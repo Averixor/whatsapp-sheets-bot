@@ -1,0 +1,411 @@
+<script>
+// Js.Diagnostics — active Stage 7.1 runtime fragment.
+
+  // =========================
+  // HEALTH CHECK
+  // =========================
+  function getHealthCheckOptions_() {
+    return STATE.healthCheckMode === 'full'
+      ? {
+          shallow: false,
+          includeStage3Base: true,
+          includeCompatibilityLayer: true,
+          includeReconciliationPreview: true
+        }
+      : {
+          shallow: true,
+          includeStage3Base: false,
+          includeCompatibilityLayer: false,
+          includeReconciliationPreview: false
+        };
+  }
+
+  function getHealthCheckModeLabel_() {
+    return STATE.healthCheckMode === 'full' ? 'Повна' : 'Швидка';
+  }
+
+  function renderHealthCheckModeSwitcher_() {
+    return `
+      <div class="result-item">
+        <div class="result-value">
+          <div class="mode-toggle">
+            <button
+              id="healthModeQuick"
+              type="button"
+              class="mode-toggle-btn ${STATE.healthCheckMode === 'quick' ? 'active' : ''}"
+              onclick="SidebarApp.setHealthCheckMode('quick')"
+            >
+              Швидка
+            </button>
+            <button
+              id="healthModeFull"
+              type="button"
+              class="mode-toggle-btn ${STATE.healthCheckMode === 'full' ? 'active' : ''}"
+              onclick="SidebarApp.setHealthCheckMode('full')"
+            >
+              Повна
+            </button>
+          </div>
+
+          <div class="health-mode-note">
+            ${STATE.healthCheckMode === 'full'
+              ? 'Повна діагностика разом із compatibility / legacy.'
+              : 'Швидка перевірка без legacy.'}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function showHealthCheckPanel() {
+    showStandardResult(`${getHealthCheckModeLabel_()} перевірка`);
+
+    setHtml('resultContent', `
+      ${renderHealthCheckModeSwitcher_()}
+
+      <div class="result-item">
+        <div class="result-label">Запуск перевірки</div>
+        <div class="result-value" style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="SidebarApp.runHealthCheck()">🩺 Перевірити</button>
+          <button class="btn" onclick="SidebarApp.copyHealthReport()">📋 Копіювати звіт</button>
+        </div>
+      </div>
+
+      <div class="result-item">
+        <div class="result-label">Поточний режим</div>
+        <div class="result-value">${escapeHtml(getHealthCheckModeLabel_())}</div>
+      </div>
+    `);
+  }
+
+  function setHealthCheckMode(mode) {
+    const nextMode = mode === 'full' ? 'full' : 'quick';
+    STATE.healthCheckMode = nextMode;
+
+    const quickBtn = $id('healthModeQuick');
+    const fullBtn = $id('healthModeFull');
+    if (quickBtn) quickBtn.classList.toggle('active', nextMode === 'quick');
+    if (fullBtn) fullBtn.classList.toggle('active', nextMode === 'full');
+
+    logToConsole(
+      `Режим: ${nextMode === 'full' ? 'повна діагностика' : 'швидка перевірка'}`,
+      'info'
+    );
+
+    runHealthCheck();
+  }
+
+  async function runHealthCheck() {
+    showStandardResult(`${getHealthCheckModeLabel_()} перевірка`);
+
+    setHtml('resultContent', `
+      ${renderHealthCheckModeSwitcher_()}
+
+      <div class="result-item">
+        <div class="result-label">Перевірка системи</div>
+        <div class="result-value">⏳ Виконую перевірку (${escapeHtml(getHealthCheckModeLabel_())})...</div>
+      </div>
+    `);
+
+    let slowModeShown = false;
+
+    const slowTimerId = setTimeout(() => {
+      slowModeShown = true;
+
+      setHtml('resultContent', `
+        ${renderHealthCheckModeSwitcher_()}
+
+        <div class="health-wrap">
+          <div class="health-item warn sev-medium">
+            <div class="health-title">⏳ Перевірка ще виконується</div>
+            <div class="health-details">
+              Сервер відповідає довше звичайного. Це не помилка — просто діагностика важка.
+            </div>
+          </div>
+        </div>
+      `);
+
+      logToConsole('⏳ Health Check виконується довше звичайного...', 'warning');
+    }, 15000);
+
+    try {
+      const reportResponse = await ActionDispatcher.run(
+        'stage4HealthCheck',
+        () => DiagnosticsApi.healthCheck(getHealthCheckOptions_()),
+        { successMessage: '' } 
+      );
+
+      clearTimeout(slowTimerId);
+
+      const report = reportResponse?.data || reportResponse;
+      STATE.lastHealthReport = report || null;
+
+      setHtml('resultContent', renderHealthReport(report));
+
+      const overallOk =
+        typeof report?.ok === 'boolean'
+          ? report.ok
+          : Array.isArray(report?.checks)
+            ? report.checks.every(check => {
+                const status = String(check?.status || '').toUpperCase();
+                return typeof check?.ok === 'boolean' ? check.ok : status === 'OK';
+              })
+            : false;
+
+      showToast(overallOk ? '✅ Система в нормі' : '⚠️ Є проблеми — див. звіт');
+
+      logToConsole(
+        slowModeShown
+          ? 'Перевірка системи завершена після тривалого очікування'
+          : 'Перевірка системи завершена',
+        overallOk ? 'success' : 'warning'
+      );
+    } catch (error) {
+      clearTimeout(slowTimerId);
+
+      setHtml('resultContent', `
+        ${renderHealthCheckModeSwitcher_()}
+
+        <div class="health-wrap">
+          <div class="health-item bad sev-critical">
+            <div class="health-title">❌ Помилка перевірки</div>
+            <div class="health-details">${escapeHtml(normalizeError(error))}</div>
+          </div>
+        </div>
+      `);
+
+      showToast('❌ Помилка Health Check');
+      logToConsole(`❌ Health Check: ${normalizeError(error)}`, 'error');
+    }
+  }
+
+  function splitHealthChecksByGroup(checks) {
+    const groups = {
+      critical: [],
+      warnings: [],
+      compatibility: [],
+      ok: []
+    };
+
+    (checks || []).forEach(function(check) {
+      const status = String(check?.status || '').toUpperCase();
+      const ok = typeof check?.ok === 'boolean' ? check.ok : status === 'OK';
+      const uiGroup = String(check?.uiGroup || '').toLowerCase();
+
+      if (uiGroup === 'critical' || uiGroup === 'warnings' || uiGroup === 'compatibility' || uiGroup === 'ok') {
+        groups[uiGroup].push(check);
+        return;
+      }
+
+      const title = String(check?.title || check?.name || '').toLowerCase();
+      const details = String(check?.details || check?.message || '').toLowerCase();
+
+      const looksCompatibility =
+        title.indexOf('deprecated ') === 0 ||
+        title.indexOf('compatibility ') === 0 ||
+        title.indexOf('wrapper source ') === 0 ||
+        title.indexOf('ui-ban marker ') === 0 ||
+        details.indexOf('compatibility-only') !== -1 ||
+        details.indexOf('замінити на ') !== -1;
+
+      if (looksCompatibility) {
+        groups.compatibility.push(check);
+        return;
+      }
+
+      if (ok) {
+        groups.ok.push(check);
+        return;
+      }
+
+      if (status === 'FAIL') {
+        groups.critical.push(check);
+        return;
+      }
+
+      if (status === 'WARN') {
+        groups.warnings.push(check);
+        return;
+      }
+
+      groups.warnings.push(check);
+    });
+
+    return groups;
+  }
+
+  function renderHealthGroup(title, icon, items, emptyText) {
+    if (!items || !items.length) {
+      return `
+        <div class="health-group">
+          <div class="health-group-title">
+            <span>${icon}</span>
+            <span>${escapeHtml(title)}</span>
+            <span class="health-group-count">0</span>
+          </div>
+          <div class="health-item ok" style="opacity:.85;">
+            ${escapeHtml(emptyText || 'Немає')}
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="health-group">
+        <div class="health-group-title">
+          <span>${icon}</span>
+          <span>${escapeHtml(title)}</span>
+          <span class="health-group-count">${items.length}</span>
+        </div>
+        <div class="health-group-body">
+          ${items.map(renderCheckItemCompact).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderCheckItemCompact(check) {
+    const status = String(check?.status || '').toUpperCase();
+    const ok = typeof check?.ok === 'boolean' ? check.ok : status === 'OK';
+    const icon = ok ? '✅' : (status === 'WARN' ? '⚠️' : '❌');
+    const title = check?.title || check?.name || 'Перевірка';
+    const details = check?.details || check?.message || '';
+    const recommendation = check?.howTo || check?.recommendation || '';
+    const cssClass = ok ? 'ok' : (status === 'FAIL' ? 'bad' : 'warn');
+
+    return `
+      <div class="health-item ${cssClass}" style="margin:4px 0; padding:6px;">
+        <div class="health-title">
+          ${icon} ${escapeHtml(title)}
+          <span class="health-badges">[${escapeHtml(status || '?')}]</span>
+        </div>
+        ${details ? `<div class="health-details">${escapeHtml(details)}</div>` : ''}
+        ${(!ok && recommendation) ? `<div class="how-to-box">${escapeHtml(recommendation)}</div>` : ''}
+      </div>
+    `;
+  }
+
+  function renderCheckItem(check) {
+    return renderCheckItemCompact(check);
+  }
+
+  function renderHealthReport(report) {
+    if (!report || !report.checks) {
+      return `
+        ${renderHealthCheckModeSwitcher_()}
+        <div class="health-item warn">❌ Порожній звіт</div>
+      `;
+    }
+
+    const checks = Array.isArray(report.checks) ? report.checks : [];
+    const groups = splitHealthChecksByGroup(checks);
+
+    const criticalCount = groups.critical.length;
+    const warningCount = groups.warnings.length;
+    const compatibilityCount = groups.compatibility.length;
+    const okCount = groups.ok.length;
+
+    const hasRealProblems = criticalCount > 0 || warningCount > 0;
+    const statusIcon = hasRealProblems ? '⚠️' : '✅';
+    const statusColor = hasRealProblems ? 'var(--warning-color)' : 'var(--success-color)';
+
+    return `
+      ${renderHealthCheckModeSwitcher_()}
+
+      <div class="compact-health-report">
+        <div style="font-weight:600; margin-bottom:6px; padding:6px 8px; background:${statusColor}20; border-radius:6px;">
+          <span style="color:${statusColor};">${statusIcon}</span>
+          ${hasRealProblems ? 'Є проблеми' : 'Все добре'}
+          <span style="float:right; font-size:0.65rem;">${checks.length} перевірок</span>
+        </div>
+
+        <div style="font-size:0.65rem; color:var(--text-secondary); margin-bottom:8px;">
+          ${report.ts ? escapeHtml(new Date(report.ts).toLocaleString('uk-UA')) : ''}
+        </div>
+
+        <div style="font-size:0.68rem; margin-bottom:8px; display:flex; gap:8px; flex-wrap:wrap;">
+          <span style="padding:2px 8px; border-radius:999px; background:rgba(34,197,94,.12); color:var(--success-color);">
+            ✅ OK: ${okCount}
+          </span>
+          <span style="padding:2px 8px; border-radius:999px; background:rgba(239,68,68,.12); color:var(--error-color);">
+            ❌ Критичні: ${criticalCount}
+          </span>
+          <span style="padding:2px 8px; border-radius:999px; background:rgba(245,158,11,.12); color:var(--warning-color);">
+            ⚠️ Попередження: ${warningCount}
+          </span>
+          <span style="padding:2px 8px; border-radius:999px; background:rgba(59,130,246,.12); color:var(--google-blue);">
+            🧩 Compatibility: ${compatibilityCount}
+          </span>
+        </div>
+
+        <div class="result-item" style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="SidebarApp.runHealthCheck()">🔄 Перевірити ще раз</button>
+          <button class="btn" onclick="SidebarApp.copyHealthReport()">📋 Копіювати звіт</button>
+        </div>
+
+        <div class="health-scroll-container" style="max-height:320px;">
+          ${renderHealthGroup('Критичні проблеми', '❌', groups.critical, 'Критичних проблем не знайдено')}
+          ${renderHealthGroup('Попередження', '⚠️', groups.warnings, 'Попереджень немає')}
+          ${renderHealthGroup('Відомий compatibility layer', '🧩', groups.compatibility, 'Compatibility layer не виявлено')}
+          ${renderHealthGroup('Успішні перевірки', '✅', groups.ok, 'Успішних перевірок немає')}
+        </div>
+      </div>
+    `;
+  }
+
+  function copyHealthReport() {
+    const report = STATE.lastHealthReport;
+
+    if (!report || !Array.isArray(report.checks)) {
+      showToast('⚠️ Спочатку натисніть "Перевірити"');
+      return;
+    }
+
+    const checks = report.checks;
+    const groups = splitHealthChecksByGroup(checks);
+
+    const overallOk =
+      typeof report?.ok === 'boolean'
+        ? report.ok
+        : (groups.critical.length === 0 && groups.warnings.length === 0);
+
+    function appendGroup(text, title, items) {
+      text += `${title}\n`;
+      text += `${'-'.repeat(title.length)}\n`;
+
+      if (!items.length) {
+        text += `Немає\n\n`;
+        return text;
+      }
+
+      items.forEach(function(check) {
+        const status = String(check?.status || '').toUpperCase();
+        const ok = typeof check?.ok === 'boolean' ? check.ok : status === 'OK';
+        const icon = ok ? '✅' : (status === 'WARN' ? '⚠️' : '❌');
+        const name = check?.title || check?.name || 'Перевірка';
+        const details = check?.details || check?.message || '';
+        const recommendation = check?.howTo || check?.recommendation || '';
+
+        text += `${icon} [${status || '?'}] ${name}\n`;
+        if (details) text += `   Деталі: ${details}\n`;
+        if (!ok && recommendation) text += `   Як виправити: ${String(recommendation).replace(/\n/g, ' ')}\n`;
+        text += `\n`;
+      });
+
+      return text;
+    }
+
+    let text = 'HEALTH CHECK ЗВІТ\n==================\n';
+    text += `Час: ${report.ts ? new Date(report.ts).toLocaleString('uk-UA') : new Date().toLocaleString('uk-UA')}\n`;
+    text += `Режим: ${getHealthCheckModeLabel_()}\n`;
+    text += `Статус: ${overallOk ? '✅ ОК' : '⚠️ Є ПРОБЛЕМИ'}\n`;
+    text += `OK: ${groups.ok.length} | Критичні: ${groups.critical.length} | Попередження: ${groups.warnings.length} | Compatibility: ${groups.compatibility.length}\n\n`;
+
+    text = appendGroup(text, 'КРИТИЧНІ ПРОБЛЕМИ', groups.critical);
+    text = appendGroup(text, 'ПОПЕРЕДЖЕННЯ', groups.warnings);
+    text = appendGroup(text, 'ВІДОМИЙ COMPATIBILITY LAYER', groups.compatibility);
+    text = appendGroup(text, 'УСПІШНІ ПЕРЕВІРКИ', groups.ok);
+
+    copyResultText(text);
+  }
+</script>

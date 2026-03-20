@@ -1,0 +1,654 @@
+<!doctype html>
+  <html>
+
+  <head>
+    <base target="_top">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      /* ========== PALANTIR-СТИЛЬ (ТЕМНА ТЕМА) ========== */
+      :root {
+        --bg-primary: #0A0A0A;
+        --bg-secondary: #141414;
+        --bg-tertiary: #1E1E1E;
+        --border-color: #2A2A2A;
+        --text-primary: #FFFFFF;
+        --text-secondary: #8A8A8A;
+        --accent-blue: #2D72D2;
+        --accent-blue-light: #3B82F6;
+        --success-green: #10B981;
+        --warning-yellow: #F59E0B;
+        --error-red: #EF4444;
+        --font-mono: 'SF Mono', 'Consolas', 'Monaco', 'Courier New', monospace;
+        --transition: all 0.2s ease;
+        --radius: 12px;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        min-height: 100vh;
+        padding: 12px;
+        display: block;
+      }
+
+      .container {
+        max-width: none;
+        width: 100%;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        padding: 16px;
+        box-shadow: none;
+        animation: slideIn 0.3s ease;
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateY(20px);
+          opacity: 0;
+        }
+
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        background: var(--bg-tertiary);
+        padding: 12px 16px;
+        border-radius: var(--radius);
+        border: 1px solid var(--border-color);
+      }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .back-button {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 1.2rem;
+        transition: var(--transition);
+      }
+
+      .back-button:hover {
+        background: var(--bg-tertiary);
+        border-color: var(--accent-blue);
+        transform: scale(1.05);
+      }
+
+      .back-button:active {
+        transform: scale(0.95);
+      }
+
+      .title {
+        font-size: 1rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text-primary);
+      }
+
+      .callsign-badge {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        padding: 4px 12px;
+        border-radius: 40px;
+        font-size: 0.8rem;
+        font-family: var(--font-mono);
+        color: var(--accent-blue);
+      }
+
+      .year-section {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        margin-bottom: 16px;
+        background: var(--bg-tertiary);
+        padding: 8px 16px;
+        border-radius: var(--radius);
+        border: 1px solid var(--border-color);
+      }
+
+      .year-btn {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 1.2rem;
+        color: var(--accent-blue);
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .year-btn:hover {
+        background: var(--bg-tertiary);
+        border-color: var(--accent-blue);
+        transform: scale(1.05);
+      }
+
+      .current-year {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        min-width: 100px;
+        text-align: center;
+        font-family: var(--font-mono);
+      }
+
+      .month-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--bg-tertiary);
+        padding: 8px 12px;
+        border-radius: var(--radius);
+        margin-bottom: 16px;
+        border: 1px solid var(--border-color);
+      }
+
+      .month-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      .nav-btn {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 1.2rem;
+        color: var(--accent-blue);
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .nav-btn:hover {
+        background: var(--bg-tertiary);
+        border-color: var(--accent-blue);
+        transform: scale(1.05);
+      }
+
+      .weekdays {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+        margin-bottom: 8px;
+        padding: 0 4px;
+      }
+
+      .weekday {
+        text-align: center;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        padding: 8px 0;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .weekday.weekend {
+        color: var(--warning-yellow);
+      }
+
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 6px;
+        background: var(--bg-secondary);
+        padding: 16px;
+        border-radius: var(--radius);
+        border: 1px solid var(--border-color);
+        margin-bottom: 16px;
+      }
+
+      .calendar-day {
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        cursor: pointer;
+        border-radius: 50%;
+        transition: var(--transition);
+        background: var(--bg-tertiary);
+        border: 2px solid transparent;
+        font-weight: 500;
+        color: var(--text-primary);
+      }
+
+      .calendar-day:hover:not(.empty) {
+        background: var(--accent-blue);
+        color: white;
+        transform: scale(1.1);
+      }
+
+      .calendar-day.selected {
+        background: var(--accent-blue);
+        color: white;
+        font-weight: 600;
+        transform: scale(1.05);
+        border-color: var(--text-primary);
+      }
+
+      .calendar-day.today {
+        border-color: var(--accent-blue);
+        font-weight: 700;
+        background: var(--bg-secondary);
+      }
+
+      .calendar-day.today.selected {
+        background: var(--accent-blue);
+        border-color: var(--text-primary);
+      }
+
+      .calendar-day.weekend:not(.empty):not(.selected) {
+        color: var(--warning-yellow);
+      }
+
+      .calendar-day.empty {
+        background: transparent;
+        cursor: default;
+        pointer-events: none;
+        color: transparent;
+      }
+
+      .selected-date-card {
+        background: var(--bg-tertiary);
+        padding: 16px;
+        border-radius: var(--radius);
+        margin-bottom: 16px;
+        text-align: center;
+        border: 1px solid var(--border-color);
+      }
+
+      .selected-date-label {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .selected-date-value {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--accent-blue);
+        font-family: var(--font-mono);
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 8px;
+      }
+
+      .btn {
+        flex: 1;
+        padding: 12px 16px;
+        border-radius: 40px;
+        border: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-family: var(--font-mono);
+      }
+
+      .btn-primary {
+        background: var(--accent-blue);
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: var(--accent-blue-light);
+        transform: translateY(-1px);
+      }
+
+      .btn-secondary {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+      }
+
+      .btn-secondary:hover {
+        background: var(--bg-secondary);
+        transform: translateY(-1px);
+      }
+
+      .error-message {
+        color: var(--error-red);
+        font-size: 0.8rem;
+        margin-top: 12px;
+        min-height: 20px;
+        text-align: center;
+        padding: 8px;
+        background: rgba(239, 68, 68, 0.1);
+        border-radius: var(--radius);
+        display: none;
+      }
+
+      .error-message.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-5px);
+        }
+
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (max-width: 480px) {
+        .container {
+          padding: 12px;
+        }
+
+        .calendar-grid {
+          gap: 4px;
+          padding: 12px;
+        }
+
+        .calendar-day {
+          font-size: 0.8rem;
+        }
+
+        .btn {
+          padding: 10px 12px;
+          font-size: 0.85rem;
+        }
+
+        .current-year {
+          min-width: 80px;
+          font-size: 1rem;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <!-- Шапка з кнопкою назад -->
+      <div class="header">
+        <div class="header-left">
+          <button class="back-button" onclick="goBack()" title="Повернутися до картки">←</button>
+          <div class="title">
+            <span>📅</span>
+            <span>Обрати дату</span>
+          </div>
+        </div>
+        <div class="callsign-badge">
+          <?= callsign ?>
+        </div>
+      </div>
+
+      <!-- Вибір року -->
+      <div class="year-section">
+        <button class="year-btn" onclick="changeYear(-1)" id="prevYearBtn" title="Попередній рік">←</button>
+        <span class="current-year" id="currentYear"></span>
+        <button class="year-btn" onclick="changeYear(1)" id="nextYearBtn" title="Наступний рік">→</button>
+      </div>
+
+      <!-- Навігація по місяцях -->
+      <div class="month-nav">
+        <button class="nav-btn" onclick="changeMonth(-1)" id="prevMonthBtn" title="Попередній місяць">←</button>
+        <span class="month-name" id="monthName"></span>
+        <button class="nav-btn" onclick="changeMonth(1)" id="nextMonthBtn" title="Наступний місяць">→</button>
+      </div>
+
+      <!-- Дні тижня -->
+      <div class="weekdays">
+        <div class="weekday">ПН</div>
+        <div class="weekday">ВТ</div>
+        <div class="weekday">СР</div>
+        <div class="weekday">ЧТ</div>
+        <div class="weekday">ПТ</div>
+        <div class="weekday weekend">СБ</div>
+        <div class="weekday weekend">НД</div>
+      </div>
+
+      <!-- Сітка календаря -->
+      <div class="calendar-grid" id="calendar"></div>
+
+      <!-- Вибрана дата -->
+      <div class="selected-date-card">
+        <div class="selected-date-label">Обрана дата</div>
+        <div class="selected-date-value" id="selectedDateValue">—</div>
+      </div>
+
+      <!-- Кнопки дій -->
+      <div class="actions">
+        <button class="btn btn-primary" onclick="selectDate()">
+          <span>✅</span>
+          <span>Обрати</span>
+        </button>
+        <button class="btn btn-secondary" onclick="goBack()">
+          <span>↩️</span>
+          <span>Назад</span>
+        </button>
+      </div>
+
+      <!-- Повідомлення про помилку -->
+      <div id="errorMessage" class="error-message"></div>
+    </div>
+
+    <script>
+      const CALLSIGN = "<?= callsign ?>";
+      const TODAY = "<?= today ?>";
+      
+      const todayParts = TODAY.split('.');
+      const todayDate = new Date(
+        parseInt(todayParts[2]), 
+        parseInt(todayParts[1]) - 1, 
+        parseInt(todayParts[0])
+      );
+      
+      let currentYear = todayDate.getFullYear();
+      let currentMonth = todayDate.getMonth(); // 0-11
+      let selectedDay = parseInt(todayParts[0]);
+      let selectedMonth = currentMonth;
+      let selectedYear = currentYear;
+      
+      const monthNames = [
+        'Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень',
+        'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'
+      ];
+      
+      function updateHeader() {
+        document.getElementById('monthName').textContent = 
+          `${monthNames[currentMonth]} ${currentYear}`;
+        document.getElementById('currentYear').textContent = currentYear;
+      }
+      
+      function changeYear(delta) {
+        currentYear += delta;
+        renderCalendar();
+        updateHeader();
+      }
+      
+      function changeMonth(delta) {
+        currentMonth += delta;
+        if (currentMonth > 11) {
+          currentMonth = 0;
+          currentYear++;
+        } else if (currentMonth < 0) {
+          currentMonth = 11;
+          currentYear--;
+        }
+        renderCalendar();
+        updateHeader();
+      }
+      
+      function isToday(day, month, year) {
+        return day === todayDate.getDate() && 
+               month === todayDate.getMonth() && 
+               year === todayDate.getFullYear();
+      }
+      
+      function isSelected(day, month, year) {
+        return day === selectedDay && 
+               month === selectedMonth && 
+               year === selectedYear;
+      }
+      
+      function isWeekend(dayIndex) {
+        return dayIndex === 5 || dayIndex === 6;
+      }
+      
+      function renderCalendar() {
+        const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+        let startOffset = firstDay === 0 ? 6 : firstDay - 1;
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        
+        let html = '';
+        for (let i = 0; i < startOffset; i++) {
+          html += '<div class="calendar-day empty"></div>';
+        }
+        
+        for (let d = 1; d <= daysInMonth; d++) {
+          const dayIndex = (startOffset + d - 1) % 7;
+          const weekendClass = isWeekend(dayIndex) ? ' weekend' : '';
+          const todayClass = isToday(d, currentMonth, currentYear) ? ' today' : '';
+          const selectedClass = isSelected(d, currentMonth, currentYear) ? ' selected' : '';
+          
+          html += `
+            <div class="calendar-day${todayClass}${selectedClass}${weekendClass}" 
+                 onclick="selectDay(${d}, ${currentMonth}, ${currentYear})">
+              ${d}
+            </div>
+          `;
+        }
+        
+        document.getElementById('calendar').innerHTML = html;
+        updateSelectedDisplay();
+      }
+      
+      function selectDay(day, month, year) {
+        selectedDay = day;
+        selectedMonth = month;
+        selectedYear = year;
+        renderCalendar();
+      }
+      
+      function updateSelectedDisplay() {
+        const displayEl = document.getElementById('selectedDateValue');
+        if (selectedDay) {
+          const formattedDay = String(selectedDay).padStart(2, '0');
+          const formattedMonth = String(selectedMonth + 1).padStart(2, '0');
+          displayEl.textContent = `${formattedDay}.${formattedMonth}.${selectedYear}`;
+        } else {
+          displayEl.textContent = '—';
+        }
+      }
+      
+      function showError(message) {
+        const errorEl = document.getElementById('errorMessage');
+        errorEl.textContent = message;
+        errorEl.classList.add('visible');
+        setTimeout(() => {
+          errorEl.classList.remove('visible');
+        }, 3000);
+      }
+
+      function normalizeError(error) {
+        if (!error) return 'Невідома помилка';
+        if (typeof error === 'string') return error;
+        if (error.message) return String(error.message);
+        return String(error);
+      }
+
+      function gsRun(method, ...args) {
+        return new Promise((resolve, reject) => {
+          try {
+            let runner = google.script.run
+              .withSuccessHandler(resolve)
+              .withFailureHandler(err => reject(normalizeError(err)));
+
+            if (typeof runner[method] !== 'function') {
+              reject(`Метод "${method}" не знайдено`);
+              return;
+            }
+
+            runner[method](...args);
+          } catch (error) {
+            reject(normalizeError(error));
+          }
+        });
+      }
+      
+      async function selectDate() {
+        if (!selectedDay) {
+          showError('❌ Оберіть дату в календарі');
+          return;
+        }
+        
+        const formattedDay = String(selectedDay).padStart(2, '0');
+        const formattedMonth = String(selectedMonth + 1).padStart(2, '0');
+        const dateStr = `${formattedDay}.${formattedMonth}.${selectedYear}`;
+        
+        try {
+          await gsRun('openPersonCardByCallsignAndDate', CALLSIGN, dateStr);
+        } catch (error) {
+          showError('❌ ' + normalizeError(error));
+        }
+      }
+
+      function goBack() {
+        const formattedDay = String(selectedDay || todayDate.getDate()).padStart(2, '0');
+        const formattedMonth = String((selectedMonth ?? todayDate.getMonth()) + 1).padStart(2, '0');
+        const dateStr = `${formattedDay}.${formattedMonth}.${selectedYear || todayDate.getFullYear()}`;
+
+        gsRun('openPersonCardByCallsignAndDate', CALLSIGN, dateStr)
+          .catch(error => showError('❌ ' + normalizeError(error)));
+      }
+      
+      renderCalendar();
+      updateHeader();
+    </script>
+  </body>
+
+  </html>
