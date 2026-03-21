@@ -1,6 +1,11 @@
 {
   "git.path": "C:\\Users\\User\\Documents\\PortableGit\\cmd\\git.exe",
 
+  "terminal.integrated.defaultProfile.windows": "PowerShell WAPB",
+  "terminal.integrated.cwd.windows": "C:\\Users\\User\\Desktop\\whatsapp-sheets-bot",
+  "terminal.integrated.enablePersistentSessions": true,
+  "terminal.integrated.persistentSessionReviveProcess": "onExitAndWindowClose",
+
   "terminal.integrated.profiles.windows": {
     "PowerShell WAPB": {
       "source": "PowerShell",

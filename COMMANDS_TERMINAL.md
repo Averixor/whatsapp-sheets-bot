@@ -1,469 +1,708 @@
-# ============================================================
-# TERMINAL_COMMANDS_WAPB.ps1
-# PowerShell-шпаргалка для проекта WAPB
-# VS Code + PowerShell + GitHub + Google Apps Script + WAPB Dev Env
-# ============================================================
-#
-# НАЗНАЧЕНИЕ
-# Этот файл — единая шпаргалка по командам для проекта:
-# C:\Users\User\Desktop\whatsapp-sheets-bot
-#
-# Здесь собраны:
-# 1) команды проверки окружения;
-# 2) команды WAPB Dev Env;
-# 3) базовые команды Git;
-# 4) базовые команды Google Apps Script / clasp;
-# 5) обход проблемы, когда npm в PowerShell падает из-за блокировки cmd.
-#
-# ВАЖНО
-# - Строки с # — это пояснения.
-# - Выполняются команды БЕЗ #.
-# - Этот файл можно хранить в проекте как документацию/шпаргалку.
-#
-# ============================================================
-# 0. ОТКРЫТИЕ ПРОЕКТА
-# ============================================================
-# Открыть VS Code.
-# Открыть папку проекта:
-# C:\Users\User\Desktop\whatsapp-sheets-bot
-# После открытия терминала PowerShell должен появиться баннер:
-#
-#   WAPB DEV ENV LOADED
-#
-# Это значит, что профиль/окружение проекта подгрузилось и доступны
-# готовые команды проекта.
+# TERMINAL COMMANDS — WAPB
 
+Пошаговая шпаргалка для работы с проектом из терминала VS Code.
+
+Проект:
+
+`C:\Users\User\Desktop\whatsapp-sheets-bot`
+
+---
+
+## Оглавление
+
+1. [Открытие проекта](#1-открытие-проекта)
+2. [Самый безопасный старт](#2-самый-безопасный-старт)
+3. [Загрузка project shell](#3-загрузка-project-shell)
+4. [Проверка, что окружение реально работает](#4-проверка-что-окружение-реально-работает)
+5. [Быстрые команды](#5-быстрые-команды)
+6. [Команды, которыми работаешь каждый день](#6-команды-которыми-работаешь-каждый-день)
+7. [Правильный порядок работы с начала до конца](#7-правильный-порядок-работы-с-начала-до-конца)
+8. [Если shell не загрузился](#8-если-shell-не-загрузился)
+9. [Если команды не найдены](#9-если-команды-не-найдены)
+10. [Если что-то не работает](#10-если-что-то-не-работает)
+11. [Работа с Git](#11-работа-с-git)
+12. [Работа с GAS](#12-работа-с-gas)
+13. [Работа с Node / npm / clasp](#13-работа-с-node--npm--clasp)
+14. [Проверка перед закрытием VS Code](#14-проверка-перед-закрытием-vs-code)
+15. [Что нельзя делать](#15-что-нельзя-делать)
+16. [Короткая шпаргалка](#16-короткая-шпаргалка)
+
+---
+
+## 1. Открытие проекта
+
+После открытия VS Code:
+
+1. Открой папку проекта  
+   `C:\Users\User\Desktop\whatsapp-sheets-bot`
+
+2. Открой терминал PowerShell
+
+3. Если терминал открылся не в папке проекта, перейди вручную:
+
+```powershell
 cd "C:\Users\User\Desktop\whatsapp-sheets-bot"
-pwd
-Get-ChildItem -Force
+```
 
-# Пояснение:
-# cd ...              -> перейти в папку проекта
-# pwd                 -> показать текущую папку
-# Get-ChildItem -Force -> показать все файлы, включая скрытые
+---
 
-# ============================================================
-# 1. ПРОВЕРКА, ЧТО ОКРУЖЕНИЕ ПРОЕКТА ПОДГРУЗИЛОСЬ
-# ============================================================
-# Эти команды проверяют, что WAPB Dev Env реально доступен.
+## 2. Самый безопасный старт
 
-Get-Command gas-status -ErrorAction SilentlyContinue
-Get-Command gas-pull -ErrorAction SilentlyContinue
-Get-Command gas-push -ErrorAction SilentlyContinue
-Get-Command project-health -ErrorAction SilentlyContinue
-Get-Command deploy-all -ErrorAction SilentlyContinue
+Это рекомендуемый старт почти всегда.
 
-# Пояснение:
-# Если команды найдены — окружение проекта загружено нормально.
-# Если не найдены — PowerShell-профиль/скрипт окружения не подгрузился.
-
-# ============================================================
-# 2. ОСНОВНЫЕ ГОТОВЫЕ КОМАНДЫ WAPB DEV ENV
-# ============================================================
-# Это главный и предпочтительный способ работы в твоём проекте.
-# Сначала используем именно эти команды, а не голый ручной набор.
-
-gas-status
-gas-pull
-gas-push
-gas-push-smart
-gas-watch
-git-status-short
-git-save "manual save"
-git-sync "sync update"
-deploy-all "deploy update"
+```powershell
+# === САМЫЙ БЕЗОПАСНЫЙ СТАРТ (рекомендуется всегда) ===
+cd "C:\Users\User\Desktop\whatsapp-sheets-bot"
+$PSVersionTable.PSVersion
+. .\dev-shell.ps1
 project-health
-
-# Пояснение по каждой команде:
-#
-# gas-status
-#   -> показывает состояние Apps Script / GAS-части проекта
-#
-# gas-pull
-#   -> тянет актуальный код из Google Apps Script в локальный проект
-#
-# gas-push
-#   -> пушит локальный код в Google Apps Script
-#
-# gas-push-smart
-#   -> пушит в GAS только если реально есть изменения
-#
-# gas-watch
-#   -> режим наблюдения / автоматизации, если это предусмотрено в env
-#
-# git-status-short
-#   -> короткий статус git без лишней простыни
-#
-# git-save "сообщение"
-#   -> локально сохранить изменения в git с указанным сообщением
-#
-# git-sync "сообщение"
-#   -> типовой git-цикл: сохранить + синхронизировать ветку
-#
-# deploy-all "сообщение"
-#   -> полный цикл деплоя, если он настроен в проекте
-#
-# project-health
-#   -> проверить общее здоровье/состояние проекта
-
-# ============================================================
-# 3. КАНОНИЧЕСКИЕ ПОЛНЫЕ ИМЕНА КОМАНД WAPB DEV ENV
-# ============================================================
-# То же самое, но без коротких alias.
-# Полезно, если alias конфликтуют или хочешь видеть полное имя.
-
-Get-GasStatus
-Invoke-GasPull
-Invoke-GasPush
-Invoke-GasPushIfChanged
-Start-GasWatch
-Get-GitStatusShort
-Save-GitChanges "manual save"
-Sync-GitBranch "sync update"
-Deploy-All "deploy update"
-Test-ProjectHealth
-
-# Пояснение:
-# Это полные названия тех же команд.
-# Если короткий alias не работает — пробуй каноническое имя.
-
-# ============================================================
-# 4. ТИПОВОЙ СЦЕНАРИЙ РАБОТЫ ПРИ СТАРТЕ ДНЯ
-# ============================================================
-# Это нормальный порядок действий, когда только открыл проект.
-
-cd "C:\Users\User\Desktop\whatsapp-sheets-bot"
+clasp whoami
 gas-status
 git-status-short
-gas-pull
+```
+
+Что это даёт:
+
+- показывает версию PowerShell
+- загружает `dev-shell.ps1`
+- проверяет окружение проекта
+- проверяет авторизацию clasp
+- показывает статус GAS
+- показывает короткий статус Git
+
+### Проверка версии PowerShell
+
+Сразу после открытия терминала полезно выполнить:
+
+```powershell
+$PSVersionTable.PSVersion
+```
+
+Предпочтительно, чтобы `Major` был `7`.
+
+Если видишь `5`, это ещё не приговор, но:
+- сначала запусти `project-health`
+- если начинаются странности, открой `pwsh` и работай уже там
+
+Пример:
+
+```powershell
+pwsh
+```
+
+---
+
+## 3. Загрузка project shell
+
+Главная команда после открытия терминала:
+
+```powershell
+. .\dev-shell.ps1
+```
+
+Важно: это команда **с точкой, пробелом и путём**.  
+Она загружает dev-среду в **текущую сессию PowerShell**.
+
+Если всё нормально, должен появиться баннер:
+
+```text
+WAPB DEV ENV LOADED
+```
+
+---
+
+## 4. Проверка, что окружение реально работает
+
+Сразу после загрузки shell выполни:
+
+```powershell
+Get-Command gas-status
+Get-Command gas-pull
+Get-Command gas-push
+Get-Command project-health
+```
+
+Потом выполни:
+
+```powershell
 project-health
+```
 
-# Пояснение:
-# 1) зайти в папку проекта
-# 2) посмотреть состояние
-# 3) подтянуть свежий код из GAS
-# 4) проверить, что проект живой
+И отдельно полезно проверить авторизацию clasp:
 
-# ============================================================
-# 5. ТИПОВОЙ СЦЕНАРИЙ ПОСЛЕ ПРАВОК
-# ============================================================
-# Когда закончил изменения и хочешь всё сохранить.
+```powershell
+clasp whoami
+```
 
-git-status-short
-git-save "updated local files"
-gas-push
-project-health
+Если `clasp whoami` падает, попробуй:
 
-# Пояснение:
-# 1) посмотреть что изменилось
-# 2) сохранить изменения в git
-# 3) отправить код в GAS
-# 4) проверить, что ничего не сломалось
-
-# ============================================================
-# 6. ПОЛНЫЙ СЦЕНАРИЙ СИНХРОНИЗАЦИИ
-# ============================================================
-# Когда нужно провести нормальную синхронизацию проекта.
-
-gas-pull
-git-sync "sync after pull"
-gas-push-smart
-project-health
-
-# Пояснение:
-# gas-pull        -> забрать актуальное из GAS
-# git-sync "..."  -> синхронизировать git
-# gas-push-smart  -> отправить в GAS только если есть изменения
-# project-health  -> контрольная проверка
-
-# ============================================================
-# 7. ПОЛНЫЙ ДЕПЛОЙ ОДНОЙ КОМАНДОЙ
-# ============================================================
-# Если окружение проекта это поддерживает, использовать можно так:
-
-deploy-all "stage update"
-
-# Пояснение:
-# deploy-all "..." -> полный цикл деплоя/синхронизации по логике проекта
-
-# ============================================================
-# 8. ПРОВЕРКА NODE.JS
-# ============================================================
-# Node нужен для инструментария проекта.
-# Если node -v работает, сам Node живой.
-
-node -v
-
-# Пояснение:
-# node -v -> показывает установленную версию Node.js
-
-# ============================================================
-# 9. ВАЖНО: ПРОБЛЕМА С npm В ТВОЁМ ОКРУЖЕНИИ
-# ============================================================
-# У тебя возможна ситуация:
-#
-#   npm -v
-#   The command prompt has been disabled by your administrator.
-#
-# Это значит:
-# - Node живой;
-# - сам PowerShell живой;
-# - но стандартный Windows-маршрут запуска npm упирается в cmd.exe,
-#   который у тебя заблокирован администратором.
-#
-# Поэтому:
-# - node -v можно использовать;
-# - npm -v может падать;
-# - это НЕ означает, что весь проект сломан.
-#
-# Ниже — обходной способ запуска npm напрямую через node.
-
-# ============================================================
-# 10. ОБХОДНОЙ ЗАПУСК npm БЕЗ npm.cmd
-# ============================================================
-# Запускать этот блок только если обычный npm не работает.
-
-$NodeExe  = (Get-Command node).Source
-$NodeRoot = Split-Path $NodeExe -Parent
-$script:NpmCli = Join-Path $NodeRoot 'node_modules\npm\bin\npm-cli.js'
-$script:NpxCli = Join-Path $NodeRoot 'node_modules\npm\bin\npx-cli.js'
-
-function Invoke-Npm {
-    param(
-        [Parameter(ValueFromRemainingArguments = $true)]
-        [string[]]$Args
-    )
-    & node $script:NpmCli @Args
-}
-
-function Invoke-Npx {
-    param(
-        [Parameter(ValueFromRemainingArguments = $true)]
-        [string[]]$Args
-    )
-    & node $script:NpxCli @Args
-}
-
-Set-Alias npm Invoke-Npm -Scope Global -Force
-Set-Alias npx Invoke-Npx -Scope Global -Force
-
-npm -v
-npx --version
-
-# Пояснение:
-# Этот блок:
-# 1) находит установленный node;
-# 2) находит внутренний npm-cli.js;
-# 3) создаёт рабочие alias npm и npx без участия cmd.exe.
-#
-# Использовать только если обычный npm не работает.
-
-# ============================================================
-# 11. УСТАНОВКА / ПРОВЕРКА CLASP
-# ============================================================
-# clasp нужен для ручной работы с Google Apps Script,
-# если потребуется напрямую, без обёрток WAPB env.
-
-npm install -g @google/clasp
-clasp -v
-
-# Пояснение:
-# npm install -g @google/clasp -> установить clasp глобально
-# clasp -v                    -> проверить, что clasp установлен
-
-# ============================================================
-# 12. АВТОРИЗАЦИЯ В GOOGLE APPS SCRIPT
-# ============================================================
-# Используется для ручного подключения к GAS.
-
+```powershell
+clasp logout
 clasp login
+clasp whoami
+```
 
-# Пояснение:
-# clasp login -> вход в Google-аккаунт для Apps Script
+---
 
-# ============================================================
-# 13. ПРОВЕРКА ПРИВЯЗКИ К ПРОЕКТУ GAS
-# ============================================================
-# Проверить локальную привязку к Apps Script проекту.
+## 5. Быстрые команды
 
-Get-Content .clasp.json
+| Что нужно | Команда |
+|---|---|
+| Загрузить shell | `. .\dev-shell.ps1` |
+| Проверить всё | `project-health` |
+| Проверить auth clasp | `clasp whoami` |
+| Подтянуть из GAS | `gas-pull` |
+| Отправить в GAS | `gas-push` |
+| Отправить только если есть изменения | `gas-push-smart` |
+| Короткий статус Git | `git-status-short` |
+| Сохранить в Git | `git-save "update"` |
+| Сохранить и отправить на GitHub | `git-sync "update"` |
+| Полный цикл | `deploy-all "update"` |
+
+---
+
+## 6. Команды, которыми работаешь каждый день
+
+### Проверка состояния
+
+```powershell
+project-health
+```
+
+### Проверка авторизации clasp
+
+```powershell
+clasp whoami
+```
+
+### Короткий статус Git
+
+```powershell
+git-status-short
+```
+
+### Статус GAS
+
+```powershell
+gas-status
+```
+
+### Подтянуть изменения из GAS
+
+```powershell
+gas-pull
+```
+
+### Отправить изменения в GAS
+
+```powershell
+gas-push
+```
+
+### Отправить в GAS только при наличии изменений
+
+```powershell
+gas-push-smart
+```
+
+### Сохранить изменения в Git
+
+```powershell
+git-save "update"
+```
+
+### Сохранить и отправить на GitHub
+
+```powershell
+git-sync "update"
+```
+
+### Полный цикл
+
+```powershell
+deploy-all "update"
+```
+
+### Быстрый WIP-коммит с датой
+
+```powershell
+git-save "WIP $(Get-Date -Format yyyy-MM-dd_HH-mm)"
+```
+
+### Быстрый WIP-коммит + push на GitHub
+
+```powershell
+git-sync "WIP $(Get-Date -Format yyyy-MM-dd_HH-mm)"
+```
+
+### Полный WIP-цикл
+
+```powershell
+deploy-all "WIP $(Get-Date -Format yyyy-MM-dd_HH-mm)"
+```
+
+---
+
+## 7. Правильный порядок работы с начала до конца
+
+### Сценарий A — обычный старт работы
+
+```powershell
+cd "C:\Users\User\Desktop\whatsapp-sheets-bot"
+$PSVersionTable.PSVersion
+. .\dev-shell.ps1
+project-health
+clasp whoami
+gas-status
+git-status-short
+```
+
+### Сценарий B — если работаешь после правок в GAS editor
+
+```powershell
+gas-pull
+git-status-short
+```
+
+### Сценарий C — после локальных правок в VS Code
+
+```powershell
+gas-push-smart
+git-save "update"
+project-health
+```
+
+### Сценарий D — если нужно сразу отправить и в GitHub, и в GAS
+
+```powershell
+git-sync "update"
+gas-push-smart
+project-health
+```
+
+### Сценарий E — закончить рабочую сессию
+
+```powershell
+git-status-short
+gas-status
+project-health
+```
+
+Если есть несохранённые изменения:
+
+```powershell
+git-save "final update"
+gas-push-smart
+project-health
+```
+
+### Самый короткий рабочий цикл
+
+```powershell
+cd "C:\Users\User\Desktop\whatsapp-sheets-bot"
+. .\dev-shell.ps1
+gas-pull
+gas-push-smart
+git-save "update"
+project-health
+```
+
+---
+
+## 8. Если shell не загрузился
+
+Если после открытия терминала команды вроде `gas-status` не работают, выполни вручную:
+
+```powershell
+cd "C:\Users\User\Desktop\whatsapp-sheets-bot"
+. .\dev-shell.ps1
+```
+
+Потом проверь:
+
+```powershell
+Get-Command gas-status
+Get-Command project-health
+```
+
+---
+
+## 9. Если команды не найдены
+
+Если PowerShell пишет:
+
+```text
+The term 'gas-status' is not recognized...
+```
+
+это значит, что `dev-shell.ps1` **не был загружен в текущую сессию**.
+
+Исправление:
+
+```powershell
+. .\dev-shell.ps1
+```
+
+Потом:
+
+```powershell
+gas-status
+project-health
+```
+
+---
+
+## 10. Если что-то не работает
+
+### Базовая диагностика
+
+```powershell
+$PSVersionTable.PSVersion
+Get-Command clasp, node, npmps, git | Select-Object Name, CommandType, Version, Source, Path
+project-health
+```
+
+Это покажет:
+
+- какая версия PowerShell запущена
+- откуда реально берутся `clasp`, `node`, `npmps`, `git`
+- полные пути к исполняемым файлам, где это возможно
+- нет ли конфликта путей
+- живо ли окружение проекта
+
+### Если clasp не видит аккаунт
+
+```powershell
+clasp whoami
+```
+
+Если ошибка:
+
+```powershell
+clasp logout
+clasp login
+clasp whoami
+```
+
+### Если проблема с кодировкой
+
+Проверка:
+
+```powershell
+[Console]::OutputEncoding
+```
+
+Временно на одну сессию можно поставить UTF-8:
+
+```powershell
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+```
+
+---
+
+## 11. Работа с Git
+
+### Проверить статус
+
+```powershell
+git-status-short
+```
+
+или обычной командой:
+
+```powershell
+git status --short
+```
+
+### Сохранить изменения в локальный Git
+
+```powershell
+git-save "message"
+```
+
+Пример:
+
+```powershell
+git-save "fix sidebar send panel"
+```
+
+Что делает:
+
+- `git add .`
+- `git commit -m "message"`
+
+### Сохранить и отправить на GitHub
+
+```powershell
+git-sync "message"
+```
+
+Пример:
+
+```powershell
+git-sync "stage 7.1 diagnostics cleanup"
+```
+
+Что делает:
+
+- `git add .`
+- `git commit -m "message"`
+- `git push`
+
+### Полезные обычные команды Git
+
+```powershell
+git status
+git add .
+git commit -m "message"
+git push
+git pull
+git log --oneline -10
+```
+
+---
+
+## 12. Работа с GAS
+
+### Проверить статус GAS
+
+```powershell
+gas-status
+```
+
+или:
+
+```powershell
 clasp status
-clasp open
+```
 
-# Пояснение:
-# Get-Content .clasp.json -> показать scriptId и rootDir
-# clasp status           -> показать состояние GAS-файлов
-# clasp open             -> открыть проект GAS в браузере
+### Подтянуть код из GAS
 
-# ============================================================
-# 14. РУЧНАЯ СИНХРОНИЗАЦИЯ С GOOGLE APPS SCRIPT
-# ============================================================
-# Использовать только если работаешь напрямую через clasp.
+```powershell
+gas-pull
+```
 
+или:
+
+```powershell
+clasp pull
+```
+
+Использовать, если:
+
+- код менялся в Google Apps Script editor
+- нужно подтянуть актуальное облачное состояние в локальную папку
+
+### Отправить код в GAS
+
+```powershell
+gas-push
+```
+
+или:
+
+```powershell
+clasp push
+```
+
+Использовать, если:
+
+- ты изменил `.gs`, `.html`, `appsscript.json` в VS Code
+- нужно отправить это в Google Apps Script
+
+### Отправить только если реально есть изменения
+
+```powershell
+gas-push-smart
+```
+
+### Открыть проект GAS в браузере
+
+```powershell
+gas-open
+```
+
+### Авто-push watcher
+
+```powershell
+gas-watch
+```
+
+или напрямую:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+.\watch-sync-simple.ps1
+```
+
+Что делает:
+
+- каждые несколько секунд проверяет изменения
+- при изменениях выполняет `clasp push`
+
+Как остановить:
+
+```text
+Ctrl + C
+```
+
+---
+
+## 13. Работа с Node / npm / clasp
+
+### Проверка версий
+
+```powershell
+git --version
+node -v
+npmps -v
+clasp --version
+```
+
+### Почему используется `npmps`, а не обычный `npm`
+
+Обычный `npm` в этой системе не используется напрямую, потому что Windows-обёртка `npm.cmd` может упираться в `cmd.exe`.
+
+Используется:
+
+```powershell
+npmps
+```
+
+Примеры:
+
+```powershell
+npmps -v
+npmps install
+npmps config get script-shell
+```
+
+### Почему используется функция `clasp`, а не `clasp.cmd`
+
+Обычный `clasp.cmd` тоже может упираться в `cmd.exe`.
+
+Используется функция:
+
+```powershell
+clasp
+```
+
+Примеры:
+
+```powershell
+clasp --version
+clasp status
 clasp pull
 clasp push
-clasp push -f
+clasp whoami
+```
 
-# Пояснение:
-# clasp pull   -> скачать код из GAS
-# clasp push   -> загрузить код в GAS
-# clasp push -f -> принудительно загрузить код в GAS
+---
 
-# ============================================================
-# 15. ПРОВЕРКА GIT
-# ============================================================
-# Проверить, что Git работает и проект привязан к репозиторию.
+## 14. Проверка перед закрытием VS Code
 
-git --version
-git status
-git remote -v
-git log --oneline --graph --decorate -n 15
+Перед закрытием полезно выполнить:
 
-# Пояснение:
-# git --version -> версия Git
-# git status    -> состояние файлов
-# git remote -v -> адреса подключенных удалённых репозиториев
-# git log ...   -> краткая история коммитов
-
-# ============================================================
-# 16. РУЧНОЕ СОХРАНЕНИЕ ИЗМЕНЕНИЙ В GIT
-# ============================================================
-# Если нужно всё сделать руками, без alias-обёрток.
-
-git add .
-git commit -m "update project"
-git push origin main
-
-# Пояснение:
-# git add .             -> добавить изменения
-# git commit -m "..."   -> создать коммит
-# git push origin main  -> отправить изменения на GitHub
-
-# ============================================================
-# 17. РУЧНОЕ ПОЛУЧЕНИЕ ИЗМЕНЕНИЙ ИЗ GITHUB
-# ============================================================
-
-git pull origin main
-
-# Пояснение:
-# git pull origin main -> скачать свежие изменения из GitHub
-
-# ============================================================
-# 18. ПЕРВИЧНАЯ ПРИВЯЗКА К GITHUB
-# ============================================================
-# Использовать, если проект ещё не привязан к удалённому репозиторию.
-
-git init
-git remote add origin https://github.com/USERNAME/REPOSITORY.git
-git branch -M main
-git add .
-git commit -m "Initial commit"
-git push -u origin main
-
-# Пояснение:
-# git init                -> создать локальный git-репозиторий
-# git remote add origin   -> привязать GitHub-репозиторий
-# git branch -M main      -> основная ветка main
-# git push -u origin main -> первый push с установкой upstream
-
-# ============================================================
-# 19. ПОВТОРНАЯ ПРИВЯЗКА GITHUB, ЕСЛИ УКАЗАН НЕ ТОТ REPO
-# ============================================================
-
-git remote -v
-git remote remove origin
-git remote add origin https://github.com/USERNAME/REPOSITORY.git
-git remote -v
-
-# Пояснение:
-# Использовать, если был подключён неправильный GitHub-репозиторий
-
-# ============================================================
-# 20. ПЕРЕПРИВЯЗКА КОНКРЕТНОГО ПРОЕКТА GOOGLE APPS SCRIPT
-# ============================================================
-# Использовать, если .clasp.json отсутствует или указывает не на тот проект.
-
-Remove-Item .clasp.json -ErrorAction SilentlyContinue
-
-@"
-{
-  "scriptId": "1AB7o3GPo41RchW5k_LAWrgwsIujcfNBQpvqHP5faLldTs0hFglbWI85_",
-  "rootDir": "."
-}
-"@ | Set-Content -Path ".clasp.json" -Encoding UTF8
-
-Get-Content .clasp.json
-clasp status
-
-# Пояснение:
-# Remove-Item .clasp.json -> удалить старую привязку
-# Set-Content .clasp.json -> создать новую привязку к GAS-проекту
-
-# ============================================================
-# 21. ПОЛЕЗНЫЕ КОМАНДЫ ДЛЯ VS CODE И POWERSHELL
-# ============================================================
-
-code .
-clear
-Get-ChildItem -Force
-Get-Location
-
-# Пояснение:
-# code .               -> открыть текущую папку в VS Code
-# clear                -> очистить терминал
-# Get-ChildItem -Force -> показать все файлы, включая скрытые
-# Get-Location         -> показать текущую папку
-
-# ============================================================
-# 22. МИНИМАЛЬНЫЙ НАБОР КОМАНД БЕЗ ЛИШНЕГО
-# ============================================================
-# Самый короткий рабочий набор для повседневной жизни.
-
-cd "C:\Users\User\Desktop\whatsapp-sheets-bot"
+```powershell
 gas-status
-gas-pull
-git-save "update"
+git-status-short
+project-health
+```
+
+Если есть изменения, сохранить их:
+
+```powershell
+git-save "final update"
 gas-push-smart
 project-health
+```
 
-# Пояснение:
-# Это короткий практический набор:
-# 1) открыл проект
-# 2) проверил статус
-# 3) подтянул изменения
-# 4) сохранил изменения
-# 5) отправил в GAS
-# 6) проверил здоровье проекта
+Если всё чисто — можно закрывать VS Code.
 
-# ============================================================
-# 23. ЧТО ЗА ЧТО ОТВЕЧАЕТ — КОРОТКО
-# ============================================================
-#
-# gas-status               -> статус GAS-части проекта
-# gas-pull                 -> скачать код из Google Apps Script
-# gas-push                 -> загрузить код в Google Apps Script
-# gas-push-smart           -> загрузить в GAS только если есть изменения
-# gas-watch                -> режим наблюдения/автослежения
-# git-status-short         -> короткий git-статус
-# git-save "msg"           -> сохранить изменения в git
-# git-sync "msg"           -> синхронизация git с сообщением
-# deploy-all "msg"         -> полный деплой/синхронизация проекта
-# project-health           -> общая проверка состояния проекта
-#
-# node -v                  -> проверить Node.js
-# npm -v                   -> проверить npm
-# clasp -v                 -> проверить clasp
-# clasp login              -> вход в Google Apps Script
-# clasp pull               -> скачать код из GAS
-# clasp push               -> загрузить код в GAS
-# clasp open               -> открыть GAS-проект в браузере
-# git status               -> состояние файлов Git
-# git add .                -> добавить изменения в Git
-# git commit -m "..."      -> создать коммит
-# git pull origin main     -> скачать изменения из GitHub
-# git push origin main     -> отправить изменения на GitHub
-# code .                   -> открыть проект в VS Code
-#
-# ============================================================
-# КОНЕЦ ФАЙЛА
-# ============================================================
+---
+
+## 15. Что нельзя делать
+
+### Неправильно
+
+Нельзя вставлять в терминал строки вида:
+
+```powershell
+PS C:\Users\User\Desktop\whatsapp-sheets-bot> gas-status
+```
+
+Нельзя вставлять в терминал текст ошибок:
+
+```text
+At line:1 char:1
++ gas-status
+...
+```
+
+Нельзя вставлять **весь `.md`-файл целиком** в терминал.
+
+Нельзя запускать `clasp push` / `gas-push`, если перед этим не сделал `gas-pull` после правок в Google Apps Script editor.  
+Иначе можно тупо перезаписать облачные изменения локальной версией.
+
+Нельзя считать, что `&&` будет вести себя одинаково во всех версиях PowerShell.  
+Для этой шпаргалки безопаснее писать команды отдельными строками.
+
+### Правильно
+
+В терминал вставляются только **сами команды**, например:
+
+```powershell
+gas-status
+```
+
+или:
+
+```powershell
+. .\dev-shell.ps1
+```
+
+---
+
+## 16. Короткая шпаргалка
+
+```powershell
+# === СТАРТ ===
+cd "C:\Users\User\Desktop\whatsapp-sheets-bot"
+$PSVersionTable.PSVersion
+. .\dev-shell.ps1
+project-health
+clasp whoami
+
+# === РАБОТА ===
+gas-pull
+gas-push-smart
+git-save "update"
+
+# === ФИНИШ ===
+git-status-short
+gas-status
+project-health
+```
+
+---
+
+## Финальное правило
+
+Если не уверен, что делать:
+
+```powershell
+cd "C:\Users\User\Desktop\whatsapp-sheets-bot"
+$PSVersionTable.PSVersion
+. .\dev-shell.ps1
+project-health
+```
+
+После этого уже видно:
+
+- жива ли среда
+- виден ли Git
+- виден ли Node
+- работает ли clasp
+- авторизован ли clasp
+- чист ли Git-статус
+- видит ли проект GAS-файлы
