@@ -120,5 +120,5 @@ function switchBotToMonth_(monthSheetName) {
   const ss = SpreadsheetApp.getActive();
   const sh = ss.getSheetByName(monthSheetName);
   if (sh) sh.activate();
-  SpreadsheetApp.getUi().toast(`Бот активний: ${monthSheetName}`, 'WhatsAppBot', 3);
+  SpreadsheetApp.getUi().toast(`Бот активний: ${monthSheetName}`, ' WhatsApp-Sheets-Bot', 3);
 }

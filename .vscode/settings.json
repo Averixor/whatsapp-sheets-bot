@@ -1,0 +1,15 @@
+{
+  "git.path": "C:\\Users\\User\\Documents\\PortableGit\\cmd\\git.exe",
+
+  "terminal.integrated.profiles.windows": {
+    "PowerShell WAPB": {
+      "source": "PowerShell",
+      "args": ["-NoLogo"],
+      "env": {
+        "PATH": "C:\\Users\\User\\Documents\\PortableGit\\cmd;C:\\Users\\User\\OneDrive\\Документи\\node-v20.20.1-win-x64;${env:PATH}"
+      }
+    }
+  },
+
+  "terminal.integrated.defaultProfile.windows": "PowerShell WAPB"
+}

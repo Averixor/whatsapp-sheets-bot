@@ -10,9 +10,7 @@
 function showSidebar() {
   const html = HtmlService.createTemplateFromFile('Sidebar')
     .evaluate()
-    .setTitle('🤖 WhatsAppBot')
-    .setFaviconUrl('https://www.whatsapp.com/favicon.ico');
-
+    .setTitle('\u00A0\u00A0\u00A0WhatsApp-Sheets-Bot')
   SpreadsheetApp.getUi().showSidebar(html);
 }
 

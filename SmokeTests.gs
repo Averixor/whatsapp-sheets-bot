@@ -722,4 +722,3 @@ function runStage5SmokeTests(options) {
 
   return report;
 }
-

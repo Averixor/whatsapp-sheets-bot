@@ -5,7 +5,7 @@
 
 const DialogPresenter_ = (function() {
   function _show(output, title) {
-    SpreadsheetApp.getUi().showModalDialog(output, title || 'WAPB');
+    SpreadsheetApp.getUi().showModalDialog(output, title || 'WASB');
   }
 
   function showLinkDialog(data) {
