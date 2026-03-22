@@ -51,9 +51,12 @@ cd "C:\Users\User\Desktop\whatsapp-sheets-bot"
 Это рекомендуемый старт почти всегда.
 
 ```powershell
-# === САМЫЙ БЕЗОПАСНЫЙ СТАРТ (рекомендуется всегда) ===
 cd "C:\Users\User\Desktop\whatsapp-sheets-bot"
-
+$PSVersionTable.PSVersion
+. .\dev-shell.ps1
+project-health
+gas-status
+git-status-short
 ```
 
 Что это даёт:
@@ -73,13 +76,16 @@ cd "C:\Users\User\Desktop\whatsapp-sheets-bot"
 $PSVersionTable.PSVersion
 ```
 
-Предпочтительно, чтобы `Major` был `7`.
+Для этого проекта **PowerShell 5.1 уже работает**.  
+PowerShell 7 тоже нормален, но требование «обязательно только 7» здесь не нужно.
 
-Если видишь `5`, это ещё не приговор, но:
-- сначала запусти `project-health`
-- если начинаются странности, открой `pwsh` и работай уже там
+Если видишь `5`, это не ошибка. Сначала просто загрузи shell и прогони:
 
-Пример:
+```powershell
+project-health
+```
+
+Если хочешь открыть PowerShell 7 вручную:
 
 ```powershell
 pwsh
@@ -104,37 +110,73 @@ pwsh
 WAPB DEV ENV LOADED
 ```
 
+### Как делать нельзя
+
+Вот так запускать не надо:
+
+```powershell
+dev-shell.ps1
+```
+
+Так PowerShell часто отвечает, что команда не найдена. Это не поломка файла, а неправильный способ запуска.
+
 ---
 
 ## 4. Проверка, что окружение реально работает
 
 Сразу после загрузки shell выполни:
 
-```
+```powershell
 Get-Command gas-status
 Get-Command gas-pull
 Get-Command gas-push
 Get-Command project-health
+Get-Command deploy-all
 ```
 
 Потом выполни:
 
-```
+```powershell
 project-health
 ```
 
-И отдельно полезно проверить авторизацию clasp:
+И отдельно полезно проверить, что alias реально смотрят в нужные команды:
 
 ```powershell
-clasp whoami
+(Get-Command gas-status).Definition
+(Get-Command gas-pull).Definition
+(Get-Command gas-push).Definition
+(Get-Command project-health).Definition
+(Get-Command deploy-all).Definition
 ```
 
-Если `clasp whoami` падает, попробуй:
+Ожидаемо должно быть примерно так:
 
+- `gas-status` -> `Get-GasStatus`
+- `gas-pull` -> `Invoke-GasPull`
+- `gas-push` -> `Invoke-GasPush`
+- `project-health` -> `Test-ProjectHealth`
+- `deploy-all` -> `Invoke-DeployAll`
+
+### Про `clasp whoami`
+
+В этом окружении команда `clasp whoami` может не поддерживаться текущей версией `clasp`.  
+Поэтому **не считай её обязательной проверкой**.
+
+Вместо неё используй:
+
+```powershell
+clasp --version
+gas-status
+project-health
 ```
+
+Если реально нужно перелогиниться:
+
+```powershell
 clasp logout
 clasp login
-clasp whoami
+gas-status
 ```
 
 ---
@@ -145,7 +187,7 @@ clasp whoami
 |---|---|
 | Загрузить shell | `. .\dev-shell.ps1` |
 | Проверить всё | `project-health` |
-| Проверить auth clasp | `clasp whoami` |
+| Проверить версию clasp | `clasp --version` |
 | Подтянуть из GAS | `gas-pull` |
 | Отправить в GAS | `gas-push` |
 | Отправить только если есть изменения | `gas-push-smart` |
@@ -270,8 +312,7 @@ project-health
 ### Сценарий D — если нужно сразу отправить и в GitHub, и в GAS
 
 ```powershell
-git-sync "update"
-gas-push-smart
+deploy-all "update"
 project-health
 ```
 
@@ -365,18 +406,12 @@ project-health
 - нет ли конфликта путей
 - живо ли окружение проекта
 
-### Если clasp не видит аккаунт
-
-```powershell
-clasp whoami
-```
-
-Если ошибка:
+### Если clasp не пускает
 
 ```powershell
 clasp logout
 clasp login
-clasp whoami
+gas-status
 ```
 
 ### Если проблема с кодировкой
@@ -637,10 +672,22 @@ At line:1 char:1
 Нельзя вставлять **весь `.md`-файл целиком** в терминал.
 
 Нельзя запускать `clasp push` / `gas-push`, если перед этим не сделал `gas-pull` после правок в Google Apps Script editor.  
-Иначе можно тупо перезаписать облачные изменения локальной версией.
+Иначе можно перезаписать облачные изменения локальной версией.
 
 Нельзя считать, что `&&` будет вести себя одинаково во всех версиях PowerShell.  
 Для этой шпаргалки безопаснее писать команды отдельными строками.
+
+Нельзя запускать `dev-shell.ps1` как обычную команду без точки и пробела:
+
+```powershell
+dev-shell.ps1
+```
+
+Правильно:
+
+```powershell
+. .\dev-shell.ps1
+```
 
 ### Правильно
 
