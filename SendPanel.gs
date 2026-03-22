@@ -304,8 +304,8 @@ function buildSendPanelSidebarResponse_(meta) {
     notSentCount: data.filter(item => item.status === getSendPanelNotSentStatus_() && !item.sent).length,
     errorCount: data.filter(item => String(item.status || '').indexOf(getSendPanelErrorPrefix_()) === 0).length,
     sentCount: data.filter(item => item.sent === true || item.status === getSendPanelSentStatus_()).length,
-    month: fresh && fresh.month ? fresh.month : getBotMonthSheetName_(),
-    date: fresh && fresh.date ? fresh.date : Utilities.formatDate(new Date(), CONFIG.TZ, 'dd.MM.yyyy')
+    month: meta && meta.month ? meta.month : getBotMonthSheetName_(),
+    date: meta && meta.date ? meta.date : Utilities.formatDate(new Date(), CONFIG.TZ, 'dd.MM.yyyy')
   };
 }
 
@@ -320,23 +320,30 @@ function generateSendPanel() {
   }
 }
 
+function isSendPanelCurrentDate_() {
+  const panel = SpreadsheetApp.getActive().getSheetByName(CONFIG.SEND_PANEL_SHEET);
+  if (!panel) return false;
+
+  const storedDate = readSendPanelStoredDate_(panel);
+  const today = Utilities.formatDate(new Date(), CONFIG.TZ, 'dd.MM.yyyy');
+  return storedDate === today;
+}
+
 function sendAllFromSendPanel() {
   const ui = SpreadsheetApp.getUi();
-
-  try {
-    ensureSendPanelFreshForToday_();
-  } catch (e) {
-    return ui.alert(`❌ ${e && e.message ? e.message : String(e)}`);
-  }
-
   const panel = SpreadsheetApp.getActive().getSheetByName(CONFIG.SEND_PANEL_SHEET);
+
   if (!panel) return ui.alert('❌ Спочатку створіть панель');
+
+  if (!isSendPanelCurrentDate_()) {
+    return ui.alert('⚠️ Панель застаріла. Спочатку пересоберіть панель на поточну дату.');
+  }
 
   const last = panel.getLastRow();
   if (last < CONFIG.SEND_PANEL_DATA_START_ROW) return ui.alert('❌ Панель порожня');
 
   const countRows = last - (CONFIG.SEND_PANEL_DATA_START_ROW - 1);
-  const values = panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 1, countRows, 7).getDisplayValues();
+  const values = panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 1, countRows, 5).getDisplayValues();
   const formulas = panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 6, countRows, 1).getFormulas().flat();
   const sent = panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 7, countRows, 1).getValues().flat();
 
@@ -350,7 +357,6 @@ function sendAllFromSendPanel() {
 
     items.push({
       fio: String(row[0] || '').trim(),
-      phone: String(row[1] || '').replace(/^'/, '').trim(),
       code: String(row[2] || '').trim(),
       tasks: String(row[3] || '').trim(),
       status: String(row[4] || '').trim(),

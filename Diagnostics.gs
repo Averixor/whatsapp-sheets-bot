@@ -736,7 +736,7 @@ function testFunctions() {
     }
 
     try {
-      const f = _formatPhoneDisplay_('+380664276894');
+      const f = _formatPhoneDisplay_('+380661234567');
       _pushCheck_(report, {
         type: 'test_function',
         name: '_formatPhoneDisplay_',

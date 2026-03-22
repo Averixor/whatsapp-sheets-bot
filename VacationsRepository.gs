@@ -32,7 +32,7 @@ const VacationsRepository_ = (function() {
   }
 
   function getCurrentForFio(fio, dateStr) {
-    const target = _parseUaDate_(dateStr) || new Date();
+    const target = parseUaDate_(dateStr) || new Date();
     target.setHours(12, 0, 0, 0);
 
     const matches = findByFio(fio).filter(function(item) {
@@ -53,7 +53,7 @@ const VacationsRepository_ = (function() {
   }
 
   function getNextForFio(fio, dateStr) {
-    const target = _parseUaDate_(dateStr) || new Date();
+    const target = parseUaDate_(dateStr) || new Date();
     target.setHours(0, 0, 0, 0);
 
     const future = findByFio(fio).filter(function(item) {

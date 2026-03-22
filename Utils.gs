@@ -12,7 +12,7 @@ function _todayStr_() {
 }
 
 /** @deprecated Використовуйте DateUtils_.parseUaDate() */
-function _parseUaDate_(dateStr) {
+function parseUaDate_(dateStr) {
   return DateUtils_.parseUaDate(dateStr);
 }
 

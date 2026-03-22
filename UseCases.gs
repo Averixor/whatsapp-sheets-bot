@@ -208,8 +208,8 @@ const Stage4UseCases_ = (function() {
         };
       },
       execute: function(input, beforeState, plan, context) {
-        const start = _parseUaDate_(input.startDate);
-        const end = _parseUaDate_(input.endDate);
+        const start = parseUaDate_(input.startDate);
+        const end = parseUaDate_(input.endDate);
         const reports = [];
         let cursor = new Date(start);
         while (cursor.getTime() <= end.getTime()) {
@@ -705,7 +705,7 @@ const Stage4UseCases_ = (function() {
         return { payload: info.payload, warnings: [] };
       },
       execute: function(input, beforeState, plan, context) {
-        const targetDate = _parseUaDate_(input.dateStr || input.date) || new Date();
+        const targetDate = parseUaDate_(input.dateStr || input.date) || new Date();
         const vacations = runVacationEngine_(targetDate) || {};
         const birthdays = runBirthdayEngine_(targetDate) || {};
         return {

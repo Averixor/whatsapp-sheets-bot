@@ -5,7 +5,7 @@
 
 const VacationService_ = (function() {
   function check(dateStr) {
-    const target = _parseUaDate_(dateStr || _todayStr_()) || new Date();
+    const target = parseUaDate_(dateStr || _todayStr_()) || new Date();
     const vacations = runVacationEngine_(target);
     const birthdays = runBirthdayEngine_(target);
 
