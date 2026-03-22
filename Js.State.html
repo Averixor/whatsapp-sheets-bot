@@ -1,6 +1,4 @@
 <script>
-// Js.State — active Stage 7.1 runtime fragment.
-
   const UiState = {
     patch(values = {}) {
       Object.assign(STATE, values || {});
@@ -10,6 +8,11 @@
       return Array.isArray(keys) ? keys.slice() : [keys];
     }
   };
+
+  if (typeof STATE.panelRefreshSeq !== 'number') STATE.panelRefreshSeq = 0;
+  if (typeof STATE.panelRefreshInProgress !== 'boolean') STATE.panelRefreshInProgress = false;
+  if (!Array.isArray(STATE.lastNonEmptyPanelData)) STATE.lastNonEmptyPanelData = [];
+  if (typeof STATE.lastPanelDataUpdatedAt !== 'number') STATE.lastPanelDataUpdatedAt = 0;
 
   const LoaderService = {
     show: () => showLoading(),
@@ -50,7 +53,15 @@
       }
 
       if (refresh.includes('panel')) {
-        try { await refreshSendPanelDataFromServer({ silent: true }); } catch (_) {}
+        try {
+          await refreshSendPanelDataFromServer({
+            silent: true,
+            preserveNonEmpty: true,
+            retries: 2,
+            retryDelayMs: 450,
+            reason: 'RenderCoordinator.sync'
+          });
+        } catch (_) {}
       }
 
       return true;
@@ -61,14 +72,23 @@
     async run(methodName, handler, options = {}) {
       const opts = options || {};
       if (opts.showLoader !== false) LoaderService.show();
+
       try {
         const result = await handler();
+
         if (result?.success !== false) {
-          await RenderCoordinator.sync(result?.meta || result?.data?.meta || result?.raw?.data?.meta || {});
+          await RenderCoordinator.sync(
+            result?.meta ||
+            result?.data?.meta ||
+            result?.raw?.data?.meta ||
+            {}
+          );
         }
+
         if (result?.success && opts.successMessage) {
           ToastService.success(opts.successMessage);
         }
+
         return result;
       } catch (error) {
         ErrorPresenter.present(error);
@@ -90,8 +110,23 @@
     }
   }
 
-  function setCurrentPanelData(panelData) {
-    STATE.currentPanelData = Array.isArray(panelData) ? panelData : [];
+  function clonePanelRows_(rows) {
+    return Array.isArray(rows)
+      ? rows.map(item => (item && typeof item === 'object' ? Object.assign({}, item) : item))
+      : [];
+  }
+
+  function setCurrentPanelData(panelData, options = {}) {
+    const rows = clonePanelRows_(panelData);
+    const preserveLastNonEmpty = options.preserveLastNonEmpty !== false;
+
+    STATE.currentPanelData = rows;
+
+    if (preserveLastNonEmpty && rows.length > 0) {
+      STATE.lastNonEmptyPanelData = clonePanelRows_(rows);
+      STATE.lastPanelDataUpdatedAt = Date.now();
+    }
+
     updateSendUnsentButtonState();
     return STATE.currentPanelData;
   }
@@ -124,21 +159,92 @@
       : 'Немає невідправлених';
   }
 
+  function waitMs_(ms) {
+    return new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms || 0))));
+  }
+
   async function refreshSendPanelDataFromServer(options = {}) {
-    const { silent = false } = options;
-    const result = await Stage4Api.getSendPanelData();
+    const {
+      silent = false,
+      preserveNonEmpty = true,
+      retries = 2,
+      retryDelayMs = 450,
+      reason = 'manual-refresh'
+    } = options;
 
-    if (!result?.success) {
-      throw new Error(result?.error || 'Не вдалося перечитати SEND_PANEL');
+    const refreshToken = ++STATE.panelRefreshSeq;
+    STATE.panelRefreshInProgress = true;
+
+    let lastFailure = null;
+
+    try {
+      for (let attempt = 0; attempt <= retries; attempt++) {
+        const result = await Stage4Api.getSendPanelData();
+
+        if (!result?.success) {
+          lastFailure = new Error(result?.error || 'Не вдалося перечитати SEND_PANEL');
+          break;
+        }
+
+        const rows = Array.isArray(result.data) ? result.data : [];
+        const hasRows = rows.length > 0;
+
+        const currentRows = Array.isArray(STATE.currentPanelData) ? STATE.currentPanelData : [];
+        const currentHasRows = currentRows.length > 0;
+
+        if (refreshToken !== STATE.panelRefreshSeq) {
+          return result;
+        }
+
+        if (hasRows || !preserveNonEmpty || !currentHasRows) {
+          setCurrentPanelData(rows);
+
+          if (!silent) {
+            logToConsole(`🔄 SEND_PANEL синхронізовано (${reason})`, 'info');
+          }
+
+          return result;
+        }
+
+        if (attempt < retries) {
+          if (!silent) {
+            logToConsole(
+              `⏳ SEND_PANEL ще перебудовується, повторна спроба ${attempt + 2}/${retries + 1}`,
+              'warning'
+            );
+          }
+
+          await waitMs_(retryDelayMs * (attempt + 1));
+          continue;
+        }
+
+        const fallbackRows =
+          Array.isArray(STATE.lastNonEmptyPanelData) && STATE.lastNonEmptyPanelData.length
+            ? STATE.lastNonEmptyPanelData
+            : currentRows;
+
+        setCurrentPanelData(fallbackRows, { preserveLastNonEmpty: true });
+
+        if (!silent) {
+          logToConsole(
+            '⚠️ Сервер тимчасово повернув порожній SEND_PANEL — залишаю останні непорожні дані',
+            'warning'
+          );
+        }
+
+        return Object.assign({}, result, {
+          data: clonePanelRows_(fallbackRows),
+          rows: clonePanelRows_(fallbackRows),
+          totalCount: fallbackRows.length
+        });
+      }
+
+      throw lastFailure || new Error('Не вдалося перечитати SEND_PANEL');
+    } finally {
+      if (refreshToken === STATE.panelRefreshSeq) {
+        STATE.panelRefreshInProgress = false;
+      }
     }
-
-    setCurrentPanelData(result.data);
-
-    if (!silent) {
-      logToConsole('🔄 SEND_PANEL синхронізовано', 'info');
-    }
-
-    return result;
   }
 
   function openLinkSafe(url) {

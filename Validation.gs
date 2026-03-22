@@ -20,7 +20,7 @@ function validateDatePayload_(payload, fieldName) {
   const source = (payload && typeof payload === 'object') ? payload : { date: payload };
   const raw = source[key] || source.dateStr || source.date || _todayStr_();
   const dateStr = _stage4NormalizeDateValue_(raw);
-  const parsed = parseUaDate_(dateStr);
+  const parsed = _parseUaDate_(dateStr);
   _stage4Assert_(parsed instanceof Date && !isNaN(parsed.getTime()), 'validateDatePayload_', { field: key, value: raw }, `Не вдалося розпізнати дату "${raw}"`);
   return {
     dateStr: dateStr,

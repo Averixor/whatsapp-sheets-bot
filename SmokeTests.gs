@@ -15,22 +15,22 @@ function _smokeHasRouteApi_(fnName) {
   if (!target) return false;
   try {
     if (typeof getStage6ARouteByApiMethod_ === 'function') return !!getStage6ARouteByApiMethod_(target);
-  } catch (e) {}
+  } catch (e) { }
   try {
     if (typeof listStage6ARoutes_ === 'function') {
-      return (listStage6ARoutes_() || []).some(function(item) {
+      return (listStage6ARoutes_() || []).some(function (item) {
         return item && item.publicApiMethod === target;
       });
     }
-  } catch (e) {}
+  } catch (e) { }
   try {
     if (typeof getRoutingRegistry_ === 'function') {
-      return Object.keys(getRoutingRegistry_() || {}).some(function(key) {
+      return Object.keys(getRoutingRegistry_() || {}).some(function (key) {
         const item = (getRoutingRegistry_() || {})[key];
         return item && item.publicApiMethod === target;
       });
     }
-  } catch (e) {}
+  } catch (e) { }
   return false;
 }
 
@@ -40,14 +40,13 @@ function _smokeHasFn_(name) {
   try {
     // eslint-disable-next-line no-eval
     if (eval(`typeof ${target} === 'function'`)) return true;
-  } catch (e) {}
+  } catch (e) { }
   try {
     const g = Function('return this')();
     if (g && typeof g[target] === 'function') return true;
-  } catch (e) {}
+  } catch (e) { }
   return _smokeHasRouteApi_(target);
 }
-
 
 function _smokePush_(report, name, fn, options) {
   const opts = options || {};
@@ -76,7 +75,7 @@ function _smokePush_(report, name, fn, options) {
 
 function _assertUnifiedContract_(result, functionName) {
   _smokeAssert_(result && typeof result === 'object', `${functionName}() не повернув об'єкт`);
-  ['success', 'message', 'error', 'data', 'context', 'warnings'].forEach(function(field) {
+  ['success', 'message', 'error', 'data', 'context', 'warnings'].forEach(function (field) {
     _smokeAssert_(field in result, `${functionName}() не повернув поле ${field}`);
   });
 }
@@ -98,7 +97,7 @@ function _assertStage4Meta_(result, functionName) {
 }
 
 function _runContractTest_(report, name, fn, options) {
-  _smokePush_(report, name, function() {
+  _smokePush_(report, name, function () {
     const result = fn();
     _assertStage4Meta_(result, name);
     return `success=${result.success}`;
@@ -127,41 +126,41 @@ function runStage4ScenarioTests(options) {
     warnings: []
   };
 
-  _runContractTest_(report, 'apiStage4GetMonthsList', function() {
+  _runContractTest_(report, 'apiStage4GetMonthsList', function () {
     const result = apiStage4GetMonthsList();
     _smokeAssert_(Array.isArray(result.data.result.months), 'months[] не повернуто');
     return result;
   });
 
-  _runContractTest_(report, 'apiStage4GetSidebarData', function() {
+  _runContractTest_(report, 'apiStage4GetSidebarData', function () {
     const result = apiStage4GetSidebarData(testDate);
     _smokeAssert_(Array.isArray(result.data.result.personnel), 'personnel[] не повернуто');
     return result;
   }, { skipOnError: true });
 
-  _runContractTest_(report, 'apiStage4GetSendPanelData', function() {
+  _runContractTest_(report, 'apiStage4GetSendPanelData', function () {
     const result = apiStage4GetSendPanelData();
     _smokeAssert_(Array.isArray(result.data.result.rows), 'rows[] не повернуто');
     return result;
   }, { skipOnError: true });
 
-  _runContractTest_(report, 'apiGenerateSendPanelForDate', function() {
+  _runContractTest_(report, 'apiGenerateSendPanelForDate', function () {
     const result = apiGenerateSendPanelForDate({ dryRun: true, date: testDate });
     _smokeAssert_(Array.isArray(result.data.result.rows), 'rows[] не повернуто');
     return result;
   });
 
-  _runContractTest_(report, 'apiGenerateSendPanelForRange', function() {
+  _runContractTest_(report, 'apiGenerateSendPanelForRange', function () {
     const result = apiGenerateSendPanelForRange({ dryRun: true, startDate: testDate, endDate: testDate });
     _smokeAssert_(Array.isArray(result.data.result.reports), 'reports[] не повернуто');
     return result;
   });
 
-  _runContractTest_(report, 'apiMarkPanelRowsAsSent', function() {
+  _runContractTest_(report, 'apiMarkPanelRowsAsSent', function () {
     return apiMarkPanelRowsAsSent([Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3], { dryRun: true });
   }, { skipOnError: true });
 
-  _runContractTest_(report, 'apiMarkPanelRowsAsUnsent', function() {
+  _runContractTest_(report, 'apiMarkPanelRowsAsUnsent', function () {
     return apiMarkPanelRowsAsUnsent([Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3], { dryRun: true });
   }, { skipOnError: true });
 
@@ -169,30 +168,30 @@ function runStage4ScenarioTests(options) {
     return apiSendPendingRows({ dryRun: true, limit: 10 });
   }, { skipOnError: true });
 
-  _runContractTest_(report, 'apiBuildDaySummary', function() {
+  _runContractTest_(report, 'apiBuildDaySummary', function () {
     const result = apiBuildDaySummary(testDate);
     _smokeAssert_(typeof result.data.result.summary === 'string', 'summary не повернуто');
     return result;
   }, { skipOnError: true });
 
-  _runContractTest_(report, 'apiBuildDetailedSummary', function() {
+  _runContractTest_(report, 'apiBuildDetailedSummary', function () {
     const result = apiBuildDetailedSummary(testDate);
     _smokeAssert_(typeof result.data.result.summary === 'string', 'summary не повернуто');
     return result;
   }, { skipOnError: true });
 
-  _runContractTest_(report, 'apiOpenPersonCard', function() {
+  _runContractTest_(report, 'apiOpenPersonCard', function () {
     _smokeAssert_(!!testCallsign, 'Не знайдено позивного для тесту картки');
     const result = apiOpenPersonCard(testCallsign, testDate);
     _smokeAssert_(!!result.data.result.callsign, 'callsign не повернуто');
     return result;
   }, { skipOnError: true });
 
-  _runContractTest_(report, 'apiCheckVacationsAndBirthdays', function() {
+  _runContractTest_(report, 'apiCheckVacationsAndBirthdays', function () {
     return apiCheckVacationsAndBirthdays(testDate);
   });
 
-  _runContractTest_(report, 'apiStage4SwitchBotToMonth', function() {
+  _runContractTest_(report, 'apiStage4SwitchBotToMonth', function () {
     return apiStage4SwitchBotToMonth(getBotMonthSheetName_());
   });
 
@@ -285,8 +284,8 @@ function runStage4SmokeTests(options) {
 
   _smokePush_(report, 'compatibility wrappers lead to canonical api', function () {
     getStage4CompatibilityMap_()
-      .filter(function(item) { return !!item.verifySourceToken; })
-      .forEach(function(item) {
+      .filter(function (item) { return !!item.verifySourceToken; })
+      .forEach(function (item) {
         if (!_stage3HasFn_(item.name)) return;
         const src = String(_global_()[item.name]);
         _smokeAssert_(src.indexOf(item.verifySourceToken) !== -1, `${item.name} не веде до ${item.verifySourceToken}`);
@@ -326,7 +325,6 @@ function runStage4SmokeTests(options) {
 
   return report;
 }
-
 
 function runStage5ScenarioTests(options) {
   const opts = options || {};

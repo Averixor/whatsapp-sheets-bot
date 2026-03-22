@@ -1,5 +1,5 @@
 <script>
-// Js.Core — active Stage 7.1 runtime fragment.
+  // Js.Core — active Stage 7.1 runtime fragment.
 
   // =========================
   // CONSTANTS
@@ -43,7 +43,12 @@
     waSenderWindow: null,
 
     consoleInitialized: false,
-    DIAG_TEST_MODE: !!window.DIAG_TEST_MODE
+    DIAG_TEST_MODE: !!window.DIAG_TEST_MODE,
+
+    panelRefreshSeq: 0,
+    panelRefreshInProgress: false,
+    lastNonEmptyPanelData: [],
+    lastPanelDataUpdatedAt: 0
   };
 
   // =========================

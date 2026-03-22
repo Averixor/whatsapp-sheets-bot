@@ -12,15 +12,19 @@
       return;
     }
 
-    setCurrentPanelData(result.data);
+    const rows = Array.isArray(result.rows)
+      ? result.rows
+      : (Array.isArray(result.data) ? result.data : []);
+
+    setCurrentPanelData(rows);
 
     logToConsole(`📋 Панель створено для ${result.month || '?'}`, 'success');
     logToConsole(
-      `📊 Всього: ${result.totalCount || 0}, Готових: ${result.readyCount || 0}, Помилок: ${result.errorCount || 0}`,
+      `📊 Всього: ${result.totalCount || rows.length || 0}, Готових: ${result.readyCount || 0}, Помилок: ${result.errorCount || 0}`,
       'info'
     );
 
-    showSendPanel();
+      showSendPanel();
   }
 
   function showSendPanel() {
