@@ -357,6 +357,7 @@ function sendAllFromSendPanel() {
 
     items.push({
       fio: String(row[0] || '').trim(),
+      phone: String(row[1] || '').replace(/^'/, '').trim(),
       code: String(row[2] || '').trim(),
       tasks: String(row[3] || '').trim(),
       status: String(row[4] || '').trim(),
