@@ -1,0 +1,447 @@
+[1mdiff --git a/SendPanel.gs b/SendPanel.gs[m
+[1mindex a0bc228..db851e0 100644[m
+[1m--- a/SendPanel.gs[m
+[1m+++ b/SendPanel.gs[m
+[36m@@ -1,44 +1,103 @@[m
+ /************ ПАНЕЛЬ ВІДПРАВКИ ************/[m
+[32m+[m
+ function extractHyperlinkUrl_(formula) {[m
+[31m-  const m = String(formula).match(/HYPERLINK\("([^"]+)"/i);[m
+[32m+[m[32m  const m = String(formula || '').match(/HYPERLINK\("([^"]+)"/i);[m
+   return m ? m[1] : '';[m
+ }[m
+ [m
+ function makeSendPanelKey_(f, p, c) {[m
+[31m-  return [normalizeFIO_(f || ''), String(p || '').replace(/[^\d]/g, ''), String(c || '').trim()].join('|');[m
+[32m+[m[32m  return [[m
+[32m+[m[32m    normalizeFIO_(f || ''),[m
+[32m+[m[32m    String(p || '').replace(/[^\d]/g, ''),[m
+[32m+[m[32m    String(c || '').trim()[m
+[32m+[m[32m  ].join('|');[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mfunction getSendPanelReadyStatus_() {[m
+[32m+[m[32m  return '✅ Готово';[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mfunction getSendPanelOpenedStatus_() {[m
+[32m+[m[32m  return '🟦 Відкрито';[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mfunction getSendPanelSentStatus_() {[m
+[32m+[m[32m  return '📤 Відправлено';[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mfunction getSendPanelNotSentStatus_() {[m
+[32m+[m[32m  return '↩️ Не відправлено';[m
+ }[m
+ [m
+[31m-function readSendPanelSentMap_(panel) {[m
+[32m+[m[32mfunction getSendPanelErrorPrefix_() {[m
+[32m+[m[32m  return '❌';[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mfunction getSendPanelMetaDateCellA1_() {[m
+[32m+[m[32m  return 'H1';[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mfunction getSendPanelWhatsappTabName_() {[m
+[32m+[m[32m  return 'wapb_whatsapp_tab';[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mfunction readSendPanelStoredDate_(panel) {[m
+[32m+[m[32m  if (!panel) return '';[m
+[32m+[m[32m  return String(panel.getRange(getSendPanelMetaDateCellA1_()).getDisplayValue() || '').trim();[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mfunction readSendPanelStateMap_(panel) {[m
+   const map = {};[m
+   const last = panel.getLastRow();[m
+   if (last < CONFIG.SEND_PANEL_DATA_START_ROW) return map;[m
+[31m-  const vals = panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 1,[m
+[31m-    last - (CONFIG.SEND_PANEL_DATA_START_ROW - 1), 7)[m
+[31m-    .getValues();[m
+[32m+[m
+[32m+[m[32m  const vals = panel.getRange([m
+[32m+[m[32m    CONFIG.SEND_PANEL_DATA_START_ROW,[m
+[32m+[m[32m    1,[m
+[32m+[m[32m    last - (CONFIG.SEND_PANEL_DATA_START_ROW - 1),[m
+[32m+[m[32m    7[m
+[32m+[m[32m  ).getValues();[m
+[32m+[m
+   vals.forEach(row => {[m
+     const [fio, phone, code, tasks, status, action, sent] = row;[m
+[31m-    if (fio && phone && code && sent) map[makeSendPanelKey_(fio, phone, code)] = true;[m
+[32m+[m[32m    if (!fio || !phone || !code) return;[m
+[32m+[m
+[32m+[m[32m    map[makeSendPanelKey_(fio, phone, code)] = {[m
+[32m+[m[32m      status: String(status || '').trim(),[m
+[32m+[m[32m      sent: sent === true || String(sent).toUpperCase() === 'TRUE'[m
+[32m+[m[32m    };[m
+   });[m
+[32m+[m
+   return map;[m
+ }[m
+ [m
+[31m-function getSendPanelReadyStatus_() {[m
+[31m-  return '✅';[m
+[31m-}[m
+[32m+[m[32mfunction normalizeSendPanelState_(state) {[m
+[32m+[m[32m  if (!state) {[m
+[32m+[m[32m    return { status: getSendPanelReadyStatus_(), sent: false };[m
+[32m+[m[32m  }[m
+ [m
+[31m-function getSendPanelSentStatus_() {[m
+[31m-  return '📤 Відправлено';[m
+[31m-}[m
+[32m+[m[32m  if (state.sent === true || state.status === getSendPanelSentStatus_()) {[m
+[32m+[m[32m    return { status: getSendPanelSentStatus_(), sent: true };[m
+[32m+[m[32m  }[m
+ [m
+[31m-function getSendPanelErrorPrefix_() {[m
+[31m-  return '❌';[m
+[32m+[m[32m  if (state.status === getSendPanelOpenedStatus_()) {[m
+[32m+[m[32m    return { status: getSendPanelOpenedStatus_(), sent: false };[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  if (state.status === getSendPanelNotSentStatus_()) {[m
+[32m+[m[32m    return { status: getSendPanelNotSentStatus_(), sent: false };[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  return { status: getSendPanelReadyStatus_(), sent: false };[m
+ }[m
+ [m
+[31m-function ensureSendPanelStructure_(panel, botMonth) {[m
+[32m+[m[32mfunction ensureSendPanelStructure_(panel, botMonth, panelDate) {[m
+   panel.clearContents();[m
+[32m+[m
+[32m+[m[32m  panel.getRange(1, 1, 1, 7).breakApart();[m
+   panel.getRange(1, 1, 1, 7)[m
+     .merge()[m
+[31m-    .setValue(`🤖 Активний місяць: ${botMonth}`)[m
+[32m+[m[32m    .setValue(`🤖 Активний місяць: ${botMonth} | Дата панелі: ${panelDate}`)[m
+     .setFontWeight('bold')[m
+     .setFontSize(14)[m
+     .setHorizontalAlignment('center')[m
+[36m@@ -49,59 +108,88 @@[m [mfunction ensureSendPanelStructure_(panel, botMonth) {[m
+     .setFontWeight('bold')[m
+     .setHorizontalAlignment('center')[m
+     .setBackground('#f0f0f0');[m
+[31m-}[m
+[31m-[m
+[31m-function rebuildSendPanelCore_() {[m
+[31m-  const ss = SpreadsheetApp.getActive();[m
+[31m-  const source = getBotSheet_();[m
+[31m-  let panel = ss.getSheetByName(CONFIG.SEND_PANEL_SHEET);[m
+[31m-  const prevSent = panel ? readSendPanelSentMap_(panel) : {};[m
+[31m-  if (!panel) panel = ss.insertSheet(CONFIG.SEND_PANEL_SHEET);[m
+ [m
+[31m-  const botMonth = getBotMonthSheetName_();[m
+[31m-  ensureSendPanelStructure_(panel, botMonth);[m
+[32m+[m[32m  panel.getRange(getSendPanelMetaDateCellA1_()).setValue(panelDate);[m
+ [m
+[31m-  const phones = loadPhonesMap_();[m
+[31m-  const dict = loadDictMap_();[m
+[31m-  const today = Utilities.formatDate(new Date(), CONFIG.TZ, 'dd.MM.yyyy');[m
+[31m-  const ref = source.getRange(CONFIG.CODE_RANGE_A1);[m
+[31m-  const col = findTodayColumn_(source, today);[m
+[31m-  if (col === -1) {[m
+[31m-    throw new Error(`Колонка ${today} не знайдена в аркуші "${source.getName()}"`);[m
+[32m+[m[32m  try {[m
+[32m+[m[32m    panel.hideColumns(8);[m
+[32m+[m[32m  } catch (e) {[m
+[32m+[m[32m    // якщо з якоїсь причини не вийде — не критично[m
+   }[m
+[32m+[m[32m}[m
+ [m
+[31m-  const rows = [];[m
+[32m+[m[32mfunction buildSendPanelRowsFast_(source, col, phonesMap, dictMap, prevSent, reportDate) {[m
+[32m+[m[32m  const ref = source.getRange(CONFIG.CODE_RANGE_A1);[m
+   const start = ref.getRow();[m
+   const num = ref.getNumRows();[m
+[31m-  const codes = source.getRange(start, col, num, 1).getDisplayValues();[m
+[31m-  const fios = source.getRange(start, CONFIG.FIO_COL, num, 1).getDisplayValues();[m
+[32m+[m
+[32m+[m[32m  const fios = source.getRange(start, CONFIG.FIO_COL, num, 1).getDisplayValues().flat();[m
+[32m+[m[32m  const brs = source.getRange(start, 6, num, 1).getDisplayValues().flat();[m
+[32m+[m[32m  const codes = source.getRange(start, col, num, 1).getDisplayValues().flat();[m
+[32m+[m
+[32m+[m[32m  const rows = [];[m
+ [m
+   for (let i = 0; i < num; i++) {[m
+[31m-    const code = String(codes[i][0] || '').trim();[m
+[31m-    const fio = String(fios[i][0] || '').trim();[m
+[31m-    if (!code || !fio) continue;[m
+[32m+[m[32m    const fioRaw = String(fios[i] || '').trim();[m
+[32m+[m[32m    const code = String(codes[i] || '').trim();[m
+[32m+[m
+[32m+[m[32m    if (!fioRaw || !code) continue;[m
+ [m
+     try {[m
+[31m-      const payload = buildPayloadForCell_(source, start + i, col, phones, dict);[m
+[31m-      const linkFormula = `=HYPERLINK("${payload.link}"; "📱 НАДІСЛАТИ")`;[m
+[31m-      const key = makeSendPanelKey_(payload.fio, payload.phone, payload.code);[m
+[31m-      let formattedPhone = String(payload.phone || '').trim();[m
+[32m+[m[32m      const fioNorm = normalizeFIO_(fioRaw);[m
+[32m+[m
+[32m+[m[32m      let phone = '';[m
+[32m+[m[32m      if (phonesMap) {[m
+[32m+[m[32m        phone = String(phonesMap[fioRaw] || phonesMap[fioNorm] || '').trim();[m
+[32m+[m[32m      }[m
+[32m+[m
+[32m+[m[32m      const phoneDigits = phone ? phone.replace(/[^\d+]/g, '') : '';[m
+[32m+[m[32m      const waPhone = phoneDigits[m
+[32m+[m[32m        ? (phoneDigits.startsWith('+') ? phoneDigits : '+' + phoneDigits)[m
+[32m+[m[32m        : '';[m
+[32m+[m
+[32m+[m[32m      const dict = (dictMap && dictMap[code]) ? dictMap[code] : null;[m
+[32m+[m[32m      const service = dict ? String(dict.service || '').trim() : '';[m
+[32m+[m[32m      const place = dict ? String(dict.place || '').trim() : '';[m
+[32m+[m[32m      const tasks = dict ? String(dict.tasks || '').trim() : '';[m
+[32m+[m
+[32m+[m[32m      const brRaw = String(brs[i] || '').trim();[m
+[32m+[m[32m      const brDays = brRaw ? (Number(brRaw.replace(',', '.')) || 0) : 0;[m
+[32m+[m
+[32m+[m[32m      const msg = buildMessage_({[m
+[32m+[m[32m        reportDate: reportDate,[m
+[32m+[m[32m        service: service,[m
+[32m+[m[32m        place: place,[m
+[32m+[m[32m        tasks: tasks,[m
+[32m+[m[32m        brDays: brDays,[m
+[32m+[m[32m        minimal: false[m
+[32m+[m[32m      });[m
+[32m+[m
+[32m+[m[32m      const safeMessage = trimToEncoded_(msg, CONFIG.MAX_WA_TEXT);[m
+[32m+[m[32m      const link = waPhone[m
+[32m+[m[32m        ? `https://wa.me/${waPhone.replace('+', '')}?text=${encodeURIComponent(safeMessage)}`[m
+[32m+[m[32m        : '';[m
+[32m+[m
+[32m+[m[32m      const key = makeSendPanelKey_(fioRaw, waPhone, code);[m
+[32m+[m[32m      const isSent = prevSent[key] === true;[m
+[32m+[m
+[32m+[m[32m      let formattedPhone = waPhone;[m
+       if (formattedPhone.startsWith('+')) {[m
+         formattedPhone = "'" + formattedPhone;[m
+       }[m
+ [m
+       rows.push([[m
+[31m-        payload.fio,[m
+[32m+[m[32m        fioRaw,[m
+         formattedPhone || '—',[m
+[31m-        payload.code,[m
+[31m-        payload.tasks || '—',[m
+[31m-        getSendPanelReadyStatus_(),[m
+[31m-        linkFormula,[m
+[31m-        prevSent[key] === true[m
+[32m+[m[32m        code,[m
+[32m+[m[32m        tasks || '—',[m
+[32m+[m[32m        isSent ? getSendPanelSentStatus_() : getSendPanelReadyStatus_(),[m
+[32m+[m[32m        link ? `=HYPERLINK("${link}"; "📱 НАДІСЛАТИ")` : '',[m
+[32m+[m[32m        isSent[m
+       ]);[m
+     } catch (e) {[m
+       rows.push([[m
+[31m-        fio,[m
+[32m+[m[32m        fioRaw,[m
+         '—',[m
+         code,[m
+         '—',[m
+[36m@@ -112,19 +200,88 @@[m [mfunction rebuildSendPanelCore_() {[m
+     }[m
+   }[m
+ [m
+[32m+[m[32m  return rows;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mfunction ensureSendPanelFreshForToday_() {[m
+[32m+[m[32m  const ss = SpreadsheetApp.getActive();[m
+[32m+[m[32m  const today = Utilities.formatDate(new Date(), CONFIG.TZ, 'dd.MM.yyyy');[m
+[32m+[m[32m  let panel = ss.getSheetByName(CONFIG.SEND_PANEL_SHEET);[m
+[32m+[m
+[32m+[m[32m  if (!panel) {[m
+[32m+[m[32m    return rebuildSendPanelCore_();[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  const storedDate = readSendPanelStoredDate_(panel);[m
+[32m+[m[32m  if (storedDate !== today) {[m
+[32m+[m[32m    return rebuildSendPanelCore_();[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  return {[m
+[32m+[m[32m    panel: panel,[m
+[32m+[m[32m    rowsWritten: Math.max(0, panel.getLastRow() - (CONFIG.SEND_PANEL_DATA_START_ROW - 1)),[m
+[32m+[m[32m    month: getBotMonthSheetName_(),[m
+[32m+[m[32m    date: today[m
+[32m+[m[32m  };[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mfunction rebuildSendPanelCore_() {[m
+[32m+[m[32m  const ss = SpreadsheetApp.getActive();[m
+[32m+[m[32m  const source = getBotSheet_();[m
+[32m+[m
+[32m+[m[32m  let panel = ss.getSheetByName(CONFIG.SEND_PANEL_SHEET);[m
+[32m+[m[32m  const prevSent = panel ? readSendPanelSentMap_(panel) : {};[m
+[32m+[m[32m  const isNewPanel = !panel;[m
+[32m+[m
+[32m+[m[32m  if (!panel) {[m
+[32m+[m[32m    panel = ss.insertSheet(CONFIG.SEND_PANEL_SHEET);[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  const botMonth = getBotMonthSheetName_();[m
+[32m+[m[32m  const phones = loadPhonesMap_();[m
+[32m+[m[32m  const dict = loadDictMap_();[m
+[32m+[m
+[32m+[m[32m  const today = Utilities.formatDate(new Date(), CONFIG.TZ, 'dd.MM.yyyy');[m
+[32m+[m[32m  const col = findTodayColumn_(source, today);[m
+[32m+[m[32m  if (col === -1) {[m
+[32m+[m[32m    throw new Error(`Колонка ${today} не знайдена в аркуші "${source.getName()}"`);[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  const dateCell = source.getRange(Number(CONFIG.DATE_ROW) || 1, col);[m
+[32m+[m[32m  const reportDate = normalizeDate_(dateCell.getValue(), dateCell.getDisplayValue());[m
+[32m+[m
+[32m+[m[32m  const rows = buildSendPanelRowsFast_(source, col, phones, dict, prevSent, reportDate);[m
+[32m+[m
+   if (!rows.length) {[m
+     throw new Error('На сьогодні немає даних для SEND_PANEL');[m
+   }[m
+ [m
+[32m+[m[32m  ensureSendPanelStructure_(panel, botMonth);[m
+[32m+[m
+   panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 1, rows.length, 7).setValues(rows);[m
+   panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 7, rows.length, 1).insertCheckboxes();[m
+[31m-  applyColumnWidthsStandardsToSheet_(panel);[m
+[32m+[m
+[32m+[m[32m  if (isNewPanel) {[m
+[32m+[m[32m    applyColumnWidthsStandardsToSheet_(panel);[m
+[32m+[m[32m  }[m
+ [m
+   const statusRng = panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 5, rows.length, 1);[m
+   panel.setConditionalFormatRules([[m
+[31m-    SpreadsheetApp.newConditionalFormatRule().whenTextContains(getSendPanelReadyStatus_()).setBackground('#e6f4e6').setRanges([statusRng]).build(),[m
+[31m-    SpreadsheetApp.newConditionalFormatRule().whenTextContains(getSendPanelErrorPrefix_()).setBackground('#ffe6e6').setRanges([statusRng]).build(),[m
+[31m-    SpreadsheetApp.newConditionalFormatRule().whenTextContains(getSendPanelSentStatus_()).setBackground('#ede9fe').setRanges([statusRng]).build()[m
+[32m+[m[32m    SpreadsheetApp.newConditionalFormatRule()[m
+[32m+[m[32m      .whenTextContains(getSendPanelReadyStatus_())[m
+[32m+[m[32m      .setBackground('#e6f4e6')[m
+[32m+[m[32m      .setRanges([statusRng])[m
+[32m+[m[32m      .build(),[m
+[32m+[m[32m    SpreadsheetApp.newConditionalFormatRule()[m
+[32m+[m[32m      .whenTextContains(getSendPanelErrorPrefix_())[m
+[32m+[m[32m      .setBackground('#ffe6e6')[m
+[32m+[m[32m      .setRanges([statusRng])[m
+[32m+[m[32m      .build(),[m
+[32m+[m[32m    SpreadsheetApp.newConditionalFormatRule()[m
+[32m+[m[32m      .whenTextContains(getSendPanelSentStatus_())[m
+[32m+[m[32m      .setBackground('#ede9fe')[m
+[32m+[m[32m      .setRanges([statusRng])[m
+[32m+[m[32m      .build()[m
+   ]);[m
+ [m
+   panel.setFrozenRows(CONFIG.SEND_PANEL_HEADER_ROW);[m
+[36m@@ -138,6 +295,8 @@[m [mfunction rebuildSendPanelCore_() {[m
+ }[m
+ [m
+ function readSendPanelSidebarData_() {[m
+[32m+[m[32m  ensureSendPanelFreshForToday_();[m
+[32m+[m
+   const panel = SpreadsheetApp.getActive().getSheetByName(CONFIG.SEND_PANEL_SHEET);[m
+   if (!panel) return [];[m
+ [m
+[36m@@ -152,6 +311,7 @@[m [mfunction readSendPanelSidebarData_() {[m
+   return values.map((row, index) => {[m
+     const status = String(row[4] || '').trim();[m
+     const sent = sentValues[index] === true || String(sentValues[index]).toUpperCase() === 'TRUE';[m
+[32m+[m
+     return {[m
+       fio: String(row[0] || '').trim(),[m
+       phone: String(row[1] || '').replace(/^'/, '').trim() || '—',[m
+[36m@@ -166,16 +326,20 @@[m [mfunction readSendPanelSidebarData_() {[m
+ }[m
+ [m
+ function buildSendPanelSidebarResponse_(meta) {[m
+[32m+[m[32m  const fresh = meta || ensureSendPanelFreshForToday_();[m
+   const data = readSendPanelSidebarData_();[m
+[32m+[m
+   return {[m
+     success: true,[m
+     data: data,[m
+     totalCount: data.length,[m
+     readyCount: data.filter(item => item.status === getSendPanelReadyStatus_() && item.link && !item.sent).length,[m
+[32m+[m[32m    openedCount: data.filter(item => item.status === getSendPanelOpenedStatus_() && !item.sent).length,[m
+[32m+[m[32m    notSentCount: data.filter(item => item.status === getSendPanelNotSentStatus_() && !item.sent).length,[m
+     errorCount: data.filter(item => String(item.status || '').indexOf(getSendPanelErrorPrefix_()) === 0).length,[m
+     sentCount: data.filter(item => item.sent === true || item.status === getSendPanelSentStatus_()).length,[m
+[31m-    month: meta && meta.month ? meta.month : getBotMonthSheetName_(),[m
+[31m-    date: meta && meta.date ? meta.date : Utilities.formatDate(new Date(), CONFIG.TZ, 'dd.MM.yyyy')[m
+[32m+[m[32m    month: fresh && fresh.month ? fresh.month : getBotMonthSheetName_(),[m
+[32m+[m[32m    date: fresh && fresh.date ? fresh.date : Utilities.formatDate(new Date(), CONFIG.TZ, 'dd.MM.yyyy')[m
+   };[m
+ }[m
+ [m
+[36m@@ -184,8 +348,7 @@[m [mfunction generateSendPanel() {[m
+   try {[m
+     const result = rebuildSendPanelCore_();[m
+     result.panel.activate();[m
+[31m-    ui.alert(`✅ Панель створена (${result.rowsWritten} записів)[m
+[31m-Місяць бота: ${result.month}`);[m
+[32m+[m[32m    ui.alert(`✅ Панель створена (${result.rowsWritten} записів)\nМісяць бота: ${result.month}`);[m
+   } catch (e) {[m
+     ui.alert(`❌ ${e && e.message ? e.message : String(e)}`);[m
+   }[m
+[36m@@ -193,6 +356,13 @@[m [mfunction generateSendPanel() {[m
+ [m
+ function sendAllFromSendPanel() {[m
+   const ui = SpreadsheetApp.getUi();[m
+[32m+[m
+[32m+[m[32m  try {[m
+[32m+[m[32m    ensureSendPanelFreshForToday_();[m
+[32m+[m[32m  } catch (e) {[m
+[32m+[m[32m    return ui.alert(`❌ ${e && e.message ? e.message : String(e)}`);[m
+[32m+[m[32m  }[m
+[32m+[m
+   const panel = SpreadsheetApp.getActive().getSheetByName(CONFIG.SEND_PANEL_SHEET);[m
+   if (!panel) return ui.alert('❌ Спочатку створіть панель');[m
+ [m
+[36m@@ -200,30 +370,67 @@[m [mfunction sendAllFromSendPanel() {[m
+   if (last < CONFIG.SEND_PANEL_DATA_START_ROW) return ui.alert('❌ Панель порожня');[m
+ [m
+   const countRows = last - (CONFIG.SEND_PANEL_DATA_START_ROW - 1);[m
+[32m+[m[32m  const values = panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 1, countRows, 7).getDisplayValues();[m
+   const formulas = panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 6, countRows, 1).getFormulas().flat();[m
+   const sent = panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 7, countRows, 1).getValues().flat();[m
+ [m
+   const items = [];[m
+[31m-  formulas.forEach((f, i) => {[m
+[31m-    if (sent[i]) return;[m
+[31m-    const url = extractHyperlinkUrl_(f);[m
+[31m-    if (url && url.startsWith('https://wa.me/')) items.push({ url, row: CONFIG.SEND_PANEL_DATA_START_ROW + i });[m
+[32m+[m[32m  values.forEach((row, i) => {[m
+[32m+[m[32m    const isSent = sent[i] === true || String(sent[i]).toUpperCase() === 'TRUE';[m
+[32m+[m[32m    if (isSent) return;[m
+[32m+[m
+[32m+[m[32m    const url = extractHyperlinkUrl_(formulas[i] || '');[m
+[32m+[m[32m    if (!url || !url.startsWith('https://wa.me/')) return;[m
+[32m+[m
+[32m+[m[32m    items.push({[m
+[32m+[m[32m      fio: String(row[0] || '').trim(),[m
+[32m+[m[32m      phone: String(row[1] || '').replace(/^'/, '').trim(),[m
+[32m+[m[32m      code: String(row[2] || '').trim(),[m
+[32m+[m[32m      tasks: String(row[3] || '').trim(),[m
+[32m+[m[32m      status: String(row[4] || '').trim(),[m
+[32m+[m[32m      url: url,[m
+[32m+[m[32m      row: CONFIG.SEND_PANEL_DATA_START_ROW + i[m
+[32m+[m[32m    });[m
+   });[m
+ [m
+   if (!items.length) return ui.alert('✅ Усе вже відправлено');[m
+[32m+[m
+   showSendPanelDialog_(items);[m
+ }[m
+ [m
+[31m-function markSendPanelSent_(row) {[m
+[32m+[m[32mfunction markSendPanelOpened_(row) {[m
+   const panel = SpreadsheetApp.getActive().getSheetByName(CONFIG.SEND_PANEL_SHEET);[m
+   if (!panel) return;[m
+[32m+[m
+[32m+[m[32m  const sent = panel.getRange(r
