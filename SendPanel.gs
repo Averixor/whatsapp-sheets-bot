@@ -1,7 +1,7 @@
 /************ ПАНЕЛЬ ВІДПРАВКИ ************/
 
 var SEND_PANEL_STATE_STORE_PREFIX_ = 'SEND_PANEL_SENT_V2|';
-var SEND_PANEL_WHATSAPP_TARGET_ = 'WAPB_WHATSAPP_SENDER_TAB';
+var SEND_PANEL_WHATSAPP_TARGET_ = SendPanelConstants_.WA_SENDER_TARGET;
 
 function extractHyperlinkUrl_(formula) {
   const m = String(formula || '').match(/HYPERLINK\("([^"]+)"/i);
@@ -17,15 +17,15 @@ function makeSendPanelKey_(f, p, c) {
 }
 
 function getSendPanelReadyStatus_() {
-  return '✅';
+  return SendPanelConstants_.STATUS_READY;
 }
 
 function getSendPanelSentStatus_() {
-  return '📤 Відправлено';
+  return SendPanelConstants_.STATUS_SENT;
 }
 
 function getSendPanelErrorPrefix_() {
-  return '❌';
+  return SendPanelConstants_.STATUS_ERROR_PREFIX;
 }
 
 function getSendPanelToday_() {
@@ -200,12 +200,15 @@ function cleanupOldSendPanelSentState_(keepDays) {
   return cleanupOldSendPanelStateMaps_(keepDays);
 }
 
-function ensureSendPanelStructure_(panel, botMonth) {
+function ensureSendPanelStructure_(panel, botMonth, panelDate) {
   panel.clearContents();
+
+  const safeMonth = String(botMonth || '').trim();
+  const safeDate = assertUaDateString_(panelDate || resolveSendPanelStateDate_(panelDate || getSendPanelToday_()));
 
   panel.getRange(1, 1, 1, 7)
     .merge()
-    .setValue(`🤖 Активний місяць: ${botMonth}`)
+    .setValue(`🤖 Активний місяць: ${safeMonth} | Дата панелі: ${safeDate}`)
     .setFontWeight('bold')
     .setFontSize(14)
     .setHorizontalAlignment('center')
@@ -216,6 +219,65 @@ function ensureSendPanelStructure_(panel, botMonth) {
     .setFontWeight('bold')
     .setHorizontalAlignment('center')
     .setBackground('#f0f0f0');
+
+  setSendPanelMetadata_(panel, safeMonth, safeDate);
+}
+
+function setSendPanelMetadata_(panel, botMonth, panelDate) {
+  if (!panel) return false;
+  panel.getRange(SendPanelConstants_.METADATA_MONTH_CELL).setValue(String(botMonth || '').trim());
+  panel.getRange(SendPanelConstants_.METADATA_DATE_CELL).setValue(assertUaDateString_(panelDate || getSendPanelToday_()));
+  return true;
+}
+
+function getSendPanelMetadata_(panel) {
+  const sheet = panel || SpreadsheetApp.getActive().getSheetByName(CONFIG.SEND_PANEL_SHEET);
+  if (!sheet) {
+    return { month: '', date: '', hasMetadata: false };
+  }
+
+  const month = String(sheet.getRange(SendPanelConstants_.METADATA_MONTH_CELL).getDisplayValue() || '').trim();
+  const rawDate = String(sheet.getRange(SendPanelConstants_.METADATA_DATE_CELL).getDisplayValue() || '').trim();
+  const safeDate = /^\d{2}\.\d{2}\.\d{4}$/.test(rawDate) ? rawDate : '';
+
+  return {
+    month: month,
+    date: safeDate,
+    hasMetadata: !!(month || safeDate)
+  };
+}
+
+function readSendPanelStateObjectMap_(panel) {
+  const map = {};
+  const sheet = panel || SpreadsheetApp.getActive().getSheetByName(CONFIG.SEND_PANEL_SHEET);
+  if (!sheet || typeof sheet.getLastRow !== 'function') return map;
+
+  const last = sheet.getLastRow();
+  if (last < CONFIG.SEND_PANEL_DATA_START_ROW) return map;
+
+  const rowCount = last - (CONFIG.SEND_PANEL_DATA_START_ROW - 1);
+  const values = sheet.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 1, rowCount, 7).getDisplayValues();
+  const formulas = sheet.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 6, rowCount, 1).getFormulas().flat();
+  const sentValues = sheet.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 7, rowCount, 1).getValues().flat();
+
+  values.forEach(function(row, index) {
+    const fio = String(row[0] || '').trim();
+    const phone = String(row[1] || '').replace(/^'/, '').trim();
+    const code = String(row[2] || '').trim();
+    if (!fio || !code) return;
+
+    const key = makeSendPanelKey_(fio, phone, code);
+    const normalizedStatus = normalizeSendPanelStatus_(row[4]);
+    const sent = sentValues[index] === true || String(sentValues[index]).toUpperCase() === 'TRUE' || isSendPanelSentStatusValue_(normalizedStatus);
+
+    map[key] = {
+      status: normalizedStatus,
+      sent: !!sent,
+      link: extractHyperlinkUrl_(formulas[index] || '')
+    };
+  });
+
+  return map;
 }
 
 function normalizeSendPanelDailyState_(panel) {

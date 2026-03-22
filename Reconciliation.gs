@@ -29,7 +29,7 @@ const Reconciliation_ = (function () {
   }
 
   function _allowedStatuses() {
-    return [getSendPanelReadyStatus_(), getSendPanelSentStatus_()];
+    return getSendPanelAllAllowedStatuses_();
   }
 
   function compareRows(expectedRows, actualRows) {

@@ -70,7 +70,7 @@ function runStage6ADomainTests_(options) {
 
   _domainPush_(report, 'sendPanel.normalize rows', function() {
     const rows = SendPanelService_.normalizeRows([
-      { fio: ' Петренко ', phone: "'+380661234567", code: ' БР ', status: '✅', sent: false },
+      { fio: ' Петренко ', phone: "'+380661234567", code: ' БР ', status: getSendPanelReadyStatus_(), sent: false },
       { fio: '', phone: '', code: '', status: '', sent: false }
     ]);
     _domainAssert_(rows.length === 1, 'normalizeRows повинен відкидати порожні рядки');
@@ -94,16 +94,31 @@ function runStage6ADomainTests_(options) {
     return next.status;
   });
 
+  _domainPush_(report, 'sendPanel.pending transition rules', function() {
+    const next = SendPanelService_.resolveTransition({ sent: false, status: getSendPanelReadyStatus_() }, 'markPending');
+    _domainAssert_(next.sent === false && next.status === SendPanelConstants_.STATUS_PENDING, 'markPending rule пошкоджений');
+    return next.status;
+  });
+
   _domainPush_(report, 'sendPanel.unsent transition rules', function() {
     const next = SendPanelService_.resolveTransition({ sent: true, status: getSendPanelSentStatus_() }, 'markUnsent');
-    _domainAssert_(next.sent === false && next.status === getSendPanelReadyStatus_(), 'markUnsent rule пошкоджений');
+    _domainAssert_(next.sent === false && next.status === SendPanelConstants_.STATUS_UNSENT, 'markUnsent rule пошкоджений');
     return next.status;
+  });
+
+  _domainPush_(report, 'sendPanel.allowed statuses canonical set', function() {
+    const statuses = getSendPanelAllAllowedStatuses_();
+    _domainAssert_(statuses.indexOf(SendPanelConstants_.STATUS_READY) !== -1, 'Немає STATUS_READY');
+    _domainAssert_(statuses.indexOf(SendPanelConstants_.STATUS_PENDING) !== -1, 'Немає STATUS_PENDING');
+    _domainAssert_(statuses.indexOf(SendPanelConstants_.STATUS_UNSENT) !== -1, 'Немає STATUS_UNSENT');
+    _domainAssert_(statuses.indexOf(SendPanelConstants_.STATUS_SENT) !== -1, 'Немає STATUS_SENT');
+    return statuses.join(', ');
   });
 
   // Reconciliation pure compare
   _domainPush_(report, 'reconciliation.compare missing rows', function() {
     const result = Reconciliation_.compareRows([
-      { fio: 'Петренко', phone: '+380661234567', code: 'БР', status: '✅', link: 'x', row: 3 }
+      { fio: 'Петренко', phone: '+380661234567', code: 'БР', status: getSendPanelReadyStatus_(), link: 'x', row: 3 }
     ], []);
     const types = result.issues.map(function(item) { return item.type; });
     _domainAssert_(types.indexOf('missingExpectedItem') !== -1, 'Не знайдено missingExpectedItem');
@@ -112,7 +127,7 @@ function runStage6ADomainTests_(options) {
 
   _domainPush_(report, 'reconciliation.compare extra rows', function() {
     const result = Reconciliation_.compareRows([], [
-      { fio: 'Петренко', phone: '+380661234567', code: 'БР', status: '✅', link: 'x', row: 3 }
+      { fio: 'Петренко', phone: '+380661234567', code: 'БР', status: getSendPanelReadyStatus_(), link: 'x', row: 3 }
     ]);
     const types = result.issues.map(function(item) { return item.type; });
     _domainAssert_(types.indexOf('orphanSendPanelRow') !== -1, 'Не знайдено orphanSendPanelRow');
@@ -121,10 +136,10 @@ function runStage6ADomainTests_(options) {
 
   _domainPush_(report, 'reconciliation.compare duplicates', function() {
     const result = Reconciliation_.compareRows([
-      { fio: 'Петренко', phone: '+380661234567', code: 'БР', status: '✅', link: 'x', row: 3 }
+      { fio: 'Петренко', phone: '+380661234567', code: 'БР', status: getSendPanelReadyStatus_(), link: 'x', row: 3 }
     ], [
-      { fio: 'Петренко', phone: '+380661234567', code: 'БР', status: '✅', link: 'x', row: 3 },
-      { fio: 'Петренко', phone: '+380661234567', code: 'БР', status: '✅', link: 'x', row: 4 }
+      { fio: 'Петренко', phone: '+380661234567', code: 'БР', status: getSendPanelReadyStatus_(), link: 'x', row: 3 },
+      { fio: 'Петренко', phone: '+380661234567', code: 'БР', status: getSendPanelReadyStatus_(), link: 'x', row: 4 }
     ]);
     const types = result.issues.map(function(item) { return item.type; });
     _domainAssert_(types.indexOf('duplicateSendPanelRow') !== -1, 'Не знайдено duplicateSendPanelRow');

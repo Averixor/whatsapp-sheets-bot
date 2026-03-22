@@ -5,7 +5,7 @@
 var PersonsRepository_ = PersonsRepository_ || (function() {
   function normalizeDateStr(dateStr) {
     const safe = String(dateStr || '').trim();
-    return /^\d{2}\.\d{2}\.\d{4}$/.test(safe) ? safe : _todayStr_();
+    return assertUaDateString_(safe);
   }
 
   function getSheetByDate(dateStr) {

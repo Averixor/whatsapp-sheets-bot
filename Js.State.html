@@ -133,7 +133,7 @@
 
   function getReadyPanelItems(panelData = STATE.currentPanelData) {
     const data = Array.isArray(panelData) ? panelData : [];
-    return data.filter(item => item && item.status === PANEL_READY_STATUS && item.link && !item.sent);
+    return data.filter(item => item && item.link && !item.sent && (item.status === PANEL_READY_STATUS || item.status === PANEL_UNSENT_STATUS));
   }
 
   function getPanelErrorItems(panelData = STATE.currentPanelData) {
@@ -247,26 +247,47 @@
     }
   }
 
-  function openLinkSafe(url) {
-    if (!url) return null;
-
-    const link = String(url).trim();
-    if (!link) return null;
-
+  function primeWhatsAppSenderTab() {
+    if (STATE.DIAG_TEST_MODE) return null;
     try {
-      if (STATE.waSenderWindow && !STATE.waSenderWindow.closed) {
-        STATE.waSenderWindow.location.assign(link);
-        STATE.waSenderWindow.focus();
-        return STATE.waSenderWindow;
+      const existing = STATE.waSenderWindow;
+      if (existing && !existing.closed) return existing;
+      const win = window.open('', WA_SENDER_TARGET, 'noopener');
+      if (win) {
+        STATE.waSenderWindow = win;
+        return win;
+      }
+    } catch (error) {
+      console.error('primeWhatsAppSenderTab error:', error);
+    }
+    return null;
+  }
+
+  function openLinkSafe(url) {
+    try {
+      const link = String(url || '').trim();
+      if (!link) return null;
+      if (STATE.DIAG_TEST_MODE) return { closed: false, focus() {} };
+
+      const prepared = primeWhatsAppSenderTab();
+      if (prepared && !prepared.closed) {
+        try {
+          prepared.location.href = link;
+          prepared.focus();
+          return prepared;
+        } catch (_) {}
       }
 
-      const win = window.open(link, '_blank', 'noopener');
-      if (win) STATE.waSenderWindow = win;
+      const win = window.open(link, WA_SENDER_TARGET, 'noopener');
+      if (win) {
+        STATE.waSenderWindow = win;
+        try { win.focus(); } catch (_) {}
+      }
       return win;
     } catch (error) {
       console.error('openLinkSafe error:', error);
       try {
-        return window.open(link, '_blank', 'noopener');
+        return window.open(String(url || '').trim(), WA_SENDER_TARGET, 'noopener');
       } catch (_) {
         return null;
       }

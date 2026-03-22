@@ -201,7 +201,7 @@ function healthCheck() {
     }
 
     const statuses = sh.getRange(3, 5, sh.getLastRow() - 2, 1).getDisplayValues().flat().map(v => String(v || '').trim()).filter(Boolean);
-    const invalid = statuses.filter(status => status !== '✅' && status !== '📤 Відправлено' && !status.startsWith('❌'));
+    const invalid = statuses.filter(status => getSendPanelAllAllowedStatuses_().indexOf(normalizeSendPanelStatus_(status)) === -1 && !String(status || '').startsWith(getSendPanelErrorPrefix_()));
 
     return {
       status: invalid.length === 0 ? 'OK' : 'WARN',
@@ -209,7 +209,7 @@ function healthCheck() {
       details: invalid.length === 0
         ? `Усі ${statuses.length} статусів валідні`
         : `Некоректні статуси: ${[...new Set(invalid)].join(', ')}`,
-      howTo: invalid.length === 0 ? '' : 'Використовуйте тільки ✅, 📤 Відправлено або ❌ ...'
+      howTo: invalid.length === 0 ? '' : 'Використовуйте тільки ✅ Готово, 🟡 Очікує підтвердження, ↩️ Не відправлено, 📤 Відправлено або ❌ ...'
     };
   });
 

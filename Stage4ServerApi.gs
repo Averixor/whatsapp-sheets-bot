@@ -29,6 +29,10 @@ function apiGenerateSendPanelForRange(options) {
   return Stage4UseCases_.generateSendPanelForRange(options || {});
 }
 
+function apiMarkPanelRowsAsPending(rowNumbers, options) {
+  return Stage4UseCases_.markPanelRowsAsPending(rowNumbers, options || {});
+}
+
 function apiMarkPanelRowsAsSent(rowNumbers, options) {
   return Stage4UseCases_.markPanelRowsAsSent(rowNumbers, options || {});
 }

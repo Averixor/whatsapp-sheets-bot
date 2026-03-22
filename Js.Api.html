@@ -64,6 +64,10 @@
       };
     },
 
+    async markAsPending(rows, options = {}) {
+      return adaptStage4PanelResponse(await Api.run('apiMarkPanelRowsAsPending', rows, options));
+    },
+
     async markAsSent(rows, options = {}) {
       return adaptStage4PanelResponse(await Api.run('apiMarkPanelRowsAsSent', rows, options));
     },
@@ -195,6 +199,7 @@
     getSidebarData: Stage4Api.getSidebarData,
     generatePanel: Stage4Api.generatePanelForDate,
     getSendPanel: Stage4Api.getSendPanelData,
+    markAsPending: Stage4Api.markAsPending,
     markAsSent: Stage4Api.markAsSent,
     markAsUnsent: Stage4Api.markAsUnsent,
     getVacations: async (dateStr) => Stage4Api.checkVacationsAndBirthdays(dateStr || ''),

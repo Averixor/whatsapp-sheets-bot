@@ -1,114 +1,48 @@
-# GAS WAPB — Stage 7.1 Reliability Hardened Baseline
+# whatsapp-sheets-bot — stabilized build
 
-This bundle is the frozen final baseline of the current GAS-first WAPB project.
+This archive is the **stabilized SEND_PANEL-oriented build** prepared against the uploaded stabilization brief.
 
-It does **not** introduce a new runtime, a new UI stack, or new business logic.
-This pass closes the release semantically: the system already worked, and now its metadata, docs, diagnostics, smoke tests, and active comments speak with one release voice.
+## What was fixed in this build
 
-## Release identity
+- SEND_PANEL no longer treats opening WhatsApp as automatic sending.
+- Canonical status model added:
+  - `✅ Готово`
+  - `🟡 Очікує підтвердження`
+  - `↩️ Не відправлено`
+  - `📤 Відправлено`
+  - `❌ ...`
+- SEND_PANEL state is preserved from the sheet itself during rebuild for the same panel date.
+- Panel date is read from explicit SEND_PANEL metadata instead of silently returning "today".
+- WhatsApp links use one named sender tab instead of `_blank`.
+- Sidebar flow now supports manual confirmation after opening a chat.
+- `dev-shell.ps1` was rewritten into a self-consistent shell with real aliases and soft clasp detection.
+- `watch-sync-simple.ps1` now checks exit codes, retries clasp push, and hashes relative paths.
+- `ProjectMetadata.gs` and this README were rewritten to match the actual archive contents.
 
-**Official release:** `Stage 7.1 — Reliability Hardened Baseline`  
-**Version:** `7.1.1-reliability-hardened-merged`  
-**Archive / root folder:** `gas_wapb_stage7_1_reliability_hardened_baseline`
+## What this archive deliberately does not claim
 
-Functional lineage remains intentionally preserved:
+- It does not claim that nonexistent docs or root files are present.
+- It does not ship `.git`, `node_modules`, or a real `.clasp.json`.
 
-- canonical runtime / business baseline: **Stage 5 Final RC2**
-- operational hardening overlay: **Stage 6A**
-- frozen release marker: **Stage 7.1 — Reliability Hardened Baseline**
+## Repository hygiene
 
-In plain language: this is the stabilized baseline, hardened and semantically cleaned, then frozen under one final release identity.
+Keep only `.clasp.json.example` in version control.
+Keep the real `.clasp.json` local and ignored.
 
-This merged 7.1 bundle keeps the fuller diagnostics/smoke surface from the earlier 7.1 build and backports the stronger lifecycle hardening improvements from the later 7.2 iteration.
+## Main files to review first
 
-## What this pass changes
+- `SendPanelConstants.gs`
+- `SendPanel.gs`
+- `SendPanelRepository.gs`
+- `SendPanelService.gs`
+- `UseCases.gs`
+- `Js.Core.html`
+- `Js.State.html`
+- `Js.Render.html`
+- `dev-shell.ps1`
+- `watch-sync-simple.ps1`
+- `ProjectMetadata.gs`
 
-This pass does **not** change the business behavior of:
+## Archive composition
 
-- sidebar workflows
-- SEND_PANEL logic
-- summaries
-- person cards
-- vacation / birthday logic
-- spreadsheet / manual actions
-- reconciliation domain rules
-
-This pass changes the semantic layer around the working system:
-
-- active diagnostics wording is aligned to the final release
-- historical / compatibility diagnostics stay visible but are framed as historical or informational
-- **Baseline health** stays the neutral health summary
-- the compatibility split stays explicit **informational** reporting
-- active runtime comments and UI text no longer carry RC2 / Stage 5 transitional markers
-- smoke tests guard semantic cleanliness of the active public layer
-
-## Packaging policy
-
-The bundle uses **root manifest policy**.
-
-Present in bundle root:
-
-- `appsscript.json`
-- `.clasp.json.example`
-
-## Documentation layout
-
-### Active docs in root
-- `README.md`
-- `ARCHITECTURE.md`
-- `RUNBOOK.md`
-- `STAGE7_REPORT.md`
-
-### Canonical reference docs
-Stored in `docs/reference/`:
-- `PUBLIC_API_STAGE5.md`
-- `CHANGELOG_STAGE5.md`
-- `STAGE5_REPORT.md`
-- `STAGE6A_REPORT.md`
-- `SPREADSHEET_ACTION_API.md`
-- `JOBS_RUNTIME.md`
-- `SUNSET_POLICY.md`
-
-### Historical docs
-Stored in `docs/archive/`:
-- Stage 3 / Stage 4 reports
-- historical API docs
-- historical changelogs
-- legacy merge/build notes
-
-Anything under `docs/archive/` is historical by definition and must not be treated as active.
-
-## Canonical code surfaces
-
-### Application / operational API
-- `Stage4ServerApi.gs`
-
-### Spreadsheet / manual actions
-- `SpreadsheetActionsApi.gs`
-
-### Maintenance / diagnostics / jobs
-- `Stage5MaintenanceApi.gs`
-
-### Compatibility facade kept intentionally
-- `Stage4MaintenanceApi.gs`
-
-### Active sidebar runtime
-- `Sidebar.html`
-- `Styles.html`
-- `JavaScript.html`
-
-The active runtime remains **modular** and template-loaded through:
-
-`Sidebar.html -> includeTemplate('JavaScript')`
-
-`Js.*.html` files remain **active modular artifacts**.
-
-## First files a new maintainer should open
-
-1. `README.md`
-2. `ARCHITECTURE.md`
-3. `RUNBOOK.md`
-4. `STAGE7_REPORT.md`
-5. `ProjectMetadata.gs`
-
-Now the project reads like one release instead of a haunted warehouse of leftover labels.
+This release contains only the files physically present in the archive root. See `ProjectMetadata.gs` for the exact index.

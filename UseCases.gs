@@ -47,7 +47,7 @@ function _stage4ApplyPanelState_(rowNumbers, sentValue, statusText) {
 
 function _stage4GetPanelReadyRows_() {
   return SendPanelRepository_.readRows().filter(function(item) {
-    return item && item.status === getSendPanelReadyStatus_() && !!item.link && !item.sent;
+    return shouldTreatRowAsReadyToOpen_(item);
   });
 }
 
@@ -266,6 +266,73 @@ const Stage4UseCases_ = (function() {
     });
   }
 
+  function markPanelRowsAsPending(rowNumbers, options) {
+    const payload = Object.assign({}, options || {}, { rowNumbers: rowNumbers });
+    return WorkflowOrchestrator_.run({
+      scenario: 'markPanelRowsAsPending',
+      routeName: 'sidebar.markPanelRowsAsPending',
+      publicApiMethod: 'apiMarkPanelRowsAsPending',
+      payload: payload,
+      write: true,
+      validate: function(input) {
+        const rowsInfo = validatePanelRowSelection_(input.rowNumbers, { maxRows: input.maxRows });
+        return {
+          payload: Object.assign({}, input, { rowNumbers: rowsInfo.rows, dryRun: !!input.dryRun }),
+          warnings: rowsInfo.warnings
+        };
+      },
+      readBefore: function(input) {
+        const rows = SendPanelRepository_.readRows();
+        return {
+          selectedRows: rows.filter(function(item) { return input.rowNumbers.indexOf(item.row) !== -1; }),
+          allRows: rows
+        };
+      },
+      execute: function(input, beforeState) {
+        const targetRows = beforeState.selectedRows || [];
+        if (input.dryRun) {
+          return {
+            success: true,
+            message: `Dry-run: буде позначено ${targetRows.length} рядків як такі, що очікують підтвердження`,
+            result: {
+              rows: beforeState.allRows,
+              updatedRows: input.rowNumbers,
+              stats: SendPanelRepository_.buildStats(beforeState.allRows)
+            },
+            changes: [],
+            affectedSheets: [CONFIG.SEND_PANEL_SHEET],
+            affectedEntities: targetRows.map(function(item) { return item.fio; }),
+            appliedChangesCount: 0,
+            skippedChangesCount: 0,
+            partial: false
+          };
+        }
+
+        const result = SendPanelRepository_.markRowsAsPending(input.rowNumbers, {});
+        return {
+          success: true,
+          message: `Позначено ${result.updatedRows.length} рядків як такі, що очікують підтвердження`,
+          result: result,
+          changes: _stage4RowsToChangeList_(targetRows, 'markPending'),
+          affectedSheets: [CONFIG.SEND_PANEL_SHEET],
+          affectedEntities: targetRows.map(function(item) { return item.fio; }),
+          appliedChangesCount: result.updatedRows.length,
+          skippedChangesCount: 0,
+          partial: false
+        };
+      },
+      sync: function() {
+        return {
+          refresh: ['panel', 'counters', 'summaryPreview'],
+          invalidateCaches: ['sendPanel']
+        };
+      },
+      verify: function(input) {
+        return input.dryRun ? { ok: true, verifiedRows: 0, mismatchCount: 0 } : _stage6AVerifyPanelStatuses_(input.rowNumbers, SendPanelConstants_.STATUS_PENDING, false);
+      }
+    });
+  }
+
   function markPanelRowsAsSent(rowNumbers, options) {
     const payload = Object.assign({}, options || {}, { rowNumbers: rowNumbers });
     return WorkflowOrchestrator_.run({
@@ -400,7 +467,7 @@ const Stage4UseCases_ = (function() {
         };
       },
       verify: function(input) {
-        return input.dryRun ? { ok: true, verifiedRows: 0, mismatchCount: 0 } : _stage6AVerifyPanelStatuses_(input.rowNumbers, getSendPanelReadyStatus_(), false);
+        return input.dryRun ? { ok: true, verifiedRows: 0, mismatchCount: 0 } : _stage6AVerifyPanelStatuses_(input.rowNumbers, SendPanelConstants_.STATUS_UNSENT, false);
       }
     });
   }
@@ -432,7 +499,7 @@ const Stage4UseCases_ = (function() {
         if (!queue.length) {
           return {
             success: true,
-            message: 'Немає невідправлених рядків',
+            message: 'Немає рядків для відкриття',
             result: {
               queue: [],
               rows: beforeState.allRows,
@@ -450,7 +517,7 @@ const Stage4UseCases_ = (function() {
         if (input.dryRun) {
           return {
             success: true,
-            message: `Dry-run: підготовлено ${queue.length} повідомлень`,
+            message: `Dry-run: підготовлено ${queue.length} чатів без фіксації відправки`,
             result: {
               queue: queue,
               rows: beforeState.allRows,
@@ -465,17 +532,17 @@ const Stage4UseCases_ = (function() {
           };
         }
 
-        const result = SendPanelRepository_.markRowsAsSent(queue.map(function(item) { return item.row; }), {});
+        const result = SendPanelRepository_.markRowsAsPending(queue.map(function(item) { return item.row; }), {});
         return {
           success: true,
-          message: `Позначено як відправлені ${queue.length} повідомлень`,
+          message: `Позначено ${queue.length} рядків як такі, що очікують підтвердження`,
           result: {
             queue: queue,
             rows: result.rows,
             updatedRows: result.updatedRows,
             stats: result.stats
           },
-          changes: _stage4RowsToChangeList_(queue, 'sendPending'),
+          changes: _stage4RowsToChangeList_(queue, 'markPending'),
           affectedSheets: [CONFIG.SEND_PANEL_SHEET],
           affectedEntities: queue.map(function(item) { return item.fio; }),
           appliedChangesCount: queue.length,
@@ -492,7 +559,7 @@ const Stage4UseCases_ = (function() {
       verify: function(input, beforeState, plan, execution) {
         if (input.dryRun) return { ok: true, verifiedRows: 0, mismatchCount: 0 };
         const updatedRows = stage4AsArray_(execution && execution.result && execution.result.updatedRows);
-        return _stage6AVerifyPanelStatuses_(updatedRows, getSendPanelSentStatus_(), true);
+        return _stage6AVerifyPanelStatuses_(updatedRows, SendPanelConstants_.STATUS_PENDING, false);
       }
     });
   }
@@ -540,14 +607,15 @@ const Stage4UseCases_ = (function() {
       execute: function() {
         const rows = SendPanelRepository_.readRows();
         const stats = SendPanelRepository_.buildStats(rows);
+        const panelMeta = typeof SendPanelRepository_.getPanelMetadata === 'function' ? SendPanelRepository_.getPanelMetadata() : { month: getBotMonthSheetName_(), date: '' };
         return {
           success: true,
           message: 'SEND_PANEL перечитано',
           result: {
             rows: rows,
             stats: stats,
-            month: getBotMonthSheetName_(),
-            date: _todayStr_()
+            month: panelMeta.month || getBotMonthSheetName_(),
+            date: panelMeta.date || ''
           },
           changes: [],
           affectedSheets: [CONFIG.SEND_PANEL_SHEET, getBotMonthSheetName_()],
@@ -1236,6 +1304,7 @@ const Stage4UseCases_ = (function() {
   return {
     generateSendPanelForDate: generateSendPanelForDate,
     generateSendPanelForRange: generateSendPanelForRange,
+    markPanelRowsAsPending: markPanelRowsAsPending,
     markPanelRowsAsSent: markPanelRowsAsSent,
     markPanelRowsAsUnsent: markPanelRowsAsUnsent,
     sendPendingRows: sendPendingRows,

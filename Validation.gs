@@ -8,17 +8,42 @@ function _stage4Assert_(condition, functionName, context, message) {
   }
 }
 
-function _stage4NormalizeDateValue_(value) {
+function parseFlexibleDateInput_(value) {
   const safe = String(value || '').trim();
-  const dateStr = /^\d{2}\.\d{2}\.\d{4}$/.test(safe) ? safe : _todayStr_();
-  _stage4Assert_(/^\d{2}\.\d{2}\.\d{4}$/.test(dateStr), 'validateDatePayload_', { value: safe }, 'Некоректна дата');
-  return dateStr;
+  if (!safe) return null;
+
+  if (/^\d{2}\.\d{2}\.\d{4}$/.test(safe)) {
+    const parsedUa = _parseUaDate_(safe);
+    return parsedUa && !isNaN(parsedUa.getTime()) ? safe : null;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(safe)) {
+    const parsedIso = new Date(safe + 'T00:00:00');
+    return isNaN(parsedIso.getTime()) ? null : Utilities.formatDate(parsedIso, CONFIG.TZ, 'dd.MM.yyyy');
+  }
+
+  const parsed = new Date(safe);
+  return isNaN(parsed.getTime()) ? null : Utilities.formatDate(parsed, CONFIG.TZ, 'dd.MM.yyyy');
+}
+
+function assertUaDateString_(value) {
+  const safe = String(value || '').trim();
+  _stage4Assert_(/^\d{2}\.\d{2}\.\d{4}$/.test(safe), 'assertUaDateString_', { value: safe }, 'Очікувався формат dd.MM.yyyy');
+  const parsed = _parseUaDate_(safe);
+  _stage4Assert_(parsed instanceof Date && !isNaN(parsed.getTime()), 'assertUaDateString_', { value: safe }, 'Передано неіснуючу дату');
+  return safe;
+}
+
+function _stage4NormalizeDateValue_(value) {
+  const parsed = parseFlexibleDateInput_(value);
+  _stage4Assert_(!!parsed, 'validateDatePayload_', { value: value }, 'Некоректна дата');
+  return assertUaDateString_(parsed);
 }
 
 function validateDatePayload_(payload, fieldName) {
   const key = fieldName || 'date';
   const source = (payload && typeof payload === 'object') ? payload : { date: payload };
-  const raw = source[key] || source.dateStr || source.date || _todayStr_();
+  const raw = source[key] || source.dateStr || source.date;
   const dateStr = _stage4NormalizeDateValue_(raw);
   const parsed = _parseUaDate_(dateStr);
   _stage4Assert_(parsed instanceof Date && !isNaN(parsed.getTime()), 'validateDatePayload_', { field: key, value: raw }, `Не вдалося розпізнати дату "${raw}"`);
@@ -32,8 +57,10 @@ function validateDatePayload_(payload, fieldName) {
 
 function validateDateRangePayload_(payload) {
   const source = payload || {};
-  const start = validateDatePayload_({ date: source.startDate || source.dateFrom || source.start || source.date || _todayStr_() }, 'date');
-  const end = validateDatePayload_({ date: source.endDate || source.dateTo || source.end || source.date || start.dateStr }, 'date');
+  const startRaw = source.startDate || source.dateFrom || source.start || source.date;
+  const endRaw = source.endDate || source.dateTo || source.end || source.date || startRaw;
+  const start = validateDatePayload_({ date: startRaw }, 'date');
+  const end = validateDatePayload_({ date: endRaw }, 'date');
 
   _stage4Assert_(start.date.getTime() <= end.date.getTime(), 'validateDateRangePayload_', source, 'Дата початку більша за дату завершення');
 

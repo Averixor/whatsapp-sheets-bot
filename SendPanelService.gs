@@ -8,11 +8,11 @@
 
 const SendPanelService_ = (function() {
   function preview(dateStr) {
-    return SendPanelRepository_.preview(dateStr || _todayStr_());
+    return SendPanelRepository_.preview(assertUaDateString_(dateStr));
   }
 
   function rebuild(dateStr) {
-    return SendPanelRepository_.rebuild(dateStr || _todayStr_());
+    return SendPanelRepository_.rebuild(assertUaDateString_(dateStr));
   }
 
   function readRows() {
@@ -22,7 +22,7 @@ const SendPanelService_ = (function() {
   function getStats(rows) {
     const items = Array.isArray(rows) ? rows : readRows();
     const ready = items.filter(function(item) {
-      return item.status === getSendPanelReadyStatus_() && item.link && item.sent !== true;
+      return shouldTreatRowAsReadyToOpen_(item);
     }).length;
     const sent = items.filter(function(item) {
       return item.sent === true || item.status === getSendPanelSentStatus_();
@@ -46,7 +46,7 @@ const SendPanelService_ = (function() {
         phone: String(item && item.phone || '').replace(/^'/, '').trim(),
         code: String(item && item.code || '').trim(),
         tasks: String(item && item.tasks || '—').trim() || '—',
-        status: String(item && item.status || '').trim(),
+        status: normalizeSendPanelStatus_(String(item && item.status || '').trim()),
         link: String(item && item.link || '').trim(),
         sent: item && item.sent === true
       };
@@ -69,17 +69,31 @@ const SendPanelService_ = (function() {
 
   function resolveTransition(row, action) {
     const item = Object.assign({}, row || {});
-    if (String(action || '') === 'markSent' || String(action || '') === 'sendPending') {
+    const normalizedAction = String(action || '').trim();
+
+    if (normalizedAction === 'markPending' || normalizedAction === 'openChat' || normalizedAction === 'sendPending') {
+      item.sent = false;
+      item.status = SendPanelConstants_.STATUS_PENDING;
+      return item;
+    }
+    if (normalizedAction === 'markSent' || normalizedAction === 'confirmSent') {
       item.sent = true;
       item.status = getSendPanelSentStatus_();
       return item;
     }
-    if (String(action || '') === 'markUnsent') {
+    if (normalizedAction === 'markUnsent') {
       item.sent = false;
-      item.status = getSendPanelReadyStatus_();
+      item.status = SendPanelConstants_.STATUS_UNSENT;
       return item;
     }
     return item;
+  }
+
+  function markRowsAsPending(rowNumbers, options) {
+    if (typeof SendPanelRepository_.markRowsAsPending === 'function') {
+      return SendPanelRepository_.markRowsAsPending(rowNumbers, options || {});
+    }
+    return { dryRun: !!(options && options.dryRun), requestedRows: stage4AsArray_(rowNumbers) };
   }
 
   function markRowsAsSent(rowNumbers, options) {
@@ -101,6 +115,7 @@ const SendPanelService_ = (function() {
     normalizeRows: normalizeRows,
     findDuplicateKeys: findDuplicateKeys,
     resolveTransition: resolveTransition,
+    markRowsAsPending: markRowsAsPending,
     markRowsAsSent: markRowsAsSent,
     markRowsAsUnsent: markRowsAsUnsent
   };

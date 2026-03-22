@@ -1,780 +1,158 @@
-﻿﻿$ErrorActionPreference = "Stop"
+param()
+
+$ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-# -------------------------
-# CONFIG
-# -------------------------
-$GitPath     = "C:\Users\User\Documents\PortableGit\cmd"
-$NodePath    = "C:\Users\User\Documents\node-v20.20.1-win-x64"
 $ProjectRoot = $PSScriptRoot
-
-# -------------------------
-# PATHS
-# -------------------------
-$GitExePath      = Join-Path $GitPath "git.exe"
-$NodeExePath     = Join-Path $NodePath "node.exe"
-$NpmCliPath      = Join-Path $NodePath "node_modules\npm\bin\npm-cli.js"
-$NpxCliPath      = Join-Path $NodePath "node_modules\npm\bin\npx-cli.js"
-$ClaspEntryPath  = Join-Path $ProjectRoot "node_modules\@google\clasp\build\src\index.js"
-$WatchScriptPath = Join-Path $ProjectRoot "watch-sync-simple.ps1"
-$ManifestPath    = Join-Path $ProjectRoot "appsscript.json"
-$ClaspConfigPath = Join-Path $ProjectRoot ".clasp.json"
-
-# -------------------------
-# PATH SETUP
-# -------------------------
-$env:Path = "$GitPath;$NodePath;$env:Path"
 Set-Location $ProjectRoot
 
-# -------------------------
-# VALIDATION
-# -------------------------
-function Assert-FileExists {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Path,
-
-        [Parameter(Mandatory = $true)]
-        [string]$Label
-    )
-
-    if (-not (Test-Path -LiteralPath $Path)) {
-        throw "$Label not found: $Path"
-    }
-}
-
-function Test-ClaspProjectLinked {
-    [CmdletBinding()]
-    param()
-
-    return (Test-Path -LiteralPath $ClaspConfigPath)
-}
-
-function Assert-ClaspProjectLinked {
-    [CmdletBinding()]
-    param()
-
-    if (-not (Test-ClaspProjectLinked)) {
-        throw ".clasp.json not found: $ClaspConfigPath. GAS project commands require a linked Apps Script project."
-    }
-}
-
-Assert-FileExists -Path $GitExePath      -Label "git.exe"
-Assert-FileExists -Path $NodeExePath     -Label "node.exe"
-Assert-FileExists -Path $NpmCliPath      -Label "npm-cli.js"
-Assert-FileExists -Path $ClaspEntryPath  -Label "clasp entry"
-Assert-FileExists -Path $ManifestPath    -Label "appsscript.json"
-
-# npx необязателен
-$HasNpx = Test-Path -LiteralPath $NpxCliPath
-
-# -------------------------
-# SAFE FULL PATHS
-# -------------------------
-$GitExe      = (Get-Item -LiteralPath $GitExePath).FullName
-$NodeExe     = (Get-Item -LiteralPath $NodeExePath).FullName
-$NpmCli      = (Get-Item -LiteralPath $NpmCliPath).FullName
-$NpxCli      = if ($HasNpx) { (Get-Item -LiteralPath $NpxCliPath).FullName } else { $null }
-$ClaspEntry  = (Get-Item -LiteralPath $ClaspEntryPath).FullName
-$WatchScript = if (Test-Path -LiteralPath $WatchScriptPath) { (Get-Item -LiteralPath $WatchScriptPath).FullName } else { $null }
-$Manifest    = (Get-Item -LiteralPath $ManifestPath).FullName
-$ClaspConfig = if (Test-ClaspProjectLinked) { (Get-Item -LiteralPath $ClaspConfigPath).FullName } else { $null }
-
-# -------------------------
-# UI HELPERS
-# -------------------------
-function Write-Section {
-    [CmdletBinding()]
-    param([string]$Title)
-
-    Write-Host ""
-    Write-Host "=== $Title ==="
-}
-
-function Write-Info {
-    [CmdletBinding()]
-    param([string]$Message)
-
-    Write-Host "[INFO] $Message"
-}
-
-function Write-Ok {
-    [CmdletBinding()]
-    param([string]$Message)
-
-    Write-Host "[OK] $Message"
-}
-
-function Write-WarnLine {
-    [CmdletBinding()]
-    param([string]$Message)
-
-    Write-Host "[WARN] $Message"
-}
-
-# -------------------------
-# PROJECT HELPERS
-# -------------------------
-function Test-ClaspProjectLinked {
-    [CmdletBinding()]
-    param()
-
-    Refresh-WapbEnvState
-    return $script:HasClaspConfig
-}
-
-function Assert-ClaspProjectLinked {
-    [CmdletBinding()]
-    param()
-
-    if (-not (Test-ClaspProjectLinked)) {
-        throw ".clasp.json not found: $script:ClaspConfigPath. GAS project commands require a linked Apps Script project."
-    }
-}
-
-function Test-ClaspInstalled {
-    [CmdletBinding()]
-    param()
-
-    Refresh-WapbEnvState
-    return $script:HasClasp
-}
-
-function Assert-ClaspInstalled {
-    [CmdletBinding()]
-    param()
-
-    if (-not (Test-ClaspInstalled)) {
-        throw "Local clasp is not installed. Run: Install-ClaspLocal"
-    }
-}
-
-function Get-ProjectRelativePath {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$BasePath,
-
-        [Parameter(Mandatory = $true)]
-        [string]$TargetPath
-    )
-
-    $baseFull = [System.IO.Path]::GetFullPath($BasePath)
-    if (-not $baseFull.EndsWith([System.IO.Path]::DirectorySeparatorChar)) {
-        $baseFull += [System.IO.Path]::DirectorySeparatorChar
-    }
-
-    $targetFull = [System.IO.Path]::GetFullPath($TargetPath)
-
-    $baseUri   = New-Object System.Uri($baseFull)
-    $targetUri = New-Object System.Uri($targetFull)
-
-    $relativeUri = $baseUri.MakeRelativeUri($targetUri)
-    return [System.Uri]::UnescapeDataString($relativeUri.ToString()).Replace('/', '\')
-}
-
-# -------------------------
-# INTERNAL EXEC HELPERS
-# -------------------------
-function Invoke-ExternalNodeCommand {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$EntryFile,
-
-        [Parameter(Mandatory = $true)]
-        [string]$ToolName,
-
-        [Parameter(ValueFromRemainingArguments = $true)]
-        [string[]]$Arguments
-    )
-
-    & $NodeExe $EntryFile @Arguments
-    $exitCode = $LASTEXITCODE
-
-    if ($exitCode -ne 0) {
-        $joinedArgs = if ($Arguments) { $Arguments -join ' ' } else { '' }
-        throw "$ToolName $joinedArgs failed with exit code $exitCode"
-    }
-}
-
-function Invoke-ProjectGit {
-    [CmdletBinding()]
-    param(
-        [Parameter(ValueFromRemainingArguments = $true)]
-        [string[]]$Arguments
-    )
-
-    & $GitExe @Arguments
-    $exitCode = $LASTEXITCODE
-
-    if ($exitCode -ne 0) {
-        $joinedArgs = if ($Arguments) { $Arguments -join ' ' } else { '' }
-        throw "git $joinedArgs failed with exit code $exitCode"
-    }
-}
-
-function Invoke-NpmPs {
-    [CmdletBinding()]
-    param(
-        [Parameter(ValueFromRemainingArguments = $true)]
-        [string[]]$Arguments
-    )
-
-    Invoke-ExternalNodeCommand -EntryFile $NpmCli -ToolName "npm" @Arguments
-}
-
-function Invoke-NpxPs {
-    [CmdletBinding()]
-    param(
-        [Parameter(ValueFromRemainingArguments = $true)]
-        [string[]]$Arguments
-    )
-
-    if (-not $HasNpx) {
-        throw "npx-cli.js not found: $NpxCliPath"
-    }
-
-    Invoke-ExternalNodeCommand -EntryFile $NpxCli -ToolName "npx" @Arguments
-}
-
-function Invoke-Clasp {
-    [CmdletBinding()]
-    param(
-        [Parameter(ValueFromRemainingArguments = $true)]
-        [string[]]$Arguments
-    )
-
-    Invoke-ExternalNodeCommand -EntryFile $ClaspEntry -ToolName "clasp" @Arguments
-}
-
-# -------------------------
-# SOURCE FILES / HASH
-# -------------------------
-function Get-WapbTrackedSourceFiles {
-    [CmdletBinding()]
-    param()
-
-    Get-ChildItem -Path $ProjectRoot -Recurse -File |
-        Where-Object {
-            $_.FullName -notmatch '\\node_modules\\' -and
-            $_.FullName -notmatch '\\\.git\\' -and
-            $_.FullName -notmatch '\\dist\\' -and
-            $_.FullName -notmatch '\\build\\' -and
-            (
-                $_.Name -eq 'appsscript.json' -or
-                $_.Extension -in @('.gs', '.html')
-            )
-        } |
-        Sort-Object FullName
-}
-
-function Get-WapbSourceHash {
-    [CmdletBinding()]
-    param()
-
-    $files = Get-WapbTrackedSourceFiles
-
-    if (-not $files) {
-        return ""
-    }
-
-    $parts = foreach ($file in $files) {
-        $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash
-        $relativePath = [System.IO.Path]::GetRelativePath($ProjectRoot, $file.FullName)
-        "$relativePath|$hash"
-    }
-
-    $joined = $parts -join "`n"
-    $bytes  = [System.Text.Encoding]::UTF8.GetBytes($joined)
-    $sha    = [System.Security.Cryptography.SHA256]::Create()
-
-    try {
-        ($sha.ComputeHash($bytes) | ForEach-Object { $_.ToString("x2") }) -join ""
-    }
-    finally {
-        $sha.Dispose()
-    }
-}
-
-# -------------------------
-# AVAILABILITY CHECKS
-# -------------------------
-function Test-GitAvailable {
-    [CmdletBinding()]
-    param()
-
-    try {
-        Invoke-ProjectGit --version | Out-Null
-        return $true
-    }
-    catch {
-        return $false
-    }
-}
-
-function Test-NpmAvailable {
-    [CmdletBinding()]
-    param()
-
-    try {
-        Invoke-NpmPs -v | Out-Null
-        return $true
-    }
-    catch {
-        return $false
-    }
-}
-
-function Test-ClaspAvailable {
-    [CmdletBinding()]
-    param()
-
-    try {
-        Refresh-WapbEnvState
-        if (-not $script:HasClasp) {
-            return $false
+function Resolve-OptionalPath {
+    param([string[]]$Candidates)
+    foreach ($candidate in $Candidates) {
+        if ($candidate -and (Test-Path -LiteralPath $candidate)) {
+            return (Get-Item -LiteralPath $candidate).FullName
         }
-
-        Invoke-Clasp --version | Out-Null
-        return $true
     }
-    catch {
-        return $false
+    return $null
+}
+
+function Refresh-WapbEnvState {
+    $script:WapbEnv = [ordered]@{
+        ProjectRoot = $ProjectRoot
+        ManifestPath = Resolve-OptionalPath @((Join-Path $ProjectRoot 'appsscript.json'))
+        ClaspConfigPath = Resolve-OptionalPath @((Join-Path $ProjectRoot '.clasp.json'))
+        LocalClaspEntry = Resolve-OptionalPath @((Join-Path $ProjectRoot 'node_modules/@google/clasp/build/src/index.js'))
+        NodePath = Resolve-OptionalPath @(
+            (Join-Path $ProjectRoot 'tnt/node-v20.20.1-win-x64/node.exe'),
+            (Join-Path $ProjectRoot 'node.exe')
+        )
+        GitPath = $null
+    }
+
+    try { $script:WapbEnv.GitPath = (Get-Command git -ErrorAction Stop).Source } catch {}
+    if (-not $script:WapbEnv.NodePath) {
+        try { $script:WapbEnv.NodePath = (Get-Command node.exe -ErrorAction Stop).Source } catch {}
     }
 }
 
-# -------------------------
-# SETUP COMMANDS
-# -------------------------
-function Install-ProjectDeps {
-    [CmdletBinding()]
-    param()
-
-    Write-Info "Installing project dependencies..."
-    Invoke-NpmPs install
+function Get-WapbNodePath {
     Refresh-WapbEnvState
-    Write-Ok "Project dependencies installed."
+    if (-not $script:WapbEnv.NodePath) { throw 'node.exe не знайдено. Вкажи локальний Node у tnt/ або встанови Node у PATH.' }
+    return $script:WapbEnv.NodePath
 }
 
-function Install-ClaspLocal {
-    [CmdletBinding()]
-    param()
+function npmx {
+    param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Args)
+    $node = Get-WapbNodePath
+    $npmCli = Join-Path (Split-Path $node -Parent) 'node_modules/npm/bin/npm-cli.js'
+    if (-not (Test-Path -LiteralPath $npmCli)) { throw "npm-cli.js не знайдено: $npmCli" }
+    & $node $npmCli @Args
+}
 
-    Write-Info "Installing local clasp..."
-    Invoke-NpmPs install --save-dev "@google/clasp"
+function npxx {
+    param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Args)
+    $node = Get-WapbNodePath
+    $npxCli = Join-Path (Split-Path $node -Parent) 'node_modules/npm/bin/npx-cli.js'
+    if (-not (Test-Path -LiteralPath $npxCli)) { throw "npx-cli.js не знайдено: $npxCli" }
+    & $node $npxCli @Args
+}
+
+function gitx {
+    param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Args)
     Refresh-WapbEnvState
-    Write-Ok "Local clasp installed."
+    if (-not $script:WapbEnv.GitPath) { throw 'git не знайдено в PATH.' }
+    & $script:WapbEnv.GitPath @Args
 }
 
-function Connect-GasProject {
-    [CmdletBinding()]
-    param()
+function Test-ClaspProjectLinked { Refresh-WapbEnvState; return [bool]$script:WapbEnv.ClaspConfigPath }
+function Assert-ClaspProjectLinked { if (-not (Test-ClaspProjectLinked)) { throw '.clasp.json не знайдено. У репозиторії зберігай тільки .clasp.json.example.' } }
 
-    Assert-ClaspInstalled
-    Invoke-Clasp login
-}
-
-function Disconnect-GasProject {
-    [CmdletBinding()]
-    param()
-
-    Assert-ClaspInstalled
-    Invoke-Clasp logout
-}
-
-# -------------------------
-# GAS COMMANDS
-# -------------------------
-function Get-GasStatus {
-    [CmdletBinding()]
-    param()
-
-    Assert-ClaspInstalled
-    Assert-ClaspProjectLinked
-    Invoke-Clasp status
-}
-
-function Invoke-GasPull {
-    [CmdletBinding()]
-    param()
-
-    Assert-ClaspInstalled
-    Assert-ClaspProjectLinked
-    Write-Info "Pulling from Google Apps Script..."
-    Invoke-Clasp pull
-    $script:WapbLastKnownHash = Get-WapbSourceHash
-    Write-Ok "GAS pull completed."
-}
-
-function Invoke-GasPush {
-    [CmdletBinding()]
-    param()
-
-    Assert-ClaspInstalled
-    Assert-ClaspProjectLinked
-    Write-Info "Pushing to Google Apps Script..."
-    Invoke-Clasp push
-    $script:WapbLastKnownHash = Get-WapbSourceHash
-    Write-Ok "GAS push completed."
-}
-
-function Open-GasProject {
-    [CmdletBinding()]
-    param()
-
-    Assert-ClaspInstalled
-    Assert-ClaspProjectLinked
-    Invoke-Clasp open
-}
-
-function Start-GasWatch {
-    [CmdletBinding()]
-    param(
-        [int]$IntervalSeconds = 3
-    )
-
-    Assert-ClaspInstalled
-    Assert-ClaspProjectLinked
-
+function Invoke-ClaspCommand {
+    param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Args)
     Refresh-WapbEnvState
-    if (-not $script:WatchScript) {
-        throw "watch-sync-simple.ps1 not found: $script:WatchScriptPath"
-    }
-
-    Set-ExecutionPolicy -Scope Process Bypass -Force
-    & $WatchScript -IntervalSeconds $IntervalSeconds
-    $exitCode = $LASTEXITCODE
-
-    if ($exitCode -ne 0) {
-        throw "watch-sync-simple.ps1 failed with exit code $exitCode"
-    }
-}
-
-function Invoke-GasPushIfChanged {
-    [CmdletBinding()]
-    param()
-
-    Assert-ClaspInstalled
-    Assert-ClaspProjectLinked
-    $currentHash = Get-WapbSourceHash
-
-    if (-not $script:WapbLastKnownHash) {
-        $script:WapbLastKnownHash = $currentHash
-        Write-Info "Initial source hash captured. Push skipped."
+    if ($script:WapbEnv.LocalClaspEntry) {
+        $node = Get-WapbNodePath
+        & $node $script:WapbEnv.LocalClaspEntry @Args
         return
     }
-
-    if ($currentHash -eq $script:WapbLastKnownHash) {
-        Write-Info "No source changes detected."
-        return
-    }
-
-    Write-Info "Changes detected. Pushing to Google Apps Script..."
-    Invoke-Clasp push
-    $script:WapbLastKnownHash = Get-WapbSourceHash
-    Write-Ok "GAS push completed."
+    Write-Warning 'Локальний clasp не знайдено. Спроба через npx.'
+    & npxx @('clasp') @Args
 }
 
-# -------------------------
-# GIT COMMANDS
-# -------------------------
-function Get-GitStatusShort {
-    [CmdletBinding()]
-    param()
-
-    Invoke-ProjectGit status --short
-}
-
-function Save-GitChanges {
-    [CmdletBinding()]
-    param(
-        [string]$Message = "update"
-    )
-
-    Invoke-ProjectGit add .
-
-    $pending = Invoke-ProjectGit status --short
-    if (-not $pending) {
-        Write-Info "No changes to commit."
-        return
-    }
-
-    Invoke-ProjectGit commit -m $Message
-    Write-Ok "Git commit created."
-}
-
-function Sync-GitBranch {
-    [CmdletBinding()]
-    param(
-        [string]$Message = "update"
-    )
-
-    Invoke-ProjectGit add .
-
-    $pending = Invoke-ProjectGit status --short
-    if ($pending) {
-        Invoke-ProjectGit commit -m $Message
-        Write-Ok "Git commit created."
-    }
-    else {
-        Write-Info "No changes to commit."
-    }
-
-    Write-Info "Pushing Git..."
-    Invoke-ProjectGit push
-    Write-Ok "Git push completed."
-}
-
-# -------------------------
-# FULL WORKFLOW
-# -------------------------
-function Invoke-DeployAll {
-    [CmdletBinding()]
-    param(
-        [string]$Message = "update"
-    )
-
-    Assert-ClaspInstalled
-    Assert-ClaspProjectLinked
-    Write-Section "DEPLOY ALL"
-
-    Save-GitChanges -Message $Message
-
-    Write-Info "Pushing Git..."
-    Invoke-ProjectGit push
-
-    Write-Info "Pushing GAS..."
-    Invoke-Clasp push
-
-    $script:WapbLastKnownHash = Get-WapbSourceHash
-    Write-Ok "Deploy completed."
-}
-
-# -------------------------
-# NPM / NPX COMMANDS
-# -------------------------
-function Get-NpmVersion {
-    [CmdletBinding()]
-    param()
-
-    Invoke-NpmPs -v
-}
-
-function Get-NpxVersion {
-    [CmdletBinding()]
-    param()
-
-    Invoke-NpxPs --version
-}
-
-# -------------------------
-# HEALTH CHECK
-# -------------------------
+function Get-GasStatus { Assert-ClaspProjectLinked; Invoke-ClaspCommand status }
+function Invoke-GasPull { Assert-ClaspProjectLinked; Invoke-ClaspCommand pull }
+function Invoke-GasPush { Assert-ClaspProjectLinked; Invoke-ClaspCommand push }
+function Invoke-GasPushIfChanged { Assert-ClaspProjectLinked; & (Join-Path $ProjectRoot 'watch-sync-simple.ps1') }
+function Open-GasProject { Assert-ClaspProjectLinked; Invoke-ClaspCommand open }
+function Start-GasWatch { Assert-ClaspProjectLinked; & (Join-Path $ProjectRoot 'watch-sync-simple.ps1') }
+function Get-GitStatusShort { gitx status --short }
+function Save-GitChanges([string]$Message) { gitx add -A; gitx commit -m ($(if ($Message) { $Message } else { 'update' })) }
+function Sync-GitBranch([string]$Message) { if ($Message) { Save-GitChanges $Message }; gitx pull --rebase; gitx push }
+function Invoke-DeployAll([string]$Message) { if ($Message) { Save-GitChanges $Message }; Invoke-GasPush; gitx push }
 function Test-ProjectHealth {
-    [CmdletBinding()]
-    param()
-
     Refresh-WapbEnvState
-
-    Write-Section "ENVIRONMENT"
-    Invoke-ProjectGit --version
-    & $NodeExe -v
-    if ($LASTEXITCODE -ne 0) {
-        throw "node -v failed with exit code $LASTEXITCODE"
+    [pscustomobject]@{
+        ProjectRoot = $script:WapbEnv.ProjectRoot
+        ManifestFound = [bool]$script:WapbEnv.ManifestPath
+        ClaspLinked = [bool]$script:WapbEnv.ClaspConfigPath
+        LocalClaspFound = [bool]$script:WapbEnv.LocalClaspEntry
+        NodeFound = [bool]$script:WapbEnv.NodePath
+        GitFound = [bool]$script:WapbEnv.GitPath
     }
-
-    Invoke-NpmPs -v
-    Invoke-Clasp --version
-
-    if ($HasNpx) {
-        Invoke-NpxPs --version
-    }
-    else {
-        Write-WarnLine "npx is not available."
-    }
-
-    if ($script:HasClasp) {
-        Invoke-Clasp --version
-    }
-    else {
-        Write-WarnLine "Local clasp is not installed."
-    }
-
-    Write-Section "PATHS"
-    Write-Host "ProjectRoot : $ProjectRoot"
-    Write-Host "GitRoot     : $GitRoot"
-    Write-Host "NodeRoot    : $NodeRoot"
-    Write-Host "GitExe      : $GitExe"
-    Write-Host "NodeExe     : $NodeExe"
-    Write-Host "NpmCli      : $NpmCli"
-    Write-Host "NpxCli      : $(if ($NpxCli) { $NpxCli } else { '<not found>' })"
-    Write-Host "ClaspEntry  : $ClaspEntry"
-    Write-Host "Manifest    : $Manifest"
-    Write-Host "ClaspConfig : $(if ($ClaspConfig) { $ClaspConfig } else { '<not found>' })"
-    Write-Host "WatchScript : $(if ($WatchScript) { $WatchScript } else { '<not found>' })"
-
-    Write-Section "GIT"
-    Invoke-ProjectGit status --short
-
-    Write-Section "GAS"
-    if (Test-ClaspProjectLinked) {
-        Invoke-Clasp status
-    }
-    elseif (-not $script:HasClasp) {
-        Write-WarnLine "clasp is not installed yet."
-    }
-    else {
-        Write-WarnLine ".clasp.json not found. GAS status is unavailable."
-    }
-
-    Write-Section "SOURCE FILES"
-    Get-WapbTrackedSourceFiles | Select-Object -ExpandProperty FullName
-
-    Write-Section "SOURCE HASH"
-    Write-Host (Get-WapbSourceHash)
-
-    Write-Host ""
 }
-
-# -------------------------
-# HELP
-# -------------------------
 function Show-WapbCommands {
-    [CmdletBinding()]
-    param()
+@'
+Canonical commands:
+  Get-GasStatus
+  Invoke-GasPull
+  Invoke-GasPush
+  Invoke-GasPushIfChanged
+  Open-GasProject
+  Start-GasWatch
+  Get-GitStatusShort
+  Save-GitChanges "msg"
+  Sync-GitBranch "msg"
+  Invoke-DeployAll "msg"
+  Test-ProjectHealth
+  Show-WapbCommands
 
-    Refresh-WapbEnvState
-
-    Write-Host ""
-    Write-Host "WAPB COMMANDS"
-    Write-Host "-------------"
-    Write-Host "gas-status            -> показать статус GAS"
-    Write-Host "gas-pull              -> скачать код из Google Apps Script"
-    Write-Host "gas-push              -> загрузить код в Google Apps Script"
-    Write-Host "gas-push-smart        -> пушить в GAS только если есть изменения"
-    Write-Host "gas-open              -> открыть GAS-проект в браузере"
-    Write-Host "gas-watch             -> запустить watch-sync-simple.ps1"
-    Write-Host "git-status-short      -> короткий git status"
-    Write-Host "git-save 'msg'        -> git add + git commit"
-    Write-Host "git-sync 'msg'        -> git add + git commit + git push"
-    Write-Host "deploy-all 'msg'      -> git commit + git push + gas push"
-    Write-Host "project-health        -> полная проверка окружения и проекта"
-    Write-Host "npm -v                -> версия npm через node/npm-cli.js"
-    Write-Host "npx --version         -> версия npx через node/npx-cli.js"
-    Write-Host "clasp --version       -> проверить версию clasp"
-    Write-Host "clasp login           -> логин в clasp"
-    Write-Host "wapb-help             -> показать эту справку"
-    Write-Host ""
+Short aliases:
+  gas-status
+  gas-pull
+  gas-push
+  gas-push-smart
+  gas-open
+  gas-watch
+  git-status-short
+  git-save "msg"
+  git-sync "msg"
+  deploy-all "msg"
+  project-health
+  wapb-help
+  npmx ...
+  npxx ...
+  gitx ...
+'@ | Write-Host
 }
 
-# -------------------------
-# SHORT ALIASES
-# -------------------------
-Set-Alias npm              Invoke-NpmPs
-Set-Alias npmps            Invoke-NpmPs
-if ($HasNpx) { Set-Alias npx Invoke-NpxPs }
-
-Set-Alias clasp            Invoke-Clasp
-Set-Alias gas-status       Get-GasStatus
-Set-Alias gas-pull         Invoke-GasPull
-Set-Alias gas-push         Invoke-GasPush
-Set-Alias gas-push-smart   Invoke-GasPushIfChanged
-Set-Alias gas-open         Open-GasProject
-Set-Alias gas-watch        Start-GasWatch
-Set-Alias gas-login        Login-GasProject
-Set-Alias gas-logout       Logout-GasProject
+Set-Alias gas-status Get-GasStatus
+Set-Alias gas-pull Invoke-GasPull
+Set-Alias gas-push Invoke-GasPush
+Set-Alias gas-push-smart Invoke-GasPushIfChanged
+Set-Alias gas-open Open-GasProject
+Set-Alias gas-watch Start-GasWatch
 Set-Alias git-status-short Get-GitStatusShort
-Set-Alias git-save         Save-GitChanges
-Set-Alias git-sync         Sync-GitBranch
-Set-Alias deploy-all       Invoke-DeployAll
-Set-Alias project-health   Test-ProjectHealth
-Set-Alias wapb-help        Show-WapbCommands
+Set-Alias git-save Save-GitChanges
+Set-Alias git-sync Sync-GitBranch
+Set-Alias deploy-all Invoke-DeployAll
+Set-Alias project-health Test-ProjectHealth
+Set-Alias wapb-help Show-WapbCommands
 
-# -------------------------
-# INIT STATE
-# -------------------------
-$script:WapbLastKnownHash = Get-WapbSourceHash
-
-# -------------------------
-# READY BANNER
-# -------------------------
-Write-Host ""
-Write-Host "======================================"
-Write-Host " WAPB DEV ENV LOADED"
-Write-Host "======================================"
-Write-Host ""
+Refresh-WapbEnvState
+Write-Host ''
+Write-Host '======================================'
+Write-Host ' WAPB DEV ENV LOADED'
+Write-Host '======================================'
 Write-Host "Project: $ProjectRoot"
-Write-Host "Node   : $NodeRoot"
-Write-Host "Git    : $GitRoot"
-Write-Host ""
-
-if ($MyInvocation.InvocationName -ne '.') {
-    Write-WarnLine "Run this file with dot-sourcing, otherwise commands will disappear after script exits:"
-    Write-Host "  . .\dev-shell.ps1"
-    Write-Host ""
-}
-
-Write-Host "Quick wrappers:"
-Write-Host "  npmx <args>"
-Write-Host "  npxx <args>"
-Write-Host "  gitx <args>"
-Write-Host ""
-
-Write-Host "Canonical commands:"
-Write-Host "  Install-ProjectDeps"
-Write-Host "  Install-ClaspLocal"
-Write-Host "  Login-GasProject"
-Write-Host "  Logout-GasProject"
-Write-Host "  Get-GasStatus"
-Write-Host "  Invoke-GasPull"
-Write-Host "  Invoke-GasPush"
-Write-Host "  Invoke-GasPushIfChanged"
-Write-Host "  Open-GasProject"
-Write-Host "  Start-GasWatch"
-Write-Host "  Get-GitStatusShort"
-Write-Host "  Save-GitChanges 'msg'"
-Write-Host "  Sync-GitBranch 'msg'"
-Write-Host "  Invoke-DeployAll 'msg'"
-Write-Host "  Test-ProjectHealth"
-Write-Host "  Show-WapbCommands"
-Write-Host ""
-
-Write-Host "Short aliases:"
-Write-Host "  gas-status"
-Write-Host "  gas-pull"
-Write-Host "  gas-push"
-Write-Host "  gas-push-smart"
-Write-Host "  gas-open"
-Write-Host "  gas-watch"
-Write-Host "  gas-login"
-Write-Host "  gas-logout"
-Write-Host "  git-status-short"
-Write-Host "  git-save 'msg'"
-Write-Host "  git-sync 'msg'"
-Write-Host "  deploy-all 'msg'"
-Write-Host "  project-health"
-Write-Host "  wapb-help"
-Write-Host "  npm -v"
-Write-Host "  clasp --version"
-if ($HasNpx) {
-    Write-Host "  npx --version"
-}
-if (Test-ClaspInstalled) {
-    Write-Host "  clasp --version"
-}
-Write-Host ""
-
-if (-not (Test-ClaspInstalled)) {
-    Write-WarnLine "Local clasp is not installed yet. Run: Install-ClaspLocal"
-    Write-Host ""
-}
-
-if (-not (Test-ClaspProjectLinked)) {
-    Write-WarnLine ".clasp.json not found. Git/npm commands work, global clasp commands work, but GAS project commands are disabled until project linking."
-    Write-Host ""
-}
-
-Write-Host "======================================"
-Write-Host ""
+if (-not $script:WapbEnv.LocalClaspEntry) { Write-Warning 'Локальний clasp не знайдено. Shell завантажено без падіння; GAS-команди працюватимуть через npx або після npm install.' }
+Show-WapbCommands
