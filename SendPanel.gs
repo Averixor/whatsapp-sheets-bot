@@ -1,7 +1,7 @@
 /************ ПАНЕЛЬ ВІДПРАВКИ ************/
 
 var SEND_PANEL_STATE_STORE_PREFIX_ = 'SEND_PANEL_SENT_V2|';
-var SEND_PANEL_WHATSAPP_TARGET_ = SendPanelConstants_.WA_SENDER_TARGET;
+var SEND_PANEL_WHATSAPP_TARGET_ = 'WAPB_WHATSAPP_SENDER_TAB';
 
 function extractHyperlinkUrl_(formula) {
   const m = String(formula || '').match(/HYPERLINK\("([^"]+)"/i);
@@ -588,7 +588,7 @@ function markSendPanelUnsent_(row) {
 function showSendPanelDialog_(items) {
   items = Array.isArray(items) ? items : [];
   const safeJson = JSON.stringify(items);
-  const safeTarget = JSON.stringify(SEND_PANEL_WHATSAPP_TARGET_);
+  const safeTarget = JSON.stringify(getSendPanelWhatsAppTarget_());
 
   const html = HtmlService.createHtmlOutput(`
 <!DOCTYPE html>
