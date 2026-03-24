@@ -1,20 +1,62 @@
-# Implementation report — 2026-03-22
+/**
+ * DictionaryRepository.gs — доступ до словників, телефонів і профілів.
+ */
 
-## Implemented
+const DictionaryRepository_ = (function() {
+  function getPhonesMap() {
+    return loadPhonesMap_();
+  }
 
-- Canonical SEND_PANEL status layer added in `SendPanelConstants.gs`.
-- Sidebar send flow changed to: open chat -> pending confirmation -> confirm sent / mark unsent.
-- Auto-mark-as-sent after opening WhatsApp removed from single and batch sidebar flows.
-- One named WhatsApp sender tab enforced in sidebar and generated WA links.
-- `SendPanelRepository.rebuild()` now uses explicit panel date metadata and preserves sheet state for the same panel date.
-- `getSendPanelData()` now returns stored panel date metadata.
-- Validation no longer silently falls back to today in deep date normalization helpers.
-- `dev-shell.ps1` rewritten into a self-consistent shell.
-- `watch-sync-simple.ps1` hardened with exit-code checks and retry.
-- `README.md` and `ProjectMetadata.gs` aligned to actual archive contents.
+  function getProfiles() {
+    return loadPhonesProfiles_();
+  }
 
-## Partially addressed / not fully rewritten
+  function getDictMap() {
+    return loadDictMap_();
+  }
 
-- Legacy helpers in `SendPanel.gs` remain present for compatibility, but active sidebar flow now uses the repository/service path.
-- The broader repository still contains historical code paths outside the stabilized SEND_PANEL contour.
-- PowerShell files were hardened by code review and rewrite, but not executed in this Linux container.
+  function getSummaryRules() {
+    return readDictSum_();
+  }
+
+  function getPhoneByRole(role) {
+    return findPhoneByRole_(role);
+  }
+
+  function getPhoneByFio(fio) {
+    if (!fio) return '';
+    const phones = getPhonesMap();
+    const raw = String(fio || '').trim();
+    const norm = normalizeFIO_(raw);
+    return phones[raw] || phones[norm] || '';
+  }
+
+  function getProfileByCallsign(callsign) {
+    const profiles = getProfiles();
+    const key = _normCallsignKey_(callsign);
+    return (profiles && profiles.byCallsign && profiles.byCallsign[key]) || null;
+  }
+
+  function getProfileByFio(fio) {
+    const profiles = getProfiles();
+    const key = _normFioForProfiles_(fio);
+    return (profiles && profiles.byFio && profiles.byFio[key]) || null;
+  }
+
+  function getDictEntry(code) {
+    const dict = getDictMap();
+    return dict[String(code || '').trim()] || null;
+  }
+
+  return {
+    getPhonesMap: getPhonesMap,
+    getProfiles: getProfiles,
+    getDictMap: getDictMap,
+    getSummaryRules: getSummaryRules,
+    getPhoneByRole: getPhoneByRole,
+    getPhoneByFio: getPhoneByFio,
+    getProfileByCallsign: getProfileByCallsign,
+    getProfileByFio: getProfileByFio,
+    getDictEntry: getDictEntry
+  };
+})();

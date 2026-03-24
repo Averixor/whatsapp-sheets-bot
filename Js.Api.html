@@ -1,232 +1,111 @@
-<script>
-  // Js.Api — active Stage 7.1 runtime fragment.
 
-  const Stage4Api = {
-    async getMonths() {
-      const response = await Api.run('apiStage4GetMonthsList');
-      const result = unwrapStage4Result(response) || {};
-      return {
-        success: !!response?.success,
-        message: response?.message || '',
-        error: response?.error || null,
-        data: result,
-        months: Array.isArray(result.months) ? result.months : [],
-        current: result.current || '',
-        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
-        context: response?.context || null,
-        meta: unwrapStage4Meta(response),
-        raw: response
-      };
-    },
+/**
+ * JobRuntime.gs — stage 5 runtime observability layer.
+ */
 
-    async getSidebarData(dateStr = '') {
-      const response = await Api.run('apiStage4GetSidebarData', dateStr || '');
-      const result = unwrapStage4Result(response) || {};
-      return {
-        success: !!response?.success,
-        message: response?.message || '',
-        error: response?.error || null,
-        data: Array.isArray(result.personnel) ? result.personnel : [],
-        personnel: Array.isArray(result.personnel) ? result.personnel : [],
-        count: Number(result.count || (Array.isArray(result.personnel) ? result.personnel.length : 0)),
-        month: result.month || '',
-        date: result.date || '',
-        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
-        context: response?.context || null,
-        meta: unwrapStage4Meta(response),
-        raw: response
-      };
-    },
+const JobRuntime_ = (function() {
+  function observe(jobName, context, fn) {
+    const ctx = Object.assign({
+      source: 'manual',
+      dryRun: false,
+      operationId: stage4UniqueId_(jobName || 'job')
+    }, context || {});
 
-    async getSendPanelData() {
-      return adaptStage4PanelResponse(await Api.run('apiStage4GetSendPanelData'));
-    },
+    const active = JobRuntimeRepository_.getActive(jobName);
+    if (active && Number(active.ts || 0) && (Date.now() - Number(active.ts || 0)) < 60 * 60 * 1000) {
+      throw new Error(`Job "${jobName}" уже виконується або був запущений надто недавно`);
+    }
 
-    async generatePanelForDate(options = {}) {
-      return adaptStage4PanelResponse(await Api.run('apiGenerateSendPanelForDate', options));
-    },
+    JobRuntimeRepository_.setActive(jobName, {
+      operationId: ctx.operationId,
+      source: ctx.source || 'manual',
+      dryRun: !!ctx.dryRun
+    });
 
-    async generatePanelForRange(options = {}) {
-      const response = await Api.run('apiGenerateSendPanelForRange', options);
-      const result = unwrapStage4Result(response) || {};
-      return {
-        success: !!response?.success,
-        message: response?.message || '',
-        error: response?.error || null,
-        data: result,
-        range: result.range || null,
-        reports: Array.isArray(result.reports) ? result.reports : [],
-        persisted: result.persisted || null,
-        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
-        context: response?.context || null,
-        meta: unwrapStage4Meta(response),
-        raw: response
-      };
-    },
+    const startedAt = new Date();
+    try {
+      const result = fn();
+      const finishedAt = new Date();
 
-    async markAsPending(rows, options = {}) {
-      return adaptStage4PanelResponse(await Api.run('apiMarkPanelRowsAsPending', rows, options));
-    },
+      JobRuntimeRepository_.append({
+        jobName: String(jobName || 'unknownJob'),
+        tsStart: startedAt.toISOString(),
+        tsEnd: finishedAt.toISOString(),
+        status: 'SUCCESS',
+        source: ctx.source || 'manual',
+        dryRun: !!ctx.dryRun,
+        operationId: ctx.operationId,
+        durationMs: finishedAt.getTime() - startedAt.getTime(),
+        message: (result && result.message) ? result.message : 'OK',
+        error: ''
+      });
 
-    async markAsSent(rows, options = {}) {
-      return adaptStage4PanelResponse(await Api.run('apiMarkPanelRowsAsSent', rows, options));
-    },
+      return result;
+    } catch (e) {
+      const finishedAt = new Date();
 
-    async markAsUnsent(rows, options = {}) {
-      return adaptStage4PanelResponse(await Api.run('apiMarkPanelRowsAsUnsent', rows, options));
-    },
+      JobRuntimeRepository_.append({
+        jobName: String(jobName || 'unknownJob'),
+        tsStart: startedAt.toISOString(),
+        tsEnd: finishedAt.toISOString(),
+        status: 'ERROR',
+        source: ctx.source || 'manual',
+        dryRun: !!ctx.dryRun,
+        operationId: ctx.operationId,
+        durationMs: finishedAt.getTime() - startedAt.getTime(),
+        message: '',
+        error: e && e.message ? e.message : String(e)
+      });
 
-    async sendPendingRows(options = {}) {
-      const response = await Api.run('apiSendPendingRows', options);
-      const result = unwrapStage4Result(response) || {};
-      return {
-        success: !!response?.success,
-        message: response?.message || '',
-        error: response?.error || null,
-        data: result,
-        queue: Array.isArray(result.queue) ? result.queue : [],
-        rows: Array.isArray(result.rows) ? result.rows : [],
-        updatedRows: Array.isArray(result.updatedRows) ? result.updatedRows : [],
-        stats: result.stats || {},
-        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
-        context: response?.context || null,
-        meta: unwrapStage4Meta(response),
-        raw: response
-      };
-    },
+      throw e;
+    } finally {
+      try { JobRuntimeRepository_.clearActive(jobName); } catch (_) {}
+    }
+  }
 
-    async buildDaySummary(dateStr = '') {
-      return adaptStage4SummaryResponse(await Api.run('apiBuildDaySummary', dateStr || ''));
-    },
+  function listExecutions() {
+    return JobRuntimeRepository_.listLastRuns();
+  }
 
-    async buildDetailedSummary(dateStr = '') {
-      return adaptStage4SummaryResponse(await Api.run('apiBuildDetailedSummary', dateStr || ''), true);
-    },
+  function getHistory(jobName) {
+    return JobRuntimeRepository_.getHistory(jobName);
+  }
 
-    async openPersonCard(callsign, dateStr = '') {
-      const response = await Api.run('apiOpenPersonCard', callsign || '', dateStr || '');
-      const result = unwrapStage4Result(response) || {};
-      return Object.assign({
-        success: !!response?.success,
-        message: response?.message || '',
-        error: response?.error || null,
-        data: result,
-        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
-        context: response?.context || null,
-        meta: unwrapStage4Meta(response),
-        raw: response
-      }, result || {});
-    },
+  function buildRuntimeReport() {
+    const items = listExecutions();
+    const now = Date.now();
 
-    async checkVacationsAndBirthdays(dateStr = '') {
-      const response = await Api.run('apiCheckVacationsAndBirthdays', dateStr || '');
-      const result = unwrapStage4Result(response) || {};
-      return {
-        success: !!response?.success,
-        message: response?.message || '',
-        error: response?.error || null,
-        data: result,
-        date: result.date || '',
-        vacations: result.vacations || {},
-        birthdays: result.birthdays || {},
-        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
-        context: response?.context || null,
-        meta: unwrapStage4Meta(response),
-        raw: response
-      };
-    },
+    const jobs = items.map(function(item) {
+      const ageMs = item && item.tsEnd ? (now - new Date(item.tsEnd).getTime()) : null;
+      const stale = ageMs != null && ageMs > 36 * 60 * 60 * 1000;
+      const history = getHistory(item.jobName);
+      const consecutiveFailures = history
+        .slice(0, 5)
+        .filter(function(entry) { return entry.status === 'ERROR'; })
+        .length;
 
-    async createNextMonth(options = {}) {
-      const response = await Api.run('apiCreateNextMonthStage4', options);
-      const result = unwrapStage4Result(response) || {};
-      return {
-        success: !!response?.success,
-        message: response?.message || '',
-        error: response?.error || null,
-        data: result,
-        month: result.createdMonth || '',
-        createdMonth: result.createdMonth || '',
-        sourceMonth: result.sourceMonth || '',
-        switched: !!result.switched,
-        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
-        context: response?.context || null,
-        meta: unwrapStage4Meta(response),
-        raw: response
-      };
-    },
+      return Object.assign({}, item, {
+        stale: stale,
+        consecutiveFailures: consecutiveFailures
+      });
+    });
 
-    async switchMonth(month) {
-      const response = await Api.run('apiStage4SwitchBotToMonth', month || '');
-      const result = unwrapStage4Result(response) || {};
-      return {
-        success: !!response?.success,
-        message: response?.message || '',
-        error: response?.error || null,
-        data: result,
-        month: result.month || '',
-        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
-        context: response?.context || null,
-        meta: unwrapStage4Meta(response),
-        raw: response
-      };
-    },
+    return {
+      jobs: jobs.sort(function(a, b) {
+        return String(a.jobName || '').localeCompare(String(b.jobName || ''));
+      }),
+      totalJobs: jobs.length,
+      staleJobs: jobs.filter(function(item) { return item.stale; }).length,
+      failedJobs: jobs.filter(function(item) { return item.status === 'ERROR'; }).length,
+      repeatedFailures: jobs.filter(function(item) { return item.consecutiveFailures >= 2; }).length,
+      storagePolicy: JobRuntimeRepository_.buildStoragePolicyReport()
+    };
+  }
 
-    runReconciliation: (options = {}) => Api.run('apiRunReconciliation', options)
+  return {
+    observe: observe,
+    listExecutions: listExecutions,
+    getHistory: getHistory,
+    buildRuntimeReport: buildRuntimeReport
   };
-
-  const MaintenanceApi = {
-    clearCache: async () => adaptStage4UtilityResponse(await Api.run('apiStage5ClearCache')),
-    clearLog: async () => adaptStage4UtilityResponse(await Api.run('apiStage5ClearLog')),
-    clearPhoneCache: async () => adaptStage4UtilityResponse(await Api.run('apiStage5ClearPhoneCache')),
-    restartBot: async () => adaptStage4UtilityResponse(await Api.run('apiStage5RestartBot')),
-    setupVacationTriggers: async () => adaptStage4UtilityResponse(await Api.run('apiStage5SetupVacationTriggers')),
-    cleanupDuplicateTriggers: async (functionName) => adaptStage4UtilityResponse(await Api.run('apiStage5CleanupDuplicateTriggers', functionName)),
-    debugPhones: async () => adaptStage4UtilityResponse(await Api.run('apiStage5DebugPhones')),
-    buildBirthdayLink: async (phone, name) => adaptStage4UtilityResponse(await Api.run('apiStage5BuildBirthdayLink', phone, name)),
-    runMaintenance: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiRunStage5MaintenanceScenario', options)),
-    listJobs: async () => adaptStage4UtilityResponse(await Api.run('apiListStage5Jobs')),
-    installJobs: async () => adaptStage4UtilityResponse(await Api.run('apiInstallStage5Jobs')),
-    runJob: async (jobName, options = {}) => adaptStage4UtilityResponse(await Api.run('apiRunStage5Job', jobName, options)),
-    healthCheck: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage5HealthCheck', options)),
-    runRegressionTests: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiRunStage5RegressionTests', options)),
-    listPendingRepairs: async (filters = {}) => adaptStage4UtilityResponse(await Api.run('apiStage5ListPendingRepairs', filters)),
-    getOperationDetails: async (operationId) => adaptStage4UtilityResponse(await Api.run('apiStage5GetOperationDetails', operationId || '')),
-    runRepair: async (operationId, options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage5RunRepair', operationId || '', options))
-  };
-
-  const SidebarApi = {
-    getMonths: Stage4Api.getMonths,
-    getSidebarData: Stage4Api.getSidebarData,
-    generatePanel: Stage4Api.generatePanelForDate,
-    getSendPanel: Stage4Api.getSendPanelData,
-    markAsPending: Stage4Api.markAsPending,
-    markAsSent: Stage4Api.markAsSent,
-    markAsUnsent: Stage4Api.markAsUnsent,
-    getVacations: async (dateStr) => Stage4Api.checkVacationsAndBirthdays(dateStr || ''),
-    getBirthdays: async (dateStr) => Stage4Api.checkVacationsAndBirthdays(dateStr || ''),
-    createNextMonth: Stage4Api.createNextMonth,
-    switchMonth: Stage4Api.switchMonth,
-    clearCache: MaintenanceApi.clearCache,
-    clearLog: MaintenanceApi.clearLog,
-    clearPhoneCache: MaintenanceApi.clearPhoneCache,
-    restartBot: MaintenanceApi.restartBot,
-    setupVacationTriggers: MaintenanceApi.setupVacationTriggers,
-    cleanupDuplicateTriggers: MaintenanceApi.cleanupDuplicateTriggers,
-    debugPhones: MaintenanceApi.debugPhones
-  };
-
-  const SummaryApi = {
-    getDaySummary: Stage4Api.buildDaySummary,
-    getDetailedDaySummary: Stage4Api.buildDetailedSummary
-  };
-
-  const CardApi = {
-    getPersonCard: Stage4Api.openPersonCard,
-    buildBirthdayLink: MaintenanceApi.buildBirthdayLink
-  };
-
-  const DiagnosticsApi = {
-    healthCheck: MaintenanceApi.healthCheck,
-    runRegressionTests: MaintenanceApi.runRegressionTests
-  };
-</script>
+})();

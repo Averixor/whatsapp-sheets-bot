@@ -1,62 +1,47 @@
+
 /**
- * DictionaryRepository.gs — доступ до словників, телефонів і профілів.
+ * DialogPresenter.gs — stage 5 presentation-only dialog layer.
  */
 
-const DictionaryRepository_ = (function() {
-  function getPhonesMap() {
-    return loadPhonesMap_();
+const DialogPresenter_ = (function() {
+  function _show(output, title) {
+    SpreadsheetApp.getUi().showModalDialog(output, title || 'WASB');
   }
 
-  function getProfiles() {
-    return loadPhonesProfiles_();
+  function showLinkDialog(data) {
+    const payload = Object.assign({ title: 'Посилання' }, data || {});
+    _show(DialogTemplates_.linkDialog(payload), payload.title);
   }
 
-  function getDictMap() {
-    return loadDictMap_();
+  function showSinglePayloadPreview(data) {
+    const payload = data || {};
+    _show(DialogTemplates_.singleMessage(payload), payload.title || 'Повідомлення');
   }
 
-  function getSummaryRules() {
-    return readDictSum_();
+  function showMultiplePayloadPreview(data) {
+    const payload = data || {};
+    _show(DialogTemplates_.multipleMessages(payload), payload.title || 'Пакет повідомлень');
   }
 
-  function getPhoneByRole(role) {
-    return findPhoneByRole_(role);
+  function showSummaryPreview(data) {
+    const payload = data || {};
+    _show(DialogTemplates_.summaryDialog(payload), payload.title || 'Зведення');
   }
 
-  function getPhoneByFio(fio) {
-    if (!fio) return '';
-    const phones = getPhonesMap();
-    const raw = String(fio || '').trim();
-    const norm = normalizeFIO_(raw);
-    return phones[raw] || phones[norm] || '';
-  }
-
-  function getProfileByCallsign(callsign) {
-    const profiles = getProfiles();
-    const key = _normCallsignKey_(callsign);
-    return (profiles && profiles.byCallsign && profiles.byCallsign[key]) || null;
-  }
-
-  function getProfileByFio(fio) {
-    const profiles = getProfiles();
-    const key = _normFioForProfiles_(fio);
-    return (profiles && profiles.byFio && profiles.byFio[key]) || null;
-  }
-
-  function getDictEntry(code) {
-    const dict = getDictMap();
-    return dict[String(code || '').trim()] || null;
+  function showPrepared(result) {
+    const kind = String((result && result.kind) || '').trim();
+    if (kind === 'singleMessagePreview') return showSinglePayloadPreview(result);
+    if (kind === 'multipleMessagesPreview') return showMultiplePayloadPreview(result);
+    if (kind === 'summaryPreview') return showSummaryPreview(result);
+    if (kind === 'linkPreview') return showLinkDialog(result);
+    throw new Error('Невідомий prepared dialog result');
   }
 
   return {
-    getPhonesMap: getPhonesMap,
-    getProfiles: getProfiles,
-    getDictMap: getDictMap,
-    getSummaryRules: getSummaryRules,
-    getPhoneByRole: getPhoneByRole,
-    getPhoneByFio: getPhoneByFio,
-    getProfileByCallsign: getProfileByCallsign,
-    getProfileByFio: getProfileByFio,
-    getDictEntry: getDictEntry
+    showLinkDialog: showLinkDialog,
+    showSinglePayloadPreview: showSinglePayloadPreview,
+    showMultiplePayloadPreview: showMultiplePayloadPreview,
+    showSummaryPreview: showSummaryPreview,
+    showPrepared: showPrepared
   };
 })();

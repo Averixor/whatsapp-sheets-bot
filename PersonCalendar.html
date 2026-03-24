@@ -1,654 +1,805 @@
-<!doctype html>
-  <html>
+/**
+ * OperationRepository.gs — Stage 7 sheet-backed operation lifecycle repository.
+ *
+ * Source of truth for recoverable state:
+ * - OPS_LOG
+ * - ACTIVE_OPERATIONS
+ * - CHECKPOINTS
+ */
 
-  <head>
-    <base target="_top">
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-      /* ========== PALANTIR-СТИЛЬ (ТЕМНА ТЕМА) ========== */
-      :root {
-        --bg-primary: #0A0A0A;
-        --bg-secondary: #141414;
-        --bg-tertiary: #1E1E1E;
-        --border-color: #2A2A2A;
-        --text-primary: #FFFFFF;
-        --text-secondary: #8A8A8A;
-        --accent-blue: #2D72D2;
-        --accent-blue-light: #3B82F6;
-        --success-green: #10B981;
-        --warning-yellow: #F59E0B;
-        --error-red: #EF4444;
-        --font-mono: 'SF Mono', 'Consolas', 'Monaco', 'Courier New', monospace;
-        --transition: all 0.2s ease;
-        --radius: 12px;
+const OperationRepository_ = (function() {
+  const SHEETS = Object.freeze({
+    OPS: appGetCore('OPS_LOG_SHEET', 'OPS_LOG'),
+    ACTIVE: appGetCore('ACTIVE_OPERATIONS_SHEET', 'ACTIVE_OPERATIONS'),
+    CHECKPOINTS: appGetCore('CHECKPOINTS_SHEET', 'CHECKPOINTS')
+  });
+
+  const OPS_HEADERS = Object.freeze([
+    'TimestampStarted', 'TimestampFinished', 'OperationId', 'ParentOperationId', 'Scenario', 'RawScenario',
+    'Initiator', 'RunSource', 'Status', 'Fingerprint', 'AffectedRows', 'AffectedEntities',
+    'VerificationResult', 'RepairNeeded', 'ErrorMessage', 'TransitionReason', 'Notes',
+    'ResolvedByOperationId', 'ResolvedAt', 'ResolutionStatus', 'LastHeartbeat', 'ExpiresAt',
+    'PayloadJson', 'ResultJson', 'CheckpointCount'
+  ]);
+
+  const ACTIVE_HEADERS = Object.freeze([
+    'OperationId', 'Scenario', 'Fingerprint', 'Status', 'StartedAt', 'LastHeartbeat',
+    'Initiator', 'RunSource', 'ExpiresAt', 'LockHolder', 'ParentOperationId', 'Notes', 'PayloadJson'
+  ]);
+
+  const CHECKPOINT_HEADERS = Object.freeze([
+    'OperationId', 'CheckpointIndex', 'ProcessedUpTo', 'LastProcessedEntity', 'LastProcessedRow',
+    'CheckpointTimestamp', 'CheckpointPayload', 'VerificationSnapshot'
+  ]);
+
+  const FINAL_STATUSES = Object.freeze({ COMMITTED: true, FAILED: true, FAILED_STALE: true, ABANDONED: true, CANCELLED: true });
+  const ALLOWED_RESOLUTION_STATUSES = Object.freeze({ RESOLVED_SUCCESS: true, RESOLVED_PARTIAL: true, RESOLVED_FAILED: true });
+  const TRANSITIONS = Object.freeze({
+    STARTED: Object.freeze({ COMMITTED: true, FAILED: true, FAILED_STALE: true, ABANDONED: true, CANCELLED: true }),
+    FAILED: Object.freeze({ NEEDS_REPAIR: true }),
+    FAILED_STALE: Object.freeze({ NEEDS_REPAIR: true })
+  });
+
+  const TTL_MINUTES = Object.freeze({
+    mark_sent: 10,
+    mark_unsent: 10,
+    reconciliation: 20,
+    create_next_month: 10,
+    repair: 15,
+    panel_regenerate: 12,
+    panel_sync: 12,
+    restart_bot: 10,
+    __DEFAULT__: 12
+  });
+
+  function _ss() { return SpreadsheetApp.getActive(); }
+  function _tz() { return (typeof getTimeZone_ === 'function' ? getTimeZone_() : Session.getScriptTimeZone()) || Session.getScriptTimeZone(); }
+  function _now() { return new Date(); }
+  function _fmt(date, pattern) { return Utilities.formatDate(date instanceof Date ? date : new Date(date), _tz(), pattern); }
+  function _iso(date) { return _fmt(date || _now(), "yyyy-MM-dd'T'HH:mm:ss"); }
+  function _noteStamp() { return _fmt(_now(), 'yyyy-MM-dd HH:mm:ss'); }
+  function _safeJson(value) { return stage4SafeStringify_(value === undefined ? null : value, 50000); }
+  function _parseJson(value, fallback) {
+    try { return value ? JSON.parse(value) : (fallback === undefined ? null : fallback); } catch (_) { return fallback === undefined ? null : fallback; }
+  }
+  function _string(value) { return value === null || value === undefined ? '' : String(value); }
+  function _bool(value) { return value === true || String(value).toLowerCase() === 'true'; }
+  function _uniqueStrings(list) {
+    return Array.from(new Set(stage4AsArray_(list).filter(function(item) { return item !== null && item !== undefined && item !== ''; }).map(function(item) { return String(item); })));
+  }
+  function _uniqueNumbers(list) {
+    return Array.from(new Set(stage4AsArray_(list).map(Number).filter(function(item) { return isFinite(item); }))).sort(function(a, b) { return a - b; });
+  }
+
+  function _sheet(name, headers) {
+    var ss = _ss();
+    var sh = ss.getSheetByName(name);
+    if (!sh) {
+      sh = ss.insertSheet(name);
+      sh.getRange(1, 1, 1, headers.length).setValues([headers.slice()]);
+      sh.setFrozenRows(1);
+    }
+    return sh;
+  }
+
+  function ensureServiceSheets() {
+    return {
+      ops: _sheet(SHEETS.OPS, OPS_HEADERS).getName(),
+      active: _sheet(SHEETS.ACTIVE, ACTIVE_HEADERS).getName(),
+      checkpoints: _sheet(SHEETS.CHECKPOINTS, CHECKPOINT_HEADERS).getName()
+    };
+  }
+
+  function _headerMap(sheet) {
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0] || [];
+    var map = {};
+    headers.forEach(function(name, idx) { map[String(name)] = idx + 1; });
+    return map;
+  }
+
+  function _rowsAsObjects(sheet) {
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 2) return [];
+    var map = _headerMap(sheet);
+    var values = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+    var headers = Object.keys(map);
+    return values.map(function(row, idx) {
+      var out = { __row: idx + 2 };
+      headers.forEach(function(header) { out[header] = row[map[header] - 1]; });
+      return out;
+    });
+  }
+
+  function _findByOperationId(sheet, operationId) {
+    return _rowsAsObjects(sheet).filter(function(item) { return String(item.OperationId || '') === String(operationId || ''); })[0] || null;
+  }
+
+  function _updateCell(sheet, row, col, value) {
+    if (!row || !col) return;
+    sheet.getRange(row, col).setValue(value);
+  }
+
+  function _appendRow(sheet, row) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, 1, row.length).setValues([row]);
+  }
+
+  function _rand4() {
+    var alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    var out = '';
+    for (var i = 0; i < 4; i++) out += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+    return out;
+  }
+
+  function _camelToSnake(value) {
+    return String(value || '')
+      .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+      .replace(/[^A-Za-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .toLowerCase();
+  }
+
+  function canonicalScenario(rawScenario, payload) {
+    var raw = String(rawScenario || '').trim();
+    var data = payload || {};
+    if (data.parentOperationId || data.repairTargetOperationId || data.repairMode) return 'repair';
+    if (raw === 'runReconciliation') return 'reconciliation';
+    if (raw === 'markPanelRowsAsSent') return 'mark_sent';
+    if (raw === 'markPanelRowsAsUnsent') return 'mark_unsent';
+    if (raw === 'createNextMonth') return 'create_next_month';
+    if (raw === 'generateSendPanelForDate' || raw === 'generateSendPanelForRange') return 'panel_regenerate';
+    if (raw === 'sendPendingRows') return 'panel_sync';
+    if (raw === 'switchBotToMonth') return 'switch_bot_month';
+    if (raw === 'runMaintenanceScenario') {
+      var type = _camelToSnake(data.type || 'maintenance');
+      if (type === 'repair_pending_operation') return 'repair';
+      if (type) return type;
+    }
+    return _camelToSnake(raw || 'operation');
+  }
+
+  function makeOperationId(rawScenario, payload, preferred) {
+    var explicit = String(preferred || '').trim();
+    if (/^op_[a-z0-9_]+_\d{8}_\d{6}_[a-z0-9]{4}$/i.test(explicit)) return explicit;
+    var scenario = canonicalScenario(rawScenario, payload || {});
+    return 'op_' + scenario + '_' + _fmt(_now(), 'yyyyMMdd_HHmmss') + '_' + _rand4();
+  }
+
+  function _parseDateish(value) {
+    var text = String(value || '').trim();
+    if (!text) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+    var m = text.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    if (m) return m[3] + '-' + m[2] + '-' + m[1];
+    return null;
+  }
+
+  function _normalizeValue(value, key) {
+    if (value === null || value === undefined || value === '') return null;
+    if (Object.prototype.toString.call(value) === '[object Date]') return _iso(value);
+    if (Array.isArray(value)) {
+      var normalizedItems = value.map(function(item) { return _normalizeValue(item, key); }).filter(function(item) { return item !== null && item !== undefined; });
+      if (!normalizedItems.length) return [];
+      if (normalizedItems.every(function(item) { return typeof item === 'number' && isFinite(item); })) {
+        return Array.from(new Set(normalizedItems)).sort(function(a, b) { return a - b; });
+      }
+      if (normalizedItems.every(function(item) { return typeof item === 'string'; })) {
+        return Array.from(new Set(normalizedItems.map(function(item) { return String(item).trim().toLowerCase(); }).filter(Boolean))).sort();
+      }
+      return normalizedItems.sort(function(a, b) { return _stableStringify(a).localeCompare(_stableStringify(b)); });
+    }
+    if (typeof value === 'object') {
+      var out = {};
+      Object.keys(value).sort().forEach(function(k) {
+        out[k] = _normalizeValue(value[k], k);
+      });
+      return out;
+    }
+    if (typeof value === 'string') {
+      var trimmed = value.trim();
+      if (!trimmed) return null;
+      var maybeDate = /date|timestamp|started|finished|heartbeat|expires|resolved/i.test(String(key || '')) ? _parseDateish(trimmed) : _parseDateish(trimmed);
+      return maybeDate || trimmed;
+    }
+    return value;
+  }
+
+  function _stableStringify(value) {
+    if (value === null || value === undefined) return 'null';
+    if (typeof value !== 'object') return JSON.stringify(value);
+    if (Array.isArray(value)) return '[' + value.map(_stableStringify).join(',') + ']';
+    return '{' + Object.keys(value).sort().map(function(k) { return JSON.stringify(k) + ':' + _stableStringify(value[k]); }).join(',') + '}';
+  }
+
+  function buildFingerprint(rawScenario, payload) {
+    var scenario = canonicalScenario(rawScenario, payload || {});
+    var normalized = _normalizeValue(payload || {}, 'payload');
+    var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, _stableStringify({ scenario: scenario, payload: normalized }));
+    return Utilities.base64EncodeWebSafe(digest).replace(/=+$/g, '').slice(0, 32);
+  }
+
+  function ttlMinutesFor(rawScenario, payload) {
+    var scenario = canonicalScenario(rawScenario, payload || {});
+    return Number(TTL_MINUTES[scenario] || TTL_MINUTES.__DEFAULT__ || 12);
+  }
+
+  function _expiresAtText(rawScenario, payload, startedAt) {
+    var date = startedAt instanceof Date ? startedAt : _now();
+    return _iso(new Date(date.getTime() + ttlMinutesFor(rawScenario, payload) * 60 * 1000));
+  }
+
+  function _findDuplicateInActive(rawScenario, fingerprint, operationId) {
+    var sheet = _sheet(SHEETS.ACTIVE, ACTIVE_HEADERS);
+    var nowMs = _now().getTime();
+    return _rowsAsObjects(sheet).filter(function(item) {
+      if (String(item.OperationId || '') === String(operationId || '')) return false;
+      if (String(item.Fingerprint || '') !== String(fingerprint || '')) return false;
+      if (String(item.Status || '') !== 'STARTED') return false;
+      var expiresAt = String(item.ExpiresAt || '').trim();
+      if (!expiresAt) return true;
+      var ms = new Date(expiresAt).getTime();
+      return isFinite(ms) ? ms > nowMs : true;
+    })[0] || null;
+  }
+
+  function _findRecentCommitted(rawScenario, fingerprint, operationId) {
+    var sheet = _sheet(SHEETS.OPS, OPS_HEADERS);
+    var maxAgeMs = ttlMinutesFor(rawScenario, {}) * 60 * 1000;
+    var nowMs = _now().getTime();
+    var rows = _rowsAsObjects(sheet).reverse();
+    for (var i = 0; i < rows.length; i++) {
+      var item = rows[i];
+      if (String(item.OperationId || '') === String(operationId || '')) continue;
+      if (String(item.Fingerprint || '') !== String(fingerprint || '')) continue;
+      if (String(item.Status || '') !== 'COMMITTED') continue;
+      var finished = new Date(String(item.TimestampFinished || item.LastHeartbeat || item.TimestampStarted || '')).getTime();
+      if (isFinite(finished) && (nowMs - finished) <= maxAgeMs) return item;
+    }
+    return null;
+  }
+
+  function beginExecution(spec) {
+    var cfg = spec || {};
+    ensureServiceSheets();
+    var startedAt = _now();
+    var rawScenario = String(cfg.rawScenario || cfg.scenario || 'operation');
+    var payload = cfg.payload || {};
+    var canonical = canonicalScenario(rawScenario, payload);
+    var operationId = makeOperationId(rawScenario, payload, cfg.operationId);
+    var fingerprint = String(cfg.fingerprint || buildFingerprint(rawScenario, payload));
+    var initiator = String(cfg.initiator || 'manual');
+    var runSource = String(cfg.runSource || cfg.source || initiator || 'manual');
+    var parentOperationId = String(cfg.parentOperationId || payload.parentOperationId || '');
+
+    if (!cfg.dryRun) {
+      var duplicateActive = _findDuplicateInActive(rawScenario, fingerprint, operationId);
+      if (duplicateActive) {
+        return { suppressed: true, reason: 'duplicate_active_execution', previous: duplicateActive, operationId: operationId, fingerprint: fingerprint, scenario: canonical };
+      }
+      var recentCommitted = _findRecentCommitted(rawScenario, fingerprint, operationId);
+      if (recentCommitted) {
+        return { suppressed: true, reason: 'duplicate_recent_success', previous: recentCommitted, operationId: operationId, fingerprint: fingerprint, scenario: canonical };
       }
 
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-
-      body {
-        background: var(--bg-primary);
-        color: var(--text-primary);
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        min-height: 100vh;
-        padding: 12px;
-        display: block;
-      }
-
-      .container {
-        max-width: none;
-        width: 100%;
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius);
-        padding: 16px;
-        box-shadow: none;
-        animation: slideIn 0.3s ease;
-      }
-
-      @keyframes slideIn {
-        from {
-          transform: translateY(20px);
-          opacity: 0;
-        }
-
-        to {
-          transform: translateY(0);
-          opacity: 1;
-        }
-      }
-
-      .header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 20px;
-        background: var(--bg-tertiary);
-        padding: 12px 16px;
-        border-radius: var(--radius);
-        border: 1px solid var(--border-color);
-      }
-
-      .header-left {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .back-button {
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        color: var(--text-primary);
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        font-size: 1.2rem;
-        transition: var(--transition);
-      }
-
-      .back-button:hover {
-        background: var(--bg-tertiary);
-        border-color: var(--accent-blue);
-        transform: scale(1.05);
-      }
-
-      .back-button:active {
-        transform: scale(0.95);
-      }
-
-      .title {
-        font-size: 1rem;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: var(--text-primary);
-      }
-
-      .callsign-badge {
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        padding: 4px 12px;
-        border-radius: 40px;
-        font-size: 0.8rem;
-        font-family: var(--font-mono);
-        color: var(--accent-blue);
-      }
-
-      .year-section {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 16px;
-        margin-bottom: 16px;
-        background: var(--bg-tertiary);
-        padding: 8px 16px;
-        border-radius: var(--radius);
-        border: 1px solid var(--border-color);
-      }
-
-      .year-btn {
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        cursor: pointer;
-        font-size: 1.2rem;
-        color: var(--accent-blue);
-        transition: var(--transition);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .year-btn:hover {
-        background: var(--bg-tertiary);
-        border-color: var(--accent-blue);
-        transform: scale(1.05);
-      }
-
-      .current-year {
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: var(--text-primary);
-        min-width: 100px;
-        text-align: center;
-        font-family: var(--font-mono);
-      }
-
-      .month-nav {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        background: var(--bg-tertiary);
-        padding: 8px 12px;
-        border-radius: var(--radius);
-        margin-bottom: 16px;
-        border: 1px solid var(--border-color);
-      }
-
-      .month-name {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: var(--text-primary);
-      }
-
-      .nav-btn {
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        cursor: pointer;
-        font-size: 1.2rem;
-        color: var(--accent-blue);
-        transition: var(--transition);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .nav-btn:hover {
-        background: var(--bg-tertiary);
-        border-color: var(--accent-blue);
-        transform: scale(1.05);
-      }
-
-      .weekdays {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 4px;
-        margin-bottom: 8px;
-        padding: 0 4px;
-      }
-
-      .weekday {
-        text-align: center;
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: var(--text-secondary);
-        padding: 8px 0;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
-
-      .weekday.weekend {
-        color: var(--warning-yellow);
-      }
-
-      .calendar-grid {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 6px;
-        background: var(--bg-secondary);
-        padding: 16px;
-        border-radius: var(--radius);
-        border: 1px solid var(--border-color);
-        margin-bottom: 16px;
-      }
-
-      .calendar-day {
-        aspect-ratio: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.85rem;
-        cursor: pointer;
-        border-radius: 50%;
-        transition: var(--transition);
-        background: var(--bg-tertiary);
-        border: 2px solid transparent;
-        font-weight: 500;
-        color: var(--text-primary);
-      }
-
-      .calendar-day:hover:not(.empty) {
-        background: var(--accent-blue);
-        color: white;
-        transform: scale(1.1);
-      }
-
-      .calendar-day.selected {
-        background: var(--accent-blue);
-        color: white;
-        font-weight: 600;
-        transform: scale(1.05);
-        border-color: var(--text-primary);
-      }
-
-      .calendar-day.today {
-        border-color: var(--accent-blue);
-        font-weight: 700;
-        background: var(--bg-secondary);
-      }
-
-      .calendar-day.today.selected {
-        background: var(--accent-blue);
-        border-color: var(--text-primary);
-      }
-
-      .calendar-day.weekend:not(.empty):not(.selected) {
-        color: var(--warning-yellow);
-      }
-
-      .calendar-day.empty {
-        background: transparent;
-        cursor: default;
-        pointer-events: none;
-        color: transparent;
-      }
-
-      .selected-date-card {
-        background: var(--bg-tertiary);
-        padding: 16px;
-        border-radius: var(--radius);
-        margin-bottom: 16px;
-        text-align: center;
-        border: 1px solid var(--border-color);
-      }
-
-      .selected-date-label {
-        font-size: 0.8rem;
-        color: var(--text-secondary);
-        margin-bottom: 4px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
-
-      .selected-date-value {
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: var(--accent-blue);
-        font-family: var(--font-mono);
-      }
-
-      .actions {
-        display: flex;
-        gap: 12px;
-        margin-top: 8px;
-      }
-
-      .btn {
-        flex: 1;
-        padding: 12px 16px;
-        border-radius: 40px;
-        border: none;
-        font-weight: 600;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: var(--transition);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        font-family: var(--font-mono);
-      }
-
-      .btn-primary {
-        background: var(--accent-blue);
-        color: white;
-      }
-
-      .btn-primary:hover {
-        background: var(--accent-blue-light);
-        transform: translateY(-1px);
-      }
-
-      .btn-secondary {
-        background: var(--bg-tertiary);
-        color: var(--text-primary);
-        border: 1px solid var(--border-color);
-      }
-
-      .btn-secondary:hover {
-        background: var(--bg-secondary);
-        transform: translateY(-1px);
-      }
-
-      .error-message {
-        color: var(--error-red);
-        font-size: 0.8rem;
-        margin-top: 12px;
-        min-height: 20px;
-        text-align: center;
-        padding: 8px;
-        background: rgba(239, 68, 68, 0.1);
-        border-radius: var(--radius);
-        display: none;
-      }
-
-      .error-message.visible {
-        display: block;
-        animation: fadeIn 0.3s ease;
-      }
-
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(-5px);
-        }
-
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
-      @media (max-width: 480px) {
-        .container {
-          padding: 12px;
-        }
-
-        .calendar-grid {
-          gap: 4px;
-          padding: 12px;
-        }
-
-        .calendar-day {
-          font-size: 0.8rem;
-        }
-
-        .btn {
-          padding: 10px 12px;
-          font-size: 0.85rem;
-        }
-
-        .current-year {
-          min-width: 80px;
-          font-size: 1rem;
-        }
-      }
-    </style>
-  </head>
-
-  <body>
-    <div class="container">
-      <!-- Шапка з кнопкою назад -->
-      <div class="header">
-        <div class="header-left">
-          <button class="back-button" onclick="goBack()" title="Повернутися до картки">←</button>
-          <div class="title">
-            <span>📅</span>
-            <span>Обрати дату</span>
-          </div>
-        </div>
-        <div class="callsign-badge">
-          <?= callsign ?>
-        </div>
-      </div>
-
-      <!-- Вибір року -->
-      <div class="year-section">
-        <button class="year-btn" onclick="changeYear(-1)" id="prevYearBtn" title="Попередній рік">←</button>
-        <span class="current-year" id="currentYear"></span>
-        <button class="year-btn" onclick="changeYear(1)" id="nextYearBtn" title="Наступний рік">→</button>
-      </div>
-
-      <!-- Навігація по місяцях -->
-      <div class="month-nav">
-        <button class="nav-btn" onclick="changeMonth(-1)" id="prevMonthBtn" title="Попередній місяць">←</button>
-        <span class="month-name" id="monthName"></span>
-        <button class="nav-btn" onclick="changeMonth(1)" id="nextMonthBtn" title="Наступний місяць">→</button>
-      </div>
-
-      <!-- Дні тижня -->
-      <div class="weekdays">
-        <div class="weekday">ПН</div>
-        <div class="weekday">ВТ</div>
-        <div class="weekday">СР</div>
-        <div class="weekday">ЧТ</div>
-        <div class="weekday">ПТ</div>
-        <div class="weekday weekend">СБ</div>
-        <div class="weekday weekend">НД</div>
-      </div>
-
-      <!-- Сітка календаря -->
-      <div class="calendar-grid" id="calendar"></div>
-
-      <!-- Вибрана дата -->
-      <div class="selected-date-card">
-        <div class="selected-date-label">Обрана дата</div>
-        <div class="selected-date-value" id="selectedDateValue">—</div>
-      </div>
-
-      <!-- Кнопки дій -->
-      <div class="actions">
-        <button class="btn btn-primary" onclick="selectDate()">
-          <span>✅</span>
-          <span>Обрати</span>
-        </button>
-        <button class="btn btn-secondary" onclick="goBack()">
-          <span>↩️</span>
-          <span>Назад</span>
-        </button>
-      </div>
-
-      <!-- Повідомлення про помилку -->
-      <div id="errorMessage" class="error-message"></div>
-    </div>
-
-    <script>
-      const CALLSIGN = "<?= callsign ?>";
-      const TODAY = "<?= today ?>";
-      
-      const todayParts = TODAY.split('.');
-      const todayDate = new Date(
-        parseInt(todayParts[2]), 
-        parseInt(todayParts[1]) - 1, 
-        parseInt(todayParts[0])
-      );
-      
-      let currentYear = todayDate.getFullYear();
-      let currentMonth = todayDate.getMonth(); // 0-11
-      let selectedDay = parseInt(todayParts[0]);
-      let selectedMonth = currentMonth;
-      let selectedYear = currentYear;
-      
-      const monthNames = [
-        'Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень',
-        'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'
-      ];
-      
-      function updateHeader() {
-        document.getElementById('monthName').textContent = 
-          `${monthNames[currentMonth]} ${currentYear}`;
-        document.getElementById('currentYear').textContent = currentYear;
-      }
-      
-      function changeYear(delta) {
-        currentYear += delta;
-        renderCalendar();
-        updateHeader();
-      }
-      
-      function changeMonth(delta) {
-        currentMonth += delta;
-        if (currentMonth > 11) {
-          currentMonth = 0;
-          currentYear++;
-        } else if (currentMonth < 0) {
-          currentMonth = 11;
-          currentYear--;
-        }
-        renderCalendar();
-        updateHeader();
-      }
-      
-      function isToday(day, month, year) {
-        return day === todayDate.getDate() && 
-               month === todayDate.getMonth() && 
-               year === todayDate.getFullYear();
-      }
-      
-      function isSelected(day, month, year) {
-        return day === selectedDay && 
-               month === selectedMonth && 
-               year === selectedYear;
-      }
-      
-      function isWeekend(dayIndex) {
-        return dayIndex === 5 || dayIndex === 6;
-      }
-      
-      function renderCalendar() {
-        const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-        let startOffset = firstDay === 0 ? 6 : firstDay - 1;
-        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-        
-        let html = '';
-        for (let i = 0; i < startOffset; i++) {
-          html += '<div class="calendar-day empty"></div>';
-        }
-        
-        for (let d = 1; d <= daysInMonth; d++) {
-          const dayIndex = (startOffset + d - 1) % 7;
-          const weekendClass = isWeekend(dayIndex) ? ' weekend' : '';
-          const todayClass = isToday(d, currentMonth, currentYear) ? ' today' : '';
-          const selectedClass = isSelected(d, currentMonth, currentYear) ? ' selected' : '';
-          
-          html += `
-            <div class="calendar-day${todayClass}${selectedClass}${weekendClass}" 
-                 onclick="selectDay(${d}, ${currentMonth}, ${currentYear})">
-              ${d}
-            </div>
-          `;
-        }
-        
-        document.getElementById('calendar').innerHTML = html;
-        updateSelectedDisplay();
-      }
-      
-      function selectDay(day, month, year) {
-        selectedDay = day;
-        selectedMonth = month;
-        selectedYear = year;
-        renderCalendar();
-      }
-      
-      function updateSelectedDisplay() {
-        const displayEl = document.getElementById('selectedDateValue');
-        if (selectedDay) {
-          const formattedDay = String(selectedDay).padStart(2, '0');
-          const formattedMonth = String(selectedMonth + 1).padStart(2, '0');
-          displayEl.textContent = `${formattedDay}.${formattedMonth}.${selectedYear}`;
-        } else {
-          displayEl.textContent = '—';
-        }
-      }
-      
-      function showError(message) {
-        const errorEl = document.getElementById('errorMessage');
-        errorEl.textContent = message;
-        errorEl.classList.add('visible');
-        setTimeout(() => {
-          errorEl.classList.remove('visible');
-        }, 3000);
-      }
-
-      function normalizeError(error) {
-        if (!error) return 'Невідома помилка';
-        if (typeof error === 'string') return error;
-        if (error.message) return String(error.message);
-        return String(error);
-      }
-
-      function gsRun(method, ...args) {
-        return new Promise((resolve, reject) => {
-          try {
-            let runner = google.script.run
-              .withSuccessHandler(resolve)
-              .withFailureHandler(err => reject(normalizeError(err)));
-
-            if (typeof runner[method] !== 'function') {
-              reject(`Метод "${method}" не знайдено`);
-              return;
-            }
-
-            runner[method](...args);
-          } catch (error) {
-            reject(normalizeError(error));
-          }
-        });
-      }
-      
-      async function selectDate() {
-        if (!selectedDay) {
-          showError('❌ Оберіть дату в календарі');
-          return;
-        }
-        
-        const formattedDay = String(selectedDay).padStart(2, '0');
-        const formattedMonth = String(selectedMonth + 1).padStart(2, '0');
-        const dateStr = `${formattedDay}.${formattedMonth}.${selectedYear}`;
-        
-        try {
-          await gsRun('openPersonCardByCallsignAndDate', CALLSIGN, dateStr);
-        } catch (error) {
-          showError('❌ ' + normalizeError(error));
-        }
-      }
-
-      function goBack() {
-        const formattedDay = String(selectedDay || todayDate.getDate()).padStart(2, '0');
-        const formattedMonth = String((selectedMonth ?? todayDate.getMonth()) + 1).padStart(2, '0');
-        const dateStr = `${formattedDay}.${formattedMonth}.${selectedYear || todayDate.getFullYear()}`;
-
-        gsRun('openPersonCardByCallsignAndDate', CALLSIGN, dateStr)
-          .catch(error => showError('❌ ' + normalizeError(error)));
-      }
-      
-      renderCalendar();
-      updateHeader();
-    </script>
-  </body>
-
-  </html>
+      var startedText = _iso(startedAt);
+      var expiresAt = _expiresAtText(rawScenario, payload, startedAt);
+      _appendRow(_sheet(SHEETS.OPS, OPS_HEADERS), [
+        startedText, '', operationId, parentOperationId, canonical, rawScenario,
+        initiator, runSource, 'STARTED', fingerprint, '', '', '', false, '', 'preflight-started', '', '', '', '', startedText, expiresAt,
+        _safeJson(payload), '', 0
+      ]);
+      _appendRow(_sheet(SHEETS.ACTIVE, ACTIVE_HEADERS), [
+        operationId, canonical, fingerprint, 'STARTED', startedText, startedText,
+        initiator, runSource, expiresAt, String(cfg.lockHolder || ''), parentOperationId, '', _safeJson(payload)
+      ]);
+    }
+
+    return {
+      suppressed: false,
+      operationId: operationId,
+      fingerprint: fingerprint,
+      scenario: canonical,
+      rawScenario: rawScenario,
+      startedAt: _iso(startedAt),
+      expiresAt: _expiresAtText(rawScenario, payload, startedAt),
+      parentOperationId: parentOperationId
+    };
+  }
+
+  function _updateActiveRow(operationId, updates) {
+    var sheet = _sheet(SHEETS.ACTIVE, ACTIVE_HEADERS);
+    var row = _findByOperationId(sheet, operationId);
+    if (!row) return null;
+    var map = _headerMap(sheet);
+    Object.keys(updates || {}).forEach(function(key) {
+      if (map[key]) _updateCell(sheet, row.__row, map[key], updates[key]);
+    });
+    return _findByOperationId(sheet, operationId);
+  }
+
+  function _removeActiveRow(operationId) {
+    var sheet = _sheet(SHEETS.ACTIVE, ACTIVE_HEADERS);
+    var row = _findByOperationId(sheet, operationId);
+    if (row && row.__row >= 2) sheet.deleteRow(row.__row);
+    return !!row;
+  }
+
+  function _updateOpsRow(operationId, updates) {
+    var sheet = _sheet(SHEETS.OPS, OPS_HEADERS);
+    var row = _findByOperationId(sheet, operationId);
+    if (!row) return null;
+    var map = _headerMap(sheet);
+    Object.keys(updates || {}).forEach(function(key) {
+      if (map[key]) _updateCell(sheet, row.__row, map[key], updates[key]);
+    });
+    return _findByOperationId(sheet, operationId);
+  }
+
+  function heartbeat(operationId, reason, extra) {
+    var current = _getOperationRow(operationId);
+    if (!current) return null;
+    if (FINAL_STATUSES[String(current.Status || '')]) return current;
+    var nowText = _iso(_now());
+    var updates = Object.assign({
+      LastHeartbeat: nowText,
+      ExpiresAt: _expiresAtText(current.RawScenario || current.Scenario || '', _parseJson(current.PayloadJson, {}), _now())
+    }, extra || {});
+    _updateOpsRow(operationId, updates);
+    _updateActiveRow(operationId, {
+      LastHeartbeat: updates.LastHeartbeat,
+      ExpiresAt: updates.ExpiresAt,
+      Status: String(current.Status || 'STARTED')
+    });
+    return _getOperationRow(operationId);
+  }
+
+  function _appendNoteText(existing, text, source) {
+    var prefix = '[' + _noteStamp() + '][' + String(source || 'system') + '] ';
+    var base = String(existing || '').trim();
+    var next = prefix + String(text || '').trim();
+    return base ? (base + '\n' + next) : next;
+  }
+
+  function appendNote(operationId, text, source) {
+    var current = _getOperationRow(operationId);
+    if (!current) throw new Error('Операцію не знайдено: ' + operationId);
+    var noteText = String(text || '').trim();
+    if (!noteText) return current;
+    var notes = _appendNoteText(current.Notes, noteText, source || 'system');
+    _updateOpsRow(operationId, { Notes: notes });
+    _updateActiveRow(operationId, { Notes: notes });
+    return _getOperationRow(operationId);
+  }
+
+  function _allowedTransition(fromStatus, toStatus) {
+    var from = String(fromStatus || '').trim();
+    var to = String(toStatus || '').trim();
+    if (from === to) return true;
+    return !!(TRANSITIONS[from] && TRANSITIONS[from][to]);
+  }
+
+  function transitionStatus(operationId, newStatus, reason, extra) {
+    var current = _getOperationRow(operationId);
+    if (!current) throw new Error('Операцію не знайдено: ' + operationId);
+    var fromStatus = String(current.Status || '');
+    var toStatus = String(newStatus || '').trim();
+    var allowed = _allowedTransition(fromStatus, toStatus);
+    if (FINAL_STATUSES[fromStatus] && !allowed) {
+      throw new Error('Фінальний запис заморожено і не може змінювати статус: ' + fromStatus);
+    }
+    if (!allowed) {
+      throw new Error('Недозволений перехід статусу: ' + fromStatus + ' -> ' + toStatus);
+    }
+
+    var updates = Object.assign({}, extra || {}, {
+      Status: toStatus,
+      TransitionReason: String(reason || extra && extra.TransitionReason || ''),
+      LastHeartbeat: _iso(_now())
+    });
+
+    if (FINAL_STATUSES[toStatus]) {
+      updates.TimestampFinished = updates.TimestampFinished || _iso(_now());
+    }
+
+    _updateOpsRow(operationId, updates);
+
+    if (toStatus === 'FAILED_STALE') {
+      _updateActiveRow(operationId, {
+        Status: toStatus,
+        LastHeartbeat: updates.LastHeartbeat,
+        ExpiresAt: updates.ExpiresAt || current.ExpiresAt || ''
+      });
+    } else if (FINAL_STATUSES[toStatus] || toStatus === 'NEEDS_REPAIR') {
+      _removeActiveRow(operationId);
+    } else {
+      _updateActiveRow(operationId, {
+        Status: toStatus,
+        LastHeartbeat: updates.LastHeartbeat,
+        ExpiresAt: updates.ExpiresAt || current.ExpiresAt || ''
+      });
+    }
+
+    return _getOperationRow(operationId);
+  }
+
+  function _classifyVerification(verification) {
+    if (!verification) return 'OK';
+    if (String(verification.result || '').trim()) return String(verification.result).trim().toUpperCase();
+    if (verification.ok === false) return 'FAILED';
+    if (verification.partial === true) return 'PARTIAL';
+    if (stage4AsArray_(verification.warnings).length) return 'WARNING';
+    return 'OK';
+  }
+
+  function _extractAffectedRows(payload, result) {
+    var rows = [];
+    var input = payload || {};
+    if (Array.isArray(input.rowNumbers)) rows = rows.concat(input.rowNumbers);
+    if (Array.isArray(input.rows)) rows = rows.concat(input.rows);
+    if (result && Array.isArray(result.updatedRows)) rows = rows.concat(result.updatedRows);
+    return _uniqueNumbers(rows).join(', ');
+  }
+
+  function _extractAffectedEntities(payload, execution) {
+    var entities = [];
+    if (execution && Array.isArray(execution.affectedEntities)) entities = entities.concat(execution.affectedEntities);
+    if (payload && Array.isArray(payload.callsigns)) entities = entities.concat(payload.callsigns);
+    return _uniqueStrings(entities).join(', ');
+  }
+
+  function finalizeSuccessfulExecution(spec) {
+    var cfg = spec || {};
+    if (cfg.dryRun) return null;
+    var verificationResult = _classifyVerification(cfg.verification);
+    var status = cfg.success === false ? 'FAILED' : (verificationResult === 'FAILED' ? 'FAILED' : 'COMMITTED');
+    var repairNeeded = !!cfg.repairNeeded || status === 'FAILED' || verificationResult === 'PARTIAL';
+    return transitionStatus(cfg.operationId, status, cfg.transitionReason || (status === 'COMMITTED' ? 'write-verified' : 'write-or-verify-failed'), {
+      AffectedRows: _extractAffectedRows(cfg.payload || {}, cfg.result || {}),
+      AffectedEntities: _extractAffectedEntities(cfg.payload || {}, cfg.execution || {}),
+      VerificationResult: verificationResult,
+      RepairNeeded: repairNeeded,
+      ErrorMessage: status === 'FAILED' ? String(cfg.errorMessage || cfg.message || 'Verification failed') : '',
+      ResultJson: _safeJson(cfg.result || null),
+      TimestampFinished: _iso(_now())
+    });
+  }
+
+  function registerFailure(spec) {
+    var cfg = spec || {};
+    if (cfg.dryRun) return null;
+    return transitionStatus(cfg.operationId, 'FAILED', cfg.transitionReason || 'exception', {
+      AffectedRows: _extractAffectedRows(cfg.payload || {}, cfg.result || {}),
+      AffectedEntities: _extractAffectedEntities(cfg.payload || {}, cfg.execution || {}),
+      VerificationResult: cfg.verificationResult || '',
+      RepairNeeded: true,
+      ErrorMessage: String(cfg.errorMessage || 'Unknown error'),
+      ResultJson: _safeJson(cfg.result || null),
+      TimestampFinished: _iso(_now())
+    });
+  }
+
+  function saveCheckpoint(spec) {
+    var cfg = spec || {};
+    if (!cfg.operationId) throw new Error('Checkpoint requires operationId');
+    var payloadJson = _safeJson(cfg.checkpointPayload || cfg.payload || null);
+    var verificationSnapshot = _safeJson(cfg.verificationSnapshot || null);
+    var checkpointTimestamp = _iso(_now());
+    _appendRow(_sheet(SHEETS.CHECKPOINTS, CHECKPOINT_HEADERS), [
+      cfg.operationId,
+      Number(cfg.checkpointIndex || 0),
+      _string(cfg.processedUpTo),
+      _string(cfg.lastProcessedEntity),
+      _string(cfg.lastProcessedRow),
+      checkpointTimestamp,
+      payloadJson,
+      verificationSnapshot
+    ]);
+    var current = _getOperationRow(cfg.operationId);
+    var nextCount = Number(current && current.CheckpointCount || 0) + 1;
+    var payload = current ? _parseJson(current.PayloadJson, {}) : {};
+    var expiresAt = _expiresAtText(current && (current.RawScenario || current.Scenario || ''), payload, _now());
+    _updateOpsRow(cfg.operationId, { CheckpointCount: nextCount, LastHeartbeat: checkpointTimestamp, ExpiresAt: expiresAt });
+    _updateActiveRow(cfg.operationId, { LastHeartbeat: checkpointTimestamp, ExpiresAt: expiresAt, Status: current && current.Status ? String(current.Status) : 'STARTED' });
+    return { checkpointCount: nextCount };
+  }
+
+  function _getOperationRow(operationId) {
+    return _findByOperationId(_sheet(SHEETS.OPS, OPS_HEADERS), operationId);
+  }
+
+  function getOperationDetails(operationId) {
+    var entry = _getOperationRow(operationId);
+    if (!entry) return null;
+    var checkpoints = _rowsAsObjects(_sheet(SHEETS.CHECKPOINTS, CHECKPOINT_HEADERS)).filter(function(item) {
+      return String(item.OperationId || '') === String(operationId || '');
+    }).sort(function(a, b) { return Number(a.CheckpointIndex || 0) - Number(b.CheckpointIndex || 0); });
+    return {
+      operation: entry,
+      checkpoints: checkpoints,
+      payload: _parseJson(entry.PayloadJson, {}),
+      result: _parseJson(entry.ResultJson, null),
+      checkpointContext: checkpoints.length ? checkpoints[checkpoints.length - 1] : null
+    };
+  }
+
+  function listPendingRepairs(filters) {
+    var opts = Object.assign({ limit: 100 }, filters || {});
+    var items = _rowsAsObjects(_sheet(SHEETS.OPS, OPS_HEADERS)).filter(function(item) {
+      var status = String(item.Status || '');
+      var wantsRepair = _bool(item.RepairNeeded) || ['FAILED', 'FAILED_STALE', 'NEEDS_REPAIR'].indexOf(status) !== -1;
+      if (!wantsRepair) return false;
+      if (opts.status && status !== String(opts.status)) return false;
+      if (opts.scenario && String(item.Scenario || '') !== String(opts.scenario)) return false;
+      if (opts.date && String(item.TimestampStarted || '').indexOf(String(opts.date)) !== 0) return false;
+      return true;
+    }).sort(function(a, b) {
+      return String(b.TimestampStarted || '').localeCompare(String(a.TimestampStarted || ''));
+    });
+
+    return {
+      operations: items.slice(0, Number(opts.limit || 100)).map(function(item) {
+        return {
+          operationId: String(item.OperationId || ''),
+          parentOperationId: String(item.ParentOperationId || ''),
+          scenario: String(item.Scenario || ''),
+          rawScenario: String(item.RawScenario || ''),
+          startedAt: String(item.TimestampStarted || ''),
+          lastHeartbeat: String(item.LastHeartbeat || ''),
+          status: String(item.Status || ''),
+          errorMessage: String(item.ErrorMessage || ''),
+          affectedRows: String(item.AffectedRows || ''),
+          initiator: String(item.Initiator || ''),
+          fingerprint: String(item.Fingerprint || ''),
+          notes: String(item.Notes || ''),
+          verificationResult: String(item.VerificationResult || ''),
+          resolutionStatus: String(item.ResolutionStatus || '')
+        };
+      }),
+      total: items.length
+    };
+  }
+
+  function markNeedsRepair(operationId, reason) {
+    var current = _getOperationRow(operationId);
+    if (!current) throw new Error('Операцію не знайдено: ' + operationId);
+    var status = String(current.Status || '');
+    if (status === 'NEEDS_REPAIR') return current;
+    if (status === 'FAILED' || status === 'FAILED_STALE') {
+      return transitionStatus(operationId, 'NEEDS_REPAIR', reason || 'queued-for-repair', { RepairNeeded: true });
+    }
+    return current;
+  }
+
+  function resolveIncident(operationId, resolvedByOperationId, resolutionStatus) {
+    var current = _getOperationRow(operationId);
+    if (!current) throw new Error('Операцію не знайдено: ' + operationId);
+    var status = String(current.Status || '');
+    if (['FAILED', 'FAILED_STALE', 'NEEDS_REPAIR'].indexOf(status) === -1) {
+      throw new Error('Resolve дозволений тільки для FAILED / FAILED_STALE / NEEDS_REPAIR');
+    }
+    var resolution = String(resolutionStatus || '').trim();
+    if (!ALLOWED_RESOLUTION_STATUSES[resolution]) {
+      throw new Error('Недопустимий ResolutionStatus: ' + resolution);
+    }
+    _updateOpsRow(operationId, {
+      ResolvedByOperationId: String(resolvedByOperationId || ''),
+      ResolvedAt: _iso(_now()),
+      ResolutionStatus: resolution
+    });
+    return _getOperationRow(operationId);
+  }
+
+  function detectStaleOperations() {
+    ensureServiceSheets();
+    var sheet = _sheet(SHEETS.ACTIVE, ACTIVE_HEADERS);
+    var rows = _rowsAsObjects(sheet);
+    var nowMs = _now().getTime();
+    var stale = [];
+    rows.forEach(function(item) {
+      if (String(item.Status || '') !== 'STARTED') return;
+      var payload = _parseJson(item.PayloadJson, {});
+      var ttlMs = ttlMinutesFor(item.Scenario || '', payload) * 60 * 1000;
+      var lastHeartbeatMs = new Date(String(item.LastHeartbeat || item.StartedAt || '')).getTime();
+      var expiresAtMs = new Date(String(item.ExpiresAt || '')).getTime();
+      var heartbeatExpired = isFinite(lastHeartbeatMs) ? (nowMs - lastHeartbeatMs > ttlMs) : false;
+      var expiresExpired = isFinite(expiresAtMs) ? expiresAtMs < nowMs : false;
+      if (!(heartbeatExpired || expiresExpired)) return;
+      var current = _getOperationRow(item.OperationId);
+      if (!current || String(current.Status || '') !== 'STARTED') return;
+      transitionStatus(item.OperationId, 'FAILED_STALE', 'heartbeat-timeout', {
+        VerificationResult: 'FAILED',
+        RepairNeeded: true,
+        ErrorMessage: 'Marked FAILED_STALE after heartbeat timeout',
+        TimestampFinished: _iso(_now())
+      });
+      appendNote(item.OperationId, 'Marked as FAILED_STALE after heartbeat timeout', 'stale-detector');
+      stale.push(item.OperationId);
+    });
+    return { staleOperations: stale, total: stale.length, checked: rows.length };
+  }
+
+  function abandonAllActive(reason, options) {
+    ensureServiceSheets();
+    var opts = options && typeof options === 'object' ? options : {};
+    var excluded = {};
+    stage4AsArray_(opts.excludeOperationIds).forEach(function(id) {
+      var key = String(id || '').trim();
+      if (key) excluded[key] = true;
+    });
+    if (opts.excludeOperationId) {
+      var single = String(opts.excludeOperationId || '').trim();
+      if (single) excluded[single] = true;
+    }
+    var rows = _rowsAsObjects(_sheet(SHEETS.ACTIVE, ACTIVE_HEADERS));
+    var updated = [];
+    rows.forEach(function(item) {
+      var opId = String(item.OperationId || '').trim();
+      if (!opId || excluded[opId]) return;
+      var current = _getOperationRow(opId);
+      if (!current || String(current.Status || '') !== 'STARTED') return;
+      transitionStatus(opId, 'ABANDONED', reason || 'manual-abandon', {
+        ErrorMessage: 'Abandoned by maintenance flow',
+        TimestampFinished: _iso(_now())
+      });
+      appendNote(opId, 'Marked as ABANDONED by restart/maintenance flow', 'maintenance');
+      updated.push(opId);
+    });
+    return {
+      total: updated.length,
+      operationIds: updated,
+      excludedOperationIds: Object.keys(excluded)
+    };
+  }
+
+  function runRetentionCleanup() {
+    ensureServiceSheets();
+    var opsSheet = _sheet(SHEETS.OPS, OPS_HEADERS);
+    var activeSheet = _sheet(SHEETS.ACTIVE, ACTIVE_HEADERS);
+    var checkpointsSheet = _sheet(SHEETS.CHECKPOINTS, CHECKPOINT_HEADERS);
+    var rows = _rowsAsObjects(opsSheet);
+    var cutoffDays = Number(appGetCore('OPS_HOT_RETENTION_DAYS', 180) || 180);
+    var staleGraceHours = Number(appGetCore('ACTIVE_STALE_GRACE_HOURS', 48) || 48);
+    var cutoffMs = _now().getTime() - cutoffDays * 24 * 60 * 60 * 1000;
+    var staleCutoffMs = _now().getTime() - staleGraceHours * 60 * 60 * 1000;
+    var archived = 0;
+    var archivedCheckpoints = 0;
+    var removedActiveStale = 0;
+    rows.slice().reverse().forEach(function(item) {
+      var startedMs = new Date(String(item.TimestampStarted || '')).getTime();
+      if (!isFinite(startedMs) || startedMs >= cutoffMs) return;
+      var suffix = _fmt(new Date(startedMs), 'yyyy_MM');
+      var archiveName = 'OPS_LOG_' + suffix;
+      var archiveSheet = _sheet(archiveName, OPS_HEADERS);
+      var rowValues = OPS_HEADERS.map(function(header) { return item[header]; });
+      _appendRow(archiveSheet, rowValues);
+
+      _rowsAsObjects(checkpointsSheet).slice().reverse().forEach(function(checkpoint) {
+        if (String(checkpoint.OperationId || '') !== String(item.OperationId || '')) return;
+        var checkpointArchiveName = 'CHECKPOINTS_' + suffix;
+        var checkpointArchiveSheet = _sheet(checkpointArchiveName, CHECKPOINT_HEADERS);
+        var checkpointRow = CHECKPOINT_HEADERS.map(function(header) { return checkpoint[header]; });
+        _appendRow(checkpointArchiveSheet, checkpointRow);
+        checkpointsSheet.deleteRow(checkpoint.__row);
+        archivedCheckpoints++;
+      });
+
+      opsSheet.deleteRow(item.__row);
+      archived++;
+    });
+
+    _rowsAsObjects(activeSheet).slice().reverse().forEach(function(item) {
+      if (String(item.Status || '') !== 'FAILED_STALE') return;
+      var classifiedMs = new Date(String(item.LastHeartbeat || item.StartedAt || '')).getTime();
+      if (!isFinite(classifiedMs) || classifiedMs >= staleCutoffMs) return;
+      activeSheet.deleteRow(item.__row);
+      removedActiveStale++;
+    });
+
+    return {
+      archived: archived,
+      archivedCheckpoints: archivedCheckpoints,
+      removedActiveStale: removedActiveStale,
+      cutoffDays: cutoffDays,
+      staleGraceHours: staleGraceHours
+    };
+  }
+
+  function buildLifecyclePolicyReport() {
+    return {
+      serviceSheets: [SHEETS.OPS, SHEETS.ACTIVE, SHEETS.CHECKPOINTS],
+      ttlScenarios: Object.keys(TTL_MINUTES).length,
+      retentionDays: Number(appGetCore('OPS_HOT_RETENTION_DAYS', 180) || 180),
+      activeStaleGraceHours: Number(appGetCore('ACTIVE_STALE_GRACE_HOURS', 48) || 48),
+      operationIdPattern: 'op_<scenario>_<YYYYMMDD>_<HHMMSS>_<4random>',
+      sourceOfTruth: 'sheet-backed'
+    };
+  }
+
+  function runRepair(operationId, options) {
+    var details = getOperationDetails(operationId);
+    if (!details || !details.operation) throw new Error('Операцію для repair не знайдено');
+    var op = details.operation;
+    markNeedsRepair(operationId, 'repair-requested');
+    var payload = _parseJson(op.PayloadJson, {});
+    var rawScenario = String(op.RawScenario || op.Scenario || '');
+    var replayPayload = Object.assign({}, payload, options || {}, {
+      operationId: '',
+      parentOperationId: operationId,
+      repairTargetOperationId: operationId,
+      repairMode: true,
+      dryRun: !!(options && options.dryRun)
+    });
+
+    var result;
+    switch (rawScenario) {
+      case 'markPanelRowsAsSent':
+        result = Stage4UseCases_.markPanelRowsAsSent(payload.rowNumbers || [], replayPayload);
+        break;
+      case 'markPanelRowsAsUnsent':
+        result = Stage4UseCases_.markPanelRowsAsUnsent(payload.rowNumbers || [], replayPayload);
+        break;
+      case 'sendPendingRows':
+        result = Stage4UseCases_.sendPendingRows(replayPayload);
+        break;
+      case 'createNextMonth':
+        result = Stage4UseCases_.createNextMonth(replayPayload);
+        break;
+      case 'runReconciliation':
+        result = Stage4UseCases_.runReconciliation(replayPayload);
+        break;
+      case 'generateSendPanelForDate':
+        result = Stage4UseCases_.generateSendPanelForDate(replayPayload);
+        break;
+      case 'generateSendPanelForRange':
+        result = Stage4UseCases_.generateSendPanelForRange(replayPayload);
+        break;
+      case 'runMaintenanceScenario':
+        result = Stage4UseCases_.runMaintenanceScenario(replayPayload);
+        break;
+      case 'switchBotToMonth':
+        result = Stage4UseCases_.switchBotToMonth(replayPayload);
+        break;
+      default:
+        throw new Error('Repair для сценарію "' + rawScenario + '" ще не реалізовано');
+    }
+
+    var newOperationId = result && result.operationId ? result.operationId : (result && result.data && result.data.meta && result.data.meta.operationId || '');
+    if (result && result.success) {
+      resolveIncident(operationId, newOperationId, result.partial ? 'RESOLVED_PARTIAL' : 'RESOLVED_SUCCESS');
+    } else if (newOperationId) {
+      resolveIncident(operationId, newOperationId, 'RESOLVED_FAILED');
+    }
+
+    return {
+      success: !!(result && result.success),
+      message: result && (result.message || result.error) || '',
+      operationId: newOperationId || '',
+      originalOperationId: operationId,
+      result: result
+    };
+  }
+
+  return {
+    ensureServiceSheets: ensureServiceSheets,
+    canonicalScenario: canonicalScenario,
+    makeOperationId: makeOperationId,
+    buildFingerprint: buildFingerprint,
+    ttlMinutesFor: ttlMinutesFor,
+    beginExecution: beginExecution,
+    heartbeat: heartbeat,
+    saveCheckpoint: saveCheckpoint,
+    appendNote: appendNote,
+    transitionStatus: transitionStatus,
+    finalizeSuccessfulExecution: finalizeSuccessfulExecution,
+    registerFailure: registerFailure,
+    getOperationDetails: getOperationDetails,
+    listPendingRepairs: listPendingRepairs,
+    markNeedsRepair: markNeedsRepair,
+    resolveIncident: resolveIncident,
+    detectStaleOperations: detectStaleOperations,
+    abandonAllActive: abandonAllActive,
+    runRetentionCleanup: runRetentionCleanup,
+    buildLifecyclePolicyReport: buildLifecyclePolicyReport,
+    runRepair: runRepair,
+    _classifyVerification: _classifyVerification
+  };
+})();
