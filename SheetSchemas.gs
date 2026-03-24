@@ -1,365 +1,444 @@
 /**
- * SendPanelRepository.gs — canonical синхронізація monthly sheet -> SEND_PANEL.
+ * SheetSchemas.gs — hybrid canonical contract для stage 3.
+ *
+ * База: сильний stage 3 API/data-access каркас.
+ * Підсилення: richer schema metadata, header aliases, helper getters,
+ * але без зламу сумісності зі старим SheetSchemas_.get(...).
  */
 
-const SendPanelRepository_ = (function() {
-  function extractLinkUrl(formula) {
-    return extractHyperlinkUrl_(formula);
+function _columnLetterToNumber_(letters) {
+  const text = String(letters || '').trim().toUpperCase();
+  let out = 0;
+  for (let i = 0; i < text.length; i++) {
+    out = out * 26 + (text.charCodeAt(i) - 64);
+  }
+  return out;
+}
+
+function _parseA1RangeRef_(a1) {
+  const text = String(a1 || '').trim();
+  const match = text.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/i);
+  if (!match) {
+    throw new Error(`Непідтримуваний A1-діапазон: ${text}`);
   }
 
-  function getPanelSheet(required) {
-    return DataAccess_.getSheet('SEND_PANEL', null, required !== false);
-  }
-
-  function readRows() {
-    const panel = getPanelSheet(false);
-    if (!panel) return [];
-
-    const schema = SheetSchemas_.get('SEND_PANEL');
-    const lastRow = panel.getLastRow();
-    if (lastRow < schema.dataStartRow) return [];
-
-    const count = lastRow - (schema.dataStartRow - 1);
-    const values = panel.getRange(schema.dataStartRow, 1, count, 7).getDisplayValues();
-    const formulas = panel.getRange(schema.dataStartRow, 6, count, 1).getFormulas().flat();
-    const sentValues = panel.getRange(schema.dataStartRow, 7, count, 1).getValues().flat();
-
-    return values.map(function(row, index) {
-      const status = normalizeSendPanelStatus_(String(row[4] || '').trim());
-      const sent = sentValues[index] === true || String(sentValues[index]).toUpperCase() === 'TRUE' || isSendPanelSentStatusValue_(status);
-      return {
-        fio: String(row[0] || '').trim(),
-        phone: String(row[1] || '').replace(/^'/, '').trim() || '—',
-        code: String(row[2] || '').trim(),
-        tasks: String(row[3] || '').trim() || '—',
-        status: status,
-        link: extractLinkUrl(formulas[index] || ''),
-        sent: sent,
-        row: schema.dataStartRow + index
-      };
-    }).filter(function(item) {
-      return item.fio || item.code || item.phone !== '—';
-    });
-  }
-
-  function buildStats(rows) {
-    const items = Array.isArray(rows) ? rows : [];
-    return {
-      totalCount: items.length,
-      readyCount: items.filter(function(item) {
-        return shouldTreatRowAsReadyToOpen_(item);
-      }).length,
-      pendingCount: items.filter(function(item) {
-        return isSendPanelPendingStatus_(item.status) && !item.sent;
-      }).length,
-      errorCount: items.filter(function(item) {
-        return isSendPanelErrorStatus_(item.status);
-      }).length,
-      sentCount: items.filter(function(item) {
-        return item.sent === true || isSendPanelSentStatusValue_(item.status);
-      }).length
-    };
-  }
-
-  function buildRowsForDate(dateStr) {
-    const ctx = PersonsRepository_.getDateContext(dateStr);
-    const source = ctx.sheet;
-    const phones = DictionaryRepository_.getPhonesMap();
-    const dict = DictionaryRepository_.getDictMap();
-    const ref = source.getRange(CONFIG.CODE_RANGE_A1);
-    const start = ref.getRow();
-    const num = ref.getNumRows();
-    const codes = source.getRange(start, ctx.col, num, 1).getDisplayValues();
-    const fios = source.getRange(start, CONFIG.FIO_COL, num, 1).getDisplayValues();
-
-    const rows = [];
-    const payloads = [];
-
-    for (let i = 0; i < num; i++) {
-      const code = String(codes[i][0] || '').trim();
-      const fio = String(fios[i][0] || '').trim();
-      if (!code || !fio) continue;
-
-      try {
-        const payload = buildPayloadForCell_(source, start + i, ctx.col, phones, dict);
-        let formattedPhone = String(payload.phone || '').trim();
-        if (formattedPhone.startsWith('+')) {
-          formattedPhone = "'" + formattedPhone;
-        }
-
-        const linkFormula = payload.link
-          ? `=HYPERLINK("${payload.link}"; "📱 НАДІСЛАТИ")`
-          : '';
-
-        rows.push([
-          payload.fio,
-          formattedPhone || '—',
-          payload.code,
-          payload.tasks || '—',
-          getSendPanelReadyStatus_(),
-          linkFormula,
-          false
-        ]);
-
-        payloads.push(payload);
-      } catch (e) {
-        rows.push([
-          fio,
-          '—',
-          code,
-          '—',
-          `${getSendPanelErrorPrefix_()} ${e && e.message ? e.message : String(e)}`,
-          '',
-          false
-        ]);
-      }
-    }
-
-    return {
-      month: source.getName(),
-      date: ctx.dateStr,
-      rows: rows,
-      payloads: payloads,
-      canonicalSource: {
-        type: 'MONTHLY',
-        sheet: source.getName(),
-        date: ctx.dateStr
-      }
-    };
-  }
-
-  function preview(dateStr) {
-    const built = buildRowsForDate(dateStr);
-    const mapped = built.rows.map(function(row, index) {
-      return {
-        fio: String(row[0] || '').trim(),
-        phone: String(row[1] || '').replace(/^'/, '').trim() || '—',
-        code: String(row[2] || '').trim(),
-        tasks: String(row[3] || '').trim() || '—',
-        status: normalizeSendPanelStatus_(String(row[4] || '').trim()),
-        link: extractLinkUrl(String(row[5] || '')),
-        sent: row[6] === true,
-        row: (Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3) + index
-      };
-    });
-
-    return {
-      month: built.month,
-      date: built.date,
-      canonicalSource: built.canonicalSource,
-      rows: mapped,
-      stats: buildStats(mapped)
-    };
-  }
-
-  function rebuild(dateStr) {
-    const ss = SpreadsheetApp.getActive();
-    const built = buildRowsForDate(dateStr);
-    let panel = ss.getSheetByName(CONFIG.SEND_PANEL_SHEET);
-    const prevMeta = panel ? getSendPanelMetadata_(panel) : { month: '', date: '', hasMetadata: false };
-    const preserveState = !!(panel && prevMeta.date && prevMeta.date === built.date);
-    const prevState = preserveState ? readSendPanelStateObjectMap_(panel) : {};
-    if (!panel) panel = ss.insertSheet(CONFIG.SEND_PANEL_SHEET);
-
-    ensureSendPanelStructure_(panel, built.month, built.date);
-
-    const rows = built.rows.map(function(row) {
-      const key = makeSendPanelKey_(row[0], row[1], row[2]);
-      const prev = prevState[key] || null;
-      const builtStatus = normalizeSendPanelStatus_(row[4]);
-      const preservedStatus = prev && prev.status ? normalizeSendPanelStatus_(prev.status) : builtStatus;
-      const preservedSent = !!(prev && prev.sent);
-
-      return [
-        row[0],
-        row[1],
-        row[2],
-        row[3],
-        preservedSent ? getSendPanelSentStatus_() : preservedStatus,
-        row[5],
-        preservedSent
-      ];
-    });
-
-    if (!rows.length) {
-      throw new Error('На вибрану дату немає даних для SEND_PANEL');
-    }
-
-    panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 1, rows.length, 7).setValues(rows);
-    panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 7, rows.length, 1).insertCheckboxes();
-    applyColumnWidthsStandardsToSheet_(panel);
-
-    const statusRng = panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 5, rows.length, 1);
-    panel.setConditionalFormatRules([
-      SpreadsheetApp.newConditionalFormatRule().whenTextContains(getSendPanelReadyStatus_()).setBackground('#e6f4e6').setRanges([statusRng]).build(),
-      SpreadsheetApp.newConditionalFormatRule().whenTextContains(SendPanelConstants_.STATUS_UNSENT).setBackground('#fff8db').setRanges([statusRng]).build(),
-      SpreadsheetApp.newConditionalFormatRule().whenTextContains(SendPanelConstants_.STATUS_PENDING).setBackground('#fff3cd').setRanges([statusRng]).build(),
-      SpreadsheetApp.newConditionalFormatRule().whenTextContains(getSendPanelErrorPrefix_()).setBackground('#ffe6e6').setRanges([statusRng]).build(),
-      SpreadsheetApp.newConditionalFormatRule().whenTextContains(getSendPanelSentStatus_()).setBackground('#ede9fe').setRanges([statusRng]).build()
-    ]);
-    panel.setFrozenRows(CONFIG.SEND_PANEL_HEADER_ROW);
-
-    const rowsData = readRows();
-    return {
-      month: built.month,
-      date: built.date,
-      canonicalSource: built.canonicalSource,
-      rows: rowsData,
-      stats: buildStats(rowsData),
-      rowsWritten: rows.length
-    };
-  }
-
-  function batchSetPanelState_(panel, rowNumbers, statusText, sentValue) {
-    const schema = SheetSchemas_.get('SEND_PANEL');
-    const validRows = [...new Set((Array.isArray(rowNumbers) ? rowNumbers : []).map(Number).filter(Number.isFinite))].sort(function(a, b) { return a - b; });
-    const groups = [];
-
-    validRows.forEach(function(row) {
-      const last = groups[groups.length - 1];
-      if (!last || row !== last.end + 1) {
-        groups.push({ start: row, end: row, rows: [row] });
-        return;
-      }
-      last.end = row;
-      last.rows.push(row);
-    });
-
-    groups.forEach(function(group) {
-      const count = group.rows.length;
-      panel.getRange(group.start, schema.columns.status, count, 1)
-        .setValues(group.rows.map(function() { return [statusText]; }));
-      panel.getRange(group.start, schema.columns.sent, count, 1)
-        .setValues(group.rows.map(function() { return [!!sentValue]; }));
-    });
-
-    return validRows;
-  }
-
-  function markRowsAsPending(rowNumbers, opts) {
-    const options = opts || {};
-    const rows = Array.isArray(rowNumbers) ? rowNumbers.map(Number) : [];
-    if (options.dryRun) {
-      const previewRows = readRows();
-      return {
-        dryRun: true,
-        requestedRows: rows,
-        updatedRows: rows.filter(function(v) { return Number.isFinite(v); }),
-        rows: previewRows,
-        stats: buildStats(previewRows)
-      };
-    }
-
-    const panel = getPanelSheet(true);
-    const schema = SheetSchemas_.get('SEND_PANEL');
-    const firstDataRow = schema.dataStartRow;
-    const lastDataRow = panel.getLastRow();
-    const validRows = [...new Set(rows)].filter(function(row) {
-      return Number.isFinite(row) && row >= firstDataRow && row <= lastDataRow;
-    });
-    if (!validRows.length) throw new Error('Передано некоректні рядки SEND_PANEL');
-
-    batchSetPanelState_(panel, validRows, SendPanelConstants_.STATUS_PENDING, false);
-    const afterRows = readRows();
-    return { updatedRows: validRows, rows: afterRows, stats: buildStats(afterRows) };
-  }
-
-  function markRowsAsSent(rowNumbers, opts) {
-    const options = opts || {};
-    const rows = Array.isArray(rowNumbers) ? rowNumbers.map(Number) : [];
-    if (options.dryRun) {
-      const previewRows = readRows();
-      return {
-        dryRun: true,
-        requestedRows: rows,
-        updatedRows: rows.filter(function(v) { return Number.isFinite(v); }),
-        rows: previewRows,
-        stats: buildStats(previewRows)
-      };
-    }
-
-    const panel = getPanelSheet(true);
-    const schema = SheetSchemas_.get('SEND_PANEL');
-    const firstDataRow = schema.dataStartRow;
-    const lastDataRow = panel.getLastRow();
-    const validRows = [...new Set(rows)].filter(function(row) {
-      return Number.isFinite(row) && row >= firstDataRow && row <= lastDataRow;
-    });
-
-    if (!validRows.length) throw new Error('Передано некоректні рядки SEND_PANEL');
-
-    const beforeRows = readRows().filter(function(item) {
-      return validRows.indexOf(item.row) !== -1;
-    });
-
-    batchSetPanelState_(panel, validRows, getSendPanelSentStatus_(), true);
-
-    const logs = beforeRows.map(function(item) {
-      return {
-        timestamp: new Date(),
-        reportDateStr: getSendPanelMetadata_(panel).date || _todayStr_(),
-        sheet: CONFIG.SEND_PANEL_SHEET,
-        cell: `ROW:${item.row}`,
-        fio: item.fio,
-        phone: item.phone,
-        code: item.code,
-        service: '',
-        place: '',
-        tasks: item.tasks || '',
-        message: `Підтверджено відправку: ${item.code}`,
-        link: item.link || ''
-      };
-    });
-
-    if (logs.length) {
-      try { LogsRepository_.writeBatch(logs); } catch (_) {}
-    }
-
-    const afterRows = readRows();
-    return { updatedRows: validRows, rows: afterRows, stats: buildStats(afterRows) };
-  }
-
-  function markRowsAsUnsent(rowNumbers, opts) {
-    const options = opts || {};
-    const rows = Array.isArray(rowNumbers) ? rowNumbers.map(Number) : [];
-    if (options.dryRun) {
-      const previewRows = readRows();
-      return {
-        dryRun: true,
-        requestedRows: rows,
-        updatedRows: rows.filter(function(v) { return Number.isFinite(v); }),
-        rows: previewRows,
-        stats: buildStats(previewRows)
-      };
-    }
-
-    const panel = getPanelSheet(true);
-    const schema = SheetSchemas_.get('SEND_PANEL');
-    const firstDataRow = schema.dataStartRow;
-    const lastDataRow = panel.getLastRow();
-    const validRows = [...new Set(rows)].filter(function(row) {
-      return Number.isFinite(row) && row >= firstDataRow && row <= lastDataRow;
-    });
-
-    if (!validRows.length) throw new Error('Передано некоректні рядки SEND_PANEL');
-
-    batchSetPanelState_(panel, validRows, SendPanelConstants_.STATUS_UNSENT, false);
-    const afterRows = readRows();
-    return { updatedRows: validRows, rows: afterRows, stats: buildStats(afterRows) };
-  }
-
-  function getPanelMetadata() {
-    return getSendPanelMetadata_(getPanelSheet(false));
-  }
   return {
-    readRows: readRows,
-    buildStats: buildStats,
-    buildRowsForDate: buildRowsForDate,
-    preview: preview,
-    rebuild: rebuild,
-    markRowsAsPending: markRowsAsPending,
-    markRowsAsSent: markRowsAsSent,
-    markRowsAsUnsent: markRowsAsUnsent,
-    getPanelMetadata: getPanelMetadata
+    startCol: _columnLetterToNumber_(match[1]),
+    startRow: Number(match[2]),
+    endCol: _columnLetterToNumber_(match[3]),
+    endRow: Number(match[4])
+  };
+}
+
+function _monthlyMatrix_() {
+  return _parseA1RangeRef_(CONFIG.CODE_RANGE_A1);
+}
+
+function _vacationSheetName_() {
+  return (typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.VACATIONS_SHEET)
+    ? VACATION_ENGINE_CONFIG.VACATIONS_SHEET
+    : 'VACATIONS';
+}
+
+const SHEET_SCHEMAS = Object.freeze({
+  monthly: Object.freeze({
+    key: 'monthly',
+    legacyKey: 'MONTHLY',
+    type: 'monthly',
+    title: 'Monthly sheet',
+    dynamicName: true,
+    required: true,
+    sheetNamePattern: /^\d{2}$/,
+    headerRow: Number(CONFIG.DATE_ROW) || 1,
+    dateRow: Number(CONFIG.DATE_ROW) || 1,
+    codeRangeA1: CONFIG.CODE_RANGE_A1,
+    osFioRangeA1: CONFIG.OS_FIO_RANGE,
+    dataStartRow: _monthlyMatrix_().startRow,
+    dataEndRow: _monthlyMatrix_().endRow,
+    matrix: _monthlyMatrix_(),
+    columns: Object.freeze({
+      phone: 1,
+      callsign: 2,
+      position: 3,
+      oshs: 4,
+      rank: 5,
+      brDays: 6,
+      fio: 7
+    }),
+    fields: Object.freeze({
+      phone:    { col: 1, type: 'string', required: false, allowBlank: true, label: 'Телефон' },
+      callsign: { col: 2, type: 'string', required: true,  allowBlank: false, label: 'Позивний' },
+      position: { col: 3, type: 'string', required: false, allowBlank: true, label: 'Посада' },
+      oshs:     { col: 4, type: 'string', required: false, allowBlank: true, label: 'ОШС' },
+      rank:     { col: 5, type: 'string', required: false, allowBlank: true, label: 'Звання' },
+      brDays:   { col: 6, type: 'number|string', required: false, allowBlank: true, label: 'Дні БР' },
+      fio:      { col: 7, type: 'string', required: true,  allowBlank: false, label: 'ПІБ' }
+    }),
+    keyFields: ['callsign', 'fio'],
+    requiredFields: ['callsign', 'fio'],
+    nullableFields: ['phone', 'position', 'oshs', 'rank', 'brDays'],
+    searchableFields: ['callsign', 'fio'],
+    notes: 'Канонічне джерело щоденних кодів і статусів для sidebar/SEND_PANEL/зведень.'
+  }),
+
+  phones: Object.freeze({
+    key: 'phones',
+    legacyKey: 'PHONES',
+    type: 'table',
+    title: 'PHONES',
+    name: CONFIG.PHONES_SHEET,
+    headerRow: 1,
+    dataStartRow: 2,
+    required: true,
+    columns: Object.freeze({ fio: 1, phone: 2, role: 3, birthday: 4 }),
+    fields: Object.freeze({
+      fio:      { col: 1, type: 'string', required: true,  allowBlank: false, label: 'ПІБ' },
+      phone:    { col: 2, type: 'string', required: false, allowBlank: true,  label: 'Телефон' },
+      role:     { col: 3, type: 'string', required: false, allowBlank: true,  label: 'Роль' },
+      birthday: { col: 4, type: 'date|string', required: false, allowBlank: true, label: 'День народження' }
+    }),
+    headerAliases: Object.freeze({
+      fio: ['ПІБ', 'ПІБ/ФІО', 'ФІО', 'FIO'],
+      phone: ['Телефон', 'Phone'],
+      role: ['Роль', 'Role'],
+      birthday: ['День народження', 'Birthday']
+    }),
+    keyFields: ['fio', 'role'],
+    requiredFields: ['fio'],
+    nullableFields: ['phone', 'role', 'birthday'],
+    searchableFields: ['fio', 'role', 'phone']
+  }),
+
+  dict: Object.freeze({
+    key: 'dict',
+    legacyKey: 'DICT',
+    type: 'table',
+    title: 'DICT',
+    name: CONFIG.DICT_SHEET,
+    headerRow: 1,
+    dataStartRow: 2,
+    required: true,
+    columns: Object.freeze({ code: 1, service: 2, place: 3, tasks: 4 }),
+    fields: Object.freeze({
+      code:    { col: 1, type: 'string', required: true,  allowBlank: false, label: 'Код' },
+      service: { col: 2, type: 'string', required: false, allowBlank: true,  label: 'Служба' },
+      place:   { col: 3, type: 'string', required: false, allowBlank: true,  label: 'Місце' },
+      tasks:   { col: 4, type: 'string', required: false, allowBlank: true,  label: 'Завдання' }
+    }),
+    headerAliases: Object.freeze({
+      code: ['Код', 'Code'],
+      service: ['Служба', 'Service'],
+      place: ['Місце', 'Place'],
+      tasks: ['Завдання', 'Tasks']
+    }),
+    keyFields: ['code'],
+    requiredFields: ['code'],
+    nullableFields: ['service', 'place', 'tasks'],
+    searchableFields: ['code', 'service', 'place', 'tasks']
+  }),
+
+  dictSum: Object.freeze({
+    key: 'dictSum',
+    legacyKey: 'DICT_SUM',
+    type: 'table',
+    title: 'DICT_SUM',
+    name: CONFIG.DICT_SUM_SHEET,
+    headerRow: 1,
+    dataStartRow: 2,
+    required: true,
+    columns: Object.freeze({ code: 1, label: 2, order: 3, showZero: 4 }),
+    fields: Object.freeze({
+      code:     { col: 1, type: 'string', required: true,  allowBlank: false, label: 'Код' },
+      label:    { col: 2, type: 'string', required: false, allowBlank: true,  label: 'Назва' },
+      order:    { col: 3, type: 'number|string', required: true, allowBlank: false, label: 'Порядок' },
+      showZero: { col: 4, type: 'boolean|string', required: false, allowBlank: true, label: 'Показувати 0' }
+    }),
+    headerAliases: Object.freeze({
+      code: ['Код', 'Code'],
+      label: ['Назва', 'Label'],
+      order: ['Порядок', 'Order'],
+      showZero: ['Показувати 0', 'ShowZero', 'Show zero']
+    }),
+    keyFields: ['code'],
+    requiredFields: ['code', 'order'],
+    nullableFields: ['label', 'showZero'],
+    searchableFields: ['code', 'label']
+  }),
+
+  sendPanel: Object.freeze({
+    key: 'sendPanel',
+    legacyKey: 'SEND_PANEL',
+    type: 'table',
+    title: 'SEND_PANEL',
+    name: CONFIG.SEND_PANEL_SHEET,
+    titleRows: Number(CONFIG.SEND_PANEL_TITLE_ROWS) || 1,
+    headerRow: Number(CONFIG.SEND_PANEL_HEADER_ROW) || 2,
+    dataStartRow: Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3,
+    required: false,
+    columns: Object.freeze({ fio: 1, phone: 2, code: 3, tasks: 4, status: 5, action: 6, sent: 7 }),
+    fields: Object.freeze({
+      fio:    { col: 1, type: 'string', required: true,  allowBlank: false, label: 'ПІБ' },
+      phone:  { col: 2, type: 'string', required: false, allowBlank: true,  label: 'Телефон' },
+      code:   { col: 3, type: 'string', required: true,  allowBlank: false, label: 'Код' },
+      tasks:  { col: 4, type: 'string', required: false, allowBlank: true,  label: 'Завдання' },
+      status: { col: 5, type: 'string', required: false, allowBlank: true,  label: 'Статус' },
+      action: { col: 6, type: 'string', required: false, allowBlank: true,  label: 'Дія' },
+      sent:   { col: 7, type: 'boolean|string', required: false, allowBlank: true, label: 'Відправлено' }
+    }),
+    headerAliases: Object.freeze({
+      fio: ['ПІБ', 'ФІО'],
+      phone: ['Телефон'],
+      code: ['Код'],
+      tasks: ['Завдання'],
+      status: ['Статус'],
+      action: ['Дія'],
+      sent: ['Відправлено']
+    }),
+    keyFields: ['fio', 'phone', 'code'],
+    requiredFields: ['fio', 'code'],
+    nullableFields: ['phone', 'tasks', 'status', 'action', 'sent'],
+    searchableFields: ['fio', 'phone', 'code', 'status']
+  }),
+
+  vacations: Object.freeze({
+    key: 'vacations',
+    legacyKey: 'VACATIONS',
+    type: 'table',
+    title: 'VACATIONS',
+    name: _vacationSheetName_(),
+    headerRow: 1,
+    dataStartRow: 2,
+    required: false,
+    columns: Object.freeze({
+      fio: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.NAME_COL) || 1),
+      startDate: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.START_COL) || 2),
+      endDate: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.END_COL) || 3),
+      vacationNo: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.NUM_COL) || 4),
+      active: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.ACTIVE_COL) || 5),
+      notify: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.NOTIFY_COL) || 6)
+    }),
+    fields: Object.freeze({
+      fio:        { col: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.NAME_COL) || 1), type: 'string', required: true,  allowBlank: false, label: 'ПІБ' },
+      startDate:  { col: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.START_COL) || 2), type: 'date|string', required: true, allowBlank: false, label: 'Початок' },
+      endDate:    { col: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.END_COL) || 3), type: 'date|string', required: true, allowBlank: false, label: 'Кінець' },
+      vacationNo: { col: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.NUM_COL) || 4), type: 'string', required: false, allowBlank: true, label: 'Номер' },
+      active:     { col: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.ACTIVE_COL) || 5), type: 'boolean|string', required: false, allowBlank: true, label: 'Активна' },
+      notify:     { col: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.NOTIFY_COL) || 6), type: 'boolean|string', required: false, allowBlank: true, label: 'Notify' }
+    }),
+    keyFields: ['fio', 'startDate', 'endDate'],
+    requiredFields: ['fio', 'startDate', 'endDate'],
+    nullableFields: ['vacationNo', 'active', 'notify'],
+    searchableFields: ['fio', 'vacationNo', 'active']
+  }),
+
+  log: Object.freeze({
+    key: 'log',
+    legacyKey: 'LOG',
+    type: 'table',
+    title: 'LOG',
+    name: CONFIG.LOG_SHEET,
+    headerRow: 1,
+    dataStartRow: 2,
+    required: false,
+    columns: Object.freeze({
+      timestamp: 1,
+      reportDateStr: 2,
+      sheet: 3,
+      cell: 4,
+      fio: 5,
+      phone: 6,
+      code: 7,
+      service: 8,
+      place: 9,
+      tasks: 10,
+      message: 11,
+      link: 12
+    }),
+    fields: Object.freeze({
+      timestamp:     { col: 1, type: 'date|string', required: true,  allowBlank: false, label: 'Timestamp' },
+      reportDateStr: { col: 2, type: 'string', required: false, allowBlank: true, label: 'ReportDate' },
+      sheet:         { col: 3, type: 'string', required: false, allowBlank: true, label: 'Sheet' },
+      cell:          { col: 4, type: 'string', required: false, allowBlank: true, label: 'Cell' },
+      fio:           { col: 5, type: 'string', required: false, allowBlank: true, label: 'FIO' },
+      phone:         { col: 6, type: 'string', required: false, allowBlank: true, label: 'Phone' },
+      code:          { col: 7, type: 'string', required: false, allowBlank: true, label: 'Code' },
+      service:       { col: 8, type: 'string', required: false, allowBlank: true, label: 'Service' },
+      place:         { col: 9, type: 'string', required: false, allowBlank: true, label: 'Place' },
+      tasks:         { col: 10, type: 'string', required: false, allowBlank: true, label: 'Tasks' },
+      message:       { col: 11, type: 'string', required: false, allowBlank: true, label: 'Message' },
+      link:          { col: 12, type: 'string', required: false, allowBlank: true, label: 'Link' }
+    }),
+    keyFields: ['timestamp', 'fio', 'code'],
+    requiredFields: ['timestamp'],
+    nullableFields: ['reportDateStr', 'sheet', 'cell', 'fio', 'phone', 'code', 'service', 'place', 'tasks', 'message', 'link'],
+    searchableFields: ['fio', 'phone', 'code', 'sheet']
+  })
+});
+
+function _canonicalSchemaMap_() {
+  return {
+    MONTHLY: SHEET_SCHEMAS.monthly,
+    monthly: SHEET_SCHEMAS.monthly,
+    PHONES: SHEET_SCHEMAS.phones,
+    phones: SHEET_SCHEMAS.phones,
+    DICT: SHEET_SCHEMAS.dict,
+    dict: SHEET_SCHEMAS.dict,
+    DICT_SUM: SHEET_SCHEMAS.dictSum,
+    dictSum: SHEET_SCHEMAS.dictSum,
+    dictsum: SHEET_SCHEMAS.dictSum,
+    SEND_PANEL: SHEET_SCHEMAS.sendPanel,
+    sendPanel: SHEET_SCHEMAS.sendPanel,
+    sendpanel: SHEET_SCHEMAS.sendPanel,
+    VACATIONS: SHEET_SCHEMAS.vacations,
+    vacations: SHEET_SCHEMAS.vacations,
+    LOG: SHEET_SCHEMAS.log,
+    log: SHEET_SCHEMAS.log
+  };
+}
+
+function getRequiredSchemaKeys_() {
+  return ['monthly', 'phones', 'dict', 'dictSum', 'sendPanel', 'vacations', 'log'];
+}
+
+function _toLegacySchema_(canonical, explicitSheetName) {
+  const name = explicitSheetName ? String(explicitSheetName).trim() : (canonical.name || null);
+  const out = Object.assign({}, canonical, {
+    key: canonical.legacyKey || canonical.key,
+    name: name,
+    dynamicName: !!canonical.dynamicName,
+    fields: canonical.fields,
+    columns: canonical.columns,
+    legacyKey: canonical.legacyKey || canonical.key
+  });
+  return out;
+}
+
+function getMonthlySheetSchema_(sheetName) {
+  return _toLegacySchema_(SHEET_SCHEMAS.monthly, String(sheetName || '').trim() || getBotMonthSheetName_());
+}
+
+const SheetSchemas_ = (function() {
+  function get(schemaKeyOrSheetName) {
+    const key = String(schemaKeyOrSheetName || '').trim();
+    if (!key) throw new Error('Не передано ключ схеми листа');
+    if (/^\d{2}$/.test(key)) return getMonthlySheetSchema_(key);
+    const schema = _canonicalSchemaMap_()[key] || _canonicalSchemaMap_()[key.toUpperCase()];
+    if (!schema) throw new Error(`Схема "${schemaKeyOrSheetName}" не знайдена`);
+    if (schema === SHEET_SCHEMAS.monthly) return getMonthlySheetSchema_(getBotMonthSheetName_());
+    return _toLegacySchema_(schema);
+  }
+
+  function getAll() {
+    return {
+      MONTHLY: getMonthlySheetSchema_(getBotMonthSheetName_()),
+      PHONES: _toLegacySchema_(SHEET_SCHEMAS.phones),
+      DICT: _toLegacySchema_(SHEET_SCHEMAS.dict),
+      DICT_SUM: _toLegacySchema_(SHEET_SCHEMAS.dictSum),
+      SEND_PANEL: _toLegacySchema_(SHEET_SCHEMAS.sendPanel),
+      VACATIONS: _toLegacySchema_(SHEET_SCHEMAS.vacations),
+      LOG: _toLegacySchema_(SHEET_SCHEMAS.log)
+    };
+  }
+
+  function resolveSheetName(schemaKey, explicitName) {
+    if (explicitName) return String(explicitName).trim();
+    const schema = get(schemaKey);
+    return schema.name || '';
+  }
+
+  return {
+    get: get,
+    getAll: getAll,
+    resolveSheetName: resolveSheetName
   };
 })();
+
+function getSheetSchema_(schemaKeyOrSheetName) {
+  return SheetSchemas_.get(schemaKeyOrSheetName);
+}
+
+function getSchemaFieldNames_(schemaOrKey) {
+  const schema = typeof schemaOrKey === 'string' ? getSheetSchema_(schemaOrKey) : schemaOrKey;
+  return Object.keys((schema && schema.fields) || (schema && schema.columns) || {});
+}
+
+function getSchemaFieldColumn_(schemaOrKey, fieldName) {
+  const schema = typeof schemaOrKey === 'string' ? getSheetSchema_(schemaOrKey) : schemaOrKey;
+  if (!schema) throw new Error('Schema not found');
+  if (schema.fields && schema.fields[fieldName]) return Number(schema.fields[fieldName].col);
+  if (schema.columns && fieldName in schema.columns) return Number(schema.columns[fieldName]);
+  throw new Error(`Поле "${fieldName}" не описане у схемі ${schema.key || ''}`);
+}
+
+function getSchemaLastColumn_(schemaOrKey) {
+  const schema = typeof schemaOrKey === 'string' ? getSheetSchema_(schemaOrKey) : schemaOrKey;
+  return Math.max.apply(null, getSchemaFieldNames_(schema).map(function(name) {
+    return getSchemaFieldColumn_(schema, name);
+  }).concat([1]));
+}
+
+function getSchemaSheetName_(schemaOrKey, options) {
+  const schema = typeof schemaOrKey === 'string' ? getSheetSchema_(schemaOrKey) : schemaOrKey;
+  if (schema.type === 'monthly' || schema.dynamicName) {
+    if (options && options.sheetName) return String(options.sheetName).trim();
+    return String(schema.name || getBotMonthSheetName_()).trim();
+  }
+  return String(schema.name || '').trim();
+}
+
+function validateSheetHeadersBySchema_(sheet, schemaOrKey) {
+  const schema = typeof schemaOrKey === 'string' ? getSheetSchema_(schemaOrKey) : schemaOrKey;
+  const report = {
+    ok: true,
+    schema: schema.key,
+    sheet: sheet ? sheet.getName() : '',
+    missing: [],
+    mismatches: [],
+    warnings: []
+  };
+
+  if (!sheet) {
+    report.ok = false;
+    report.missing.push('sheet');
+    return report;
+  }
+
+  if (schema.type === 'monthly' || schema.dynamicName) {
+    try {
+      const codeRange = sheet.getRange(schema.codeRangeA1 || CONFIG.CODE_RANGE_A1);
+      if (codeRange.getNumRows() <= 0 || codeRange.getNumColumns() <= 0) {
+        report.ok = false;
+        report.mismatches.push(`Некоректний codeRange ${schema.codeRangeA1 || CONFIG.CODE_RANGE_A1}`);
+      }
+    } catch (e) {
+      report.ok = false;
+      report.mismatches.push(e && e.message ? e.message : String(e));
+    }
+    return report;
+  }
+
+  const headerRow = Number(schema.headerRow) || 1;
+  const lastCol = Math.max(sheet.getLastColumn(), getSchemaLastColumn_(schema));
+  const headers = lastCol > 0 ? sheet.getRange(headerRow, 1, 1, lastCol).getDisplayValues()[0] : [];
+
+  getSchemaFieldNames_(schema).forEach(function(fieldName) {
+    const field = (schema.fields && schema.fields[fieldName]) || { col: getSchemaFieldColumn_(schema, fieldName), label: fieldName };
+    const actual = String(headers[field.col - 1] || '').trim();
+    const aliases = (schema.headerAliases && schema.headerAliases[fieldName]) || [field.label || fieldName];
+    if (!actual) {
+      if (field.required) {
+        report.ok = false;
+        report.missing.push(fieldName);
+      } else {
+        report.warnings.push(`Порожній header для ${fieldName}`);
+      }
+      return;
+    }
+    if (aliases.length && aliases.indexOf(actual) === -1) {
+      report.mismatches.push(`${fieldName}: actual="${actual}", expected one of [${aliases.join(', ')}]`);
+    }
+  });
+
+  if (report.mismatches.length) report.ok = false;
+  return report;
+}

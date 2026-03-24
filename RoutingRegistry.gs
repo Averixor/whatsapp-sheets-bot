@@ -1,448 +1,331 @@
 /**
- * ProjectMetadata.gs — truthful release metadata for the active Stage 7.1 baseline.
+ * RoutingRegistry.gs — canonical Stage 7 routing / safety registry.
+ *
+ * This file is the single source of truth for active route metadata:
+ * - canonical route name
+ * - public API entrypoint
+ * - underlying use case / service
+ * - category and compatibility status
+ * - read/write mode
+ * - lock requirement
+ * - dry-run support
+ * - UI eligibility
  */
 
-function _projectMetaDeepCopy_(value) {
-  return JSON.parse(JSON.stringify(value));
-}
+var WAPB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WAPB_STAGE7_ROUTING_REGISTRY_STORE_ !== 'undefined' && WAPB_STAGE7_ROUTING_REGISTRY_STORE_) || Object.freeze({
 
-const PROJECT_RELEASE_NAMING_ = Object.freeze({
-  stage: '7.1',
-  stageLabel: 'Stage 7.1 — Reliability Hardened Baseline',
-  stageVersion: '7.1.0-reliability-hardened-merged',
-  activeBaseline: 'stage7-1-reliability-hardened-baseline',
-  archiveBaseName: 'gas_wapb_stage7_1_reliability_hardened_baseline',
-  archiveFileName: 'gas_wapb_stage7_1_reliability_hardened_baseline.zip',
-  rootFolderName: 'gas_wapb_stage7_1_reliability_hardened_baseline'
-});
-
-const PROJECT_DOCUMENTATION_MAP_ = Object.freeze({
-  active: Object.freeze({
-    readme: 'README.md',
-    architecture: 'ARCHITECTURE.md',
-    runbook: 'RUNBOOK.md',
-    releaseReport: 'STAGE7_REPORT.md'
-  }),
-  reference: Object.freeze([
-    'docs/reference/PUBLIC_API_STAGE5.md',
-    'docs/reference/CHANGELOG_STAGE5.md',
-    'docs/reference/STAGE5_REPORT.md',
-    'docs/reference/STAGE6A_REPORT.md',
-    'docs/reference/SPREADSHEET_ACTION_API.md',
-    'docs/reference/JOBS_RUNTIME.md',
-    'docs/reference/SUNSET_POLICY.md'
-  ]),
-  historical: Object.freeze([
-    'docs/archive/PUBLIC_API_STAGE4.md',
-    'docs/archive/CHANGELOG_STAGE4.md',
-    'docs/archive/STAGE4_REPORT.md',
-    'docs/archive/STAGE6A_TRANSITION_NOTES.md'
-  ])
-});
-
-const PROJECT_CANONICAL_LAYERS_ = Object.freeze({
-  applicationApi: 'Stage4ServerApi.gs',
-  sidebarApplicationApi: 'Stage4ServerApi.gs',
-  spreadsheetActionApi: 'SpreadsheetActionsApi.gs',
-  maintenanceApi: 'Stage5MaintenanceApi.gs',
-  useCases: 'UseCases.gs',
-  workflow: 'WorkflowOrchestrator.gs',
-  compatibility: 'SidebarServer.gs',
-  compatibilityFacade: 'SidebarServer.gs',
-  diagnostics: 'Diagnostics.gs',
-  tests: 'SmokeTests.gs',
-  metadata: 'ProjectMetadata.gs',
-  dialogPresentation: 'DialogPresenter.gs',
-  dialogTemplates: 'DialogTemplates.gs'
-});
-
-const PROJECT_STAGE4_CANONICAL_API_MAP_ = Object.freeze({
-  application: Object.freeze([
-    'apiStage4GetMonthsList',
-    'apiStage4GetSidebarData',
-    'apiGenerateSendPanelForDate',
-    'apiGenerateSendPanelForRange',
-    'apiStage4GetSendPanelData',
-    'apiMarkPanelRowsAsSent',
-    'apiMarkPanelRowsAsUnsent',
-    'apiSendPendingRows',
-    'apiBuildDaySummary',
-    'apiBuildDetailedSummary',
-    'apiOpenPersonCard',
-    'apiCheckVacationsAndBirthdays',
-    'apiStage4SwitchBotToMonth',
-    'apiCreateNextMonthStage4',
-    'apiRunReconciliation'
-  ]),
-  maintenance: Object.freeze([
-    'apiStage5ClearCache',
-    'apiStage5ClearLog',
-    'apiStage5ClearPhoneCache',
-    'apiStage5RestartBot',
-    'apiStage5SetupVacationTriggers',
-    'apiStage5CleanupDuplicateTriggers',
-    'apiStage5DebugPhones',
-    'apiStage5BuildBirthdayLink',
-    'apiRunStage5MaintenanceScenario',
-    'apiInstallStage5Jobs',
-    'apiListStage5Jobs',
-    'apiRunStage5Job',
-    'apiStage5HealthCheck',
-    'apiRunStage5Diagnostics',
-    'apiRunStage5RegressionTests',
-    'apiListStage5JobRuntime',
-    'apiStage5ListPendingRepairs',
-    'apiStage5GetOperationDetails',
-    'apiStage5RunRepair',
-    'apiStage5RunLifecycleRetentionCleanup'
-  ]),
-  compatibility: Object.freeze([
-    'getMonthsList',
-    'getSidebarData',
-    'generateSendPanelSidebar',
-    'getSendPanelSidebarData',
-    'getDaySummaryByDate',
-    'getDetailedDaySummaryByDate',
-    'checkVacationsAndNotifySidebar',
-    'createNextMonthSheetSidebar',
-    'switchBotToMonthSidebar',
-    'markMultipleAsSentFromSidebar',
-    'markMultipleAsUnsentFromSidebar',
-    'apiGetMonthsList',
-    'apiGetSidebarData',
-    'apiGenerateSendPanel',
-    'apiGetSendPanelData',
-    'apiMarkSendPanelRowsAsSent',
-    'apiGetDaySummary',
-    'apiGetDetailedDaySummary',
-    'apiCheckVacations',
-    'apiGetBirthdays',
-    'apiBuildBirthdayLink',
-    'apiGetPersonCardData',
-    'apiSwitchBotToMonth',
-    'apiCreateNextMonth',
-    'apiSetupVacationTriggers',
-    'apiCleanupDuplicateTriggers',
-    'apiDebugPhones',
-    'apiClearCache',
-    'apiClearPhoneCache',
-    'apiClearLog',
-    'apiHealthCheck',
-    'apiRunRegressionTests',
-    '_parseUaDate_',
-    'normalizeDate_',
-    '_parseDate_',
-    'escapeHtml_',
-    '_escapeHtml_'
-  ])
-});
-
-const PROJECT_STAGE5_PUBLIC_API_MAP_ = Object.freeze({
-  application: PROJECT_STAGE4_CANONICAL_API_MAP_.application,
-  spreadsheet: Object.freeze([
-    'apiPreviewSelectionMessage',
-    'apiPreviewMultipleMessages',
-    'apiPreviewGroupedMessages',
-    'apiPrepareRangeMessages',
-    'apiBuildCommanderSummaryPreview',
-    'apiBuildCommanderSummaryLink',
-    'apiLogPreparedMessages',
-    'apiRunSelectionDiagnostics'
-  ]),
-  maintenance: PROJECT_STAGE4_CANONICAL_API_MAP_.maintenance,
-  compatibility: PROJECT_STAGE4_CANONICAL_API_MAP_.compatibility
-});
-
-const PROJECT_STAGE4_CLIENT_ROUTING_POLICY_ = Object.freeze({
-  getMonthsList: 'apiStage4GetMonthsList',
-  getSidebarData: 'apiStage4GetSidebarData',
-  getSendPanelData: 'apiStage4GetSendPanelData',
-  generatePanel: 'apiGenerateSendPanelForDate',
-  daySummary: 'apiBuildDaySummary',
-  detailedDay: 'apiBuildDetailedSummary',
-  openPersonCard: 'apiOpenPersonCard',
-  vacationReminder: 'apiCheckVacationsAndBirthdays',
-  birthdayCheck: 'apiCheckVacationsAndBirthdays',
-  switchMonth: 'apiStage4SwitchBotToMonth',
-  createNextMonth: 'apiCreateNextMonthStage4',
-  markPanelRowsAsSent: 'apiMarkPanelRowsAsSent',
-  markSendPanelRowsAsSent: 'apiMarkPanelRowsAsSent',
-  markPanelRowsAsUnsent: 'apiMarkPanelRowsAsUnsent',
-  sendUnsent: 'apiSendPendingRows',
-  runReconciliation: 'apiRunReconciliation',
-  healthCheck: 'apiStage5HealthCheck',
-  clearCache: 'apiStage5ClearCache',
-  clearLog: 'apiStage5ClearLog',
-  clearPhoneCache: 'apiStage5ClearPhoneCache',
-  restartBot: 'apiStage5RestartBot',
-  setupTrigger: 'apiStage5SetupVacationTriggers',
-  cleanupTriggers: 'apiStage5CleanupDuplicateTriggers',
-  debugPhones: 'apiStage5DebugPhones',
-  pendingRepairs: 'apiStage5ListPendingRepairs',
-  operationDetails: 'apiStage5GetOperationDetails',
-  runRepair: 'apiStage5RunRepair',
-  lifecycleRetentionCleanup: 'apiStage5RunLifecycleRetentionCleanup'
-});
-
-const PROJECT_STAGE5_CLIENT_ROUTING_POLICY_ = Object.freeze({
   sidebar: Object.freeze({
-    getMonthsList: 'apiStage4GetMonthsList',
-    getSidebarData: 'apiStage4GetSidebarData',
-    getSendPanelData: 'apiStage4GetSendPanelData',
-    generatePanel: 'apiGenerateSendPanelForDate',
-    daySummary: 'apiBuildDaySummary',
-    detailedDay: 'apiBuildDetailedSummary',
-    openPersonCard: 'apiOpenPersonCard',
-    vacationReminder: 'apiCheckVacationsAndBirthdays',
-    birthdayCheck: 'apiCheckVacationsAndBirthdays',
-    switchMonth: 'apiStage4SwitchBotToMonth',
-    createNextMonth: 'apiCreateNextMonthStage4',
-    markPanelRowsAsSent: 'apiMarkPanelRowsAsSent',
-    markSendPanelRowsAsSent: 'apiMarkPanelRowsAsSent',
-    markPanelRowsAsUnsent: 'apiMarkPanelRowsAsUnsent',
-    sendUnsent: 'apiSendPendingRows',
-    runReconciliation: 'apiRunReconciliation'
+    getMonthsList: Object.freeze({
+      routeName: 'sidebar.getMonthsList',
+      publicApiMethod: 'apiStage4GetMonthsList',
+      useCase: 'Stage4UseCases_.listMonths',
+      category: 'sidebar',
+      compatibilityStatus: 'canonical',
+      mode: 'read',
+      lockRequired: false,
+      dryRunSupported: false,
+      uiAllowed: true,
+      clientActionAliases: [],
+      verifyAfterWrite: false
+    }),
+
+    getSidebarData: Object.freeze({
+      routeName: 'sidebar.getSidebarData',
+      publicApiMethod: 'apiStage4GetSidebarData',
+      useCase: 'Stage4UseCases_.loadCalendarDay',
+      category: 'sidebar',
+      compatibilityStatus: 'canonical',
+      mode: 'read',
+      lockRequired: false,
+      dryRunSupported: false,
+      uiAllowed: true,
+      clientActionAliases: [],
+      verifyAfterWrite: false
+    }),
+
+    getSendPanelData: Object.freeze({
+      routeName: 'sidebar.getSendPanelData',
+      publicApiMethod: 'apiStage4GetSendPanelData',
+      useCase: 'Stage4UseCases_.getSendPanelData',
+      category: 'sidebar',
+      compatibilityStatus: 'canonical',
+      mode: 'read',
+      lockRequired: false,
+      dryRunSupported: false,
+      uiAllowed: true,
+      clientActionAliases: [],
+      verifyAfterWrite: false
+    }),
+
+    generateSendPanelForDate: Object.freeze({
+      routeName: 'sidebar.generateSendPanelForDate',
+      publicApiMethod: 'apiGenerateSendPanelForDate',
+      useCase: 'Stage4UseCases_.generateSendPanelForDate',
+      category: 'sidebar',
+      compatibilityStatus: 'canonical',
+      mode: 'write',
+      lockRequired: true,
+      dryRunSupported: true,
+      uiAllowed: true,
+      clientActionAliases: ['generatePanel'],
+      verifyAfterWrite: true
+    }),
+
+    generateSendPanelForRange: Object.freeze({
+      routeName: 'sidebar.generateSendPanelForRange',
+      publicApiMethod: 'apiGenerateSendPanelForRange',
+      useCase: 'Stage4UseCases_.generateSendPanelForRange',
+      category: 'sidebar',
+      compatibilityStatus: 'canonical',
+      mode: 'write',
+      lockRequired: true,
+      dryRunSupported: true,
+      uiAllowed: false,
+      clientActionAliases: [],
+      verifyAfterWrite: true
+    }),
+
+    markPanelRowsAsSent: Object.freeze({
+      routeName: 'sidebar.markPanelRowsAsSent',
+      publicApiMethod: 'apiMarkPanelRowsAsSent',
+      useCase: 'Stage4UseCases_.markPanelRowsAsSent',
+      category: 'sidebar',
+      compatibilityStatus: 'canonical',
+      mode: 'write',
+      lockRequired: true,
+      dryRunSupported: true,
+      uiAllowed: true,
+      clientActionAliases: ['markPanelRowsAsSent', 'markSendPanelRowsAsSent'],
+      verifyAfterWrite: true
+    }),
+
+    markPanelRowsAsUnsent: Object.freeze({
+      routeName: 'sidebar.markPanelRowsAsUnsent',
+      publicApiMethod: 'apiMarkPanelRowsAsUnsent',
+      useCase: 'Stage4UseCases_.markPanelRowsAsUnsent',
+      category: 'sidebar',
+      compatibilityStatus: 'canonical',
+      mode: 'write',
+      lockRequired: true,
+      dryRunSupported: true,
+      uiAllowed: true,
+      clientActionAliases: ['markPanelRowsAsUnsent'],
+      verifyAfterWrite: true
+    }),
+
+    sendPendingRows: Object.freeze({
+      routeName: 'sidebar.sendPendingRows',
+      publicApiMethod: 'apiSendPendingRows',
+      useCase: 'Stage4UseCases_.sendPendingRows',
+      category: 'sidebar',
+      compatibilityStatus: 'canonical',
+      mode: 'write',
+      lockRequired: true,
+      dryRunSupported: true,
+      uiAllowed: true,
+      clientActionAliases: ['sendUnsent'],
+      verifyAfterWrite: true
+    }),
+
+    buildDaySummary: Object.freeze({
+      routeName: 'sidebar.buildDaySummary',
+      publicApiMethod: 'apiBuildDaySummary',
+      useCase: 'Stage4UseCases_.buildDaySummary',
+      category: 'sidebar',
+      compatibilityStatus: 'canonical',
+      mode: 'read',
+      lockRequired: false,
+      dryRunSupported: false,
+      uiAllowed: true,
+      clientActionAliases: ['daySummary'],
+      verifyAfterWrite: false
+    }),
+
+    buildDetailedSummary: Object.freeze({
+      routeName: 'sidebar.buildDetailedSummary',
+      publicApiMethod: 'apiBuildDetailedSummary',
+      useCase: 'Stage4UseCases_.buildDetailedSummary',
+      category: 'sidebar',
+      compatibilityStatus: 'canonical',
+      mode: 'read',
+      lockRequired: false,
+      dryRunSupported: false,
+      uiAllowed: true,
+      clientActionAliases: ['detailedDay'],
+      verifyAfterWrite: false
+    }),
+
+    openPersonCard: Object.freeze({
+      routeName: 'sidebar.openPersonCard',
+      publicApiMethod: 'apiOpenPersonCard',
+      useCase: 'Stage4UseCases_.openPersonCard',
+      category: 'sidebar',
+      compatibilityStatus: 'canonical',
+      mode: 'read',
+      lockRequired: false,
+      dryRunSupported: false,
+      uiAllowed: true,
+      clientActionAliases: [],
+      verifyAfterWrite: false
+    }),
+
+    checkVacationsAndBirthdays: Object.freeze({
+      routeName: 'sidebar.checkVacationsAndBirthdays',
+      publicApiMethod: 'apiCheckVacationsAndBirthdays',
+      useCase: 'Stage4UseCases_.checkVacationsAndBirthdays',
+      category: 'sidebar',
+      compatibilityStatus: 'canonical',
+      mode: 'read',
+      lockRequired: false,
+      dryRunSupported: false,
+      uiAllowed: true,
+      clientActionAliases: ['vacationReminder', 'birthdayCheck'],
+      verifyAfterWrite: false
+    }),
+
+    switchBotToMonth: Object.freeze({
+      routeName: 'sidebar.switchBotToMonth',
+      publicApiMethod: 'apiStage4SwitchBotToMonth',
+      useCase: 'Stage4UseCases_.switchBotToMonth',
+      category: 'sidebar',
+      compatibilityStatus: 'canonical',
+      mode: 'write',
+      lockRequired: true,
+      dryRunSupported: false,
+      uiAllowed: true,
+      clientActionAliases: ['switchMonth'],
+      verifyAfterWrite: false
+    }),
+
+    createNextMonth: Object.freeze({
+      routeName: 'sidebar.createNextMonth',
+      publicApiMethod: 'apiCreateNextMonthStage4',
+      useCase: 'Stage4UseCases_.createNextMonth',
+      category: 'sidebar',
+      compatibilityStatus: 'canonical',
+      mode: 'write',
+      lockRequired: true,
+      dryRunSupported: true,
+      uiAllowed: true,
+      clientActionAliases: ['createNextMonth'],
+      verifyAfterWrite: true
+    }),
+
+    runReconciliation: Object.freeze({
+      routeName: 'sidebar.runReconciliation',
+      publicApiMethod: 'apiRunReconciliation',
+      useCase: 'Stage4UseCases_.runReconciliation',
+      category: 'sidebar',
+      compatibilityStatus: 'canonical',
+      mode: 'write-conditional',
+      lockRequired: true,
+      dryRunSupported: true,
+      uiAllowed: true,
+      clientActionAliases: ['runReconciliation'],
+      verifyAfterWrite: true
+    })
   }),
+
   spreadsheet: Object.freeze({
-    previewSelectionMessage: 'apiPreviewSelectionMessage',
-    previewMultipleMessages: 'apiPreviewMultipleMessages',
-    previewGroupedMessages: 'apiPreviewGroupedMessages',
-    prepareRangeMessages: 'apiPrepareRangeMessages',
-    buildCommanderSummaryPreview: 'apiBuildCommanderSummaryPreview',
-    buildCommanderSummaryLink: 'apiBuildCommanderSummaryLink',
-    logPreparedMessages: 'apiLogPreparedMessages',
-    runSelectionDiagnostics: 'apiRunSelectionDiagnostics'
+    previewSelectionMessage: Object.freeze({ routeName: 'spreadsheet.previewSelectionMessage', publicApiMethod: 'apiPreviewSelectionMessage', useCase: 'SelectionActionService_', category: 'spreadsheet', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: true, uiAllowed: false, clientActionAliases: [], verifyAfterWrite: false }),
+    previewMultipleMessages: Object.freeze({ routeName: 'spreadsheet.previewMultipleMessages', publicApiMethod: 'apiPreviewMultipleMessages', useCase: 'SelectionActionService_', category: 'spreadsheet', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: true, uiAllowed: false, clientActionAliases: [], verifyAfterWrite: false }),
+    previewGroupedMessages: Object.freeze({ routeName: 'spreadsheet.previewGroupedMessages', publicApiMethod: 'apiPreviewGroupedMessages', useCase: 'SelectionActionService_', category: 'spreadsheet', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: true, uiAllowed: false, clientActionAliases: [], verifyAfterWrite: false }),
+    prepareRangeMessages: Object.freeze({ routeName: 'spreadsheet.prepareRangeMessages', publicApiMethod: 'apiPrepareRangeMessages', useCase: 'SelectionActionService_', category: 'spreadsheet', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: true, uiAllowed: false, clientActionAliases: [], verifyAfterWrite: false }),
+    buildCommanderSummaryPreview: Object.freeze({ routeName: 'spreadsheet.buildCommanderSummaryPreview', publicApiMethod: 'apiBuildCommanderSummaryPreview', useCase: 'SummaryService_.buildCommanderPreview', category: 'spreadsheet', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: true, uiAllowed: false, clientActionAliases: [], verifyAfterWrite: false }),
+    buildCommanderSummaryLink: Object.freeze({ routeName: 'spreadsheet.buildCommanderSummaryLink', publicApiMethod: 'apiBuildCommanderSummaryLink', useCase: 'SummaryService_.buildCommanderLink', category: 'spreadsheet', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: true, uiAllowed: false, clientActionAliases: [], verifyAfterWrite: false }),
+    logPreparedMessages: Object.freeze({ routeName: 'spreadsheet.logPreparedMessages', publicApiMethod: 'apiLogPreparedMessages', useCase: 'SelectionActionService_', category: 'spreadsheet', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: true, uiAllowed: false, clientActionAliases: [], verifyAfterWrite: false }),
+    runSelectionDiagnostics: Object.freeze({ routeName: 'spreadsheet.runSelectionDiagnostics', publicApiMethod: 'apiRunSelectionDiagnostics', useCase: 'SelectionActionService_', category: 'spreadsheet', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: true, uiAllowed: false, clientActionAliases: [], verifyAfterWrite: false })
   }),
+
   maintenance: Object.freeze({
-    clearCache: 'apiStage5ClearCache',
-    clearLog: 'apiStage5ClearLog',
-    clearPhoneCache: 'apiStage5ClearPhoneCache',
-    restartBot: 'apiStage5RestartBot',
-    setupTrigger: 'apiStage5SetupVacationTriggers',
-    cleanupTriggers: 'apiStage5CleanupDuplicateTriggers',
-    debugPhones: 'apiStage5DebugPhones',
-    buildBirthdayLink: 'apiStage5BuildBirthdayLink',
-    runMaintenanceScenario: 'apiRunStage5MaintenanceScenario',
-    installJobs: 'apiInstallStage5Jobs',
-    listJobs: 'apiListStage5Jobs',
-    runJob: 'apiRunStage5Job',
-    healthCheck: 'apiStage5HealthCheck',
-    runDiagnostics: 'apiRunStage5Diagnostics',
-    runRegressionTests: 'apiRunStage5RegressionTests',
-    listJobRuntime: 'apiListStage5JobRuntime',
-    pendingRepairs: 'apiStage5ListPendingRepairs',
-    operationDetails: 'apiStage5GetOperationDetails',
-    runRepair: 'apiStage5RunRepair',
-    lifecycleRetentionCleanup: 'apiStage5RunLifecycleRetentionCleanup'
+    clearCache: Object.freeze({ routeName: 'maintenance.clearCache', publicApiMethod: 'apiStage5ClearCache', useCase: 'Stage4UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['clearCache'], verifyAfterWrite: false }),
+    clearLog: Object.freeze({ routeName: 'maintenance.clearLog', publicApiMethod: 'apiStage5ClearLog', useCase: 'Stage4UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['clearLog'], verifyAfterWrite: false }),
+    clearPhoneCache: Object.freeze({ routeName: 'maintenance.clearPhoneCache', publicApiMethod: 'apiStage5ClearPhoneCache', useCase: 'Stage4UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['clearPhoneCache'], verifyAfterWrite: false }),
+    restartBot: Object.freeze({ routeName: 'maintenance.restartBot', publicApiMethod: 'apiStage5RestartBot', useCase: 'Stage4UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['restartBot'], verifyAfterWrite: false }),
+    setupVacationTriggers: Object.freeze({ routeName: 'maintenance.setupVacationTriggers', publicApiMethod: 'apiStage5SetupVacationTriggers', useCase: 'Stage4UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['setupTrigger'], verifyAfterWrite: false }),
+    cleanupDuplicateTriggers: Object.freeze({ routeName: 'maintenance.cleanupDuplicateTriggers', publicApiMethod: 'apiStage5CleanupDuplicateTriggers', useCase: 'Stage4UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['cleanupTriggers'], verifyAfterWrite: false }),
+    debugPhones: Object.freeze({ routeName: 'maintenance.debugPhones', publicApiMethod: 'apiStage5DebugPhones', useCase: 'Stage4UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['debugPhones'], verifyAfterWrite: false }),
+    buildBirthdayLink: Object.freeze({ routeName: 'maintenance.buildBirthdayLink', publicApiMethod: 'apiStage5BuildBirthdayLink', useCase: 'apiStage5BuildBirthdayLink', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
+    runMaintenanceScenario: Object.freeze({ routeName: 'maintenance.runMaintenanceScenario', publicApiMethod: 'apiRunStage5MaintenanceScenario', useCase: 'Stage4UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write-conditional', lockRequired: true, dryRunSupported: true, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
+    installJobs: Object.freeze({ routeName: 'maintenance.installJobs', publicApiMethod: 'apiInstallStage5Jobs', useCase: 'Stage4Triggers_.installManagedTriggers', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
+    listJobs: Object.freeze({ routeName: 'maintenance.listJobs', publicApiMethod: 'apiListStage5Jobs', useCase: 'Stage4Triggers_.listJobs', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
+    runJob: Object.freeze({ routeName: 'maintenance.runJob', publicApiMethod: 'apiRunStage5Job', useCase: 'Stage4Triggers_.runJob', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write-conditional', lockRequired: true, dryRunSupported: true, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: true }),
+    healthCheck: Object.freeze({ routeName: 'maintenance.healthCheck', publicApiMethod: 'apiStage5HealthCheck', useCase: 'runStage5DiagnosticsByMode_', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: true, uiAllowed: true, clientActionAliases: ['healthCheck'], verifyAfterWrite: false }),
+    runDiagnostics: Object.freeze({ routeName: 'maintenance.runDiagnostics', publicApiMethod: 'apiRunStage5Diagnostics', useCase: 'runStage5DiagnosticsByMode_', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: true, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
+    runRegressionTests: Object.freeze({ routeName: 'maintenance.runRegressionTests', publicApiMethod: 'apiRunStage5RegressionTests', useCase: 'runStage5SmokeTests', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: true, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
+    listJobRuntime: Object.freeze({ routeName: 'maintenance.listJobRuntime', publicApiMethod: 'apiListStage5JobRuntime', useCase: 'JobRuntime_.buildRuntimeReport', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
+    listPendingRepairs: Object.freeze({ routeName: 'maintenance.listPendingRepairs', publicApiMethod: 'apiStage5ListPendingRepairs', useCase: 'OperationRepository_.listPendingRepairs', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['pendingRepairs'], verifyAfterWrite: false }),
+    getOperationDetails: Object.freeze({ routeName: 'maintenance.getOperationDetails', publicApiMethod: 'apiStage5GetOperationDetails', useCase: 'OperationRepository_.getOperationDetails', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['operationDetails'], verifyAfterWrite: false }),
+    runRepair: Object.freeze({ routeName: 'maintenance.runRepair', publicApiMethod: 'apiStage5RunRepair', useCase: 'OperationRepository_.runRepair', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write-conditional', lockRequired: true, dryRunSupported: true, uiAllowed: true, clientActionAliases: ['runRepair'], verifyAfterWrite: true }),
+    runLifecycleRetentionCleanup: Object.freeze({ routeName: 'maintenance.runLifecycleRetentionCleanup', publicApiMethod: 'apiStage5RunLifecycleRetentionCleanup', useCase: 'Stage4UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['lifecycleRetentionCleanup'], verifyAfterWrite: false })
   })
 });
 
-const PROJECT_MAINTENANCE_POLICY_ = Object.freeze({
-  policy: 'canonical-stage5-maintenance-with-stage4-compat-facade',
-  canonicalMaintenanceApi: 'Stage5MaintenanceApi.gs',
-  compatibilityFacade: 'Stage4MaintenanceApi.gs',
-  diagnosticsEntrypoint: 'apiRunStage5Diagnostics',
-  healthEntrypoint: 'apiStage5HealthCheck'
-});
-
-const PROJECT_HARDENING_OVERLAY_ = Object.freeze({
-  label: 'Stage 6A hardening evolved into Stage 7 lifecycle baseline',
-  lineage: 'stage6a-to-stage7-lifecycle-overlay'
-});
-
-const PROJECT_CLIENT_RUNTIME_POLICY_ = Object.freeze({
-  runtimeFile: 'JavaScript.html',
-  bootstrapTemplate: 'Sidebar.html',
-  bootstrapMode: 'sidebar-includeTemplate',
-  runtimeStatus: 'canonical-modular-runtime',
-  modularStatus: 'active-js-include-chain',
-  policyMarker: 'stage7-sidebar-runtime',
-  activeRuntimeChain: Object.freeze([
-    'Js.Core.html',
-    'Js.State.html',
-    'Js.Api.html',
-    'Js.Render.html',
-    'Js.Diagnostics.html',
-    'Js.Helpers.html',
-    'Js.Events.html',
-    'Js.Actions.html'
-  ])
-});
-
-const PROJECT_BUNDLE_FILE_INDEX_ = Object.freeze([
-  '.clasp.json.example',
-  '.claspignore',
-  '.gitignore',
-  'ARCHITECTURE.md',
-  'Actions.gs',
-  'AuditTrail.gs',
-  'COMMANDS_TERMINAL.md',
-  'Code.gs',
-  'DataAccess.gs',
-  'DateUtils.gs',
-  'DeprecatedRegistry.gs',
-  'Diagnostics.gs',
-  'DialogPresenter.gs',
-  'DialogTemplates.gs',
-  'Dialogs.gs',
-  'DictionaryRepository.gs',
-  'DomainTests.gs',
-  'HtmlUtils.gs',
-  'IMPLEMENTATION_REPORT_2026-03-22.md',
-  'JavaScript.html',
-  'JobRuntime.gs',
-  'JobRuntimeRepository.gs',
-  'Js.Actions.html',
-  'Js.Api.html',
-  'Js.Core.html',
-  'Js.Diagnostics.html',
-  'Js.Events.html',
-  'Js.Helpers.html',
-  'Js.Render.html',
-  'Js.State.html',
-  'Log.gs',
-  'LogsRepository.gs',
-  'MonthSheets.gs',
-  'OperationRepository.gs',
-  'OperationSafety.gs',
-  'PersonCalendar.html',
-  'PersonCards.gs',
-  'PersonsRepository.gs',
-  'PreviewLinkService.gs',
-  'ProjectMetadata.gs',
-  'README.md',
-  'RUNBOOK.md',
-  'Reconciliation.gs',
-  'RoutingRegistry.gs',
-  'STABILIZATION_NOTES_2026-03-22.md',
-  'STAGE7_REPORT.md',
-  'SelectionActionService.gs',
-  'SendPanel.gs',
-  'SendPanelConstants.gs',
-  'SendPanelRepository.gs',
-  'SendPanelService.gs',
-  'ServerResponse.gs',
-  'SheetSchemas.gs',
-  'SheetStandards.gs',
-  'Sidebar.html',
-  'SidebarServer.gs',
-  'SmokeTests.gs',
-  'SpreadsheetActionsApi.gs',
-  'Stage3ServerApi.gs',
-  'Stage4Config.gs',
-  'Stage4MaintenanceApi.gs',
-  'Stage4ServerApi.gs',
-  'Stage5MaintenanceApi.gs',
-  'Styles.html',
-  'Summaries.gs',
-  'SummaryRepository.gs',
-  'SummaryService.gs',
-  'TemplateRegistry.gs',
-  'TemplateResolver.gs',
-  'Templates.gs',
-  'Triggers.gs',
-  'UseCases.gs',
-  'Utils.gs',
-  'VacationEngine.gs',
-  'VacationService.gs',
-  'VacationsRepository.gs',
-  'Validation.gs',
-  'WorkflowOrchestrator.gs',
-  'appsscript.json',
-  'dev-shell.ps1',
-  'docs/archive/CHANGELOG_STAGE4.md',
-  'docs/archive/PUBLIC_API_STAGE4.md',
-  'docs/archive/STAGE4_REPORT.md',
-  'docs/archive/STAGE6A_TRANSITION_NOTES.md',
-  'docs/reference/CHANGELOG_STAGE5.md',
-  'docs/reference/JOBS_RUNTIME.md',
-  'docs/reference/PUBLIC_API_STAGE5.md',
-  'docs/reference/SPREADSHEET_ACTION_API.md',
-  'docs/reference/STAGE5_REPORT.md',
-  'docs/reference/STAGE6A_REPORT.md',
-  'docs/reference/SUNSET_POLICY.md',
-  'package.json',
-  'watch-sync-simple.ps1'
-]);
-
-const PROJECT_BUNDLE_METADATA_ = Object.freeze({
-  stage: PROJECT_RELEASE_NAMING_.stage,
-  stageLabel: PROJECT_RELEASE_NAMING_.stageLabel,
-  stageVersion: PROJECT_RELEASE_NAMING_.stageVersion,
-  activeBaseline: PROJECT_RELEASE_NAMING_.activeBaseline,
-  release: PROJECT_RELEASE_NAMING_,
-  canonicalLayers: PROJECT_CANONICAL_LAYERS_,
-  packagingPolicy: Object.freeze({
-    policy: 'root-manifest-with-root-clasp-example',
-    manifestFile: 'appsscript.json',
-    claspExampleFile: '.clasp.json.example',
-    notes: ['The release zip must not include .git or node_modules.', 'The real .clasp.json stays local and ignored.']
-  }),
-  maintenanceLayerStatus: 'stage5-canonical-maintenance-api',
-  maintenanceLayerPolicy: PROJECT_MAINTENANCE_POLICY_,
-  clientRuntimePolicy: PROJECT_CLIENT_RUNTIME_POLICY_,
-  hardeningOverlay: PROJECT_HARDENING_OVERLAY_,
-  requiredDocs: Object.freeze([
-    'README.md',
-    'ARCHITECTURE.md',
-    'RUNBOOK.md',
-    'STAGE7_REPORT.md',
-    'docs/reference/PUBLIC_API_STAGE5.md',
-    'docs/reference/CHANGELOG_STAGE5.md',
-    'docs/reference/STAGE5_REPORT.md',
-    'docs/reference/STAGE6A_REPORT.md'
-  ]),
-  notes: Object.freeze([
-    'Metadata is aligned to the active Stage 7.1 release identity.',
-    'Historical Stage 4 compatibility remains intentionally preserved.',
-    'Stage 5 maintenance naming remains canonical in the active release.'
-  ])
-});
-
-function getProjectReleaseNaming_() {
-  return _projectMetaDeepCopy_(PROJECT_RELEASE_NAMING_);
+function _stage6ADeepCopy_(value) {
+  return JSON.parse(JSON.stringify(value));
 }
 
-function getProjectBundleMetadata_() {
-  return _projectMetaDeepCopy_(PROJECT_BUNDLE_METADATA_);
+function getStage6ARoutingRegistry_() {
+  return _stage6ADeepCopy_(WAPB_STAGE7_ROUTING_REGISTRY_STORE_);
 }
 
-function getProjectDocumentationMap_() {
-  return _projectMetaDeepCopy_(PROJECT_DOCUMENTATION_MAP_);
+function getRoutingRegistry_() {
+  return listStage6ARoutes_();
 }
 
-function getStage5MaintenancePolicy_() {
-  return _projectMetaDeepCopy_(PROJECT_MAINTENANCE_POLICY_);
-}
-
-function getStage4CanonicalApiMap_() {
-  return _projectMetaDeepCopy_(PROJECT_STAGE4_CANONICAL_API_MAP_);
-}
-
-function getStage5PublicApiMap_() {
-  return _projectMetaDeepCopy_(PROJECT_STAGE5_PUBLIC_API_MAP_);
-}
-
-function getStage4ClientRoutingPolicy_() {
-  return _projectMetaDeepCopy_(PROJECT_STAGE4_CLIENT_ROUTING_POLICY_);
-}
-
-function getStage5ClientRoutingPolicy_() {
-  return _projectMetaDeepCopy_(PROJECT_STAGE5_CLIENT_ROUTING_POLICY_);
-}
-
-function getStage5CanonicalLayerMap_() {
-  return _projectMetaDeepCopy_(PROJECT_CANONICAL_LAYERS_);
-}
-
-function isProjectBundleFilePresent_(path) {
-  const target = String(path || '').trim();
-  if (!target) return false;
-  return PROJECT_BUNDLE_FILE_INDEX_.indexOf(target) !== -1;
-}
-
-function getMissingProjectBundleFiles_(paths) {
-  return (paths || []).filter(function(path) {
-    return !isProjectBundleFilePresent_(path);
+function listStage6ARoutes_() {
+  const groups = WAPB_STAGE7_ROUTING_REGISTRY_STORE_ || {};
+  const out = [];
+  Object.keys(groups).forEach(function (group) {
+    Object.keys(groups[group] || {}).forEach(function (key) {
+      out.push(Object.assign({ group: group, action: key }, groups[group][key] || {}));
+    });
   });
+  return out;
+}
+
+function getStage6ARouteByName_(routeName) {
+  const target = String(routeName || '').trim();
+  return listStage6ARoutes_().find(function (item) { return item.routeName === target; }) || null;
+}
+
+function getStage6ARouteByApiMethod_(methodName) {
+  const target = String(methodName || '').trim();
+  return listStage6ARoutes_().find(function (item) { return item.publicApiMethod === target; }) || null;
+}
+
+function getStage6AUiActionMap_() {
+  const map = {};
+  listStage6ARoutes_().forEach(function (item) {
+    (item.clientActionAliases || []).forEach(function (alias) {
+      map[String(alias)] = item.routeName;
+    });
+  });
+  return map;
+}
+
+function normalizeStage6AUiAction_(action) {
+  const safe = String(action || '').trim();
+  const map = getStage6AUiActionMap_();
+  return map[safe] || safe;
+}
+
+function getStage6ACriticalWriteRoutes_() {
+  return listStage6ARoutes_().filter(function (item) {
+    return String(item.mode || '').indexOf('write') === 0;
+  });
+}
+
+function getStage6ARouteCoverageReport_() {
+  const routes = listStage6ARoutes_();
+  const critical = getStage6ACriticalWriteRoutes_();
+  return {
+    total: routes.length,
+    groups: [...new Set(routes.map(function (item) { return item.group; }))],
+    criticalWrites: critical.length,
+    lockCoverage: critical.filter(function (item) { return item.lockRequired; }).length,
+    dryRunCoverage: critical.filter(function (item) { return item.dryRunSupported; }).length,
+    uiAllowedRoutes: routes.filter(function (item) { return item.uiAllowed; }).length,
+    missingLockCoverage: critical.filter(function (item) { return !item.lockRequired; }).map(function (item) { return item.routeName; })
+  };
 }

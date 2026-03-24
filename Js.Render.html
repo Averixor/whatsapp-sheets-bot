@@ -4,7 +4,7 @@
   // =========================
   // SEND PANEL
   // =========================
-  function displayPanelResult(result) {
+  async function displayPanelResult(result) {
     hideLoading();
 
     if (!result?.success) {
@@ -12,11 +12,23 @@
       return;
     }
 
-    const rows = Array.isArray(result.rows)
+    let rows = Array.isArray(result.rows)
       ? result.rows
       : (Array.isArray(result.data) ? result.data : []);
 
     setCurrentPanelData(rows);
+
+    if (!rows.length) {
+      try {
+        rows = await ensurePanelDataLoadedFromServer({
+          silent: true,
+          preserveNonEmpty: false,
+          retries: 2,
+          retryDelayMs: 450,
+          reason: 'displayPanelResult.empty'
+        });
+      } catch (_) {}
+    }
 
     const stats = result.stats || {};
     logToConsole(`📋 Панель створено для ${result.date || '?'} (${result.month || '?'})`, 'success');
@@ -53,6 +65,18 @@
         </div>
       </div>
     `;
+
+    if (!data.length) {
+      html += `
+        <div class="result-item">
+          <div class="result-label">⚠️ SEND_PANEL порожній у sidebar</div>
+          <div class="result-value">
+            <p>Лист може містити рядки, але клієнтський стан зараз порожній.</p>
+            <button class="result-link" onclick="SidebarApp.reloadSendPanelFromServer()" style="width:100%; margin-top:8px;">🔄 Перечитати SEND_PANEL</button>
+          </div>
+        </div>
+      `;
+    }
 
     if (readyItems.length > 0) {
       html += `

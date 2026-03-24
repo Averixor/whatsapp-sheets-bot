@@ -131,6 +131,26 @@
     return STATE.currentPanelData;
   }
 
+  async function ensurePanelDataLoadedFromServer(options = {}) {
+    const opts = Object.assign({
+      silent: true,
+      preserveNonEmpty: false,
+      retries: 2,
+      retryDelayMs: 450,
+      reason: 'ensure-panel-data'
+    }, options || {});
+
+    const currentRows = Array.isArray(STATE.currentPanelData) ? STATE.currentPanelData : [];
+    if (currentRows.length > 0 && !opts.force) return currentRows;
+
+    const result = await refreshSendPanelDataFromServer(opts);
+    if (result?.success) {
+      return Array.isArray(STATE.currentPanelData) ? STATE.currentPanelData : [];
+    }
+
+    throw new Error(result?.error || 'Не вдалося перечитати SEND_PANEL');
+  }
+
   function getReadyPanelItems(panelData = STATE.currentPanelData) {
     const data = Array.isArray(panelData) ? panelData : [];
     return data.filter(item => item && item.link && !item.sent && (item.status === PANEL_READY_STATUS || item.status === PANEL_UNSENT_STATUS));
@@ -252,11 +272,6 @@
     try {
       const existing = STATE.waSenderWindow;
       if (existing && !existing.closed) return existing;
-      const win = window.open('', WA_SENDER_TARGET, 'noopener');
-      if (win) {
-        STATE.waSenderWindow = win;
-        return win;
-      }
     } catch (error) {
       console.error('primeWhatsAppSenderTab error:', error);
     }
@@ -269,25 +284,24 @@
       if (!link) return null;
       if (STATE.DIAG_TEST_MODE) return { closed: false, focus() {} };
 
-      const prepared = primeWhatsAppSenderTab();
-      if (prepared && !prepared.closed) {
+      const existing = primeWhatsAppSenderTab();
+      if (existing && !existing.closed) {
         try {
-          prepared.location.href = link;
-          prepared.focus();
-          return prepared;
+          existing.location.href = link;
+          STATE.waSenderWindow = existing;
+          return existing;
         } catch (_) {}
       }
 
-      const win = window.open(link, WA_SENDER_TARGET, 'noopener');
+      const win = window.open(link, WA_SENDER_TARGET, 'noopener,noreferrer');
       if (win) {
         STATE.waSenderWindow = win;
-        try { win.focus(); } catch (_) {}
       }
       return win;
     } catch (error) {
       console.error('openLinkSafe error:', error);
       try {
-        return window.open(String(url || '').trim(), WA_SENDER_TARGET, 'noopener');
+        return window.open(String(url || '').trim(), WA_SENDER_TARGET, 'noopener,noreferrer');
       } catch (_) {
         return null;
       }

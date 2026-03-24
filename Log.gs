@@ -1,354 +1,70 @@
-<script>
-// Js.Helpers — active Stage 7.1 runtime fragment.
+/************ LOG WRITER ************/
+function _ensureLogSheet_() {
+  const ss = SpreadsheetApp.getActive();
+  let sh = ss.getSheetByName(CONFIG.LOG_SHEET);
 
-  // =========================
-  // CONSOLE
-  // =========================
-  function toggleConsole() {
-    const consoleSection = $id('consoleSection');
-    const toggle = $id('consoleToggle');
-    const arrow = $id('consoleArrow');
-
-    if (!consoleSection || !toggle || !arrow) return;
-
-    consoleSection.classList.toggle('open');
-    toggle.classList.toggle('open');
-    arrow.textContent = consoleSection.classList.contains('open') ? '▲' : '▼';
-
-    localStorage.setItem('consoleOpen', consoleSection.classList.contains('open'));
+  if (!sh) {
+    sh = ss.insertSheet(CONFIG.LOG_SHEET);
   }
 
-  function logToConsole(message, type = 'info') {
-    const consoleEl = $id('consoleOutput');
-    if (!consoleEl) return;
+  const headers = [
+    'Timestamp',
+    'ReportDate',
+    'Sheet',
+    'Cell',
+    'FIO',
+    'Phone',
+    'Code',
+    'Service',
+    'Place',
+    'Tasks',
+    'Message',
+    'Link'
+  ];
 
-    const timestamp = new Date().toLocaleTimeString('uk-UA', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-
-    const logEntry = document.createElement('div');
-    logEntry.className = `log-entry log-${type}`;
-    logEntry.innerHTML = `<span class="log-time">[${timestamp}]</span> ${escapeHtml(message)}`;
-
-    consoleEl.appendChild(logEntry);
-    consoleEl.scrollTop = consoleEl.scrollHeight;
+  if (sh.getLastRow() === 0) {
+    sh.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sh.getRange(1, 1, 1, headers.length)
+      .setFontWeight('bold')
+      .setBackground('#f0f0f0');
   }
 
-  function clearConsole() {
-    const consoleEl = $id('consoleOutput');
-    if (!consoleEl) return;
+  return sh;
+}
 
-    consoleEl.innerHTML = '';
-    logToConsole('🧹 Консоль очищено', 'info');
+function writeLogsBatch_(items) {
+  items = Array.isArray(items) ? items.filter(Boolean) : [];
+  if (!items.length) {
+    return { success: true, count: 0, message: 'Немає логів для запису' };
   }
 
-  function scrollConsole(direction) {
-    const consoleEl = $id('consoleOutput');
-    if (!consoleEl) return;
+  const sh = _ensureLogSheet_();
 
-    consoleEl.scrollTop = direction === 'top' ? 0 : consoleEl.scrollHeight;
-  }
+  const rows = items.map(item => {
+    if (Array.isArray(item)) return item;
 
-  // =========================
-  // PROGRESS
-  // =========================
-  function showProgressBar(total, current) {
-    let progressEl = $id('sendingProgress');
+    const o = item || {};
+    return [
+      o.timestamp || new Date(),
+      o.reportDateStr || '',
+      o.sheet || '',
+      o.cell || '',
+      o.fio || '',
+      o.phone || '',
+      o.code || '',
+      o.service || '',
+      o.place || '',
+      o.tasks || '',
+      o.message || '',
+      o.link || ''
+    ];
+  });
 
-    if (!progressEl) {
-      const resultContent = $id('resultContent');
-      if (!resultContent) return;
+  sh.getRange(sh.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
 
-      resultContent.insertAdjacentHTML('afterbegin', `
-        <div class="result-item" id="sendingProgress">
-          <div class="result-label">📤 Прогрес відправки</div>
-          <div class="progress-bar">
-            <div id="progressFill" class="progress-fill"></div>
-          </div>
-          <div id="progressText" class="progress-text">0/${total}</div>
-        </div>
-      `);
-    }
-
-    const fill = $id('progressFill');
-    const text = $id('progressText');
-
-    if (fill && text) {
-      const percent = total ? Math.round((current / total) * 100) : 0;
-      fill.style.width = percent + '%';
-      text.textContent = `${current}/${total}`;
-    }
-  }
-
-  function hideProgressBar() {
-    $id('sendingProgress')?.remove();
-  }
-
-  // =========================
-  // INIT
-  // =========================
-  async function initSidebar() {
-    showLoading();
-    hidePersonCard();
-
-    try {
-      const consoleOpen = localStorage.getItem('consoleOpen') === 'true';
-      if (consoleOpen && !STATE.consoleInitialized) {
-        $id('consoleSection')?.classList?.add('open');
-        $id('consoleToggle')?.classList?.add('open');
-
-        const arrow = $id('consoleArrow');
-        if (arrow) arrow.textContent = '▲';
-
-        STATE.consoleInitialized = true;
-      }
-
-      const data = await Stage4Api.getMonths();
-
-      if (data?.months) STATE.monthsList = data.months;
-
-      if (data?.current) {
-        STATE.currentMonth = data.current;
-        updateMonthBadge(STATE.currentMonth);
-      }
-
-      logToConsole('✅ Панель готова до роботи', 'success');
-    } catch (error) {
-      logToConsole(`❌ Помилка ініціалізації: ${normalizeError(error)}`, 'error');
-    } finally {
-      hideLoading();
-    }
-  }
-
-
-
-  function formatOperationDate(value) {
-    const raw = String(value || '').trim();
-    if (!raw) return '—';
-    const parsed = new Date(raw);
-    if (!Number.isFinite(parsed.getTime())) return raw;
-    return parsed.toLocaleString('uk-UA', {
-      weekday: 'short',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-  }
-
-  function translateLifecycleScenario(value) {
-    const raw = String(value || '').trim();
-    const map = {
-      restart_bot: 'перезапуск бота',
-      reconciliation: 'звірка',
-      mark_sent: 'позначення як відправлено',
-      mark_unsent: 'зняття позначки відправлення',
-      repair: 'виправлення',
-      create_next_month: 'створення наступного місяця',
-      panel_regenerate: 'перегенерація панелі',
-      panel_rebuild: 'перебудова панелі',
-      panel_sync: 'синхронізація панелі'
-    };
-    return map[raw] || raw;
-  }
-
-  function translateLifecycleStatus(value) {
-    const raw = String(value || '').trim();
-    const map = {
-      STARTED: 'РОЗПОЧАТО',
-      NEEDS_REPAIR: 'ПОТРЕБУЄ ВИПРАВЛЕННЯ',
-      COMMITTED: 'ЗАВЕРШЕНО',
-      FAILED: 'ПОМИЛКА',
-      FAILED_STALE: 'ПОМИЛКА (зависла операція)',
-      ABANDONED: 'ПЕРЕРВАНО',
-      CANCELLED: 'СКАСОВАНО'
-    };
-    return map[raw] || raw;
-  }
-
-  function translateLifecycleText(value) {
-    const raw = String(value || '').trim();
-    if (!raw) return '';
-    const directMap = {
-      'context is not defined': 'Помилка: context не визначено',
-      'Repair failed': 'Виправлення завершилося з помилкою',
-      'Repair repository недоступний': 'Сховище виправлення недоступне',
-      'Repair завершився з помилкою': 'Виправлення завершилося з помилкою',
-      'Repair виконано': 'Виправлення виконано'
-    };
-    if (directMap[raw]) return directMap[raw];
-    return raw
-      .replace(/^Repair failed$/i, 'Виправлення завершилося з помилкою')
-      .replace(/^Repair completed$/i, 'Виправлення виконано')
-      .replace(/^Repair /i, 'Виправлення ')
-      .replace(/^Pending Repairs$/i, 'Операції, що потребують виправлення')
-      .replace(/FAILED_STALE/g, 'Помилка (зависла операція)')
-      .replace(/FAILED/g, 'Помилка')
-      .replace(/COMMITTED/g, 'Завершено')
-      .replace(/STARTED/g, 'Розпочато')
-      .replace(/NEEDS_REPAIR/g, 'Потребує виправлення')
-      .replace(/ABANDONED/g, 'Перервано')
-      .replace(/CANCELLED/g, 'Скасовано');
-  }
-
-  function copyConsole() {
-    const output = $id('consoleOutput');
-    const month = STATE.currentMonth || '—';
-    const dateText = new Date().toLocaleString('uk-UA');
-    const body = output
-      ? Array.from(output.querySelectorAll('.log-entry')).map(el => (el.innerText || '').trim()).filter(Boolean).join('\n')
-      : '';
-    const text = [
-      'WAPB EXECUTION LOG',
-      '=================',
-      'Час: ' + dateText,
-      'Активний місяць: ' + month,
-      '',
-      body || 'Лог порожній'
-    ].join('\n');
-    copyResultText(text);
-  }
-
-  function getActionName(action) {
-    const names = {
-      generatePanel: 'Створення панелі',
-      sendUnsent: 'Панель відправки',
-      daySummary: 'Зведення дня',
-      detailedDay: 'Детальне зведення',
-      createNextMonth: 'Створення місяця',
-      switchMonth: 'Перемикання місяця',
-      clearCache: 'Очищення кешу',
-      clearLog: 'Очищення логів',
-      restartBot: 'Перезапуск бота',
-      pendingRepairs: 'Операції, що потребують виправлення',
-      vacationReminder: 'Нагадування про відпустки',
-      birthdayCheck: 'Дні Народження'
-    };
-
-    return names[action] || action;
-  }
-
-  function handleError(error) {
-    const message = normalizeError(error);
-
-    hideLoading();
-    hideProgressBar();
-    stopSending();
-
-    logToConsole(`❌ Помилка: ${message}`, 'error');
-    displayInResult('error', { error: message });
-  }
-
-  async function handleMenuAction(action) {
-    logToConsole(`➡️ Виконання: ${getActionName(action)}`, 'info');
-
-    try {
-      switch (action) {
-        case 'generatePanel': {
-          primeWhatsAppSenderTab();
-          const result = await ActionDispatcher.run('generatePanel', () => Stage4Api.generatePanelForDate({ date: _todayStr_() }));
-          displayPanelResult(result);
-          break;
-        }
-
-        case 'sendUnsent': {
-          if (!Array.isArray(STATE.currentPanelData) || STATE.currentPanelData.length === 0) {
-            logToConsole('⚠️ Спочатку створіть панель', 'warning');
-            return;
-          }
-          showSendPanel();
-          break;
-        }
-
-        case 'daySummary':
-        case 'detailedDay':
-          showCalendar(action);
-          break;
-
-        case 'createNextMonth': {
-          const result = await ActionDispatcher.run('createNextMonth', () => Stage4Api.createNextMonth({ switchToNewMonth: true }));
-          if (result?.success) {
-            logToConsole(`✅ ${result.message}`, 'success');
-            showStandardResult('Створення місяця');
-            displayInResult('createMonth', result);
-          } else {
-            displayInResult('error', { error: result?.error || 'Невідома помилка' });
-          }
-          break;
-        }
-
-        case 'vacationReminder': {
-          const result = await ActionDispatcher.run('checkVacationsAndBirthdays', () => Stage4Api.checkVacationsAndBirthdays(_todayStr_()));
-          if (result?.success) {
-            showStandardResult('Нагадування про відпустки');
-            displayInResult('vacationResult', Object.assign({}, result.vacations || {}, { message: result.message || '' }));
-            logToConsole('🏖️ Нагадування про відпустки перевірено', 'success');
-          } else {
-            displayInResult('error', { error: result?.error || 'Невідома помилка' });
-          }
-          break;
-        }
-
-        case 'birthdayCheck': {
-          const result = await ActionDispatcher.run('checkBirthdays', () => Stage4Api.checkVacationsAndBirthdays(_todayStr_()));
-          if (result?.success) {
-            showStandardResult('🎂 Дні Народження');
-            displayBirthdayResult(result.birthdays || {});
-            logToConsole('🎂 Перевірка ДН виконана', 'success');
-          } else {
-            displayInResult('error', { error: result?.error || 'Невідома помилка' });
-          }
-          break;
-        }
-
-        case 'switchMonth':
-          await showMonthSwitcher();
-          break;
-
-        case 'clearCache': {
-          const result = await ActionDispatcher.run('clearCache', () => MaintenanceApi.clearCache());
-          displayInResult(
-            result?.success ? 'success' : 'error',
-            result?.success
-              ? { message: result.message }
-              : { error: result?.error || 'Невідома помилка' }
-          );
-          break;
-        }
-
-        case 'healthCheck':
-          showHealthCheckPanel();
-          break;
-
-        case 'pendingRepairs':
-          await showPendingRepairs();
-          break;
-
-        case 'restartBot':
-          await restartBot();
-          break;
-
-        case 'clearLog': {
-          const result = await ActionDispatcher.run('clearLog', () => MaintenanceApi.clearLog());
-          if (result?.success) clearConsole();
-          displayInResult(
-            result?.success ? 'success' : 'error',
-            result?.success
-              ? { message: result.message }
-              : { error: result?.error || 'Невідома помилка' }
-          );
-          break;
-        }
-
-        default:
-          logToConsole(`⚠️ Невідома дія: ${action}`, 'warning');
-      }
-    } catch (error) {
-      handleError(error);
-    }
-  }
-</script>
+  return {
+    success: true,
+    count: rows.length,
+    message: `Записано ${rows.length} логів`
+  };
+}

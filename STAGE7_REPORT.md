@@ -1,80 +1,74 @@
-/**
- * Stage4MaintenanceApi.gs — compatibility-only facade for historical Stage 4.x maintenance callers.
- *
- * Canonical maintenance entrypoints live in Stage5MaintenanceApi.gs.
- * This file intentionally keeps thin wrappers only.
- */
+# STAGE7_REPORT — Stage 7.1 Reliability Hardened Baseline
 
-function apiStage4ClearCache() {
-  return apiStage5ClearCache();
-}
+## Що зроблено
 
-function apiStage4ClearLog() {
-  return apiStage5ClearLog();
-}
+> Цей merged Stage 7.1 зібрано на базі технічно сильнішого lifecycle/hardening шару пізнішої збірки та повнішого diagnostics/smoke baseline ранньої збірки, без відкату ключових reliability-покращень.
 
-function apiStage4ClearPhoneCache() {
-  return apiStage5ClearPhoneCache();
-}
+### 1. Lifecycle критичних операцій
+- Додано `OperationRepository.gs` як sheet-backed lifecycle repository.
+- Критичні write-операції тепер працюють через `WorkflowOrchestrator_` з:
+  - canonical `OperationId`
+  - fingerprint deduplication
+  - `OPS_LOG`
+  - `ACTIVE_OPERATIONS`
+  - `CHECKPOINTS`
+  - heartbeat / stale detection / repair metadata
 
-function apiStage4RestartBot() {
-  return apiStage5RestartBot();
-}
+### 2. Repair flow
+- Додано maintenance API:
+  - `apiStage5ListPendingRepairs`
+  - `apiStage5GetOperationDetails`
+  - `apiStage5RunRepair`
+  - `apiStage5RunLifecycleRetentionCleanup`
+- Repair запускається як нова операція з `ParentOperationId`.
+- Старий інцидент не переписується; у ньому фіксуються resolution fields.
 
-function apiStage4SetupVacationTriggers() {
-  return apiStage5SetupVacationTriggers();
-}
+### 3. Runtime decomposition
+- `JavaScript.html` більше не містить монолітного runtime.
+- Активний runtime збирається через include chain:
+  - `Js.Core.html`
+  - `Js.State.html`
+  - `Js.Api.html`
+  - `Js.Render.html`
+  - `Js.Diagnostics.html`
+  - `Js.Helpers.html`
+  - `Js.Events.html`
+  - `Js.Actions.html`
 
-function apiStage4CleanupDuplicateTriggers(functionName) {
-  return apiStage5CleanupDuplicateTriggers(functionName || '');
-}
+### 4. Sidebar-first evolution
+- Додано sidebar maintenance flow `Pending Repairs`.
+- Доступні дії:
+  - список pending repairs
+  - перегляд деталей операції
+  - запуск repair зі sidebar
 
-function apiStage4DebugPhones() {
-  return apiStage5DebugPhones();
-}
+### 5. Trigger / maintenance
+- Додано `stage7JobDetectStaleOperations()`.
+- Install jobs тепер ставить time-driven stale detector на 15 хвилин.
+- Cleanup flow виконує retention cleanup для `OPS_LOG` hot storage.
+- Додано окремий lifecycle retention cleanup flow для `OPS_LOG`, `ACTIVE_OPERATIONS` і `CHECKPOINTS`.
 
-function apiStage4BuildBirthdayLink(phone, name) {
-  return apiStage5BuildBirthdayLink(phone || '', name || '');
-}
+## Службові аркуші
+- `OPS_LOG`
+- `ACTIVE_OPERATIONS`
+- `CHECKPOINTS`
 
-function apiRunMaintenanceScenario(options) {
-  return apiRunStage5MaintenanceScenario(options || {});
-}
+## Важливі примітки
+- Stage 4 compatibility facade збережено.
+- Stage 5 maintenance naming збережено.
+- Бізнес-логіка доменних сценаріїв не переписувалась; hardening накладено поверх baseline.
+- Dry-run сценарії не забивають service sheets як реальні committed execution records.
 
-function apiInstallStage4Jobs() {
-  return apiInstallStage5Jobs();
-}
-
-function apiListStage4Jobs() {
-  return apiListStage5Jobs();
-}
-
-function apiRunStage4Job(jobName, options) {
-  return apiRunStage5Job(jobName, options || {});
-}
-
-function apiStage4HealthCheck(options) {
-  return apiStage5HealthCheck(options || {});
-}
-
-function apiRunStage4RegressionTests(options) {
-  return apiRunStage5RegressionTests(options || {});
-}
-
-
-function apiStage4ListPendingRepairs(filters) {
-  return apiStage5ListPendingRepairs(filters || {});
-}
-
-function apiStage4GetOperationDetails(operationId) {
-  return apiStage5GetOperationDetails(operationId || '');
-}
-
-function apiStage4RunRepair(operationId, options) {
-  return apiStage5RunRepair(operationId || '', options || {});
-}
+## Відомі межі поточної реалізації
+- Batch/checkpoint integration реалізована на orchestration-рівні; окремі доменні сценарії ще можна поглибити до більш granular checkpointing.
+- Repair replay покриває головні критичні сценарії baseline; екзотичні maintenance branches можуть потребувати окремого routing розширення.
 
 
-function apiStage4RunLifecycleRetentionCleanup() {
-  return apiStage5RunLifecycleRetentionCleanup();
-}
+## Що додатково увійшло в merged 7.1 поверх первинного 7.1
+- За основу взято Stage 7 lifecycle / repair / stale-detector шар і збережено стабільний sidebar/runtime baseline зі Stage 6 Final lineage.
+- Виправлено execution bug у maintenance-сценарії `restartBot`, де callback використовував `context` поза власною сигнатурою.
+- Посилено policy заморожування фінальних lifecycle-записів: статус фінальної операції більше не можна потай переписати через `transitionStatus(...)`.
+- `saveCheckpoint(...)` тепер оновлює не лише `OPS_LOG`, а й active heartbeat / expiry, щоб довгі операції не виглядали мертвими між батчами.
+- Retention cleanup розширено на `CHECKPOINTS` з ротацією в `CHECKPOINTS_YYYY_MM`.
+- Додано окремий job `stage7JobLifecycleRetentionCleanup()` і maintenance flow `cleanupLifecycleRetention`.
+- Прибрано службові `.bak` хвости з фінальної збірки та вирівняно metadata / diagnostics / smoke tests під маркер Stage 7.1.

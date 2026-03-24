@@ -552,6 +552,23 @@
     });
   }
 
+  async function reloadSendPanelFromServer() {
+    try {
+      const rows = await ensurePanelDataLoadedFromServer({
+        silent: false,
+        preserveNonEmpty: false,
+        retries: 2,
+        retryDelayMs: 450,
+        reason: 'manual-reload'
+      });
+      logToConsole(`🔄 SEND_PANEL перечитано: ${Array.isArray(rows) ? rows.length : 0} рядків`, 'success');
+      showSendPanel();
+    } catch (error) {
+      logToConsole(`❌ Не вдалося перечитати SEND_PANEL: ${normalizeError(error)}`, 'error');
+      showSendPanel();
+    }
+  }
+
   // =========================
   // BOOTSTRAP
   // =========================
@@ -588,6 +605,7 @@
     sendOneFromPanel,
     confirmSendFromPanel,
     rejectSendFromPanel,
+    reloadSendPanelFromServer,
     updateSendUnsentButtonState,
 
     processSelectedDate,

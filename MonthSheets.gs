@@ -1,404 +1,124 @@
-<script>
-  const UiState = {
-    patch(values = {}) {
-      Object.assign(STATE, values || {});
-      return STATE;
-    },
-    invalidate(keys = []) {
-      return Array.isArray(keys) ? keys.slice() : [keys];
-    }
-  };
+/************ МІСЯЧНІ АРКУШІ ************/
+function _inferMonthYearFromSheet_(sheet) {
+  const ref = sheet.getRange(CONFIG.CODE_RANGE_A1);
+  const row = Number(CONFIG.DATE_ROW) || 1;
+  const startCol = ref.getColumn();
+  const endCol = ref.getLastColumn();
+  const vals = sheet.getRange(row, startCol, 1, endCol - startCol + 1).getValues()[0];
+  const disp = sheet.getRange(row, startCol, 1, endCol - startCol + 1).getDisplayValues()[0];
 
-  if (typeof STATE.panelRefreshSeq !== 'number') STATE.panelRefreshSeq = 0;
-  if (typeof STATE.panelRefreshInProgress !== 'boolean') STATE.panelRefreshInProgress = false;
-  if (!Array.isArray(STATE.lastNonEmptyPanelData)) STATE.lastNonEmptyPanelData = [];
-  if (typeof STATE.lastPanelDataUpdatedAt !== 'number') STATE.lastPanelDataUpdatedAt = 0;
-
-  const LoaderService = {
-    show: () => showLoading(),
-    hide: () => hideLoading()
-  };
-
-  const ToastService = {
-    success: (message) => showToast(message),
-    warning: (message) => showToast(message),
-    error: (message) => showToast(message)
-  };
-
-  const ErrorPresenter = {
-    present: (error) => handleError(error)
-  };
-
-  const RenderCoordinator = {
-    async sync(meta = {}) {
-      const syncMeta = meta?.sync || meta || {};
-      const refresh = Array.isArray(syncMeta.refresh) ? syncMeta.refresh : [];
-
-      if (syncMeta.currentMonth) {
-        UiState.patch({ currentMonth: syncMeta.currentMonth });
-        updateMonthBadge(syncMeta.currentMonth);
-      }
-
-      if (refresh.includes('monthsList') || refresh.includes('currentMonth')) {
-        try {
-          const monthsResult = await Stage4Api.getMonths();
-          if (monthsResult?.success) {
-            UiState.patch({
-              monthsList: Array.isArray(monthsResult.months) ? monthsResult.months : STATE.monthsList,
-              currentMonth: monthsResult.current || STATE.currentMonth
-            });
-            updateMonthBadge(monthsResult.current || STATE.currentMonth);
-          }
-        } catch (_) {}
-      }
-
-      if (refresh.includes('panel')) {
-        try {
-          await refreshSendPanelDataFromServer({
-            silent: true,
-            preserveNonEmpty: true,
-            retries: 2,
-            retryDelayMs: 450,
-            reason: 'RenderCoordinator.sync'
-          });
-        } catch (_) {}
-      }
-
-      return true;
-    }
-  };
-
-  const ActionDispatcher = {
-    async run(methodName, handler, options = {}) {
-      const opts = options || {};
-      if (opts.showLoader !== false) LoaderService.show();
-
-      try {
-        const result = await handler();
-
-        if (result?.success !== false) {
-          await RenderCoordinator.sync(
-            result?.meta ||
-            result?.data?.meta ||
-            result?.raw?.data?.meta ||
-            {}
-          );
-        }
-
-        if (result?.success && opts.successMessage) {
-          ToastService.success(opts.successMessage);
-        }
-
-        return result;
-      } catch (error) {
-        ErrorPresenter.present(error);
-        throw error;
-      } finally {
-        if (opts.showLoader !== false) LoaderService.hide();
-      }
-    }
-  };
-
-  function gsRun(method, ...args) {
-    return Api.run(method, ...args);
-  }
-
-  function stopSending() {
-    if (STATE.sendingInterval) {
-      clearInterval(STATE.sendingInterval);
-      STATE.sendingInterval = null;
-    }
-  }
-
-  function clonePanelRows_(rows) {
-    return Array.isArray(rows)
-      ? rows.map(item => (item && typeof item === 'object' ? Object.assign({}, item) : item))
-      : [];
-  }
-
-  function setCurrentPanelData(panelData, options = {}) {
-    const rows = clonePanelRows_(panelData);
-    const preserveLastNonEmpty = options.preserveLastNonEmpty !== false;
-
-    STATE.currentPanelData = rows;
-
-    if (preserveLastNonEmpty && rows.length > 0) {
-      STATE.lastNonEmptyPanelData = clonePanelRows_(rows);
-      STATE.lastPanelDataUpdatedAt = Date.now();
-    }
-
-    updateSendUnsentButtonState();
-    return STATE.currentPanelData;
-  }
-
-  function getReadyPanelItems(panelData = STATE.currentPanelData) {
-    const data = Array.isArray(panelData) ? panelData : [];
-    return data.filter(item => item && item.link && !item.sent && (item.status === PANEL_READY_STATUS || item.status === PANEL_UNSENT_STATUS));
-  }
-
-  function getPanelErrorItems(panelData = STATE.currentPanelData) {
-    const data = Array.isArray(panelData) ? panelData : [];
-    return data.filter(item => String(item?.status || '').startsWith(PANEL_ERROR_PREFIX));
-  }
-
-  function updateSendUnsentButtonState() {
-    const sendBtn = $id('sendUnsentBtn');
-    if (!sendBtn) return;
-
-    const panelData = Array.isArray(STATE.currentPanelData) ? STATE.currentPanelData : [];
-    if (!panelData.length) {
-      sendBtn.disabled = true;
-      sendBtn.title = 'Спочатку створіть панель';
-      return;
-    }
-
-    const unsentCount = getReadyPanelItems(panelData).length;
-    sendBtn.disabled = unsentCount === 0;
-    sendBtn.title = unsentCount > 0
-      ? `Відправити ${unsentCount} повідомлень`
-      : 'Немає невідправлених';
-  }
-
-  function waitMs_(ms) {
-    return new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms || 0))));
-  }
-
-  async function refreshSendPanelDataFromServer(options = {}) {
-    const {
-      silent = false,
-      preserveNonEmpty = true,
-      retries = 2,
-      retryDelayMs = 450,
-      reason = 'manual-refresh'
-    } = options;
-
-    const refreshToken = ++STATE.panelRefreshSeq;
-    STATE.panelRefreshInProgress = true;
-
-    let lastFailure = null;
-
+  for (let i = 0; i < vals.length; i++) {
     try {
-      for (let attempt = 0; attempt <= retries; attempt++) {
-        const result = await Stage4Api.getSendPanelData();
-
-        if (!result?.success) {
-          lastFailure = new Error(result?.error || 'Не вдалося перечитати SEND_PANEL');
-          break;
-        }
-
-        const rows = Array.isArray(result.data) ? result.data : [];
-        const hasRows = rows.length > 0;
-
-        const currentRows = Array.isArray(STATE.currentPanelData) ? STATE.currentPanelData : [];
-        const currentHasRows = currentRows.length > 0;
-
-        if (refreshToken !== STATE.panelRefreshSeq) {
-          return result;
-        }
-
-        if (hasRows || !preserveNonEmpty || !currentHasRows) {
-          setCurrentPanelData(rows);
-
-          if (!silent) {
-            logToConsole(`🔄 SEND_PANEL синхронізовано (${reason})`, 'info');
-          }
-
-          return result;
-        }
-
-        if (attempt < retries) {
-          if (!silent) {
-            logToConsole(
-              `⏳ SEND_PANEL ще перебудовується, повторна спроба ${attempt + 2}/${retries + 1}`,
-              'warning'
-            );
-          }
-
-          await waitMs_(retryDelayMs * (attempt + 1));
-          continue;
-        }
-
-        const fallbackRows =
-          Array.isArray(STATE.lastNonEmptyPanelData) && STATE.lastNonEmptyPanelData.length
-            ? STATE.lastNonEmptyPanelData
-            : currentRows;
-
-        setCurrentPanelData(fallbackRows, { preserveLastNonEmpty: true });
-
-        if (!silent) {
-          logToConsole(
-            '⚠️ Сервер тимчасово повернув порожній SEND_PANEL — залишаю останні непорожні дані',
-            'warning'
-          );
-        }
-
-        return Object.assign({}, result, {
-          data: clonePanelRows_(fallbackRows),
-          rows: clonePanelRows_(fallbackRows),
-          totalCount: fallbackRows.length
-        });
+      const ddmmyyyy = normalizeDate_(vals[i], disp[i]);
+      const m = ddmmyyyy.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+      if (m) {
+        const mm = parseInt(m[2], 10);
+        const yy = parseInt(m[3], 10);
+        if (mm >= 1 && mm <= 12 && yy >= 2000) return { month: mm, year: yy };
       }
-
-      throw lastFailure || new Error('Не вдалося перечитати SEND_PANEL');
-    } finally {
-      if (refreshToken === STATE.panelRefreshSeq) {
-        STATE.panelRefreshInProgress = false;
-      }
-    }
+    } catch (e) { }
   }
 
-  function primeWhatsAppSenderTab() {
-    if (STATE.DIAG_TEST_MODE) return null;
-    try {
-      const existing = STATE.waSenderWindow;
-      if (existing && !existing.closed) return existing;
-      const win = window.open('', WA_SENDER_TARGET, 'noopener');
-      if (win) {
-        STATE.waSenderWindow = win;
-        return win;
-      }
-    } catch (error) {
-      console.error('primeWhatsAppSenderTab error:', error);
-    }
-    return null;
+  const now = new Date();
+  return { month: now.getMonth() + 1, year: now.getFullYear() };
+}
+
+function _setMonthDatesRow_(sheet, month, year) {
+  const ref = sheet.getRange(CONFIG.CODE_RANGE_A1);
+  const row = Number(CONFIG.DATE_ROW) || 1;
+  const startCol = ref.getColumn();
+  const width = ref.getLastColumn() - startCol + 1;
+
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const out = new Array(width).fill('');
+
+  const n = Math.min(width, daysInMonth);
+  for (let d = 1; d <= n; d++) {
+    out[d - 1] = new Date(year, month - 1, d);
   }
 
-  function openLinkSafe(url) {
-    try {
-      const link = String(url || '').trim();
-      if (!link) return null;
-      if (STATE.DIAG_TEST_MODE) return { closed: false, focus() {} };
+  sheet.getRange(row, startCol, 1, width).setValues([out]);
+}
 
-      const prepared = primeWhatsAppSenderTab();
-      if (prepared && !prepared.closed) {
-        try {
-          prepared.location.href = link;
-          prepared.focus();
-          return prepared;
-        } catch (_) {}
-      }
+function createNextMonthSheet() {
+  const ui = SpreadsheetApp.getUi();
+  try {
+    const ss = SpreadsheetApp.getActive();
+    const src = ss.getActiveSheet();
+    const srcName = String(src.getName()).trim();
 
-      const win = window.open(link, WA_SENDER_TARGET, 'noopener');
-      if (win) {
-        STATE.waSenderWindow = win;
-        try { win.focus(); } catch (_) {}
-      }
-      return win;
-    } catch (error) {
-      console.error('openLinkSafe error:', error);
-      try {
-        return window.open(String(url || '').trim(), WA_SENDER_TARGET, 'noopener');
-      } catch (_) {
-        return null;
-      }
-    }
-  }
-
-  function formatPhone(phone) {
-    if (!phone || phone === '—') return '—';
-
-    let cleaned = String(phone).replace(/[^\d+]/g, '');
-
-    if (cleaned.startsWith('380') && !cleaned.startsWith('+')) cleaned = '+' + cleaned;
-    if (cleaned.startsWith('0') && cleaned.length === 10) cleaned = '+38' + cleaned;
-
-    if (cleaned.startsWith('+380') && cleaned.length === 13) {
-      const operator = cleaned.slice(4, 6);
-      const part1 = cleaned.slice(6, 9);
-      const part2 = cleaned.slice(9, 11);
-      const part3 = cleaned.slice(11, 13);
-      return `+380 ${operator} ${part1} ${part2} ${part3}`;
+    if (!/^\d{2}$/.test(srcName)) {
+      throw new Error(`Активний лист "${srcName}" не є місячним. Потрібна назва виду "02", "03", "04"...`);
     }
 
-    return cleaned;
-  }
+    let nextNum = parseInt(srcName, 10) + 1;
+    if (nextNum > 12) nextNum = 1;
+    if (nextNum < 1) nextNum = 1;
 
-  function formatDateForDisplay(dateStr) {
-    if (!dateStr) return '';
-    const parts = String(dateStr).split('.');
-    return parts.length === 3 ? `${parts[0]}.${parts[1]}.${parts[2]}` : String(dateStr);
-  }
+    const nextName = String(nextNum).padStart(2, '0');
 
-  function hidePersonCard() {
-    const el = $id('personCardContainer');
-    if (el) el.style.display = 'none';
-  }
-
-  function showPersonCardContainer() {
-    const el = $id('personCardContainer');
-    if (el) el.style.display = 'block';
-  }
-
-  function showToast(message) {
-    const msg = String(message || '');
-    if (!msg) return;
-
-    let toast = $id('appToast');
-
-    if (!toast) {
-      toast = document.createElement('div');
-      toast.id = 'appToast';
-      toast.style.position = 'fixed';
-      toast.style.bottom = '16px';
-      toast.style.left = '50%';
-      toast.style.transform = 'translateX(-50%)';
-      toast.style.zIndex = '9999';
-      toast.style.padding = '10px 14px';
-      toast.style.borderRadius = '999px';
-      toast.style.background = 'var(--whatsapp-dark)';
-      toast.style.color = 'white';
-      toast.style.fontSize = '13px';
-      toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
-      toast.style.maxWidth = '90%';
-      toast.style.textAlign = 'center';
-      toast.style.opacity = '0';
-      toast.style.transition = 'opacity .18s ease, transform .18s ease';
-      document.body.appendChild(toast);
+    if (ss.getSheetByName(nextName)) {
+      throw new Error(`Лист "${nextName}" вже існує. Я його не перезаписую.`);
     }
 
-    toast.textContent = msg;
-    toast.style.opacity = '1';
-    toast.style.transform = 'translateX(-50%) translateY(0)';
+    const newSheet = src.copyTo(ss).setName(nextName);
 
-    clearTimeout(window.__toastTimer__);
-    window.__toastTimer__ = setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateX(-50%) translateY(6px)';
-    }, 1800);
+    const srcMY = _inferMonthYearFromSheet_(src);
+    const targetMonth = nextNum;
+    const targetYear = (targetMonth < srcMY.month) ? (srcMY.year + 1) : srcMY.year;
+
+    _setMonthDatesRow_(newSheet, targetMonth, targetYear);
+    newSheet.getRange(CONFIG.CODE_RANGE_A1).clearContent();
+
+    applyGlobalSheetStandards_();
+    newSheet.activate();
+    highlightActiveMonthTab_(nextName);
+
+    ui.alert('✅', `Створено "${nextName}" на основі "${srcName}"`, ui.ButtonSet.OK);
+  } catch (error) {
+    ui.alert('❌ Помилка', String(error), ui.ButtonSet.OK);
+    console.error(error);
   }
+}
 
-  function showMenu() {
-    $id('menuSection')?.classList?.add('active');
-    $id('resultSection')?.classList?.remove('active');
+/************ ПЕРЕМИКАННЯ БОТА НА ІНШИЙ МІСЯЦЬ ************/
+function switchBotToSheet() {
+  const ss = SpreadsheetApp.getActive();
+  const months = ss.getSheets().map(s => s.getName()).filter(n => /^\d{2}$/.test(n)).sort();
+  if (!months.length) return SpreadsheetApp.getUi().alert('❌ Немає аркушів місяців (01..12)');
 
-    stopSending();
-    hidePersonCard();
-    show('resultContent', 'block');
-  }
+  const current = getBotMonthSheetName_();
+  const options = months.map(n => `<option value="${n}" ${n === current ? 'selected' : ''}>${n}</option>`).join('');
 
-  function showResult(title) {
-    $id('menuSection')?.classList?.remove('active');
-    $id('resultSection')?.classList?.add('active');
-    setText('resultTitle', title || 'Результат');
-  }
+  const html = HtmlService.createHtmlOutput(`
+    <div style="font-family:Arial;padding:16px">
+      <h3 style="margin:0 0 12px;color:#075e54">🔁 Перемкнути бота на місяць</h3>
+      <div style="margin:10px 0">
+        <div style="font-size:12px;color:#666;margin-bottom:6px">Поточний: <b>${escapeHtml_(current)}</b></div>
+        <select id="m" style="padding:10px;width:100%;border:1px solid #ddd;border-radius:10px;font-size:16px">
+          ${options}
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+        <button onclick="google.script.host.close()" style="padding:10px 14px;border:1px solid #ddd;border-radius:10px;background:#f8f9fa;cursor:pointer">Скасувати</button>
+        <button onclick="go()" style="padding:10px 16px;border:0;border-radius:10px;background:#25D366;color:#fff;font-weight:bold;cursor:pointer">✅ Перемкнути</button>
+      </div>
+      <script>
+        function go(){
+          const v = document.getElementById('m').value;
+          google.script.run.withSuccessHandler(()=>google.script.host.close()).switchBotToMonth_(v);
+        }
+      </script>
+    </div>
+  `).setWidth(420).setHeight(240);
 
-  function showStandardResult(title) {
-    hidePersonCard();
-    show('resultContent', 'block');
-    showResult(title);
-  }
+  SpreadsheetApp.getUi().showModalDialog(html, '🔁 Перемикання');
+}
 
-  function showCardResult(title) {
-    hide('resultContent');
-    showPersonCardContainer();
-    showResult(title);
-  }
-
-  function showLoading() {
-    show('loadingOverlay', 'flex');
-  }
-
-  function hideLoading() {
-    hide('loadingOverlay');
-  }
-</script>
+function switchBotToMonth_(monthSheetName) {
+  setBotMonthSheetName_(monthSheetName);
+  const ss = SpreadsheetApp.getActive();
+  const sh = ss.getSheetByName(monthSheetName);
+  if (sh) sh.activate();
+  SpreadsheetApp.getUi().toast(`Бот активний: ${monthSheetName}`, ' WhatsApp-Sheets-Bot', 3);
+}

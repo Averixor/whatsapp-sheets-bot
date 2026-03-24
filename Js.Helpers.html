@@ -251,7 +251,7 @@
         case 'generatePanel': {
           primeWhatsAppSenderTab();
           const result = await ActionDispatcher.run('generatePanel', () => Stage4Api.generatePanelForDate({ date: _todayStr_() }));
-          displayPanelResult(result);
+          await displayPanelResult(result);
           break;
         }
 
