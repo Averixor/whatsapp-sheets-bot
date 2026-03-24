@@ -1,411 +1,1027 @@
 <script>
-// Js.Diagnostics — active Stage 7.1 runtime fragment.
+// Js.Render — active Stage 7.1 runtime fragment.
 
   // =========================
-  // HEALTH CHECK
+  // SEND PANEL
   // =========================
-  function getHealthCheckOptions_() {
-    return STATE.healthCheckMode === 'full'
-      ? {
-          shallow: false,
-          includeStage3Base: true,
-          includeCompatibilityLayer: true,
-          includeReconciliationPreview: true
-        }
-      : {
-          shallow: true,
-          includeStage3Base: false,
-          includeCompatibilityLayer: false,
-          includeReconciliationPreview: false
-        };
-  }
+  function displayPanelResult(result) {
+    hideLoading();
 
-  function getHealthCheckModeLabel_() {
-    return STATE.healthCheckMode === 'full' ? 'Повна' : 'Швидка';
-  }
-
-  function renderHealthCheckModeSwitcher_() {
-    return `
-      <div class="result-item">
-        <div class="result-value">
-          <div class="mode-toggle">
-            <button
-              id="healthModeQuick"
-              type="button"
-              class="mode-toggle-btn ${STATE.healthCheckMode === 'quick' ? 'active' : ''}"
-              onclick="SidebarApp.setHealthCheckMode('quick')"
-            >
-              Швидка
-            </button>
-            <button
-              id="healthModeFull"
-              type="button"
-              class="mode-toggle-btn ${STATE.healthCheckMode === 'full' ? 'active' : ''}"
-              onclick="SidebarApp.setHealthCheckMode('full')"
-            >
-              Повна
-            </button>
-          </div>
-
-          <div class="health-mode-note">
-            ${STATE.healthCheckMode === 'full'
-              ? 'Повна діагностика разом із compatibility / legacy.'
-              : 'Швидка перевірка без legacy.'}
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  function showHealthCheckPanel() {
-    showStandardResult(`${getHealthCheckModeLabel_()} перевірка`);
-
-    setHtml('resultContent', `
-      ${renderHealthCheckModeSwitcher_()}
-
-      <div class="result-item">
-        <div class="result-label">Запуск перевірки</div>
-        <div class="result-value" style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="btn btn-primary" onclick="SidebarApp.runHealthCheck()">🩺 Перевірити</button>
-          <button class="btn" onclick="SidebarApp.copyHealthReport()">📋 Копіювати звіт</button>
-        </div>
-      </div>
-
-      <div class="result-item">
-        <div class="result-label">Поточний режим</div>
-        <div class="result-value">${escapeHtml(getHealthCheckModeLabel_())}</div>
-      </div>
-    `);
-  }
-
-  function setHealthCheckMode(mode) {
-    const nextMode = mode === 'full' ? 'full' : 'quick';
-    STATE.healthCheckMode = nextMode;
-
-    const quickBtn = $id('healthModeQuick');
-    const fullBtn = $id('healthModeFull');
-    if (quickBtn) quickBtn.classList.toggle('active', nextMode === 'quick');
-    if (fullBtn) fullBtn.classList.toggle('active', nextMode === 'full');
-
-    logToConsole(
-      `Режим: ${nextMode === 'full' ? 'повна діагностика' : 'швидка перевірка'}`,
-      'info'
-    );
-
-    runHealthCheck();
-  }
-
-  async function runHealthCheck() {
-    showStandardResult(`${getHealthCheckModeLabel_()} перевірка`);
-
-    setHtml('resultContent', `
-      ${renderHealthCheckModeSwitcher_()}
-
-      <div class="result-item">
-        <div class="result-label">Перевірка системи</div>
-        <div class="result-value">⏳ Виконую перевірку (${escapeHtml(getHealthCheckModeLabel_())})...</div>
-      </div>
-    `);
-
-    let slowModeShown = false;
-
-    const slowTimerId = setTimeout(() => {
-      slowModeShown = true;
-
-      setHtml('resultContent', `
-        ${renderHealthCheckModeSwitcher_()}
-
-        <div class="health-wrap">
-          <div class="health-item warn sev-medium">
-            <div class="health-title">⏳ Перевірка ще виконується</div>
-            <div class="health-details">
-              Сервер відповідає довше звичайного. Це не помилка — просто діагностика важка.
-            </div>
-          </div>
-        </div>
-      `);
-
-      logToConsole('⏳ Health Check виконується довше звичайного...', 'warning');
-    }, 15000);
-
-    try {
-      const reportResponse = await ActionDispatcher.run(
-        'stage4HealthCheck',
-        () => DiagnosticsApi.healthCheck(getHealthCheckOptions_()),
-        { successMessage: '' } 
-      );
-
-      clearTimeout(slowTimerId);
-
-      const report = reportResponse?.data || reportResponse;
-      STATE.lastHealthReport = report || null;
-
-      setHtml('resultContent', renderHealthReport(report));
-
-      const overallOk =
-        typeof report?.ok === 'boolean'
-          ? report.ok
-          : Array.isArray(report?.checks)
-            ? report.checks.every(check => {
-                const status = String(check?.status || '').toUpperCase();
-                return typeof check?.ok === 'boolean' ? check.ok : status === 'OK';
-              })
-            : false;
-
-      showToast(overallOk ? '✅ Система в нормі' : '⚠️ Є проблеми — див. звіт');
-
-      logToConsole(
-        slowModeShown
-          ? 'Перевірка системи завершена після тривалого очікування'
-          : 'Перевірка системи завершена',
-        overallOk ? 'success' : 'warning'
-      );
-    } catch (error) {
-      clearTimeout(slowTimerId);
-
-      setHtml('resultContent', `
-        ${renderHealthCheckModeSwitcher_()}
-
-        <div class="health-wrap">
-          <div class="health-item bad sev-critical">
-            <div class="health-title">❌ Помилка перевірки</div>
-            <div class="health-details">${escapeHtml(normalizeError(error))}</div>
-          </div>
-        </div>
-      `);
-
-      showToast('❌ Помилка Health Check');
-      logToConsole(`❌ Health Check: ${normalizeError(error)}`, 'error');
-    }
-  }
-
-  function splitHealthChecksByGroup(checks) {
-    const groups = {
-      critical: [],
-      warnings: [],
-      compatibility: [],
-      ok: []
-    };
-
-    (checks || []).forEach(function(check) {
-      const status = String(check?.status || '').toUpperCase();
-      const ok = typeof check?.ok === 'boolean' ? check.ok : status === 'OK';
-      const uiGroup = String(check?.uiGroup || '').toLowerCase();
-
-      if (uiGroup === 'critical' || uiGroup === 'warnings' || uiGroup === 'compatibility' || uiGroup === 'ok') {
-        groups[uiGroup].push(check);
-        return;
-      }
-
-      const title = String(check?.title || check?.name || '').toLowerCase();
-      const details = String(check?.details || check?.message || '').toLowerCase();
-
-      const looksCompatibility =
-        title.indexOf('deprecated ') === 0 ||
-        title.indexOf('compatibility ') === 0 ||
-        title.indexOf('wrapper source ') === 0 ||
-        title.indexOf('ui-ban marker ') === 0 ||
-        details.indexOf('compatibility-only') !== -1 ||
-        details.indexOf('замінити на ') !== -1;
-
-      if (looksCompatibility) {
-        groups.compatibility.push(check);
-        return;
-      }
-
-      if (ok) {
-        groups.ok.push(check);
-        return;
-      }
-
-      if (status === 'FAIL') {
-        groups.critical.push(check);
-        return;
-      }
-
-      if (status === 'WARN') {
-        groups.warnings.push(check);
-        return;
-      }
-
-      groups.warnings.push(check);
-    });
-
-    return groups;
-  }
-
-  function renderHealthGroup(title, icon, items, emptyText) {
-    if (!items || !items.length) {
-      return `
-        <div class="health-group">
-          <div class="health-group-title">
-            <span>${icon}</span>
-            <span>${escapeHtml(title)}</span>
-            <span class="health-group-count">0</span>
-          </div>
-          <div class="health-item ok" style="opacity:.85;">
-            ${escapeHtml(emptyText || 'Немає')}
-          </div>
-        </div>
-      `;
-    }
-
-    return `
-      <div class="health-group">
-        <div class="health-group-title">
-          <span>${icon}</span>
-          <span>${escapeHtml(title)}</span>
-          <span class="health-group-count">${items.length}</span>
-        </div>
-        <div class="health-group-body">
-          ${items.map(renderCheckItemCompact).join('')}
-        </div>
-      </div>
-    `;
-  }
-
-  function renderCheckItemCompact(check) {
-    const status = String(check?.status || '').toUpperCase();
-    const ok = typeof check?.ok === 'boolean' ? check.ok : status === 'OK';
-    const icon = ok ? '✅' : (status === 'WARN' ? '⚠️' : '❌');
-    const title = check?.title || check?.name || 'Перевірка';
-    const details = check?.details || check?.message || '';
-    const recommendation = check?.howTo || check?.recommendation || '';
-    const cssClass = ok ? 'ok' : (status === 'FAIL' ? 'bad' : 'warn');
-
-    return `
-      <div class="health-item ${cssClass}" style="margin:4px 0; padding:6px;">
-        <div class="health-title">
-          ${icon} ${escapeHtml(title)}
-          <span class="health-badges">[${escapeHtml(status || '?')}]</span>
-        </div>
-        ${details ? `<div class="health-details">${escapeHtml(details)}</div>` : ''}
-        ${(!ok && recommendation) ? `<div class="how-to-box">${escapeHtml(recommendation)}</div>` : ''}
-      </div>
-    `;
-  }
-
-  function renderCheckItem(check) {
-    return renderCheckItemCompact(check);
-  }
-
-  function renderHealthReport(report) {
-    if (!report || !report.checks) {
-      return `
-        ${renderHealthCheckModeSwitcher_()}
-        <div class="health-item warn">❌ Порожній звіт</div>
-      `;
-    }
-
-    const checks = Array.isArray(report.checks) ? report.checks : [];
-    const groups = splitHealthChecksByGroup(checks);
-
-    const criticalCount = groups.critical.length;
-    const warningCount = groups.warnings.length;
-    const compatibilityCount = groups.compatibility.length;
-    const okCount = groups.ok.length;
-
-    const hasRealProblems = criticalCount > 0 || warningCount > 0;
-    const statusIcon = hasRealProblems ? '⚠️' : '✅';
-    const statusColor = hasRealProblems ? 'var(--warning-color)' : 'var(--success-color)';
-
-    return `
-      ${renderHealthCheckModeSwitcher_()}
-
-      <div class="compact-health-report">
-        <div style="font-weight:600; margin-bottom:6px; padding:6px 8px; background:${statusColor}20; border-radius:6px;">
-          <span style="color:${statusColor};">${statusIcon}</span>
-          ${hasRealProblems ? 'Є проблеми' : 'Все добре'}
-          <span style="float:right; font-size:0.65rem;">${checks.length} перевірок</span>
-        </div>
-
-        <div style="font-size:0.65rem; color:var(--text-secondary); margin-bottom:8px;">
-          ${report.ts ? escapeHtml(new Date(report.ts).toLocaleString('uk-UA')) : ''}
-        </div>
-
-        <div style="font-size:0.68rem; margin-bottom:8px; display:flex; gap:8px; flex-wrap:wrap;">
-          <span style="padding:2px 8px; border-radius:999px; background:rgba(34,197,94,.12); color:var(--success-color);">
-            ✅ OK: ${okCount}
-          </span>
-          <span style="padding:2px 8px; border-radius:999px; background:rgba(239,68,68,.12); color:var(--error-color);">
-            ❌ Критичні: ${criticalCount}
-          </span>
-          <span style="padding:2px 8px; border-radius:999px; background:rgba(245,158,11,.12); color:var(--warning-color);">
-            ⚠️ Попередження: ${warningCount}
-          </span>
-          <span style="padding:2px 8px; border-radius:999px; background:rgba(59,130,246,.12); color:var(--google-blue);">
-            🧩 Compatibility: ${compatibilityCount}
-          </span>
-        </div>
-
-        <div class="result-item" style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="btn btn-primary" onclick="SidebarApp.runHealthCheck()">🔄 Перевірити ще раз</button>
-          <button class="btn" onclick="SidebarApp.copyHealthReport()">📋 Копіювати звіт</button>
-        </div>
-
-        <div class="health-scroll-container" style="max-height:320px;">
-          ${renderHealthGroup('Критичні проблеми', '❌', groups.critical, 'Критичних проблем не знайдено')}
-          ${renderHealthGroup('Попередження', '⚠️', groups.warnings, 'Попереджень немає')}
-          ${renderHealthGroup('Відомий compatibility layer', '🧩', groups.compatibility, 'Compatibility layer не виявлено')}
-          ${renderHealthGroup('Успішні перевірки', '✅', groups.ok, 'Успішних перевірок немає')}
-        </div>
-      </div>
-    `;
-  }
-
-  function copyHealthReport() {
-    const report = STATE.lastHealthReport;
-
-    if (!report || !Array.isArray(report.checks)) {
-      showToast('⚠️ Спочатку натисніть "Перевірити"');
+    if (!result?.success) {
+      displayInResult('error', { error: result?.error || 'Невідома помилка' });
       return;
     }
 
-    const checks = report.checks;
-    const groups = splitHealthChecksByGroup(checks);
+    const rows = Array.isArray(result.rows)
+      ? result.rows
+      : (Array.isArray(result.data) ? result.data : []);
 
-    const overallOk =
-      typeof report?.ok === 'boolean'
-        ? report.ok
-        : (groups.critical.length === 0 && groups.warnings.length === 0);
+    setCurrentPanelData(rows);
 
-    function appendGroup(text, title, items) {
-      text += `${title}\n`;
-      text += `${'-'.repeat(title.length)}\n`;
+    const stats = result.stats || {};
+    logToConsole(`📋 Панель створено для ${result.date || '?'} (${result.month || '?'})`, 'success');
+    logToConsole(
+      `📊 Всього: ${stats.totalCount || rows.length || 0}, Готових: ${stats.readyCount || 0}, Очікує підтвердження: ${stats.pendingCount || 0}, Помилок: ${stats.errorCount || 0}`,
+      'info'
+    );
 
-      if (!items.length) {
-        text += `Немає\n\n`;
-        return text;
-      }
+    showSendPanel();
+  }
 
-      items.forEach(function(check) {
-        const status = String(check?.status || '').toUpperCase();
-        const ok = typeof check?.ok === 'boolean' ? check.ok : status === 'OK';
-        const icon = ok ? '✅' : (status === 'WARN' ? '⚠️' : '❌');
-        const name = check?.title || check?.name || 'Перевірка';
-        const details = check?.details || check?.message || '';
-        const recommendation = check?.howTo || check?.recommendation || '';
+  function showSendPanel() {
+    const data = Array.isArray(STATE.currentPanelData) ? STATE.currentPanelData : [];
 
-        text += `${icon} [${status || '?'}] ${name}\n`;
-        if (details) text += `   Деталі: ${details}\n`;
-        if (!ok && recommendation) text += `   Як виправити: ${String(recommendation).replace(/\n/g, ' ')}\n`;
-        text += `\n`;
-      });
+    showStandardResult('Панель відправки');
+    stopSending();
+    hideProgressBar();
+    updateSendUnsentButtonState();
 
-      return text;
+    const readyItems = getReadyPanelItems(data);
+    const pendingItems = data.filter(item => item && item.status === PANEL_PENDING_STATUS && item.sent !== true);
+    const errorItems = getPanelErrorItems(data);
+    const sentItems = data.filter(item => item?.sent === true || item?.status === PANEL_SENT_STATUS);
+
+    let html = `
+      <div class="result-item">
+        <div class="result-label">📋 Статистика</div>
+        <div class="result-value">
+          <p>Всього записів: <b>${data.length}</b></p>
+          <p>✅ Готово до відкриття: <b>${readyItems.length}</b></p>
+          <p>🟡 Очікує підтвердження: <b>${pendingItems.length}</b></p>
+          <p>📤 Відправлено: <b>${sentItems.length}</b></p>
+          <p>❌ З помилками: <b>${errorItems.length}</b></p>
+        </div>
+      </div>
+    `;
+
+    if (readyItems.length > 0) {
+      html += `
+        <div class="result-item">
+          <div class="result-label">🚀 Відкриття чатів</div>
+          <div class="result-value">
+            <button class="result-link" onclick="SidebarApp.startSendingUnsent()" style="width:100%; margin-bottom:8px;">
+              📱 ВІДКРИТИ ВСІ (${readyItems.length})
+            </button>
+            <p style="font-size:0.8rem; color:var(--text-secondary);">
+              Відкриття не дорівнює відправці. Після фактичної відправки підтвердь рядок вручну.
+            </p>
+          </div>
+        </div>
+      `;
     }
 
-    let text = 'HEALTH CHECK ЗВІТ\n==================\n';
-    text += `Час: ${report.ts ? new Date(report.ts).toLocaleString('uk-UA') : new Date().toLocaleString('uk-UA')}\n`;
-    text += `Режим: ${getHealthCheckModeLabel_()}\n`;
-    text += `Статус: ${overallOk ? '✅ ОК' : '⚠️ Є ПРОБЛЕМИ'}\n`;
-    text += `OK: ${groups.ok.length} | Критичні: ${groups.critical.length} | Попередження: ${groups.warnings.length} | Compatibility: ${groups.compatibility.length}\n\n`;
+    html += `<div class="result-item"><div class="result-label">📋 Список повідомлень</div></div>`;
 
-    text = appendGroup(text, 'КРИТИЧНІ ПРОБЛЕМИ', groups.critical);
-    text = appendGroup(text, 'ПОПЕРЕДЖЕННЯ', groups.warnings);
-    text = appendGroup(text, 'ВІДОМИЙ COMPATIBILITY LAYER', groups.compatibility);
-    text = appendGroup(text, 'УСПІШНІ ПЕРЕВІРКИ', groups.ok);
+    data.forEach((rawItem, index) => {
+      const item = rawItem || {};
+      const status = String(item.status || '');
+      const isPending = status === PANEL_PENDING_STATUS && item.sent !== true;
+      const isReady = (status === PANEL_READY_STATUS || status === PANEL_UNSENT_STATUS) && item.sent !== true;
+      const isSent = item.sent === true || status === PANEL_SENT_STATUS;
+      const isError = status.startsWith(PANEL_ERROR_PREFIX);
 
-    copyResultText(text);
+      const statusColor = isSent
+        ? '#9C27B0'
+        : isPending
+          ? '#b8860b'
+          : isReady
+            ? 'var(--success-color)'
+            : isError
+              ? 'var(--error-color)'
+              : 'var(--warning-color)';
+
+      html += `
+        <div class="result-item" style="border-left:3px solid ${statusColor}; padding-left:8px; margin-bottom:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <div>
+              <div>
+                <b>${escapeHtml(item.fio || '')}</b>
+                (${escapeHtml(formatPhone(item.phone || ''))})
+              </div>
+              <div style="font-size:0.75rem; color:var(--text-secondary);">
+                ${escapeHtml(item.code || '')} | ${escapeHtml(item.date || '')}
+              </div>
+            </div>
+            <div>
+              <span style="font-size:0.7rem; padding:2px 6px; background:${statusColor}20; border-radius:4px;">
+                ${escapeHtml(status || '—')}
+              </span>
+            </div>
+          </div>
+
+          <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:4px;">
+            ${escapeHtml(item.tasks || '')}
+          </div>
+
+          ${item.link ? `
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
+              ${isReady ? `<button class="result-link" onclick="SidebarApp.sendOneFromPanel(${index})" style="font-size:0.7rem; padding:4px 8px; border:none;">📱 Відкрити чат</button>` : ''}
+              ${isPending ? `<button class="result-link" onclick="SidebarApp.confirmSendFromPanel(${index})" style="font-size:0.7rem; padding:4px 8px; border:none;">✅ Підтвердити</button>` : ''}
+              ${(isPending || isSent) ? `<button class="result-link" onclick="SidebarApp.rejectSendFromPanel(${index})" style="font-size:0.7rem; padding:4px 8px; border:none;">↩️ Не відправлено</button>` : ''}
+              <a href="${escapeAttr(item.link)}" target="${escapeAttr(WA_SENDER_TARGET)}" rel="noopener noreferrer" style="font-size:0.7rem; color:#888; text-decoration:underline;">(відкрити)</a>
+            </div>` : ''}
+        </div>
+      `;
+    });
+
+    setHtml('resultContent', html);
   }
+
+  async function sendOneFromPanel(index) {
+    try {
+      const item = Array.isArray(STATE.currentPanelData) ? STATE.currentPanelData[index] : null;
+      if (!item?.link) return;
+      if (item.sent === true || item.status === PANEL_SENT_STATUS) {
+        logToConsole('ℹ️ Уже підтверджено як відправлене', 'info');
+        return;
+      }
+
+      if (!STATE.DIAG_TEST_MODE) openLinkSafe(item.link);
+
+      const rowNum = Number(item.row);
+      if (!rowNum) {
+        showSendPanel();
+        return;
+      }
+
+      const result = await ActionDispatcher.run('markPanelRowsAsPending', () => Stage4Api.markAsPending([rowNum]), { showLoader: false });
+      if (!result?.success) throw new Error(result?.error || 'Не вдалося перевести рядок у стан очікування підтвердження');
+
+      if (Array.isArray(result.data)) {
+        setCurrentPanelData(result.data);
+      } else {
+        await refreshSendPanelDataFromServer({ silent: true });
+      }
+
+      logToConsole('🟡 Чат відкрито. Підтвердь відправку після фактичного надсилання.', 'warning');
+      showSendPanel();
+    } catch (error) {
+      logToConsole(`❌ Помилка відкриття чату: ${normalizeError(error)}`, 'error');
+      try { await refreshSendPanelDataFromServer({ silent: true }); } catch (_) {}
+      showSendPanel();
+    }
+  }
+
+  async function confirmSendFromPanel(index) {
+    try {
+      const item = Array.isArray(STATE.currentPanelData) ? STATE.currentPanelData[index] : null;
+      const rowNum = Number(item?.row);
+      if (!rowNum) return;
+
+      const result = await ActionDispatcher.run('markPanelRowsAsSent', () => Stage4Api.markAsSent([rowNum]), { showLoader: false });
+      if (!result?.success) throw new Error(result?.error || 'Не вдалося підтвердити відправку');
+
+      if (Array.isArray(result.data)) {
+        setCurrentPanelData(result.data);
+      } else {
+        await refreshSendPanelDataFromServer({ silent: true });
+      }
+
+      logToConsole('✅ Відправку підтверджено вручну', 'success');
+      showSendPanel();
+    } catch (error) {
+      logToConsole(`❌ Помилка підтвердження: ${normalizeError(error)}`, 'error');
+    }
+  }
+
+  async function rejectSendFromPanel(index) {
+    try {
+      const item = Array.isArray(STATE.currentPanelData) ? STATE.currentPanelData[index] : null;
+      const rowNum = Number(item?.row);
+      if (!rowNum) return;
+
+      const result = await ActionDispatcher.run('markPanelRowsAsUnsent', () => Stage4Api.markAsUnsent([rowNum]), { showLoader: false });
+      if (!result?.success) throw new Error(result?.error || 'Не вдалося позначити як не відправлено');
+
+      if (Array.isArray(result.data)) {
+        setCurrentPanelData(result.data);
+      } else {
+        await refreshSendPanelDataFromServer({ silent: true });
+      }
+
+      logToConsole('↩️ Рядок повернуто у стан "не відправлено"', 'warning');
+      showSendPanel();
+    } catch (error) {
+      logToConsole(`❌ Помилка повернення: ${normalizeError(error)}`, 'error');
+    }
+  }
+
+  function startSendingUnsent() {
+    try {
+      const data = Array.isArray(STATE.currentPanelData) ? STATE.currentPanelData : [];
+      const queue = getReadyPanelItems(data);
+
+      if (!queue.length) {
+        logToConsole('✅ Немає рядків для відкриття', 'success');
+        return;
+      }
+
+      const openedRows = [];
+      const openedRowSet = new Set();
+      let idx = 0;
+
+      stopSending();
+      hideProgressBar();
+      showProgressBar(queue.length, 0);
+      if (!STATE.DIAG_TEST_MODE) primeWhatsAppSenderTab();
+
+      STATE.sendingInterval = setInterval(async () => {
+        try {
+          if (idx >= queue.length) {
+            stopSending();
+
+            if (!openedRows.length) {
+              showSendPanel();
+              return;
+            }
+
+            try {
+              const result = await ActionDispatcher.run('markPanelRowsAsPendingBatch', () => Stage4Api.markAsPending(openedRows), { showLoader: false });
+              if (!result?.success) throw new Error(result?.error || 'Не вдалося оновити SEND_PANEL');
+              if (Array.isArray(result.data)) {
+                setCurrentPanelData(result.data);
+              } else {
+                await refreshSendPanelDataFromServer({ silent: true });
+              }
+              logToConsole(`🟡 Відкрито ${openedRows.length} чатів. Підтвердь фактичні відправки вручну.`, 'warning');
+            } catch (error) {
+              logToConsole(`❌ Помилка фіксації стану очікування: ${normalizeError(error)}`, 'error');
+            }
+
+            showSendPanel();
+            return;
+          }
+
+          const item = queue[idx];
+          if (!STATE.DIAG_TEST_MODE) openLinkSafe(item.link);
+
+          const rowNum = Number(item.row);
+          if (rowNum && !openedRowSet.has(rowNum)) {
+            openedRowSet.add(rowNum);
+            openedRows.push(rowNum);
+          }
+
+          showProgressBar(queue.length, idx + 1);
+          idx++;
+        } catch (error) {
+          logToConsole(`❌ Помилка під час серії: ${normalizeError(error)}`, 'error');
+          idx++;
+        }
+      }, SEND_INTERVAL_MS);
+    } catch (error) {
+      logToConsole(`❌ startSendingUnsent: ${normalizeError(error)}`, 'error');
+    }
+  }
+
+  // =========================
+  // SUPPLEMENTARY BLOCKS
+  // =========================
+  function hasVacationBlocks(vacData) {
+    return !!(
+      vacData &&
+      (
+        (Array.isArray(vacData.commanderMessages) && vacData.commanderMessages.length > 0) ||
+        (Array.isArray(vacData.soldierMessages) && vacData.soldierMessages.length > 0)
+      )
+    );
+  }
+
+  function normalizeBirthdayData(raw) {
+    const data = raw || {};
+
+    const isNewShape =
+      Array.isArray(data.commanderMessages) ||
+      Array.isArray(data.birthdayMessages);
+
+    if (isNewShape) {
+      return {
+        mode: 'new',
+        commanderMessages: Array.isArray(data.commanderMessages) ? data.commanderMessages : [],
+        birthdayMessages: Array.isArray(data.birthdayMessages) ? data.birthdayMessages : []
+      };
+    }
+
+    return {
+      mode: 'legacy',
+      today: Array.isArray(data.today) ? data.today : [],
+      tomorrow: Array.isArray(data.tomorrow) ? data.tomorrow : []
+    };
+  }
+
+  function hasBirthdayBlocks(birthData) {
+    const data = normalizeBirthdayData(birthData);
+
+    return !!(
+      (data.mode === 'new' && (
+        (Array.isArray(data.commanderMessages) && data.commanderMessages.length > 0) ||
+        (Array.isArray(data.birthdayMessages) && data.birthdayMessages.length > 0)
+      )) ||
+      (data.mode === 'legacy' && (
+        (Array.isArray(data.today) && data.today.length > 0) ||
+        (Array.isArray(data.tomorrow) && data.tomorrow.length > 0)
+      ))
+    );
+  }
+
+  function renderSupplementaryBlocks(data) {
+    let html = '';
+
+    if (hasVacationBlocks(data?.vacations)) {
+      html += renderVacationAlerts(data.vacations);
+    }
+
+    if (hasBirthdayBlocks(data?.birthdays)) {
+      html += renderBirthdayResult(data.birthdays);
+    }
+
+    return html;
+  }
+
+  // =========================
+  // RESULT RENDERING
+  // =========================
+  function displayInResult(type, data = {}) {
+    showStandardResult('Результат');
+
+    const contentEl = $id('resultContent');
+    if (!contentEl) return;
+
+    let html = '';
+
+    switch (type) {
+      case 'summary':
+        setText('resultTitle', 'Зведення дня');
+        html = `
+          <div class="result-item">
+            <div class="result-label">📊 Зведення дня</div>
+
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 12px 0;">
+              <button class="btn btn-primary" onclick="SidebarApp.sendDaySummaryToCommander()">📲 Командиру</button>
+              <button class="btn" onclick="SidebarApp.copyResultText(SidebarApp.STATE.lastSummaryText)">📋 Копіювати</button>
+            </div>
+
+            <div class="result-message" style="white-space: pre-wrap;">
+              ${escapeHtml(data.summary || '').split('\n').join('<br>')}
+            </div>
+          </div>
+        `;
+        html += renderSupplementaryBlocks(data);
+        break;
+
+      case 'detailedActionable':
+        setText('resultTitle', 'Детальне зведення');
+        html = `
+          <div class="result-item">
+            <div class="result-label">📊 Детальне зведення за ${escapeHtml(data.date || '')}</div>
+
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 12px 0;">
+              <button class="btn btn-primary" onclick="SidebarApp.sendDetailedToCommander()">📲 Командиру</button>
+              <button class="btn" onclick="SidebarApp.copyResultText(SidebarApp.STATE.lastDetailedText)">📋 Копіювати</button>
+            </div>
+
+            <div class="result-value">Осіб: <b>${data.peopleCount || 0}</b></div>
+
+            <div class="result-message" style="white-space: pre-wrap; margin-top:12px;">
+              ${escapeHtml(data.summary || '').split('\n').join('<br>')}
+            </div>
+          </div>
+        `;
+        html += renderSupplementaryBlocks(data);
+        break;
+
+      case 'vacationResult':
+        setText('resultTitle', 'Нагадування про відпустки');
+        html = `
+          <div class="result-item">
+            <div class="result-label" style="color: var(--success-color);">🏖️ Результат перевірки</div>
+            <div class="result-value">${escapeHtml(data.message || '')}</div>
+          </div>
+        `;
+        if (hasVacationBlocks(data)) html += renderVacationAlerts(data);
+        break;
+
+      case 'success':
+        html = `
+          <div class="result-item">
+            <div class="result-label" style="color: var(--success-color);">✅ Успішно</div>
+            <div class="result-value">${escapeHtml(data.message || '')}</div>
+          </div>
+        `;
+        break;
+
+      case 'error':
+        setText('resultTitle', 'Помилка');
+        html = `
+          <div class="result-item">
+            <div class="result-label" style="color: var(--error-color);">❌ Помилка</div>
+            <div class="result-value">${escapeHtml(data.error || 'Невідома помилка')}</div>
+          </div>
+        `;
+        break;
+
+      case 'createMonth':
+        setText('resultTitle', 'Створення місяця');
+        html = `
+          <div class="result-item">
+            <div class="result-label" style="color: var(--success-color);">✅ Місяць створено</div>
+            <div class="result-value">${escapeHtml(data.message || '')}</div>
+          </div>
+        `;
+        break;
+
+      default:
+        html = `
+          <div class="result-item">
+            <div class="result-value">${escapeHtml(JSON.stringify(data, null, 2))}</div>
+          </div>
+        `;
+    }
+
+    contentEl.innerHTML = html;
+  }
+
+  function renderVacationAlerts(vacData) {
+    if (!vacData) return '';
+
+    const esc = value => escapeHtml(String(value ?? ''));
+    const escJs = value => String(value ?? '')
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'")
+      .replace(/\r/g, '')
+      .replace(/\n/g, '\\n');
+
+    let html = `<div class="vacation-alerts">`;
+
+    if (Array.isArray(vacData.commanderMessages) && vacData.commanderMessages.length > 0) {
+      html += `
+        <div class="result-item">
+          <div class="result-label">👨‍✈️ Командиру</div>
+          <div class="vacation-alerts__list">
+      `;
+
+      vacData.commanderMessages.forEach(row => {
+        html += `
+          <div class="vacation-card vacation-card--commander">
+            <div class="vacation-card__name">${esc(row.fio)}</div>
+            <div class="vacation-card__text">${esc(row.message)}</div>
+            ${
+              row.link
+                ? `<button class="result-link vacation-card__btn" onclick="SidebarApp.sendVacationMessage('${escJs(row.link)}')">📱 Відправити</button>`
+                : `<div class="vacation-card__empty">⚠️ Немає посилання</div>`
+            }
+          </div>
+        `;
+      });
+
+      html += `
+          </div>
+        </div>
+      `;
+    }
+
+    if (Array.isArray(vacData.soldierMessages) && vacData.soldierMessages.length > 0) {
+      html += `
+        <div class="result-item">
+          <div class="result-label">🪖 Бійцям</div>
+          <div class="vacation-alerts__list">
+      `;
+
+      vacData.soldierMessages.forEach(row => {
+        html += `
+          <div class="vacation-card vacation-card--soldier">
+            <div class="vacation-card__name">${esc(row.fio)}</div>
+            <div class="vacation-card__meta">
+              ${esc(row.startDate)} — ${esc(row.endDate)} | ${esc(row.vacationWord)}
+            </div>
+            <div class="vacation-card__text">${esc(row.message || '')}</div>
+            ${
+              row.link
+                ? `<button class="result-link vacation-card__btn" onclick="SidebarApp.sendVacationMessage('${escJs(row.link)}')">📱 Відправити</button>`
+                : `<div class="vacation-card__empty">⚠️ Немає телефону</div>`
+            }
+          </div>
+        `;
+      });
+
+      html += `
+          </div>
+        </div>
+      `;
+    }
+
+    html += `</div>`;
+    return html;
+  }
+
+  function sendVacationMessage(link) {
+    if (!link) {
+      logToConsole('❌ Немає посилання для відправки', 'error');
+      return;
+    }
+
+    if (!STATE.DIAG_TEST_MODE) openLinkSafe(link);
+    logToConsole('📱 WhatsApp відкрито', 'success');
+  }
+
+  // =========================
+  // CALENDAR
+  // =========================
+  function showCalendar(action) {
+    showStandardResult(action === 'daySummary' ? 'Зведення дня' : 'Детальне зведення');
+    renderCalendar(action);
+    hideLoading();
+  }
+
+  function renderCalendar(action) {
+    const year = STATE.currentCalendarDate.getFullYear();
+    const month = STATE.currentCalendarDate.getMonth();
+    const today = new Date();
+
+    const monthNames = [
+      'Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень',
+      'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'
+    ];
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+
+    let html = `
+      <div class="calendar-container">
+        <div class="calendar-header">
+          <div class="calendar-month-year">${monthNames[month]} ${year}</div>
+          <div class="calendar-nav">
+            <button class="calendar-nav-btn" onclick="SidebarApp.changeMonth(-1, '${action}')">←</button>
+            <button class="calendar-nav-btn" onclick="SidebarApp.changeMonth(1, '${action}')">→</button>
+          </div>
+        </div>
+
+        <div class="calendar-weekdays">
+          <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Нд</div>
+        </div>
+
+        <div class="calendar-days">
+    `;
+
+    for (let i = 0; i < startOffset; i++) {
+      html += '<div class="calendar-day empty"></div>';
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${String(day).padStart(2, '0')}.${String(month + 1).padStart(2, '0')}.${year}`;
+      const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+      const isSelected = STATE.selectedDate === dateStr;
+
+      html += `
+        <div class="calendar-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" onclick="SidebarApp.selectDate('${dateStr}', '${action}')">
+          ${day}
+        </div>
+      `;
+    }
+
+    const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+
+    for (let i = startOffset + daysInMonth; i < totalCells; i++) {
+      html += '<div class="calendar-day empty"></div>';
+    }
+
+    html += `
+        </div>
+
+        <div class="calendar-actions">
+          <button class="result-link" onclick="SidebarApp.processSelectedDate('${action}')" ${!STATE.selectedDate ? 'disabled' : ''}>
+            ${action === 'daySummary' ? '📊 Отримати зведення' : '📊 Детальне зведення'}
+          </button>
+        </div>
+      </div>
+    `;
+
+    setHtml('resultContent', html);
+  }
+
+  function changeMonth(delta, action) {
+    STATE.currentCalendarDate.setMonth(STATE.currentCalendarDate.getMonth() + delta);
+    renderCalendar(action);
+  }
+
+  function selectDate(dateStr, action) {
+    STATE.selectedDate = dateStr;
+    renderCalendar(action);
+    logToConsole(`📅 Обрано дату: ${formatDateForDisplay(dateStr)}`, 'info');
+  }
+
+  async function processSelectedDate(action) {
+    if (!STATE.selectedDate) {
+      logToConsole('⚠️ Оберіть дату в календарі', 'warning');
+      return;
+    }
+
+    try {
+      if (action === 'daySummary') {
+        const result = await ActionDispatcher.run('buildDaySummary', () => Stage4Api.buildDaySummary(STATE.selectedDate));
+        if (result?.success) {
+          STATE.lastSummaryText = result.summary || '';
+          STATE.lastSummaryDate = STATE.selectedDate;
+          displayInResult('summary', result);
+        } else {
+          displayInResult('error', { error: result?.error || 'Невідома помилка' });
+        }
+      } else {
+        const result = await ActionDispatcher.run('buildDetailedSummary', () => Stage4Api.buildDetailedSummary(STATE.selectedDate));
+        if (result?.success) {
+          STATE.lastDetailedText = result.summary || '';
+          STATE.lastDetailedDate = STATE.selectedDate;
+          displayInResult('detailedActionable', result);
+        } else {
+          displayInResult('error', { error: result?.error || 'Невідома помилка' });
+        }
+      }
+    } catch (error) {
+      handleError(error);
+    }
+  }
+
+  // =========================
+  // MONTH SWITCHER
+  // =========================
+  async function showMonthSwitcher() {
+    if (!STATE.monthsList.length) {
+      try {
+        const data = await Stage4Api.getMonths();
+
+        if (data?.months) {
+          STATE.monthsList = data.months;
+          renderMonthSwitcher();
+        } else {
+          showMenu();
+        }
+      } catch (error) {
+        logToConsole(`❌ ${normalizeError(error)}`, 'error');
+        showMenu();
+      }
+
+      hideLoading();
+      return;
+    }
+
+    renderMonthSwitcher();
+    hideLoading();
+  }
+
+  function renderMonthSwitcher() {
+    showStandardResult('Перемикання місяця');
+
+    const options = STATE.monthsList
+      .map(month => `
+        <option value="${escapeHtml(month)}" ${month === STATE.currentMonth ? 'selected' : ''}>
+          ${escapeHtml(month)}
+        </option>
+      `)
+      .join('');
+
+    setHtml('resultContent', `
+      <div class="result-item month-switcher-card">
+        <div class="month-switcher-hint">Виберіть місяць, на який потрібно перемкнути активний бот.</div>
+        <div class="month-switcher-badge">📅 Активний місяць: ${escapeHtml(STATE.currentMonth || '—')}</div>
+
+        <label class="month-switcher-field" for="monthSelect">
+          <span class="month-switcher-field__label">🗂️ Виберіть місяць</span>
+          <span class="month-switcher-select-wrap">
+            <select id="monthSelect" class="month-switcher-select">${options}</select>
+          </span>
+        </label>
+
+        <div class="month-switcher-actions">
+          <button type="button" class="result-link" onclick="SidebarApp.switchToSelectedMonth()">✅ Перемкнути</button>
+          <button type="button" class="result-link result-link--secondary" onclick="SidebarApp.showMenu()">Скасувати</button>
+        </div>
+      </div>
+    `);
+  }
+
+  async function switchToSelectedMonth() {
+    const select = $id('monthSelect');
+    if (!select) return;
+
+    try {
+      const result = await ActionDispatcher.run('switchBotToMonth', () => Stage4Api.switchMonth(select.value));
+      if (result?.success) {
+        STATE.currentMonth = result.month;
+        updateMonthBadge(STATE.currentMonth);
+        logToConsole(`✅ Перемкнено на ${STATE.currentMonth}`, 'success');
+        showMenu();
+      } else {
+        displayInResult('error', { error: result?.error || 'Невідома помилка' });
+      }
+    } catch (error) {
+      handleError(error);
+    }
+  }
+
+  async function clearPhoneCache() {
+    if (!confirm('🧹 Очистити кеш телефонів?')) return;
+
+    logToConsole('🧹 Очищення кешу телефонів...', 'info');
+
+    try {
+      const result = await ActionDispatcher.run('clearPhoneCache', () => MaintenanceApi.clearPhoneCache());
+      if (!result?.success) {
+        showToast('❌ ' + (result?.error || 'Помилка'));
+        return;
+      }
+
+      showToast('✅ Кеш очищено');
+      showStandardResult('🧹 Очищення кешу');
+
+      setHtml('resultContent', `
+        <div class="result-item">
+          <div class="result-label" style="color: var(--success-color);">✅ Успішно</div>
+          <div class="result-value">${escapeHtml(result.message || 'Кеш телефонів очищено')}</div>
+        </div>
+      `);
+    } catch (error) {
+      showToast('❌ ' + normalizeError(error));
+    }
+  }
+
+  async function setupTrigger() {
+    if (!confirm('Створити щоденні тригери для відпусток і ДН?')) return;
+
+    logToConsole('⏰ Створення тригера...', 'info');
+
+    try {
+      const result = await ActionDispatcher.run('setupVacationTriggers', () => MaintenanceApi.setupVacationTriggers());
+
+      if (result?.success) {
+        showToast('✅ Тригер створено');
+        showStandardResult('⏰ Щоденні тригери');
+
+        setHtml('resultContent', `
+          <div class="result-item">
+            <div class="result-label" style="color: var(--success-color);">✅ Успішно</div>
+            <div class="result-value">
+              <p>${escapeHtml(result.message || '').split('\n').join('<br>')}</p>
+              <p style="font-size:0.8rem; color:var(--text-secondary); margin-top:8px;">
+                Видалено старих тригерів: ${result.removed || 0}
+              </p>
+            </div>
+          </div>
+        `);
+      } else {
+        showToast('❌ ' + (result?.error || 'Помилка'));
+      }
+    } catch (error) {
+      showToast('❌ ' + normalizeError(error));
+    }
+  }
+
+  async function cleanupTriggers() {
+    if (!confirm('Очистити дублікати тригерів?')) return;
+
+    logToConsole('🧹 Очищення дублів тригерів...', 'info');
+
+    try {
+      const result = await ActionDispatcher.run('cleanupDuplicateTriggers', () => MaintenanceApi.cleanupDuplicateTriggers());
+
+      if (result?.ok) {
+        const statusMessage =
+          result.removed === 0
+            ? '✅ Дублів не знайдено. Все добре!'
+            : `✅ Видалено дублів: ${result.removed} (було: ${result.found})`;
+
+        showToast(statusMessage);
+        showStandardResult('🧹 Очищення дублів тригерів');
+
+        setHtml('resultContent', `
+          <div class="result-item">
+            <div class="result-label" style="color: var(--success-color);">✅ Результат</div>
+            <div class="result-value">${escapeHtml(statusMessage)}</div>
+          </div>
+        `);
+      } else {
+        showToast('❌ ' + (result?.error || 'Помилка'));
+      }
+    } catch (error) {
+      showToast('❌ ' + normalizeError(error));
+    }
+  }
+
+
+  async function debugPhones() {
+    logToConsole('📞 Діагностика PHONES...', 'info');
+    showStandardResult('📞 Діагностика PHONES');
+
+    setHtml('resultContent', `
+      <div class="result-item">
+        <div class="result-label">📞 Діагностика PHONES</div>
+        <div class="result-value">⏳ Аналізую аркуш PHONES...</div>
+      </div>
+    `);
+
+    try {
+      const result = await ActionDispatcher.run('debugPhones', () => MaintenanceApi.debugPhones(), { successMessage: '' });
+      if (!result?.success) {
+        throw new Error(result?.error || 'Не вдалося виконати діагностику PHONES');
+      }
+
+      const stats = result.stats || {};
+      const contacts = Array.isArray(result.contacts) ? result.contacts : [];
+      const preview = contacts.slice(0, 20);
+      const rowsHtml = preview.length
+        ? `
+          <div class="result-item">
+            <div class="result-label">Перші записи</div>
+            <div class="result-value">
+              <div style="display:grid; gap:8px;">
+                ${preview.map(item => `
+                  <div style="padding:8px; border:1px solid var(--border-color); border-radius:10px; background:var(--bg-glass);">
+                    <div><strong>#${Number(item.row || 0)}</strong> ${escapeHtml(item.fio || '—')}</div>
+                    <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:4px;">
+                      📱 ${escapeHtml(formatPhone(item.phone || '—'))}
+                      ${item.role ? `<br>🏷 ${escapeHtml(item.role)}` : ''}
+                      ${item.birthday ? `<br>🎂 ${escapeHtml(item.birthday)}` : ''}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        `
+        : `
+          <div class="result-item">
+            <div class="result-label">Записи</div>
+            <div class="result-value">Аркуш порожній або не містить контактів.</div>
+          </div>
+        `;
+
+      setHtml('resultContent', `
+        <div class="result-item">
+          <div class="result-label" style="color: var(--success-color);">✅ Результат</div>
+          <div class="result-value">${escapeHtml(result.message || 'Діагностику PHONES виконано')}</div>
+        </div>
+
+        <div class="result-item">
+          <div class="result-label">Аркуш</div>
+          <div class="result-value">${escapeHtml(result.sheetName || 'PHONES')}</div>
+        </div>
+
+        <div class="result-item">
+          <div class="result-label">Статистика</div>
+          <div class="result-value">
+            Усього контактів: <strong>${Number(stats.total || contacts.length || 0)}</strong><br>
+            З телефонами: <strong>${Number(stats.withPhone || 0)}</strong><br>
+            Без телефонів: <strong>${Number(stats.withoutPhone || 0)}</strong><br>
+            З роллю/позивним: <strong>${Number(stats.withRole || 0)}</strong><br>
+            З днем народження: <strong>${Number(stats.withBirthday || 0)}</strong>
+          </div>
+        </div>
+
+        ${rowsHtml}
+      `);
+
+      showToast('✅ Діагностику PHONES завершено');
+      logToConsole(`📞 Діагностика PHONES завершена: ${Number(stats.total || contacts.length || 0)} записів`, 'success');
+    } catch (error) {
+      const message = normalizeError(error);
+      setHtml('resultContent', `
+        <div class="result-item">
+          <div class="result-label" style="color: var(--danger-color);">❌ Помилка</div>
+          <div class="result-value">${escapeHtml(message)}</div>
+        </div>
+      `);
+      showToast('❌ ' + message);
+      logToConsole('❌ Діагностика PHONES: ' + message, 'error');
+    }
+  }
+
+
+async function restartBot() {
+  if (!confirm('Повністю перезапустити бота?\n\nБудуть очищені активні runtime-маркери та lifecycle active operations.')) return;
+  logToConsole('♻️ Перезапуск бота...', 'info');
+  try {
+    const result = await ActionDispatcher.run('restartBot', () => MaintenanceApi.restartBot(), { successMessage: '' });
+    if (!result?.success) {
+      showToast('❌ ' + (result?.error || 'Помилка'));
+      return;
+    }
+    showToast('✅ ' + (result.message || 'Бота перезапущено'));
+    showStandardResult('♻️ Перезапуск бота');
+    setHtml('resultContent', `
+      <div class="result-item">
+        <div class="result-label" style="color: var(--success-color);">✅ Успішно</div>
+        <div class="result-value">${escapeHtml(result.message || 'Бота перезапущено')}</div>
+      </div>
+    `);
+    setTimeout(() => { window.location.reload(); }, 300);
+  } catch (error) {
+    showToast('❌ ' + normalizeError(error));
+  }
+}
+
+function renderPendingRepairsTable_(items) {
+  if (!Array.isArray(items) || !items.length) {
+    return `
+      <div class="result-item">
+        <div class="result-label">✅ Операції, що потребують виправлення</div>
+        <div class="result-value">Немає операцій, що потребують виправлення.</div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="result-item">
+      <div class="result-label">🛠 - ${items.length}</div>
+      <div class="result-value" style="display:grid; gap:10px;">
+        ${items.map(item => `
+          <div style="padding:10px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-glass);">
+            <div style="font-weight:700; font-size:12px;">${escapeHtml(item.operationId || '')}</div>
+            <div style="font-size:11px; color:var(--text-secondary); margin-top:4px;">${escapeHtml(translateLifecycleScenario(item.scenario || ''))} • ${escapeHtml(translateLifecycleStatus(item.status || ''))}</div>
+            <div style="font-size:11px; color:var(--text-secondary); margin-top:4px;">${escapeHtml(formatOperationDate(item.startedAt || ''))}</div>
+            ${item.errorMessage ? `<div style="margin-top:6px; color:var(--error-color); font-size:11px;">${escapeHtml(translateLifecycleText(item.errorMessage))}</div>` : ''}
+            <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+              <button class="btn btn-secondary" onclick="SidebarApp.showOperationDetails('${escapeJsString(item.operationId || '')}')">🔎 Деталі</button>
+              <button class="btn btn-primary" onclick="SidebarApp.runRepair('${escapeJsString(item.operationId || '')}')">🛠 Виправити</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+async function showPendingRepairs() {
+  logToConsole('🛠 Завантаження операцій, що потребують виправлення...', 'info');
+  showStandardResult('🛠 Операції, що потребують виправлення');
+  setHtml('resultContent', '<div class="result-item"><div class="result-value">⏳ Завантаження...</div></div>');
+  try {
+    const result = await ActionDispatcher.run('listPendingRepairs', () => MaintenanceApi.listPendingRepairs(), { successMessage: '' });
+    const items = result?.operations || result?.data?.operations || [];
+    setHtml('resultContent', renderPendingRepairsTable_(items));
+    showToast(items.length ? `⚠️ Потребують виправлення: ${items.length}` : '✅ Операцій для виправлення немає');
+  } catch (error) {
+    setHtml('resultContent', `<div class="result-item"><div class="result-value">❌ ${escapeHtml(normalizeError(error))}</div></div>`);
+    showToast('❌ Не вдалося завантажити список операцій для виправлення');
+  }
+}
+
+async function showOperationDetails(operationId) {
+  showStandardResult('🔎 Деталі операції');
+  setHtml('resultContent', '<div class="result-item"><div class="result-value">⏳ Завантаження деталей...</div></div>');
+  try {
+    const result = await ActionDispatcher.run('getOperationDetails', () => MaintenanceApi.getOperationDetails(operationId), { successMessage: '' });
+    const details = result?.operation ? result : (result?.data || {});
+    const operation = details.operation || {};
+    const checkpoints = Array.isArray(details.checkpoints) ? details.checkpoints : [];
+    setHtml('resultContent', `
+      <div class="result-item">
+        <div class="result-label">Ідентифікатор операції</div>
+        <div class="result-value">${escapeHtml(operation.OperationId || operationId || '')}</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Сценарій / Статус</div>
+        <div class="result-value">${escapeHtml(translateLifecycleScenario(operation.Scenario || ''))} • ${escapeHtml(translateLifecycleStatus(operation.Status || ''))}</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Відбиток операції</div>
+        <div class="result-value">${escapeHtml(operation.Fingerprint || '')}</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Затронуті сутності</div>
+        <div class="result-value">${escapeHtml(operation.AffectedEntities || '') || '—'}</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Перевірка / Результат виправлення</div>
+        <div class="result-value">${escapeHtml(translateLifecycleText(operation.VerificationResult || '')) || '—'} / ${escapeHtml(translateLifecycleText(operation.ResolutionStatus || '')) || '—'}</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Примітки</div>
+        <div class="result-value" style="white-space:pre-wrap;">${escapeHtml(translateLifecycleText(operation.Notes || '')) || '—'}</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Контекст контрольних точок</div>
+        <div class="result-value">${checkpoints.length ? checkpoints.map(cp => `${escapeHtml(String(cp.CheckpointIndex || ''))}: ${escapeHtml(String(cp.ProcessedUpTo || ''))}`).join('<br>') : '—'}</div>
+      </div>
+    `);
+  } catch (error) {
+    setHtml('resultContent', `<div class="result-item"><div class="result-value">❌ ${escapeHtml(normalizeError(error))}</div></div>`);
+  }
+}
+
+async function runRepair(operationId) {
+  if (!confirm('Запустити виправлення для цієї операції?')) return;
+  showStandardResult('🛠 Запуск виправлення');
+  setHtml('resultContent', '<div class="result-item"><div class="result-value">⏳ Запускаю виправлення...</div></div>');
+  try {
+    const result = await ActionDispatcher.run('runRepair', () => MaintenanceApi.runRepair(operationId), { successMessage: '' });
+    if (result?.success) {
+      showToast('✅ Виправлення виконано');
+      await showOperationDetails(result.operationId || operationId);
+    } else {
+      setHtml('resultContent', `<div class="result-item"><div class="result-value">❌ ${escapeHtml(translateLifecycleText(result?.error || result?.message || 'Repair failed'))}</div></div>`);
+      showToast('❌ Виправлення завершилося з помилкою');
+    }
+  } catch (error) {
+    setHtml('resultContent', `<div class="result-item"><div class="result-value">❌ ${escapeHtml(normalizeError(error))}</div></div>`);
+  }
+}
 </script>
