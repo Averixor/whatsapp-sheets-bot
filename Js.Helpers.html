@@ -256,9 +256,24 @@
         }
 
         case 'sendUnsent': {
-          if (!Array.isArray(STATE.currentPanelData) || STATE.currentPanelData.length === 0) {
-            logToConsole('⚠️ Спочатку створіть панель', 'warning');
-            return;
+          let panelRows = Array.isArray(STATE.currentPanelData) ? STATE.currentPanelData : [];
+          if (!panelRows.length) {
+            try {
+              panelRows = await ensurePanelDataLoadedFromServer({
+                silent: false,
+                preserveNonEmpty: false,
+                retries: 2,
+                retryDelayMs: 450,
+                reason: 'sendUnsent.open'
+              });
+            } catch (error) {
+              logToConsole(`❌ Не вдалося перечитати SEND_PANEL: ${normalizeError(error)}`, 'error');
+              showSendPanel();
+              return;
+            }
+          }
+          if (!Array.isArray(panelRows) || panelRows.length === 0) {
+            logToConsole('⚠️ SEND_PANEL порожній навіть після перечитування', 'warning');
           }
           showSendPanel();
           break;

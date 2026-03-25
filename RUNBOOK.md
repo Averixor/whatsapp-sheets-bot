@@ -22,3 +22,13 @@ This runbook describes the practical operating rules for the active Stage 7.1 ba
 - Active release: `Stage 7.1 — Reliability Hardened Baseline`
 - Active release report: `STAGE7_REPORT.md`
 - Canonical runtime: `JavaScript.html` via `Sidebar.html -> includeTemplate('JavaScript')`
+
+
+## Local shell / sync
+- Use `dev-shell.ps1` as the canonical PowerShell entrypoint.
+- Portable Node under `Documents\node-v20.20.1-win-x64\node.exe` is supported without admin rights.
+- Use `repair-deps -Full` when `clasp` or transitive packages are damaged.
+
+
+## Packaging note
+This repack is intended for direct use through the Google Apps Script web editor. See `GAS_WEB_EDITOR_IMPORT_GUIDE.md`.

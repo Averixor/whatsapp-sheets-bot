@@ -167,8 +167,8 @@
 
     const panelData = Array.isArray(STATE.currentPanelData) ? STATE.currentPanelData : [];
     if (!panelData.length) {
-      sendBtn.disabled = true;
-      sendBtn.title = 'Спочатку створіть панель';
+      sendBtn.disabled = false;
+      sendBtn.title = 'Перечитати SEND_PANEL або створити панель';
       return;
     }
 
@@ -287,17 +287,21 @@
       const existing = primeWhatsAppSenderTab();
       if (existing && !existing.closed) {
         try {
-          existing.location.href = link;
+          existing.location.replace(link);
           STATE.waSenderWindow = existing;
           return existing;
         } catch (_) {}
       }
 
-      const win = window.open(link, WA_SENDER_TARGET, 'noopener,noreferrer');
-      if (win) {
-        STATE.waSenderWindow = win;
-      }
-      return win;
+      const anchor = document.createElement('a');
+      anchor.href = link;
+      anchor.target = WA_SENDER_TARGET;
+      anchor.rel = 'noopener noreferrer';
+      anchor.style.display = 'none';
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      return null;
     } catch (error) {
       console.error('openLinkSafe error:', error);
       try {

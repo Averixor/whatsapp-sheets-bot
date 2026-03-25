@@ -1,5 +1,10 @@
 # whatsapp-sheets-bot — Stage 7.1 Reliability Hardened Baseline
 
+> This repack is prepared for **Google Apps Script Web Editor use without VS Code**.
+> Local PowerShell / Node helper scripts were intentionally removed from this archive.
+> See `GAS_WEB_EDITOR_IMPORT_GUIDE.md` for the step-by-step import flow.
+
+
 This archive is the **Stage 7.1 Reliability Hardened Baseline** with the preserved SEND_PANEL stabilization and lifecycle hardening layers.
 
 ## What was fixed in this build
@@ -22,12 +27,13 @@ This archive is the **Stage 7.1 Reliability Hardened Baseline** with the preserv
 ## What this archive deliberately does not claim
 
 - It does not claim that nonexistent docs or root files are present.
-- It does not ship `.git`, `node_modules`, or a real `.clasp.json`.
+- It does not ship `.git` or `node_modules`.
+- This repair archive includes a ready `.clasp.json` for the provided GAS scriptId; keep it ignored in Git.
 
 ## Repository hygiene
 
 Keep only `.clasp.json.example` in version control.
-Keep the real `.clasp.json` local and ignored.
+Keep `.clasp.json` ignored in Git even though this repair archive includes a ready local copy for immediate use.
 
 ## Main files to review first
 
@@ -40,6 +46,9 @@ Keep the real `.clasp.json` local and ignored.
 - `Js.State.html`
 - `Js.Render.html`
 - `dev-shell.ps1`
+- `gas-push.ps1`
+- `gas-status.ps1`
+- `repair-deps.ps1`
 - `watch-sync-simple.ps1`
 - `ProjectMetadata.gs`
 
@@ -54,3 +63,10 @@ This release contains only the files physically present in the archive root. See
 - `ARCHITECTURE.md`
 - `RUNBOOK.md`
 - `STAGE7_REPORT.md`
+
+
+## Local shell reliability
+
+- `dev-shell.ps1` auto-detects portable Node in common locations, including `Documents\node-v20.20.1-win-x64\node.exe`.
+- `claspx` is now a real helper function inside `dev-shell.ps1`.
+- `repair-deps` can rebuild broken `node_modules` without administrator rights.

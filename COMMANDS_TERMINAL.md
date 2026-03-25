@@ -1,13 +1,14 @@
 # COMMANDS_TERMINAL
 
-## Canonical local workflow
-- `npm install`
-- `npx clasp status`
-- `npx clasp push`
-- `npx clasp pull`
+This package is intended to work **without VS Code** and without a required local terminal workflow.
 
-## PowerShell helpers
-Use `dev-shell.ps1` for the normalized local helper commands and aliases.
+## Main workflow
+- Open the Google Spreadsheet
+- Open **Extensions → Apps Script**
+- Create the files listed in `FILES_TO_CREATE_IN_GAS_WEB_EDITOR.txt`
+- Paste the matching source code from this archive
+- Save and reload the spreadsheet
 
-## Important note
-This file exists to keep root documentation truthful and to avoid metadata pointing at a ghost file.
+## Optional note
+`.clasp.json.example` remains in the archive only as an optional future example for local sync.
+It is **not required** for the web editor workflow.
