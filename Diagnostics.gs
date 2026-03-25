@@ -1479,13 +1479,18 @@ function runStage4HealthCheck_(options) {
         date: _todayStr_()
       });
 
+      const reconciliationIssues = Number(reconciliation && reconciliation.summary && reconciliation.summary.issues || 0);
+      const reconciliationCritical = Number(reconciliation && reconciliation.criticalCount || 0);
+      const reconciliationMessage = reconciliation.message
+        || ('Reconciliation preview: проблем ' + reconciliationIssues + ', critical ' + reconciliationCritical);
+
       _stage3PushCheck_(
         checks,
         'Reconciliation preview',
-        reconciliation.criticalCount > 0 ? 'WARN' : 'OK',
-        reconciliation.message || 'Reconciliation preview виконано',
-        reconciliation.criticalCount > 0
-          ? 'Перевірте report та за потреби виконайте safe repair'
+        reconciliationCritical > 0 ? 'WARN' : 'OK',
+        reconciliationMessage,
+        reconciliationCritical > 0
+          ? 'Це warning по поточних даних таблиці, а не по архіву коду. Перевірте report та за потреби виконайте safe repair'
           : ''
       );
 

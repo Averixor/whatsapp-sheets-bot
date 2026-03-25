@@ -69,19 +69,7 @@ function _legacySummaryResponseFromStage4_(response, detailed) {
 
 function apiGetMonthsList() {
   return apiExecute_('apiGetMonthsList', {}, function() {
-    const ss = SpreadsheetApp.getActive();
-    const months = ss.getSheets()
-      .map(function(s) { return s.getName(); })
-      .filter(function(name) { return /^\d{2}$/.test(name); })
-      .sort();
-
-    const current = getBotMonthSheetName_();
-    return okResponse_({
-      months: months,
-      current: current
-    }, 'Місяці завантажено', {
-      currentMonth: current
-    });
+    return apiStage4GetMonthsList();
   });
 }
 
