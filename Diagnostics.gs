@@ -85,19 +85,21 @@ function _ensureSendPanelTechnicalSheet_() {
 }
 function _addHealthCheck_(report, item) {
   const status = String(item.status || 'OK').toUpperCase();
-  const severity = String(item.severity || (status === 'FAIL' ? 'CRITICAL' : 'INFO')).toUpperCase();
+  const severity = String(item.severity || (status === 'FAIL' ? 'CRITICAL' : (status === 'WARN' ? 'WARN' : 'INFO'))).toUpperCase();
   const ok = status === 'OK';
+  const pseudo = status === 'PSEUDO';
 
   report.checks.push({
     title: String(item.title || ''),
     ok: ok,
+    pseudo: pseudo,
     status: status,
     severity: severity,
     details: String(item.details || ''),
     howTo: String(item.howTo || '')
   });
 
-  if (!ok && status === 'FAIL') {
+  if (status === 'FAIL') {
     report.ok = false;
   }
 }
@@ -405,10 +407,12 @@ function healthCheck() {
     const hasEscapeAlias = _fnExists_('escapeHtml_');
 
     return {
-      status: hasParseAlias && hasEscapeAlias ? 'OK' : 'WARN',
-      severity: 'WARN',
-      details: `parseAlias=${hasParseAlias ? '✅' : '❌'}, escapeAlias=${hasEscapeAlias ? '✅' : '❌'}`,
-      howTo: hasParseAlias && hasEscapeAlias ? '' : 'Поверніть thin-wrapper сумісності для старих викликів'
+      status: hasParseAlias && hasEscapeAlias ? 'PSEUDO' : 'WARN',
+      severity: hasParseAlias && hasEscapeAlias ? 'INFO' : 'WARN',
+      details: hasParseAlias && hasEscapeAlias
+        ? `Compatibility-only alias layer retained intentionally: parseAlias=✅, escapeAlias=✅`
+        : `parseAlias=${hasParseAlias ? '✅' : '❌'}, escapeAlias=${hasEscapeAlias ? '✅' : '❌'}`,
+      howTo: hasParseAlias && hasEscapeAlias ? 'Нейтральний сумісний шар; не є canonical-path' : 'Поверніть thin-wrapper сумісності для старих викликів'
     };
   });
 
@@ -837,14 +841,28 @@ function runFullDiagnostics() {
  * Stage 3 diagnostics — перевірка схем, repository і data-contract.
  */
 function _stage3PushCheck_(checks, name, status, details, recommendation) {
-  const normalizedStatus = String(status || 'OK').toUpperCase();
+  let normalizedStatus = _diagNormalizeStatus_(status || 'OK');
+
+  const lowerName = String(name || '').toLowerCase();
+  const lowerDetails = String(details || '').toLowerCase();
+
+  const pseudoLike =
+    normalizedStatus === 'PSEUDO' ||
+    lowerName.indexOf('deprecated ') === 0 ||
+    lowerName.indexOf('compatibility ') === 0 ||
+    lowerName.indexOf('wrapper source ') === 0 ||
+    lowerName.indexOf('ui-ban marker ') === 0 ||
+    lowerDetails.indexOf('compatibility-only') !== -1 ||
+    lowerDetails.indexOf('замінити на ') !== -1 ||
+    lowerDetails.indexOf('compatibility wrappers intentionally remain') !== -1;
+
+  if (pseudoLike && normalizedStatus === 'OK') {
+    normalizedStatus = 'PSEUDO';
+  }
 
   let severity = 'INFO';
   if (normalizedStatus === 'FAIL') severity = 'CRITICAL';
   else if (normalizedStatus === 'WARN') severity = 'WARN';
-
-  const lowerName = String(name || '').toLowerCase();
-  const lowerDetails = String(details || '').toLowerCase();
 
   let uiGroup = 'ok';
 
@@ -852,18 +870,8 @@ function _stage3PushCheck_(checks, name, status, details, recommendation) {
     uiGroup = 'critical';
   } else if (normalizedStatus === 'WARN') {
     uiGroup = 'warnings';
-  }
-
-  // Compatibility / deprecated layer
-  if (
-    lowerName.indexOf('deprecated ') === 0 ||
-    lowerName.indexOf('compatibility ') === 0 ||
-    lowerName.indexOf('wrapper source ') === 0 ||
-    lowerName.indexOf('ui-ban marker ') === 0 ||
-    lowerDetails.indexOf('compatibility-only') !== -1 ||
-    lowerDetails.indexOf('замінити на ') !== -1
-  ) {
-    uiGroup = 'compatibility';
+  } else if (normalizedStatus === 'PSEUDO') {
+    uiGroup = 'pseudo';
   }
 
   checks.push({
@@ -871,6 +879,7 @@ function _stage3PushCheck_(checks, name, status, details, recommendation) {
     title: name,
     status: normalizedStatus,
     ok: normalizedStatus === 'OK',
+    pseudo: normalizedStatus === 'PSEUDO',
     severity: severity,
     uiGroup: uiGroup,
     details: details || '',
@@ -1022,8 +1031,8 @@ function runStage3HealthCheck_(options) {
     _stage3PushCheck_(
       checks,
       `Deprecated ${item.name}`,
-      'OK',
-      `Compatibility-only alias; canonical: ${item.replacement}`,
+      'PSEUDO',
+      `Compatibility-only alias retained intentionally; canonical: ${item.replacement}`,
       item.reason || ''
     );
   });
@@ -1275,7 +1284,7 @@ function runHistoricalCompatibilityDiagnosticsInternal_(options) {
   _stage3PushCheck_(
     checks,
     'Compatibility registry',
-    registry.length ? 'OK' : 'FAIL',
+    registry.length ? 'PSEUDO' : 'FAIL',
     registry.length ? `entries=${registry.length}` : 'Реєстр порожній',
     'Оновіть DeprecatedRegistry.gs'
   );
@@ -1285,9 +1294,9 @@ function runHistoricalCompatibilityDiagnosticsInternal_(options) {
     _stage3PushCheck_(
       checks,
       `Compatibility function ${item.name}`,
-      exists ? 'OK' : 'FAIL',
+      exists ? 'PSEUDO' : 'FAIL',
       exists ? `${item.scope || 'unknown scope'} -> ${item.replacement || ''}` : 'Функцію не знайдено',
-      exists ? '' : 'Перевірте DeprecatedRegistry.gs / відповідний файл'
+      exists ? 'Нейтральний compatibility-only alias; не canonical-path' : 'Перевірте DeprecatedRegistry.gs / відповідний файл'
     );
 
     if (!exists || !item.verifySourceToken) return;
@@ -1298,7 +1307,7 @@ function runHistoricalCompatibilityDiagnosticsInternal_(options) {
       _stage3PushCheck_(
         checks,
         `Wrapper source ${item.name}`,
-        sourceOk ? 'OK' : 'WARN',
+        sourceOk ? 'PSEUDO' : 'WARN',
         sourceOk ? `source -> ${item.verifySourceToken}` : 'Wrapper source не вказує на canonical replacement',
         'Перевірте, що wrapper лишається thin alias без нової бізнес-логіки'
       );
@@ -1310,7 +1319,7 @@ function runHistoricalCompatibilityDiagnosticsInternal_(options) {
       _stage3PushCheck_(
         checks,
         `UI-ban marker ${item.name}`,
-        item.status === 'compatibility-only' ? 'OK' : 'WARN',
+        item.status === 'compatibility-only' ? 'PSEUDO' : 'WARN',
         `uiAllowed=${item.uiAllowed}, status=${item.status}`,
         'Compatibility wrapper не повинен повертатися як canonical UI route'
       );
@@ -1803,9 +1812,9 @@ function runStage5SunsetDiagnostics_(options) {
   const docs = typeof getProjectDocumentationMap_ === 'function' ? getProjectDocumentationMap_() : {};
   const checks = [];
 
-  _stage3PushCheck_(checks, 'Compatibility registry size', report.total > 0 ? 'OK' : 'FAIL', `records=${report.total}`, report.total > 0 ? '' : 'Перевірте DeprecatedRegistry.gs');
+  _stage3PushCheck_(checks, 'Compatibility registry size', report.total > 0 ? 'PSEUDO' : 'FAIL', `records=${report.total}`, report.total > 0 ? 'Нейтральний compatibility registry; не canonical-path' : 'Перевірте DeprecatedRegistry.gs');
   _stage3PushCheck_(checks, 'Sunset markers completeness', report.missingSunsetMarkers === 0 ? 'OK' : 'WARN', `missing=${report.missingSunsetMarkers}`, report.missingSunsetMarkers === 0 ? '' : 'Проставте sunset markers');
-  _stage3PushCheck_(checks, 'Compatibility split report (informational)', 'OK', `canonical=${report.counts.canonical || 0}, compatibility=${report.counts['compatibility-only'] || 0}, historical=${report.counts.historical || 0}, deprecated=${report.counts.deprecated || 0}, planned=${report.counts['sunset planned'] || 0}`, '');
+  _stage3PushCheck_(checks, 'Compatibility split report (informational)', 'PSEUDO', `canonical=${report.counts.canonical || 0}, compatibility=${report.counts['compatibility-only'] || 0}, historical=${report.counts.historical || 0}, deprecated=${report.counts.deprecated || 0}, planned=${report.counts['sunset planned'] || 0}`, 'Нейтральна інформаційна метрика; не оцінка canonical-path');
   _stage3PushCheck_(checks, 'Historical docs explicitly separated', Array.isArray(docs.historical) && docs.historical.length >= 3 ? 'OK' : 'WARN', Array.isArray(docs.historical) ? `historicalDocs=${docs.historical.length}` : 'historical docs map відсутній', 'Явно позначте Stage 4.x docs як historical/reference');
 
   return {
@@ -2131,6 +2140,9 @@ function _diagNormalizeStatus_(status) {
   if (normalized === 'ERROR') return 'FAIL';
   if (normalized === 'CRITICAL') return 'FAIL';
   if (normalized === 'SUCCESS') return 'OK';
+  if (normalized === 'COMPAT') return 'PSEUDO';
+  if (normalized === 'LEGACY-COMPAT') return 'PSEUDO';
+  if (normalized === 'PSEUDO-COMPAT') return 'PSEUDO';
   return normalized;
 }
 
@@ -2143,28 +2155,36 @@ function _diagResolveSeverity_(status, rawSeverity) {
   return 'INFO';
 }
 
-function _diagResolveUiGroup_(check) {
-  var explicit = String(check && check.uiGroup || '').toLowerCase();
-  if (explicit === 'critical' || explicit === 'warnings' || explicit === 'compatibility' || explicit === 'ok') {
-    return explicit;
+function _diagIsPseudoLikeCheck_(check) {
+  var explicitStatus = String(check && check.status || '').toUpperCase();
+  if (explicitStatus === 'PSEUDO' || explicitStatus === 'COMPAT' || explicitStatus === 'LEGACY-COMPAT' || explicitStatus === 'PSEUDO-COMPAT') {
+    return true;
   }
 
   var title = String((check && (check.title || check.name)) || '').toLowerCase();
   var details = String((check && (check.details || check.message)) || '').toLowerCase();
-  var status = _diagNormalizeStatus_(check && check.status);
 
-  var looksCompatibility =
-    title.indexOf('deprecated ') === 0 ||
+  return title.indexOf('deprecated ') === 0 ||
     title.indexOf('compatibility ') === 0 ||
     title.indexOf('wrapper source ') === 0 ||
     title.indexOf('ui-ban marker ') === 0 ||
     details.indexOf('compatibility-only') !== -1 ||
     details.indexOf('замінити на ') !== -1 ||
     details.indexOf('compatibility wrappers intentionally remain') !== -1;
+}
 
-  if (looksCompatibility) return 'compatibility';
+function _diagResolveUiGroup_(check) {
+  var explicit = String(check && check.uiGroup || '').toLowerCase();
+  if (explicit === 'critical' || explicit === 'warnings' || explicit === 'pseudo' || explicit === 'compatibility' || explicit === 'ok') {
+    return explicit === 'compatibility' ? 'pseudo' : explicit;
+  }
+
+  var status = _diagNormalizeStatus_(check && check.status);
+  var looksPseudo = _diagIsPseudoLikeCheck_(check);
+
   if (status === 'FAIL') return 'critical';
   if (status === 'WARN') return 'warnings';
+  if (status === 'PSEUDO' || (looksPseudo && status === 'OK')) return 'pseudo';
   return 'ok';
 }
 
@@ -2176,8 +2196,13 @@ function _diagNormalizeCheck_(check, titlePrefix) {
     if (pref && title.indexOf(pref + ' / ') !== 0) title = pref + ' / ' + title;
   }
 
-  var status = _diagNormalizeStatus_(check && check.status);
   var details = String((check && (check.details || check.message)) || '').trim();
+  var rawCheck = Object.assign({}, check || {}, { title: title, name: title, details: details, message: details });
+  var status = _diagNormalizeStatus_(rawCheck.status);
+  if (_diagIsPseudoLikeCheck_(rawCheck) && status === 'OK') {
+    status = 'PSEUDO';
+  }
+
   var howTo = String((check && (check.howTo || check.recommendation)) || '').trim();
   var severity = _diagResolveSeverity_(status, check && check.severity);
 
@@ -2186,8 +2211,9 @@ function _diagNormalizeCheck_(check, titlePrefix) {
     title: title,
     status: status,
     ok: status === 'OK',
+    pseudo: status === 'PSEUDO',
     severity: severity,
-    uiGroup: _diagResolveUiGroup_(Object.assign({}, check || {}, { status: status, title: title, details: details })),
+    uiGroup: _diagResolveUiGroup_(Object.assign({}, rawCheck, { status: status })),
     details: details,
     message: details,
     howTo: howTo,
@@ -2225,19 +2251,61 @@ function _diagBuildWarningsFromChecks_(checks) {
     .map(function(item) { return item.title; });
 }
 
+function _diagBuildCounts_(checks) {
+  var list = Array.isArray(checks) ? checks : [];
+  var counts = {
+    total: list.length,
+    ok: 0,
+    pseudo: 0,
+    warnings: 0,
+    failures: 0,
+    byStatus: {
+      OK: 0,
+      PSEUDO: 0,
+      WARN: 0,
+      FAIL: 0
+    },
+    byUiGroup: {
+      ok: 0,
+      pseudo: 0,
+      warnings: 0,
+      critical: 0
+    }
+  };
+
+  list.forEach(function(item) {
+    var normalized = _diagNormalizeCheck_(item);
+    var status = normalized.status;
+    var uiGroup = normalized.uiGroup || 'ok';
+
+    if (status === 'OK') counts.ok += 1;
+    else if (status === 'PSEUDO') counts.pseudo += 1;
+    else if (status === 'WARN') counts.warnings += 1;
+    else if (status === 'FAIL') counts.failures += 1;
+
+    if (counts.byStatus[status] === undefined) counts.byStatus[status] = 0;
+    counts.byStatus[status] += 1;
+
+    if (counts.byUiGroup[uiGroup] === undefined) counts.byUiGroup[uiGroup] = 0;
+    counts.byUiGroup[uiGroup] += 1;
+  });
+
+  return counts;
+}
+
 function _diagBuildReport_(checks, mode, summaryPrefix) {
   var list = Array.isArray(checks) ? checks : [];
-  var fails = list.filter(function(item) { return item.status === 'FAIL'; }).length;
-  var warns = list.filter(function(item) { return item.status === 'WARN'; }).length;
+  var counts = _diagBuildCounts_(list);
   return {
-    ok: fails === 0,
+    ok: counts.failures === 0,
     stage: '7.1',
     mode: mode || 'full',
     checks: list,
     warnings: _diagBuildWarningsFromChecks_(list),
-    summary: fails === 0
-      ? ((summaryPrefix || _releaseStageLabel_()) + '. Warnings: ' + warns)
-      : ((summaryPrefix || _releaseStageLabel_()) + '. Failures: ' + fails + ', warnings: ' + warns),
+    counts: counts,
+    summary: counts.failures === 0
+      ? ((summaryPrefix || _releaseStageLabel_()) + '. Warnings: ' + counts.warnings + ', pseudo: ' + counts.pseudo)
+      : ((summaryPrefix || _releaseStageLabel_()) + '. Failures: ' + counts.failures + ', warnings: ' + counts.warnings + ', pseudo: ' + counts.pseudo),
     ts: new Date().toISOString()
   };
 }
@@ -2324,7 +2392,7 @@ function _diagAppendPendingRepairsCheck_(checks) {
 function _diagAppendCompatibilitySplitCheck_(checks) {
   try {
     var sunset = typeof getCompatibilitySunsetReport_ === 'function' ? getCompatibilitySunsetReport_() : { total: 0, counts: {} };
-    _stage3PushCheck_(checks, 'Compatibility split report (informational)', 'OK', 'retained=' + (sunset.total || 0), 'Compatibility wrappers intentionally remain until explicit sunset plan');
+    _stage3PushCheck_(checks, 'Compatibility split report (informational)', 'PSEUDO', 'retained=' + (sunset.total || 0), 'Compatibility wrappers intentionally remain until explicit sunset plan');
   } catch (e) {
     _stage3PushCheck_(checks, 'Compatibility split report (informational)', 'WARN', e && e.message ? e.message : String(e), 'Перевірте DeprecatedRegistry.gs');
   }
