@@ -1022,11 +1022,10 @@ function runStage3HealthCheck_(options) {
     _stage3PushCheck_(
       checks,
       `Deprecated ${item.name}`,
-      'WARN',
-      `Замінити на ${item.replacement}`,
+      'OK',
+      `Compatibility-only alias; canonical: ${item.replacement}`,
       item.reason || ''
     );
-    warnings.push(`${item.name} → ${item.replacement}`);
   });
 
   const failures = checks.filter(function(item) { return item.status === 'FAIL'; }).length;

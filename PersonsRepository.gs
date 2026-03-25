@@ -10,7 +10,7 @@ var PersonsRepository_ = PersonsRepository_ || (function() {
 
   function getSheetByDate(dateStr) {
     const safeDate = normalizeDateStr(dateStr);
-    const d = _parseUaDate_(safeDate);
+    const d = DateUtils_.parseUaDate(safeDate);
     const ss = SpreadsheetApp.getActive();
     if (d) {
       const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -22,7 +22,7 @@ var PersonsRepository_ = PersonsRepository_ || (function() {
 
   function getPrevMonthSheetByDate(dateStr) {
     const safeDate = normalizeDateStr(dateStr);
-    const d = _parseUaDate_(safeDate);
+    const d = DateUtils_.parseUaDate(safeDate);
     if (!d) return null;
     const ss = SpreadsheetApp.getActive();
     const prev = new Date(d);
@@ -211,7 +211,7 @@ var PersonsRepository_ = PersonsRepository_ || (function() {
     const width = matrix.endCol - matrix.startCol + 1;
     const values = sh.getRange(Number(CONFIG.DATE_ROW) || 1, matrix.startCol, 1, width).getDisplayValues()[0];
     return values.map(function(value) {
-      return normalizeDate_(value, value);
+      return DateUtils_.normalizeDate(value, value);
     }).filter(function(value) {
       return /^\d{2}\.\d{2}\.\d{4}$/.test(String(value || '').trim());
     });

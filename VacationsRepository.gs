@@ -17,8 +17,8 @@ const VacationsRepository_ = (function() {
         vacationNo: String(item.vacationNo || '').trim(),
         active: item.active === true || String(item.active || '').toUpperCase() === 'TRUE',
         notify: item.notify === true || String(item.notify || '').toUpperCase() === 'TRUE',
-        startDate: _parseDate_(item.startDate),
-        endDate: _parseDate_(item.endDate),
+        startDate: DateUtils_.parseDateAny(item.startDate),
+        endDate: DateUtils_.parseDateAny(item.endDate),
         _meta: item._meta
       };
     });
@@ -32,7 +32,7 @@ const VacationsRepository_ = (function() {
   }
 
   function getCurrentForFio(fio, dateStr) {
-    const target = _parseUaDate_(dateStr) || new Date();
+    const target = DateUtils_.parseUaDate(dateStr) || new Date();
     target.setHours(12, 0, 0, 0);
 
     const matches = findByFio(fio).filter(function(item) {
@@ -53,7 +53,7 @@ const VacationsRepository_ = (function() {
   }
 
   function getNextForFio(fio, dateStr) {
-    const target = _parseUaDate_(dateStr) || new Date();
+    const target = DateUtils_.parseUaDate(dateStr) || new Date();
     target.setHours(0, 0, 0, 0);
 
     const future = findByFio(fio).filter(function(item) {

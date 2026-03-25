@@ -172,7 +172,7 @@ function _veParseDate_(value) {
 
   try {
     if (typeof _parseUaDate_ === 'function') {
-      const d = _parseUaDate_(s);
+      const d = DateUtils_.parseUaDate(s);
       if (d instanceof Date
         && !isNaN(d.getTime())) {
         d.setHours(12, 0, 0, 0);

@@ -9,7 +9,7 @@ function _inferMonthYearFromSheet_(sheet) {
 
   for (let i = 0; i < vals.length; i++) {
     try {
-      const ddmmyyyy = normalizeDate_(vals[i], disp[i]);
+      const ddmmyyyy = DateUtils_.normalizeDate(vals[i], disp[i]);
       const m = ddmmyyyy.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
       if (m) {
         const mm = parseInt(m[2], 10);
@@ -94,7 +94,7 @@ function switchBotToSheet() {
     <div style="font-family:Arial;padding:16px">
       <h3 style="margin:0 0 12px;color:#075e54">🔁 Перемкнути бота на місяць</h3>
       <div style="margin:10px 0">
-        <div style="font-size:12px;color:#666;margin-bottom:6px">Поточний: <b>${escapeHtml_(current)}</b></div>
+        <div style="font-size:12px;color:#666;margin-bottom:6px">Поточний: <b>${HtmlUtils_.escapeHtml(current)}</b></div>
         <select id="m" style="padding:10px;width:100%;border:1px solid #ddd;border-radius:10px;font-size:16px">
           ${options}
         </select>

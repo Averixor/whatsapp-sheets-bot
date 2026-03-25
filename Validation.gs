@@ -13,7 +13,7 @@ function parseFlexibleDateInput_(value) {
   if (!safe) return null;
 
   if (/^\d{2}\.\d{2}\.\d{4}$/.test(safe)) {
-    const parsedUa = _parseUaDate_(safe);
+    const parsedUa = DateUtils_.parseUaDate(safe);
     return parsedUa && !isNaN(parsedUa.getTime()) ? safe : null;
   }
 
@@ -29,7 +29,7 @@ function parseFlexibleDateInput_(value) {
 function assertUaDateString_(value) {
   const safe = String(value || '').trim();
   _stage4Assert_(/^\d{2}\.\d{2}\.\d{4}$/.test(safe), 'assertUaDateString_', { value: safe }, 'Очікувався формат dd.MM.yyyy');
-  const parsed = _parseUaDate_(safe);
+  const parsed = DateUtils_.parseUaDate(safe);
   _stage4Assert_(parsed instanceof Date && !isNaN(parsed.getTime()), 'assertUaDateString_', { value: safe }, 'Передано неіснуючу дату');
   return safe;
 }
@@ -45,7 +45,7 @@ function validateDatePayload_(payload, fieldName) {
   const source = (payload && typeof payload === 'object') ? payload : { date: payload };
   const raw = source[key] || source.dateStr || source.date;
   const dateStr = _stage4NormalizeDateValue_(raw);
-  const parsed = _parseUaDate_(dateStr);
+  const parsed = DateUtils_.parseUaDate(dateStr);
   _stage4Assert_(parsed instanceof Date && !isNaN(parsed.getTime()), 'validateDatePayload_', { field: key, value: raw }, `Не вдалося розпізнати дату "${raw}"`);
   return {
     dateStr: dateStr,

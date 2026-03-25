@@ -58,7 +58,7 @@ function findTodayColumn_(sheet, todayStr) {
     const idx = c - 1;
     try {
       if (idx < dateRowValues.length) {
-        const normalized = normalizeDate_(dateRowValues[idx], dateDisplayValues[idx]);
+        const normalized = DateUtils_.normalizeDate(dateRowValues[idx], dateDisplayValues[idx]);
         if (normalized === todayStr) return c;
       }
     } catch (e) { }

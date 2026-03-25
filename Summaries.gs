@@ -2,7 +2,7 @@
 function buildDaySummaryForColumn_(sheet, col) {
   const codeRef = sheet.getRange(CONFIG.CODE_RANGE_A1);
   const dateCell = sheet.getRange(Number(CONFIG.DATE_ROW) || 1, col);
-  const reportDate = normalizeDate_(dateCell.getValue(), dateCell.getDisplayValue());
+  const reportDate = DateUtils_.normalizeDate(dateCell.getValue(), dateCell.getDisplayValue());
   const shortDate = reportDate.slice(0, 5);
 
   const codes = sheet
@@ -187,7 +187,7 @@ function createDetailedDaySummary() {
     const ref = sheet.getRange(CONFIG.CODE_RANGE_A1);
     if (col < ref.getColumn() || col > ref.getLastColumn()) throw new Error(`Стовпець поза ${CONFIG.CODE_RANGE_A1}`);
     const dateCell = sheet.getRange(Number(CONFIG.DATE_ROW) || 1, col);
-    const date = normalizeDate_(dateCell.getValue(), dateCell.getDisplayValue());
+    const date = DateUtils_.normalizeDate(dateCell.getValue(), dateCell.getDisplayValue());
 
     const people = collectPeopleDetailed_(sheet, col);
     const text = formatDetailedSummary_(date, people);
@@ -207,7 +207,7 @@ function sendDetailedSummaryToCommander() {
     const ref = sheet.getRange(CONFIG.CODE_RANGE_A1);
     if (col < ref.getColumn() || col > ref.getLastColumn()) throw new Error(`Стовпець поза ${CONFIG.CODE_RANGE_A1}`);
     const dateCell = sheet.getRange(Number(CONFIG.DATE_ROW) || 1, col);
-    const date = normalizeDate_(dateCell.getValue(), dateCell.getDisplayValue());
+    const date = DateUtils_.normalizeDate(dateCell.getValue(), dateCell.getDisplayValue());
 
     const people = collectPeopleDetailed_(sheet, col);
     const text = formatDetailedSummary_(date, people);
@@ -303,10 +303,10 @@ function buildMessage_({ reportDate, service, place, tasks, brDays, minimal }) {
 }
 
 function showDetailedSummaryDialog_(date, text) {
-  const safe = escapeHtml_(text);
+  const safe = HtmlUtils_.escapeHtml(text);
   const html = HtmlService.createHtmlOutput(`
     <div style="font-family:Arial;padding:16px">
-      <h3 style="color:#075e54">📊 Детальне зведення за ${escapeHtml_(date)}</h3>
+      <h3 style="color:#075e54">📊 Детальне зведення за ${HtmlUtils_.escapeHtml(date)}</h3>
       <div style="margin-bottom:12px">
         <button onclick="copyText()" style="padding:8px 16px;background:#25D366;color:white;border:none;border-radius:6px;cursor:pointer">📋 Копіювати</button>
       </div>

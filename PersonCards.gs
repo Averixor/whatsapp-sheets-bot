@@ -7,7 +7,7 @@ const PERSON_BR_DAYS_COL = 6;
 const PERSON_FIO_COL = 7;
 
 function _getSheetByDateStr_(dateStr) {
-  const d = _parseUaDate_(dateStr);
+  const d = DateUtils_.parseUaDate(dateStr);
   const ss = SpreadsheetApp.getActive();
   if (d) {
     const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -18,7 +18,7 @@ function _getSheetByDateStr_(dateStr) {
 }
 
 function _getPrevMonthSheetByDateStr_(dateStr) {
-  const d = _parseUaDate_(dateStr);
+  const d = DateUtils_.parseUaDate(dateStr);
   if (!d) return null;
   const ss = SpreadsheetApp.getActive();
   const prev = new Date(d);
@@ -98,16 +98,16 @@ function openPersonCardByCallsignAndDate_(callsign, dateStr) {
   const currentVacHtml = data.vac && data.vac.inVacation && Array.isArray(data.vac.matches)
     ? `<div style="margin-top:14px;padding:12px;border-radius:12px;background:#fff3cd;border:1px solid #ffc107;">
         <b>Відпустка зараз</b><br>
-        ${data.vac.matches.map(v => `${escapeHtml_(v.no)}: ${escapeHtml_(v.start)} — ${escapeHtml_(v.end)}`).join('<br>')}
+        ${data.vac.matches.map(v => `${HtmlUtils_.escapeHtml(v.no)}: ${HtmlUtils_.escapeHtml(v.start)} — ${HtmlUtils_.escapeHtml(v.end)}`).join('<br>')}
       </div>`
     : '';
 
   const nextVacHtml = data.nextVacation
     ? `<div style="margin-top:14px;padding:12px;border-radius:12px;background:#e3f2fd;border:1px solid #2196F3;">
         <b>Найближча відпустка</b><br>
-        ${escapeHtml_(data.nextVacation.word || '—')}<br>
-        ${escapeHtml_(data.nextVacation.start || '—')} — ${escapeHtml_(data.nextVacation.end || '—')}<br>
-        Залишилось: ${escapeHtml_(String(data.nextVacation.daysUntil ?? '—'))} дн.
+        ${HtmlUtils_.escapeHtml(data.nextVacation.word || '—')}<br>
+        ${HtmlUtils_.escapeHtml(data.nextVacation.start || '—')} — ${HtmlUtils_.escapeHtml(data.nextVacation.end || '—')}<br>
+        Залишилось: ${HtmlUtils_.escapeHtml(String(data.nextVacation.daysUntil ?? '—'))} дн.
       </div>`
     : '';
 
@@ -184,36 +184,36 @@ function openPersonCardByCallsignAndDate_(callsign, dateStr) {
       </head>
       <body>
         <div class="card">
-          <div class="title">${escapeHtml_(data.callsign)}</div>
-          <div class="sub">${escapeHtml_(data.dateStr)}</div>
+          <div class="title">${HtmlUtils_.escapeHtml(data.callsign)}</div>
+          <div class="sub">${HtmlUtils_.escapeHtml(data.dateStr)}</div>
 
           <div class="grid">
             <div class="lbl">ПІБ</div>
-            <div class="val">${escapeHtml_(data.fio)}</div>
+            <div class="val">${HtmlUtils_.escapeHtml(data.fio)}</div>
 
             <div class="lbl">Звання</div>
-            <div class="val">${escapeHtml_(data.rank)}</div>
+            <div class="val">${HtmlUtils_.escapeHtml(data.rank)}</div>
 
             <div class="lbl">Посада</div>
-            <div class="val">${escapeHtml_(data.position)}</div>
+            <div class="val">${HtmlUtils_.escapeHtml(data.position)}</div>
 
             <div class="lbl">ОШС</div>
-            <div class="val">${escapeHtml_(data.oshs)}</div>
+            <div class="val">${HtmlUtils_.escapeHtml(data.oshs)}</div>
 
             <div class="lbl">Телефон</div>
-            <div class="val">${escapeHtml_(data.phoneDisplay)}</div>
+            <div class="val">${HtmlUtils_.escapeHtml(data.phoneDisplay)}</div>
 
             <div class="lbl">ДН</div>
-            <div class="val">${escapeHtml_(data.birthday)}</div>
+            <div class="val">${HtmlUtils_.escapeHtml(data.birthday)}</div>
 
             <div class="lbl">Група</div>
-            <div class="val">${escapeHtml_(data.todayGroup)}</div>
+            <div class="val">${HtmlUtils_.escapeHtml(data.todayGroup)}</div>
 
             <div class="lbl">БР цей місяць</div>
-            <div class="val">${escapeHtml_(data.brDaysThisMonth)}</div>
+            <div class="val">${HtmlUtils_.escapeHtml(data.brDaysThisMonth)}</div>
 
             <div class="lbl">БР минулий</div>
-            <div class="val">${escapeHtml_(data.brDaysPrevMonth)}</div>
+            <div class="val">${HtmlUtils_.escapeHtml(data.brDaysPrevMonth)}</div>
           </div>
 
           ${currentVacHtml}
@@ -226,7 +226,7 @@ function openPersonCardByCallsignAndDate_(callsign, dateStr) {
             <button class="btn" onclick="openMainSidebar()">В меню</button>
           </div>
 
-          <pre id="msg">${escapeHtml_(data.message || '')}</pre>
+          <pre id="msg">${HtmlUtils_.escapeHtml(data.message || '')}</pre>
         </div>
         <script>
           function normalizeError(error) {
@@ -253,7 +253,7 @@ function openPersonCardByCallsignAndDate_(callsign, dateStr) {
             });
           }
           function openCalendar() {
-            gsRun('openPersonCalendar', '${escapeHtml_(data.callsign)}')
+            gsRun('openPersonCalendar', '${HtmlUtils_.escapeHtml(data.callsign)}')
               .catch(err => alert('❌ ' + normalizeError(err)));
           }
           function openMainSidebar() {

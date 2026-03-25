@@ -22,7 +22,7 @@ const SelectionActionService_ = (function() {
 
   function _getDateForActiveColumn(sheet, col) {
     const dateCell = sheet.getRange(Number(CONFIG.DATE_ROW) || 1, col);
-    return normalizeDate_(dateCell.getValue(), dateCell.getDisplayValue());
+    return DateUtils_.normalizeDate(dateCell.getValue(), dateCell.getDisplayValue());
   }
 
   function prepareSingleSelection() {

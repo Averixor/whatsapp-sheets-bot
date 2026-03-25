@@ -353,7 +353,7 @@ function buildPayloadForCell_(sheet, row, col, phonesMap, dictMap) {
   const fioNorm = normalizeFIO_(fioRaw);
 
   const dateCell = sheet.getRange(Number(CONFIG.DATE_ROW) || 1, col);
-  const reportDate = normalizeDate_(dateCell.getValue(), dateCell.getDisplayValue());
+  const reportDate = DateUtils_.normalizeDate(dateCell.getValue(), dateCell.getDisplayValue());
 
   const brRaw = String(sheet.getRange(row, 6).getDisplayValue() || '').trim();
   const brDays = brRaw ? (Number(brRaw.replace(',', '.')) || 0) : 0;
