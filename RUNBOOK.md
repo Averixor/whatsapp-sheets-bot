@@ -1,4 +1,4 @@
-# RUNBOOK — Stage 7.1 Reliability Hardened Baseline
+# RUNBOOK — Stage 7.1.1 Final Stabilized Repair Baseline
 
 ## Purpose
 This runbook describes the practical operating rules for the active Stage 7.1 baseline.
@@ -19,7 +19,7 @@ This runbook describes the practical operating rules for the active Stage 7.1 ba
 - Keep `.clasp.json` local and out of version control.
 
 ## Release identity
-- Active release: `Stage 7.1 — Reliability Hardened Baseline`
+- Active release: `Stage 7.1.1 — Final Stabilized Repair Baseline`
 - Active release report: `STAGE7_REPORT.md`
 - Canonical runtime: `JavaScript.html` via `Sidebar.html -> includeTemplate('JavaScript')`
 

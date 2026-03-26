@@ -1556,9 +1556,9 @@ function runStage5MetadataConsistencyCheck_() {
   if (!meta) return checks;
 
   _stage3PushCheck_(checks, 'Release stage marker', String(meta.stage || '') === '7.1' ? 'OK' : 'FAIL', `stage=${meta.stage || 'n/a'}, stageVersion=${meta.stageVersion || 'n/a'}, label=${meta.stageLabel || 'n/a'}`, 'Оновіть ProjectMetadata.gs до Stage 7.1');
-  _stage3PushCheck_(checks, 'Active baseline marker', meta.activeBaseline === 'stage7-1-reliability-hardened-baseline' ? 'OK' : 'FAIL', `activeBaseline=${meta.activeBaseline || 'n/a'}`, 'Зафіксуйте Stage 7.1 як active baseline');
-  _stage3PushCheck_(checks, 'Release archive naming', release && release.archiveFileName === 'gas_wapb_stage7_1_reliability_hardened_baseline.zip' ? 'OK' : 'FAIL', release && release.archiveFileName ? release.archiveFileName : 'Не задано', 'Вирівняйте archive naming');
-  _stage3PushCheck_(checks, 'Release root folder naming', release && release.rootFolderName === 'gas_wapb_stage7_1_reliability_hardened_baseline' ? 'OK' : 'FAIL', release && release.rootFolderName ? release.rootFolderName : 'Не задано', 'Вирівняйте root folder naming');
+  _stage3PushCheck_(checks, 'Active baseline marker', meta.activeBaseline === 'stage7-1-1-final-stabilized-repair-baseline' ? 'OK' : 'FAIL', `activeBaseline=${meta.activeBaseline || 'n/a'}`, 'Зафіксуйте Stage 7.1 як active baseline');
+  _stage3PushCheck_(checks, 'Release archive naming', release && release.archiveFileName === 'gas_wapb_stage7_1_1_final_stabilized_repair.zip' ? 'OK' : 'FAIL', release && release.archiveFileName ? release.archiveFileName : 'Не задано', 'Вирівняйте archive naming');
+  _stage3PushCheck_(checks, 'Release root folder naming', release && release.rootFolderName === 'gas_wapb_stage7_1_1_final_stabilized_repair' ? 'OK' : 'FAIL', release && release.rootFolderName ? release.rootFolderName : 'Не задано', 'Вирівняйте root folder naming');
   _stage3PushCheck_(checks, 'Packaging policy marker', meta.packagingPolicy && meta.packagingPolicy.policy === 'root-manifest-web-editor-only' ? 'OK' : 'FAIL', meta.packagingPolicy && meta.packagingPolicy.policy ? meta.packagingPolicy.policy : 'Не задано', 'Зафіксуйте web-editor-only packaging policy');
   _stage3PushCheck_(checks, 'Root manifest declared', meta.manifestIncluded === true ? 'OK' : 'FAIL', `manifestIncluded=${meta.manifestIncluded}`, 'Вирівняйте metadata');
   _stage3PushCheck_(checks, 'Root manifest physical', _projectBundleHas_((meta.packagingPolicy && meta.packagingPolicy.manifestPath) || 'appsscript.json') ? 'OK' : 'FAIL', _projectBundleHas_((meta.packagingPolicy && meta.packagingPolicy.manifestPath) || 'appsscript.json') ? ((meta.packagingPolicy && meta.packagingPolicy.manifestPath) || 'appsscript.json') : 'manifest missing', 'Додайте appsscript.json у root');
@@ -1575,7 +1575,7 @@ function runStage5MetadataConsistencyCheck_() {
   _stage3PushCheck_(checks, 'Client runtime file', clientRuntimePolicy.runtimeFile === 'JavaScript.html' ? 'OK' : 'FAIL', clientRuntimePolicy.runtimeFile || 'Не задано', 'Зафіксуйте JavaScript.html як canonical runtime');
   _stage3PushCheck_(checks, 'Client bootstrap mode', clientRuntimePolicy.bootstrapMode === 'sidebar-includeTemplate' ? 'OK' : 'FAIL', clientRuntimePolicy.bootstrapMode || 'Не задано', 'Використовуйте Sidebar.html -> includeTemplate(\'JavaScript\')');
   _stage3PushCheck_(checks, 'Client modular status', clientRuntimePolicy.modularStatus === 'active-js-include-chain' ? 'OK' : 'WARN', clientRuntimePolicy.modularStatus || 'Не задано', 'Позначте Js.*.html як non-active experimental/reference artifacts');
-  _stage3PushCheck_(checks, 'Diagnostics wording policy', meta.diagnosticsPolicy && meta.diagnosticsPolicy.wording === 'stage7-1-reliability-hardened-baseline' ? 'OK' : 'WARN', meta.diagnosticsPolicy && meta.diagnosticsPolicy.wording ? meta.diagnosticsPolicy.wording : 'Не задано', 'Зафіксуйте Stage 7.1 diagnostics wording policy');
+  _stage3PushCheck_(checks, 'Diagnostics wording policy', meta.diagnosticsPolicy && meta.diagnosticsPolicy.wording === 'stage7-1-1-final-stabilized-repair-baseline' ? 'OK' : 'WARN', meta.diagnosticsPolicy && meta.diagnosticsPolicy.wording ? meta.diagnosticsPolicy.wording : 'Не задано', 'Зафіксуйте Stage 7.1 diagnostics wording policy');
 
   const requiredDocs = Array.isArray(meta.requiredDocs) ? meta.requiredDocs : [];
   requiredDocs.forEach(function(doc) {
@@ -1820,7 +1820,7 @@ function _stage3HasFn_(name) {
 
 function _releaseStageLabel_() {
   var meta = typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_() : null;
-  return meta && meta.stageLabel ? meta.stageLabel : 'Stage 7.1 — Reliability Hardened Baseline';
+  return meta && meta.stageLabel ? meta.stageLabel : 'Stage 7.1.1 — Final Stabilized Repair Baseline';
 }
 
 function _diagNormalizeStatus_(status) {
@@ -2024,8 +2024,8 @@ function _diagBuildStage7CoreChecks_(options) {
   var runtimeContract = typeof getClientRuntimeContract_ === 'function' ? getClientRuntimeContract_() : {};
 
   _stage3PushCheck_(checks, 'Release stage marker', String(meta && meta.stage || '') === '7.1' ? 'OK' : 'FAIL', 'stage=' + (meta && meta.stage || 'n/a') + ', label=' + (meta && meta.stageLabel || 'n/a'), 'Оновіть ProjectMetadata.gs під Stage 7.1');
-  _stage3PushCheck_(checks, 'Active baseline marker', meta && meta.activeBaseline === 'stage7-1-reliability-hardened-baseline' ? 'OK' : 'FAIL', 'activeBaseline=' + (meta && meta.activeBaseline || 'n/a'), 'Оновіть activeBaseline');
-  _stage3PushCheck_(checks, 'Release naming aligned', release && release.archiveBaseName === 'gas_wapb_stage7_1_reliability_hardened_baseline' && release.rootFolderName === 'gas_wapb_stage7_1_reliability_hardened_baseline' ? 'OK' : 'FAIL', (release && release.archiveBaseName || 'n/a') + ' / ' + (release && release.rootFolderName || 'n/a'), 'Вирівняйте archive/root naming');
+  _stage3PushCheck_(checks, 'Active baseline marker', meta && meta.activeBaseline === 'stage7-1-1-final-stabilized-repair-baseline' ? 'OK' : 'FAIL', 'activeBaseline=' + (meta && meta.activeBaseline || 'n/a'), 'Оновіть activeBaseline');
+  _stage3PushCheck_(checks, 'Release naming aligned', release && release.archiveBaseName === 'gas_wapb_stage7_1_1_final_stabilized_repair' && release.rootFolderName === 'gas_wapb_stage7_1_1_final_stabilized_repair' ? 'OK' : 'FAIL', (release && release.archiveBaseName || 'n/a') + ' / ' + (release && release.rootFolderName || 'n/a'), 'Вирівняйте archive/root naming');
   _stage3PushCheck_(checks, 'Stage7 report active', docs && docs.active && docs.active.releaseReport === 'STAGE7_REPORT.md' ? 'OK' : 'FAIL', docs && docs.active && docs.active.releaseReport ? docs.active.releaseReport : 'Не задано', 'Зафіксуйте STAGE7_REPORT.md як active release report');
   _stage3PushCheck_(checks, 'Modular runtime policy', policy && policy.runtimeStatus === 'canonical-modular-runtime' ? 'OK' : 'FAIL', policy && policy.runtimeStatus ? policy.runtimeStatus : 'Не задано', 'Оновіть clientRuntimePolicy.runtimeStatus');
   _stage3PushCheck_(checks, 'Active Js include chain', policy && policy.modularStatus === 'active-js-include-chain' ? 'OK' : 'FAIL', policy && policy.modularStatus ? policy.modularStatus : 'Не задано', 'Оновіть clientRuntimePolicy.modularStatus');

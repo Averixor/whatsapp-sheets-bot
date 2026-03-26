@@ -335,7 +335,7 @@ function runStage5ScenarioTests(options) {
   const opts = options || {};
   const report = {
     ok: true,
-    stage: (typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_().stageVersion : '7.1.0-reliability-hardened-merged'),
+    stage: (typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_().stageVersion : '7.1.1-final-stabilized-repair'),
     ts: new Date().toISOString(),
     dryRun: opts.dryRun !== false,
     checks: [],
@@ -419,7 +419,7 @@ function runStage5SmokeTests(options) {
   const release = typeof getProjectReleaseNaming_ === 'function' ? getProjectReleaseNaming_() : (meta && meta.release) || {};
   const report = {
     ok: true,
-    stage: meta && meta.stageVersion ? meta.stageVersion : '7.1.0-reliability-hardened-merged',
+    stage: meta && meta.stageVersion ? meta.stageVersion : '7.1.1-final-stabilized-repair',
     ts: new Date().toISOString(),
     dryRun: opts.dryRun !== false,
     checks: [],
@@ -436,9 +436,9 @@ function runStage5SmokeTests(options) {
 
   _smokePush_(report, 'release metadata truth model', function () {
     _smokeAssert_(String(meta.stage) === '7.1', 'metadata.stage має бути 7.1');
-    _smokeAssert_(meta.stageLabel === 'Stage 7.1 — Reliability Hardened Baseline', 'stageLabel має бути Stage 7.1 — Reliability Hardened Baseline');
-    _smokeAssert_(meta.stageVersion === '7.1.0-reliability-hardened-merged', 'stageVersion має бути 7.1.0-reliability-hardened-merged');
-    _smokeAssert_(meta.activeBaseline === 'stage7-1-reliability-hardened-baseline', 'activeBaseline має бути stage7-1-reliability-hardened-baseline');
+    _smokeAssert_(meta.stageLabel === 'Stage 7.1.1 — Final Stabilized Repair Baseline', 'stageLabel має бути Stage 7.1.1 — Final Stabilized Repair Baseline');
+    _smokeAssert_(meta.stageVersion === '7.1.1-final-stabilized-repair', 'stageVersion має бути 7.1.1-final-stabilized-repair');
+    _smokeAssert_(meta.activeBaseline === 'stage7-1-1-final-stabilized-repair-baseline', 'activeBaseline має бути stage7-1-1-final-stabilized-repair-baseline');
     _smokeAssert_(meta.maintenanceLayerStatus === 'stage5-canonical-maintenance-api', 'maintenanceLayerStatus не Stage 5 canonical');
     _smokeAssert_(meta.packagingPolicy && meta.packagingPolicy.policy === 'root-manifest-web-editor-only', 'Packaging policy має бути root-manifest-web-editor-only');
     _smokeAssert_(meta.requiredDocs.indexOf('docs/reference/PUBLIC_API_STAGE5.md') !== -1, 'docs/reference/PUBLIC_API_STAGE5.md відсутній у metadata');
@@ -491,9 +491,9 @@ function runStage5SmokeTests(options) {
   });
 
   _smokePush_(report, 'release naming consistency', function () {
-    _smokeAssert_(release.archiveBaseName === 'gas_wapb_stage7_1_reliability_hardened_baseline', 'archiveBaseName має бути gas_wapb_stage7_1_reliability_hardened_baseline');
-    _smokeAssert_(release.archiveFileName === 'gas_wapb_stage7_1_reliability_hardened_baseline.zip', 'archiveFileName має бути gas_wapb_stage7_1_reliability_hardened_baseline.zip');
-    _smokeAssert_(release.rootFolderName === 'gas_wapb_stage7_1_reliability_hardened_baseline', 'rootFolderName має бути gas_wapb_stage7_1_reliability_hardened_baseline');
+    _smokeAssert_(release.archiveBaseName === 'gas_wapb_stage7_1_1_final_stabilized_repair', 'archiveBaseName має бути gas_wapb_stage7_1_1_final_stabilized_repair');
+    _smokeAssert_(release.archiveFileName === 'gas_wapb_stage7_1_1_final_stabilized_repair.zip', 'archiveFileName має бути gas_wapb_stage7_1_1_final_stabilized_repair.zip');
+    _smokeAssert_(release.rootFolderName === 'gas_wapb_stage7_1_1_final_stabilized_repair', 'rootFolderName має бути gas_wapb_stage7_1_1_final_stabilized_repair');
     _smokeAssert_(meta.hardeningOverlay && meta.hardeningOverlay.label === 'Stage 6A hardening evolved into Stage 7 lifecycle baseline', 'overlay label невірний');
     return 'release-naming-ok';
   });
@@ -580,7 +580,7 @@ function runStage5SmokeTests(options) {
       });
     });
 
-    _smokeAssert_(String(full.summary || '').indexOf('Stage 7.1 — Reliability Hardened Baseline') !== -1, 'Stage 7.1 wording не знайдено в diagnostics summary');
+    _smokeAssert_(String(full.summary || '').indexOf('Stage 7.1.1 — Final Stabilized Repair Baseline') !== -1, 'Stage 7.1 wording не знайдено в diagnostics summary');
     _smokeAssert_((sunset.checks || []).some(function (item) { return item.name === 'Compatibility split report (informational)'; }), 'Informational compatibility split report не знайдено');
     _smokeAssert_((sunset.checks || []).every(function (item) { return item.name !== 'Canonical vs compatibility split'; }), 'Залишився старий compatibility split check name');
     _smokeAssert_((quick.checks || []).every(function (item) { return item.name !== 'Stage5 baseline health bridge'; }), 'У quick diagnostics залишився старий baseline health marker');

@@ -1,10 +1,10 @@
-# whatsapp-sheets-bot — Stage 7.1 Reliability Hardened Baseline
+# whatsapp-sheets-bot — Stage 7.1.1 Final Stabilized Repair Baseline
 
 > This repack is prepared for **Google Apps Script Web Editor use without VS Code**.
 > Local PowerShell / Node helper scripts are **not included** in this archive.
 > See `GAS_WEB_EDITOR_IMPORT_GUIDE.md` for the import flow.
 
-This archive is the **Stage 7.1 Reliability Hardened Baseline** with preserved SEND_PANEL stabilization and lifecycle hardening.
+This archive is the **Stage 7.1.1 Final Stabilized Repair Baseline** with preserved SEND_PANEL stabilization and lifecycle hardening.
 
 ## What is included
 

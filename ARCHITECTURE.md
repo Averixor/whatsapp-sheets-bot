@@ -1,10 +1,10 @@
-# Architecture — Stage 7.1 Reliability Hardened Baseline
+# Architecture — Stage 7.1.1 Final Stabilized Repair Baseline
 
 ## Release truth model
 
 The project is now described as:
 
-- **Release stage:** `Stage 7.1 — Reliability Hardened Baseline`
+- **Release stage:** `Stage 7.1.1 — Final Stabilized Repair Baseline`
 - **Functional lineage:** stabilized **Stage 5 Final RC2** baseline + preserved **Stage 6A** hardening overlay
 - **Maintenance API lineage:** Stage 5 canonical maintenance API remains active by design
 - **Compatibility lineage:** Stage 4 compatibility facade remains intentionally preserved
@@ -84,7 +84,7 @@ The modular `Js.*.html` runtime chain is production-active in this release and m
 
 The diagnostics stack is split into three honest buckets:
 
-- **active release diagnostics** — Stage 7.1 — Reliability Hardened Baseline wording
+- **active release diagnostics** — Stage 7.1.1 — Final Stabilized Repair Baseline wording
 - **historical / compatibility diagnostics** — clearly marked as historical lineage
 - **informational compatibility reporting** — explicitly labeled as informational, not masked as an acceptance assert
 
