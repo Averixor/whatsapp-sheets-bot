@@ -1,7 +1,7 @@
 <script>
   // Js.Api — active Stage 7.1 runtime fragment.
 
-  const Stage4Api = {
+  var Stage4Api = {
     async getMonths() {
       const response = await Api.run('apiStage4GetMonthsList');
       const result = unwrapStage4Result(response) || {};
@@ -174,7 +174,7 @@
     runReconciliation: (options = {}) => Api.run('apiRunReconciliation', options)
   };
 
-  const MaintenanceApi = {
+  var MaintenanceApi = {
     clearCache: async () => adaptStage4UtilityResponse(await Api.run('apiStage5ClearCache')),
     clearLog: async () => adaptStage4UtilityResponse(await Api.run('apiStage5ClearLog')),
     clearPhoneCache: async () => adaptStage4UtilityResponse(await Api.run('apiStage5ClearPhoneCache')),
@@ -194,7 +194,7 @@
     runRepair: async (operationId, options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage5RunRepair', operationId || '', options))
   };
 
-  const SidebarApi = {
+  var SidebarApi = {
     getMonths: Stage4Api.getMonths,
     getSidebarData: Stage4Api.getSidebarData,
     generatePanel: Stage4Api.generatePanelForDate,
@@ -215,17 +215,17 @@
     debugPhones: MaintenanceApi.debugPhones
   };
 
-  const SummaryApi = {
+  var SummaryApi = {
     getDaySummary: Stage4Api.buildDaySummary,
     getDetailedDaySummary: Stage4Api.buildDetailedSummary
   };
 
-  const CardApi = {
+  var CardApi = {
     getPersonCard: Stage4Api.openPersonCard,
     buildBirthdayLink: MaintenanceApi.buildBirthdayLink
   };
 
-  const DiagnosticsApi = {
+  var DiagnosticsApi = {
     healthCheck: MaintenanceApi.healthCheck,
     runRegressionTests: MaintenanceApi.runRegressionTests
   };

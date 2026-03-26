@@ -1,5 +1,5 @@
 <script>
-  const UiState = {
+  var UiState = {
     patch(values = {}) {
       Object.assign(STATE, values || {});
       return STATE;
@@ -14,22 +14,22 @@
   if (!Array.isArray(STATE.lastNonEmptyPanelData)) STATE.lastNonEmptyPanelData = [];
   if (typeof STATE.lastPanelDataUpdatedAt !== 'number') STATE.lastPanelDataUpdatedAt = 0;
 
-  const LoaderService = {
+  var LoaderService = {
     show: () => showLoading(),
     hide: () => hideLoading()
   };
 
-  const ToastService = {
+  var ToastService = {
     success: (message) => showToast(message),
     warning: (message) => showToast(message),
     error: (message) => showToast(message)
   };
 
-  const ErrorPresenter = {
+  var ErrorPresenter = {
     present: (error) => handleError(error)
   };
 
-  const RenderCoordinator = {
+  var RenderCoordinator = {
     async sync(meta = {}) {
       const syncMeta = meta?.sync || meta || {};
       const refresh = Array.isArray(syncMeta.refresh) ? syncMeta.refresh : [];
@@ -68,7 +68,7 @@
     }
   };
 
-  const ActionDispatcher = {
+  var ActionDispatcher = {
     async run(methodName, handler, options = {}) {
       const opts = options || {};
       if (opts.showLoader !== false) LoaderService.show();
