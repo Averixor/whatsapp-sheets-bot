@@ -34,23 +34,59 @@ function _smokeHasRouteApi_(fnName) {
   return false;
 }
 
+function _smokeResolveKnownSymbol_(name) {
+  switch (String(name || '').trim()) {
+    case 'DataAccess_': return typeof DataAccess_ !== 'undefined' ? DataAccess_ : undefined;
+    case 'DictionaryRepository_': return typeof DictionaryRepository_ !== 'undefined' ? DictionaryRepository_ : undefined;
+    case 'PersonsRepository_': return typeof PersonsRepository_ !== 'undefined' ? PersonsRepository_ : undefined;
+    case 'SendPanelRepository_': return typeof SendPanelRepository_ !== 'undefined' ? SendPanelRepository_ : undefined;
+    case 'VacationsRepository_': return typeof VacationsRepository_ !== 'undefined' ? VacationsRepository_ : undefined;
+    case 'SummaryRepository_': return typeof SummaryRepository_ !== 'undefined' ? SummaryRepository_ : undefined;
+    case 'LogsRepository_': return typeof LogsRepository_ !== 'undefined' ? LogsRepository_ : undefined;
+    case 'Stage4UseCases_': return typeof Stage4UseCases_ !== 'undefined' ? Stage4UseCases_ : undefined;
+    case 'WorkflowOrchestrator_': return typeof WorkflowOrchestrator_ !== 'undefined' ? WorkflowOrchestrator_ : undefined;
+    case 'Stage4AuditTrail_': return typeof Stage4AuditTrail_ !== 'undefined' ? Stage4AuditTrail_ : undefined;
+    case 'Reconciliation_': return typeof Reconciliation_ !== 'undefined' ? Reconciliation_ : undefined;
+    case 'Stage4Triggers_': return typeof Stage4Triggers_ !== 'undefined' ? Stage4Triggers_ : undefined;
+    case 'Stage4Templates_': return typeof Stage4Templates_ !== 'undefined' ? Stage4Templates_ : undefined;
+    default: return undefined;
+  }
+}
+
+function _smokeResolveFn_(name) {
+  const target = String(name || '').trim();
+  if (!target) return undefined;
+
+  const parts = target.split('.').filter(Boolean);
+  if (!parts.length) return undefined;
+
+  const knownRoot = _smokeResolveKnownSymbol_(parts[0]);
+  if (knownRoot !== undefined) {
+    let current = knownRoot;
+    for (let i = 1; i < parts.length; i++) {
+      if (!current || !(parts[i] in current)) return undefined;
+      current = current[parts[i]];
+    }
+    return current;
+  }
+
+  try {
+    const g = (typeof globalThis !== 'undefined') ? globalThis : Function('return this')();
+    let current = g;
+    for (let i = 0; i < parts.length; i++) {
+      if (!current || !(parts[i] in current)) return undefined;
+      current = current[parts[i]];
+    }
+    return current;
+  } catch (e) { }
+
+  return undefined;
+}
+
 function _smokeHasFn_(name) {
   const target = String(name || '').trim();
   if (!target) return false;
-  try {
-    const g = (typeof globalThis !== 'undefined') ? globalThis : Function('return this')();
-    const parts = target.split('.').filter(Boolean);
-    let current = g;
-    for (let i = 0; i < parts.length; i++) {
-      if (!current || !(parts[i] in current)) {
-        current = undefined;
-        break;
-      }
-      current = current[parts[i]];
-    }
-    if (typeof current === 'function') return true;
-  } catch (e) { }
-  return _smokeHasRouteApi_(target);
+  return typeof _smokeResolveFn_(target) === 'function' || _smokeHasRouteApi_(target);
 }
 
 function _smokePush_(report, name, fn, options) {

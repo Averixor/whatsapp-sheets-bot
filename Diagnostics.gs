@@ -203,7 +203,7 @@ function healthCheck() {
       details: invalid.length === 0
         ? `Усі ${statuses.length} статусів валідні`
         : `Некоректні статуси: ${[...new Set(invalid)].join(', ')}`,
-      howTo: invalid.length === 0 ? '' : 'Використовуйте тільки ✓ Готово, 🟡 Очікує підтвердження, ↩️ Не відправлено, 📤 Відправлено або ✕ ...'
+      howTo: invalid.length === 0 ? '' : 'Використовуйте тільки ✅ Готово, 🟡 Очікує підтвердження, ↩️ Не відправлено, 📤 Відправлено або ❌ ...'
     };
   });
 
@@ -385,7 +385,7 @@ function healthCheck() {
 
     return {
       status: hasParse && hasVacMap ? 'OK' : 'FAIL',
-      details: `parse=${hasParse ? '✓' : '✕'}, vacationWord=${hasVacMap ? '✓' : '✕'}`,
+      details: `parse=${hasParse ? '✅' : '❌'}, vacationWord=${hasVacMap ? '✅' : '❌'}`,
       howTo: hasParse && hasVacMap ? '' : 'Додайте thin-wrapper helper-и в Utils.gs'
     };
   });
@@ -400,9 +400,9 @@ function healthCheck() {
       status: hasDateUtils && hasHtmlUtils && hasSmoke ? 'OK' : 'WARN',
       severity: 'WARN',
       details: [
-        `DateUtils_: ${hasDateUtils ? '✓' : '✕'}`,
-        `HtmlUtils_: ${hasHtmlUtils ? '✓' : '✕'}`,
-        `runSmokeTests(): ${hasSmoke ? '✓' : '✕'}`
+        `DateUtils_: ${hasDateUtils ? '✅' : '❌'}`,
+        `HtmlUtils_: ${hasHtmlUtils ? '✅' : '❌'}`,
+        `runSmokeTests(): ${hasSmoke ? '✅' : '❌'}`
       ].join('\n'),
       howTo: hasDateUtils && hasHtmlUtils && hasSmoke
         ? ''
@@ -418,8 +418,8 @@ function healthCheck() {
       status: hasParseAlias && hasEscapeAlias ? 'PSEUDO' : 'WARN',
       severity: hasParseAlias && hasEscapeAlias ? 'INFO' : 'WARN',
       details: hasParseAlias && hasEscapeAlias
-        ? `Compatibility-only alias layer retained intentionally: parseAlias=✓, escapeAlias=✓`
-        : `parseAlias=${hasParseAlias ? '✓' : '✕'}, escapeAlias=${hasEscapeAlias ? '✓' : '✕'}`,
+        ? `Compatibility-only alias layer retained intentionally: parseAlias=✅, escapeAlias=✅`
+        : `parseAlias=${hasParseAlias ? '✅' : '❌'}, escapeAlias=${hasEscapeAlias ? '✅' : '❌'}`,
       howTo: hasParseAlias && hasEscapeAlias ? 'Нейтральний сумісний шар; не є canonical-path' : 'Поверніть thin-wrapper сумісності для старих викликів'
     };
   });
@@ -441,9 +441,9 @@ function healthCheck() {
       status: ok ? 'OK' : 'WARN',
       severity: 'WARN',
       details: [
-        `Відпустки: ${hasVac ? `✓ (${vac.length} шт)` : '✕ немає'}`,
-        `ДН: ${hasBd ? `✓ (${bd.length} шт)` : '✕ немає'}`,
-        dupVac || dupBd ? '⁈ Є дублікати тригерів' : ''
+        `Відпустки: ${hasVac ? `✅ (${vac.length} шт)` : '❌ немає'}`,
+        `ДН: ${hasBd ? `✅ (${bd.length} шт)` : '❌ немає'}`,
+        dupVac || dupBd ? '⚠️ Є дублікати тригерів' : ''
       ].filter(Boolean).join('\n'),
       howTo: (!hasVac || !hasBd)
         ? 'Натисніть "⏰ Створити тригер"'
@@ -505,10 +505,10 @@ function checkSheets() {
         name: item.name,
         status: exists ? 'OK' : (item.required ? 'ERROR' : 'WARN'),
         message: exists
-          ? '✓ Лист "' + item.name + '" знайдено'
+          ? '✅ Лист "' + item.name + '" знайдено'
           : (item.required
-            ? '✕ Обов\'язковий лист "' + item.name + '" не знайдено'
-            : '⁈ Лист "' + item.name + '" не знайдено')
+            ? '❌ Обов\'язковий лист "' + item.name + '" не знайдено'
+            : '⚠️ Лист "' + item.name + '" не знайдено')
       });
     });
 
@@ -525,8 +525,8 @@ function checkSheets() {
       name: 'month_sheets',
       status: existingMonths.length > 0 ? 'OK' : 'WARN',
       message: existingMonths.length > 0
-        ? '✓ Місячні листи: ' + existingMonths.join(', ')
-        : '⁈ Не знайдено жодного місячного листа'
+        ? '✅ Місячні листи: ' + existingMonths.join(', ')
+        : '⚠️ Не знайдено жодного місячного листа'
     });
 
   } catch (e) {
@@ -570,8 +570,8 @@ function checkFiles() {
         name: func.name,
         status: exists ? 'OK' : (func.required ? 'ERROR' : 'WARN'),
         message: exists
-          ? '✓ ' + func.name + ' існує'
-          : '✕ ' + func.name + ' не знайдена'
+          ? '✅ ' + func.name + ' існує'
+          : '❌ ' + func.name + ' не знайдена'
       });
     });
 
@@ -596,7 +596,7 @@ function checkDuplicates() {
         type: 'duplicates_skip',
         name: 'PHONES',
         status: 'WARN',
-        message: '⁈ Лист PHONES не знайдено або порожній'
+        message: '⚠️ Лист PHONES не знайдено або порожній'
       });
       DIAGNOSTICS.results.duplicates = report;
       return report;
@@ -685,7 +685,7 @@ function checkDuplicates() {
         type: 'duplicates_result',
         name: 'duplicates',
         status: 'OK',
-        message: '✓ Явних дублікатів не знайдено'
+        message: '✅ Явних дублікатів не знайдено'
       });
     } else {
       dups.forEach(function (message) {
@@ -693,7 +693,7 @@ function checkDuplicates() {
           type: 'duplicate',
           name: 'duplicate',
           status: 'WARN',
-          message: '⁈ ' + message
+          message: '⚠️ ' + message
         });
       });
     }
@@ -717,14 +717,14 @@ function testFunctions() {
         type: 'test_function',
         name: '_todayStr_',
         status: /^\d{2}\.\d{2}\.\d{4}$/.test(today) ? 'OK' : 'ERROR',
-        message: '✓ _todayStr_() → ' + today
+        message: '✅ _todayStr_() → ' + today
       });
     } catch (e) {
       _pushCheck_(report, {
         type: 'test_function',
         name: '_todayStr_',
         status: 'ERROR',
-        message: '✕ _todayStr_(): ' + _safeErr_(e)
+        message: '❌ _todayStr_(): ' + _safeErr_(e)
       });
     }
 
@@ -735,15 +735,15 @@ function testFunctions() {
         name: '_parseUaDate_',
         status: d instanceof Date ? 'OK' : 'ERROR',
         message: d instanceof Date
-          ? '✓ _parseUaDate_() працює'
-          : '✕ _parseUaDate_() не змогла розібрати дату'
+          ? '✅ _parseUaDate_() працює'
+          : '❌ _parseUaDate_() не змогла розібрати дату'
       });
     } catch (e) {
       _pushCheck_(report, {
         type: 'test_function',
         name: '_parseUaDate_',
         status: 'ERROR',
-        message: '✕ _parseUaDate_(): ' + _safeErr_(e)
+        message: '❌ _parseUaDate_(): ' + _safeErr_(e)
       });
     }
 
@@ -754,15 +754,15 @@ function testFunctions() {
         name: '_formatPhoneDisplay_',
         status: f ? 'OK' : 'ERROR',
         message: f
-          ? '✓ _formatPhoneDisplay_() → ' + f
-          : '✕ _formatPhoneDisplay_() повернула порожнє значення'
+          ? '✅ _formatPhoneDisplay_() → ' + f
+          : '❌ _formatPhoneDisplay_() повернула порожнє значення'
       });
     } catch (e) {
       _pushCheck_(report, {
         type: 'test_function',
         name: '_formatPhoneDisplay_',
         status: 'ERROR',
-        message: '✕ _formatPhoneDisplay_(): ' + _safeErr_(e)
+        message: '❌ _formatPhoneDisplay_(): ' + _safeErr_(e)
       });
     }
 
@@ -773,15 +773,15 @@ function testFunctions() {
         name: 'healthCheck',
         status: hc && Array.isArray(hc.checks) ? 'OK' : 'ERROR',
         message: hc && Array.isArray(hc.checks)
-          ? '✓ healthCheck() повернув звіт'
-          : '✕ healthCheck() повернув невалідні дані'
+          ? '✅ healthCheck() повернув звіт'
+          : '❌ healthCheck() повернув невалідні дані'
       });
     } catch (e) {
       _pushCheck_(report, {
         type: 'test_function',
         name: 'healthCheck',
         status: 'ERROR',
-        message: '✕ healthCheck(): ' + _safeErr_(e)
+        message: '❌ healthCheck(): ' + _safeErr_(e)
       });
     }
 
@@ -896,6 +896,8 @@ function _stage3PushCheck_(checks, name, status, details, recommendation) {
     howTo: recommendation || ''
   });
 }
+
+
 
 function runStage3HealthCheck_(options) {
   const opts = options || {};
@@ -1044,6 +1046,8 @@ function runStage3HealthCheck_(options) {
 // =========================
 // STAGE 4 DIAGNOSTICS 2.0
 // =========================
+
+
 function _projectBundleHas_(path) {
   return typeof isProjectBundleFilePresent_ === 'function' ? isProjectBundleFilePresent_(path) : false;
 }
@@ -1611,6 +1615,17 @@ function runStage5MetadataConsistencyCheck_() {
   return checks;
 }
 
+
+
+
+
+
+
+
+
+
+
+
 function debugSendPanelNow() {
   const ss = SpreadsheetApp.getActive();
   const sh = ss.getSheetByName(CONFIG.SEND_PANEL_SHEET);
@@ -1774,9 +1789,46 @@ function _diagHasRouteApi_(fnName) {
   return false;
 }
 
+function _diagResolveKnownSymbolStage7_(name) {
+  switch (String(name || '').trim()) {
+    case 'DataAccess_': return typeof DataAccess_ !== 'undefined' ? DataAccess_ : undefined;
+    case 'DictionaryRepository_': return typeof DictionaryRepository_ !== 'undefined' ? DictionaryRepository_ : undefined;
+    case 'PersonsRepository_': return typeof PersonsRepository_ !== 'undefined' ? PersonsRepository_ : undefined;
+    case 'SendPanelRepository_': return typeof SendPanelRepository_ !== 'undefined' ? SendPanelRepository_ : undefined;
+    case 'VacationsRepository_': return typeof VacationsRepository_ !== 'undefined' ? VacationsRepository_ : undefined;
+    case 'SummaryRepository_': return typeof SummaryRepository_ !== 'undefined' ? SummaryRepository_ : undefined;
+    case 'LogsRepository_': return typeof LogsRepository_ !== 'undefined' ? LogsRepository_ : undefined;
+    case 'Stage4UseCases_': return typeof Stage4UseCases_ !== 'undefined' ? Stage4UseCases_ : undefined;
+    case 'WorkflowOrchestrator_': return typeof WorkflowOrchestrator_ !== 'undefined' ? WorkflowOrchestrator_ : undefined;
+    case 'Stage4AuditTrail_': return typeof Stage4AuditTrail_ !== 'undefined' ? Stage4AuditTrail_ : undefined;
+    case 'Reconciliation_': return typeof Reconciliation_ !== 'undefined' ? Reconciliation_ : undefined;
+    case 'Stage4Triggers_': return typeof Stage4Triggers_ !== 'undefined' ? Stage4Triggers_ : undefined;
+    case 'Stage4Templates_': return typeof Stage4Templates_ !== 'undefined' ? Stage4Templates_ : undefined;
+    case 'OperationRepository_': return typeof OperationRepository_ !== 'undefined' ? OperationRepository_ : undefined;
+    case 'SheetSchemas_': return typeof SheetSchemas_ !== 'undefined' ? SheetSchemas_ : undefined;
+    case 'SheetStandards_': return typeof SheetStandards_ !== 'undefined' ? SheetStandards_ : undefined;
+    case 'Validation_': return typeof Validation_ !== 'undefined' ? Validation_ : undefined;
+    default: return undefined;
+  }
+}
+
 function _diagResolveSymbolStage7_(name) {
   var target = String(name || '').trim();
   if (!target) return undefined;
+
+  var directKnown = _diagResolveKnownSymbolStage7_(target);
+  if (directKnown !== undefined) return directKnown;
+
+  if (target.indexOf('.') > -1) {
+    var parts = target.split('.').filter(Boolean);
+    if (parts.length) {
+      var rootSymbol = _diagResolveKnownSymbolStage7_(parts[0]);
+      if (rootSymbol !== undefined) {
+        var nested = _diagResolvePath_(rootSymbol, parts.slice(1).join('.'));
+        if (nested !== undefined) return nested;
+      }
+    }
+  }
 
   try {
     var g = _diagGlobal_();
