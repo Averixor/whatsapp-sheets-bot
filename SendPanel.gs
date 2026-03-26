@@ -204,8 +204,40 @@ function cleanupOldSendPanelSentState_(keepDays) {
   return cleanupOldSendPanelStateMaps_(keepDays);
 }
 
+
+function getSendPanelStatusFormula_() {
+  return '=ARRAYFORMULA(IF(A3:A40&B3:B40&C3:C40&D3:D40="";"";IF((A3:A40<>"")*(B3:B40<>"")*(C3:C40<>"")*(D3:D40<>"");"✔";"✘")))';
+}
+
+function deriveSendPanelStatusFromInputs_(fio, phone, code, tasks) {
+  const values = [fio, phone, code, tasks].map(function(item) {
+    return String(item || '').trim();
+  });
+  return values.every(Boolean) ? getSendPanelReadyStatus_() : getSendPanelBlockedStatus_();
+}
+
+function ensureSendPanelStatusFormula_(panel) {
+  const sheet = panel || SpreadsheetApp.getActive().getSheetByName(CONFIG.SEND_PANEL_SHEET);
+  if (!sheet) return false;
+
+  const startRow = Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3;
+  const lastRow = (typeof MONTHLY_CONFIG !== 'undefined' && Number(MONTHLY_CONFIG.LAST_DATA_ROW)) || 40;
+  const rowCount = Math.max(1, lastRow - startRow + 1);
+  const statusRange = sheet.getRange(startRow, 5, rowCount, 1);
+
+  statusRange.clearDataValidations();
+  statusRange.clearContent();
+  sheet.getRange(startRow, 5).setFormula(getSendPanelStatusFormula_());
+  statusRange.setHorizontalAlignment('center');
+
+  return true;
+}
+
 function ensureSendPanelStructure_(panel, botMonth, panelDate) {
+  try { panel.getRange(1, 1, 1, 7).breakApart(); } catch (e) {}
   panel.clearContents();
+  panel.clearFormats();
+  panel.clearDataValidations();
 
   const safeMonth = String(botMonth || '').trim();
   const safeDate = assertUaDateString_(panelDate || resolveSendPanelStateDate_(panelDate || getSendPanelToday_()));
@@ -222,7 +254,12 @@ function ensureSendPanelStructure_(panel, botMonth, panelDate) {
     .setValues([['FIO', 'Phone', 'Code', 'Tasks', 'Status', 'Sent', 'Action']])
     .setFontWeight('bold')
     .setHorizontalAlignment('center')
-    .setBackground('#f0f0f0');
+    .setBackground(null);
+
+  const startRow = Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3;
+  const lastRow = (typeof MONTHLY_CONFIG !== 'undefined' && Number(MONTHLY_CONFIG.LAST_DATA_ROW)) || 40;
+  const rowCount = Math.max(1, lastRow - startRow + 1);
+  panel.getRange(startRow, 1, rowCount, 7).setBackground(null);
 
   setSendPanelMetadata_(panel, safeMonth, safeDate);
 }
@@ -284,6 +321,9 @@ function normalizeSendPanelDailyState_(panel) {
   panel = panel || SpreadsheetApp.getActive().getSheetByName(CONFIG.SEND_PANEL_SHEET);
   if (!panel) return false;
 
+  ensureSendPanelStatusFormula_(panel);
+  SpreadsheetApp.flush();
+
   const last = panel.getLastRow();
   if (last < CONFIG.SEND_PANEL_DATA_START_ROW) return true;
 
@@ -292,7 +332,6 @@ function normalizeSendPanelDailyState_(panel) {
   const formulas = panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 7, rowCount, 1).getFormulas().flat();
   const sentMap = readSendPanelStateMap_(getSendPanelToday_());
 
-  const statuses = [];
   const sentMarks = [];
   const actions = [];
 
@@ -302,17 +341,17 @@ function normalizeSendPanelDailyState_(panel) {
     const code = String(values[i][2] || '').trim();
     const key = makeSendPanelKey_(fio, phone, code);
     const link = extractHyperlinkUrl_(formulas[i] || '');
-    const status = (fio && code && link) ? getSendPanelReadyStatus_() : getSendPanelBlockedStatus_();
+    const status = normalizeSendPanelStatus_(values[i][4]);
     const sent = !!(sentMap[key] === true || isSendPanelSentMark_(values[i][5]));
 
-    statuses.push([status]);
     sentMarks.push([sent ? getSendPanelSentMark_() : getSendPanelUnsentMark_()]);
     actions.push([resolveSendPanelActionCellValue_(link, status, sent)]);
   }
 
-  panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 5, rowCount, 1).setValues(statuses);
   panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 6, rowCount, 1).setValues(sentMarks);
   panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 7, rowCount, 1).setValues(actions);
+  panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 1, rowCount, 7).setBackground(null);
+  panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 5, rowCount, 2).setHorizontalAlignment('center');
 
   return true;
 }
@@ -362,19 +401,19 @@ function rebuildSendPanelCore_() {
 
       rows.push([
         payload.fio,
-        formattedPhone || '—',
+        formattedPhone || '',
         payload.code,
-        payload.tasks || '—',
-        getSendPanelReadyStatus_(),
+        payload.tasks || '',
+        deriveSendPanelStatusFromInputs_(payload.fio, formattedPhone, payload.code, payload.tasks),
         sentToday ? getSendPanelSentMark_() : getSendPanelUnsentMark_(),
-        resolveSendPanelActionCellValue_(payload.link, getSendPanelReadyStatus_(), sentToday)
+        resolveSendPanelActionCellValue_(payload.link, deriveSendPanelStatusFromInputs_(payload.fio, formattedPhone, payload.code, payload.tasks), sentToday)
       ]);
     } catch (e) {
       rows.push([
         fio,
-        '—',
+        '',
         code,
-        '—',
+        '',
         getSendPanelBlockedStatus_(),
         getSendPanelUnsentMark_(),
         ''
@@ -387,6 +426,7 @@ function rebuildSendPanelCore_() {
   }
 
   panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 1, rows.length, 7).setValues(rows);
+  ensureSendPanelStatusFormula_(panel);
   applyColumnWidthsStandardsToSheet_(panel);
   panel.setFrozenRows(CONFIG.SEND_PANEL_HEADER_ROW);
   normalizeSendPanelDailyState_(panel);
@@ -470,8 +510,8 @@ function sendAllFromSendPanel() {
   for (let i = 0; i < countRows; i++) {
     if (isSendPanelSentMark_(sent[i])) continue;
 
-    const status = String(values[i][4] || '').trim();
-    if (status.indexOf(getSendPanelErrorPrefix_()) === 0) continue;
+    const status = normalizeSendPanelStatus_(values[i][4]);
+    if (status !== getSendPanelReadyStatus_()) continue;
 
     const url = extractHyperlinkUrl_(formulas[i]);
     if (url && url.startsWith('https://wa.me/')) {
@@ -500,7 +540,7 @@ function markSendPanelSent_(row) {
   const status = String(panel.getRange(row, 5).getDisplayValue() || '').trim();
 
   if (!fio || !code) return false;
-  if (status.indexOf(getSendPanelErrorPrefix_()) === 0) return false;
+  if (normalizeSendPanelStatus_(status) !== getSendPanelReadyStatus_()) return false;
 
   const key = makeSendPanelKey_(fio, phone, code);
   const dateStr = getSendPanelToday_();
@@ -525,7 +565,7 @@ function markSendPanelUnsent_(row) {
   const status = String(panel.getRange(row, 5).getDisplayValue() || '').trim();
 
   if (!fio || !code) return false;
-  if (status.indexOf(getSendPanelErrorPrefix_()) === 0) return false;
+  if (normalizeSendPanelStatus_(status) !== getSendPanelReadyStatus_()) return false;
 
   const key = makeSendPanelKey_(fio, phone, code);
   const dateStr = getSendPanelToday_();

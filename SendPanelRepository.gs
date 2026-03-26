@@ -15,20 +15,8 @@ const SendPanelRepository_ = (function() {
     if (!panel || !rowCount) return false;
 
     const schema = SheetSchemas_.get('SEND_PANEL');
-    const values = panel.getRange(schema.dataStartRow, 1, rowCount, 7).getDisplayValues();
-    const backgrounds = values.map(function(row) {
-      const status = normalizeSendPanelStatus_(row[4]);
-      const sent = isSendPanelSentMark_(row[5]);
-      const color = sent
-        ? '#ede9fe'
-        : status === SendPanelConstants_.STATUS_READY
-          ? '#e6f4e6'
-          : '#ffe6e6';
-      return Array(7).fill(color);
-    });
-
-    panel.getRange(schema.dataStartRow, 1, rowCount, 7).setBackgrounds(backgrounds);
-    panel.getRange(schema.dataStartRow, schema.columns.sent, rowCount, 1).setHorizontalAlignment('center');
+    panel.getRange(schema.dataStartRow, 1, rowCount, 7).setBackground(null);
+    panel.getRange(schema.dataStartRow, schema.columns.status, rowCount, 2).setHorizontalAlignment('center');
     return true;
   }
 
@@ -103,23 +91,25 @@ const SendPanelRepository_ = (function() {
           formattedPhone = "'" + formattedPhone;
         }
 
+        const effectiveStatus = deriveSendPanelStatusFromInputs_(payload.fio, formattedPhone, payload.code, payload.tasks);
+
         rows.push([
           payload.fio,
-          formattedPhone || '—',
+          formattedPhone || '',
           payload.code,
-          payload.tasks || '—',
-          SendPanelConstants_.STATUS_READY,
+          payload.tasks || '',
+          effectiveStatus,
           getSendPanelUnsentMark_(),
-          resolveSendPanelActionCellValue_(payload.link, SendPanelConstants_.STATUS_READY, false)
+          resolveSendPanelActionCellValue_(payload.link, effectiveStatus, false)
         ]);
 
         payloads.push(payload);
       } catch (e) {
         rows.push([
           fio,
-          '—',
+          '',
           code,
-          '—',
+          '',
           SendPanelConstants_.STATUS_BLOCKED,
           getSendPanelUnsentMark_(),
           SendPanelConstants_.ACTION_BLOCKED_LABEL
@@ -198,6 +188,8 @@ const SendPanelRepository_ = (function() {
     }
 
     panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 1, rows.length, 7).setValues(rows);
+    ensureSendPanelStatusFormula_(panel);
+    SpreadsheetApp.flush();
     applyColumnWidthsStandardsToSheet_(panel);
     panel.setFrozenRows(CONFIG.SEND_PANEL_HEADER_ROW);
     applyVisualState_(panel, rows.length);
@@ -264,7 +256,12 @@ const SendPanelRepository_ = (function() {
     const byRow = {};
     beforeRows.forEach(function(item) { byRow[item.row] = item; });
 
-    validRows.forEach(function(row) {
+    const eligibleRows = validRows.filter(function(row) {
+      return shouldTreatRowAsReadyToOpen_(byRow[row] || {});
+    });
+    if (!eligibleRows.length) throw new Error('Немає готових рядків SEND_PANEL для позначення як відправлені');
+
+    eligibleRows.forEach(function(row) {
       const item = byRow[row] || {};
       panel.getRange(row, schema.columns.sent).setValue(getSendPanelSentMark_());
       panel.getRange(row, schema.columns.action).setValue(resolveSendPanelActionCellValue_(item.link || '', item.status || SendPanelConstants_.STATUS_READY, true));
@@ -272,7 +269,7 @@ const SendPanelRepository_ = (function() {
 
     applyVisualState_(panel, Math.max(0, panel.getLastRow() - (schema.dataStartRow - 1)));
 
-    const logs = beforeRows.map(function(item) {
+    const logs = beforeRows.filter(function(item) { return eligibleRows.indexOf(item.row) !== -1; }).map(function(item) {
       return {
         timestamp: new Date(),
         reportDateStr: getSendPanelMetadata_(panel).date || _todayStr_(),
@@ -294,7 +291,7 @@ const SendPanelRepository_ = (function() {
     }
 
     const afterRows = readRows();
-    return { updatedRows: validRows, rows: afterRows, stats: buildStats(afterRows) };
+    return { updatedRows: eligibleRows, rows: afterRows, stats: buildStats(afterRows) };
   }
 
   function markRowsAsUnsent(rowNumbers, opts) {

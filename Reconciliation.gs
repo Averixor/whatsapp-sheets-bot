@@ -227,7 +227,8 @@ const Reconciliation_ = (function () {
 
   function _setPanelStatus(row, value) {
     const panel = DataAccess_.getSheet('SEND_PANEL', null, true);
-    panel.getRange(row, 5).setValue(value);
+    ensureSendPanelStatusFormula_(panel);
+    normalizeSendPanelDailyState_(panel);
   }
 
   function _appendPanelRow(expectedRow) {
@@ -235,17 +236,27 @@ const Reconciliation_ = (function () {
     const nextRow = Math.max(panel.getLastRow() + 1, Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3);
     const formattedPhone = String(expectedRow.phone || '').trim().startsWith('+')
       ? "'" + String(expectedRow.phone || '').trim()
-      : String(expectedRow.phone || '').trim() || '—';
-    const formula = expectedRow.link ? `=HYPERLINK("${expectedRow.link}"; "📱 НАДІСЛАТИ")` : '';
-    panel.getRange(nextRow, 1, 1, 7).setValues([[
+      : String(expectedRow.phone || '').trim();
+    const status = deriveSendPanelStatusFromInputs_(expectedRow.fio || '', formattedPhone || '', expectedRow.code || '', expectedRow.tasks || '');
+
+    panel.getRange(nextRow, 1, 1, 4).setValues([[
       expectedRow.fio || '',
-      formattedPhone,
+      formattedPhone || '',
       expectedRow.code || '',
-      expectedRow.tasks || '—',
-      expectedRow.status || getSendPanelReadyStatus_(),
-      expectedRow.sent === true ? getSendPanelSentMark_() : getSendPanelUnsentMark_(),
-      resolveSendPanelActionCellValue_(expectedRow.link || '', expectedRow.status || getSendPanelReadyStatus_(), expectedRow.sent === true)
+      expectedRow.tasks || ''
     ]]);
+    panel.getRange(nextRow, 6, 1, 2).setValues([[
+      expectedRow.sent === true ? getSendPanelSentMark_() : getSendPanelUnsentMark_(),
+      resolveSendPanelActionCellValue_(expectedRow.link || '', status, expectedRow.sent === true)
+    ]]);
+
+    if (nextRow <= (((typeof MONTHLY_CONFIG !== 'undefined' && Number(MONTHLY_CONFIG.LAST_DATA_ROW)) || 40))) {
+      ensureSendPanelStatusFormula_(panel);
+      normalizeSendPanelDailyState_(panel);
+    } else {
+      panel.getRange(nextRow, 5).setValue(status);
+    }
+
     return nextRow;
   }
 
