@@ -4,7 +4,7 @@
   function reportBootstrapError_(error, source) {
     const msg = `[bootstrap:${source}] ${normalizeError(error)}`;
     try { console.error(msg, error); } catch (_) {}
-    try { if (STATE.consoleInitialized) logToConsole(`❌ ${msg}`, 'error'); } catch (_) {}
+    try { if (STATE.consoleInitialized) logToConsole(`✕ ${msg}`, 'error'); } catch (_) {}
   }
 
   function registerGlobalRuntimeEvents_() {

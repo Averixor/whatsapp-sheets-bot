@@ -18,7 +18,7 @@ function _unwrapActionResult_(result) {
 }
 
 function _showActionError_(e) {
-  SpreadsheetApp.getUi().alert('❌ ' + (e && e.message ? e.message : String(e)));
+  SpreadsheetApp.getUi().alert('✕ ' + (e && e.message ? e.message : String(e)));
 }
 
 function waShowForSelection() {

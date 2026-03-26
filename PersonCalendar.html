@@ -463,7 +463,7 @@
       <!-- Кнопки дій -->
       <div class="actions">
         <button class="btn btn-primary" onclick="selectDate()">
-          <span>✅</span>
+          <span>✓</span>
           <span>Обрати</span>
         </button>
         <button class="btn btn-secondary" onclick="goBack()">
@@ -622,7 +622,7 @@
       
       async function selectDate() {
         if (!selectedDay) {
-          showError('❌ Оберіть дату в календарі');
+          showError('✕ Оберіть дату в календарі');
           return;
         }
         
@@ -633,7 +633,7 @@
         try {
           await gsRun('openPersonCardByCallsignAndDate', CALLSIGN, dateStr);
         } catch (error) {
-          showError('❌ ' + normalizeError(error));
+          showError('✕ ' + normalizeError(error));
         }
       }
 
@@ -643,7 +643,7 @@
         const dateStr = `${formattedDay}.${formattedMonth}.${selectedYear || todayDate.getFullYear()}`;
 
         gsRun('openPersonCardByCallsignAndDate', CALLSIGN, dateStr)
-          .catch(error => showError('❌ ' + normalizeError(error)));
+          .catch(error => showError('✕ ' + normalizeError(error)));
       }
       
       renderCalendar();

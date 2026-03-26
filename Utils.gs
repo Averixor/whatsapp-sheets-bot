@@ -253,7 +253,7 @@ function clearCacheCore_() {
 
 function waClearCache() {
   clearCacheCore_();
-  SpreadsheetApp.getUi().alert('✅ Кеш очищено');
+  SpreadsheetApp.getUi().alert('✓ Кеш очищено');
 }
 
 function clearLogCore_() {
@@ -269,8 +269,8 @@ function clearLogCore_() {
 function clearLogSheet() {
   const ui = SpreadsheetApp.getUi();
   if (ui.alert('🧹 Очистити LOG?', ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
-  if (clearLogCore_()) ui.alert('✅ Лог очищено');
-  else ui.alert('❌ LOG не знайдено');
+  if (clearLogCore_()) ui.alert('✓ Лог очищено');
+  else ui.alert('✕ LOG не знайдено');
 }
 
 function clearPhoneCache() {

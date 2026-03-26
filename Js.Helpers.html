@@ -114,9 +114,9 @@
         updateMonthBadge(STATE.currentMonth);
       }
 
-      logToConsole('✅ Панель готова до роботи', 'success');
+      logToConsole('✓ Панель готова до роботи', 'success');
     } catch (error) {
-      logToConsole(`❌ Помилка ініціалізації: ${normalizeError(error)}`, 'error');
+      logToConsole(`✕ Помилка ініціалізації: ${normalizeError(error)}`, 'error');
     } finally {
       hideLoading();
     }
@@ -239,7 +239,7 @@
     hideProgressBar();
     stopSending();
 
-    logToConsole(`❌ Помилка: ${message}`, 'error');
+    logToConsole(`✕ Помилка: ${message}`, 'error');
     displayInResult('error', { error: message });
   }
 
@@ -267,13 +267,13 @@
                 reason: 'sendUnsent.open'
               });
             } catch (error) {
-              logToConsole(`❌ Не вдалося перечитати SEND_PANEL: ${normalizeError(error)}`, 'error');
+              logToConsole(`✕ Не вдалося перечитати SEND_PANEL: ${normalizeError(error)}`, 'error');
               showSendPanel();
               return;
             }
           }
           if (!Array.isArray(panelRows) || panelRows.length === 0) {
-            logToConsole('⚠️ SEND_PANEL порожній навіть після перечитування', 'warning');
+            logToConsole('⁈ SEND_PANEL порожній навіть після перечитування', 'warning');
           }
           showSendPanel();
           break;
@@ -287,7 +287,7 @@
         case 'createNextMonth': {
           const result = await ActionDispatcher.run('createNextMonth', () => Stage4Api.createNextMonth({ switchToNewMonth: true }));
           if (result?.success) {
-            logToConsole(`✅ ${result.message}`, 'success');
+            logToConsole(`✓ ${result.message}`, 'success');
             showStandardResult('Створення місяця');
             displayInResult('createMonth', result);
           } else {
@@ -360,7 +360,7 @@
         }
 
         default:
-          logToConsole(`⚠️ Невідома дія: ${action}`, 'warning');
+          logToConsole(`⁈ Невідома дія: ${action}`, 'warning');
       }
     } catch (error) {
       handleError(error);

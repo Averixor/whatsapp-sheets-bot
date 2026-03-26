@@ -58,10 +58,10 @@
         <div class="result-label">📋 Статистика</div>
         <div class="result-value">
           <p>Всього записів: <b>${data.length}</b></p>
-          <p>✅ Готово до відкриття: <b>${readyItems.length}</b></p>
+          <p>✓ Готово до відкриття: <b>${readyItems.length}</b></p>
           <p>🟡 Очікує підтвердження: <b>${pendingItems.length}</b></p>
           <p>📤 Відправлено: <b>${sentItems.length}</b></p>
-          <p>❌ З помилками: <b>${errorItems.length}</b></p>
+          <p>✕ З помилками: <b>${errorItems.length}</b></p>
         </div>
       </div>
     `;
@@ -69,7 +69,7 @@
     if (!data.length) {
       html += `
         <div class="result-item">
-          <div class="result-label">⚠️ SEND_PANEL порожній у sidebar</div>
+          <div class="result-label">⁈ SEND_PANEL порожній у sidebar</div>
           <div class="result-value">
             <p>Лист може містити рядки, але клієнтський стан зараз порожній.</p>
             <button class="result-link" onclick="SidebarApp.reloadSendPanelFromServer()" style="width:100%; margin-top:8px;">🔄 Перечитати SEND_PANEL</button>
@@ -140,7 +140,7 @@
           ${item.link ? `
             <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
               ${isReady ? `<button class="result-link" onclick="SidebarApp.sendOneFromPanel(${index})" style="font-size:0.7rem; padding:4px 8px; border:none;">📱 Відкрити чат</button>` : ''}
-              ${isPending ? `<button class="result-link" onclick="SidebarApp.confirmSendFromPanel(${index})" style="font-size:0.7rem; padding:4px 8px; border:none;">✅ Підтвердити</button>` : ''}
+              ${isPending ? `<button class="result-link" onclick="SidebarApp.confirmSendFromPanel(${index})" style="font-size:0.7rem; padding:4px 8px; border:none;">✓ Підтвердити</button>` : ''}
               ${(isPending || isSent) ? `<button class="result-link" onclick="SidebarApp.rejectSendFromPanel(${index})" style="font-size:0.7rem; padding:4px 8px; border:none;">↩️ Не відправлено</button>` : ''}
               <a href="${escapeAttr(item.link)}" target="${escapeAttr(WA_SENDER_TARGET)}" rel="noopener noreferrer" style="font-size:0.7rem; color:#888; text-decoration:underline;">(відкрити)</a>
             </div>` : ''}
@@ -180,7 +180,7 @@
       logToConsole('🟡 Чат відкрито. Підтвердь відправку після фактичного надсилання.', 'warning');
       showSendPanel();
     } catch (error) {
-      logToConsole(`❌ Помилка відкриття чату: ${normalizeError(error)}`, 'error');
+      logToConsole(`✕ Помилка відкриття чату: ${normalizeError(error)}`, 'error');
       try { await refreshSendPanelDataFromServer({ silent: true }); } catch (_) {}
       showSendPanel();
     }
@@ -201,10 +201,10 @@
         await refreshSendPanelDataFromServer({ silent: true });
       }
 
-      logToConsole('✅ Відправку підтверджено вручну', 'success');
+      logToConsole('✓ Відправку підтверджено вручну', 'success');
       showSendPanel();
     } catch (error) {
-      logToConsole(`❌ Помилка підтвердження: ${normalizeError(error)}`, 'error');
+      logToConsole(`✕ Помилка підтвердження: ${normalizeError(error)}`, 'error');
     }
   }
 
@@ -226,7 +226,7 @@
       logToConsole('↩️ Рядок повернуто у стан "не відправлено"', 'warning');
       showSendPanel();
     } catch (error) {
-      logToConsole(`❌ Помилка повернення: ${normalizeError(error)}`, 'error');
+      logToConsole(`✕ Помилка повернення: ${normalizeError(error)}`, 'error');
     }
   }
 
@@ -236,7 +236,7 @@
     const queue = getReadyPanelItems(data);
 
     if (!queue.length) {
-      logToConsole('✅ Немає рядків для відкриття', 'success');
+      logToConsole('✓ Немає рядків для відкриття', 'success');
       return;
     }
 
@@ -268,7 +268,7 @@
         }
         logToConsole(`🟡 Відкрито ${openedRows.length} чатів. Підтвердь фактичні відправки вручну.`, 'warning');
       } catch (error) {
-        logToConsole(`❌ Помилка фіксації стану очікування: ${normalizeError(error)}`, 'error');
+        logToConsole(`✕ Помилка фіксації стану очікування: ${normalizeError(error)}`, 'error');
       }
 
       showSendPanel();
@@ -295,7 +295,7 @@
         idx += 1;
         showProgressBar(queue.length, idx);
       } catch (error) {
-        logToConsole(`❌ Помилка під час серії: ${normalizeError(error)}`, 'error');
+        logToConsole(`✕ Помилка під час серії: ${normalizeError(error)}`, 'error');
         idx += 1;
       }
 
@@ -309,7 +309,7 @@
 
     STATE.sendingInterval = setTimeout(runNextStep, 0);
   } catch (error) {
-    logToConsole(`❌ startSendingUnsent: ${normalizeError(error)}`, 'error');
+    logToConsole(`✕ startSendingUnsent: ${normalizeError(error)}`, 'error');
   }
 }
 
@@ -443,7 +443,7 @@
       case 'success':
         html = `
           <div class="result-item">
-            <div class="result-label" style="color: var(--success-color);">✅ Успішно</div>
+            <div class="result-label" style="color: var(--success-color);">✓ Успішно</div>
             <div class="result-value">${escapeHtml(data.message || '')}</div>
           </div>
         `;
@@ -453,7 +453,7 @@
         setText('resultTitle', 'Помилка');
         html = `
           <div class="result-item">
-            <div class="result-label" style="color: var(--error-color);">❌ Помилка</div>
+            <div class="result-label" style="color: var(--error-color);">✕ Помилка</div>
             <div class="result-value">${escapeHtml(data.error || 'Невідома помилка')}</div>
           </div>
         `;
@@ -463,7 +463,7 @@
         setText('resultTitle', 'Створення місяця');
         html = `
           <div class="result-item">
-            <div class="result-label" style="color: var(--success-color);">✅ Місяць створено</div>
+            <div class="result-label" style="color: var(--success-color);">✓ Місяць створено</div>
             <div class="result-value">${escapeHtml(data.message || '')}</div>
           </div>
         `;
@@ -507,7 +507,7 @@
             ${
               row.link
                 ? `<button class="result-link vacation-card__btn" onclick="SidebarApp.sendVacationMessage('${escJs(row.link)}')">📱 Відправити</button>`
-                : `<div class="vacation-card__empty">⚠️ Немає посилання</div>`
+                : `<div class="vacation-card__empty">⁈ Немає посилання</div>`
             }
           </div>
         `;
@@ -537,7 +537,7 @@
             ${
               row.link
                 ? `<button class="result-link vacation-card__btn" onclick="SidebarApp.sendVacationMessage('${escJs(row.link)}')">📱 Відправити</button>`
-                : `<div class="vacation-card__empty">⚠️ Немає телефону</div>`
+                : `<div class="vacation-card__empty">⁈ Немає телефону</div>`
             }
           </div>
         `;
@@ -555,7 +555,7 @@
 
   function sendVacationMessage(link) {
     if (!link) {
-      logToConsole('❌ Немає посилання для відправки', 'error');
+      logToConsole('✕ Немає посилання для відправки', 'error');
       return;
     }
 
@@ -652,7 +652,7 @@
 
   async function processSelectedDate(action) {
     if (!STATE.selectedDate) {
-      logToConsole('⚠️ Оберіть дату в календарі', 'warning');
+      logToConsole('⁈ Оберіть дату в календарі', 'warning');
       return;
     }
 
@@ -696,7 +696,7 @@
           showMenu();
         }
       } catch (error) {
-        logToConsole(`❌ ${normalizeError(error)}`, 'error');
+        logToConsole(`✕ ${normalizeError(error)}`, 'error');
         showMenu();
       }
 
@@ -732,7 +732,7 @@
         </label>
 
         <div class="month-switcher-actions">
-          <button type="button" class="result-link" onclick="SidebarApp.switchToSelectedMonth()">✅ Перемкнути</button>
+          <button type="button" class="result-link" onclick="SidebarApp.switchToSelectedMonth()">✓ Перемкнути</button>
           <button type="button" class="result-link result-link--secondary" onclick="SidebarApp.showMenu()">Скасувати</button>
         </div>
       </div>
@@ -748,7 +748,7 @@
       if (result?.success) {
         STATE.currentMonth = result.month;
         updateMonthBadge(STATE.currentMonth);
-        logToConsole(`✅ Перемкнено на ${STATE.currentMonth}`, 'success');
+        logToConsole(`✓ Перемкнено на ${STATE.currentMonth}`, 'success');
         showMenu();
       } else {
         displayInResult('error', { error: result?.error || 'Невідома помилка' });
@@ -766,21 +766,21 @@
     try {
       const result = await ActionDispatcher.run('clearPhoneCache', () => MaintenanceApi.clearPhoneCache());
       if (!result?.success) {
-        showToast('❌ ' + (result?.error || 'Помилка'));
+        showToast('✕ ' + (result?.error || 'Помилка'));
         return;
       }
 
-      showToast('✅ Кеш очищено');
+      showToast('✓ Кеш очищено');
       showStandardResult('🧹 Очищення кешу');
 
       setHtml('resultContent', `
         <div class="result-item">
-          <div class="result-label" style="color: var(--success-color);">✅ Успішно</div>
+          <div class="result-label" style="color: var(--success-color);">✓ Успішно</div>
           <div class="result-value">${escapeHtml(result.message || 'Кеш телефонів очищено')}</div>
         </div>
       `);
     } catch (error) {
-      showToast('❌ ' + normalizeError(error));
+      showToast('✕ ' + normalizeError(error));
     }
   }
 
@@ -793,12 +793,12 @@
       const result = await ActionDispatcher.run('setupVacationTriggers', () => MaintenanceApi.setupVacationTriggers());
 
       if (result?.success) {
-        showToast('✅ Тригер створено');
+        showToast('✓ Тригер створено');
         showStandardResult('⏰ Щоденні тригери');
 
         setHtml('resultContent', `
           <div class="result-item">
-            <div class="result-label" style="color: var(--success-color);">✅ Успішно</div>
+            <div class="result-label" style="color: var(--success-color);">✓ Успішно</div>
             <div class="result-value">
               <p>${escapeHtml(result.message || '').split('\n').join('<br>')}</p>
               <p style="font-size:0.8rem; color:var(--text-secondary); margin-top:8px;">
@@ -808,10 +808,10 @@
           </div>
         `);
       } else {
-        showToast('❌ ' + (result?.error || 'Помилка'));
+        showToast('✕ ' + (result?.error || 'Помилка'));
       }
     } catch (error) {
-      showToast('❌ ' + normalizeError(error));
+      showToast('✕ ' + normalizeError(error));
     }
   }
 
@@ -826,23 +826,23 @@
       if (result?.ok) {
         const statusMessage =
           result.removed === 0
-            ? '✅ Дублів не знайдено. Все добре!'
-            : `✅ Видалено дублів: ${result.removed} (було: ${result.found})`;
+            ? '✓ Дублів не знайдено. Все добре!'
+            : `✓ Видалено дублів: ${result.removed} (було: ${result.found})`;
 
         showToast(statusMessage);
         showStandardResult('🧹 Очищення дублів тригерів');
 
         setHtml('resultContent', `
           <div class="result-item">
-            <div class="result-label" style="color: var(--success-color);">✅ Результат</div>
+            <div class="result-label" style="color: var(--success-color);">✓ Результат</div>
             <div class="result-value">${escapeHtml(statusMessage)}</div>
           </div>
         `);
       } else {
-        showToast('❌ ' + (result?.error || 'Помилка'));
+        showToast('✕ ' + (result?.error || 'Помилка'));
       }
     } catch (error) {
-      showToast('❌ ' + normalizeError(error));
+      showToast('✕ ' + normalizeError(error));
     }
   }
 
@@ -896,7 +896,7 @@
 
       setHtml('resultContent', `
         <div class="result-item">
-          <div class="result-label" style="color: var(--success-color);">✅ Результат</div>
+          <div class="result-label" style="color: var(--success-color);">✓ Результат</div>
           <div class="result-value">${escapeHtml(result.message || 'Діагностику PHONES виконано')}</div>
         </div>
 
@@ -919,18 +919,18 @@
         ${rowsHtml}
       `);
 
-      showToast('✅ Діагностику PHONES завершено');
+      showToast('✓ Діагностику PHONES завершено');
       logToConsole(`📞 Діагностика PHONES завершена: ${Number(stats.total || contacts.length || 0)} записів`, 'success');
     } catch (error) {
       const message = normalizeError(error);
       setHtml('resultContent', `
         <div class="result-item">
-          <div class="result-label" style="color: var(--danger-color);">❌ Помилка</div>
+          <div class="result-label" style="color: var(--danger-color);">✕ Помилка</div>
           <div class="result-value">${escapeHtml(message)}</div>
         </div>
       `);
-      showToast('❌ ' + message);
-      logToConsole('❌ Діагностика PHONES: ' + message, 'error');
+      showToast('✕ ' + message);
+      logToConsole('✕ Діагностика PHONES: ' + message, 'error');
     }
   }
 
@@ -941,20 +941,20 @@ async function restartBot() {
   try {
     const result = await ActionDispatcher.run('restartBot', () => MaintenanceApi.restartBot(), { successMessage: '' });
     if (!result?.success) {
-      showToast('❌ ' + (result?.error || 'Помилка'));
+      showToast('✕ ' + (result?.error || 'Помилка'));
       return;
     }
-    showToast('✅ ' + (result.message || 'Бота перезапущено'));
+    showToast('✓ ' + (result.message || 'Бота перезапущено'));
     showStandardResult('♻️ Перезапуск бота');
     setHtml('resultContent', `
       <div class="result-item">
-        <div class="result-label" style="color: var(--success-color);">✅ Успішно</div>
+        <div class="result-label" style="color: var(--success-color);">✓ Успішно</div>
         <div class="result-value">${escapeHtml(result.message || 'Бота перезапущено')}</div>
       </div>
     `);
     setTimeout(() => { window.location.reload(); }, 300);
   } catch (error) {
-    showToast('❌ ' + normalizeError(error));
+    showToast('✕ ' + normalizeError(error));
   }
 }
 
@@ -962,7 +962,7 @@ function renderPendingRepairsTable_(items) {
   if (!Array.isArray(items) || !items.length) {
     return `
       <div class="result-item">
-        <div class="result-label">✅ Операції, що потребують виправлення</div>
+        <div class="result-label">✓ Операції, що потребують виправлення</div>
         <div class="result-value">Немає операцій, що потребують виправлення.</div>
       </div>
     `;
@@ -1002,18 +1002,18 @@ async function showPendingRepairs() {
       html += `<div class="result-item"><div class="result-label">ℹ️ Пропущені записи</div><div class="result-value">${escapeHtml(String(skippedWithoutOperationId))} запис(ів) без коректного operationId не показано в списку repair.</div></div>`;
     }
     setHtml('resultContent', html);
-    showToast(items.length ? `⚠️ Потребують виправлення: ${items.length}` : '✅ Операцій для виправлення немає');
+    showToast(items.length ? `⁈ Потребують виправлення: ${items.length}` : '✓ Операцій для виправлення немає');
   } catch (error) {
-    setHtml('resultContent', `<div class="result-item"><div class="result-value">❌ ${escapeHtml(normalizeError(error))}</div></div>`);
-    showToast('❌ Не вдалося завантажити список операцій для виправлення');
+    setHtml('resultContent', `<div class="result-item"><div class="result-value">✕ ${escapeHtml(normalizeError(error))}</div></div>`);
+    showToast('✕ Не вдалося завантажити список операцій для виправлення');
   }
 }
 
 async function showOperationDetails(operationId) {
   const opId = String(operationId || '').trim();
   if (!opId) {
-    setHtml('resultContent', '<div class="result-item"><div class="result-value">❌ Не передано operationId</div></div>');
-    showToast('❌ Не знайдено operationId');
+    setHtml('resultContent', '<div class="result-item"><div class="result-value">✕ Не передано operationId</div></div>');
+    showToast('✕ Не знайдено operationId');
     return;
   }
   showStandardResult('🔎 Деталі операції');
@@ -1054,15 +1054,15 @@ async function showOperationDetails(operationId) {
       </div>
     `);
   } catch (error) {
-    setHtml('resultContent', `<div class="result-item"><div class="result-value">❌ ${escapeHtml(normalizeError(error))}</div></div>`);
+    setHtml('resultContent', `<div class="result-item"><div class="result-value">✕ ${escapeHtml(normalizeError(error))}</div></div>`);
   }
 }
 
 async function runRepair(operationId) {
   const opId = String(operationId || '').trim();
   if (!opId) {
-    setHtml('resultContent', '<div class="result-item"><div class="result-value">❌ Не передано operationId для repair</div></div>');
-    showToast('❌ Не знайдено operationId');
+    setHtml('resultContent', '<div class="result-item"><div class="result-value">✕ Не передано operationId для repair</div></div>');
+    showToast('✕ Не знайдено operationId');
     return;
   }
   if (!confirm('Запустити виправлення для цієї операції?')) return;
@@ -1071,14 +1071,14 @@ async function runRepair(operationId) {
   try {
     const result = await ActionDispatcher.run('runRepair', () => MaintenanceApi.runRepair(opId), { successMessage: '' });
     if (result?.success) {
-      showToast('✅ Виправлення виконано');
+      showToast('✓ Виправлення виконано');
       await showOperationDetails(result.operationId || opId);
     } else {
-      setHtml('resultContent', `<div class="result-item"><div class="result-value">❌ ${escapeHtml(translateLifecycleText(result?.error || result?.message || 'Repair failed'))}</div></div>`);
-      showToast('❌ Виправлення завершилося з помилкою');
+      setHtml('resultContent', `<div class="result-item"><div class="result-value">✕ ${escapeHtml(translateLifecycleText(result?.error || result?.message || 'Repair failed'))}</div></div>`);
+      showToast('✕ Виправлення завершилося з помилкою');
     }
   } catch (error) {
-    setHtml('resultContent', `<div class="result-item"><div class="result-value">❌ ${escapeHtml(normalizeError(error))}</div></div>`);
+    setHtml('resultContent', `<div class="result-item"><div class="result-value">✕ ${escapeHtml(normalizeError(error))}</div></div>`);
   }
 }
 </script>

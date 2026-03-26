@@ -93,7 +93,7 @@ const DialogTemplates_ = (function () {
 
     const errorsBlock = errors.length ? `
       <div style="border:1px solid #fecaca;background:#fff1f2;border-radius:12px;padding:12px;margin-bottom:12px;">
-        <div style="font-weight:700;color:#991b1b;margin-bottom:8px;">⚠️ Помилки підготовки: ${errors.length}</div>
+        <div style="font-weight:700;color:#991b1b;margin-bottom:8px;">⁈ Помилки підготовки: ${errors.length}</div>
         ${errors.map(function (item) {
       return `<div style="font-size:12px;color:#7f1d1d;margin-bottom:4px;">${esc(item.cell || '')} ${esc(item.message || '')}</div>`;
     }).join('')}

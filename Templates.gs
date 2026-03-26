@@ -144,9 +144,9 @@ function testNotifyWithTemplate_() {
   console.log('LINK:', link);
 
   if (link && link.includes('wa.me/') && link.includes('text=')) {
-    console.log('✅ OK: WA link built');
+    console.log('✓ OK: WA link built');
   } else {
-    console.error('❌ FAIL: WA link not built');
+    console.error('✕ FAIL: WA link not built');
   }
 
   return link;

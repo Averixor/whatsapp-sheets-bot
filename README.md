@@ -21,11 +21,11 @@ This archive is the **Stage 7.1.1 Final Stabilized Repair Baseline** with preser
 
 - SEND_PANEL no longer treats opening WhatsApp as automatic sending.
 - Canonical status model is preserved:
-  - `✅ Готово`
+  - `✓ Готово`
   - `🟡 Очікує підтвердження`
   - `↩️ Не відправлено`
   - `📤 Відправлено`
-  - `❌ ...`
+  - `✕ ...`
 - SEND_PANEL rebuild preserves state from the sheet for the same panel date.
 - Panel date is read from explicit SEND_PANEL metadata instead of silently falling back to "today".
 - WhatsApp links use one named sender tab instead of `_blank`.

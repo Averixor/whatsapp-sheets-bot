@@ -74,9 +74,9 @@ function createNextMonthSheet() {
     newSheet.activate();
     highlightActiveMonthTab_(nextName);
 
-    ui.alert('✅', `Створено "${nextName}" на основі "${srcName}"`, ui.ButtonSet.OK);
+    ui.alert('✓', `Створено "${nextName}" на основі "${srcName}"`, ui.ButtonSet.OK);
   } catch (error) {
-    ui.alert('❌ Помилка', String(error), ui.ButtonSet.OK);
+    ui.alert('✕ Помилка', String(error), ui.ButtonSet.OK);
     console.error(error);
   }
 }
@@ -85,7 +85,7 @@ function createNextMonthSheet() {
 function switchBotToSheet() {
   const ss = SpreadsheetApp.getActive();
   const months = ss.getSheets().map(s => s.getName()).filter(n => /^\d{2}$/.test(n)).sort();
-  if (!months.length) return SpreadsheetApp.getUi().alert('❌ Немає аркушів місяців (01..12)');
+  if (!months.length) return SpreadsheetApp.getUi().alert('✕ Немає аркушів місяців (01..12)');
 
   const current = getBotMonthSheetName_();
   const options = months.map(n => `<option value="${n}" ${n === current ? 'selected' : ''}>${n}</option>`).join('');
@@ -101,7 +101,7 @@ function switchBotToSheet() {
       </div>
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
         <button onclick="google.script.host.close()" style="padding:10px 14px;border:1px solid #ddd;border-radius:10px;background:#f8f9fa;cursor:pointer">Скасувати</button>
-        <button onclick="go()" style="padding:10px 16px;border:0;border-radius:10px;background:#25D366;color:#fff;font-weight:bold;cursor:pointer">✅ Перемкнути</button>
+        <button onclick="go()" style="padding:10px 16px;border:0;border-radius:10px;background:#25D366;color:#fff;font-weight:bold;cursor:pointer">✓ Перемкнути</button>
       </div>
       <script>
         function go(){

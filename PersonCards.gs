@@ -254,11 +254,11 @@ function openPersonCardByCallsignAndDate_(callsign, dateStr) {
           }
           function openCalendar() {
             gsRun('openPersonCalendar', '${HtmlUtils_.escapeHtml(data.callsign)}')
-              .catch(err => alert('❌ ' + normalizeError(err)));
+              .catch(err => alert('✕ ' + normalizeError(err)));
           }
           function openMainSidebar() {
             gsRun('showSidebar')
-              .catch(err => alert('❌ ' + normalizeError(err)));
+              .catch(err => alert('✕ ' + normalizeError(err)));
           }
         </script>
       </body>

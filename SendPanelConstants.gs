@@ -3,12 +3,12 @@
  */
 
 const SendPanelConstants_ = Object.freeze({
-  STATUS_READY: '✅ Готово',
+  STATUS_READY: '✓ Готово',
   STATUS_PENDING: '🟡 Очікує підтвердження',
   STATUS_UNSENT: '↩️ Не відправлено',
   STATUS_SENT: '📤 Відправлено',
-  STATUS_ERROR_PREFIX: '❌',
-  LEGACY_STATUS_READY: '✅',
+  STATUS_ERROR_PREFIX: '✕',
+  LEGACY_STATUS_READY: '✓',
   LEGACY_STATUS_OPENED: '🟦 Відкрито',
   WA_SENDER_TARGET: 'WAPB_WHATSAPP_SENDER_TAB',
   METADATA_MONTH_CELL: 'H1',

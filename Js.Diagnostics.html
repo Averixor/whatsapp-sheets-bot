@@ -145,7 +145,7 @@
       const grouped = splitHealthChecksByGroup(Array.isArray(report?.checks) ? report.checks : []);
       const overallOk = grouped.critical.length === 0 && grouped.warnings.length === 0;
 
-      showToast(overallOk ? '✅ Система в нормі' : '⚠️ Є проблеми — див. звіт');
+      showToast(overallOk ? '✓ Система в нормі' : '⁈ Є проблеми — див. звіт');
 
       logToConsole(
         slowModeShown
@@ -161,14 +161,14 @@
 
         <div class="health-wrap">
           <div class="health-item bad sev-critical">
-            <div class="health-title">❌ Помилка перевірки</div>
+            <div class="health-title">✕ Помилка перевірки</div>
             <div class="health-details">${escapeHtml(normalizeError(error))}</div>
           </div>
         </div>
       `);
 
-      showToast('❌ Помилка Health Check');
-      logToConsole(`❌ Health Check: ${normalizeError(error)}`, 'error');
+      showToast('✕ Помилка Health Check');
+      logToConsole(`✕ Health Check: ${normalizeError(error)}`, 'error');
     }
   }
   function splitHealthChecksByGroup(checks) {
@@ -258,7 +258,7 @@
     const status = String(check?.status || '').toUpperCase();
     const ok = typeof check?.ok === 'boolean' ? check.ok : status === 'OK';
     const isPseudo = status === 'PSEUDO';
-    const icon = isPseudo ? '🧩' : (ok ? '✅' : (status === 'WARN' ? '⚠️' : '❌'));
+    const icon = isPseudo ? '🧩' : (ok ? '✓' : (status === 'WARN' ? '⁈' : '✕'));
     const title = check?.title || check?.name || 'Перевірка';
     const details = check?.details || check?.message || '';
     const recommendation = check?.howTo || check?.recommendation || '';
@@ -284,7 +284,7 @@
     if (!report || !report.checks) {
       return `
         ${renderHealthCheckModeSwitcher_()}
-        <div class="health-item warn">❌ Порожній звіт</div>
+        <div class="health-item warn">✕ Порожній звіт</div>
       `;
     }
 
@@ -297,7 +297,7 @@
     const okCount = groups.ok.length;
 
     const hasRealProblems = criticalCount > 0 || warningCount > 0;
-    const statusIcon = hasRealProblems ? '⚠️' : '✅';
+    const statusIcon = hasRealProblems ? '⁈' : '✓';
     const statusColor = hasRealProblems ? 'var(--warning-color)' : 'var(--success-color)';
 
     return `
@@ -316,13 +316,13 @@
 
         <div style="font-size:0.68rem; margin-bottom:8px; display:flex; gap:8px; flex-wrap:wrap;">
           <span style="padding:2px 8px; border-radius:999px; background:rgba(34,197,94,.12); color:var(--success-color);">
-            ✅ OK: ${okCount}
+            ✓ OK: ${okCount}
           </span>
           <span style="padding:2px 8px; border-radius:999px; background:rgba(239,68,68,.12); color:var(--error-color);">
-            ❌ Критичні: ${criticalCount}
+            ✕ Критичні: ${criticalCount}
           </span>
           <span style="padding:2px 8px; border-radius:999px; background:rgba(245,158,11,.12); color:var(--warning-color);">
-            ⚠️ Попередження: ${warningCount}
+            ⁈ Попередження: ${warningCount}
           </span>
           <span style="padding:2px 8px; border-radius:999px; background:rgba(59,130,246,.12); color:var(--google-blue);">
             🧩 PSEUDO: ${pseudoCount}
@@ -335,10 +335,10 @@
         </div>
 
         <div class="health-scroll-container" style="max-height:320px;">
-          ${renderHealthGroup('Критичні проблеми', '❌', groups.critical, 'Критичних проблем не знайдено')}
-          ${renderHealthGroup('Попередження', '⚠️', groups.warnings, 'Попереджень немає')}
+          ${renderHealthGroup('Критичні проблеми', '✕', groups.critical, 'Критичних проблем не знайдено')}
+          ${renderHealthGroup('Попередження', '⁈', groups.warnings, 'Попереджень немає')}
           ${renderHealthGroup('PSEUDO / compatibility layer', '🧩', groups.pseudo, 'Нейтральний compatibility layer не виявлено')}
-          ${renderHealthGroup('Успішні перевірки', '✅', groups.ok, 'Успішних перевірок немає')}
+          ${renderHealthGroup('Успішні перевірки', '✓', groups.ok, 'Успішних перевірок немає')}
         </div>
       </div>
     `;
@@ -347,7 +347,7 @@
     const report = STATE.lastHealthReport;
 
     if (!report || !Array.isArray(report.checks)) {
-      showToast('⚠️ Спочатку натисніть "Перевірити"');
+      showToast('⁈ Спочатку натисніть "Перевірити"');
       return;
     }
 
@@ -368,7 +368,7 @@
         const status = String(check?.status || '').toUpperCase();
         const ok = typeof check?.ok === 'boolean' ? check.ok : status === 'OK';
         const isPseudo = status === 'PSEUDO';
-        const icon = isPseudo ? '🧩' : (ok ? '✅' : (status === 'WARN' ? '⚠️' : '❌'));
+        const icon = isPseudo ? '🧩' : (ok ? '✓' : (status === 'WARN' ? '⁈' : '✕'));
         const name = check?.title || check?.name || 'Перевірка';
         const details = check?.details || check?.message || '';
         const recommendation = check?.howTo || check?.recommendation || '';
@@ -385,7 +385,7 @@
     let text = 'HEALTH CHECK ЗВІТ\n==================\n';
     text += `Час: ${report.ts ? new Date(report.ts).toLocaleString('uk-UA') : new Date().toLocaleString('uk-UA')}\n`;
     text += `Режим: ${getHealthCheckModeLabel_()}\n`;
-    text += `Статус: ${overallOk ? '✅ ОК' : '⚠️ Є ПРОБЛЕМИ'}\n`;
+    text += `Статус: ${overallOk ? '✓ ОК' : '⁈ Є ПРОБЛЕМИ'}\n`;
     text += `OK: ${groups.ok.length} | Критичні: ${groups.critical.length} | Попередження: ${groups.warnings.length} | PSEUDO: ${groups.pseudo.length}\n\n`;
 
     text = appendGroup(text, 'КРИТИЧНІ ПРОБЛЕМИ', groups.critical);

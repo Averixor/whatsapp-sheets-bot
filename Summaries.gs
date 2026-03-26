@@ -195,7 +195,7 @@ function createDetailedDaySummary() {
     saveDetailedSummaryToHistory_(date, people, text);
     createDetailedSheet_(date, people);
     showDetailedSummaryDialog_(date, text);
-  } catch (e) { SpreadsheetApp.getUi().alert('❌ ' + e.message); }
+  } catch (e) { SpreadsheetApp.getUi().alert('✕ ' + e.message); }
 }
 
 function sendDetailedSummaryToCommander() {
@@ -216,7 +216,7 @@ function sendDetailedSummaryToCommander() {
     if (!phone) {
       const ui = SpreadsheetApp.getUi();
       ui.alert(
-        '❌ Телефон не знайдено',
+        '✕ Телефон не знайдено',
         `Для ролі "${CONFIG.COMMANDER_ROLE}" не знайдено телефону.\n\n` +
         `Перевірте:\n` +
         `1. В аркуші PHONES є запис з роллю "${CONFIG.COMMANDER_ROLE}" в колонці C\n` +
@@ -230,7 +230,7 @@ function sendDetailedSummaryToCommander() {
     const safe = trimToEncoded_(text, CONFIG.MAX_WA_TEXT);
     showLinkDialogSimple_('📊 Детальне → командиру', `https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(safe)}`);
   } catch (e) {
-    SpreadsheetApp.getUi().alert('❌ ' + e.message);
+    SpreadsheetApp.getUi().alert('✕ ' + e.message);
   }
 }
 
@@ -315,7 +315,7 @@ function showDetailedSummaryDialog_(date, text) {
         function copyText() {
           const t = document.getElementById('t');
           t.select(); t.setSelectionRange(0,999999);
-          navigator.clipboard.writeText(t.value).then(()=>alert('✅ Скопійовано'));
+          navigator.clipboard.writeText(t.value).then(()=>alert('✓ Скопійовано'));
         }
       </script>
     </div>
