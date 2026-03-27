@@ -1208,22 +1208,32 @@ const Stage4UseCases_ = (function() {
             const cleanup = (typeof OperationRepository_ === 'object')
               ? OperationRepository_.runRetentionCleanup()
               : { archived: 0, removedActiveStale: 0, archivedCheckpoints: 0 };
+            const retention = (typeof cleanupLogsAndAuditRetention_ === 'function')
+              ? cleanupLogsAndAuditRetention_()
+              : { removed: 0, log: { removed: 0 }, audit: { removed: 0 } };
             return {
               success: true,
               message: 'Lifecycle retention cleanup виконано',
-              result: Object.assign({ type: 'cleanupLifecycleRetention' }, cleanup || {}),
+              result: Object.assign({ type: 'cleanupLifecycleRetention' }, cleanup || {}, {
+                logRetention: retention.log || {},
+                auditRetention: retention.audit || {},
+                removedLogAndAudit: Number(retention.removed || 0)
+              }),
               changes: [{
                 type: 'cleanupLifecycleRetention',
                 archived: Number(cleanup && cleanup.archived || 0),
                 archivedCheckpoints: Number(cleanup && cleanup.archivedCheckpoints || 0),
-                removedActiveStale: Number(cleanup && cleanup.removedActiveStale || 0)
+                removedActiveStale: Number(cleanup && cleanup.removedActiveStale || 0),
+                removedLogRows: Number(retention && retention.log && retention.log.removed || 0),
+                removedAuditRows: Number(retention && retention.audit && retention.audit.removed || 0)
               }],
-              affectedSheets: ['OPS_LOG', 'ACTIVE_OPERATIONS', 'CHECKPOINTS'],
+              affectedSheets: ['OPS_LOG', 'ACTIVE_OPERATIONS', 'CHECKPOINTS', CONFIG.LOG_SHEET || 'LOG', STAGE4_CONFIG.AUDIT_SHEET || 'AUDIT_LOG'],
               affectedEntities: [],
               appliedChangesCount:
                 Number(cleanup && cleanup.archived || 0) +
                 Number(cleanup && cleanup.archivedCheckpoints || 0) +
-                Number(cleanup && cleanup.removedActiveStale || 0),
+                Number(cleanup && cleanup.removedActiveStale || 0) +
+                Number(retention && retention.removed || 0),
               skippedChangesCount: 0,
               partial: false
             };

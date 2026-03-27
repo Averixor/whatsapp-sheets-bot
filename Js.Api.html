@@ -191,7 +191,9 @@
     runRegressionTests: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiRunStage5RegressionTests', options)),
     listPendingRepairs: async (filters = {}) => adaptStage4UtilityResponse(await Api.run('apiStage5ListPendingRepairs', filters)),
     getOperationDetails: async (operationId) => adaptStage4UtilityResponse(await Api.run('apiStage5GetOperationDetails', operationId || '')),
-    runRepair: async (operationId, options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage5RunRepair', operationId || '', options))
+    runRepair: async (operationId, options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage5RunRepair', operationId || '', options)),
+    getAccessDescriptor: async () => adaptStage4UtilityResponse(await Api.run('apiStage5GetAccessDescriptor')),
+    applyProtections: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage5ApplyProtections', options))
   };
 
   var SidebarApi = {

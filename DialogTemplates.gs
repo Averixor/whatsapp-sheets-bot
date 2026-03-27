@@ -47,7 +47,7 @@ const DialogTemplates_ = (function () {
     const body = `
       <div style="text-align:center;padding:8px 4px 2px 4px;">
         <p style="margin:0 0 14px 0;color:#334155;">${esc((data && data.description) || 'Натисніть, щоб відкрити WhatsApp')}</p>
-        <a href="${safe}" target="WAPB_WHATSAPP_SENDER_TAB" style="display:inline-block;padding:12px 24px;background:#25D366;color:#fff;text-decoration:none;border-radius:10px;font-weight:700;">
+        <a href="${safe}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:12px 24px;background:#25D366;color:#fff;text-decoration:none;border-radius:10px;font-weight:700;">
           📱 ВІДКРИТИ
         </a>
       </div>
@@ -68,7 +68,7 @@ const DialogTemplates_ = (function () {
       <textarea id="msgText" readonly style="width:100%;height:180px;border:1px solid #cbd5e1;border-radius:10px;padding:12px;box-sizing:border-box;">${esc(item.message || '')}</textarea>
       <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;">
         <button onclick="copyTextSmart(document.getElementById('msgText').value)" style="padding:10px 16px;border:none;border-radius:10px;background:#0ea5e9;color:#fff;font-weight:700;cursor:pointer;">📋 Копіювати</button>
-        <a href="${safe}" target="WAPB_WHATSAPP_SENDER_TAB" style="display:inline-block;padding:10px 16px;border-radius:10px;background:#25D366;color:#fff;text-decoration:none;font-weight:700;">📱 Відкрити</a>
+        <a href="${safe}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 16px;border-radius:10px;background:#25D366;color:#fff;text-decoration:none;font-weight:700;">📱 Відкрити</a>
       </div>
     `;
     return baseShell((data && data.title) || 'Повідомлення', body, 620, 480);
@@ -85,7 +85,7 @@ const DialogTemplates_ = (function () {
           <textarea readonly style="width:100%;height:92px;border:1px solid #cbd5e1;border-radius:8px;padding:8px;box-sizing:border-box;">${esc(item.message || '')}</textarea>
           <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
             <button onclick="copyTextSmart(this.parentNode.previousElementSibling.value)" style="padding:8px 12px;border:none;border-radius:8px;background:#0ea5e9;color:#fff;cursor:pointer;">📋</button>
-            <a href="${PreviewLinkService_.safeWaLink(item.link || '')}" target="WAPB_WHATSAPP_SENDER_TAB" style="display:inline-block;padding:8px 12px;border-radius:8px;background:#25D366;color:#fff;text-decoration:none;">📱</a>
+            <a href="${PreviewLinkService_.safeWaLink(item.link || '')}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:8px 12px;border-radius:8px;background:#25D366;color:#fff;text-decoration:none;">📱</a>
           </div>
         </div>
       `;
@@ -115,7 +115,7 @@ const DialogTemplates_ = (function () {
       <textarea id="summaryText" readonly style="width:100%;height:260px;border:1px solid #cbd5e1;border-radius:10px;padding:12px;box-sizing:border-box;">${esc(item.summary || '')}</textarea>
       <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;">
         <button onclick="copyTextSmart(document.getElementById('summaryText').value)" style="padding:10px 16px;border:none;border-radius:10px;background:#0ea5e9;color:#fff;font-weight:700;cursor:pointer;">📋 Копіювати</button>
-        ${item.link ? `<a href="${PreviewLinkService_.safeWaLink(item.link)}" target="WAPB_WHATSAPP_SENDER_TAB" style="display:inline-block;padding:10px 16px;border-radius:10px;background:#25D366;color:#fff;text-decoration:none;font-weight:700;">📱 Відкрити</a>` : ''}
+        ${item.link ? `<a href="${PreviewLinkService_.safeWaLink(item.link)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 16px;border-radius:10px;background:#25D366;color:#fff;text-decoration:none;font-weight:700;">📱 Відкрити</a>` : ''}
       </div>
     `;
     return baseShell(item.title || 'Зведення', body, 620, 520);

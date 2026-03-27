@@ -30,27 +30,68 @@ function _stage5BuildMaintenanceResponse_(success, message, report, scenario, wa
   );
 }
 
+
+function _stage5AssertAdminAccess_(actionLabel) {
+  return (typeof AccessControl_ === 'object')
+    ? AccessControl_.assertRoleAtLeast('admin', actionLabel || 'maintenance action')
+    : { role: 'admin', source: 'fallback' };
+}
+
+function apiStage5GetAccessDescriptor() {
+  const descriptor = (typeof AccessControl_ === 'object')
+    ? AccessControl_.describe()
+    : { role: 'viewer', knownUser: false, reason: 'AccessControl_ недоступний' };
+  return _stage5BuildMaintenanceResponse_(
+    true,
+    descriptor.isAdmin ? 'Роль доступу визначено' : 'Доступ до maintenance-дій обмежено',
+    descriptor,
+    'stage5AccessDescriptor',
+    descriptor.reason ? [descriptor.reason] : []
+  );
+}
+
+function apiStage5ApplyProtections(options) {
+  _stage5AssertAdminAccess_('apply spreadsheet protections');
+  const result = (typeof applySpreadsheetProtections_ === 'function')
+    ? applySpreadsheetProtections_(options || {})
+    : { protectedSheets: [], warnings: ['applySpreadsheetProtections_ недоступна'] };
+  return _stage5BuildMaintenanceResponse_(
+    true,
+    result.dryRun ? 'План захисту листів побудовано' : 'Захист службових листів застосовано',
+    result,
+    'stage5ApplyProtections',
+    result.warnings || [],
+    { affectedSheets: result.plannedSheets || [] }
+  );
+}
+
 function apiStage5ClearCache() {
+  _stage5AssertAdminAccess_('clear cache');
   return Stage4UseCases_.runMaintenanceScenario({ type: 'cleanupCaches' });
 }
 
 function apiStage5ClearLog() {
+  _stage5AssertAdminAccess_('clear log');
   return Stage4UseCases_.runMaintenanceScenario({ type: 'clearLog' });
 }
 
 function apiStage5ClearPhoneCache() {
+  _stage5AssertAdminAccess_('clear phone cache');
   return Stage4UseCases_.runMaintenanceScenario({ type: 'clearPhoneCache' });
 }
 
 function apiStage5RestartBot() {
+  _stage5AssertAdminAccess_('restart bot');
   return Stage4UseCases_.runMaintenanceScenario({ type: 'restartBot' });
 }
 
 function apiStage5SetupVacationTriggers() {
+  _stage5AssertAdminAccess_('setup triggers');
   return Stage4UseCases_.runMaintenanceScenario({ type: 'setupVacationTriggers' });
 }
 
 function apiStage5CleanupDuplicateTriggers(functionName) {
+  _stage5AssertAdminAccess_('cleanup duplicate triggers');
   return Stage4UseCases_.runMaintenanceScenario({
     type: 'cleanupDuplicateTriggers',
     functionName: functionName || ''
@@ -58,6 +99,7 @@ function apiStage5CleanupDuplicateTriggers(functionName) {
 }
 
 function apiStage5DebugPhones() {
+  _stage5AssertAdminAccess_('debug phones');
   return Stage4UseCases_.runMaintenanceScenario({ type: 'debugPhones' });
 }
 
@@ -99,10 +141,12 @@ function apiStage5BuildBirthdayLink(phone, name) {
 }
 
 function apiRunStage5MaintenanceScenario(options) {
+  _stage5AssertAdminAccess_('run maintenance scenario');
   return Stage4UseCases_.runMaintenanceScenario(options || {});
 }
 
 function apiInstallStage5Jobs() {
+  _stage5AssertAdminAccess_('install jobs');
   return WorkflowOrchestrator_.run({
     scenario: 'installStage5Jobs',
     payload: {},
@@ -128,6 +172,7 @@ function apiInstallStage5Jobs() {
 }
 
 function apiListStage5Jobs() {
+  _stage5AssertAdminAccess_('list jobs');
   return _stage5BuildMaintenanceResponse_(
     true,
     'Jobs перелічено',
@@ -137,6 +182,7 @@ function apiListStage5Jobs() {
 }
 
 function apiRunStage5Job(jobName, options) {
+  _stage5AssertAdminAccess_('run job');
   return Stage4Triggers_.runJob(jobName, options || {});
 }
 
@@ -154,6 +200,7 @@ function runStage5DiagnosticsByMode_(options) {
 }
 
 function apiStage5HealthCheck(options) {
+  _stage5AssertAdminAccess_('health check');
   const opts = Object.assign({}, options || {});
   const resolvedMode = opts.mode
     ? String(opts.mode).toLowerCase()
@@ -172,6 +219,7 @@ function apiStage5HealthCheck(options) {
 }
 
 function apiRunStage5Diagnostics(options) {
+  _stage5AssertAdminAccess_('run diagnostics');
   const report = runStage5DiagnosticsByMode_(options || {});
   return _stage5BuildMaintenanceResponse_(
     report.ok,
@@ -183,6 +231,7 @@ function apiRunStage5Diagnostics(options) {
 }
 
 function apiRunStage5RegressionTests(options) {
+  _stage5AssertAdminAccess_('run regression tests');
   const report = runStage5SmokeTests(options || {});
   return _stage5BuildMaintenanceResponse_(
     report.ok,
@@ -194,6 +243,7 @@ function apiRunStage5RegressionTests(options) {
 }
 
 function apiListStage5JobRuntime() {
+  _stage5AssertAdminAccess_('list job runtime');
   const report = JobRuntime_.buildRuntimeReport();
   return _stage5BuildMaintenanceResponse_(
     true,
@@ -207,6 +257,7 @@ function apiListStage5JobRuntime() {
 
 
 function apiStage5ListPendingRepairs(filters) {
+  _stage5AssertAdminAccess_('list pending repairs');
   return _stage5BuildMaintenanceResponse_(
     true,
     'Pending repairs перелічено',
@@ -218,6 +269,7 @@ function apiStage5ListPendingRepairs(filters) {
 }
 
 function apiStage5GetOperationDetails(operationId) {
+  _stage5AssertAdminAccess_('get operation details');
   const normalizedId = String(operationId || '').trim();
   if (!normalizedId) {
     return _stage5BuildMaintenanceResponse_(
@@ -241,6 +293,7 @@ function apiStage5GetOperationDetails(operationId) {
 }
 
 function apiStage5RunRepair(operationId, options) {
+  _stage5AssertAdminAccess_('run repair');
   if (typeof OperationRepository_ !== 'object') {
     return _stage5BuildMaintenanceResponse_(false, 'Сховище виправлення недоступне', { success: false }, 'stage5RunRepair', ['Сховище операцій недоступне']);
   }

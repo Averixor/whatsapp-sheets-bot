@@ -45,7 +45,7 @@ const Stage4Triggers_ = (function() {
         jobName: cfg.JOBS.LIFECYCLE_RETENTION_CLEANUP,
         handler: 'stage7JobLifecycleRetentionCleanup',
         kind: 'timeBased',
-        description: 'Retention cleanup для OPS_LOG / ACTIVE_OPERATIONS / CHECKPOINTS'
+        description: 'Retention cleanup для OPS/ACTIVE/CHECKPOINTS/LOG/AUDIT'
       }
     });
   }
@@ -137,9 +137,7 @@ const Stage4Triggers_ = (function() {
           ? { success: true, message: 'Stale detector виконано', result: OperationRepository_.detectStaleOperations() }
           : { success: false, message: 'OperationRepository_ недоступний', result: { staleOperations: [] } };
       case _cfg().JOBS.LIFECYCLE_RETENTION_CLEANUP:
-        return (typeof OperationRepository_ === 'object')
-          ? { success: true, message: 'Lifecycle retention cleanup виконано', result: OperationRepository_.runRetentionCleanup() }
-          : { success: false, message: 'OperationRepository_ недоступний', result: { archived: 0, removedActiveStale: 0, archivedCheckpoints: 0 } };
+        return Stage4UseCases_.runMaintenanceScenario(Object.assign({}, opts, { type: 'cleanupLifecycleRetention' }));
       default:
         throw new Error(`Stage4 job "${registryItem.jobName}" не підтримується`);
     }

@@ -1,18 +1,13 @@
 /************ СТАНДАРТИ ДЛЯ ЛИСТІВ ************/
 function applyGlobalSheetStandards_() {
   const ss = SpreadsheetApp.getActive();
-
   ss.getSheets().forEach(sh => {
     const name = sh.getName();
-    const isMonthSheet = /^\d{2}$/.test(name);
-    const isSendPanel = name === CONFIG.SEND_PANEL_SHEET;
-
-    // Применяем стандарты только к месячным листам и SEND_PANEL
-    if (!isMonthSheet && !isSendPanel) return;
-
-    applyFontStandardsToSheet_(sh);
-    applyFreezeStandardsToSheet_(sh);
-    applyColumnWidthsStandardsToSheet_(sh);
+    if (/^\d{2}$/.test(name) || name === CONFIG.SEND_PANEL_SHEET) {
+      applyFontStandardsToSheet_(sh);
+      applyFreezeStandardsToSheet_(sh);
+      applyColumnWidthsStandardsToSheet_(sh);
+    }
   });
 }
 
@@ -20,7 +15,6 @@ function applyFontStandardsToSheet_(sheet) {
   const maxR = sheet.getMaxRows();
   const maxC = sheet.getMaxColumns();
   if (maxR < 1 || maxC < 1) return;
-
   sheet.getRange(1, 1, maxR, maxC)
     .setFontFamily('Times New Roman')
     .setFontSize(12);
@@ -28,34 +22,21 @@ function applyFontStandardsToSheet_(sheet) {
 
 function applyFreezeStandardsToSheet_(sheet) {
   try {
-    const name = sheet.getName();
-    const isMonthSheet = /^\d{2}$/.test(name);
-
-    // Заморозка только для месячных листов 01..12
-    if (isMonthSheet) {
-      sheet.setFrozenRows(1);
-      sheet.setFrozenColumns(1);
-    } else {
-      // Для SEND_PANEL и остальных листов заморозку снимаем
-      sheet.setFrozenRows(0);
-      sheet.setFrozenColumns(0);
-    }
-  } catch (e) {}
+    sheet.setFrozenRows(1);
+    sheet.setFrozenColumns(7);
+  } catch (e) { }
 }
 
 function applyColumnWidthsStandardsToSheet_(sheet) {
   const isSendPanel = sheet.getName() === CONFIG.SEND_PANEL_SHEET;
   const maxCols = sheet.getMaxColumns();
-
   const widths = isSendPanel
-    ? [320, 110, 90, 150, 90, 90, 120]
-    : [110, 110, 110, 110, 150, 40, 315];
+    ? [320, 110, 90, 150, 95, 125, 95].slice(0, maxCols)
+    : [110, 110, 110, 110, 150, 40, 315].slice(0, maxCols);
 
-  widths.slice(0, maxCols).forEach((w, i) => {
+  widths.forEach((w, i) => {
     if (Number(w) > 0) {
-      try {
-        sheet.setColumnWidth(i + 1, w);
-      } catch (e) {}
+      try { sheet.setColumnWidth(i + 1, w); } catch (e) { }
     }
   });
 }
@@ -63,7 +44,6 @@ function applyColumnWidthsStandardsToSheet_(sheet) {
 /************ ПОШУК СЬОГОДНІШНЬОГО СТОВПЦЯ ************/
 function findTodayColumn_(sheet, todayStr) {
   todayStr = todayStr || Utilities.formatDate(new Date(), getTimeZone_(), 'dd.MM.yyyy');
-
   const codeRef = sheet.getRange(CONFIG.CODE_RANGE_A1);
   const row = Number(CONFIG.DATE_ROW) || 1;
 
@@ -81,8 +61,7 @@ function findTodayColumn_(sheet, todayStr) {
         const normalized = DateUtils_.normalizeDate(dateRowValues[idx], dateDisplayValues[idx]);
         if (normalized === todayStr) return c;
       }
-    } catch (e) {}
+    } catch (e) { }
   }
-
   return -1;
 }

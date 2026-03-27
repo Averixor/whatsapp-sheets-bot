@@ -280,18 +280,26 @@
   }
 
   function openLinkSafe(url) {
-    try {
-      const link = String(url || '').trim();
-      if (!link) return null;
-      if (STATE.DIAG_TEST_MODE) return { closed: false, focus() {} };
+    const link = String(url || '').trim();
+    if (!link) return null;
+    if (STATE.DIAG_TEST_MODE) return { closed: false, focus() {} };
 
+    try {
       const existing = primeWhatsAppSenderTab();
       if (existing && !existing.closed) {
         try {
           existing.location.replace(link);
+          existing.focus();
           STATE.waSenderWindow = existing;
           return existing;
         } catch (_) {}
+      }
+
+      const opened = window.open(link, WA_SENDER_TARGET, 'noopener,noreferrer');
+      if (opened) {
+        STATE.waSenderWindow = opened;
+        try { opened.focus(); } catch (_) {}
+        return opened;
       }
 
       const anchor = document.createElement('a');
@@ -305,11 +313,7 @@
       return null;
     } catch (error) {
       console.error('openLinkSafe error:', error);
-      try {
-        return window.open(String(url || '').trim(), WA_SENDER_TARGET, 'noopener,noreferrer');
-      } catch (_) {
-        return null;
-      }
+      return null;
     }
   }
 

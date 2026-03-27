@@ -1,7 +1,7 @@
 /************ ПАНЕЛЬ ВІДПРАВКИ ************/
 
 var SEND_PANEL_STATE_STORE_PREFIX_ = 'SEND_PANEL_SENT_V2|';
-var SEND_PANEL_WHATSAPP_TARGET_ = 'WAPB_WHATSAPP_SENDER_TAB';
+var SEND_PANEL_WHATSAPP_TARGET_ = '_blank';
 
 function extractHyperlinkUrl_(formula) {
   const m = String(formula || '').match(/HYPERLINK\("([^"]+)"/i);
