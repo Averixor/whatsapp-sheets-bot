@@ -86,6 +86,47 @@
     $id('sendingProgress')?.remove();
   }
 
+
+
+  function isAdminRole() {
+    return !!(STATE.access && STATE.access.isAdmin);
+  }
+
+  function applyAccessPolicyUI() {
+    const banner = $id('accessBanner');
+    const message = $id('accessBannerText');
+    const isAdmin = isAdminRole();
+    document.querySelectorAll('[data-admin-only="true"]').forEach(function(el) {
+      el.style.display = isAdmin ? '' : 'none';
+    });
+    if (banner && message) {
+      if (isAdmin) {
+        banner.style.display = 'none';
+        message.textContent = '';
+      } else {
+        banner.style.display = 'block';
+        message.textContent = STATE.access && STATE.access.reason
+          ? STATE.access.reason
+          : 'Maintenance-операції доступні лише адміністратору.';
+      }
+    }
+  }
+
+  async function loadAccessDescriptor() {
+    try {
+      const descriptor = await MaintenanceApi.getAccessDescriptor();
+      STATE.access = descriptor && descriptor.data ? descriptor.data : { role: 'viewer', isAdmin: false, knownUser: false, reason: '' };
+    } catch (error) {
+      STATE.access = { role: 'viewer', isAdmin: false, knownUser: false, reason: normalizeError(error) };
+    }
+    applyAccessPolicyUI();
+  }
+
+  function assertAdminAction_(actionName) {
+    if (isAdminRole()) return true;
+    throw new Error('Недостатньо прав для дії: ' + String(actionName || 'admin action'));
+  }
+
   // =========================
   // INIT
   // =========================
@@ -224,6 +265,7 @@
       clearCache: 'Очищення кешу',
       clearLog: 'Очищення логів',
       restartBot: 'Перезапуск бота',
+      applyProtections: 'Захист службових листів',
       pendingRepairs: 'Операції, що потребують виправлення',
       vacationReminder: 'Нагадування про відпустки',
       birthdayCheck: 'Дні Народження'
@@ -247,6 +289,7 @@
     logToConsole(`➡️ Виконання: ${getActionName(action)}`, 'info');
 
     try {
+      if (['clearCache', 'clearLog', 'restartBot', 'clearPhoneCache', 'setupTrigger', 'cleanupTriggers', 'debugPhones', 'healthCheck', 'pendingRepairs', 'applyProtections'].indexOf(action) !== -1) assertAdminAction_(action);
       switch (action) {
         case 'generatePanel': {
           primeWhatsAppSenderTab();
@@ -358,6 +401,10 @@
           );
           break;
         }
+
+        case 'applyProtections':
+          await applyProtections();
+          break;
 
         default:
           logToConsole(`⁈ Невідома дія: ${action}`, 'warning');

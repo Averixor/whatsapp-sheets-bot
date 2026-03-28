@@ -721,6 +721,7 @@
   }
 
   async function clearPhoneCache() {
+    assertAdminAction_('clearPhoneCache');
     if (!confirm('🧹 Очистити кеш телефонів?')) return;
 
     logToConsole('🧹 Очищення кешу телефонів...', 'info');
@@ -747,6 +748,7 @@
   }
 
   async function setupTrigger() {
+    assertAdminAction_('setupTrigger');
     if (!confirm('Створити щоденні тригери для відпусток і ДН?')) return;
 
     logToConsole('⏰ Створення тригера...', 'info');
@@ -778,6 +780,7 @@
   }
 
   async function cleanupTriggers() {
+    assertAdminAction_('cleanupTriggers');
     if (!confirm('Очистити дублікати тригерів?')) return;
 
     logToConsole('🧹 Очищення дублів тригерів...', 'info');
@@ -810,6 +813,7 @@
 
 
   async function debugPhones() {
+    assertAdminAction_('debugPhones');
     logToConsole('📞 Діагностика PHONES...', 'info');
     showStandardResult('📞 Діагностика PHONES');
 
@@ -897,7 +901,37 @@
   }
 
 
+  async function applyProtections() {
+    assertAdminAction_('applyProtections');
+    if (!confirm('Застосувати захист до службових листів?')) return;
+    logToConsole('🛡 Застосування захисту до службових листів...', 'info');
+    showStandardResult('🛡 Захист службових листів');
+    setHtml('resultContent', '<div class="result-item"><div class="result-value">⏳ Підготовка захисту...</div></div>');
+    try {
+      const result = await ActionDispatcher.run('applyProtections', () => MaintenanceApi.applyProtections({ dryRun: false }), { successMessage: '' });
+      const protectedSheets = Array.isArray(result?.protectedSheets) ? result.protectedSheets : (Array.isArray(result?.data?.protectedSheets) ? result.data.protectedSheets : []);
+      const warnings = Array.isArray(result?.warnings) ? result.warnings : (Array.isArray(result?.data?.warnings) ? result.data.warnings : []);
+      setHtml('resultContent', `
+        <div class="result-item">
+          <div class="result-label" style="color: var(--success-color);">✓ Результат</div>
+          <div class="result-value">${escapeHtml(result?.message || 'Захист застосовано')}</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Захищені листи</div>
+          <div class="result-value">${protectedSheets.length ? protectedSheets.map(escapeHtml).join('<br>') : '—'}</div>
+        </div>
+        ${warnings.length ? `<div class="result-item"><div class="result-label">Попередження</div><div class="result-value">${warnings.map(escapeHtml).join('<br>')}</div></div>` : ''}
+      `);
+      showToast('✓ Захист службових листів застосовано');
+    } catch (error) {
+      setHtml('resultContent', `<div class="result-item"><div class="result-value">✕ ${escapeHtml(normalizeError(error))}</div></div>`);
+      showToast('✕ Не вдалося застосувати захист');
+    }
+  }
+
+
 async function restartBot() {
+  assertAdminAction_('restartBot');
   if (!confirm('Повністю перезапустити бота?\n\nБудуть очищені активні runtime-маркери та lifecycle active operations.')) return;
   logToConsole('♻️ Перезапуск бота...', 'info');
   try {
@@ -952,6 +986,7 @@ function renderPendingRepairsTable_(items) {
 }
 
 async function showPendingRepairs() {
+  assertAdminAction_('pendingRepairs');
   logToConsole('🛠 Завантаження операцій, що потребують виправлення...', 'info');
   showStandardResult('🛠 Операції, що потребують виправлення');
   setHtml('resultContent', '<div class="result-item"><div class="result-value">⏳ Завантаження...</div></div>');
@@ -972,6 +1007,7 @@ async function showPendingRepairs() {
 }
 
 async function showOperationDetails(operationId) {
+  assertAdminAction_('operationDetails');
   const opId = String(operationId || '').trim();
   if (!opId) {
     setHtml('resultContent', '<div class="result-item"><div class="result-value">✕ Не передано operationId</div></div>');
@@ -1021,6 +1057,7 @@ async function showOperationDetails(operationId) {
 }
 
 async function runRepair(operationId) {
+  assertAdminAction_('runRepair');
   const opId = String(operationId || '').trim();
   if (!opId) {
     setHtml('resultContent', '<div class="result-item"><div class="result-value">✕ Не передано operationId для repair</div></div>');

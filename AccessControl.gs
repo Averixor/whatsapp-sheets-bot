@@ -110,13 +110,42 @@ const AccessControl_ = (function() {
     return null;
   }
 
+  function _configuredEntriesCount_() {
+    let count = listAdminEmails().length + listEmailsByRole('operator').length + listEmailsByRole('viewer').length;
+    const sh = _getSheet_(false);
+    if (sh && sh.getLastRow() >= 2) {
+      count += sh.getLastRow() - 1;
+    }
+    return count;
+  }
+
   function describe(email) {
     const userEmail = normalizeEmail_(email) || safeGetUserEmail_();
+    const configuredEntries = _configuredEntriesCount_();
     const sheetEntry = _findInSheet_(userEmail);
     const propEntry = !sheetEntry ? _findInProperties_(userEmail) : null;
     const match = sheetEntry || propEntry;
-    const role = match ? normalizeRole_(match.role) : 'viewer';
     const knownUser = !!userEmail;
+
+    if (!match && configuredEntries === 0 && knownUser) {
+      return {
+        email: userEmail,
+        role: 'admin',
+        enabled: true,
+        knownUser: true,
+        readOnly: false,
+        isAdmin: true,
+        isOperator: true,
+        source: 'bootstrap-admin',
+        note: '',
+        accessSheet: ACCESS_SHEET,
+        reason: 'RBAC ще не налаштовано. Поточний користувач тимчасово працює як bootstrap-admin, поки не буде заповнено ACCESS.',
+        adminEmailsConfigured: 0,
+        availableRoles: Object.keys(ROLE_ORDER)
+      };
+    }
+
+    const role = match ? normalizeRole_(match.role) : 'viewer';
     const readOnly = role === 'viewer';
     const enabled = match ? match.enabled !== false : true;
     const reason = !knownUser

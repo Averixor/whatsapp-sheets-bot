@@ -30,7 +30,7 @@ var STAGE6A_CONFIG = (typeof STAGE6A_CONFIG !== 'undefined') ? STAGE6A_CONFIG : 
 
 function buildAppConfig_() {
   return Object.freeze({
-    CURRENT_VERSION: '7.1.1-reliability-hardened-merged',
+    CURRENT_VERSION: '7.1.2-security-ops-hardened',
 
     CORE: Object.freeze({
       AUDIT_SHEET: 'AUDIT_LOG',
@@ -40,8 +40,14 @@ function buildAppConfig_() {
       OPS_LOG_SHEET: 'OPS_LOG',
       ACTIVE_OPERATIONS_SHEET: 'ACTIVE_OPERATIONS',
       CHECKPOINTS_SHEET: 'CHECKPOINTS',
+      ACCESS_SHEET: 'ACCESS',
+      ALERTS_SHEET: 'ALERTS_LOG',
       OPS_HOT_RETENTION_DAYS: 180,
       ACTIVE_STALE_GRACE_HOURS: 48,
+      LOG_RETENTION_DAYS: 60,
+      AUDIT_RETENTION_DAYS: 180,
+      JOB_BACKOFF_MINUTES: 30,
+      JOB_FAILURE_ALERT_THRESHOLD: 3,
 
       MAX_BATCH_ROWS: 250,
       MAX_RANGE_DAYS: 31,

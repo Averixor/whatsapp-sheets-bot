@@ -8,6 +8,7 @@ const JobRuntimeRepository_ = (function() {
   const LAST_PREFIX = PREFIX + 'LAST:';
   const HISTORY_PREFIX = PREFIX + 'HISTORY:';
   const ACTIVE_PREFIX = PREFIX + 'ACTIVE:';
+  const BACKOFF_PREFIX = PREFIX + 'BACKOFF:';
 
   function _props() {
     return PropertiesService.getDocumentProperties();
@@ -112,6 +113,28 @@ const JobRuntimeRepository_ = (function() {
     return true;
   }
 
+
+  function setBackoff(jobName, payload) {
+    const item = Object.assign({ ts: Date.now() }, payload || {});
+    _props().setProperty(BACKOFF_PREFIX + String(jobName || ''), JSON.stringify(item));
+    return item;
+  }
+
+  function getBackoff(jobName) {
+    const raw = _props().getProperty(BACKOFF_PREFIX + String(jobName || ''));
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function clearBackoff(jobName) {
+    _props().deleteProperty(BACKOFF_PREFIX + String(jobName || ''));
+    return true;
+  }
+
   function buildStoragePolicyReport() {
     const props = _props().getProperties();
     const historyKeys = Object.keys(props).filter(function(key) { return key.indexOf(HISTORY_PREFIX) === 0; }).length;
@@ -123,6 +146,7 @@ const JobRuntimeRepository_ = (function() {
       historyKeys: historyKeys,
       lastKeys: lastKeys,
       activeKeys: activeKeys,
+      backoffKeys: Object.keys(props).filter(function(key) { return key.indexOf(BACKOFF_PREFIX) === 0; }).length,
       policy: 'hybrid-sheet-plus-properties',
       propertiesArePrimaryJournal: false
     };

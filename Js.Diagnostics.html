@@ -96,6 +96,7 @@
   }
 
   async function runHealthCheck() {
+    assertAdminAction_('healthCheck');
     showStandardResult(`${getHealthCheckModeLabel_()} перевірка`);
 
     setHtml('resultContent', `

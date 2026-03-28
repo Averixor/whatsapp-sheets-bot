@@ -650,7 +650,7 @@ function runStage5SmokeTests(options) {
     const policy = getStage5MaintenancePolicy_();
     _smokeAssert_(policy.canonicalFile === 'Stage5MaintenanceApi.gs', 'canonical maintenance file має бути Stage5MaintenanceApi.gs');
     _smokeAssert_(policy.compatibilityFile === 'Stage4MaintenanceApi.gs', 'compatibility maintenance facade має бути Stage4MaintenanceApi.gs');
-    ['apiStage5ClearCache', 'apiStage5HealthCheck', 'apiRunStage5Diagnostics', 'apiRunStage5RegressionTests', 'apiListStage5JobRuntime'].forEach(function (fnName) {
+    ['apiStage5ClearCache', 'apiStage5HealthCheck', 'apiRunStage5Diagnostics', 'apiRunStage5RegressionTests', 'apiListStage5JobRuntime', 'apiStage5GetAccessDescriptor', 'apiStage5ApplyProtections', 'apiStage5BootstrapAccessSheet'].forEach(function (fnName) {
       _smokeAssert_(_stage3HasFn_(fnName), `${fnName} відсутній`);
     });
     ['apiStage4ClearCache', 'apiStage4HealthCheck', 'apiRunStage4RegressionTests'].forEach(function (fnName) {
@@ -734,6 +734,16 @@ function runStage5SmokeTests(options) {
     _smokeAssert_(fp1 === fp2, 'fingerprint normalization не працює стабільно');
     return 'lifecycle-contract-ok';
   });
+
+
+  _smokePush_(report, 'security hardening helpers', function () {
+    _smokeAssert_(typeof AccessControl_ === 'object', 'AccessControl_ відсутній');
+    _smokeAssert_(typeof SecurityRedaction_ === 'object', 'SecurityRedaction_ відсутній');
+    _smokeAssert_(typeof applySpreadsheetProtections_ === 'function', 'applySpreadsheetProtections_ відсутня');
+    _smokeAssert_(typeof cleanupLogsAndAuditRetention_ === 'function', 'cleanupLogsAndAuditRetention_ відсутня');
+    return 'security-helpers-ok';
+  });
+
 
   _smokePush_(report, 'maintenance repair api contract', function () {
     ['apiStage5ListPendingRepairs', 'apiStage5GetOperationDetails', 'apiStage5RunRepair'].forEach(function (name) {

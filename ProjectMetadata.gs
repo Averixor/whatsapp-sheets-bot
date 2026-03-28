@@ -8,12 +8,12 @@ function _projectMetaDeepCopy_(value) {
 
 const PROJECT_RELEASE_NAMING_ = Object.freeze({
   stage: '7.1',
-  stageLabel: 'Stage 7.1.1 — Final Stabilized Repair Baseline',
-  stageVersion: '7.1.1-final-stabilized-repair',
-  activeBaseline: 'stage7-1-1-final-stabilized-repair-baseline',
-  archiveBaseName: 'gas_wapb_stage7_1_1_final_stabilized_repair',
-  archiveFileName: 'gas_wapb_stage7_1_1_final_stabilized_repair.zip',
-  rootFolderName: 'gas_wapb_stage7_1_1_final_stabilized_repair'
+  stageLabel: 'Stage 7.1.2 — Security & Ops Hardened Baseline',
+  stageVersion: '7.1.2-security-ops-hardened',
+  activeBaseline: 'stage7-1-2-security-ops-hardened-baseline',
+  archiveBaseName: 'gas_wapb_stage7_1_2_security_ops_hardened',
+  archiveFileName: 'gas_wapb_stage7_1_2_security_ops_hardened.zip',
+  rootFolderName: 'gas_wapb_stage7_1_2_security_ops_hardened'
 });
 
 const PROJECT_DOCUMENTATION_MAP_ = Object.freeze({
@@ -94,7 +94,10 @@ const PROJECT_STAGE4_CANONICAL_API_MAP_ = Object.freeze({
     'apiStage5ListPendingRepairs',
     'apiStage5GetOperationDetails',
     'apiStage5RunRepair',
-    'apiStage5RunLifecycleRetentionCleanup'
+    'apiStage5RunLifecycleRetentionCleanup',
+    'apiStage5GetAccessDescriptor',
+    'apiStage5ApplyProtections',
+    'apiStage5BootstrapAccessSheet'
   ]),
   compatibility: Object.freeze([
     'getMonthsList',
@@ -233,7 +236,10 @@ const PROJECT_STAGE5_CLIENT_ROUTING_POLICY_ = Object.freeze({
     pendingRepairs: 'apiStage5ListPendingRepairs',
     operationDetails: 'apiStage5GetOperationDetails',
     runRepair: 'apiStage5RunRepair',
-    lifecycleRetentionCleanup: 'apiStage5RunLifecycleRetentionCleanup'
+    lifecycleRetentionCleanup: 'apiStage5RunLifecycleRetentionCleanup',
+    getAccessDescriptor: 'apiStage5GetAccessDescriptor',
+    applyProtections: 'apiStage5ApplyProtections',
+    bootstrapAccessSheet: 'apiStage5BootstrapAccessSheet'
   })
 });
 

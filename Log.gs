@@ -43,7 +43,9 @@ function writeLogsBatch_(items) {
   const rows = items.map(item => {
     if (Array.isArray(item)) return item;
 
-    const o = item || {};
+    const o = (typeof SecurityRedaction_ === 'object' && SecurityRedaction_.sanitizeLogEntry)
+      ? SecurityRedaction_.sanitizeLogEntry(item || {})
+      : (item || {});
     return [
       o.timestamp || new Date(),
       o.reportDateStr || '',

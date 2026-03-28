@@ -2,7 +2,10 @@
 
 Create/copy these files with the exact same names.
 
+AccessControl.gs
 Actions.gs
+AlertsRepository.gs
+appsscript.json
 AuditTrail.gs
 Code.gs
 DataAccess.gs
@@ -10,8 +13,8 @@ DateUtils.gs
 DeprecatedRegistry.gs
 Diagnostics.gs
 DialogPresenter.gs
-DialogTemplates.gs
 Dialogs.gs
+DialogTemplates.gs
 DictionaryRepository.gs
 DomainTests.gs
 HtmlUtils.gs
@@ -26,6 +29,7 @@ Js.Events.html
 Js.Helpers.html
 Js.Render.html
 Js.State.html
+LifecycleRetention.gs
 Log.gs
 LogsRepository.gs
 MonthSheets.gs
@@ -38,6 +42,7 @@ PreviewLinkService.gs
 ProjectMetadata.gs
 Reconciliation.gs
 RoutingRegistry.gs
+SecurityRedaction.gs
 SelectionActionService.gs
 SendPanel.gs
 SendPanelConstants.gs
@@ -50,6 +55,7 @@ Sidebar.html
 SidebarServer.gs
 SmokeTests.gs
 SpreadsheetActionsApi.gs
+SpreadsheetProtection.gs
 Stage3ServerApi.gs
 Stage4Config.gs
 Stage4MaintenanceApi.gs
@@ -70,4 +76,3 @@ VacationService.gs
 VacationsRepository.gs
 Validation.gs
 WorkflowOrchestrator.gs
-appsscript.json

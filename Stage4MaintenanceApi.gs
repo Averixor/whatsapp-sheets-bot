@@ -78,3 +78,15 @@ function apiStage4RunRepair(operationId, options) {
 function apiStage4RunLifecycleRetentionCleanup() {
   return apiStage5RunLifecycleRetentionCleanup();
 }
+
+function apiStage4GetAccessDescriptor() {
+  return apiStage5GetAccessDescriptor();
+}
+
+function apiStage4ApplyProtections(options) {
+  return apiStage5ApplyProtections(options || {});
+}
+
+function apiStage4BootstrapAccessSheet() {
+  return apiStage5BootstrapAccessSheet();
+}
