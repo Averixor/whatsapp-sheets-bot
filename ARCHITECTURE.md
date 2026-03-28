@@ -15,9 +15,9 @@ This removes the last visible split-brain leftovers where the bundle worked as o
 ## Canonical runtime and layers
 
 ### Public application API
-- `Stage4ServerApi.gs`— stable sidebar / operational application surface
-- `SpreadsheetActionsApi.gs`— canonical spreadsheet/manual action API
-- `Stage5MaintenanceApi.gs`— canonical maintenance / diagnostics / jobs API
+- `Stage4ServerApi.gs` — stable sidebar / operational application surface
+- `SpreadsheetActionsApi.gs` — canonical spreadsheet/manual action API
+- `Stage5MaintenanceApi.gs` — canonical maintenance / diagnostics / jobs API
 
 ### Application / orchestration
 - `UseCases.gs`
@@ -45,8 +45,8 @@ This removes the last visible split-brain leftovers where the bundle worked as o
 - `DialogTemplates.gs`
 - `Sidebar.html`
 - `Styles.html`
-- `JavaScript.html`— active modular client runtime
-- `Js.*.html`— active modular client artifacts
+- `JavaScript.html` — active modular client runtime
+- `Js.*.html` — active modular client artifacts
 
 ### Reconciliation / maintenance / observability
 - `Reconciliation.gs`
@@ -73,12 +73,12 @@ This removes the last visible split-brain leftovers where the bundle worked as o
 
 The active client runtime remains deliberately conservative:
 
-1. `showSidebar()`renders `Sidebar.html`
-2. `Sidebar.html`includes `Styles.html`
-3. `Sidebar.html`loads `JavaScript.html`via `includeTemplate('JavaScript')`
-4. `JavaScript.html`contains the full active runtime script
+1. `showSidebar()` renders `Sidebar.html`
+2. `Sidebar.html` includes `Styles.html`
+3. `Sidebar.html` loads `JavaScript.html` via `includeTemplate('JavaScript')`
+4. `JavaScript.html` contains the full active runtime script
 
-The modular `Js.*.html`runtime chain is production-active in this release and must remain aligned with `JavaScript.html`.
+The modular `Js.*.html` runtime chain is production-active in this release and must remain aligned with `JavaScript.html`.
 
 ## Diagnostics model
 
@@ -108,14 +108,14 @@ This keeps compatibility lineage visible without letting it cosplay as the activ
 - `docs/reference/SUNSET_POLICY.md`
 
 ### Historical docs
-Everything in `docs/archive/`is historical or archival material and must not be interpreted as active.
+Everything in `docs/archive/` is historical or archival material and must not be interpreted as active.
 
 ## Packaging policy
 
 The release follows **root manifest policy**:
 
-- `appsscript.json`lives in bundle root
-- No `.clasp`files are required in the web-editor-ready bundle
+- `appsscript.json` lives in bundle root
+- No `.clasp` files are required in the web-editor-ready bundle
 
 This layout is aligned with metadata, diagnostics, smoke tests, and archive naming.
 
