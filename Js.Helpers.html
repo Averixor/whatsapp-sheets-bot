@@ -112,25 +112,30 @@
   function applyAccessPolicyUI() {
     const banner = $id('accessBanner');
     const message = $id('accessBannerText');
-    const badge = $id('accessRoleBadge');
-    const title = $id('accessBannerTitle');
     const access = STATE.access || { role: 'viewer', isAdmin: false, knownUser: false, reason: '' };
     const isAdmin = !!access.isAdmin;
+
     document.querySelectorAll('[data-admin-only="true"]').forEach(function(el) {
       el.style.display = isAdmin ? '' : 'none';
     });
-    if (banner && message && badge) {
-      banner.style.display = 'block';
-      banner.classList.remove('is-viewer', 'is-operator', 'is-admin', 'is-sysadmin', 'is-safe-mode');
-      banner.classList.add('is-' + String(access.role || 'viewer').toLowerCase());
-      if (!access.knownUser) banner.classList.add('is-safe-mode');
-      const roleLabel = getAccessRoleLabel_(access.role);
-      badge.textContent = roleLabel;
-      if (title) title.textContent = 'Режим доступу :';
-      const consoleMessage = buildAccessBannerMessage_(access);
-      message.textContent = '';
-      message.style.display = 'none';
-      if (consoleMessage) logToConsole('🛡 ' + consoleMessage, access.knownUser ? 'info' : 'warning');
+
+    if (!banner || !message) return;
+
+    banner.style.display = 'block';
+    banner.classList.remove('is-viewer', 'is-operator', 'is-admin', 'is-sysadmin', 'is-safe-mode');
+    banner.classList.add('is-' + String(access.role || 'viewer').toLowerCase());
+
+    if (!access.knownUser) {
+      banner.classList.add('is-safe-mode');
+    }
+
+    const roleLabel = getAccessRoleLabel_(access.role);
+    message.textContent = 'Режим доступу : ' + roleLabel;
+    message.style.display = 'block';
+
+    const consoleMessage = buildAccessBannerMessage_(access);
+    if (consoleMessage) {
+      logToConsole('🛡 ' + consoleMessage, access.knownUser ? 'info' : 'warning');
     }
   }
 
