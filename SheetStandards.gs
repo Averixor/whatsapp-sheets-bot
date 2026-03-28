@@ -31,7 +31,7 @@ function applyColumnWidthsStandardsToSheet_(sheet) {
   const isSendPanel = sheet.getName() === CONFIG.SEND_PANEL_SHEET;
   const maxCols = sheet.getMaxColumns();
   const widths = isSendPanel
-    ? [320, 110, 90, 150, 95, 125, 95].slice(0, maxCols)
+    ? [320, 120, 80, 150, 80, 80, 120].slice(0, maxCols)
     : [110, 110, 110, 110, 150, 40, 315].slice(0, maxCols);
 
   widths.forEach((w, i) => {
