@@ -100,15 +100,13 @@
   function buildAccessBannerMessage_(descriptor) {
     const access = descriptor || STATE.access || {};
     const parts = [];
-    const reason = String(access.reason || '').trim();
     const note = String(access.note || '').trim();
-    const source = String(access.source || '').trim();
     const email = String(access.email || '').trim();
-    if (email) parts.push('Користувач: ' + email);
-    if (reason) parts.push(reason);
     if (note) parts.push('Примітка: ' + note);
-    if (source) parts.push('Джерело: ' + source);
-    return parts.join(' • ') || 'Роль доступу визначено.';
+    if (email && access.knownUser && !access.fallbackUsed && String(access.source || '').trim() !== 'default') {
+      parts.push(email);
+    }
+    return parts.join(' • ');
   }
 
   function applyAccessPolicyUI() {
@@ -121,12 +119,14 @@
       el.style.display = isAdmin ? '' : 'none';
     });
     if (banner && message && badge) {
+      const bannerMessage = buildAccessBannerMessage_(access);
       banner.style.display = 'block';
       banner.classList.remove('is-viewer', 'is-operator', 'is-admin', 'is-sysadmin', 'is-safe-mode');
       banner.classList.add('is-' + String(access.role || 'viewer').toLowerCase());
-      if (!access.knownUser) banner.classList.add('is-safe-mode');
+      if (!access.knownUser && !access.fallbackUsed) banner.classList.add('is-safe-mode');
       badge.textContent = getAccessRoleLabel_(access.role);
-      message.textContent = buildAccessBannerMessage_(access);
+      message.textContent = bannerMessage;
+      message.style.display = bannerMessage ? 'block' : 'none';
     }
   }
 
@@ -134,8 +134,13 @@
     try {
       const descriptor = await MaintenanceApi.getAccessDescriptor();
       STATE.access = descriptor && descriptor.data ? descriptor.data : { role: 'viewer', isAdmin: false, knownUser: false, reason: '' };
+      if (STATE.access && STATE.access.reason) {
+        const suffix = STATE.access.source ? ' • Джерело: ' + STATE.access.source : '';
+        logToConsole(STATE.access.reason + suffix, STATE.access.isAdmin ? 'info' : 'warn');
+      }
     } catch (error) {
       STATE.access = { role: 'viewer', isAdmin: false, knownUser: false, reason: normalizeError(error) };
+      logToConsole('✕ ' + normalizeError(error), 'error');
     }
     applyAccessPolicyUI();
   }

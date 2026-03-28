@@ -101,6 +101,40 @@ const AccessControl_ = (function() {
     return null;
   }
 
+  function _listSheetEntries_() {
+    const sh = _getSheet_(false);
+    if (!sh || sh.getLastRow() < 2) return [];
+    const values = sh.getRange(2, 1, sh.getLastRow() - 1, Math.max(sh.getLastColumn(), SHEET_HEADERS.length)).getValues();
+    return values.map(function(row, index) {
+      const email = normalizeEmail_(row[0]);
+      const enabledRaw = String(row[2] === '' || row[2] === null ? 'TRUE' : row[2]).trim().toLowerCase();
+      const enabled = !(enabledRaw === 'false' || enabledRaw === '0' || enabledRaw === 'no' || enabledRaw === 'ні');
+      return {
+        email: email,
+        role: normalizeRole_(row[1]),
+        enabled: enabled,
+        note: String(row[3] || ''),
+        source: ACCESS_SHEET,
+        sheetRow: index + 2
+      };
+    }).filter(function(item) {
+      return !!item.email;
+    });
+  }
+
+  function _resolveSingleConfiguredFallback_() {
+    const entries = _listSheetEntries_().filter(function(item) {
+      return item.enabled !== false;
+    });
+    if (entries.length === 1) {
+      const only = Object.assign({}, entries[0]);
+      only.source = 'ACCESS(single-user-fallback)';
+      only.fallbackUsed = true;
+      return only;
+    }
+    return null;
+  }
+
   function _findInProperties_(email) {
     const normalizedEmail = normalizeEmail_(email);
     if (!normalizedEmail) return null;
@@ -133,8 +167,9 @@ const AccessControl_ = (function() {
     const configuredEntries = _configuredEntriesCount_();
     const sheetEntry = _findInSheet_(userEmail);
     const propEntry = !sheetEntry ? _findInProperties_(userEmail) : null;
-    const match = sheetEntry || propEntry;
-    const knownUser = !!userEmail;
+    const fallbackEntry = (!userEmail && !sheetEntry && !propEntry) ? _resolveSingleConfiguredFallback_() : null;
+    const match = sheetEntry || propEntry || fallbackEntry;
+    const knownUser = !!userEmail || !!fallbackEntry;
 
     if (!match && configuredEntries === 0 && knownUser) {
       return {
@@ -157,14 +192,16 @@ const AccessControl_ = (function() {
     const role = match ? normalizeRole_(match.role) : 'viewer';
     const readOnly = role === 'viewer';
     const enabled = match ? match.enabled !== false : true;
-    const reason = !knownUser
-      ? 'Email користувача недоступний; небезпечні дії переведені в safe-mode.'
+    const reason = !userEmail
+      ? (fallbackEntry
+        ? 'Email користувача недоступний; застосовано fallback до єдиного налаштованого акаунта з ACCESS.'
+        : 'Email користувача недоступний; небезпечні дії переведені в safe-mode.')
       : (match
         ? ''
         : 'Роль не налаштовано. Доступ до maintenance-операцій заборонено.');
 
     return {
-      email: userEmail,
+      email: userEmail || (match && match.email) || '',
       role: role,
       enabled: enabled,
       knownUser: knownUser,
@@ -175,6 +212,7 @@ const AccessControl_ = (function() {
       note: match && match.note ? String(match.note) : '',
       accessSheet: ACCESS_SHEET,
       reason: reason,
+      fallbackUsed: !!(match && match.fallbackUsed),
       adminEmailsConfigured: listAdminEmails().length,
       availableRoles: Object.keys(ROLE_ORDER)
     };
