@@ -128,12 +128,72 @@ const AccessControl_ = (function() {
     return count;
   }
 
+  function _getEnabledSheetEntries_() {
+    const sh = _getSheet_(false);
+    if (!sh || sh.getLastRow() < 2) return [];
+    const values = sh.getRange(2, 1, sh.getLastRow() - 1, Math.max(sh.getLastColumn(), SHEET_HEADERS.length)).getValues();
+    const result = [];
+    for (let i = 0; i < values.length; i++) {
+      const row = values[i];
+      const email = normalizeEmail_(row[0]);
+      const role = normalizeRole_(row[1]);
+      const enabledRaw = String(row[2] === '' || row[2] === null ? 'TRUE' : row[2]).trim().toLowerCase();
+      const enabled = !(enabledRaw === 'false' || enabledRaw === '0' || enabledRaw === 'no' || enabledRaw === 'ні');
+      if (!email || !enabled) continue;
+      result.push({
+        email: email,
+        role: role,
+        enabled: enabled,
+        note: String(row[3] || ''),
+        source: ACCESS_SHEET,
+        sheetRow: i + 2
+      });
+    }
+    return result;
+  }
+
+  function _getEnabledPropertyEntries_() {
+    const roles = ['sysadmin', 'admin', 'operator', 'viewer'];
+    const result = [];
+    roles.forEach(function(role) {
+      listEmailsByRole(role).forEach(function(email) {
+        result.push({ email: email, role: role, enabled: true, note: '', source: 'scriptProperties' });
+      });
+    });
+    return result;
+  }
+
+  function _resolveAnonymousFallback_() {
+    const entries = _getEnabledSheetEntries_().concat(_getEnabledPropertyEntries_());
+    if (!entries.length) return null;
+
+    const sysadmins = entries.filter(function(entry) { return entry.role === 'sysadmin'; });
+    if (sysadmins.length === 1) {
+      return Object.assign({}, sysadmins[0], {
+        source: sysadmins[0].source + '-fallback',
+        reason: 'Email користувача недоступний; використано єдиний запис sysadmin з ACCESS.'
+      });
+    }
+
+    const admins = entries.filter(function(entry) { return entry.role === 'admin'; });
+    const elevated = entries.filter(function(entry) { return entry.role === 'sysadmin' || entry.role === 'admin'; });
+    if (!sysadmins.length && admins.length === 1 && elevated.length === 1) {
+      return Object.assign({}, admins[0], {
+        source: admins[0].source + '-fallback',
+        reason: 'Email користувача недоступний; використано єдиний запис admin з ACCESS.'
+      });
+    }
+
+    return null;
+  }
+
   function describe(email) {
     const userEmail = normalizeEmail_(email) || safeGetUserEmail_();
     const configuredEntries = _configuredEntriesCount_();
     const sheetEntry = _findInSheet_(userEmail);
     const propEntry = !sheetEntry ? _findInProperties_(userEmail) : null;
-    const match = sheetEntry || propEntry;
+    const anonymousFallback = (!userEmail && !sheetEntry && !propEntry) ? _resolveAnonymousFallback_() : null;
+    const match = sheetEntry || propEntry || anonymousFallback;
     const knownUser = !!userEmail;
 
     if (!match && configuredEntries === 0 && knownUser) {
@@ -158,7 +218,9 @@ const AccessControl_ = (function() {
     const readOnly = role === 'viewer';
     const enabled = match ? match.enabled !== false : true;
     const reason = !knownUser
-      ? 'Email користувача недоступний; небезпечні дії переведені в safe-mode.'
+      ? (match && match.reason
+        ? String(match.reason)
+        : 'Email користувача недоступний; небезпечні дії переведені в safe-mode.')
       : (match
         ? ''
         : 'Роль не налаштовано. Доступ до maintenance-операцій заборонено.');
