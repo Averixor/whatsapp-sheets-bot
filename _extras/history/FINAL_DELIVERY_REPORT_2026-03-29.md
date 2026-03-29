@@ -16,7 +16,7 @@
   - `last_seen_at` is updated
 - Normal implicit fallback by email is disabled.
 - The only remaining fallback is the explicit migration bridge controlled by script property:
-  - `WAPB_ACCESS_MIGRATION_EMAIL_BRIDGE = true`
+  - `WASB_ACCESS_MIGRATION_EMAIL_BRIDGE = true`
 - This migration bridge is intended only for short rollout windows.
 
 ### 2. Access enforcement completed end-to-end
@@ -37,7 +37,7 @@ Historical reports and one-off notes were moved into `_extras/history/`.
 
 ### 4. Legacy cleanup
 - Broken/bad access files from the newer archive were discarded.
-- Branding and naming drift (`WASB` / `WAPB`) was normalized.
+- Branding and naming drift (`WASB` / legacy naming) was normalized.
 - Metadata, diagnostics, smoke-tests, and physical bundle layout were aligned to the new docs structure.
 - Compatibility wrappers remain only where they are still required for stability; their status is explicitly documented in the deprecated registry.
 

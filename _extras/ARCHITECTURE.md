@@ -1,4 +1,4 @@
-# WAPB Architecture
+# WASB Architecture
 
 ## Runtime shape
 - Server runtime: Google Apps Script.

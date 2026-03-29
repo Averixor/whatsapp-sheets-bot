@@ -1,4 +1,4 @@
-# WAPB Security
+# WASB Security
 
 ## Identity
 Primary identity is `Session.getTemporaryActiveUserKey()`.

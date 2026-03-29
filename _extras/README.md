@@ -1,6 +1,6 @@
-# WAPB — Google Apps Script release bundle
+# WASB — Google Apps Script release bundle
 
-This is the web-editor-ready WAPB bundle for Google Apps Script.
+This is the web-editor-ready WASB bundle for Google Apps Script.
 
 ## What is active in this release
 - **Strict user-key access model** based on `Session.getTemporaryActiveUserKey()`.
@@ -42,6 +42,6 @@ Required columns:
 
 ## Migration note
 The project now assumes **strict user-key access**. The only fallback left is the **explicit emergency migration bridge** controlled by script property:
-- `WAPB_ACCESS_MIGRATION_EMAIL_BRIDGE = true`
+- `WASB_ACCESS_MIGRATION_EMAIL_BRIDGE = true`
 
 Leave it off in normal operation. Turn it on only during a short migration window, then turn it back off when keys are registered.

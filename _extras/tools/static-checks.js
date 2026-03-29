@@ -5,7 +5,7 @@ const files = fs.readdirSync(root).filter(name => /\.(gs|html|md|json)$/.test(na
 const issues = [];
 for (const file of files) {
   const text = fs.readFileSync(path.join(root, file), 'utf8');
-  if (/WAPB_WHATSAPP_SENDER_TAB/.test(text)) {
+  if (/WASB_WHATSAPP_SENDER_TAB/.test(text)) {
     issues.push(`${file}: legacy whatsapp target name found`);
   }
 }

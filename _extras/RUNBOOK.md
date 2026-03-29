@@ -1,4 +1,4 @@
-# WAPB Runbook
+# WASB Runbook
 
 ## First import into GAS
 1. Create/open the target spreadsheet-bound Apps Script project.
@@ -39,7 +39,7 @@ If the user suddenly becomes guest/safe-mode but was previously registered:
 
 ## Emergency migration bridge
 Script property:
-- `WAPB_ACCESS_MIGRATION_EMAIL_BRIDGE = true`
+- `WASB_ACCESS_MIGRATION_EMAIL_BRIDGE = true`
 
 Use only when:
 - the project is being migrated from email identity to user keys
