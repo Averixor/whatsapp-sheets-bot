@@ -21,6 +21,7 @@ const AccessControl_ = (function() {
     'enabled',
     'note',
     'display_name',
+    'person_callsign',
     'user_key_current',
     'user_key_prev',
     'last_seen_at',
@@ -86,6 +87,33 @@ const AccessControl_ = (function() {
 
   function listAdminEmails() {
     return listEmailsByRole('sysadmin').concat(listEmailsByRole('admin'));
+  }
+
+  function listNotificationEmails() {
+    const seen = Object.create(null);
+    const result = [];
+
+    function push(email) {
+      const normalized = normalizeEmail_(email);
+      if (!normalized || seen[normalized]) return;
+      seen[normalized] = true;
+      result.push(normalized);
+    }
+
+    listAdminEmails().forEach(push);
+    _readSheetEntries_().forEach(function(entry) {
+      if (!entry.enabled) return;
+      if (entry.role !== 'admin' && entry.role !== 'sysadmin') return;
+      push(entry.email);
+    });
+
+    return result;
+  }
+
+  function getAccessRowByEmail(email) {
+    const normalizedEmail = normalizeEmail_(email);
+    if (!normalizedEmail) return null;
+    return _findByEmailInSheet_(normalizedEmail) || _findInProperties_(normalizedEmail);
   }
 
   function _getSheet_(createIfMissing) {
@@ -169,6 +197,7 @@ const AccessControl_ = (function() {
       enabled: isEnabledValue_(read('enabled')),
       note: String(read('note') || ''),
       displayName: String(read('display_name') || ''),
+      personCallsign: String(read('person_callsign') || '').trim(),
       userKeyCurrent: normalizeUserKey_(read('user_key_current')),
       userKeyPrev: normalizeUserKey_(read('user_key_prev')),
       lastSeenAt: String(read('last_seen_at') || ''),
@@ -262,7 +291,7 @@ const AccessControl_ = (function() {
   function _configuredEntriesCount_() {
     let count = listEmailsByRole('sysadmin').length + listEmailsByRole('admin').length + listEmailsByRole('operator').length + listEmailsByRole('viewer').length;
     _readSheetEntries_().forEach(function(entry) {
-      if (entry.email || entry.userKeyCurrent || entry.userKeyPrev || entry.displayName) count += 1;
+      if (entry.email || entry.userKeyCurrent || entry.userKeyPrev || entry.displayName || entry.personCallsign) count += 1;
     });
     return count;
   }
@@ -387,6 +416,7 @@ const AccessControl_ = (function() {
         source: 'bootstrap-admin',
         note: '',
         displayName: '',
+        personCallsign: '',
         accessSheet: ACCESS_SHEET,
         reason: 'RBAC ще не налаштовано. Поточний користувач тимчасово працює як bootstrap-admin, поки не буде заповнено ACCESS.',
         adminEmailsConfigured: 0,
@@ -429,6 +459,7 @@ const AccessControl_ = (function() {
       source: match ? match.source : (userKeyModeEnabled ? 'ACCESS-user-key-unregistered' : 'default'),
       note: match && match.note ? String(match.note) : '',
       displayName: match && match.displayName ? String(match.displayName) : '',
+      personCallsign: match && match.personCallsign ? String(match.personCallsign) : '',
       accessSheet: ACCESS_SHEET,
       reason: reason,
       adminEmailsConfigured: listAdminEmails().length,
@@ -459,7 +490,9 @@ const AccessControl_ = (function() {
     assertRoleAtLeast: assertRoleAtLeast,
     bootstrapSheet: bootstrapSheet,
     listAdminEmails: listAdminEmails,
+    listNotificationEmails: listNotificationEmails,
     listEmailsByRole: listEmailsByRole,
+    getAccessRowByEmail: getAccessRowByEmail,
     normalizeRole: normalizeRole_,
     normalizeEmail: normalizeEmail_,
     normalizeUserKey: normalizeUserKey_,

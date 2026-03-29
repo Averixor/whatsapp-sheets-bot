@@ -1612,6 +1612,22 @@
     color: #ffffff;
   }
 
+  .personnel-card.is-locked {
+    opacity: 0.58;
+    cursor: not-allowed;
+    color: var(--text-secondary);
+  }
+
+  .personnel-card.is-locked:hover {
+    transform: none;
+    border-color: var(--border-color);
+    background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.025) 0%,
+        rgba(255, 255, 255, 0.01) 100%);
+    color: var(--text-secondary);
+    box-shadow: none;
+  }
+
   .personnel-empty {
     padding: 18px 12px;
     text-align: center;

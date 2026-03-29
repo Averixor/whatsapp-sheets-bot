@@ -117,6 +117,9 @@ function sendDaySummaryToCommanderSidebar(dateStr, summaryText) {
 
 function sendDetailedToCommanderSidebar(dateStr, detailedText) {
   try {
+    if (typeof AccessEnforcement_ === 'object' && AccessEnforcement_.assertCanUseDetailedSummary) {
+      AccessEnforcement_.assertCanUseDetailedSummary(dateStr || '');
+    }
     if (!detailedText) {
       throw new Error('Немає тексту детального зведення');
     }

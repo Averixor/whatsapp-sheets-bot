@@ -78,6 +78,20 @@ function apiStage5DebugAccess() {
   );
 }
 
+function apiStage5ReportAccessViolation(actionName, details) {
+  const result = (typeof AccessEnforcement_ === 'object' && AccessEnforcement_.reportViolation)
+    ? AccessEnforcement_.reportViolation(actionName || '', details || {})
+    : { success: false, message: 'AccessEnforcement_ недоступний' };
+  return _stage5BuildMaintenanceResponse_(
+    result.success !== false,
+    result.message || 'Порушення доступу зафіксовано',
+    result.data || result,
+    'stage5ReportAccessViolation',
+    [],
+    { affectedSheets: [appGetCore('ALERTS_SHEET', 'ALERTS_LOG')] }
+  );
+}
+
 function apiStage5ApplyProtections(options) {
   _stage5AssertAdminAccess_('apply spreadsheet protections');
   const result = (typeof applySpreadsheetProtections_ === 'function')

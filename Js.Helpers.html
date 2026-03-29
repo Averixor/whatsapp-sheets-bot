@@ -97,6 +97,52 @@
     return map[String(role || 'viewer').trim().toLowerCase()] || 'Перегляд';
   }
 
+  function hasDetailedSummaryAccess_() {
+    const access = STATE.access || {};
+    return !!(access && access.isOperator);
+  }
+
+  function getViewerOwnCallsign_() {
+    const access = STATE.access || {};
+    return String(access.personCallsign || '').trim();
+  }
+
+  function canOpenPersonCardClient_(callsign) {
+    const access = STATE.access || {};
+    const role = String(access.role || 'viewer').toLowerCase();
+    const target = String(callsign || '').trim().toUpperCase();
+    const own = getViewerOwnCallsign_().toUpperCase();
+    if (!target) return false;
+    if (access.isOperator || access.isAdmin) return true;
+    if (role !== 'viewer') return false;
+    return !!own && own === target;
+  }
+
+  async function reportAccessViolation_(actionName, details) {
+    try {
+      if (!MaintenanceApi || !MaintenanceApi.reportAccessViolation) return;
+      await MaintenanceApi.reportAccessViolation(actionName || '', details || {});
+    } catch (error) {
+      logToConsole('✕ Не вдалося зафіксувати порушення доступу: ' + normalizeError(error), 'error');
+    }
+  }
+
+  function updateRestrictedUi_() {
+    const detailedBtn = $id('btnDetailedSummary');
+    const access = STATE.access || {};
+    if (detailedBtn) {
+      const allowed = hasDetailedSummaryAccess_();
+      detailedBtn.classList.toggle('is-disabled', !allowed);
+      detailedBtn.classList.toggle('is-restricted', !allowed);
+      detailedBtn.setAttribute('aria-disabled', allowed ? 'false' : 'true');
+      if (!allowed) {
+        detailedBtn.title = 'Недоступно для ролі ' + getAccessRoleLabel_(access.role);
+      } else {
+        detailedBtn.title = 'Детальне зведення за день';
+      }
+    }
+  }
+
   function buildAccessBannerMessage_(descriptor) {
     const access = descriptor || STATE.access || {};
     const reason = String(access.reason || '').trim();
@@ -182,7 +228,7 @@
       return 'Переведіть ACCESS на user key: додайте ключі користувачів у user_key_current. Старий email у колонці email можна залишити лише як довідкове поле.';
     }
     if (role === 'viewer') {
-      return 'Перевірте ACCESS: user_key_current без пробілів, роль одна з viewer/operator/admin/sysadmin, enabled = TRUE.';
+      return 'Перевірте ACCESS: user_key_current без пробілів, роль одна з viewer/operator/admin/sysadmin, enabled = TRUE. Для режиму перегляду, що бачить лише свою картку, також заповніть person_callsign.';
     }
     return 'Додаткових дій не потрібно. Якщо панель поводиться не так, як роль у звіті, проблема вже не в доступі, а в UI або окремій кнопці.';
   }
@@ -199,6 +245,7 @@
     const adminLabel = access && access.isAdmin ? 'так' : 'ні';
     const operatorLabel = access && access.isOperator ? 'так' : 'ні';
     const note = String(access && access.note || '').trim() || 'немає';
+    const personCallsign = String(access && access.personCallsign || '').trim() || 'не задано';
     const reason = String(access && access.reason || '').trim() || 'немає';
 
     return [
@@ -215,6 +262,7 @@
       'Адмін-доступ: ' + adminLabel,
       'Робочий доступ: ' + operatorLabel,
       'Примітка: ' + note,
+      'Свій позивний: ' + personCallsign,
       'Технічна причина: ' + reason,
       '',
       'Що це означає:',
@@ -238,6 +286,7 @@
     const operatorLabel = access && access.isOperator ? 'Дозволено' : 'Заблоковано';
     const reason = String(access && access.reason || '').trim() || 'Немає';
     const note = String(access && access.note || '').trim() || 'Немає';
+    const personCallsign = String(access && access.personCallsign || '').trim() || 'Немає';
     const explanation = buildAccessDebugExplanation_(access);
     const advice = buildAccessDebugAdvice_(access);
     const reportText = buildAccessDebugReportText_(access);
@@ -304,6 +353,7 @@
               <div style="margin-top:8px; line-height:1.5;">
                 <div><b>Причина:</b> ${escapeHtml(reason)}</div>
                 <div><b>Примітка:</b> ${escapeHtml(note)}</div>
+                <div><b>Свій позивний:</b> ${escapeHtml(personCallsign)}</div>
               </div>
               <pre style="margin-top:10px; white-space:pre-wrap; word-break:break-word; font-size:0.78rem; color:var(--text-secondary);">${escapeHtml(JSON.stringify(access || {}, null, 2))}</pre>
             </details>
@@ -340,6 +390,8 @@
     if (consoleMessage) {
       logToConsole('🛡 ' + consoleMessage, access.knownUser ? 'info' : 'warning');
     }
+
+    updateRestrictedUi_();
   }
 
   async function loadAccessDescriptor() {
@@ -556,7 +608,19 @@
         }
 
         case 'daySummary':
+          showCalendar(action);
+          break;
+
         case 'detailedDay':
+          if (!hasDetailedSummaryAccess_()) {
+            await reportAccessViolation_('detailedSummaryUiDenied', {
+              source: 'sidebar-menu',
+              requestedAction: 'detailedDay'
+            });
+            showToast('Детальне зведення недоступне для цієї ролі');
+            logToConsole('✕ Детальне зведення недоступне для ролі ' + getAccessRoleLabel_(STATE.access && STATE.access.role), 'warning');
+            break;
+          }
           showCalendar(action);
           break;
 

@@ -307,6 +307,17 @@
       return;
     }
 
+    if (!canOpenPersonCardClient_(callsign)) {
+      await reportAccessViolation_('openPersonCardUiDenied', {
+        source: 'person-card-open',
+        requestedCallsign: callsign,
+        requestedDate: dateStr || ''
+      });
+      showToast('Можна відкрити лише власну картку');
+      logToConsole('✕ Недостатньо прав для відкриття картки: ' + callsign, 'warning');
+      return;
+    }
+
     try {
       const data = await ActionDispatcher.run('openPersonCard', () => Stage4Api.openPersonCard(callsign, dateStr || ''));
       if (!data || !data.success) {
@@ -502,11 +513,23 @@
 
       list.forEach(callsign => {
         const btn = document.createElement('button');
+        const allowed = canOpenPersonCardClient_(callsign);
         btn.type = 'button';
         btn.className = 'personnel-card';
-        btn.textContent = callsign;
+        btn.textContent = allowed ? callsign : (callsign + ' 🔒');
+        btn.classList.toggle('is-locked', !allowed);
+        btn.setAttribute('aria-disabled', allowed ? 'false' : 'true');
+        btn.title = allowed ? callsign : 'Доступно лише до власної картки';
 
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
+          if (!allowed) {
+            await reportAccessViolation_('personnelListUiDenied', {
+              source: 'personnel-modal',
+              requestedCallsign: callsign
+            });
+            showToast('Можна відкрити лише власну картку');
+            return;
+          }
           closeModal();
           openPersonCardByCallsign_(callsign);
         });

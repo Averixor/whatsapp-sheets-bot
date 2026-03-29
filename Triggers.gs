@@ -46,6 +46,18 @@ const Stage4Triggers_ = (function() {
         handler: 'stage7JobLifecycleRetentionCleanup',
         kind: 'timeBased',
         description: 'Retention cleanup для OPS/ACTIVE/CHECKPOINTS/LOG/AUDIT'
+      },
+      accessAuditEdit: {
+        jobName: cfg.JOBS.ACCESS_AUDIT_EDIT,
+        handler: 'stage7SecurityAuditOnEdit',
+        kind: 'spreadsheetEdit',
+        description: 'Сповіщення про підозрілі/заборонені редагування таблиці'
+      },
+      accessAuditChange: {
+        jobName: cfg.JOBS.ACCESS_AUDIT_CHANGE,
+        handler: 'stage7SecurityAuditOnChange',
+        kind: 'spreadsheetChange',
+        description: 'Сповіщення про підозрілі структурні зміни таблиці'
       }
     });
   }
@@ -112,6 +124,16 @@ const Stage4Triggers_ = (function() {
       .timeBased()
       .everyDays(1)
       .atHour(4)
+      .create();
+
+    ScriptApp.newTrigger('stage7SecurityAuditOnEdit')
+      .forSpreadsheet(SpreadsheetApp.getActive())
+      .onEdit()
+      .create();
+
+    ScriptApp.newTrigger('stage7SecurityAuditOnChange')
+      .forSpreadsheet(SpreadsheetApp.getActive())
+      .onChange()
       .create();
 
     return {

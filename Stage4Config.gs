@@ -108,7 +108,9 @@ function buildAppConfig_() {
       CLEANUP_CACHES: 'cleanupCaches',
       POST_CREATE_MONTH_CHECK: 'postCreateMonthCheck',
       STALE_OPERATION_DETECTOR: 'staleOperationDetector',
-      LIFECYCLE_RETENTION_CLEANUP: 'lifecycleRetentionCleanup'
+      LIFECYCLE_RETENTION_CLEANUP: 'lifecycleRetentionCleanup',
+      ACCESS_AUDIT_EDIT: 'accessAuditEdit',
+      ACCESS_AUDIT_CHANGE: 'accessAuditChange'
     })
   });
 }
@@ -204,7 +206,9 @@ function buildStage4Config_() {
       CLEANUP_CACHES: appGetJob('CLEANUP_CACHES', 'cleanupCaches'),
       POST_CREATE_MONTH_CHECK: appGetJob('POST_CREATE_MONTH_CHECK', 'postCreateMonthCheck'),
       STALE_OPERATION_DETECTOR: appGetJob('STALE_OPERATION_DETECTOR', 'staleOperationDetector'),
-      LIFECYCLE_RETENTION_CLEANUP: appGetJob('LIFECYCLE_RETENTION_CLEANUP', 'lifecycleRetentionCleanup')
+      LIFECYCLE_RETENTION_CLEANUP: appGetJob('LIFECYCLE_RETENTION_CLEANUP', 'lifecycleRetentionCleanup'),
+      ACCESS_AUDIT_EDIT: appGetJob('ACCESS_AUDIT_EDIT', 'accessAuditEdit'),
+      ACCESS_AUDIT_CHANGE: appGetJob('ACCESS_AUDIT_CHANGE', 'accessAuditChange')
     })
   });
 }

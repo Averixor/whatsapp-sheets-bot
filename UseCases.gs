@@ -646,6 +646,9 @@ const Stage4UseCases_ = (function() {
       lock: false,
       validate: function(input) {
         const info = validateDatePayload_(input, 'date');
+        if (typeof AccessEnforcement_ === 'object' && AccessEnforcement_.assertCanUseDetailedSummary) {
+          AccessEnforcement_.assertCanUseDetailedSummary(info.payload.dateStr || info.payload.date || '');
+        }
         return { payload: info.payload, warnings: [] };
       },
       execute: function(input, beforeState, plan, context) {
@@ -723,6 +726,9 @@ const Stage4UseCases_ = (function() {
       lock: false,
       validate: function(input) {
         const info = validatePersonLookupPayload_(input);
+        if (typeof AccessEnforcement_ === 'object' && AccessEnforcement_.assertCanOpenPersonCard) {
+          AccessEnforcement_.assertCanOpenPersonCard(info.payload.callsign || '', info.payload.dateStr || info.payload.date || '');
+        }
         return { payload: info.payload, warnings: [] };
       },
       execute: function(input, beforeState, plan, context) {

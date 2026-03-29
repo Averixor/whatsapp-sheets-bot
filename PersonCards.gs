@@ -78,6 +78,9 @@ function _buildPersonCardData_(callsign, dateStr) {
 function getPersonCardData(callsign, dateStr) {
   const context = { function: 'getPersonCardData', callsign: callsign || '', date: dateStr || '' };
   try {
+    if (typeof AccessEnforcement_ === 'object' && AccessEnforcement_.assertCanOpenPersonCard) {
+      AccessEnforcement_.assertCanOpenPersonCard(callsign || '', dateStr || '');
+    }
     const data = PersonsRepository_.getPersonByCallsign(callsign, dateStr);
     return Object.assign(okResponse_(data, 'Дані картки завантажено', context), data, { ok: true });
   } catch (e) {
