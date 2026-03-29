@@ -236,6 +236,9 @@ function getRaportRemindersState() {
 function onOpen() {
   try {
     highlightActiveMonthTab_(getBotMonthSheetName_());
+    if (typeof AccessControl_ === 'object' && AccessControl_.refreshAccessSheetUi) {
+      try { AccessControl_.refreshAccessSheetUi({ forceRewriteNotes: false }); } catch (_) {}
+    }
     SpreadsheetApp.getUi()
       .createMenu('🧐ПАНЕЛЬ')
       .addItem('📱 ПАНЕЛЬ', 'showSidebar')

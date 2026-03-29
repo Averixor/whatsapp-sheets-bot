@@ -10,11 +10,24 @@
 
 const AccessControl_ = (function() {
   const ACCESS_SHEET = appGetCore('ACCESS_SHEET', 'ACCESS');
+  const OWNER_PROP = 'WAPB_ACCESS_OWNER_EMAILS';
   const SYSADMIN_PROP = 'WAPB_ACCESS_SYSADMIN_EMAILS';
   const ADMIN_PROP = 'WAPB_ACCESS_ADMIN_EMAILS';
+  const MAINTAINER_PROP = 'WAPB_ACCESS_MAINTAINER_EMAILS';
   const OPERATOR_PROP = 'WAPB_ACCESS_OPERATOR_EMAILS';
   const VIEWER_PROP = 'WAPB_ACCESS_VIEWER_EMAILS';
-  const ROLE_ORDER = Object.freeze({ viewer: 0, operator: 1, admin: 2, sysadmin: 3 });
+  const GUEST_PROP = 'WAPB_ACCESS_GUEST_EMAILS';
+  const ROLE_ORDER = Object.freeze({ guest: 0, viewer: 1, operator: 2, maintainer: 3, admin: 4, sysadmin: 5, owner: 6 });
+  const ROLE_VALUES = Object.freeze(['guest', 'viewer', 'operator', 'maintainer', 'admin', 'sysadmin', 'owner']);
+  const ROLE_METADATA = Object.freeze({
+    guest: Object.freeze({ label: 'Гість', note: 'Гість / Спостерігач • лише безпечний перегляд' }),
+    viewer: Object.freeze({ label: 'Перегляд', note: 'Перегляд • тільки своя картка, без детального зведення' }),
+    operator: Object.freeze({ label: 'Оператор', note: 'Оператор • робочий доступ до карток, зведень і SEND_PANEL' }),
+    maintainer: Object.freeze({ label: 'Редактор', note: 'Редактор • розширений робочий доступ, перевірка і супровід' }),
+    admin: Object.freeze({ label: 'Адмін', note: 'Адмін • керування доступом, журналами і системними інструментами' }),
+    sysadmin: Object.freeze({ label: 'Сис. адмін', note: 'Сис. адмін • повне технічне обслуговування, repair і тригери' }),
+    owner: Object.freeze({ label: 'Власник', note: 'Власник • повний root-доступ до всієї системи' })
+  });
   const SHEET_HEADERS = Object.freeze([
     'email',
     'role',
@@ -34,8 +47,19 @@ const AccessControl_ = (function() {
 
   function normalizeRole_(value) {
     const role = String(value || '').trim().toLowerCase();
-    if (role === 'sysadmin' || role === 'admin' || role === 'operator' || role === 'viewer') return role;
-    return 'viewer';
+    return ROLE_VALUES.indexOf(role) !== -1 ? role : 'guest';
+  }
+
+  function getRoleMeta_(role) {
+    return ROLE_METADATA[normalizeRole_(role)] || ROLE_METADATA.guest;
+  }
+
+  function getRoleLabel_(role) {
+    return getRoleMeta_(role).label;
+  }
+
+  function getRoleNoteTemplate_(role) {
+    return getRoleMeta_(role).note;
   }
 
   function normalizeUserKey_(value) {
@@ -79,14 +103,20 @@ const AccessControl_ = (function() {
 
   function listEmailsByRole(role) {
     const normalizedRole = normalizeRole_(role);
-    const propName = normalizedRole === 'sysadmin'
-      ? SYSADMIN_PROP
-      : (normalizedRole === 'admin' ? ADMIN_PROP : (normalizedRole === 'operator' ? OPERATOR_PROP : VIEWER_PROP));
-    return _parseEmailsList_(_getProperties_().getProperty(propName));
+    const map = {
+      owner: OWNER_PROP,
+      sysadmin: SYSADMIN_PROP,
+      admin: ADMIN_PROP,
+      maintainer: MAINTAINER_PROP,
+      operator: OPERATOR_PROP,
+      viewer: VIEWER_PROP,
+      guest: GUEST_PROP
+    };
+    return _parseEmailsList_(_getProperties_().getProperty(map[normalizedRole] || GUEST_PROP));
   }
 
   function listAdminEmails() {
-    return listEmailsByRole('sysadmin').concat(listEmailsByRole('admin'));
+    return listEmailsByRole('owner').concat(listEmailsByRole('sysadmin')).concat(listEmailsByRole('admin'));
   }
 
   function listNotificationEmails() {
@@ -103,7 +133,7 @@ const AccessControl_ = (function() {
     listAdminEmails().forEach(push);
     _readSheetEntries_().forEach(function(entry) {
       if (!entry.enabled) return;
-      if (entry.role !== 'admin' && entry.role !== 'sysadmin') return;
+      if (['admin', 'sysadmin', 'owner'].indexOf(entry.role) === -1) return;
       push(entry.email);
     });
 
@@ -170,17 +200,98 @@ const AccessControl_ = (function() {
     }
   }
 
+  function _buildRoleValidationRule_() {
+    return SpreadsheetApp.newDataValidation()
+      .requireValueInList(ROLE_VALUES.slice(), true)
+      .setAllowInvalid(false)
+      .setHelpText('Оберіть роль: ' + ROLE_VALUES.join(', '))
+      .build();
+  }
+
+  function _applyRoleValidation_(sh) {
+    const maxRows = Math.max(sh.getMaxRows(), 2);
+    sh.getRange(2, 2, maxRows - 1, 1).setDataValidation(_buildRoleValidationRule_());
+  }
+
+  function _syncRoleNoteForRow_(sh, rowNumber, clearWhenEmpty) {
+    if (!sh || rowNumber < 2) return;
+    const headerMap = _getHeaderMap_(sh);
+    const roleCol = headerMap.role || 2;
+    const noteCol = headerMap.note || 4;
+    const role = normalizeRole_(sh.getRange(rowNumber, roleCol).getValue());
+    const rawRole = String(sh.getRange(rowNumber, roleCol).getValue() || '').trim();
+    const noteCell = sh.getRange(rowNumber, noteCol);
+    if (!rawRole) {
+      if (clearWhenEmpty) noteCell.clearContent();
+      return;
+    }
+    noteCell.setValue(getRoleNoteTemplate_(role));
+  }
+
+  function _syncAllRoleNotes_(sh, forceRewrite) {
+    if (!sh || sh.getLastRow() < 2) return;
+    const headerMap = _getHeaderMap_(sh);
+    const roleCol = headerMap.role || 2;
+    const noteCol = headerMap.note || 4;
+    const rowCount = sh.getLastRow() - 1;
+    const roles = sh.getRange(2, roleCol, rowCount, 1).getValues();
+    const notesRange = sh.getRange(2, noteCol, rowCount, 1);
+    const existingNotes = notesRange.getValues();
+    const output = [];
+    for (let i = 0; i < rowCount; i++) {
+      const rawRole = String(roles[i][0] || '').trim();
+      if (!rawRole) {
+        output.push([forceRewrite ? '' : existingNotes[i][0]]);
+        continue;
+      }
+      const normalizedRole = normalizeRole_(rawRole);
+      const template = getRoleNoteTemplate_(normalizedRole);
+      output.push([forceRewrite || !String(existingNotes[i][0] || '').trim() ? template : existingNotes[i][0]]);
+    }
+    notesRange.setValues(output);
+  }
+
+  function refreshAccessSheetUi(options) {
+    const sh = _getSheet_(true);
+    _applyRoleValidation_(sh);
+    _syncAllRoleNotes_(sh, !!(options && options.forceRewriteNotes));
+    return {
+      success: true,
+      sheet: ACCESS_SHEET,
+      message: 'ACCESS оновлено: ролі, dropdown і службові описи синхронізовано',
+      roleValues: ROLE_VALUES.slice()
+    };
+  }
+
+  function handleAccessSheetEdit(e) {
+    const range = e && e.range ? e.range : null;
+    if (!range) return;
+    const sh = range.getSheet();
+    if (!sh || sh.getName() !== ACCESS_SHEET) return;
+    const row = range.getRow();
+    const column = range.getColumn();
+    if (row < 2) return;
+    if (column === 2 && range.getNumColumns() === 1 && range.getNumRows() === 1) {
+      const rawRole = String(range.getValue() || '').trim();
+      if (rawRole) range.setValue(normalizeRole_(rawRole));
+      _syncRoleNoteForRow_(sh, row, true);
+    }
+  }
+
   function bootstrapSheet() {
     const existed = !!_getSheet_(false);
     const sh = _getSheet_(true);
+    _applyRoleValidation_(sh);
+    _syncAllRoleNotes_(sh, true);
     return {
       success: true,
       sheet: ACCESS_SHEET,
       created: !existed,
       message: existed
-        ? 'Лист ACCESS перевірено й оновлено під user key-доступ'
-        : 'Лист ACCESS створено та підготовлено під user key-доступ',
-      headers: SHEET_HEADERS.slice()
+        ? 'Лист ACCESS перевірено, ролі оновлено, dropdown і службові описи застосовано'
+        : 'Лист ACCESS створено, ролі оновлено, dropdown і службові описи застосовано',
+      headers: SHEET_HEADERS.slice(),
+      roleValues: ROLE_VALUES.slice()
     };
   }
 
@@ -267,17 +378,11 @@ const AccessControl_ = (function() {
   function _findInProperties_(email) {
     const normalizedEmail = normalizeEmail_(email);
     if (!normalizedEmail) return null;
-    if (listEmailsByRole('sysadmin').indexOf(normalizedEmail) !== -1) {
-      return { email: normalizedEmail, role: 'sysadmin', enabled: true, note: '', source: 'scriptProperties', matchedBy: 'email' };
-    }
-    if (listEmailsByRole('admin').indexOf(normalizedEmail) !== -1) {
-      return { email: normalizedEmail, role: 'admin', enabled: true, note: '', source: 'scriptProperties', matchedBy: 'email' };
-    }
-    if (listEmailsByRole('operator').indexOf(normalizedEmail) !== -1) {
-      return { email: normalizedEmail, role: 'operator', enabled: true, note: '', source: 'scriptProperties', matchedBy: 'email' };
-    }
-    if (listEmailsByRole('viewer').indexOf(normalizedEmail) !== -1) {
-      return { email: normalizedEmail, role: 'viewer', enabled: true, note: '', source: 'scriptProperties', matchedBy: 'email' };
+    for (let i = ROLE_VALUES.length - 1; i >= 0; i--) {
+      const role = ROLE_VALUES[i];
+      if (listEmailsByRole(role).indexOf(normalizedEmail) !== -1) {
+        return { email: normalizedEmail, role: role, enabled: true, note: getRoleNoteTemplate_(role), source: 'scriptProperties', matchedBy: 'email' };
+      }
     }
     return null;
   }
@@ -289,7 +394,10 @@ const AccessControl_ = (function() {
   }
 
   function _configuredEntriesCount_() {
-    let count = listEmailsByRole('sysadmin').length + listEmailsByRole('admin').length + listEmailsByRole('operator').length + listEmailsByRole('viewer').length;
+    let count = 0;
+    ROLE_VALUES.forEach(function(role) {
+      count += listEmailsByRole(role).length;
+    });
     _readSheetEntries_().forEach(function(entry) {
       if (entry.email || entry.userKeyCurrent || entry.userKeyPrev || entry.displayName || entry.personCallsign) count += 1;
     });
@@ -302,6 +410,11 @@ const AccessControl_ = (function() {
 
   function _resolveLegacyFallback_() {
     const sheetEntries = _listEnabledSheetEntries_();
+
+    const owners = sheetEntries.filter(function(item) { return item.role === 'owner'; });
+    if (owners.length === 1) {
+      return Object.assign({}, owners[0], { source: 'ACCESS-fallback-owner' });
+    }
 
     const sysadmins = sheetEntries.filter(function(item) { return item.role === 'sysadmin'; });
     if (sysadmins.length === 1) {
@@ -404,7 +517,7 @@ const AccessControl_ = (function() {
       return {
         email: sessionEmail,
         currentKey: currentKey,
-        role: 'sysadmin',
+        role: 'owner',
         enabled: true,
         knownUser: true,
         registered: false,
@@ -413,25 +526,25 @@ const AccessControl_ = (function() {
         readOnly: false,
         isAdmin: true,
         isOperator: true,
-        source: 'bootstrap-admin',
+        source: 'bootstrap-owner',
         note: '',
         displayName: '',
         personCallsign: '',
         accessSheet: ACCESS_SHEET,
-        reason: 'RBAC ще не налаштовано. Поточний користувач тимчасово працює як bootstrap-admin, поки не буде заповнено ACCESS.',
+        reason: 'RBAC ще не налаштовано. Поточний користувач тимчасово працює як bootstrap-owner, поки не буде заповнено ACCESS.',
         adminEmailsConfigured: 0,
-        availableRoles: Object.keys(ROLE_ORDER),
+        availableRoles: ROLE_VALUES.slice(),
         userKeyModeEnabled: userKeyModeEnabled,
         mode: mode,
         registeredKeysCount: registeredKeysCount
       };
     }
 
-    const role = match ? normalizeRole_(match.role) : 'viewer';
+    const role = match ? normalizeRole_(match.role) : 'guest';
     const enabled = match ? match.enabled !== false : true;
     const registered = !!match;
     const knownUser = registered;
-    const readOnly = role === 'viewer';
+    const readOnly = (role === 'guest' || role === 'viewer');
 
     let reason = '';
     if (!registered && userKeyModeEnabled && !keyAvailable) {
@@ -454,16 +567,17 @@ const AccessControl_ = (function() {
       keyAvailable: keyAvailable,
       emailAvailable: emailAvailable,
       readOnly: readOnly,
-      isAdmin: (role === 'admin' || role === 'sysadmin') && enabled,
+      isAdmin: (ROLE_ORDER[role] || 0) >= ROLE_ORDER.admin && enabled,
       isOperator: (ROLE_ORDER[role] || 0) >= ROLE_ORDER.operator && enabled,
+      isMaintainer: (ROLE_ORDER[role] || 0) >= ROLE_ORDER.maintainer && enabled,
       source: match ? match.source : (userKeyModeEnabled ? 'ACCESS-user-key-unregistered' : 'default'),
-      note: match && match.note ? String(match.note) : '',
+      note: match && match.note ? String(match.note) : (registered ? getRoleNoteTemplate_(role) : ''),
       displayName: match && match.displayName ? String(match.displayName) : '',
       personCallsign: match && match.personCallsign ? String(match.personCallsign) : '',
       accessSheet: ACCESS_SHEET,
       reason: reason,
       adminEmailsConfigured: listAdminEmails().length,
-      availableRoles: Object.keys(ROLE_ORDER),
+      availableRoles: ROLE_VALUES.slice(),
       userKeyModeEnabled: userKeyModeEnabled,
       mode: mode,
       registeredKeysCount: registeredKeysCount,
@@ -485,14 +599,20 @@ const AccessControl_ = (function() {
 
   return {
     ROLE_ORDER: ROLE_ORDER,
+    ROLE_VALUES: ROLE_VALUES,
+    ROLE_METADATA: ROLE_METADATA,
     SHEET_HEADERS: SHEET_HEADERS,
     describe: describe,
     assertRoleAtLeast: assertRoleAtLeast,
     bootstrapSheet: bootstrapSheet,
+    refreshAccessSheetUi: refreshAccessSheetUi,
+    handleAccessSheetEdit: handleAccessSheetEdit,
     listAdminEmails: listAdminEmails,
     listNotificationEmails: listNotificationEmails,
     listEmailsByRole: listEmailsByRole,
     getAccessRowByEmail: getAccessRowByEmail,
+    getRoleLabel: getRoleLabel_,
+    getRoleNoteTemplate: getRoleNoteTemplate_,
     normalizeRole: normalizeRole_,
     normalizeEmail: normalizeEmail_,
     normalizeUserKey: normalizeUserKey_,

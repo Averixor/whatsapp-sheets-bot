@@ -93,8 +93,8 @@
   }
 
   function getAccessRoleLabel_(role) {
-    const map = { viewer: 'Перегляд', operator: 'Оператор', admin: 'Адмін', sysadmin: 'Сис. адмін' };
-    return map[String(role || 'viewer').trim().toLowerCase()] || 'Перегляд';
+    const map = { guest: 'Гість', viewer: 'Перегляд', operator: 'Оператор', maintainer: 'Редактор', admin: 'Адмін', sysadmin: 'Сис. адмін', owner: 'Власник' };
+    return map[String(role || 'guest').trim().toLowerCase()] || 'Гість';
   }
 
   function hasDetailedSummaryAccess_() {
@@ -109,7 +109,7 @@
 
   function canOpenPersonCardClient_(callsign) {
     const access = STATE.access || {};
-    const role = String(access.role || 'viewer').toLowerCase();
+    const role = String(access.role || 'guest').toLowerCase();
     const target = String(callsign || '').trim().toUpperCase();
     const own = getViewerOwnCallsign_().toUpperCase();
     if (!target) return false;
@@ -166,7 +166,8 @@
       'ACCESS-user-key-unregistered': 'user key не зареєстровано',
       'ACCESS-email-bound-key': 'ключ прив’язано до рядка ACCESS через legacy email',
       'scriptProperties': 'налаштування Script Properties (legacy email)',
-      'bootstrap-admin': 'тимчасовий bootstrap-admin',
+      'bootstrap-owner': 'тимчасовий bootstrap-owner',
+      'ACCESS-fallback-owner': 'резервний owner із ACCESS (міграційний режим)',
       'ACCESS-fallback-sysadmin': 'резервний sysadmin із ACCESS (міграційний режим)',
       'ACCESS-fallback-admin': 'резервний admin із ACCESS (міграційний режим)',
       'default': 'режим за замовчуванням'
@@ -182,7 +183,7 @@
   }
 
   function buildAccessDebugExplanation_(access) {
-    const role = String(access && access.role || 'viewer').toLowerCase();
+    const role = String(access && access.role || 'guest').toLowerCase();
     const registered = !!(access && access.registered);
     const keyMode = !!(access && access.userKeyModeEnabled);
     const keyAvailable = !!(access && access.keyAvailable);
@@ -194,11 +195,14 @@
     if (keyMode && !registered && keyAvailable) {
       return 'Система отримала user key поточного користувача, але не знайшла його в листі ACCESS. Через це доступ знижено до безпечного режиму перегляду.';
     }
-    if (!keyMode && (source === 'ACCESS-fallback-sysadmin' || source === 'ACCESS-fallback-admin')) {
-      return 'ACCESS ще не переведено повністю на user key. Тимчасово застосовано міграційний резервний доступ, щоб не заблокувати адміністратора.';
+    if (!keyMode && (source === 'ACCESS-fallback-owner' || source === 'ACCESS-fallback-sysadmin' || source === 'ACCESS-fallback-admin')) {
+      return 'ACCESS ще не переведено повністю на user key. Тимчасово застосовано міграційний резервний доступ, щоб не заблокувати власника або адміністратора.';
     }
     if (!keyMode && !registered) {
       return 'Система ще працює в legacy email-режимі, але не змогла надійно впізнати користувача. Через це доступ знижено до перегляду.';
+    }
+    if (role === 'owner') {
+      return 'Усе добре. Користувача впізнано як власника. Це найвищий рівень доступу в системі.';
     }
     if (role === 'sysadmin') {
       return 'Усе добре. Користувача впізнано як сис. адміністратора. Повний системний блок має бути доступний.';
@@ -206,14 +210,20 @@
     if (role === 'admin') {
       return 'Усе добре. Користувача впізнано як адміністратора. Адмінські дії мають бути доступні.';
     }
+    if (role === 'maintainer') {
+      return 'Усе добре. Користувача впізнано як редактора. Розширені робочі дії дозволені, але системне адміністрування приховане.';
+    }
     if (role === 'operator') {
       return 'Усе добре. Користувача впізнано як оператора. Робочі дії дозволені, а небезпечні системні дії приховані.';
     }
-    return 'Користувача визначено в режимі перегляду. Це означає, що для нього не знайдено зареєстрований ключ або вищий рівень доступу.';
+    if (role === 'viewer') {
+      return 'Користувача визначено в режимі перегляду. Він може бачити список ОС, але відкривати тільки власну картку.';
+    }
+    return 'Користувача визначено як гостя. Це найобмеженіший рівень безпечного перегляду.';
   }
 
   function buildAccessDebugAdvice_(access) {
-    const role = String(access && access.role || 'viewer').toLowerCase();
+    const role = String(access && access.role || 'guest').toLowerCase();
     const registered = !!(access && access.registered);
     const keyMode = !!(access && access.userKeyModeEnabled);
     const keyAvailable = !!(access && access.keyAvailable);
@@ -227,8 +237,11 @@
     if (!keyMode) {
       return 'Переведіть ACCESS на user key: додайте ключі користувачів у user_key_current. Старий email у колонці email можна залишити лише як довідкове поле.';
     }
+    if (role === 'guest') {
+      return 'Запишіть людині роль guest або підвищіть її до viewer / operator, якщо потрібні додаткові розділи.';
+    }
     if (role === 'viewer') {
-      return 'Перевірте ACCESS: user_key_current без пробілів, роль одна з viewer/operator/admin/sysadmin, enabled = TRUE. Для режиму перегляду, що бачить лише свою картку, також заповніть person_callsign.';
+      return 'Перевірте ACCESS: user_key_current без пробілів, роль одна з guest/viewer/operator/maintainer/admin/sysadmin/owner, enabled = TRUE. Для viewer також заповніть person_callsign.';
     }
     return 'Додаткових дій не потрібно. Якщо панель поводиться не так, як роль у звіті, проблема вже не в доступі, а в UI або окремій кнопці.';
   }
@@ -365,7 +378,7 @@
   function applyAccessPolicyUI() {
     const banner = $id('accessBanner');
     const message = $id('accessBannerText');
-    const access = STATE.access || { role: 'viewer', isAdmin: false, knownUser: false, reason: '' };
+    const access = STATE.access || { role: 'guest', isAdmin: false, knownUser: false, reason: '' };
     const isAdmin = !!access.isAdmin;
 
     document.querySelectorAll('[data-admin-only="true"]').forEach(function(el) {
@@ -375,8 +388,8 @@
     if (!banner || !message) return;
 
     banner.style.display = 'block';
-    banner.classList.remove('is-viewer', 'is-operator', 'is-admin', 'is-sysadmin', 'is-safe-mode');
-    banner.classList.add('is-' + String(access.role || 'viewer').toLowerCase());
+    banner.classList.remove('is-guest', 'is-viewer', 'is-operator', 'is-maintainer', 'is-admin', 'is-sysadmin', 'is-owner', 'is-safe-mode');
+    banner.classList.add('is-' + String(access.role || 'guest').toLowerCase());
 
     if (!access.knownUser) {
       banner.classList.add('is-safe-mode');
@@ -397,9 +410,9 @@
   async function loadAccessDescriptor() {
     try {
       const descriptor = await MaintenanceApi.getAccessDescriptor();
-      STATE.access = descriptor && descriptor.data ? descriptor.data : { role: 'viewer', isAdmin: false, knownUser: false, reason: '' };
+      STATE.access = descriptor && descriptor.data ? descriptor.data : { role: 'guest', isAdmin: false, knownUser: false, reason: '' };
     } catch (error) {
-      STATE.access = { role: 'viewer', isAdmin: false, knownUser: false, reason: normalizeError(error) };
+      STATE.access = { role: 'guest', isAdmin: false, knownUser: false, reason: normalizeError(error) };
     }
     applyAccessPolicyUI();
   }
@@ -680,7 +693,7 @@
 
           const data = result.data || {};
           logToConsole(
-            '🔐 Access debug: role=' + String(data.role || 'viewer') +
+            '🔐 Access debug: role=' + String(data.role || 'guest') +
             ', registered=' + String(!!data.registered) +
             ', source=' + String(data.source || 'default') +
             ', key=' + String(data.currentKey ? maskAccessKey_(data.currentKey) : '∅'),

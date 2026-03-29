@@ -55,7 +55,7 @@ function apiStage5BootstrapAccessSheet() {
 function apiStage5GetAccessDescriptor() {
   const descriptor = (typeof AccessControl_ === 'object')
     ? AccessControl_.describe()
-    : { role: 'viewer', knownUser: false, reason: 'AccessControl_ недоступний' };
+    : { role: 'guest', knownUser: false, reason: 'AccessControl_ недоступний' };
   return _stage5BuildMaintenanceResponse_(
     true,
     descriptor.isAdmin ? 'Роль доступу визначено' : 'Доступ до maintenance-дій обмежено',
@@ -68,7 +68,7 @@ function apiStage5GetAccessDescriptor() {
 function apiStage5DebugAccess() {
   const descriptor = (typeof AccessControl_ === 'object')
     ? AccessControl_.describe()
-    : { role: 'viewer', knownUser: false, reason: 'AccessControl_ недоступний' };
+    : { role: 'guest', knownUser: false, reason: 'AccessControl_ недоступний' };
   return _stage5BuildMaintenanceResponse_(
     true,
     'Діагностику доступу виконано',

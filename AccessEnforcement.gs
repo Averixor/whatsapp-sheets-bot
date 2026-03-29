@@ -15,12 +15,12 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
   function _descriptor_() {
     return (typeof AccessControl_ === 'object' && AccessControl_.describe)
       ? AccessControl_.describe()
-      : { role: 'viewer', isAdmin: false, isOperator: false, enabled: true, registered: false, source: 'fallback', personCallsign: '' };
+      : { role: 'guest', isAdmin: false, isOperator: false, enabled: true, registered: false, source: 'fallback', personCallsign: '' };
   }
 
   function _roleLabel_(role) {
-    var map = { viewer: 'Перегляд', operator: 'Оператор', admin: 'Адмін', sysadmin: 'Сис. адмін' };
-    return map[String(role || 'viewer').trim().toLowerCase()] || 'Перегляд';
+    var map = { guest: 'Гість', viewer: 'Перегляд', operator: 'Оператор', maintainer: 'Редактор', admin: 'Адмін', sysadmin: 'Сис. адмін', owner: 'Власник' };
+    return map[String(role || 'guest').trim().toLowerCase()] || 'Гість';
   }
 
   function _notificationEmails_() {
@@ -50,7 +50,7 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
     var descriptor = descriptorOpt || _descriptor_();
     var action = String(actionName || 'unknownAction').trim() || 'unknownAction';
     var info = Object.assign({}, details || {});
-    var role = String(descriptor.role || 'viewer').trim().toLowerCase() || 'viewer';
+    var role = String(descriptor.role || 'guest').trim().toLowerCase() || 'guest';
     var message = 'Спроба доступу без прав: ' + action + ' (' + _roleLabel_(role) + ')';
     var record = {
       timestamp: _nowText_(),
@@ -111,7 +111,7 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
     if (!target) return false;
     if (access.enabled === false) return false;
     if (access.isOperator || access.isAdmin) return true;
-    if (String(access.role || 'viewer').toLowerCase() !== 'viewer') return false;
+    if (String(access.role || 'guest').toLowerCase() !== 'viewer') return false;
     var own = _normCallsign_(access.personCallsign || '');
     return !!own && own === target;
   }
@@ -129,7 +129,7 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
 
   function canUseDetailedSummary(descriptor) {
     var access = descriptor || _descriptor_();
-    return !!(access.enabled !== false && ((access.isOperator || access.isAdmin) || ['operator', 'admin', 'sysadmin'].indexOf(String(access.role || '').toLowerCase()) !== -1));
+    return !!(access.enabled !== false && ((access.isOperator || access.isAdmin) || ['operator', 'maintainer', 'admin', 'sysadmin', 'owner'].indexOf(String(access.role || '').toLowerCase()) !== -1));
   }
 
   function assertCanUseDetailedSummary(dateStr, descriptorOpt) {
@@ -152,25 +152,27 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
     if (!row) {
       return {
         email: normalized,
-        role: 'viewer',
+        role: 'guest',
         enabled: true,
         knownUser: !!normalized,
         registered: false,
         isAdmin: false,
         isOperator: false,
+        isMaintainer: false,
         source: normalized ? 'ACCESS-email-unregistered' : 'edit-user-unavailable',
         personCallsign: ''
       };
     }
-    var role = String(row.role || 'viewer').toLowerCase();
+    var role = String(row.role || 'guest').toLowerCase();
     return {
       email: normalized || row.email || '',
       role: role,
       enabled: row.enabled !== false,
       knownUser: !!normalized,
       registered: true,
-      isAdmin: (role === 'admin' || role === 'sysadmin') && row.enabled !== false,
-      isOperator: (role === 'operator' || role === 'admin' || role === 'sysadmin') && row.enabled !== false,
+      isAdmin: ['admin', 'sysadmin', 'owner'].indexOf(role) !== -1 && row.enabled !== false,
+      isOperator: ['operator', 'maintainer', 'admin', 'sysadmin', 'owner'].indexOf(role) !== -1 && row.enabled !== false,
+      isMaintainer: ['maintainer', 'admin', 'sysadmin', 'owner'].indexOf(role) !== -1 && row.enabled !== false,
       source: row.source || 'ACCESS',
       personCallsign: row.personCallsign || ''
     };
@@ -197,10 +199,10 @@ function stage7SecurityAuditOnEdit(e) {
     var userEmail = '';
     try { userEmail = e && e.user && e.user.getEmail ? String(e.user.getEmail() || '') : ''; } catch (_) {}
     var actor = AccessEnforcement_.describeEditActorByEmail(userEmail);
-    var role = String(actor.role || 'viewer').toLowerCase();
+    var role = String(actor.role || 'guest').toLowerCase();
     var protectedSheets = ['ACCESS', 'ALERTS_LOG', 'JOB_RUNTIME_LOG', 'AUDIT_LOG', 'OPS_LOG', 'ACTIVE_OPERATIONS', 'CHECKPOINTS'];
     var editedProtectedSheet = protectedSheets.indexOf(sheetName) !== -1;
-    var shouldAlert = (role === 'viewer' || !actor.registered || !actor.knownUser || (editedProtectedSheet && !actor.isAdmin));
+    var shouldAlert = (role === 'guest' || role === 'viewer' || !actor.registered || !actor.knownUser || (editedProtectedSheet && !actor.isAdmin));
     if (!shouldAlert) return;
     AccessEnforcement_.reportViolation('sheetEditDeniedOrSuspicious', {
       sheet: sheetName,
