@@ -253,13 +253,6 @@ function buildStage6AConfig_() {
   });
 }
 
-function getStage4Config_() {
-  if (!STAGE4_CONFIG || typeof STAGE4_CONFIG !== 'object' || !STAGE4_CONFIG.JOBS || !STAGE4_CONFIG.FEATURE_FLAGS) {
-    STAGE4_CONFIG = buildStage4Config_();
-  }
-  return STAGE4_CONFIG;
-}
-
 function getStage5Config_() {
   if (!STAGE5_CONFIG || typeof STAGE5_CONFIG !== 'object' || !STAGE5_CONFIG.FEATURE_FLAGS) {
     STAGE5_CONFIG = buildStage5Config_();
@@ -274,7 +267,7 @@ function getStage6AConfig_() {
   return STAGE6A_CONFIG;
 }
 
-STAGE4_CONFIG = getStage4Config_();
+STAGE4_CONFIG = buildStage4Config_();
 STAGE5_CONFIG = getStage5Config_();
 STAGE6A_CONFIG = getStage6AConfig_();
 
@@ -284,7 +277,7 @@ STAGE6A_CONFIG = getStage6AConfig_();
 
 function stage4GetFeatureFlag_(flagName, defaultValue) {
   if (!flagName) return !!defaultValue;
-  const flags = getStage4Config_().FEATURE_FLAGS || {};
+  const flags = STAGE4_CONFIG.FEATURE_FLAGS || {};
   if (Object.prototype.hasOwnProperty.call(flags, flagName)) return !!flags[flagName];
   return !!defaultValue;
 }

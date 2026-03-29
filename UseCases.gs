@@ -1278,7 +1278,7 @@ const Stage4UseCases_ = (function() {
               message: 'Post-create-month перевірку виконано',
               result: {
                 month: input.month || getBotMonthSheetName_(),
-                health: runStage4HealthCheck_({ shallow: true, includeReconciliationPreview: false })
+                health: runStage5FullDiagnostics_({ mode: 'full' })
               },
               changes: [],
               affectedSheets: [input.month || getBotMonthSheetName_()],
@@ -1292,7 +1292,7 @@ const Stage4UseCases_ = (function() {
             return {
               success: true,
               message: 'Health check виконано',
-              result: runStage4HealthCheck_({
+              result: runStage5FullDiagnostics_({
                 shallow: !!input.shallow,
                 includeReconciliationPreview: input.includeReconciliationPreview
               }),
@@ -1309,7 +1309,7 @@ const Stage4UseCases_ = (function() {
               success: true,
               message: 'Quick maintenance виконано',
               result: {
-                health: runStage4HealthCheck_({ shallow: true, includeReconciliationPreview: false })
+                health: runStage5FullDiagnostics_({ mode: 'full' })
               },
               changes: [],
               affectedSheets: [],

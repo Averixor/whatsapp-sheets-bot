@@ -159,7 +159,7 @@ function runStage4ScenarioTests(options) {
   const testCallsign = opts.callsign || _pickTestCallsign();
   const report = {
     ok: true,
-    stage: '4.2-compatibility',
+    stage: '7.1.2-final-clean',
     ts: new Date().toISOString(),
     dryRun: opts.dryRun !== false,
     checks: [],
@@ -248,63 +248,9 @@ function runStage4ScenarioTests(options) {
     return apiRunMaintenanceScenario({ type: 'healthCheck', shallow: true });
   });
 
-  _runContractTest_(report, 'apiStage4HealthCheck', function () {
-    const result = apiStage4HealthCheck({ shallow: true, includeReconciliationPreview: false });
-    _smokeAssert_(Array.isArray(result.data.result.checks), 'checks[] не повернуто');
-    return result;
-  });
 
-  _runContractTest_(report, 'apiRunStage4RegressionTests', function () {
-    const result = apiRunStage4RegressionTests({ dryRun: true, date: testDate, callsign: testCallsign });
-    _smokeAssert_(Array.isArray(result.data.result.checks), 'checks[] не повернуто');
-    return result;
-  });
 
-  return report;
-}
 
-function runStage4SmokeTests(options) {
-  const opts = options || {};
-  const report = {
-    ok: true,
-    stage: '4.2-compatibility',
-    ts: new Date().toISOString(),
-    dryRun: opts.dryRun !== false,
-    checks: [],
-    skipped: [],
-    warnings: []
-  };
-
-  _smokePush_(report, 'canonical stage4 response helper', function () {
-    const response = buildStage4Response_(true, 'OK', null, { foo: 1 }, [], { a: 1 }, { b: 2 }, { c: 3 }, []);
-    _assertStage4Meta_(response, 'buildStage4Response_');
-    return 'contract-ready';
-  });
-
-  _smokePush_(report, 'canonical api contract suite', function () {
-    const scenarios = runStage4ScenarioTests(opts);
-    _smokeAssert_(Array.isArray(scenarios.checks), 'runStage4ScenarioTests() не повернув checks[]');
-    _smokeAssert_(scenarios.checks.length >= 15, 'Замало historical Stage 4 compatibility contract checks');
-    if (!scenarios.ok) throw new Error('Historical Stage 4 compatibility contract suite не повинна мати FAIL');
-    return `checks=${scenarios.checks.length}`;
-  }, { skipOnError: true });
-
-  _smokePush_(report, 'maintenance api contract suite', function () {
-    [
-      apiStage4ClearCache(),
-      apiStage4ClearLog(),
-      apiStage4ClearPhoneCache(),
-      apiStage4SetupVacationTriggers(),
-      apiStage4CleanupDuplicateTriggers(),
-      apiStage4DebugPhones(),
-      apiRunMaintenanceScenario({ type: 'healthCheck', shallow: true }),
-      apiStage4HealthCheck({ shallow: true }),
-      apiRunStage4RegressionTests({ dryRun: true })
-    ].forEach(function (result, idx) {
-      _assertStage4Meta_(result, 'maintenance#' + (idx + 1));
-    });
-    return 'maintenance-contracts-ok';
-  }, { skipOnError: true });
 
   _smokePush_(report, 'jobs api contract suite', function () {
     [apiListStage4Jobs(), apiInstallStage4Jobs()].forEach(function (result, idx) {
@@ -358,11 +304,7 @@ function runStage4SmokeTests(options) {
     return 'diagnostics-modes-ok';
   });
 
-  _smokePush_(report, 'stage4 health check', function () {
-    const health = runStage4HealthCheck_({ shallow: true, includeReconciliationPreview: false });
-    _smokeAssert_(Array.isArray(health.checks), 'health.checks має бути масивом');
-    return `checks=${health.checks.length}`;
-  });
+
 
   return report;
 }
@@ -477,8 +419,8 @@ function runStage5SmokeTests(options) {
     _smokeAssert_(meta.activeBaseline === 'stage7-1-2-security-ops-hardened-baseline', 'activeBaseline має бути stage7-1-2-security-ops-hardened-baseline');
     _smokeAssert_(meta.maintenanceLayerStatus === 'stage5-canonical-maintenance-api', 'maintenanceLayerStatus не Stage 5 canonical');
     _smokeAssert_(meta.packagingPolicy && meta.packagingPolicy.policy === 'root-manifest-web-editor-only', 'Packaging policy має бути root-manifest-web-editor-only');
-    _smokeAssert_(meta.requiredDocs.indexOf('_extras/SECURITY.md') !== -1, '_extras/SECURITY.md відсутній у metadata');
-    _smokeAssert_(meta.requiredDocs.indexOf('_extras/CHANGELOG.md') !== -1, '_extras/CHANGELOG.md відсутній у metadata');
+    _smokeAssert_(meta.requiredDocs.indexOf('SECURITY.md') !== -1, 'SECURITY.md відсутній у metadata');
+    _smokeAssert_(meta.requiredDocs.indexOf('CHANGELOG.md') !== -1, 'CHANGELOG.md відсутній у metadata');
     _smokeAssert_(meta.requiredDocs.length === 5, 'requiredDocs має бути зведено до 5 головних документів');
     return 'metadata-ok';
   });
@@ -486,11 +428,11 @@ function runStage5SmokeTests(options) {
   _smokePush_(report, 'physical bundle layout', function () {
     [
       'appsscript.json',
-      '_extras/README.md',
-      '_extras/ARCHITECTURE.md',
-      '_extras/RUNBOOK.md',
-      '_extras/SECURITY.md',
-      '_extras/CHANGELOG.md',
+      'README.md',
+      'ARCHITECTURE.md',
+      'RUNBOOK.md',
+      'SECURITY.md',
+      'CHANGELOG.md',
       '_extras/history/CANONICAL_APIS_STAGE7_FINAL_STABILIZED.md',
       '_extras/history/SCHEMA.md',
       'AccessE2ETests.gs',
@@ -509,29 +451,25 @@ function runStage5SmokeTests(options) {
 
   _smokePush_(report, 'docs hierarchy truthfulness', function () {
     const activeDocs = docs && docs.active ? Object.values(docs.active) : [];
-    const referenceDocs = Array.isArray(docs.reference) ? docs.reference : [];
     const historicalDocs = Array.isArray(docs.historical) ? docs.historical : [];
-    _smokeAssert_(activeDocs.length >= 4, 'Замало active docs');
+    _smokeAssert_(activeDocs.length === 5, 'Active docs мають бути зведені до 5 файлів');
     activeDocs.forEach(function (path) {
-      _smokeAssert_(String(path).indexOf('_extras/') === 0, `Active doc має лежати в _extras/: ${path}`);
+      _smokeAssert_(String(path).indexOf('_extras/') !== 0, `Active doc має лежати в root: ${path}`);
       _smokeAssert_(_smokeBundleHas_(path), `Active doc відсутній фізично: ${path}`);
     });
-    referenceDocs.forEach(function (path) {
-      _smokeAssert_(String(path).indexOf('_extras/') === 0, `Reference doc має лежати в _extras/: ${path}`);
-    });
     historicalDocs.forEach(function (path) {
-      _smokeAssert_(String(path).indexOf('_extras/') === 0, `Historical doc має лежати в _extras/: ${path}`);
+      _smokeAssert_(String(path).indexOf('_extras/history/') === 0, `Historical doc має лежати в _extras/history/: ${path}`);
+      _smokeAssert_(_smokeBundleHas_(path), `Historical doc відсутній фізично: ${path}`);
     });
-    _smokeAssert_(docs.active.releaseReport === '_extras/CHANGELOG.md', '_extras/CHANGELOG.md має бути active release report');
-    _smokeAssert_(referenceDocs.indexOf('_extras/history/CANONICAL_APIS_STAGE7_FINAL_STABILIZED.md') !== -1, 'CANONICAL_APIS_STAGE7_FINAL_STABILIZED має бути reference doc');
+    _smokeAssert_(docs.active.changelog === 'CHANGELOG.md', 'CHANGELOG.md має бути active release report');
     _smokeAssert_(historicalDocs.indexOf('_extras/history/IMPLEMENTATION_REPORT_2026-03-22.md') !== -1, 'IMPLEMENTATION_REPORT_2026-03-22 має бути historical');
     return 'docs-ok';
   });
 
   _smokePush_(report, 'release naming consistency', function () {
-    _smokeAssert_(release.archiveBaseName === 'gas_wasb_stage7_1_2_security_ops_hardened', 'archiveBaseName має бути gas_wasb_stage7_1_2_security_ops_hardened');
-    _smokeAssert_(release.archiveFileName === 'gas_wasb_stage7_1_2_security_ops_hardened.zip', 'archiveFileName має бути gas_wasb_stage7_1_2_security_ops_hardened.zip');
-    _smokeAssert_(release.rootFolderName === 'gas_wasb_stage7_1_2_security_ops_hardened', 'rootFolderName має бути gas_wasb_stage7_1_2_security_ops_hardened');
+    _smokeAssert_(release.archiveBaseName === 'gas_wasb_stage7_1_2_final_clean', 'archiveBaseName має бути gas_wasb_stage7_1_2_final_clean');
+    _smokeAssert_(release.archiveFileName === 'gas_wasb_stage7_1_2_final_clean.zip', 'archiveFileName має бути gas_wasb_stage7_1_2_final_clean.zip');
+    _smokeAssert_(release.rootFolderName === 'gas_wasb_stage7_1_2_final_clean', 'rootFolderName має бути gas_wasb_stage7_1_2_final_clean');
     _smokeAssert_(meta.hardeningOverlay && meta.hardeningOverlay.label === 'Stage 6A hardening evolved into Stage 7 lifecycle baseline', 'overlay label невірний');
     return 'release-naming-ok';
   });
@@ -587,10 +525,7 @@ function runStage5SmokeTests(options) {
 
   _smokePush_(report, 'lifecycle retention cleanup api contract', function () {
     _smokeAssert_(_smokeHasFn_('apiStage5RunLifecycleRetentionCleanup'), 'apiStage5RunLifecycleRetentionCleanup відсутній');
-    _smokeAssert_(_smokeHasFn_('apiStage4RunLifecycleRetentionCleanup'), 'apiStage4RunLifecycleRetentionCleanup відсутній');
-    _smokeAssert_(typeof getStage4Config_ === 'function', 'getStage4Config_() відсутній');
-    const cfg = getStage4Config_();
-    _smokeAssert_(cfg && cfg.JOBS && cfg.JOBS.LIFECYCLE_RETENTION_CLEANUP === 'lifecycleRetentionCleanup', 'JOBS.LIFECYCLE_RETENTION_CLEANUP має бути lifecycleRetentionCleanup');
+    _smokeAssert_(STAGE4_CONFIG && STAGE4_CONFIG.JOBS && STAGE4_CONFIG.JOBS.LIFECYCLE_RETENTION_CLEANUP === 'lifecycleRetentionCleanup', 'JOBS.LIFECYCLE_RETENTION_CLEANUP має бути lifecycleRetentionCleanup');
     return 'retention-cleanup-contract-ok';
   });
 
@@ -598,14 +533,11 @@ function runStage5SmokeTests(options) {
     const quick = runStage5QuickDiagnostics_({ mode: 'quick' });
     const full = runStage5FullDiagnostics_({ mode: 'full' });
     const sunset = runStage5SunsetDiagnostics_({ mode: 'compatibility sunset' });
-    const compatHealth = apiStage4HealthCheck({ shallow: true, includeReconciliationPreview: false });
     const maintHealth = apiStage5HealthCheck({ mode: 'quick' });
     const maintDiagnostics = apiRunStage5Diagnostics({ mode: 'full' });
     const texts = [
       quick.summary || '',
       full.summary || '',
-      compatHealth.message || '',
-      compatHealth.data && compatHealth.data.result && compatHealth.data.result.summary || '',
       maintHealth.message || '',
       maintHealth.data && maintHealth.data.result && maintHealth.data.result.summary || '',
       maintDiagnostics.message || '',
@@ -648,18 +580,7 @@ function runStage5SmokeTests(options) {
     return 'maintenance-wording-ok';
   });
 
-  _smokePush_(report, 'maintenance naming policy', function () {
-    const policy = getStage5MaintenancePolicy_();
-    _smokeAssert_(policy.canonicalFile === 'Stage5MaintenanceApi.gs', 'canonical maintenance file має бути Stage5MaintenanceApi.gs');
-    _smokeAssert_(policy.compatibilityFile === 'Stage4MaintenanceApi.gs', 'compatibility maintenance facade має бути Stage4MaintenanceApi.gs');
-    ['apiStage5ClearCache', 'apiStage5HealthCheck', 'apiRunStage5Diagnostics', 'apiRunStage5RegressionTests', 'apiListStage5JobRuntime', 'apiStage5GetAccessDescriptor', 'apiStage5ApplyProtections', 'apiStage5BootstrapAccessSheet'].forEach(function (fnName) {
-      _smokeAssert_(_stage3HasFn_(fnName), `${fnName} відсутній`);
-    });
-    ['apiStage4ClearCache', 'apiStage4HealthCheck', 'apiRunStage4RegressionTests'].forEach(function (fnName) {
-      _smokeAssert_(_stage3HasFn_(fnName), `${fnName} як compatibility wrapper відсутній`);
-    });
-    return 'maintenance-policy-ok';
-  });
+
 
   _smokePush_(report, 'diagnostics modes available', function () {
     ['runStage5QuickDiagnostics_', 'runStage5StructuralDiagnostics_', 'runStage5OperationalDiagnostics_', 'runStage5SunsetDiagnostics_', 'runStage5FullDiagnostics_'].forEach(function (fnName) {
@@ -773,7 +694,7 @@ function runStage5SmokeTests(options) {
   }, { skipOnError: true });
 
   _smokePush_(report, 'historical docs kept non-active', function () {
-    _smokeAssert_(docs.active.releaseReport === '_extras/CHANGELOG.md', 'CHANGELOG має бути активним');
+    _smokeAssert_(docs.active.changelog === 'CHANGELOG.md', 'CHANGELOG має бути активним');
     _smokeAssert_(Array.isArray(docs.historical) && docs.historical.indexOf('_extras/history/IMPLEMENTATION_REPORT_2026-03-22.md') !== -1, 'Implementation report має бути historical');
     _smokeAssert_(Array.isArray(docs.historical) && docs.historical.indexOf('_extras/history/STABILIZATION_NOTES_2026-03-22.md') !== -1, 'Stabilization notes мають бути historical');
     return 'historical-docs-ok';

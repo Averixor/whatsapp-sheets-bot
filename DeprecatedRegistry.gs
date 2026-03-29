@@ -2,6 +2,41 @@
  * DeprecatedRegistry.gs — compatibility / historical / sunset registry for the final baseline.
  */
 
+
+const DeprecatedRegistry_ = Object.freeze({
+  add: function(name, replacement, sunset) {
+    return Object.freeze({
+      name: String(name || '').trim(),
+      replacement: String(replacement || '').trim(),
+      sunset: String(sunset || '').trim() || 'planned',
+      status: 'compatibility-wrapper',
+      scope: 'Stage4MaintenanceApi.gs',
+      uiAllowed: false,
+      risk: 'low'
+    });
+  }
+});
+
+const STAGE4_MAINTENANCE_WRAPPER_MAP_ = Object.freeze([
+  DeprecatedRegistry_.add('apiStage4ClearCache', 'apiStage5ClearCache', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4ClearLog', 'apiStage5ClearLog', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4ClearPhoneCache', 'apiStage5ClearPhoneCache', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4RestartBot', 'apiStage5RestartBot', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4SetupVacationTriggers', 'apiStage5SetupVacationTriggers', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4CleanupDuplicateTriggers', 'apiStage5CleanupDuplicateTriggers', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4DebugPhones', 'apiStage5DebugPhones', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4BuildBirthdayLink', 'apiStage5BuildBirthdayLink', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4HealthCheck', 'apiStage5HealthCheck', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiRunStage4RegressionTests', 'apiRunStage5RegressionTests', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4ListPendingRepairs', 'apiStage5ListPendingRepairs', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4GetOperationDetails', 'apiStage5GetOperationDetails', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4RunRepair', 'apiStage5RunRepair', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4RunLifecycleRetentionCleanup', 'apiStage5RunLifecycleRetentionCleanup', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4GetAccessDescriptor', 'apiStage5GetAccessDescriptor', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4ApplyProtections', 'apiStage5ApplyProtections', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4BootstrapAccessSheet', 'apiStage5BootstrapAccessSheet', 'Stage 7.2')
+]);
+
 const STAGE4_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'getMonthsList',
@@ -116,7 +151,7 @@ const STAGE4_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'apiGetMonthsList',
     replacement: 'apiStage4GetMonthsList()',
-    scope: 'Stage3ServerApi.gs',
+    scope: 'removed Stage3 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
     risk: 'medium',
@@ -126,7 +161,7 @@ const STAGE4_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'apiGetSidebarData',
     replacement: 'apiStage4GetSidebarData(dateStr)',
-    scope: 'Stage3ServerApi.gs',
+    scope: 'removed Stage3 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
     risk: 'medium',
@@ -136,7 +171,7 @@ const STAGE4_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'apiGenerateSendPanel',
     replacement: 'apiGenerateSendPanelForDate(options)',
-    scope: 'Stage3ServerApi.gs',
+    scope: 'removed Stage3 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
     risk: 'medium',
@@ -146,7 +181,7 @@ const STAGE4_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'apiGetSendPanelData',
     replacement: 'apiStage4GetSendPanelData()',
-    scope: 'Stage3ServerApi.gs',
+    scope: 'removed Stage3 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
     risk: 'medium',
@@ -156,7 +191,7 @@ const STAGE4_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'apiMarkSendPanelRowsAsSent',
     replacement: 'apiMarkPanelRowsAsSent(rowNumbers, options)',
-    scope: 'Stage3ServerApi.gs',
+    scope: 'removed Stage3 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
     risk: 'medium',
@@ -166,7 +201,7 @@ const STAGE4_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'apiGetDaySummary',
     replacement: 'apiBuildDaySummary(dateStr)',
-    scope: 'Stage3ServerApi.gs',
+    scope: 'removed Stage3 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
     risk: 'medium',
@@ -176,7 +211,7 @@ const STAGE4_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'apiGetDetailedDaySummary',
     replacement: 'apiBuildDetailedSummary(dateStr)',
-    scope: 'Stage3ServerApi.gs',
+    scope: 'removed Stage3 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
     risk: 'medium',
@@ -186,7 +221,7 @@ const STAGE4_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'apiCheckVacations',
     replacement: 'apiCheckVacationsAndBirthdays(dateStr)',
-    scope: 'Stage3ServerApi.gs',
+    scope: 'removed Stage3 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
     risk: 'medium',
@@ -196,7 +231,7 @@ const STAGE4_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'apiGetBirthdays',
     replacement: 'apiCheckVacationsAndBirthdays(dateStr)',
-    scope: 'Stage3ServerApi.gs',
+    scope: 'removed Stage3 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
     risk: 'medium',
@@ -206,7 +241,7 @@ const STAGE4_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'apiBuildBirthdayLink',
     replacement: 'apiStage4BuildBirthdayLink(phone, name)',
-    scope: 'Stage3ServerApi.gs',
+    scope: 'removed Stage3 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
     risk: 'medium',
@@ -216,7 +251,7 @@ const STAGE4_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'apiGetPersonCardData',
     replacement: 'apiOpenPersonCard(callsign, dateStr)',
-    scope: 'Stage3ServerApi.gs',
+    scope: 'removed Stage3 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
     risk: 'medium',
@@ -226,7 +261,7 @@ const STAGE4_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'apiSwitchBotToMonth',
     replacement: 'apiStage4SwitchBotToMonth(monthSheetName)',
-    scope: 'Stage3ServerApi.gs',
+    scope: 'removed Stage3 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
     risk: 'medium',
@@ -236,7 +271,7 @@ const STAGE4_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'apiCreateNextMonth',
     replacement: 'apiCreateNextMonthStage4(options)',
-    scope: 'Stage3ServerApi.gs',
+    scope: 'removed Stage3 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
     risk: 'medium',
@@ -246,7 +281,7 @@ const STAGE4_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'apiSetupVacationTriggers',
     replacement: 'apiStage4SetupVacationTriggers()',
-    scope: 'Stage3ServerApi.gs',
+    scope: 'removed Stage3 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
     risk: 'medium',
@@ -256,7 +291,7 @@ const STAGE4_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'apiCleanupDuplicateTriggers',
     replacement: 'apiStage4CleanupDuplicateTriggers(functionName)',
-    scope: 'Stage3ServerApi.gs',
+    scope: 'removed Stage3 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
     risk: 'medium',
@@ -266,7 +301,7 @@ const STAGE4_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'apiDebugPhones',
     replacement: 'apiStage4DebugPhones()',
-    scope: 'Stage3ServerApi.gs',
+    scope: 'removed Stage3 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
     risk: 'medium',
@@ -276,7 +311,7 @@ const STAGE4_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'apiClearCache',
     replacement: 'apiStage4ClearCache()',
-    scope: 'Stage3ServerApi.gs',
+    scope: 'removed Stage3 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
     risk: 'medium',
@@ -286,7 +321,7 @@ const STAGE4_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'apiClearPhoneCache',
     replacement: 'apiStage4ClearPhoneCache()',
-    scope: 'Stage3ServerApi.gs',
+    scope: 'removed Stage3 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
     risk: 'medium',
@@ -296,7 +331,7 @@ const STAGE4_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'apiClearLog',
     replacement: 'apiStage4ClearLog()',
-    scope: 'Stage3ServerApi.gs',
+    scope: 'removed Stage3 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
     risk: 'medium',
@@ -306,7 +341,7 @@ const STAGE4_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'apiHealthCheck',
     replacement: 'apiStage4HealthCheck(options)',
-    scope: 'Stage3ServerApi.gs',
+    scope: 'removed Stage3 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
     risk: 'medium',
@@ -316,7 +351,7 @@ const STAGE4_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'apiRunRegressionTests',
     replacement: 'apiRunStage4RegressionTests(options)',
-    scope: 'Stage3ServerApi.gs',
+    scope: 'removed Stage3 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
     risk: 'medium',
@@ -398,7 +433,7 @@ function _stage5EnrichCompatibilityRecord_(item) {
 }
 
 function getDeprecatedRegistry_() {
-  return STAGE4_COMPATIBILITY_MAP_.map(_stage5EnrichCompatibilityRecord_);
+  return STAGE4_COMPATIBILITY_MAP_.concat(STAGE4_MAINTENANCE_WRAPPER_MAP_).map(_stage5EnrichCompatibilityRecord_);
 }
 
 function getStage4CompatibilityMap_() {

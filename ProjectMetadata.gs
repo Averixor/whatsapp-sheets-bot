@@ -8,38 +8,42 @@ function _projectMetaDeepCopy_(value) {
 
 const PROJECT_RELEASE_NAMING_ = Object.freeze({
   stage: '7.1',
-  stageLabel: 'Stage 7.1.2 — Security & Ops Hardened Baseline',
-  stageVersion: '7.1.2-security-ops-hardened',
-  activeBaseline: 'stage7-1-2-security-ops-hardened-baseline',
-  archiveBaseName: 'gas_wasb_stage7_1_2_security_ops_hardened',
-  archiveFileName: 'gas_wasb_stage7_1_2_security_ops_hardened.zip',
-  rootFolderName: 'gas_wasb_stage7_1_2_security_ops_hardened'
+  stageLabel: 'Stage 7.1.2 — Security & Ops Hardened Baseline (Final Clean)',
+  stageVersion: '7.1.2-final-clean',
+  activeBaseline: 'stage7-1-2-final-clean-baseline',
+  archiveBaseName: 'gas_wasb_stage7_1_2_final_clean',
+  archiveFileName: 'gas_wasb_stage7_1_2_final_clean.zip',
+  rootFolderName: 'gas_wasb_stage7_1_2_final_clean'
 });
 
 const PROJECT_DOCUMENTATION_MAP_ = Object.freeze({
   active: Object.freeze({
-    readme: '_extras/README.md',
-    architecture: '_extras/ARCHITECTURE.md',
-    runbook: '_extras/RUNBOOK.md',
-    releaseReport: '_extras/CHANGELOG.md'
+    readme: 'README.md',
+    architecture: 'ARCHITECTURE.md',
+    runbook: 'RUNBOOK.md',
+    security: 'SECURITY.md',
+    changelog: 'CHANGELOG.md'
   }),
-  reference: Object.freeze([
+  historical: Object.freeze([
+    '_extras/history/ACCESS_VIEWER_RESTRICTIONS_2026-03-29.md',
+    '_extras/history/AUDIT_REPORT_2026-03-24.md',
     '_extras/history/CANONICAL_APIS_STAGE7_FINAL_STABILIZED.md',
     '_extras/history/CHANGELOG_STAGE7_FINAL_STABILIZED.md',
-    '_extras/history/COMPATIBILITY_ALIASES_STAGE7_FINAL_STABILIZED.md',
-    '_extras/history/FINAL_STABILIZATION_REPORT_2026-03-26.md',
-    '_extras/history/SCHEMA.md',
-    '_extras/history/SEND_PANEL_TZ_IMPLEMENTATION_2026-03-26.md',
-    '_extras/history/ACCESS_VIEWER_RESTRICTIONS_2026-03-29.md'
-  ]),
-  historical: Object.freeze([
-    '_extras/history/IMPLEMENTATION_REPORT_2026-03-22.md',
-    '_extras/history/STABILIZATION_NOTES_2026-03-22.md',
-    '_extras/history/AUDIT_REPORT_2026-03-24.md',
+    '_extras/history/COMMANDS_TERMINAL.md',
     '_extras/history/COMPARISON_AND_MERGE_REPORT_2026-03-26.md',
+    '_extras/history/COMPATIBILITY_ALIASES_STAGE7_FINAL_STABILIZED.md',
+    '_extras/history/FILES_TO_CREATE_IN_GAS_WEB_EDITOR.txt',
+    '_extras/history/FINAL_DELIVERY_REPORT_2026-03-29.md',
+    '_extras/history/FINAL_STABILIZATION_REPORT_2026-03-26.md',
+    '_extras/history/GAS_WEB_EDITOR_IMPORT_GUIDE.md',
+    '_extras/history/IMPLEMENTATION_REPORT_2026-03-22.md',
     '_extras/history/RELEASE_NAMING_HOTFIX_2026-03-26.md',
     '_extras/history/RESOLVER_HOTFIX_2026-03-26.md',
+    '_extras/history/SCHEMA.md',
+    '_extras/history/SEND_PANEL_TZ_IMPLEMENTATION_2026-03-26.md',
     '_extras/history/STABILIZATION_CHECK_REPORT_STAGE7_FINAL.md',
+    '_extras/history/STABILIZATION_NOTES_2026-03-22.md',
+    '_extras/history/STAGE7_REPORT.md',
     '_extras/history/TZ_EXECUTION_REPORT_2026-03-28.md'
   ])
 });
@@ -251,6 +255,8 @@ const PROJECT_STAGE5_CLIENT_ROUTING_POLICY_ = Object.freeze({
 
 const PROJECT_MAINTENANCE_POLICY_ = Object.freeze({
   policy: 'canonical-stage5-maintenance-with-stage4-compat-facade',
+  canonicalFile: 'Stage5MaintenanceApi.gs',
+  compatibilityFile: 'Stage4MaintenanceApi.gs',
   canonicalMaintenanceApi: 'Stage5MaintenanceApi.gs',
   compatibilityFacade: 'Stage4MaintenanceApi.gs',
   diagnosticsEntrypoint: 'apiRunStage5Diagnostics',
@@ -276,19 +282,21 @@ const PROJECT_CLIENT_RUNTIME_POLICY_ = Object.freeze({
     'Js.Render.html',
     'Js.Diagnostics.html',
     'Js.Helpers.html',
+    'Js.Security.html',
     'Js.Events.html',
     'Js.Actions.html'
   ])
 });
 
 const PROJECT_BUNDLE_FILE_INDEX_ = Object.freeze([
+  "ARCHITECTURE.md",
   "AccessControl.gs",
   "AccessE2ETests.gs",
   "AccessEnforcement.gs",
   "AccessSheetTriggers.gs",
-  "Actions.gs",
   "AlertsRepository.gs",
   "AuditTrail.gs",
+  "CHANGELOG.md",
   "Code.gs",
   "DataAccess.gs",
   "DateUtils.gs",
@@ -296,7 +304,6 @@ const PROJECT_BUNDLE_FILE_INDEX_ = Object.freeze([
   "Diagnostics.gs",
   "DialogPresenter.gs",
   "DialogTemplates.gs",
-  "Dialogs.gs",
   "DictionaryRepository.gs",
   "DomainTests.gs",
   "HtmlUtils.gs",
@@ -310,6 +317,7 @@ const PROJECT_BUNDLE_FILE_INDEX_ = Object.freeze([
   "Js.Events.html",
   "Js.Helpers.html",
   "Js.Render.html",
+  "Js.Security.html",
   "Js.State.html",
   "LifecycleRetention.gs",
   "Log.gs",
@@ -322,8 +330,11 @@ const PROJECT_BUNDLE_FILE_INDEX_ = Object.freeze([
   "PersonsRepository.gs",
   "PreviewLinkService.gs",
   "ProjectMetadata.gs",
+  "README.md",
+  "RUNBOOK.md",
   "Reconciliation.gs",
   "RoutingRegistry.gs",
+  "SECURITY.md",
   "SecurityRedaction.gs",
   "SelectionActionService.gs",
   "SendPanel.gs",
@@ -339,7 +350,6 @@ const PROJECT_BUNDLE_FILE_INDEX_ = Object.freeze([
   "SmokeTests.gs",
   "SpreadsheetActionsApi.gs",
   "SpreadsheetProtection.gs",
-  "Stage3ServerApi.gs",
   "Stage4Config.gs",
   "Stage4MaintenanceApi.gs",
   "Stage4ServerApi.gs",
@@ -359,11 +369,6 @@ const PROJECT_BUNDLE_FILE_INDEX_ = Object.freeze([
   "VacationsRepository.gs",
   "Validation.gs",
   "WorkflowOrchestrator.gs",
-  "_extras/ARCHITECTURE.md",
-  "_extras/CHANGELOG.md",
-  "_extras/README.md",
-  "_extras/RUNBOOK.md",
-  "_extras/SECURITY.md",
   "_extras/history/ACCESS_VIEWER_RESTRICTIONS_2026-03-29.md",
   "_extras/history/AUDIT_REPORT_2026-03-24.md",
   "_extras/history/CANONICAL_APIS_STAGE7_FINAL_STABILIZED.md",
@@ -387,7 +392,7 @@ const PROJECT_BUNDLE_FILE_INDEX_ = Object.freeze([
   "_extras/tools/package.json",
   "_extras/tools/static-checks.js",
   "_extras/tools/validate-gs-syntax.js",
-  "appsscript.json",
+  "appsscript.json"
 ]);
 
 const PROJECT_BUNDLE_METADATA_ = Object.freeze({
@@ -409,23 +414,25 @@ const PROJECT_BUNDLE_METADATA_ = Object.freeze({
     notes: ['The release zip must not include .git or node_modules.', 'Non-runtime documentation and import helpers live under _extras/.', 'No .clasp files are required or shipped for the web-editor workflow.']
   }),
   maintenanceLayerStatus: 'stage5-canonical-maintenance-api',
+  compatibilityPolicyMarker: 'stage7-compatible',
+  sunsetPolicyMarker: 'stage7-sunset-governed',
   manifestIncluded: true,
   documentation: PROJECT_DOCUMENTATION_MAP_,
-  diagnosticsPolicy: Object.freeze({ wording: 'stage7-1-2-security-ops-hardened-baseline' }),
+  diagnosticsPolicy: Object.freeze({ wording: 'stage7-1-2-final-clean-baseline' }),
   maintenanceLayerPolicy: PROJECT_MAINTENANCE_POLICY_,
   clientRuntimePolicy: PROJECT_CLIENT_RUNTIME_POLICY_,
   hardeningOverlay: PROJECT_HARDENING_OVERLAY_,
   requiredDocs: Object.freeze([
-    '_extras/README.md',
-    '_extras/ARCHITECTURE.md',
-    '_extras/RUNBOOK.md',
-    '_extras/SECURITY.md',
-    '_extras/CHANGELOG.md'
+    'README.md',
+    'ARCHITECTURE.md',
+    'RUNBOOK.md',
+    'SECURITY.md',
+    'CHANGELOG.md'
   ]),
   notes: Object.freeze([
-    'Metadata is aligned to the active Stage 7.1.2 release identity.',
-    'Historical Stage 4 compatibility remains intentionally preserved.',
-    'Stage 5 maintenance naming remains canonical in the active release.'
+    'Metadata is aligned to the active Stage 7.1.2 final clean release identity.',
+    'Root documentation is reduced to five active markdown files.',
+    'Historical notes live only under _extras/history/.'
   ])
 });
 

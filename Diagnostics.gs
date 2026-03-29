@@ -983,7 +983,7 @@ function runStage3HealthCheck_(options) {
       `Public API ${fnName}`,
       _stage3HasFn_(fnName) ? 'OK' : 'FAIL',
       _stage3HasFn_(fnName) ? 'Публічний API доступний' : 'Метод не знайдено',
-      _stage3HasFn_(fnName) ? '' : 'Перевірте Stage3ServerApi.gs'
+      _stage3HasFn_(fnName) ? '' : 'Stage 3 wrappers intentionally removed in final clean baseline'
     );
   });
 
@@ -1560,9 +1560,9 @@ function runStage5MetadataConsistencyCheck_() {
   if (!meta) return checks;
 
   _stage3PushCheck_(checks, 'Release stage marker', String(meta.stage || '') === '7.1' ? 'OK' : 'FAIL', `stage=${meta.stage || 'n/a'}, stageVersion=${meta.stageVersion || 'n/a'}, label=${meta.stageLabel || 'n/a'}`, 'Оновіть ProjectMetadata.gs до Stage 7.1');
-  _stage3PushCheck_(checks, 'Active baseline marker', meta.activeBaseline === 'stage7-1-2-security-ops-hardened-baseline' ? 'OK' : 'FAIL', `activeBaseline=${meta.activeBaseline || 'n/a'}`, 'Зафіксуйте Stage 7.1 як active baseline');
-  _stage3PushCheck_(checks, 'Release archive naming', release && release.archiveFileName === 'gas_wasb_stage7_1_2_security_ops_hardened.zip' ? 'OK' : 'FAIL', release && release.archiveFileName ? release.archiveFileName : 'Не задано', 'Вирівняйте archive naming');
-  _stage3PushCheck_(checks, 'Release root folder naming', release && release.rootFolderName === 'gas_wasb_stage7_1_2_security_ops_hardened' ? 'OK' : 'FAIL', release && release.rootFolderName ? release.rootFolderName : 'Не задано', 'Вирівняйте root folder naming');
+  _stage3PushCheck_(checks, 'Active baseline marker', meta.activeBaseline === 'stage7-1-2-final-clean-baseline' ? 'OK' : 'FAIL', `activeBaseline=${meta.activeBaseline || 'n/a'}`, 'Зафіксуйте Stage 7.1 як active baseline');
+  _stage3PushCheck_(checks, 'Release archive naming', release && release.archiveFileName === 'gas_wasb_stage7_1_2_final_clean.zip' ? 'OK' : 'FAIL', release && release.archiveFileName ? release.archiveFileName : 'Не задано', 'Вирівняйте archive naming');
+  _stage3PushCheck_(checks, 'Release root folder naming', release && release.rootFolderName === 'gas_wasb_stage7_1_2_final_clean' ? 'OK' : 'FAIL', release && release.rootFolderName ? release.rootFolderName : 'Не задано', 'Вирівняйте root folder naming');
   _stage3PushCheck_(checks, 'Packaging policy marker', meta.packagingPolicy && meta.packagingPolicy.policy === 'root-manifest-web-editor-only' ? 'OK' : 'FAIL', meta.packagingPolicy && meta.packagingPolicy.policy ? meta.packagingPolicy.policy : 'Не задано', 'Зафіксуйте web-editor-only packaging policy');
   _stage3PushCheck_(checks, 'Root manifest declared', meta.manifestIncluded === true ? 'OK' : 'FAIL', `manifestIncluded=${meta.manifestIncluded}`, 'Вирівняйте metadata');
   _stage3PushCheck_(checks, 'Root manifest physical', _projectBundleHas_((meta.packagingPolicy && meta.packagingPolicy.manifestPath) || 'appsscript.json') ? 'OK' : 'FAIL', _projectBundleHas_((meta.packagingPolicy && meta.packagingPolicy.manifestPath) || 'appsscript.json') ? ((meta.packagingPolicy && meta.packagingPolicy.manifestPath) || 'appsscript.json') : 'manifest missing', 'Додайте appsscript.json у root');
@@ -1579,7 +1579,7 @@ function runStage5MetadataConsistencyCheck_() {
   _stage3PushCheck_(checks, 'Client runtime file', clientRuntimePolicy.runtimeFile === 'JavaScript.html' ? 'OK' : 'FAIL', clientRuntimePolicy.runtimeFile || 'Не задано', 'Зафіксуйте JavaScript.html як canonical runtime');
   _stage3PushCheck_(checks, 'Client bootstrap mode', clientRuntimePolicy.bootstrapMode === 'sidebar-includeTemplate' ? 'OK' : 'FAIL', clientRuntimePolicy.bootstrapMode || 'Не задано', 'Використовуйте Sidebar.html -> includeTemplate(\'JavaScript\')');
   _stage3PushCheck_(checks, 'Client modular status', clientRuntimePolicy.modularStatus === 'active-js-include-chain' ? 'OK' : 'WARN', clientRuntimePolicy.modularStatus || 'Не задано', 'Позначте Js.*.html як non-active experimental/reference artifacts');
-  _stage3PushCheck_(checks, 'Diagnostics wording policy', meta.diagnosticsPolicy && meta.diagnosticsPolicy.wording === 'stage7-1-2-security-ops-hardened-baseline' ? 'OK' : 'WARN', meta.diagnosticsPolicy && meta.diagnosticsPolicy.wording ? meta.diagnosticsPolicy.wording : 'Не задано', 'Зафіксуйте Stage 7.1 diagnostics wording policy');
+  _stage3PushCheck_(checks, 'Diagnostics wording policy', meta.diagnosticsPolicy && meta.diagnosticsPolicy.wording === 'stage7-1-2-final-clean-baseline' ? 'OK' : 'WARN', meta.diagnosticsPolicy && meta.diagnosticsPolicy.wording ? meta.diagnosticsPolicy.wording : 'Не задано', 'Зафіксуйте Stage 7.1 diagnostics wording policy');
 
   const requiredDocs = Array.isArray(meta.requiredDocs) ? meta.requiredDocs : [];
   requiredDocs.forEach(function(doc) {
@@ -1589,22 +1589,17 @@ function runStage5MetadataConsistencyCheck_() {
 
   const activeDocs = docs && docs.active ? Object.values(docs.active) : [];
   activeDocs.forEach(function(doc) {
-    _stage3PushCheck_(checks, `Active doc path ${doc}`, _isProjectDocPath_(doc) ? 'OK' : 'FAIL', doc, 'Active docs мають лежати в _extras/');
+    _stage3PushCheck_(checks, `Active doc path ${doc}`, String(doc || '').indexOf('_extras/') !== 0 ? 'OK' : 'FAIL', doc, 'Active docs мають лежати в корені bundle');
     _stage3PushCheck_(checks, `Active doc physical ${doc}`, _projectBundleHas_(doc) ? 'OK' : 'FAIL', _projectBundleHas_(doc) ? `present=${doc}` : `missing=${doc}`, 'Вирівняйте bundle layout');
   });
 
-  const referenceDocs = Array.isArray(docs.reference) ? docs.reference : [];
-  referenceDocs.forEach(function(doc) {
-    _stage3PushCheck_(checks, `Reference doc path ${doc}`, _isProjectDocPath_(doc) ? 'OK' : 'FAIL', doc, 'Reference docs мають лежати в _extras/');
-  });
-
-  const historicalDocs = Array.isArray(docs.historical) ? docs.historical : [];
+    const historicalDocs = Array.isArray(docs.historical) ? docs.historical : [];
   historicalDocs.forEach(function(doc) {
-    _stage3PushCheck_(checks, `Historical doc path ${doc}`, _isProjectDocPath_(doc) ? 'OK' : 'FAIL', doc, 'Historical docs мають лежати в _extras/');
+    _stage3PushCheck_(checks, `Historical doc path ${doc}`, String(doc || '').indexOf('_extras/history/') === 0 ? 'OK' : 'FAIL', doc, 'Historical docs мають лежати в _extras/history/');
   });
 
-  ['_extras/README.md', '_extras/ARCHITECTURE.md', '_extras/RUNBOOK.md', '_extras/SECURITY.md', '_extras/CHANGELOG.md'].forEach(function(doc) {
-    _stage3PushCheck_(checks, `Canonical reference doc ${doc}`, _projectBundleHas_(doc) ? 'OK' : 'FAIL', _projectBundleHas_(doc) ? `present=${doc}` : `missing=${doc}`, 'Відновіть canonical docs у _extras');
+  ['README.md', 'ARCHITECTURE.md', 'RUNBOOK.md', 'SECURITY.md', 'CHANGELOG.md'].forEach(function(doc) {
+    _stage3PushCheck_(checks, `Canonical reference doc ${doc}`, _projectBundleHas_(doc) ? 'OK' : 'FAIL', _projectBundleHas_(doc) ? `present=${doc}` : `missing=${doc}`, 'Відновіть canonical docs у root');
   });
 
   const helperOk = typeof HtmlUtils_ === 'object'
@@ -2065,9 +2060,9 @@ function _diagBuildStage7CoreChecks_(options) {
   var runtimeContract = typeof getClientRuntimeContract_ === 'function' ? getClientRuntimeContract_() : {};
 
   _stage3PushCheck_(checks, 'Release stage marker', String(meta && meta.stage || '') === '7.1' ? 'OK' : 'FAIL', 'stage=' + (meta && meta.stage || 'n/a') + ', label=' + (meta && meta.stageLabel || 'n/a'), 'Оновіть ProjectMetadata.gs під Stage 7.1');
-  _stage3PushCheck_(checks, 'Active baseline marker', meta && meta.activeBaseline === 'stage7-1-2-security-ops-hardened-baseline' ? 'OK' : 'FAIL', 'activeBaseline=' + (meta && meta.activeBaseline || 'n/a'), 'Оновіть activeBaseline');
-  _stage3PushCheck_(checks, 'Release naming aligned', release && release.archiveBaseName === 'gas_wasb_stage7_1_2_security_ops_hardened' && release.rootFolderName === 'gas_wasb_stage7_1_2_security_ops_hardened' ? 'OK' : 'FAIL', (release && release.archiveBaseName || 'n/a') + ' / ' + (release && release.rootFolderName || 'n/a'), 'Вирівняйте archive/root naming');
-  _stage3PushCheck_(checks, 'Stage7 report active', docs && docs.active && docs.active.releaseReport === '_extras/CHANGELOG.md' ? 'OK' : 'FAIL', docs && docs.active && docs.active.releaseReport ? docs.active.releaseReport : 'Не задано', 'Зафіксуйте CHANGELOG.md як active release report');
+  _stage3PushCheck_(checks, 'Active baseline marker', meta && meta.activeBaseline === 'stage7-1-2-final-clean-baseline' ? 'OK' : 'FAIL', 'activeBaseline=' + (meta && meta.activeBaseline || 'n/a'), 'Оновіть activeBaseline');
+  _stage3PushCheck_(checks, 'Release naming aligned', release && release.archiveBaseName === 'gas_wasb_stage7_1_2_final_clean' && release.rootFolderName === 'gas_wasb_stage7_1_2_final_clean' ? 'OK' : 'FAIL', (release && release.archiveBaseName || 'n/a') + ' / ' + (release && release.rootFolderName || 'n/a'), 'Вирівняйте archive/root naming');
+  _stage3PushCheck_(checks, 'Stage7 report active', docs && docs.active && docs.active.changelog === 'CHANGELOG.md' ? 'OK' : 'FAIL', docs && docs.active && docs.active.changelog ? docs.active.changelog : 'Не задано', 'Зафіксуйте CHANGELOG.md як active release report');
   _stage3PushCheck_(checks, 'Modular runtime policy', policy && policy.runtimeStatus === 'canonical-modular-runtime' ? 'OK' : 'FAIL', policy && policy.runtimeStatus ? policy.runtimeStatus : 'Не задано', 'Оновіть clientRuntimePolicy.runtimeStatus');
   _stage3PushCheck_(checks, 'Active Js include chain', policy && policy.modularStatus === 'active-js-include-chain' ? 'OK' : 'FAIL', policy && policy.modularStatus ? policy.modularStatus : 'Не задано', 'Оновіть clientRuntimePolicy.modularStatus');
   _stage3PushCheck_(checks, 'Runtime contract marker', runtimeContract && runtimeContract.policyMarker === 'stage7-sidebar-runtime' ? 'OK' : 'FAIL', runtimeContract && runtimeContract.policyMarker ? runtimeContract.policyMarker : 'Не задано', 'Оновіть getClientRuntimeContract_()');
@@ -2079,7 +2074,7 @@ function _diagBuildStage7CoreChecks_(options) {
   var hasRetentionCleanup = _stage3HasFn_('apiStage5RunLifecycleRetentionCleanup');
   _stage3PushCheck_(checks, 'Lifecycle maintenance API', hasList && hasRepair ? 'OK' : 'FAIL', 'list=' + hasList + ', repair=' + hasRepair, 'Додайте maintenance API для repair flow');
   _stage3PushCheck_(checks, 'Lifecycle retention cleanup API', hasRetentionCleanup ? 'OK' : 'WARN', 'cleanup=' + hasRetentionCleanup, 'Додайте окремий maintenance flow для lifecycle retention cleanup');
-  _stage3PushCheck_(checks, 'Stage4 compatibility facade preserved', _stage3HasFn_('apiStage4ClearCache') && _stage3HasFn_('apiStage4HealthCheck') ? 'OK' : 'FAIL', 'wrappers preserved=' + (_stage3HasFn_('apiStage4ClearCache') && _stage3HasFn_('apiStage4HealthCheck')), 'Не ламайте Stage4 compatibility facade');
+  _stage3PushCheck_(checks, 'Stage4 compatibility facade declared', _stage3HasFn_('apiStage4ClearCache') && _stage3HasFn_('apiStage4HealthCheck') ? 'OK' : 'WARN', 'wrappers preserved=' + (_stage3HasFn_('apiStage4ClearCache') && _stage3HasFn_('apiStage4HealthCheck')), 'Compatibility wrappers можуть лишатися лише для зовнішніх історичних викликів');
 
   ['OPS_LOG', 'ACTIVE_OPERATIONS', 'CHECKPOINTS'].forEach(function(name) {
     _diagServiceSheetCheck_(checks, name);
@@ -2165,7 +2160,6 @@ function runStage5OperationalDiagnostics_(options) {
     _diagNormalizeReportChecks_(healthCheck(), 'Health'),
     _diagNormalizeReportChecks_(checkDuplicates(), 'Duplicates'),
     _diagNormalizeReportChecks_(testFunctions(), 'Functions'),
-    _diagNormalizeReportChecks_(runStage4HealthCheck_({ shallow: true, includeStage3Base: false, includeCompatibilityLayer: false, includeReconciliationPreview: false }), 'Stage4'),
     _diagBuildStage7CoreChecks_(opts),
     _diagNormalizeReportChecks_({ checks: extra })
   );
@@ -2204,12 +2198,6 @@ function runStage5FullDiagnostics_(options) {
     _diagNormalizeReportChecks_(checkFiles(), 'Files'),
     _diagNormalizeReportChecks_(checkDuplicates(), 'Duplicates'),
     _diagNormalizeReportChecks_(testFunctions(), 'Functions'),
-    _diagNormalizeReportChecks_(runStage4HealthCheck_({
-      shallow: false,
-      includeStage3Base: true,
-      includeCompatibilityLayer: true,
-      includeReconciliationPreview: true
-    }), 'Stage4'),
     _diagBuildStage7CoreChecks_(opts),
     _diagNormalizeReportChecks_({ checks: extra })
   );

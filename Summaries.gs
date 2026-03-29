@@ -228,7 +228,11 @@ function sendDetailedSummaryToCommander() {
     }
 
     const safe = trimToEncoded_(text, CONFIG.MAX_WA_TEXT);
-    showLinkDialogSimple_('📊 Детальне → командиру', `https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(safe)}`);
+    DialogPresenter_.showLinkDialog({
+      title: '📊 Детальне → командиру',
+      url: `https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(safe)}`,
+      description: 'Натисніть, щоб відкрити WhatsApp'
+    });
   } catch (e) {
     SpreadsheetApp.getUi().alert('✕ ' + e.message);
   }

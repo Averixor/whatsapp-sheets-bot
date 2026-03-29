@@ -35,7 +35,7 @@
       <div class="header-content">
         <h1 class="logo header-logo" title="WASB">
           <span>WASB</span>
-          <button type="button" class="header-tool-btn" onclick="SidebarApp.handleMenuAction('debugAccess')" title="Сервісна діагностика доступу">
+          <button type="button" class="header-tool-btn" data-role-min="maintainer" onclick="SidebarApp.handleMenuAction('debugAccess')" title="Сервісна діагностика доступу">
             <span class="whatsapp-icon" aria-hidden="true">🧑‍💻</span>
           </button>
         </h1>
@@ -70,7 +70,7 @@
           </button>
 
           <div class="personnel-launch-wrap" style="grid-column: span 2;">
-            <button id="btnOpenPersonnelModal" class="btn personnel-launch-btn" type="button">🪖 Особовий склад</button>
+            <button id="btnOpenPersonnelModal" class="btn personnel-launch-btn" data-role-min="viewer" type="button">🪖 Особовий склад</button>
           </div>
 
           <button id="btnCreateNextMonth" class="menu-item" data-role-min="operator" onclick="SidebarApp.handleMenuAction('createNextMonth')" title="Створити аркуш наступного місяця">

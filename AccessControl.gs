@@ -18,17 +18,6 @@ const AccessControl_ = (function() {
   const VIEWER_PROP = 'WASB_ACCESS_VIEWER_EMAILS';
   const GUEST_PROP = 'WASB_ACCESS_GUEST_EMAILS';
   const MIGRATION_EMAIL_BRIDGE_PROP = 'WASB_ACCESS_MIGRATION_EMAIL_BRIDGE';
-
-  function _legacyPropKey_(value) {
-    return String(value || '').replace(/^WAS/, 'WAP');
-  }
-
-  function _getScriptPropertyCompat_(name) {
-    const props = _getProperties_();
-    const direct = props.getProperty(name);
-    if (direct !== null && direct !== '') return direct;
-    return props.getProperty(_legacyPropKey_(name));
-  }
   const ROLE_ORDER = Object.freeze({ guest: 0, viewer: 1, operator: 2, maintainer: 3, admin: 4, sysadmin: 5, owner: 6 });
   const ROLE_VALUES = Object.freeze(['guest', 'viewer', 'operator', 'maintainer', 'admin', 'sysadmin', 'owner']);
   const ROLE_METADATA = Object.freeze({
@@ -139,7 +128,7 @@ const AccessControl_ = (function() {
       viewer: VIEWER_PROP,
       guest: GUEST_PROP
     };
-    return _parseEmailsList_(_getScriptPropertyCompat_(map[normalizedRole] || GUEST_PROP));
+    return _parseEmailsList_(_getProperties_().getProperty(map[normalizedRole] || GUEST_PROP));
   }
 
   function listAdminEmails() {
@@ -491,7 +480,7 @@ const AccessControl_ = (function() {
   }
 
   function isMigrationBridgeEnabled() {
-    return parseBoolean_(_getScriptPropertyCompat_(MIGRATION_EMAIL_BRIDGE_PROP), false);
+    return parseBoolean_(_getProperties_().getProperty(MIGRATION_EMAIL_BRIDGE_PROP), false);
   }
 
   function listAllowedActionsForRole_(role) {

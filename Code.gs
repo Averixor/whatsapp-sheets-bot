@@ -174,7 +174,7 @@ function getClientRuntimeContract_() {
     styleInclude: 'Styles.html',
     policyMarker: 'stage7-sidebar-runtime',
     runtimeStatus: 'canonical-modular-runtime',
-    runtimeModules: ['Js.Core.html', 'Js.State.html', 'Js.Api.html', 'Js.Render.html', 'Js.Diagnostics.html', 'Js.Helpers.html', 'Js.Events.html', 'Js.Actions.html']
+    runtimeModules: ['Js.Core.html', 'Js.State.html', 'Js.Api.html', 'Js.Render.html', 'Js.Diagnostics.html', 'Js.Helpers.html', 'Js.Security.html', 'Js.Events.html', 'Js.Actions.html']
   };
 }
 

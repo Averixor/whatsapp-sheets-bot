@@ -1,0 +1,438 @@
+<script>
+// Js.Security — active Stage 7.1.2 security runtime fragment.
+  function isAdminRole() {
+    return !!(STATE.access && STATE.access.isAdmin);
+  }
+
+  function getAccessRoleLabel_(role) {
+    const map = { guest: 'Гість', viewer: 'Перегляд', operator: 'Оператор', maintainer: 'Редактор', admin: 'Адмін', sysadmin: 'Сис. адмін', owner: 'Власник' };
+    return map[String(role || 'guest').trim().toLowerCase()] || 'Гість';
+  }
+
+  function getAccessRoleRank_(role) {
+    const order = { guest: 0, viewer: 1, operator: 2, maintainer: 3, admin: 4, sysadmin: 5, owner: 6 };
+    return order[String(role || 'guest').trim().toLowerCase()] || 0;
+  }
+
+  function hasRoleAtLeast_(roleName) {
+    const access = STATE.access || {};
+    return getAccessRoleRank_(access.role) >= getAccessRoleRank_(roleName) && access.enabled !== false;
+  }
+
+  function hasDaySummaryAccess_() {
+    return hasRoleAtLeast_('viewer');
+  }
+
+  function hasDetailedSummaryAccess_() {
+    return hasRoleAtLeast_('operator');
+  }
+
+  function hasWorkingAccess_() {
+    return hasRoleAtLeast_('operator');
+  }
+
+  function hasMaintainerAccess_() {
+    return hasRoleAtLeast_('maintainer');
+  }
+
+  function getViewerOwnCallsign_() {
+    const access = STATE.access || {};
+    return String(access.personCallsign || '').trim();
+  }
+
+  function canOpenPersonCardClient_(callsign) {
+    const access = STATE.access || {};
+    const role = String(access.role || 'guest').toLowerCase();
+    const target = String(callsign || '').trim().toUpperCase();
+    const own = getViewerOwnCallsign_().toUpperCase();
+    if (!target) return false;
+    if (access.isOperator || access.isAdmin) return true;
+    if (role !== 'viewer') return false;
+    return !!own && own === target;
+  }
+
+  async function reportAccessViolation_(actionName, details) {
+    try {
+      if (!MaintenanceApi || !MaintenanceApi.reportAccessViolation) return;
+      await MaintenanceApi.reportAccessViolation(actionName || '', details || {});
+    } catch (error) {
+      logToConsole('✕ Не вдалося зафіксувати порушення доступу: ' + normalizeError(error), 'error');
+    }
+  }
+
+  function updateRestrictedUi_() {
+    const access = STATE.access || {};
+    document.querySelectorAll('[data-role-min]').forEach(function(el) {
+      const required = el.getAttribute('data-role-min') || 'guest';
+      el.style.display = hasRoleAtLeast_(required) ? '' : 'none';
+    });
+
+    const detailedBtn = $id('btnDetailedSummary');
+    if (detailedBtn) {
+      const allowed = hasDetailedSummaryAccess_();
+      detailedBtn.classList.toggle('is-disabled', !allowed);
+      detailedBtn.classList.toggle('is-restricted', !allowed);
+      detailedBtn.setAttribute('aria-disabled', allowed ? 'false' : 'true');
+      detailedBtn.title = allowed ? 'Детальне зведення за день' : ('Недоступно для ролі ' + getAccessRoleLabel_(access.role));
+    }
+  }
+
+  function buildAccessBannerMessage_(descriptor) {
+    const access = descriptor || STATE.access || {};
+    const reason = String(access.reason || '').trim();
+    const note = String(access.note || '').trim();
+    const source = String(access.source || '').trim();
+    const consoleParts = [];
+    if (reason) consoleParts.push(reason);
+    if (note) consoleParts.push('Примітка: ' + note);
+    if (source) consoleParts.push('Джерело: ' + source);
+    return consoleParts.join(' • ');
+  }
+
+
+  function getAccessSourceLabel_(source) {
+    const raw = String(source || '').trim();
+    const map = {
+      'ACCESS': 'лист ACCESS',
+      'ACCESS-user-key-current': 'зареєстрований поточний user key',
+      'ACCESS-user-key-prev': 'зареєстрований попередній user key',
+      'ACCESS-user-key-rotated': 'user key оновлено автоматично',
+      'ACCESS-user-key-unregistered': 'user key не зареєстровано',
+      'ACCESS-email-bound-key': 'ключ прив’язано через аварійний email-міст',
+      'ACCESS-email-bridge': 'ідентифікацію підтверджено через аварійний email-міст',
+      'scriptProperties': 'Script Properties (тільки аварійна міграція)',
+      'scriptProperties-email-bridge': 'аварійний email-міст через Script Properties',
+      'bootstrap-owner': 'тимчасовий bootstrap-owner',
+      'default': 'режим за замовчуванням'
+    };
+    return map[raw] || (raw || 'невідомо');
+  }
+
+  function maskAccessKey_(value) {
+    const key = String(value || '').trim();
+    if (!key) return 'не визначено';
+    if (key.length <= 10) return key;
+    return key.slice(0, 6) + '…' + key.slice(-4);
+  }
+
+  function buildAccessDebugExplanation_(access) {
+    const role = String(access && access.role || 'guest').toLowerCase();
+    const registered = !!(access && access.registered);
+    const keyMode = !!(access && access.userKeyModeEnabled);
+    const keyAvailable = !!(access && access.keyAvailable);
+    const migrationMode = !!(access && access.migrationModeEnabled);
+
+    if (keyMode && !registered && !keyAvailable) {
+      return migrationMode
+        ? 'Система очікує user key. Аварійний email-міст увімкнено, але поточний сеанс не віддав ключ користувача, тому доступ знижено до safe-mode.'
+        : 'Система працює у строгому user key-режимі, але поточний сеанс не віддав ключ користувача. Через це доступ знижено до safe-mode.';
+    }
+    if (keyMode && !registered && keyAvailable) {
+      return migrationMode
+        ? 'Система отримала user key, але не знайшла його в ACCESS. Аварійний email-міст не зміг підтвердити користувача, тому доступ знижено до safe-mode.'
+        : 'Система отримала user key поточного користувача, але не знайшла його в ACCESS. Неявні fallback-схеми вимкнено, тому доступ знижено до safe-mode.';
+    }
+    if (role === 'owner') {
+      return 'Усе добре. Користувача впізнано як власника. Це найвищий рівень доступу в системі.';
+    }
+    if (role === 'sysadmin') {
+      return 'Усе добре. Користувача впізнано як сис. адміністратора. Повний системний блок має бути доступний.';
+    }
+    if (role === 'admin') {
+      return 'Усе добре. Користувача впізнано як адміністратора. Адмінські дії мають бути доступні.';
+    }
+    if (role === 'maintainer') {
+      return 'Усе добре. Користувача впізнано як редактора. Розширені робочі дії дозволені, але системне адміністрування приховане.';
+    }
+    if (role === 'operator') {
+      return 'Усе добре. Користувача впізнано як оператора. Робочі дії дозволені, а небезпечні системні дії приховані.';
+    }
+    if (role === 'viewer') {
+      return 'Користувача визначено в режимі перегляду. Він може бачити список ОС, але відкривати тільки власну картку.';
+    }
+    return 'Користувача визначено як гостя. Це найобмеженіший рівень безпечного перегляду.';
+  }
+
+  function buildAccessDebugAdvice_(access) {
+    const role = String(access && access.role || 'guest').toLowerCase();
+    const registered = !!(access && access.registered);
+    const keyMode = !!(access && access.userKeyModeEnabled);
+    const keyAvailable = !!(access && access.keyAvailable);
+    const migrationMode = !!(access && access.migrationModeEnabled);
+
+    if (keyMode && !registered && keyAvailable) {
+      return migrationMode
+        ? 'Скопіюйте свій user key в ACCESS → user_key_current. Аварійний email-міст краще вимкнути після завершення міграції.'
+        : 'Скопіюйте свій user key та внесіть його в ACCESS у колонку user_key_current навпроти потрібної ролі. Якщо ключ змінився — старий можна тимчасово покласти в user_key_prev.';
+    }
+    if (keyMode && !registered && !keyAvailable) {
+      return 'Перевірте, чи цей сеанс Google Apps Script віддає temporary user key. Без нього строгий user key-доступ не підтвердиться.';
+    }
+    if (role === 'guest') {
+      return 'Запишіть людині роль guest або підвищіть її до viewer / operator, якщо потрібні додаткові розділи.';
+    }
+    if (role === 'viewer') {
+      return 'Перевірте ACCESS: user_key_current без пробілів, роль одна з guest/viewer/operator/maintainer/admin/sysadmin/owner, enabled = TRUE. Для viewer також заповніть person_callsign.';
+    }
+    return 'Додаткових дій не потрібно. Якщо панель поводиться не так, як роль у звіті, проблема вже не в доступі, а в UI або окремій кнопці.';
+  }
+
+
+  function getAllowedActionsText_(access) {
+    const list = Array.isArray(access && access.allowedActions) ? access.allowedActions : [];
+    return list.length ? list.join(', ') : 'немає';
+  }
+
+  function getRotationModeLabel_(access) {
+    return access && access.migrationModeEnabled ? 'user key + аварійний email-міст' : 'strict user key';
+  }
+
+  function buildAccessDebugReportText_(access) {
+    const roleLabel = getAccessRoleLabel_(access && access.role);
+    const sourceLabel = getAccessSourceLabel_(access && access.source);
+    const displayName = String(access && access.displayName || '').trim() || 'не визначено';
+    const email = String(access && access.email || '').trim() || 'не визначено';
+    const currentKey = String(access && access.currentKey || '').trim() || 'не визначено';
+    const keyMasked = maskAccessKey_(currentKey);
+    const registeredLabel = access && access.registered ? 'так' : 'ні';
+    const keyModeLabel = getRotationModeLabel_(access);
+    const keyAvailableLabel = access && access.keyAvailable ? 'так' : 'ні';
+    const adminLabel = access && access.isAdmin ? 'так' : 'ні';
+    const operatorLabel = access && access.isOperator ? 'так' : 'ні';
+    const note = String(access && access.note || '').trim() || 'немає';
+    const personCallsign = String(access && access.personCallsign || '').trim() || 'не задано';
+    const reason = String(access && access.reason || '').trim() || 'немає';
+    const allowedActions = getAllowedActionsText_(access);
+    const lastSeenAt = String(access && access.lastSeenAt || '').trim() || 'немає';
+    const lastRotatedAt = String(access && access.lastRotatedAt || '').trim() || 'немає';
+    const rotationState = String(access && access.rotationState || '').trim() || 'невідомо';
+
+    return [
+      'ПЕРЕВІРКА ДОСТУПУ',
+      '=================',
+      'Режим доступу: ' + roleLabel,
+      'Режим ідентифікації: ' + keyModeLabel,
+      'Ключ користувача доступний: ' + keyAvailableLabel,
+      'Ключ користувача зареєстровано: ' + registeredLabel,
+      'Display name: ' + displayName,
+      'Поточний user key: ' + currentKey,
+      'Маска ключа: ' + keyMasked,
+      'Email (довідково): ' + email,
+      'Джерело доступу: ' + sourceLabel,
+      'Адмін-доступ: ' + adminLabel,
+      'Робочий доступ: ' + operatorLabel,
+      'Дозволені дії: ' + allowedActions,
+      'Примітка: ' + note,
+      'Свій позивний: ' + personCallsign,
+      'last_seen_at: ' + lastSeenAt,
+      'last_rotated_at: ' + lastRotatedAt,
+      'Стан ротації: ' + rotationState,
+      'Технічна причина: ' + reason,
+      '',
+      'Що це означає:',
+      buildAccessDebugExplanation_(access),
+      '',
+      'Що робити далі:',
+      buildAccessDebugAdvice_(access)
+    ].join('\n');
+  }
+
+  function renderAccessDebugResult_(access) {
+    const roleLabel = getAccessRoleLabel_(access && access.role);
+    const sourceLabel = getAccessSourceLabel_(access && access.source);
+    const email = String(access && access.email || '').trim() || 'Не вдалося визначити';
+    const currentKey = String(access && access.currentKey || '').trim();
+    const maskedKey = maskAccessKey_(currentKey);
+    const registeredLabel = access && access.registered ? 'Так' : 'Ні';
+    const keyModeLabel = getRotationModeLabel_(access);
+    const keyAvailableLabel = access && access.keyAvailable ? 'Так' : 'Ні';
+    const adminLabel = access && access.isAdmin ? 'Дозволено' : 'Заблоковано';
+    const operatorLabel = access && access.isOperator ? 'Дозволено' : 'Заблоковано';
+    const reason = String(access && access.reason || '').trim() || 'Немає';
+    const note = String(access && access.note || '').trim() || 'Немає';
+    const personCallsign = String(access && access.personCallsign || '').trim() || 'Немає';
+    const displayName = String(access && access.displayName || '').trim() || 'Немає';
+    const lastSeenAt = String(access && access.lastSeenAt || '').trim() || 'Немає';
+    const lastRotatedAt = String(access && access.lastRotatedAt || '').trim() || 'Немає';
+    const rotationState = String(access && access.rotationState || '').trim() || 'Невідомо';
+    const allowedActions = getAllowedActionsText_(access);
+    const explanation = buildAccessDebugExplanation_(access);
+    const advice = buildAccessDebugAdvice_(access);
+    const reportText = buildAccessDebugReportText_(access);
+    const keyToCopy = currentKey || '';
+
+    return `
+      <div class="result-item">
+        <div class="result-label">Перевірка доступу</div>
+        <div class="result-value">
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+            <button class="btn btn-primary" type="button" onclick="SidebarApp.copyResultText('${escapeJsString(reportText)}')">Копіювати звіт</button>
+            <button class="btn" type="button" onclick="SidebarApp.copyResultText('${escapeJsString(keyToCopy)}')" ${!keyToCopy ? 'disabled' : ''}>Копіювати user key</button>
+          </div>
+
+          <div style="display:grid; gap:10px;">
+            <div style="padding:10px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-glass);">
+              <div style="font-size:0.78rem; color:var(--text-secondary);">Поточний режим</div>
+              <div style="font-size:1rem; font-weight:700; margin-top:4px;">${escapeHtml(roleLabel)}</div>
+            </div>
+
+            <div style="padding:10px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-glass);">
+              <div style="font-size:0.78rem; color:var(--text-secondary);">Ідентифікація користувача</div>
+              <div style="margin-top:6px; line-height:1.5;">
+                <div><b>Режим:</b> ${escapeHtml(keyModeLabel)}</div>
+                <div><b>Ключ доступний:</b> ${escapeHtml(keyAvailableLabel)}</div>
+                <div><b>Ключ зареєстровано:</b> ${escapeHtml(registeredLabel)}</div>
+                <div><b>Поточний user key:</b> ${escapeHtml(currentKey || 'Не вдалося визначити')}</div>
+                <div><b>Коротка маска:</b> ${escapeHtml(maskedKey)}</div>
+                <div><b>Email (довідково):</b> ${escapeHtml(email)}</div>
+                <div><b>Display name:</b> ${escapeHtml(displayName)}</div>
+                <div><b>Джерело доступу:</b> ${escapeHtml(sourceLabel)}</div>
+              </div>
+            </div>
+
+            <div style="padding:10px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-glass);">
+              <div style="font-size:0.78rem; color:var(--text-secondary);">Що дозволено</div>
+              <div style="margin-top:6px; line-height:1.5;">
+                <div><b>Робочі дії:</b> ${escapeHtml(operatorLabel)}</div>
+                <div><b>Небезпечні системні дії:</b> ${escapeHtml(adminLabel)}</div>
+                <div><b>Дозволені дії:</b> ${escapeHtml(allowedActions)}</div>
+              </div>
+            </div>
+
+            <div style="padding:10px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-glass);">
+              <div style="font-size:0.78rem; color:var(--text-secondary);">Що це означає</div>
+              <div style="margin-top:6px; line-height:1.55;">${escapeHtml(explanation)}</div>
+            </div>
+
+            <div style="padding:10px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-glass);">
+              <div style="font-size:0.78rem; color:var(--text-secondary);">Що робити далі</div>
+              <div style="margin-top:6px; line-height:1.55;">${escapeHtml(advice)}</div>
+            </div>
+
+            <div style="padding:10px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-glass);">
+              <div style="font-size:0.78rem; color:var(--text-secondary);">Як заповнювати ACCESS тепер</div>
+              <div style="margin-top:6px; line-height:1.55;">
+                <div>1. У рядку користувача залиш role та enabled.</div>
+                <div>2. У колонку <b>user_key_current</b> встав поточний ключ користувача.</div>
+                <div>3. Якщо ключ змінився, старий тимчасово поклади в <b>user_key_prev</b>.</div>
+                <div>4. Колонку <b>email</b> можеш залишити як довідкову, але доступ тепер іде не по ній.</div>
+                <div>5. Аварійний email-міст тримай вимкненим і вмикай лише на коротку міграцію.</div>
+              </div>
+            </div>
+
+            <details style="padding:10px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-glass);">
+              <summary style="cursor:pointer; font-weight:700;">Технічні деталі</summary>
+              <div style="margin-top:8px; line-height:1.5;">
+                <div><b>Причина:</b> ${escapeHtml(reason)}</div>
+                <div><b>Примітка:</b> ${escapeHtml(note)}</div>
+                <div><b>Свій позивний:</b> ${escapeHtml(personCallsign)}</div>
+                <div><b>last_seen_at:</b> ${escapeHtml(lastSeenAt)}</div>
+                <div><b>last_rotated_at:</b> ${escapeHtml(lastRotatedAt)}</div>
+                <div><b>Стан ротації:</b> ${escapeHtml(rotationState)}</div>
+              </div>
+              <pre style="margin-top:10px; white-space:pre-wrap; word-break:break-word; font-size:0.78rem; color:var(--text-secondary);">${escapeHtml(JSON.stringify(access || {}, null, 2))}</pre>
+            </details>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  function applyAccessPolicyUI() {
+    const banner = $id('accessBanner');
+    const message = $id('accessBannerText');
+    const access = STATE.access || { role: 'guest', isAdmin: false, knownUser: false, reason: '' };
+
+    if (!banner || !message) return;
+
+    banner.style.display = 'block';
+    banner.classList.remove('is-guest', 'is-viewer', 'is-operator', 'is-maintainer', 'is-admin', 'is-sysadmin', 'is-owner', 'is-safe-mode');
+    banner.classList.add('is-' + String(access.role || 'guest').toLowerCase());
+
+    if (!access.knownUser) {
+      banner.classList.add('is-safe-mode');
+    }
+
+    const roleLabel = getAccessRoleLabel_(access.role);
+    message.textContent = 'Режим доступу : ' + roleLabel;
+    message.style.display = 'block';
+
+    const consoleMessage = buildAccessBannerMessage_(access);
+    if (consoleMessage) {
+      logToConsole('🛡 ' + consoleMessage, access.knownUser ? 'info' : 'warning');
+    }
+
+    updateRestrictedUi_();
+  }
+
+  async function loadAccessDescriptor() {
+    try {
+      const descriptor = await MaintenanceApi.getAccessDescriptor();
+      STATE.access = descriptor && descriptor.data ? descriptor.data : { role: 'guest', isAdmin: false, knownUser: false, reason: '' };
+    } catch (error) {
+      STATE.access = { role: 'guest', isAdmin: false, knownUser: false, reason: normalizeError(error) };
+    }
+    applyAccessPolicyUI();
+  }
+
+  function getActionRequiredRole_(actionName) {
+    const map = {
+      daySummary: 'viewer',
+      detailedDay: 'operator',
+      generatePanel: 'operator',
+      sendUnsent: 'operator',
+      createNextMonth: 'operator',
+      switchMonth: 'operator',
+      vacationReminder: 'operator',
+      birthdayCheck: 'operator',
+      debugPhones: 'maintainer',
+      healthCheck: 'maintainer',
+      pendingRepairs: 'maintainer',
+      operationDetails: 'maintainer',
+      runRepair: 'sysadmin',
+      clearLog: 'admin',
+      clearCache: 'sysadmin',
+      clearPhoneCache: 'sysadmin',
+      restartBot: 'sysadmin',
+      applyProtections: 'sysadmin',
+      setupTrigger: 'sysadmin',
+      cleanupTriggers: 'sysadmin'
+    };
+    return map[actionName] || '';
+  }
+
+  async function assertActionAccess_(actionName) {
+    const required = getActionRequiredRole_(actionName);
+    if (!required || hasRoleAtLeast_(required)) return true;
+    await reportAccessViolation_('sidebarActionUiDenied', {
+      source: 'sidebar-menu',
+      requestedAction: String(actionName || ''),
+      requiredRole: required,
+      currentRole: String(STATE.access && STATE.access.role || 'guest')
+    });
+    showToast('Недостатньо прав для дії: ' + getActionName(actionName));
+    logToConsole('✕ Недостатньо прав для дії ' + getActionName(actionName) + '. Потрібна роль: ' + getAccessRoleLabel_(required), 'warning');
+    return false;
+  }
+
+
+  function assertAdminAction_(actionName) {
+    const required = getActionRequiredRole_(actionName) || 'admin';
+    if (hasRoleAtLeast_(required)) return true;
+
+    Promise.resolve(reportAccessViolation_('sidebarActionUiDenied', {
+      source: 'sidebar-legacy-guard',
+      requestedAction: String(actionName || ''),
+      requiredRole: required,
+      currentRole: String(STATE.access && STATE.access.role || 'guest')
+    })).catch(function(error) {
+      logToConsole('✕ Не вдалося зафіксувати порушення доступу: ' + normalizeError(error), 'error');
+    });
+
+    const message = 'Недостатньо прав для дії: ' + getActionName(actionName);
+    showToast(message);
+    logToConsole('✕ Недостатньо прав для дії ' + getActionName(actionName) + '. Потрібна роль: ' + getAccessRoleLabel_(required), 'warning');
+    throw new Error(message);
+  }
+
+
+</script>

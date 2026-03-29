@@ -5,7 +5,7 @@
 
 const Stage4Triggers_ = (function() {
   function _cfg() {
-    return (typeof getStage4Config_ === 'function') ? getStage4Config_() : STAGE4_CONFIG;
+    return STAGE4_CONFIG;
   }
 
   function _registry() {
@@ -200,27 +200,27 @@ const Stage4Triggers_ = (function() {
 })();
 
 function stage4JobDailyVacationsAndBirthdays() {
-  return Stage4Triggers_.runJob(getStage4Config_().JOBS.DAILY_VACATIONS_AND_BIRTHDAYS, { trigger: true, initiator: 'trigger', source: 'trigger' });
+  return Stage4Triggers_.runJob(STAGE4_CONFIG.JOBS.DAILY_VACATIONS_AND_BIRTHDAYS, { trigger: true, initiator: 'trigger', source: 'trigger' });
 }
 
 function stage4JobScheduledReconciliation() {
-  return Stage4Triggers_.runJob(getStage4Config_().JOBS.SCHEDULED_RECONCILIATION, { trigger: true, initiator: 'trigger', source: 'trigger' });
+  return Stage4Triggers_.runJob(STAGE4_CONFIG.JOBS.SCHEDULED_RECONCILIATION, { trigger: true, initiator: 'trigger', source: 'trigger' });
 }
 
 function stage4JobScheduledHealthCheck() {
-  return Stage4Triggers_.runJob(getStage4Config_().JOBS.SCHEDULED_HEALTHCHECK, { trigger: true, initiator: 'trigger', source: 'trigger' });
+  return Stage4Triggers_.runJob(STAGE4_CONFIG.JOBS.SCHEDULED_HEALTHCHECK, { trigger: true, initiator: 'trigger', source: 'trigger' });
 }
 
 function stage4JobCleanupCaches() {
-  return Stage4Triggers_.runJob(getStage4Config_().JOBS.CLEANUP_CACHES, { trigger: true, initiator: 'trigger', source: 'trigger' });
+  return Stage4Triggers_.runJob(STAGE4_CONFIG.JOBS.CLEANUP_CACHES, { trigger: true, initiator: 'trigger', source: 'trigger' });
 }
 
 
 function stage7JobDetectStaleOperations() {
-  return Stage4Triggers_.runJob(getStage4Config_().JOBS.STALE_OPERATION_DETECTOR, { trigger: true, initiator: 'trigger', source: 'trigger' });
+  return Stage4Triggers_.runJob(STAGE4_CONFIG.JOBS.STALE_OPERATION_DETECTOR, { trigger: true, initiator: 'trigger', source: 'trigger' });
 }
 
 
 function stage7JobLifecycleRetentionCleanup() {
-  return Stage4Triggers_.runJob(getStage4Config_().JOBS.LIFECYCLE_RETENTION_CLEANUP, { trigger: true, initiator: 'trigger', source: 'trigger' });
+  return Stage4Triggers_.runJob(STAGE4_CONFIG.JOBS.LIFECYCLE_RETENTION_CLEANUP, { trigger: true, initiator: 'trigger', source: 'trigger' });
 }
