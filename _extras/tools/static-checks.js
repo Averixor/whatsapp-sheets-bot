@@ -5,7 +5,7 @@ const files = fs.readdirSync(root)
   .filter(name => /\.(gs|html|md|json)$/.test(name))
   .filter(name => name !== 'static-checks.js');
 const issues = [];
-const forbiddenBranding = /\b(?:WAPB|Wapb|wapb)\b/;
+const forbiddenBranding = /(?:WAPB|Wapb|wapb)/;
 const staleRelease = /7\.1\.2-security-ops-hardened|stage7-1-2-security-ops-hardened-baseline|gas_wapb_/i;
 for (const file of files) {
   const text = fs.readFileSync(path.join(root, file), 'utf8');
