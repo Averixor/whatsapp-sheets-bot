@@ -1,632 +1,440 @@
 /**
- * AccessControl.gs — lightweight RBAC for WAPB maintenance/admin actions.
- *
- * Stage 7.1 user-key access model:
- * - primary identity: Session.getTemporaryActiveUserKey()
- * - ACCESS stores current/previous user keys per user row
- * - email-based behavior is disabled by default and can be enabled only via
- *   explicit emergency migration flag WAPB_ACCESS_MIGRATION_MODE.
+ * WorkflowOrchestrator.gs — lifecycle orchestration for Stage 7 reliability hardening.
  */
 
-const AccessControl_ = (function() {
-  const ACCESS_SHEET = appGetCore('ACCESS_SHEET', 'ACCESS');
-  const OWNER_PROP = 'WAPB_ACCESS_OWNER_EMAILS';
-  const SYSADMIN_PROP = 'WAPB_ACCESS_SYSADMIN_EMAILS';
-  const ADMIN_PROP = 'WAPB_ACCESS_ADMIN_EMAILS';
-  const MAINTAINER_PROP = 'WAPB_ACCESS_MAINTAINER_EMAILS';
-  const OPERATOR_PROP = 'WAPB_ACCESS_OPERATOR_EMAILS';
-  const VIEWER_PROP = 'WAPB_ACCESS_VIEWER_EMAILS';
-  const GUEST_PROP = 'WAPB_ACCESS_GUEST_EMAILS';
-  const MIGRATION_MODE_PROP = 'WAPB_ACCESS_MIGRATION_MODE';
-  const ROLE_ORDER = Object.freeze({ guest: 0, viewer: 1, operator: 2, maintainer: 3, admin: 4, sysadmin: 5, owner: 6 });
-  const ROLE_VALUES = Object.freeze(['guest', 'viewer', 'operator', 'maintainer', 'admin', 'sysadmin', 'owner']);
-  const ROLE_METADATA = Object.freeze({
-    guest: Object.freeze({ label: 'Гість', note: 'Гість / Спостерігач • лише безпечний перегляд' }),
-    viewer: Object.freeze({ label: 'Перегляд', note: 'Перегляд • тільки своя картка, без детального зведення' }),
-    operator: Object.freeze({ label: 'Оператор', note: 'Оператор • робочий доступ до карток, зведень і SEND_PANEL' }),
-    maintainer: Object.freeze({ label: 'Редактор', note: 'Редактор • розширений робочий доступ, перевірка і супровід' }),
-    admin: Object.freeze({ label: 'Адмін', note: 'Адмін • керування доступом, журналами і системними інструментами' }),
-    sysadmin: Object.freeze({ label: 'Сис. адмін', note: 'Сис. адмін • повне технічне обслуговування, repair і тригери' }),
-    owner: Object.freeze({ label: 'Власник', note: 'Власник • повний root-доступ до всієї системи' })
-  });
-  const SHEET_HEADERS = Object.freeze([
-    'email',
-    'role',
-    'enabled',
-    'note',
-    'display_name',
-    'person_callsign',
-    'user_key_current',
-    'user_key_prev',
-    'last_seen_at',
-    'last_rotated_at'
-  ]);
-
-  function normalizeEmail_(value) {
-    return String(value || '').trim().toLowerCase();
-  }
-
-  function normalizeRole_(value) {
-    const role = String(value || '').trim().toLowerCase();
-    return ROLE_VALUES.indexOf(role) !== -1 ? role : 'guest';
-  }
-
-  function getRoleMeta_(role) {
-    return ROLE_METADATA[normalizeRole_(role)] || ROLE_METADATA.guest;
-  }
-
-  function getRoleLabel_(role) {
-    return getRoleMeta_(role).label;
-  }
-
-  function getRoleNoteTemplate_(role) {
-    return getRoleMeta_(role).note;
-  }
-
-  function normalizeUserKey_(value) {
-    return String(value || '').trim();
-  }
-
-  function isEnabledValue_(value) {
-    const raw = String(value === '' || value === null ? 'TRUE' : value).trim().toLowerCase();
-    return !(raw === 'false' || raw === '0' || raw === 'no' || raw === 'ні');
-  }
-
-  function safeGetUserEmail_() {
-    const candidates = [];
-    try { candidates.push(Session.getActiveUser().getEmail()); } catch (_) {}
-    try { candidates.push(Session.getEffectiveUser().getEmail()); } catch (_) {}
-    for (let i = 0; i < candidates.length; i++) {
-      const normalized = normalizeEmail_(candidates[i]);
-      if (normalized && normalized.indexOf('@') !== -1) return normalized;
-    }
-    return '';
-  }
-
-  function safeGetUserKey_() {
-    try {
-      return normalizeUserKey_(Session.getTemporaryActiveUserKey());
-    } catch (_) {
-      return '';
-    }
-  }
-
-  function _getProperties_() {
-    return PropertiesService.getScriptProperties();
-  }
-
-  function isMigrationModeEnabled_() {
-    const raw = String(_getProperties_().getProperty(MIGRATION_MODE_PROP) || '').trim().toLowerCase();
-    return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on';
-  }
-
-  function _parseEmailsList_(value) {
-    return String(value || '')
-      .split(/[;,\s]+/)
-      .map(normalizeEmail_)
-      .filter(Boolean);
-  }
-
-  function listEmailsByRole(role) {
-    const normalizedRole = normalizeRole_(role);
-    const map = {
-      owner: OWNER_PROP,
-      sysadmin: SYSADMIN_PROP,
-      admin: ADMIN_PROP,
-      maintainer: MAINTAINER_PROP,
-      operator: OPERATOR_PROP,
-      viewer: VIEWER_PROP,
-      guest: GUEST_PROP
-    };
-    return _parseEmailsList_(_getProperties_().getProperty(map[normalizedRole] || GUEST_PROP));
-  }
-
-  function listAdminEmails() {
-    return listEmailsByRole('owner').concat(listEmailsByRole('sysadmin')).concat(listEmailsByRole('admin'));
-  }
-
-  function listNotificationEmails() {
-    const seen = Object.create(null);
-    const result = [];
-
-    function push(email) {
-      const normalized = normalizeEmail_(email);
-      if (!normalized || seen[normalized]) return;
-      seen[normalized] = true;
-      result.push(normalized);
-    }
-
-    listAdminEmails().forEach(push);
-    _readSheetEntries_().forEach(function(entry) {
-      if (!entry.enabled) return;
-      if (['admin', 'sysadmin', 'owner'].indexOf(entry.role) === -1) return;
-      push(entry.email);
-    });
-
-    return result;
-  }
-
-  function getAccessRowByEmail(email) {
-    const normalizedEmail = normalizeEmail_(email);
-    if (!normalizedEmail) return null;
-    return _findByEmailInSheet_(normalizedEmail) || _findInProperties_(normalizedEmail);
-  }
-
-  function _getSheet_(createIfMissing) {
-    const ss = SpreadsheetApp.getActive();
-    let sh = ss.getSheetByName(ACCESS_SHEET);
-    if (!sh && createIfMissing) {
-      sh = ss.insertSheet(ACCESS_SHEET);
-    }
-    if (sh) _ensureSheetSchema_(sh);
-    return sh;
-  }
-
-  function _getHeaderMap_(sh) {
-    const lastColumn = Math.max(sh.getLastColumn(), SHEET_HEADERS.length);
-    const headers = sh.getRange(1, 1, 1, lastColumn).getValues()[0];
-    const map = {};
-    for (let i = 0; i < headers.length; i++) {
-      const key = String(headers[i] || '').trim().toLowerCase();
-      if (key) map[key] = i + 1;
-    }
-    return map;
-  }
-
-  function _ensureSheetSchema_(sh) {
-    const lastColumn = Math.max(sh.getLastColumn(), 1);
-    const existingHeaders = sh.getLastRow() >= 1
-      ? sh.getRange(1, 1, 1, lastColumn).getValues()[0].map(function(value) { return String(value || '').trim(); })
-      : [];
-
-    let changed = false;
-    if (!existingHeaders.length || existingHeaders.every(function(value) { return !value; })) {
-      sh.getRange(1, 1, 1, SHEET_HEADERS.length).setValues([SHEET_HEADERS]);
-      changed = true;
-    } else {
-      const existingMap = {};
-      existingHeaders.forEach(function(value, index) {
-        const normalized = String(value || '').trim().toLowerCase();
-        if (normalized) existingMap[normalized] = index + 1;
-      });
-      SHEET_HEADERS.forEach(function(header) {
-        if (existingMap[header]) return;
-        const targetColumn = sh.getLastColumn() + 1;
-        sh.insertColumnAfter(sh.getLastColumn());
-        sh.getRange(1, targetColumn).setValue(header);
-        changed = true;
-      });
-    }
-
-    if (changed || sh.getFrozenRows() < 1) {
-      sh.setFrozenRows(1);
-      sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(), SHEET_HEADERS.length))
-        .setFontWeight('bold')
-        .setBackground('#e8eaed');
-    }
-  }
-
-  function _buildRoleValidationRule_() {
-    return SpreadsheetApp.newDataValidation()
-      .requireValueInList(ROLE_VALUES.slice(), true)
-      .setAllowInvalid(false)
-      .setHelpText('Оберіть роль: ' + ROLE_VALUES.join(', '))
-      .build();
-  }
-
-  function _applyRoleValidation_(sh) {
-    const startRow = 2;
-    const endRow = 40;
-    const roleCol = 2;
-    const rule = _buildRoleValidationRule_();
-    sh.getRange(startRow, roleCol, endRow - startRow + 1, 1).setDataValidation(rule);
-    const maxRows = sh.getMaxRows();
-    if (maxRows > endRow) {
-      sh.getRange(endRow + 1, roleCol, maxRows - endRow, 1).clearDataValidations();
-    }
-  }
-
-  function _syncRoleNoteForRow_(sh, rowNumber, clearWhenEmpty) {
-    if (!sh || rowNumber < 2) return;
-    const headerMap = _getHeaderMap_(sh);
-    const roleCol = headerMap.role || 2;
-    const noteCol = headerMap.note || 4;
-    const role = normalizeRole_(sh.getRange(rowNumber, roleCol).getValue());
-    const rawRole = String(sh.getRange(rowNumber, roleCol).getValue() || '').trim();
-    const noteCell = sh.getRange(rowNumber, noteCol);
-    if (!rawRole) {
-      if (clearWhenEmpty) noteCell.clearContent();
-      return;
-    }
-    noteCell.setValue(getRoleNoteTemplate_(role));
-  }
-
-  function _syncAllRoleNotes_(sh, forceRewrite) {
-    if (!sh || sh.getLastRow() < 2) return;
-    const headerMap = _getHeaderMap_(sh);
-    const roleCol = headerMap.role || 2;
-    const noteCol = headerMap.note || 4;
-    const lastRow = Math.min(sh.getLastRow(), 40);
-    const rowCount = Math.max(lastRow - 1, 0);
-    if (!rowCount) return;
-    const roles = sh.getRange(2, roleCol, rowCount, 1).getValues();
-    const notesRange = sh.getRange(2, noteCol, rowCount, 1);
-    const existingNotes = notesRange.getValues();
-    const output = [];
-    for (let i = 0; i < rowCount; i++) {
-      const rawRole = String(roles[i][0] || '').trim();
-      if (!rawRole) {
-        output.push([forceRewrite ? '' : existingNotes[i][0]]);
-        continue;
-      }
-      const normalizedRole = normalizeRole_(rawRole);
-      const template = getRoleNoteTemplate_(normalizedRole);
-      output.push([forceRewrite || !String(existingNotes[i][0] || '').trim() ? template : existingNotes[i][0]]);
-    }
-    notesRange.setValues(output);
-  }
-
-  function refreshAccessSheetUi(options) {
-    const sh = _getSheet_(true);
-    _applyRoleValidation_(sh);
-    _syncAllRoleNotes_(sh, !!(options && options.forceRewriteNotes));
-    return {
-      success: true,
-      sheet: ACCESS_SHEET,
-      message: 'ACCESS оновлено: ролі, dropdown і службові описи синхронізовано',
-      roleValues: ROLE_VALUES.slice()
-    };
-  }
-
-  function handleAccessSheetEdit(e) {
-    const range = e && e.range ? e.range : null;
-    if (!range) return;
-    const sh = range.getSheet();
-    if (!sh || sh.getName() !== ACCESS_SHEET) return;
-    const row = range.getRow();
-    const column = range.getColumn();
-    if (row < 2 || row > 40) return;
-    if (column === 2 && range.getNumColumns() === 1 && range.getNumRows() === 1) {
-      const rawRole = String(range.getValue() || '').trim();
-      if (rawRole) range.setValue(normalizeRole_(rawRole));
-      _syncRoleNoteForRow_(sh, row, true);
-    }
-  }
-
-  function bootstrapSheet() {
-    const existed = !!_getSheet_(false);
-    const sh = _getSheet_(true);
-    _applyRoleValidation_(sh);
-    _syncAllRoleNotes_(sh, true);
-    return {
-      success: true,
-      sheet: ACCESS_SHEET,
-      created: !existed,
-      message: existed
-        ? 'Лист ACCESS перевірено, ролі оновлено, dropdown і службові описи застосовано'
-        : 'Лист ACCESS створено, ролі оновлено, dropdown і службові описи застосовано',
-      headers: SHEET_HEADERS.slice(),
-      roleValues: ROLE_VALUES.slice()
-    };
-  }
-
-  function _rowToEntry_(row, rowNumber, headerMap) {
-    function read(header) {
-      const column = headerMap[header];
-      if (!column) return '';
-      return row[column - 1];
-    }
-
-    return {
-      email: normalizeEmail_(read('email')),
-      role: normalizeRole_(read('role')),
-      enabled: isEnabledValue_(read('enabled')),
-      note: String(read('note') || ''),
-      displayName: String(read('display_name') || ''),
-      personCallsign: String(read('person_callsign') || '').trim(),
-      userKeyCurrent: normalizeUserKey_(read('user_key_current')),
-      userKeyPrev: normalizeUserKey_(read('user_key_prev')),
-      lastSeenAt: String(read('last_seen_at') || ''),
-      lastRotatedAt: String(read('last_rotated_at') || ''),
-      source: ACCESS_SHEET,
-      sheetRow: rowNumber
-    };
-  }
-
-  function _readSheetEntries_() {
-    const sh = _getSheet_(false);
-    if (!sh || sh.getLastRow() < 2) return [];
-    const headerMap = _getHeaderMap_(sh);
-    const rowCount = sh.getLastRow() - 1;
-    const colCount = Math.max(sh.getLastColumn(), SHEET_HEADERS.length);
-    const values = sh.getRange(2, 1, rowCount, colCount).getValues();
-    const result = [];
-
-    for (let i = 0; i < values.length; i++) {
-      result.push(_rowToEntry_(values[i], i + 2, headerMap));
-    }
-    return result;
-  }
-
-  function _writeEntryFields_(sheetRow, updates) {
-    const sh = _getSheet_(false);
-    if (!sh || !sheetRow || sheetRow < 2) return;
-    const headerMap = _getHeaderMap_(sh);
-    Object.keys(updates || {}).forEach(function(header) {
-      const column = headerMap[header];
-      if (!column) return;
-      sh.getRange(sheetRow, column).setValue(updates[header]);
-    });
-  }
-
-  function _findByUserKey_(userKey) {
-    const normalizedKey = normalizeUserKey_(userKey);
-    if (!normalizedKey) return null;
-    const entries = _readSheetEntries_();
-    for (let i = 0; i < entries.length; i++) {
-      const entry = entries[i];
-      if (!entry.enabled) continue;
-      if (entry.userKeyCurrent === normalizedKey) {
-        return Object.assign({}, entry, { source: 'ACCESS-user-key-current', matchedBy: 'user_key_current' });
-      }
-      if (entry.userKeyPrev === normalizedKey) {
-        return Object.assign({}, entry, { source: 'ACCESS-user-key-prev', matchedBy: 'user_key_prev' });
-      }
-    }
-    return null;
-  }
-
-  function _findByEmailInSheet_(email) {
-    const normalizedEmail = normalizeEmail_(email);
-    if (!normalizedEmail) return null;
-    const entries = _readSheetEntries_();
-    for (let i = 0; i < entries.length; i++) {
-      const entry = entries[i];
-      if (!entry.enabled) continue;
-      if (entry.email === normalizedEmail) {
-        return Object.assign({}, entry, { source: ACCESS_SHEET, matchedBy: 'email' });
-      }
-    }
-    return null;
-  }
-
-  function _findInProperties_(email) {
-    const normalizedEmail = normalizeEmail_(email);
-    if (!normalizedEmail) return null;
-    for (let i = ROLE_VALUES.length - 1; i >= 0; i--) {
-      const role = ROLE_VALUES[i];
-      if (listEmailsByRole(role).indexOf(normalizedEmail) !== -1) {
-        return { email: normalizedEmail, role: role, enabled: true, note: getRoleNoteTemplate_(role), source: 'scriptProperties', matchedBy: 'email' };
-      }
-    }
-    return null;
-  }
-
-  function _registeredKeysCount_() {
-    return _readSheetEntries_().filter(function(entry) {
-      return !!(entry.userKeyCurrent || entry.userKeyPrev);
-    }).length;
-  }
-
-  function _configuredEntriesCount_() {
-    let count = 0;
-    _readSheetEntries_().forEach(function(entry) {
-      if (entry.email || entry.userKeyCurrent || entry.userKeyPrev || entry.displayName || entry.personCallsign) count += 1;
-    });
-    return count;
-  }
-
-  function _listEnabledSheetEntries_() {
-    return _readSheetEntries_().filter(function(entry) { return entry.enabled; });
-  }
-
-
-  function _touchLastSeen_(entry, userKey) {
-    if (!entry || !entry.sheetRow) return entry;
-    const now = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'Etc/GMT', 'yyyy-MM-dd HH:mm:ss');
-    const updates = { last_seen_at: now };
-    let source = entry.source || ACCESS_SHEET;
-
-    if (userKey && entry.userKeyCurrent === userKey) {
-      // only update last seen
-    } else if (userKey && entry.userKeyPrev === userKey) {
-      updates.user_key_prev = entry.userKeyCurrent || entry.userKeyPrev || '';
-      updates.user_key_current = userKey;
-      updates.last_rotated_at = now;
-      source = 'ACCESS-user-key-rotated';
-    }
-
-    _writeEntryFields_(entry.sheetRow, updates);
-    return Object.assign({}, entry, {
-      userKeyCurrent: updates.user_key_current !== undefined ? updates.user_key_current : entry.userKeyCurrent,
-      userKeyPrev: updates.user_key_prev !== undefined ? updates.user_key_prev : entry.userKeyPrev,
-      lastSeenAt: now,
-      lastRotatedAt: updates.last_rotated_at !== undefined ? updates.last_rotated_at : entry.lastRotatedAt,
-      source: source
-    });
-  }
-
-  function _bindCurrentUserKeyByEmail_(sessionEmail, currentKey) {
-    const entry = _findByEmailInSheet_(sessionEmail);
-    if (!entry || !entry.sheetRow || !currentKey || !entry.enabled) return null;
-    const now = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'Etc/GMT', 'yyyy-MM-dd HH:mm:ss');
-    const updates = {
-      user_key_current: currentKey,
-      last_seen_at: now
-    };
-    if (entry.userKeyCurrent && entry.userKeyCurrent !== currentKey) {
-      updates.user_key_prev = entry.userKeyCurrent;
-      updates.last_rotated_at = now;
-    }
-    _writeEntryFields_(entry.sheetRow, updates);
-    return Object.assign({}, entry, {
-      userKeyCurrent: currentKey,
-      userKeyPrev: updates.user_key_prev !== undefined ? updates.user_key_prev : entry.userKeyPrev,
-      lastSeenAt: now,
-      lastRotatedAt: updates.last_rotated_at !== undefined ? updates.last_rotated_at : entry.lastRotatedAt,
-      source: 'ACCESS-email-bound-key',
-      matchedBy: 'email'
-    });
-  }
-
-  function describe(email) {
-    const currentKey = safeGetUserKey_();
-    const sessionEmail = normalizeEmail_(email) || safeGetUserEmail_();
-    const keyAvailable = !!currentKey;
-    const emailAvailable = !!sessionEmail;
-    const registeredKeysCount = _registeredKeysCount_();
-    const configuredEntries = _configuredEntriesCount_();
-    const migrationModeEnabled = isMigrationModeEnabled_();
-
-    let match = null;
-    let mode = migrationModeEnabled ? 'migration-email-bridge' : 'user-key';
-
-    if (keyAvailable) {
-      match = _findByUserKey_(currentKey);
-      if (match) {
-        match = _touchLastSeen_(match, currentKey);
-      }
-    }
-
-    if (!match && migrationModeEnabled && keyAvailable && emailAvailable) {
-      match = _bindCurrentUserKeyByEmail_(sessionEmail, currentKey);
-      if (match) {
-        mode = 'migration-email-bridge';
-      }
-    }
-
-    if (!match && migrationModeEnabled && emailAvailable) {
-      const sheetEntry = _findByEmailInSheet_(sessionEmail);
-      const propEntry = !sheetEntry ? _findInProperties_(sessionEmail) : null;
-      match = sheetEntry || propEntry;
-      if (match && match.sheetRow && keyAvailable) {
-        match = _bindCurrentUserKeyByEmail_(sessionEmail, currentKey) || match;
-      }
-    }
-
-    if (!match && configuredEntries === 0 && (keyAvailable || emailAvailable)) {
-      return {
-        email: sessionEmail,
-        currentKey: currentKey,
-        role: 'owner',
-        enabled: true,
-        knownUser: true,
-        registered: false,
-        keyAvailable: keyAvailable,
-        emailAvailable: emailAvailable,
-        readOnly: false,
-        isAdmin: true,
-        isOperator: true,
-        isMaintainer: true,
-        source: 'bootstrap-owner',
-        note: '',
-        displayName: '',
-        personCallsign: '',
-        accessSheet: ACCESS_SHEET,
-        reason: 'RBAC ще не налаштовано. Поточний користувач тимчасово працює як bootstrap-owner, поки не буде заповнено ACCESS.',
-        adminEmailsConfigured: listAdminEmails().length,
-        availableRoles: ROLE_VALUES.slice(),
-        userKeyModeEnabled: true,
-        migrationModeEnabled: migrationModeEnabled,
-        mode: 'bootstrap-owner',
-        registeredKeysCount: registeredKeysCount
-      };
-    }
-
-    const role = match ? normalizeRole_(match.role) : 'guest';
-    const enabled = match ? match.enabled !== false : true;
-    const registered = !!match;
-    const knownUser = registered;
-    const readOnly = (role === 'guest' || role === 'viewer');
-
-    let reason = '';
-    if (!registered && !keyAvailable) {
-      reason = migrationModeEnabled
-        ? 'Ключ поточного користувача недоступний. Тимчасовий email-міст увімкнено лише як аварійний режим міграції; небезпечні дії заблоковано.'
-        : 'Ключ поточного користувача недоступний; система працює у строгому user key-режимі, тому доступ знижено до safe-mode.';
-    } else if (!registered && keyAvailable) {
-      reason = migrationModeEnabled
-        ? 'Поточний user key ще не зареєстровано в ACCESS. Аварійний email-міст не підтвердив користувача; доступ знижено до safe-mode.'
-        : 'Поточний user key не зареєстровано в ACCESS. Неявні fallback-схеми вимкнено; користувача вважаємо незареєстрованим.';
-    }
-
-    return {
-      email: sessionEmail || (match && match.email) || '',
-      currentKey: currentKey,
-      role: role,
-      enabled: enabled,
-      knownUser: knownUser,
-      registered: registered,
-      keyAvailable: keyAvailable,
-      emailAvailable: emailAvailable,
-      readOnly: readOnly,
-      isAdmin: (ROLE_ORDER[role] || 0) >= ROLE_ORDER.admin && enabled,
-      isOperator: (ROLE_ORDER[role] || 0) >= ROLE_ORDER.operator && enabled,
-      isMaintainer: (ROLE_ORDER[role] || 0) >= ROLE_ORDER.maintainer && enabled,
-      source: match ? match.source : 'ACCESS-user-key-unregistered',
-      note: match && match.note ? String(match.note) : (registered ? getRoleNoteTemplate_(role) : ''),
-      displayName: match && match.displayName ? String(match.displayName) : '',
-      personCallsign: match && match.personCallsign ? String(match.personCallsign) : '',
-      accessSheet: ACCESS_SHEET,
-      reason: reason,
-      adminEmailsConfigured: listAdminEmails().length,
-      availableRoles: ROLE_VALUES.slice(),
-      userKeyModeEnabled: true,
-      migrationModeEnabled: migrationModeEnabled,
-      mode: mode,
-      registeredKeysCount: registeredKeysCount,
-      lastSeenAt: match && match.lastSeenAt ? String(match.lastSeenAt) : '',
-      lastRotatedAt: match && match.lastRotatedAt ? String(match.lastRotatedAt) : ''
-    };
-  }
-
-  function assertRoleAtLeast(requiredRole, actionLabel) {
-    const descriptor = describe();
-    const need = normalizeRole_(requiredRole || 'viewer');
-    const current = normalizeRole_(descriptor.role);
-    if (!descriptor.enabled || (ROLE_ORDER[current] || 0) < (ROLE_ORDER[need] || 0)) {
-      const label = String(actionLabel || 'ця дія');
-      try {
-        if (typeof AccessEnforcement_ === 'object' && AccessEnforcement_.reportViolation) {
-          AccessEnforcement_.reportViolation('roleDenied', {
-            requestedAction: label,
-            requiredRole: need,
-            currentRole: current,
-            source: 'server-assertRoleAtLeast',
-            blocked: true
-          }, descriptor);
-        }
-      } catch (_) {}
-      throw new Error('Недостатньо прав для дії: ' + label + '. Поточна роль: ' + current + '.');
-    }
-    return descriptor;
-  }
-
+function buildStage4Response_(success, message, error, result, changes, meta, diagnostics, context, warnings) {
+  const safeMeta = meta || {};
+  const safeDiagnostics = diagnostics || null;
+  const normalizedWarnings = Array.isArray(warnings) ? warnings.filter(Boolean).map(String) : [];
   return {
-    ROLE_ORDER: ROLE_ORDER,
-    ROLE_VALUES: ROLE_VALUES,
-    ROLE_METADATA: ROLE_METADATA,
-    SHEET_HEADERS: SHEET_HEADERS,
-    describe: describe,
-    assertRoleAtLeast: assertRoleAtLeast,
-    bootstrapSheet: bootstrapSheet,
-    refreshAccessSheetUi: refreshAccessSheetUi,
-    handleAccessSheetEdit: handleAccessSheetEdit,
-    listAdminEmails: listAdminEmails,
-    listNotificationEmails: listNotificationEmails,
-    listEmailsByRole: listEmailsByRole,
-    getAccessRowByEmail: getAccessRowByEmail,
-    getRoleLabel: getRoleLabel_,
-    getRoleNoteTemplate: getRoleNoteTemplate_,
-    normalizeRole: normalizeRole_,
-    normalizeEmail: normalizeEmail_,
-    normalizeUserKey: normalizeUserKey_,
-    safeGetUserEmail: safeGetUserEmail_,
-    safeGetUserKey: safeGetUserKey_,
-    isMigrationModeEnabled: isMigrationModeEnabled_
+    success: !!success,
+    message: String(message || ''),
+    error: error ? String(error) : null,
+    data: {
+      result: result === undefined ? null : result,
+      changes: Array.isArray(changes) ? changes : [],
+      meta: safeMeta,
+      diagnostics: safeDiagnostics
+    },
+    context: context || null,
+    warnings: normalizedWarnings,
+    operationId: safeMeta.operationId || null,
+    scenario: safeMeta.scenario || (context && context.scenario) || null,
+    dryRun: !!safeMeta.dryRun,
+    affectedSheets: stage4AsArray_(safeMeta.affectedSheets),
+    affectedEntities: stage4AsArray_(safeMeta.affectedEntities),
+    appliedChangesCount: Number(safeMeta.appliedChangesCount || 0),
+    skippedChangesCount: Number(safeMeta.skippedChangesCount || 0),
+    partial: !!safeMeta.partial,
+    retrySafe: safeMeta.retrySafe !== false,
+    lockUsed: !!safeMeta.lockUsed,
+    lockRequired: !!safeMeta.lockRequired,
+    diagnostics: safeDiagnostics
   };
-})();
-
-function bootstrapWapbAccessSheet() {
-  return AccessControl_.bootstrapSheet();
 }
+
+const WorkflowOrchestrator_ = (function() {
+  function _acquireLock(lockRequired, timeoutMs) {
+    if (!lockRequired) return null;
+    const lock = LockService.getDocumentLock();
+    lock.waitLock(Math.max(Number(timeoutMs) || STAGE4_CONFIG.LOCK_TIMEOUT_MS, 1000));
+    return lock;
+  }
+
+  function _releaseLock(lock) {
+    if (!lock) return;
+    try { lock.releaseLock(); } catch (_) {}
+  }
+
+  function _routeDescriptor(cfg, scenario) {
+    if (cfg && cfg.routeName && typeof getStage6ARouteByName_ === 'function') {
+      return getStage6ARouteByName_(cfg.routeName);
+    }
+    if (cfg && cfg.publicApiMethod && typeof getStage6ARouteByApiMethod_ === 'function') {
+      return getStage6ARouteByApiMethod_(cfg.publicApiMethod);
+    }
+    return null;
+  }
+
+  function _buildDuplicateResponse_(scenario, operationId, dryRun, route, lock, lockRequired, startedAt, diagnostics, context, warnings, lifecycle) {
+    const previous = lifecycle && lifecycle.previous || {};
+    const meta = {
+      stage: STAGE4_CONFIG.VERSION,
+      hardeningStage: '7',
+      scenario: scenario,
+      operationId: operationId,
+      route: route,
+      affectedSheets: [],
+      affectedEntities: [],
+      appliedChangesCount: 0,
+      skippedChangesCount: 1,
+      dryRun: dryRun,
+      partial: false,
+      retrySafe: false,
+      lockUsed: !!lock,
+      lockRequired: !!lockRequired,
+      durationMs: new Date().getTime() - startedAt.getTime(),
+      lifecycle: lifecycle ? { fingerprint: lifecycle.fingerprint || '', reason: lifecycle.reason || '' } : null,
+      idempotency: {
+        fingerprint: lifecycle && lifecycle.fingerprint || '',
+        reason: lifecycle && lifecycle.reason || '',
+        previousOperationId: previous && previous.OperationId ? String(previous.OperationId) : '',
+        previousFinishedAt: previous && previous.TimestampFinished ? String(previous.TimestampFinished) : ''
+      }
+    };
+    return buildStage4Response_(true, 'Повторний запуск безпечно подавлено', null, null, [], meta, diagnostics, context, warnings.concat(['Сценарій уже виконувався або щойно був успішно завершений']));
+  }
+
+  function run(spec) {
+    const cfg = spec || {};
+    const rawScenario = String(cfg.scenario || 'unknownScenario');
+    let payload = Object.assign({}, cfg.payload || {});
+    const startedAt = new Date();
+    const warnings = [];
+    const diagnostics = {
+      stage: STAGE4_CONFIG.VERSION,
+      hardeningStage: '7',
+      scenario: rawScenario,
+      startedAt: startedAt.toISOString(),
+      lifecycle: []
+    };
+
+    const dryRun = !!payload.dryRun;
+    const route = _routeDescriptor(cfg, rawScenario);
+    const lockRequired = cfg.lock !== false && !!cfg.write;
+    const retrySafe = cfg.retrySafe !== false;
+    let operationId = (typeof OperationRepository_ === 'object')
+      ? OperationRepository_.makeOperationId(rawScenario, payload, payload.operationId)
+      : String(payload.operationId || stage4UniqueId_(rawScenario));
+
+    let context = Object.assign({
+      stage: STAGE4_CONFIG.VERSION,
+      hardeningStage: diagnostics.hardeningStage,
+      scenario: rawScenario,
+      operationId: operationId,
+      dryRun: dryRun,
+      routeName: route && route.routeName ? route.routeName : '',
+      publicApiMethod: route && route.publicApiMethod ? route.publicApiMethod : ''
+    }, cfg.context || {});
+
+    let lock = null;
+    let beforeState = null;
+    let plan = null;
+    let execution = null;
+    let sync = null;
+    let verification = null;
+    let lifecycle = null;
+
+    try {
+      diagnostics.lifecycle.push('payload.accepted');
+
+      if (typeof cfg.validate === 'function') {
+        const validated = cfg.validate(payload, context) || {};
+        if (validated.payload && typeof validated.payload === 'object') payload = validated.payload;
+        warnings.push.apply(warnings, stage4MergeWarnings_(validated.warnings));
+        diagnostics.lifecycle.push('payload.validated');
+      }
+
+      operationId = (typeof OperationRepository_ === 'object')
+        ? OperationRepository_.makeOperationId(rawScenario, payload, payload.operationId)
+        : operationId;
+      context.operationId = operationId;
+
+      lock = _acquireLock(lockRequired, cfg.lockTimeoutMs);
+      diagnostics.lock = !!lock;
+      diagnostics.lockRequired = !!lockRequired;
+      if (lock) diagnostics.lifecycle.push('lock.acquired');
+
+      if (cfg.write && typeof OperationRepository_ === 'object') {
+        lifecycle = OperationRepository_.beginExecution({
+          scenario: rawScenario,
+          rawScenario: rawScenario,
+          payload: payload,
+          operationId: operationId,
+          dryRun: dryRun,
+          parentOperationId: payload.parentOperationId || '',
+          initiator: payload.initiator || (payload.trigger ? 'trigger' : 'manual'),
+          runSource: payload.source || (payload.trigger ? 'trigger' : 'manual'),
+          lockHolder: lock ? 'document-lock' : ''
+        });
+        diagnostics.idempotencyFingerprint = lifecycle.fingerprint || '';
+        diagnostics.lifecycle.push('lifecycle.preflight');
+        if (lifecycle.suppressed) {
+          diagnostics.lifecycle.push('idempotency.fingerprint.suppressed');
+          return _buildDuplicateResponse_(rawScenario, operationId, dryRun, route, lock, lockRequired, startedAt, diagnostics, context, warnings, lifecycle);
+        }
+        operationId = lifecycle.operationId || operationId;
+        context.operationId = operationId;
+        context.parentOperationId = lifecycle.parentOperationId || payload.parentOperationId || '';
+        context.fingerprint = lifecycle.fingerprint || '';
+      }
+
+      if (typeof cfg.readBefore === 'function') {
+        if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') OperationRepository_.heartbeat(operationId, 'before-read');
+        beforeState = cfg.readBefore(payload, context);
+        diagnostics.lifecycle.push('state.read');
+        if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') {
+          OperationRepository_.saveCheckpoint({
+            operationId: operationId,
+            checkpointIndex: 10,
+            processedUpTo: 'state.read',
+            checkpointPayload: { scenario: rawScenario },
+            verificationSnapshot: { ok: true }
+          });
+        }
+      }
+
+      if (typeof cfg.plan === 'function') {
+        if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') OperationRepository_.heartbeat(operationId, 'before-plan');
+        plan = cfg.plan(payload, beforeState, context) || {};
+        warnings.push.apply(warnings, stage4MergeWarnings_(plan.warnings));
+        diagnostics.lifecycle.push('plan.built');
+        if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') {
+          OperationRepository_.saveCheckpoint({
+            operationId: operationId,
+            checkpointIndex: 20,
+            processedUpTo: 'plan.built',
+            checkpointPayload: { meta: plan.meta || null },
+            verificationSnapshot: { ok: true }
+          });
+        }
+      }
+
+      if (typeof cfg.execute === 'function') {
+        if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') OperationRepository_.heartbeat(operationId, 'before-execute');
+        execution = cfg.execute(payload, beforeState, plan, context) || {};
+      } else {
+        execution = { result: null, changes: [], warnings: [] };
+      }
+      warnings.push.apply(warnings, stage4MergeWarnings_(execution.warnings));
+      diagnostics.lifecycle.push(dryRun ? 'execute.dryRun' : 'execute.applied');
+
+      if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') {
+        OperationRepository_.saveCheckpoint({
+          operationId: operationId,
+          checkpointIndex: 50,
+          processedUpTo: 'execute.complete',
+          lastProcessedEntity: stage4AsArray_(execution.affectedEntities)[0] || '',
+          lastProcessedRow: stage4AsArray_(payload.rowNumbers)[0] || '',
+          checkpointPayload: {
+            appliedChangesCount: Number(execution.appliedChangesCount || 0),
+            skippedChangesCount: Number(execution.skippedChangesCount || 0)
+          },
+          verificationSnapshot: { success: execution.success !== false }
+        });
+      }
+
+      if (typeof cfg.sync === 'function') {
+        sync = cfg.sync(payload, beforeState, plan, execution, context) || {};
+        warnings.push.apply(warnings, stage4MergeWarnings_(sync.warnings));
+        diagnostics.lifecycle.push('ui.sync.prepared');
+      }
+
+      if (typeof cfg.verify === 'function') {
+        if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') OperationRepository_.heartbeat(operationId, 'before-verify');
+        verification = cfg.verify(payload, beforeState, plan, execution, context) || {};
+        warnings.push.apply(warnings, stage4MergeWarnings_(verification.warnings));
+        diagnostics.verification = verification;
+        diagnostics.lifecycle.push('verification.completed');
+        if (verification && verification.partial === true) execution.partial = true;
+        if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') {
+          OperationRepository_.saveCheckpoint({
+            operationId: operationId,
+            checkpointIndex: 60,
+            processedUpTo: 'verification.complete',
+            lastProcessedEntity: stage4AsArray_(execution.affectedEntities)[0] || '',
+            lastProcessedRow: stage4AsArray_(payload.rowNumbers)[0] || '',
+            checkpointPayload: { verificationResult: OperationRepository_._classifyVerification(verification) },
+            verificationSnapshot: verification
+          });
+        }
+      }
+
+      const lifecycleScenario = (typeof OperationRepository_ === 'object') ? OperationRepository_.canonicalScenario(rawScenario, payload) : rawScenario;
+      const meta = Object.assign({
+        stage: STAGE4_CONFIG.VERSION,
+        hardeningStage: diagnostics.hardeningStage,
+        scenario: lifecycleScenario,
+        rawScenario: rawScenario,
+        operationId: operationId,
+        parentOperationId: payload.parentOperationId || '',
+        route: route,
+        fingerprint: diagnostics.idempotencyFingerprint || '',
+        affectedSheets: stage4AsArray_(execution.affectedSheets),
+        affectedEntities: stage4AsArray_(execution.affectedEntities),
+        appliedChangesCount: Number(execution.appliedChangesCount) || stage4AsArray_(execution.changes).length,
+        skippedChangesCount: Number(execution.skippedChangesCount) || 0,
+        dryRun: dryRun,
+        partial: !!execution.partial,
+        retrySafe: retrySafe,
+        lockUsed: !!lock,
+        lockRequired: !!lockRequired,
+        durationMs: new Date().getTime() - startedAt.getTime(),
+        sync: sync || null,
+        verification: verification || null,
+        repairNeeded: !dryRun && cfg.write && (!!(execution && execution.success === false) || (verification && verification.ok === false) || (verification && verification.partial === true)),
+        diagnosticsSummary: {
+          lifecycle: diagnostics.lifecycle.slice(),
+          fingerprint: diagnostics.idempotencyFingerprint || ''
+        }
+      }, execution.meta || {}, (plan && plan.meta) || {});
+
+      diagnostics.lifecycle.push('response.built');
+
+      const response = buildStage4Response_(
+        execution.success !== false,
+        execution.message || cfg.successMessage || 'Операцію виконано',
+        null,
+        execution.result,
+        execution.changes || [],
+        meta,
+        diagnostics,
+        Object.assign({}, context, execution.context || {}),
+        warnings
+      );
+
+      if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') {
+        OperationRepository_.finalizeSuccessfulExecution({
+          operationId: operationId,
+          payload: payload,
+          result: execution.result,
+          execution: execution,
+          verification: verification,
+          success: execution.success !== false,
+          message: response.message,
+          repairNeeded: meta.repairNeeded,
+          transitionReason: (verification && verification.ok === false) ? 'post-write-verification-failed' : 'commit-complete'
+        });
+      }
+
+      if (stage4GetFeatureFlag_('auditTrail', true)) {
+        Stage4AuditTrail_.record({
+          timestamp: new Date(),
+          operationId: operationId,
+          scenario: lifecycleScenario,
+          level: execution.partial ? 'WARN' : 'AUDIT',
+          status: execution.success === false ? 'ERROR' : (execution.partial ? 'PARTIAL' : 'SUCCESS'),
+          initiator: payload.initiator || (payload.trigger ? 'trigger' : 'manual'),
+          dryRun: dryRun,
+          partial: !!execution.partial,
+          affectedSheets: meta.affectedSheets,
+          affectedEntities: meta.affectedEntities,
+          appliedChangesCount: meta.appliedChangesCount,
+          skippedChangesCount: meta.skippedChangesCount,
+          warnings: warnings,
+          payload: payload,
+          before: beforeState,
+          after: execution.result,
+          changes: execution.changes,
+          diagnostics: diagnostics,
+          message: response.message,
+          error: null,
+          context: context
+        });
+        Stage4AuditTrail_.writeCompactLegacyLog({
+          timestamp: new Date(),
+          operationId: operationId,
+          scenario: lifecycleScenario,
+          level: execution.partial ? 'WARN' : 'AUDIT',
+          affectedSheets: meta.affectedSheets,
+          affectedEntities: meta.affectedEntities,
+          message: response.message,
+          context: context
+        });
+      }
+
+      return response;
+    } catch (e) {
+      diagnostics.lifecycle.push('error');
+      diagnostics.durationMs = new Date().getTime() - startedAt.getTime();
+
+      if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') {
+        try {
+          OperationRepository_.registerFailure({
+            operationId: operationId,
+            payload: payload,
+            result: execution && execution.result || null,
+            execution: execution,
+            errorMessage: e && e.message ? e.message : String(e),
+            transitionReason: 'exception'
+          });
+          OperationRepository_.appendNote(operationId, e && e.message ? e.message : String(e), 'workflow');
+        } catch (_) {}
+      }
+
+      const response = buildStage4Response_(
+        false,
+        '',
+        e && e.message ? e.message : String(e),
+        null,
+        [],
+        {
+          stage: STAGE4_CONFIG.VERSION,
+          hardeningStage: diagnostics.hardeningStage,
+          scenario: (typeof OperationRepository_ === 'object') ? OperationRepository_.canonicalScenario(rawScenario, payload) : rawScenario,
+          rawScenario: rawScenario,
+          operationId: operationId,
+          route: route,
+          fingerprint: diagnostics.idempotencyFingerprint || '',
+          affectedSheets: [],
+          affectedEntities: [],
+          appliedChangesCount: 0,
+          skippedChangesCount: 0,
+          dryRun: dryRun,
+          partial: false,
+          retrySafe: retrySafe,
+          lockUsed: !!lock,
+          lockRequired: !!lockRequired,
+          durationMs: diagnostics.durationMs,
+          verification: verification || null,
+          repairNeeded: !!cfg.write && !dryRun
+        },
+        diagnostics,
+        context,
+        warnings
+      );
+
+      if (stage4GetFeatureFlag_('auditTrail', true)) {
+        Stage4AuditTrail_.record({
+          timestamp: new Date(),
+          operationId: operationId,
+          scenario: rawScenario,
+          level: 'ERROR',
+          status: 'ERROR',
+          initiator: payload.initiator || (payload.trigger ? 'trigger' : 'manual'),
+          dryRun: dryRun,
+          partial: false,
+          affectedSheets: [],
+          affectedEntities: [],
+          appliedChangesCount: 0,
+          skippedChangesCount: 0,
+          warnings: warnings,
+          payload: payload,
+          before: beforeState,
+          after: null,
+          changes: [],
+          diagnostics: diagnostics,
+          message: '',
+          error: response.error,
+          context: context
+        });
+        Stage4AuditTrail_.writeCompactLegacyLog({
+          timestamp: new Date(),
+          operationId: operationId,
+          scenario: rawScenario,
+          level: 'ERROR',
+          affectedSheets: [],
+          affectedEntities: [],
+          message: response.error,
+          context: context
+        });
+      }
+
+      return response;
+    } finally {
+      _releaseLock(lock);
+    }
+  }
+
+  return { run: run };
+})();
