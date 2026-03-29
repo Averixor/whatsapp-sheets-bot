@@ -48,7 +48,7 @@ function applySpreadsheetProtections_(options) {
 
     try {
       const protection = sh.protect();
-      protection.setDescription('WAPB service sheet protection');
+      protection.setDescription('WASB service sheet protection');
       protection.setWarningOnly(warningOnly);
       if (!warningOnly) {
         try {

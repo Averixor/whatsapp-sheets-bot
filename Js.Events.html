@@ -8,7 +8,7 @@
   }
 
   function registerGlobalRuntimeEvents_() {
-    window.WAPB_CLIENT_RUNTIME_POLICY = CLIENT_RUNTIME_POLICY;
+    window.WASB_CLIENT_RUNTIME_POLICY = CLIENT_RUNTIME_POLICY;
 
     window.addEventListener('error', function(event) {
       reportBootstrapError_(event && event.error ? event.error : (event && event.message) || 'window.error', 'window.error');

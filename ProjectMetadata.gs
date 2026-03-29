@@ -11,9 +11,9 @@ const PROJECT_RELEASE_NAMING_ = Object.freeze({
   stageLabel: 'Stage 7.1.2 — Security & Ops Hardened Baseline',
   stageVersion: '7.1.2-security-ops-hardened',
   activeBaseline: 'stage7-1-2-security-ops-hardened-baseline',
-  archiveBaseName: 'gas_wapb_stage7_1_2_security_ops_hardened',
-  archiveFileName: 'gas_wapb_stage7_1_2_security_ops_hardened.zip',
-  rootFolderName: 'gas_wapb_stage7_1_2_security_ops_hardened'
+  archiveBaseName: 'gas_wasb_stage7_1_2_security_ops_hardened',
+  archiveFileName: 'gas_wasb_stage7_1_2_security_ops_hardened.zip',
+  rootFolderName: 'gas_wasb_stage7_1_2_security_ops_hardened'
 });
 
 const PROJECT_DOCUMENTATION_MAP_ = Object.freeze({

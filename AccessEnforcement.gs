@@ -124,7 +124,7 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
     _appendLegacyLog_(message, record);
 
     var body = [
-      'WAPB SECURITY ALERT',
+      'WASB SECURITY ALERT',
       '===================',
       'Час: ' + record.timestamp,
       'Подія: ' + action,
@@ -143,7 +143,7 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
 
     var mailResult = { sent: false, recipients: [] };
     try {
-      mailResult = _sendMail_('WAPB SECURITY ALERT: ' + action, body);
+      mailResult = _sendMail_('WASB SECURITY ALERT: ' + action, body);
     } catch (error) {
       _appendAlert_({
         timestamp: new Date(),

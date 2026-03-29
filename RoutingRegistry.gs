@@ -12,7 +12,7 @@
  * - UI eligibility
  */
 
-var WAPB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WAPB_STAGE7_ROUTING_REGISTRY_STORE_ !== 'undefined' && WAPB_STAGE7_ROUTING_REGISTRY_STORE_) || Object.freeze({
+var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_STORE_ !== 'undefined' && WASB_STAGE7_ROUTING_REGISTRY_STORE_) || Object.freeze({
 
   sidebar: Object.freeze({
     getMonthsList: Object.freeze({
@@ -266,7 +266,7 @@ function _stage6ADeepCopy_(value) {
 }
 
 function getStage6ARoutingRegistry_() {
-  return _stage6ADeepCopy_(WAPB_STAGE7_ROUTING_REGISTRY_STORE_);
+  return _stage6ADeepCopy_(WASB_STAGE7_ROUTING_REGISTRY_STORE_);
 }
 
 function getRoutingRegistry_() {
@@ -274,7 +274,7 @@ function getRoutingRegistry_() {
 }
 
 function listStage6ARoutes_() {
-  const groups = WAPB_STAGE7_ROUTING_REGISTRY_STORE_ || {};
+  const groups = WASB_STAGE7_ROUTING_REGISTRY_STORE_ || {};
   const out = [];
   Object.keys(groups).forEach(function (group) {
     Object.keys(groups[group] || {}).forEach(function (key) {
