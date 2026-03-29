@@ -123,6 +123,33 @@
     font-size: 1.3rem;
   }
 
+  .header-logo {
+    gap: 10px;
+  }
+
+  .header-tool-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.12);
+    color: inherit;
+    cursor: pointer;
+    transition: var(--transition);
+    padding: 0;
+  }
+
+  .header-tool-btn:hover,
+  .header-tool-btn:focus-visible {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.34);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
+    outline: none;
+  }
+
   .status-badge {
     background: rgba(255, 255, 255, 0.12);
     backdrop-filter: blur(8px);

@@ -12,10 +12,11 @@
   <div class="sidebar-container">
     <div class="header">
       <div class="header-content">
-        <h1 class="logo"
-          style="display: flex; flex-direction: row-reverse; align-items: center; gap: 45px; justify-content: flex-end;">
-          <span class="whatsapp-icon">🧑‍💻</span>
+        <h1 class="logo header-logo" title="WASB">
           <span>WASB</span>
+          <button type="button" class="header-tool-btn" onclick="SidebarApp.handleMenuAction('debugAccess')" title="Сервісна діагностика доступу">
+            <span class="whatsapp-icon" aria-hidden="true">🧑‍💻</span>
+          </button>
         </h1>
 
         <div class="status-badge" id="botMonthStatus">

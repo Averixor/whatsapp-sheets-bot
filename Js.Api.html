@@ -193,6 +193,7 @@
     getOperationDetails: async (operationId) => adaptStage4UtilityResponse(await Api.run('apiStage5GetOperationDetails', operationId || '')),
     runRepair: async (operationId, options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage5RunRepair', operationId || '', options)),
     getAccessDescriptor: async () => adaptStage4UtilityResponse(await Api.run('apiStage5GetAccessDescriptor')),
+    debugAccess: async () => adaptStage4UtilityResponse(await Api.run('apiStage5DebugAccess')),
     applyProtections: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage5ApplyProtections', options)),
     bootstrapAccessSheet: async () => adaptStage4UtilityResponse(await Api.run('apiStage5BootstrapAccessSheet'))
   };

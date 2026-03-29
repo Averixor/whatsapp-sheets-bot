@@ -93,7 +93,7 @@
   }
 
   function getAccessRoleLabel_(role) {
-    const map = { viewer: 'Перегляд', operator: 'Оператор', admin: 'Адмін', sysadmin: 'Сис. адмін' };
+    const map = { viewer: 'Перегляд', operator: 'Оператор', admin: 'Адміністратор', sysadmin: 'Сис. адміністратор' };
     return map[String(role || 'viewer').trim().toLowerCase()] || 'Перегляд';
   }
 
@@ -297,7 +297,8 @@
       applyProtections: 'Захист службових листів',
       pendingRepairs: 'Операції, що потребують виправлення',
       vacationReminder: 'Нагадування про відпустки',
-      birthdayCheck: 'Дні Народження'
+      birthdayCheck: 'Дні Народження',
+      debugAccess: 'Перевірка доступу'
     };
 
     return names[action] || action;
@@ -395,6 +396,38 @@
         case 'switchMonth':
           await showMonthSwitcher();
           break;
+
+        case 'debugAccess': {
+          showStandardResult('Перевірка доступу');
+          setHtml('resultContent', `
+            <div class="result-item">
+              <div class="result-value">Перевіряю доступ...</div>
+            </div>
+          `);
+
+          const result = await ActionDispatcher.run('debugAccess', () => MaintenanceApi.debugAccess(), { successMessage: '' });
+          if (!result?.success) {
+            displayInResult('error', { error: result?.error || 'Невідома помилка' });
+            break;
+          }
+
+          const data = result.data || {};
+          logToConsole(
+            '🔐 Access debug: role=' + String(data.role || 'viewer') +
+            ', knownUser=' + String(!!data.knownUser) +
+            ', source=' + String(data.source || 'default') +
+            ', email=' + String(data.email || '∅'),
+            data.knownUser ? 'info' : 'warning'
+          );
+
+          setHtml('resultContent', `
+            <div class="result-item">
+              <div class="result-label">Перевірка доступу</div>
+              <div class="result-value" style="white-space:pre-wrap;">${escapeHtml(JSON.stringify(data, null, 2))}</div>
+            </div>
+          `);
+          break;
+        }
 
         case 'clearCache': {
           const result = await ActionDispatcher.run('clearCache', () => MaintenanceApi.clearCache());

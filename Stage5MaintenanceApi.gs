@@ -65,6 +65,19 @@ function apiStage5GetAccessDescriptor() {
   );
 }
 
+function apiStage5DebugAccess() {
+  const descriptor = (typeof AccessControl_ === 'object')
+    ? AccessControl_.describe()
+    : { role: 'viewer', knownUser: false, reason: 'AccessControl_ недоступний' };
+  return _stage5BuildMaintenanceResponse_(
+    true,
+    'Діагностику доступу виконано',
+    descriptor,
+    'stage5DebugAccess',
+    descriptor.reason ? [descriptor.reason] : []
+  );
+}
+
 function apiStage5ApplyProtections(options) {
   _stage5AssertAdminAccess_('apply spreadsheet protections');
   const result = (typeof applySpreadsheetProtections_ === 'function')

@@ -11,7 +11,8 @@
     startSendingUnsent() {},
     sendOneFromPanel() {},
     confirmSendFromPanel() {},
-    rejectSendFromPanel() {}
+    rejectSendFromPanel() {},
+    debugAccess() {}
   };
 
   // =========================
@@ -634,6 +635,7 @@
     runRepair,
     copyHealthReport,
     setHealthCheckMode,
+    debugAccess: function() { return handleMenuAction('debugAccess'); },
 
     sendDaySummaryToCommander,
     sendDetailedToCommander,
