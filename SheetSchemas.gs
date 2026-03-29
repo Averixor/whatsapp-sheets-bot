@@ -1,7 +1,7 @@
 /**
- * SheetSchemas.gs — hybrid canonical contract для stage 3.
+ * SheetSchemas.gs — hybrid canonical contract для stage 7.
  *
- * База: сильний stage 3 API/data-access каркас.
+ * База: сильний stage 7 API/data-access каркас.
  * Підсилення: richer schema metadata, header aliases, helper getters,
  * але без зламу сумісності зі старим SheetSchemas_.get(...).
  */

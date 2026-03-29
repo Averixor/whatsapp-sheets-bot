@@ -1,6 +1,6 @@
 
 /**
- * TemplateRegistry.gs — stage 5 template governance registry.
+ * TemplateRegistry.gs — stage 7 template governance registry.
  */
 
 const TemplateRegistry_ = (function() {
@@ -13,7 +13,7 @@ const TemplateRegistry_ = (function() {
   }
 
   function list() {
-    const fallbacks = typeof STAGE4_INLINE_TEMPLATES_ === 'object' ? STAGE4_INLINE_TEMPLATES_ : {};
+    const fallbacks = typeof STAGE7_INLINE_TEMPLATES_ === 'object' ? STAGE7_INLINE_TEMPLATES_ : {};
     const managed = _sheetTemplates();
 
     return [...new Set(Object.keys(fallbacks).concat(Object.keys(managed)))].sort().map(function(key) {
@@ -22,14 +22,14 @@ const TemplateRegistry_ = (function() {
         source: managed[key] ? 'managed-sheet' : 'system-fallback',
         managed: !!managed[key],
         hasFallback: !!fallbacks[key],
-        preview: Stage4Templates_.preview(key, {}, { maxLen: 120 })
+        preview: Stage7Templates_.preview(key, {}, { maxLen: 120 })
       };
     });
   }
 
   function get(key) {
     const managed = _sheetTemplates();
-    const fallback = typeof STAGE4_INLINE_TEMPLATES_ === 'object' ? STAGE4_INLINE_TEMPLATES_[key] : '';
+    const fallback = typeof STAGE7_INLINE_TEMPLATES_ === 'object' ? STAGE7_INLINE_TEMPLATES_[key] : '';
     return {
       key: key,
       managed: managed[key] || '',

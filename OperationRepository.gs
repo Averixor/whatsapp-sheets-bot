@@ -58,17 +58,17 @@ const OperationRepository_ = (function() {
   function _fmt(date, pattern) { return Utilities.formatDate(date instanceof Date ? date : new Date(date), _tz(), pattern); }
   function _iso(date) { return _fmt(date || _now(), "yyyy-MM-dd'T'HH:mm:ss"); }
   function _noteStamp() { return _fmt(_now(), 'yyyy-MM-dd HH:mm:ss'); }
-  function _safeJson(value) { return stage4SafeStringify_(value === undefined ? null : value, 50000); }
+  function _safeJson(value) { return stage7SafeStringify_(value === undefined ? null : value, 50000); }
   function _parseJson(value, fallback) {
     try { return value ? JSON.parse(value) : (fallback === undefined ? null : fallback); } catch (_) { return fallback === undefined ? null : fallback; }
   }
   function _string(value) { return value === null || value === undefined ? '' : String(value); }
   function _bool(value) { return value === true || String(value).toLowerCase() === 'true'; }
   function _uniqueStrings(list) {
-    return Array.from(new Set(stage4AsArray_(list).filter(function(item) { return item !== null && item !== undefined && item !== ''; }).map(function(item) { return String(item); })));
+    return Array.from(new Set(stage7AsArray_(list).filter(function(item) { return item !== null && item !== undefined && item !== ''; }).map(function(item) { return String(item); })));
   }
   function _uniqueNumbers(list) {
-    return Array.from(new Set(stage4AsArray_(list).map(Number).filter(function(item) { return isFinite(item); }))).sort(function(a, b) { return a - b; });
+    return Array.from(new Set(stage7AsArray_(list).map(Number).filter(function(item) { return isFinite(item); }))).sort(function(a, b) { return a - b; });
   }
 
   function _sheet(name, headers) {
@@ -438,7 +438,7 @@ const OperationRepository_ = (function() {
     if (String(verification.result || '').trim()) return String(verification.result).trim().toUpperCase();
     if (verification.ok === false) return 'FAILED';
     if (verification.partial === true) return 'PARTIAL';
-    if (stage4AsArray_(verification.warnings).length) return 'WARNING';
+    if (stage7AsArray_(verification.warnings).length) return 'WARNING';
     return 'OK';
   }
 
@@ -644,7 +644,7 @@ const OperationRepository_ = (function() {
     ensureServiceSheets();
     var opts = options && typeof options === 'object' ? options : {};
     var excluded = {};
-    stage4AsArray_(opts.excludeOperationIds).forEach(function(id) {
+    stage7AsArray_(opts.excludeOperationIds).forEach(function(id) {
       var key = String(id || '').trim();
       if (key) excluded[key] = true;
     });
@@ -758,31 +758,31 @@ const OperationRepository_ = (function() {
     var result;
     switch (rawScenario) {
       case 'markPanelRowsAsSent':
-        result = Stage4UseCases_.markPanelRowsAsSent(payload.rowNumbers || [], replayPayload);
+        result = Stage7UseCases_.markPanelRowsAsSent(payload.rowNumbers || [], replayPayload);
         break;
       case 'markPanelRowsAsUnsent':
-        result = Stage4UseCases_.markPanelRowsAsUnsent(payload.rowNumbers || [], replayPayload);
+        result = Stage7UseCases_.markPanelRowsAsUnsent(payload.rowNumbers || [], replayPayload);
         break;
       case 'sendPendingRows':
-        result = Stage4UseCases_.sendPendingRows(replayPayload);
+        result = Stage7UseCases_.sendPendingRows(replayPayload);
         break;
       case 'createNextMonth':
-        result = Stage4UseCases_.createNextMonth(replayPayload);
+        result = Stage7UseCases_.createNextMonth(replayPayload);
         break;
       case 'runReconciliation':
-        result = Stage4UseCases_.runReconciliation(replayPayload);
+        result = Stage7UseCases_.runReconciliation(replayPayload);
         break;
       case 'generateSendPanelForDate':
-        result = Stage4UseCases_.generateSendPanelForDate(replayPayload);
+        result = Stage7UseCases_.generateSendPanelForDate(replayPayload);
         break;
       case 'generateSendPanelForRange':
-        result = Stage4UseCases_.generateSendPanelForRange(replayPayload);
+        result = Stage7UseCases_.generateSendPanelForRange(replayPayload);
         break;
       case 'runMaintenanceScenario':
-        result = Stage4UseCases_.runMaintenanceScenario(replayPayload);
+        result = Stage7UseCases_.runMaintenanceScenario(replayPayload);
         break;
       case 'switchBotToMonth':
-        result = Stage4UseCases_.switchBotToMonth(replayPayload);
+        result = Stage7UseCases_.switchBotToMonth(replayPayload);
         break;
       default:
         throw new Error('Repair для сценарію "' + rawScenario + '" ще не реалізовано');

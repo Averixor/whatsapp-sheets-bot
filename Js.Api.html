@@ -1,7 +1,7 @@
 <script>
   // Js.Api — active Stage 7.1 runtime fragment.
 
-  var Stage4Api = {
+  var Stage7Api = {
     async getMonths() {
       const response = await Api.run('apiStage4GetMonthsList');
       const result = unwrapStage4Result(response) || {};
@@ -199,17 +199,17 @@
   };
 
   var SidebarApi = {
-    getMonths: Stage4Api.getMonths,
-    getSidebarData: Stage4Api.getSidebarData,
-    generatePanel: Stage4Api.generatePanelForDate,
-    getSendPanel: Stage4Api.getSendPanelData,
-    markAsPending: Stage4Api.markAsPending,
-    markAsSent: Stage4Api.markAsSent,
-    markAsUnsent: Stage4Api.markAsUnsent,
-    getVacations: async (dateStr) => Stage4Api.checkVacationsAndBirthdays(dateStr || ''),
-    getBirthdays: async (dateStr) => Stage4Api.checkVacationsAndBirthdays(dateStr || ''),
-    createNextMonth: Stage4Api.createNextMonth,
-    switchMonth: Stage4Api.switchMonth,
+    getMonths: Stage7Api.getMonths,
+    getSidebarData: Stage7Api.getSidebarData,
+    generatePanel: Stage7Api.generatePanelForDate,
+    getSendPanel: Stage7Api.getSendPanelData,
+    markAsPending: Stage7Api.markAsPending,
+    markAsSent: Stage7Api.markAsSent,
+    markAsUnsent: Stage7Api.markAsUnsent,
+    getVacations: async (dateStr) => Stage7Api.checkVacationsAndBirthdays(dateStr || ''),
+    getBirthdays: async (dateStr) => Stage7Api.checkVacationsAndBirthdays(dateStr || ''),
+    createNextMonth: Stage7Api.createNextMonth,
+    switchMonth: Stage7Api.switchMonth,
     clearCache: MaintenanceApi.clearCache,
     clearLog: MaintenanceApi.clearLog,
     clearPhoneCache: MaintenanceApi.clearPhoneCache,
@@ -220,12 +220,12 @@
   };
 
   var SummaryApi = {
-    getDaySummary: Stage4Api.buildDaySummary,
-    getDetailedDaySummary: Stage4Api.buildDetailedSummary
+    getDaySummary: Stage7Api.buildDaySummary,
+    getDetailedDaySummary: Stage7Api.buildDetailedSummary
   };
 
   var CardApi = {
-    getPersonCard: Stage4Api.openPersonCard,
+    getPersonCard: Stage7Api.openPersonCard,
     buildBirthdayLink: MaintenanceApi.buildBirthdayLink
   };
 

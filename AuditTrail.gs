@@ -1,10 +1,10 @@
 /**
- * AuditTrail.gs — розширений audit/logging helper для stage 4.
+ * AuditTrail.gs — розширений audit/logging helper для stage 7.
  */
 
 function ensureAuditTrailSheet_() {
   const ss = SpreadsheetApp.getActive();
-  let sh = ss.getSheetByName(STAGE4_CONFIG.AUDIT_SHEET);
+  let sh = ss.getSheetByName(STAGE7_CONFIG.AUDIT_SHEET);
   const headers = [[
     'Timestamp', 'OperationId', 'Scenario', 'Level', 'Status', 'Initiator',
     'DryRun', 'Partial', 'AffectedSheets', 'AffectedEntities',
@@ -14,21 +14,21 @@ function ensureAuditTrailSheet_() {
   ]];
 
   if (!sh) {
-    sh = ss.insertSheet(STAGE4_CONFIG.AUDIT_SHEET);
+    sh = ss.insertSheet(STAGE7_CONFIG.AUDIT_SHEET);
   }
 
-  if (sh.getLastRow() < STAGE4_CONFIG.AUDIT_HEADER_ROW) {
-    sh.getRange(STAGE4_CONFIG.AUDIT_HEADER_ROW, 1, 1, headers[0].length).setValues(headers);
-    sh.getRange(STAGE4_CONFIG.AUDIT_HEADER_ROW, 1, 1, headers[0].length)
+  if (sh.getLastRow() < STAGE7_CONFIG.AUDIT_HEADER_ROW) {
+    sh.getRange(STAGE7_CONFIG.AUDIT_HEADER_ROW, 1, 1, headers[0].length).setValues(headers);
+    sh.getRange(STAGE7_CONFIG.AUDIT_HEADER_ROW, 1, 1, headers[0].length)
       .setFontWeight('bold')
       .setBackground('#e8eaed');
-    sh.setFrozenRows(STAGE4_CONFIG.AUDIT_HEADER_ROW);
+    sh.setFrozenRows(STAGE7_CONFIG.AUDIT_HEADER_ROW);
   }
 
   return sh;
 }
 
-const Stage4AuditTrail_ = (function() {
+const Stage7AuditTrail_ = (function() {
   function _rowFromEntry(entry) {
     const e = (typeof SecurityRedaction_ === 'object' && SecurityRedaction_.sanitizeAuditEntry)
       ? SecurityRedaction_.sanitizeAuditEntry(entry || {})
@@ -42,16 +42,16 @@ const Stage4AuditTrail_ = (function() {
       e.initiator || '',
       !!e.dryRun,
       !!e.partial,
-      stage4AsArray_(e.affectedSheets).join(', '),
-      stage4AsArray_(e.affectedEntities).join(', '),
+      stage7AsArray_(e.affectedSheets).join(', '),
+      stage7AsArray_(e.affectedEntities).join(', '),
       Number(e.appliedChangesCount) || 0,
       Number(e.skippedChangesCount) || 0,
-      stage4AsArray_(e.warnings).join(' | '),
-      stage4SafeStringify_(e.payload, 12000),
-      stage4SafeStringify_(e.before, 12000),
-      stage4SafeStringify_(e.after, 12000),
-      stage4SafeStringify_(e.changes, 12000),
-      stage4SafeStringify_(e.diagnostics, 12000),
+      stage7AsArray_(e.warnings).join(' | '),
+      stage7SafeStringify_(e.payload, 12000),
+      stage7SafeStringify_(e.before, 12000),
+      stage7SafeStringify_(e.after, 12000),
+      stage7SafeStringify_(e.changes, 12000),
+      stage7SafeStringify_(e.diagnostics, 12000),
       String(e.message || ''),
       e.error ? String(e.error) : ''
     ];
@@ -62,14 +62,14 @@ const Stage4AuditTrail_ = (function() {
   }
 
   function recordBatch(entries) {
-    const items = stage4AsArray_(entries).filter(Boolean);
-    if (!items.length) return { written: 0, sheet: STAGE4_CONFIG.AUDIT_SHEET };
+    const items = stage7AsArray_(entries).filter(Boolean);
+    if (!items.length) return { written: 0, sheet: STAGE7_CONFIG.AUDIT_SHEET };
     const sh = ensureAuditTrailSheet_();
     const rows = items.map(_rowFromEntry);
     sh.getRange(sh.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
     return {
       written: rows.length,
-      sheet: STAGE4_CONFIG.AUDIT_SHEET
+      sheet: STAGE7_CONFIG.AUDIT_SHEET
     };
   }
 
@@ -79,9 +79,9 @@ const Stage4AuditTrail_ = (function() {
       return LogsRepository_.writeBatch([{
         timestamp: e.timestamp || new Date(),
         reportDateStr: (e.context && e.context.date) || (e.context && e.context.dateStr) || _todayStr_(),
-        sheet: stage4AsArray_(e.affectedSheets)[0] || '',
+        sheet: stage7AsArray_(e.affectedSheets)[0] || '',
         cell: e.operationId || '',
-        fio: stage4AsArray_(e.affectedEntities)[0] || '',
+        fio: stage7AsArray_(e.affectedEntities)[0] || '',
         phone: '',
         code: '',
         service: '',
@@ -91,7 +91,7 @@ const Stage4AuditTrail_ = (function() {
         link: ''
       }]);
     } catch (err) {
-      return errorResponse_(err, { function: 'Stage4AuditTrail_.writeCompactLegacyLog' });
+      return errorResponse_(err, { function: 'Stage7AuditTrail_.writeCompactLegacyLog' });
     }
   }
 

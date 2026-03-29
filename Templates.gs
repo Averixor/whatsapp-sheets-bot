@@ -153,10 +153,10 @@ function testNotifyWithTemplate_() {
 }
 
 // =========================
-// STAGE 4 MANAGED TEMPLATE LAYER
+// STAGE 7 MANAGED TEMPLATE LAYER
 // =========================
 
-const STAGE4_INLINE_TEMPLATES_ = Object.freeze({
+const STAGE7_INLINE_TEMPLATES_ = Object.freeze({
   DAY_SUMMARY_HEADER: 'Зведення за {date}',
   DETAILED_SUMMARY_HEADER: 'Детальне зведення за {date}',
   BIRTHDAY_REMINDER: 'Вітаю з днем народження, {name}!',
@@ -165,16 +165,16 @@ const STAGE4_INLINE_TEMPLATES_ = Object.freeze({
   REPAIR_REPORT: 'Repair report\nДата: {date}\nПроблем: {problems}\nВиправлено: {fixed}'
 });
 
-const Stage4Templates_ = (function() {
+const Stage7Templates_ = (function() {
   function getTemplate(key) {
     const external = getTemplateText_(key);
     if (external) return external;
-    return STAGE4_INLINE_TEMPLATES_[String(key || '').trim()] || '';
+    return STAGE7_INLINE_TEMPLATES_[String(key || '').trim()] || '';
   }
 
   function listKeys() {
     const externalMap = _loadTemplatesMap_();
-    return [...new Set(Object.keys(STAGE4_INLINE_TEMPLATES_).concat(Object.keys(externalMap || {})))].sort();
+    return [...new Set(Object.keys(STAGE7_INLINE_TEMPLATES_).concat(Object.keys(externalMap || {})))].sort();
   }
 
   function render(key, data, options) {
@@ -183,7 +183,7 @@ const Stage4Templates_ = (function() {
     if (!tpl) return '';
     const rendered = renderTemplate_(tpl, data || {});
     if (!opts.preview) return rendered;
-    const max = Number(opts.maxLen) || STAGE4_CONFIG.TEMPLATE_PREVIEW_LIMIT;
+    const max = Number(opts.maxLen) || STAGE7_CONFIG.TEMPLATE_PREVIEW_LIMIT;
     return rendered.length > max ? rendered.slice(0, max) + '…' : rendered;
   }
 
@@ -199,10 +199,10 @@ const Stage4Templates_ = (function() {
   };
 })();
 
-function stage4RenderTemplate_(templateKey, data, options) {
-  return Stage4Templates_.render(templateKey, data || {}, options || {});
+function stage7RenderTemplate_(templateKey, data, options) {
+  return Stage7Templates_.render(templateKey, data || {}, options || {});
 }
 
-function stage4PreviewTemplate_(templateKey, data, options) {
-  return Stage4Templates_.preview(templateKey, data || {}, options || {});
+function stage7PreviewTemplate_(templateKey, data, options) {
+  return Stage7Templates_.preview(templateKey, data || {}, options || {});
 }

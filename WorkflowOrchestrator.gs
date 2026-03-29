@@ -21,8 +21,8 @@ function buildStage4Response_(success, message, error, result, changes, meta, di
     operationId: safeMeta.operationId || null,
     scenario: safeMeta.scenario || (context && context.scenario) || null,
     dryRun: !!safeMeta.dryRun,
-    affectedSheets: stage4AsArray_(safeMeta.affectedSheets),
-    affectedEntities: stage4AsArray_(safeMeta.affectedEntities),
+    affectedSheets: stage7AsArray_(safeMeta.affectedSheets),
+    affectedEntities: stage7AsArray_(safeMeta.affectedEntities),
     appliedChangesCount: Number(safeMeta.appliedChangesCount || 0),
     skippedChangesCount: Number(safeMeta.skippedChangesCount || 0),
     partial: !!safeMeta.partial,
@@ -37,7 +37,7 @@ const WorkflowOrchestrator_ = (function() {
   function _acquireLock(lockRequired, timeoutMs) {
     if (!lockRequired) return null;
     const lock = LockService.getDocumentLock();
-    lock.waitLock(Math.max(Number(timeoutMs) || STAGE4_CONFIG.LOCK_TIMEOUT_MS, 1000));
+    lock.waitLock(Math.max(Number(timeoutMs) || STAGE7_CONFIG.LOCK_TIMEOUT_MS, 1000));
     return lock;
   }
 
@@ -59,7 +59,7 @@ const WorkflowOrchestrator_ = (function() {
   function _buildDuplicateResponse_(scenario, operationId, dryRun, route, lock, lockRequired, startedAt, diagnostics, context, warnings, lifecycle) {
     const previous = lifecycle && lifecycle.previous || {};
     const meta = {
-      stage: STAGE4_CONFIG.VERSION,
+      stage: STAGE7_CONFIG.VERSION,
       hardeningStage: '7',
       scenario: scenario,
       operationId: operationId,
@@ -92,7 +92,7 @@ const WorkflowOrchestrator_ = (function() {
     const startedAt = new Date();
     const warnings = [];
     const diagnostics = {
-      stage: STAGE4_CONFIG.VERSION,
+      stage: STAGE7_CONFIG.VERSION,
       hardeningStage: '7',
       scenario: rawScenario,
       startedAt: startedAt.toISOString(),
@@ -105,10 +105,10 @@ const WorkflowOrchestrator_ = (function() {
     const retrySafe = cfg.retrySafe !== false;
     let operationId = (typeof OperationRepository_ === 'object')
       ? OperationRepository_.makeOperationId(rawScenario, payload, payload.operationId)
-      : String(payload.operationId || stage4UniqueId_(rawScenario));
+      : String(payload.operationId || stage7UniqueId_(rawScenario));
 
     let context = Object.assign({
-      stage: STAGE4_CONFIG.VERSION,
+      stage: STAGE7_CONFIG.VERSION,
       hardeningStage: diagnostics.hardeningStage,
       scenario: rawScenario,
       operationId: operationId,
@@ -131,7 +131,7 @@ const WorkflowOrchestrator_ = (function() {
       if (typeof cfg.validate === 'function') {
         const validated = cfg.validate(payload, context) || {};
         if (validated.payload && typeof validated.payload === 'object') payload = validated.payload;
-        warnings.push.apply(warnings, stage4MergeWarnings_(validated.warnings));
+        warnings.push.apply(warnings, stage7MergeWarnings_(validated.warnings));
         diagnostics.lifecycle.push('payload.validated');
       }
 
@@ -187,7 +187,7 @@ const WorkflowOrchestrator_ = (function() {
       if (typeof cfg.plan === 'function') {
         if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') OperationRepository_.heartbeat(operationId, 'before-plan');
         plan = cfg.plan(payload, beforeState, context) || {};
-        warnings.push.apply(warnings, stage4MergeWarnings_(plan.warnings));
+        warnings.push.apply(warnings, stage7MergeWarnings_(plan.warnings));
         diagnostics.lifecycle.push('plan.built');
         if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') {
           OperationRepository_.saveCheckpoint({
@@ -206,7 +206,7 @@ const WorkflowOrchestrator_ = (function() {
       } else {
         execution = { result: null, changes: [], warnings: [] };
       }
-      warnings.push.apply(warnings, stage4MergeWarnings_(execution.warnings));
+      warnings.push.apply(warnings, stage7MergeWarnings_(execution.warnings));
       diagnostics.lifecycle.push(dryRun ? 'execute.dryRun' : 'execute.applied');
 
       if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') {
@@ -214,8 +214,8 @@ const WorkflowOrchestrator_ = (function() {
           operationId: operationId,
           checkpointIndex: 50,
           processedUpTo: 'execute.complete',
-          lastProcessedEntity: stage4AsArray_(execution.affectedEntities)[0] || '',
-          lastProcessedRow: stage4AsArray_(payload.rowNumbers)[0] || '',
+          lastProcessedEntity: stage7AsArray_(execution.affectedEntities)[0] || '',
+          lastProcessedRow: stage7AsArray_(payload.rowNumbers)[0] || '',
           checkpointPayload: {
             appliedChangesCount: Number(execution.appliedChangesCount || 0),
             skippedChangesCount: Number(execution.skippedChangesCount || 0)
@@ -226,14 +226,14 @@ const WorkflowOrchestrator_ = (function() {
 
       if (typeof cfg.sync === 'function') {
         sync = cfg.sync(payload, beforeState, plan, execution, context) || {};
-        warnings.push.apply(warnings, stage4MergeWarnings_(sync.warnings));
+        warnings.push.apply(warnings, stage7MergeWarnings_(sync.warnings));
         diagnostics.lifecycle.push('ui.sync.prepared');
       }
 
       if (typeof cfg.verify === 'function') {
         if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') OperationRepository_.heartbeat(operationId, 'before-verify');
         verification = cfg.verify(payload, beforeState, plan, execution, context) || {};
-        warnings.push.apply(warnings, stage4MergeWarnings_(verification.warnings));
+        warnings.push.apply(warnings, stage7MergeWarnings_(verification.warnings));
         diagnostics.verification = verification;
         diagnostics.lifecycle.push('verification.completed');
         if (verification && verification.partial === true) execution.partial = true;
@@ -242,8 +242,8 @@ const WorkflowOrchestrator_ = (function() {
             operationId: operationId,
             checkpointIndex: 60,
             processedUpTo: 'verification.complete',
-            lastProcessedEntity: stage4AsArray_(execution.affectedEntities)[0] || '',
-            lastProcessedRow: stage4AsArray_(payload.rowNumbers)[0] || '',
+            lastProcessedEntity: stage7AsArray_(execution.affectedEntities)[0] || '',
+            lastProcessedRow: stage7AsArray_(payload.rowNumbers)[0] || '',
             checkpointPayload: { verificationResult: OperationRepository_._classifyVerification(verification) },
             verificationSnapshot: verification
           });
@@ -252,7 +252,7 @@ const WorkflowOrchestrator_ = (function() {
 
       const lifecycleScenario = (typeof OperationRepository_ === 'object') ? OperationRepository_.canonicalScenario(rawScenario, payload) : rawScenario;
       const meta = Object.assign({
-        stage: STAGE4_CONFIG.VERSION,
+        stage: STAGE7_CONFIG.VERSION,
         hardeningStage: diagnostics.hardeningStage,
         scenario: lifecycleScenario,
         rawScenario: rawScenario,
@@ -260,9 +260,9 @@ const WorkflowOrchestrator_ = (function() {
         parentOperationId: payload.parentOperationId || '',
         route: route,
         fingerprint: diagnostics.idempotencyFingerprint || '',
-        affectedSheets: stage4AsArray_(execution.affectedSheets),
-        affectedEntities: stage4AsArray_(execution.affectedEntities),
-        appliedChangesCount: Number(execution.appliedChangesCount) || stage4AsArray_(execution.changes).length,
+        affectedSheets: stage7AsArray_(execution.affectedSheets),
+        affectedEntities: stage7AsArray_(execution.affectedEntities),
+        appliedChangesCount: Number(execution.appliedChangesCount) || stage7AsArray_(execution.changes).length,
         skippedChangesCount: Number(execution.skippedChangesCount) || 0,
         dryRun: dryRun,
         partial: !!execution.partial,
@@ -307,8 +307,8 @@ const WorkflowOrchestrator_ = (function() {
         });
       }
 
-      if (stage4GetFeatureFlag_('auditTrail', true)) {
-        Stage4AuditTrail_.record({
+      if (stage7GetFeatureFlag_('auditTrail', true)) {
+        Stage7AuditTrail_.record({
           timestamp: new Date(),
           operationId: operationId,
           scenario: lifecycleScenario,
@@ -331,7 +331,7 @@ const WorkflowOrchestrator_ = (function() {
           error: null,
           context: context
         });
-        Stage4AuditTrail_.writeCompactLegacyLog({
+        Stage7AuditTrail_.writeCompactLegacyLog({
           timestamp: new Date(),
           operationId: operationId,
           scenario: lifecycleScenario,
@@ -369,7 +369,7 @@ const WorkflowOrchestrator_ = (function() {
         null,
         [],
         {
-          stage: STAGE4_CONFIG.VERSION,
+          stage: STAGE7_CONFIG.VERSION,
           hardeningStage: diagnostics.hardeningStage,
           scenario: (typeof OperationRepository_ === 'object') ? OperationRepository_.canonicalScenario(rawScenario, payload) : rawScenario,
           rawScenario: rawScenario,
@@ -394,8 +394,8 @@ const WorkflowOrchestrator_ = (function() {
         warnings
       );
 
-      if (stage4GetFeatureFlag_('auditTrail', true)) {
-        Stage4AuditTrail_.record({
+      if (stage7GetFeatureFlag_('auditTrail', true)) {
+        Stage7AuditTrail_.record({
           timestamp: new Date(),
           operationId: operationId,
           scenario: rawScenario,
@@ -418,7 +418,7 @@ const WorkflowOrchestrator_ = (function() {
           error: response.error,
           context: context
         });
-        Stage4AuditTrail_.writeCompactLegacyLog({
+        Stage7AuditTrail_.writeCompactLegacyLog({
           timestamp: new Date(),
           operationId: operationId,
           scenario: rawScenario,

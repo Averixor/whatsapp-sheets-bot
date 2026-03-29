@@ -131,7 +131,7 @@
 
     try {
       const reportResponse = await ActionDispatcher.run(
-        'stage4HealthCheck',
+        'stage7HealthCheck',
         () => DiagnosticsApi.healthCheck(getHealthCheckOptions_()),
         { successMessage: '' } 
       );

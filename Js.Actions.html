@@ -15,6 +15,31 @@
     debugAccess() {}
   };
 
+  function canOpenPersonCardClientSafe_(callsign) {
+    if (typeof canOpenPersonCardClient_ === 'function') {
+      try {
+        return !!canOpenPersonCardClient_(callsign);
+      } catch (_) {}
+    }
+    const access = (typeof STATE !== 'undefined' && STATE && STATE.access) ? STATE.access : {};
+    const role = String(access.role || 'guest').trim().toLowerCase();
+    const target = String(callsign || '').trim().toUpperCase();
+    const own = String(access.personCallsign || '').trim().toUpperCase();
+    if (!target) return false;
+    if (access.isOperator || access.isAdmin) return true;
+    if (role !== 'viewer') return false;
+    return !!own && own === target;
+  }
+
+  async function reportAccessViolationSafe_(actionName, details) {
+    if (typeof reportAccessViolation_ === 'function') {
+      try {
+        return await reportAccessViolation_(actionName, details);
+      } catch (_) {}
+    }
+    return null;
+  }
+
   // =========================
   // COPY
   // =========================
@@ -307,8 +332,8 @@
       return;
     }
 
-    if (!canOpenPersonCardClient_(callsign)) {
-      await reportAccessViolation_('openPersonCardUiDenied', {
+    if (!canOpenPersonCardClientSafe_(callsign)) {
+      await reportAccessViolationSafe_('openPersonCardUiDenied', {
         source: 'person-card-open',
         requestedCallsign: callsign,
         requestedDate: dateStr || ''
@@ -319,7 +344,7 @@
     }
 
     try {
-      const data = await ActionDispatcher.run('openPersonCard', () => Stage4Api.openPersonCard(callsign, dateStr || ''));
+      const data = await ActionDispatcher.run('openPersonCard', () => Stage7Api.openPersonCard(callsign, dateStr || ''));
       if (!data || !data.success) {
         const msg = data?.error || 'Не вдалося отримати дані картки';
         showError(msg);
@@ -513,7 +538,7 @@
 
       list.forEach(callsign => {
         const btn = document.createElement('button');
-        const allowed = canOpenPersonCardClient_(callsign);
+        const allowed = canOpenPersonCardClientSafe_(callsign);
         btn.type = 'button';
         btn.className = 'personnel-card';
         btn.textContent = allowed ? callsign : (callsign + ' 🔒');
@@ -523,7 +548,7 @@
 
         btn.addEventListener('click', async () => {
           if (!allowed) {
-            await reportAccessViolation_('personnelListUiDenied', {
+            await reportAccessViolationSafe_('personnelListUiDenied', {
               source: 'personnel-modal',
               requestedCallsign: callsign
             });
@@ -687,7 +712,7 @@
     showToast,
     showError,
 
-    Stage4Api,
+    Stage7Api,
     UiState,
     LoaderService,
     ToastService,

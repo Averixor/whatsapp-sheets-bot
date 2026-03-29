@@ -1,6 +1,6 @@
 
 /**
- * SendPanelService.gs — stage 5 domain service for SEND_PANEL.
+ * SendPanelService.gs — stage 7 domain service for SEND_PANEL.
  *
  * Доменный слой остаётся тонким: он не меняет бизнес-логику, а даёт
  * каноническую точку входа поверх существующего repository/legacy-ядра.
@@ -40,7 +40,7 @@ const SendPanelService_ = (function() {
   }
 
   function normalizeRows(rows) {
-    return stage4AsArray_(rows).map(function(item) {
+    return stage7AsArray_(rows).map(function(item) {
       return {
         fio: String(item && item.fio || '').trim(),
         phone: String(item && item.phone || '').replace(/^'/, '').trim(),
@@ -93,7 +93,7 @@ const SendPanelService_ = (function() {
     if (typeof SendPanelRepository_.markRowsAsPending === 'function') {
       return SendPanelRepository_.markRowsAsPending(rowNumbers, options || {});
     }
-    return { dryRun: !!(options && options.dryRun), requestedRows: stage4AsArray_(rowNumbers) };
+    return { dryRun: !!(options && options.dryRun), requestedRows: stage7AsArray_(rowNumbers) };
   }
 
   function markRowsAsSent(rowNumbers, options) {
@@ -104,7 +104,7 @@ const SendPanelService_ = (function() {
     if (typeof SendPanelRepository_.markRowsAsUnsent === 'function') {
       return SendPanelRepository_.markRowsAsUnsent(rowNumbers, options || {});
     }
-    return { dryRun: !!(options && options.dryRun), requestedRows: stage4AsArray_(rowNumbers) };
+    return { dryRun: !!(options && options.dryRun), requestedRows: stage7AsArray_(rowNumbers) };
   }
 
   return {

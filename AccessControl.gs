@@ -427,11 +427,11 @@ const AccessControl_ = (function() {
 
   function _auditKeyRotation_(entry, payload) {
     try {
-      if (typeof Stage4AuditTrail_ !== 'object' || typeof Stage4AuditTrail_.record !== 'function') return;
+      if (typeof Stage7AuditTrail_ !== 'object' || typeof Stage7AuditTrail_.record !== 'function') return;
       const data = payload || {};
-      Stage4AuditTrail_.record({
+      Stage7AuditTrail_.record({
         timestamp: new Date(),
-        operationId: stage4UniqueId_('access_key_rotation'),
+        operationId: stage7UniqueId_('access_key_rotation'),
         scenario: 'access.user_key_rotation',
         level: 'AUDIT',
         status: 'COMMITTED',

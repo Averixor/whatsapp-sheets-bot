@@ -41,7 +41,7 @@
 
       if (refresh.includes('monthsList') || refresh.includes('currentMonth')) {
         try {
-          const monthsResult = await Stage4Api.getMonths();
+          const monthsResult = await Stage7Api.getMonths();
           if (monthsResult?.success) {
             UiState.patch({
               monthsList: Array.isArray(monthsResult.months) ? monthsResult.months : STATE.monthsList,
@@ -200,7 +200,7 @@
 
     try {
       for (let attempt = 0; attempt <= retries; attempt++) {
-        const result = await Stage4Api.getSendPanelData();
+        const result = await Stage7Api.getSendPanelData();
 
         if (!result?.success) {
           lastFailure = new Error(result?.error || 'Не вдалося перечитати SEND_PANEL');

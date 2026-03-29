@@ -1,6 +1,6 @@
 
 /**
- * DialogTemplates.gs — stage 5 presentation templates.
+ * DialogTemplates.gs — stage 7 presentation templates.
  */
 
 const DialogTemplates_ = (function () {

@@ -1,10 +1,10 @@
 
 /**
- * JobRuntimeRepository.gs — stage 5 persistent job runtime storage.
+ * JobRuntimeRepository.gs — stage 7 persistent job runtime storage.
  */
 
 const JobRuntimeRepository_ = (function() {
-  const PREFIX = 'STAGE5:JOB_RUNTIME:';
+  const PREFIX = 'STAGE7:JOB_RUNTIME:';
   const LAST_PREFIX = PREFIX + 'LAST:';
   const HISTORY_PREFIX = PREFIX + 'HISTORY:';
   const ACTIVE_PREFIX = PREFIX + 'ACTIVE:';
@@ -16,9 +16,9 @@ const JobRuntimeRepository_ = (function() {
 
   function _sheet() {
     const ss = SpreadsheetApp.getActive();
-    let sh = ss.getSheetByName(STAGE5_CONFIG.JOB_RUNTIME_SHEET);
+    let sh = ss.getSheetByName(STAGE7_CONFIG.JOB_RUNTIME_SHEET);
     if (!sh) {
-      sh = ss.insertSheet(STAGE5_CONFIG.JOB_RUNTIME_SHEET);
+      sh = ss.insertSheet(STAGE7_CONFIG.JOB_RUNTIME_SHEET);
       sh.getRange(1, 1, 1, 10).setValues([[
         'tsStart', 'tsEnd', 'jobName', 'status', 'source', 'durationMs',
         'dryRun', 'operationId', 'message', 'error'
@@ -49,7 +49,7 @@ const JobRuntimeRepository_ = (function() {
     }
 
     history.unshift(item);
-    history = history.slice(0, Number(STAGE5_CONFIG.MAX_RUNTIME_HISTORY) || 50);
+    history = history.slice(0, Number(STAGE7_CONFIG.MAX_RUNTIME_HISTORY) || 50);
     props.setProperty(historyKey, JSON.stringify(history));
     props.setProperty(lastKey, JSON.stringify(item));
 
@@ -67,7 +67,7 @@ const JobRuntimeRepository_ = (function() {
         item.message || '',
         item.error || ''
       ]);
-      const overflow = Math.max(sh.getLastRow() - 1 - (Number(STAGE5_CONFIG.MAX_RUNTIME_LOG_ROWS) || 500), 0);
+      const overflow = Math.max(sh.getLastRow() - 1 - (Number(STAGE7_CONFIG.MAX_RUNTIME_LOG_ROWS) || 500), 0);
       if (overflow > 0) {
         sh.deleteRows(2, overflow);
       }
@@ -146,7 +146,7 @@ const JobRuntimeRepository_ = (function() {
     const lastKeys = Object.keys(props).filter(function(key) { return key.indexOf(LAST_PREFIX) === 0; }).length;
     const activeKeys = Object.keys(props).filter(function(key) { return key.indexOf(ACTIVE_PREFIX) === 0; }).length;
     return {
-      primaryJournal: STAGE5_CONFIG.JOB_RUNTIME_SHEET,
+      primaryJournal: STAGE7_CONFIG.JOB_RUNTIME_SHEET,
       lightweightStateStore: 'PropertiesService',
       historyKeys: historyKeys,
       lastKeys: lastKeys,

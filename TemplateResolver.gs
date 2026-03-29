@@ -1,6 +1,6 @@
 
 /**
- * TemplateResolver.gs — stage 5 template resolution / validation layer.
+ * TemplateResolver.gs — stage 7 template resolution / validation layer.
  */
 
 const TemplateResolver_ = (function() {
@@ -30,7 +30,7 @@ const TemplateResolver_ = (function() {
 
     const opts = options || {};
     const preview = opts.preview === true;
-    const maxLen = Number(opts.maxLen) || STAGE4_CONFIG.TEMPLATE_PREVIEW_LIMIT;
+    const maxLen = Number(opts.maxLen) || STAGE7_CONFIG.TEMPLATE_PREVIEW_LIMIT;
     const text = preview && rendered.length > maxLen ? rendered.slice(0, maxLen) + '…' : rendered;
 
     return {

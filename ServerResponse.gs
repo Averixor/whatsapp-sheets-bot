@@ -1,5 +1,5 @@
 /**
- * ServerResponse.gs — канонічний контракт server-side API для stage 3.
+ * ServerResponse.gs — канонічний контракт server-side API для stage 7.
  */
 
 const SERVER_RESPONSE_VERSION_ = '3.0.0';

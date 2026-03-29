@@ -51,7 +51,7 @@ const AlertsRepository_ = (function() {
       item.email || '',
       item.source || '',
       item.message || '',
-      stage4SafeStringify_(item.details || {}, 9000)
+      stage7SafeStringify_(item.details || {}, 9000)
     ]);
     return { success: true, written: 1, sheet: sh.getName() };
   }

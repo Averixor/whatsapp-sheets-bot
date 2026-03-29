@@ -50,7 +50,7 @@ function cleanupLogsAndAuditRetention_(options) {
   const logRetentionDays = Number(opts.logRetentionDays || appGetCore('LOG_RETENTION_DAYS', 60)) || 60;
   const auditRetentionDays = Number(opts.auditRetentionDays || appGetCore('AUDIT_RETENTION_DAYS', 180)) || 180;
   const log = _cleanupSheetByAge_(CONFIG.LOG_SHEET || 'LOG', 1, logRetentionDays);
-  const audit = _cleanupSheetByAge_(STAGE4_CONFIG.AUDIT_SHEET || 'AUDIT_LOG', STAGE4_CONFIG.AUDIT_HEADER_ROW || 1, auditRetentionDays);
+  const audit = _cleanupSheetByAge_(STAGE7_CONFIG.AUDIT_SHEET || 'AUDIT_LOG', STAGE7_CONFIG.AUDIT_HEADER_ROW || 1, auditRetentionDays);
   return {
     log: log,
     audit: audit,

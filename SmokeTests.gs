@@ -1,5 +1,5 @@
 /**
- * SmokeTests.gs — merged Stage 7.1 smoke / regression / compatibility suite preserving the full Stage 6 baseline breadth and adding Stage 7 lifecycle/runtime hardening checks, including retention cleanup flow.
+ * SmokeTests.gs — merged Stage 7.1 smoke / regression / compatibility suite preserving the full Stage 7 baseline breadth and adding Stage 7 lifecycle/runtime hardening checks, including retention cleanup flow.
  */
 
 function _smokeAssert_(condition, message) {
@@ -43,12 +43,12 @@ function _smokeResolveKnownSymbol_(name) {
     case 'VacationsRepository_': return typeof VacationsRepository_ !== 'undefined' ? VacationsRepository_ : undefined;
     case 'SummaryRepository_': return typeof SummaryRepository_ !== 'undefined' ? SummaryRepository_ : undefined;
     case 'LogsRepository_': return typeof LogsRepository_ !== 'undefined' ? LogsRepository_ : undefined;
-    case 'Stage4UseCases_': return typeof Stage4UseCases_ !== 'undefined' ? Stage4UseCases_ : undefined;
+    case 'Stage7UseCases_': return typeof Stage7UseCases_ !== 'undefined' ? Stage7UseCases_ : undefined;
     case 'WorkflowOrchestrator_': return typeof WorkflowOrchestrator_ !== 'undefined' ? WorkflowOrchestrator_ : undefined;
-    case 'Stage4AuditTrail_': return typeof Stage4AuditTrail_ !== 'undefined' ? Stage4AuditTrail_ : undefined;
+    case 'Stage7AuditTrail_': return typeof Stage7AuditTrail_ !== 'undefined' ? Stage7AuditTrail_ : undefined;
     case 'Reconciliation_': return typeof Reconciliation_ !== 'undefined' ? Reconciliation_ : undefined;
-    case 'Stage4Triggers_': return typeof Stage4Triggers_ !== 'undefined' ? Stage4Triggers_ : undefined;
-    case 'Stage4Templates_': return typeof Stage4Templates_ !== 'undefined' ? Stage4Templates_ : undefined;
+    case 'Stage7Triggers_': return typeof Stage7Triggers_ !== 'undefined' ? Stage7Triggers_ : undefined;
+    case 'Stage7Templates_': return typeof Stage7Templates_ !== 'undefined' ? Stage7Templates_ : undefined;
     default: return undefined;
   }
 }
@@ -256,7 +256,7 @@ function runStage4ScenarioTests(options) {
     [apiListStage4Jobs(), apiInstallStage4Jobs()].forEach(function (result, idx) {
       _assertStage4Meta_(result, 'jobs#' + (idx + 1));
     });
-    _assertUnifiedContract_(apiRunStage4Job(STAGE4_CONFIG.JOBS.SCHEDULED_HEALTHCHECK, { dryRun: true }), 'apiRunStage4Job');
+    _assertUnifiedContract_(apiRunStage4Job(STAGE7_CONFIG.JOBS.SCHEDULED_HEALTHCHECK, { dryRun: true }), 'apiRunStage4Job');
     return 'jobs-contracts-ok';
   }, { skipOnError: true });
 
@@ -273,7 +273,7 @@ function runStage4ScenarioTests(options) {
     getStage4CompatibilityMap_()
       .filter(function (item) { return !!item.verifySourceToken; })
       .forEach(function (item) {
-        if (!_stage3HasFn_(item.name)) return;
+        if (!_stage7HasFn_(item.name)) return;
         const src = String(_global_()[item.name]);
         _smokeAssert_(src.indexOf(item.verifySourceToken) !== -1, `${item.name} не веде до ${item.verifySourceToken}`);
       });
@@ -290,16 +290,16 @@ function runStage4ScenarioTests(options) {
   _smokePush_(report, 'bundle metadata / manifest / docs markers', function () {
     const meta = getProjectBundleMetadata_();
     _smokeAssert_(meta.manifestIncluded === true, 'manifestIncluded має бути true');
-    _smokeAssert_(meta.maintenanceLayerStatus === 'stage5-canonical-maintenance-api', 'maintenanceLayerStatus має вказувати на Stage 5 canonical layer');
+    _smokeAssert_(meta.maintenanceLayerStatus === 'stage7-canonical-maintenance-api', 'maintenanceLayerStatus має вказувати на Stage 7 canonical layer');
     _smokeAssert_(Array.isArray(meta.documentation.historical) && meta.documentation.historical.indexOf('_extras/history/IMPLEMENTATION_REPORT_2026-03-22.md') !== -1, '_extras/history/IMPLEMENTATION_REPORT_2026-03-22.md має бути historical');
     _smokeAssert_(_smokeBundleHas_('appsscript.json'), 'appsscript.json має фізично існувати у root bundle');
     _smokeAssert_(!_smokeBundleHas_('.clasp.json.example'), '.clasp.json.example не повинен існувати у web-editor-ready root bundle');
     return 'bundle-ok';
   });
 
-  _smokePush_(report, 'stage4 diagnostics modes available', function () {
+  _smokePush_(report, 'stage7 diagnostics modes available', function () {
     ['runHistoricalQuickDiagnosticsInternal_', 'runHistoricalStructuralDiagnosticsInternal_', 'runHistoricalCompatibilityDiagnosticsInternal_', 'runHistoricalFullDiagnosticsInternal_'].forEach(function (fnName) {
-      _smokeAssert_(_stage3HasFn_(fnName), `${fnName} відсутній`);
+      _smokeAssert_(_stage7HasFn_(fnName), `${fnName} відсутній`);
     });
     return 'diagnostics-modes-ok';
   });
@@ -417,7 +417,7 @@ function runStage5SmokeTests(options) {
     _smokeAssert_(meta.stageLabel === 'Stage 7.1.2 — Security & Ops Hardened Baseline (Final Clean)', 'stageLabel має бути Stage 7.1.2 — Security & Ops Hardened Baseline (Final Clean)');
     _smokeAssert_(meta.stageVersion === '7.1.2-final-clean', 'stageVersion має бути 7.1.2-final-clean');
     _smokeAssert_(meta.activeBaseline === 'stage7-1-2-final-clean-baseline', 'activeBaseline має бути stage7-1-2-final-clean-baseline');
-    _smokeAssert_(meta.maintenanceLayerStatus === 'stage5-canonical-maintenance-api', 'maintenanceLayerStatus не Stage 5 canonical');
+    _smokeAssert_(meta.maintenanceLayerStatus === 'stage7-canonical-maintenance-api', 'maintenanceLayerStatus не Stage 7 canonical');
     _smokeAssert_(meta.packagingPolicy && meta.packagingPolicy.policy === 'root-manifest-web-editor-only', 'Packaging policy має бути root-manifest-web-editor-only');
     _smokeAssert_(meta.requiredDocs.indexOf('SECURITY.md') !== -1, 'SECURITY.md відсутній у metadata');
     _smokeAssert_(meta.requiredDocs.indexOf('CHANGELOG.md') !== -1, 'CHANGELOG.md відсутній у metadata');
@@ -470,7 +470,7 @@ function runStage5SmokeTests(options) {
     _smokeAssert_(release.archiveBaseName === 'gas_wasb_stage7_1_2_final_clean', 'archiveBaseName має бути gas_wasb_stage7_1_2_final_clean');
     _smokeAssert_(release.archiveFileName === 'gas_wasb_stage7_1_2_final_clean.zip', 'archiveFileName має бути gas_wasb_stage7_1_2_final_clean.zip');
     _smokeAssert_(release.rootFolderName === 'gas_wasb_stage7_1_2_final_clean', 'rootFolderName має бути gas_wasb_stage7_1_2_final_clean');
-    _smokeAssert_(meta.hardeningOverlay && meta.hardeningOverlay.label === 'Stage 6A hardening evolved into Stage 7 lifecycle baseline', 'overlay label невірний');
+    _smokeAssert_(meta.hardeningOverlay && meta.hardeningOverlay.label === 'Stage 7A hardening evolved into Stage 7 lifecycle baseline', 'overlay label невірний');
     return 'release-naming-ok';
   });
 
@@ -511,12 +511,12 @@ function runStage5SmokeTests(options) {
     const rawJavaScript = include('JavaScript');
     const rawSidebar = include('Sidebar');
     const runtimeContract = getClientRuntimeContract_();
-    [{ token: 'runtime consolidated in RC2', label: 'legacy-runtime-token-1' }, { token: 'Показує тільки швидку актуальну Stage 5 перевірку без legacy-шуму.', label: 'legacy-runtime-token-2' }, { token: 'stage6a-canonical-runtime', label: 'legacy-runtime-token-3' }].forEach(function (item) {
+    [{ token: 'runtime consolidated in RC2', label: 'legacy-runtime-token-1' }, { token: 'Показує тільки швидку актуальну Stage 7 перевірку без legacy-шуму.', label: 'legacy-runtime-token-2' }, { token: 'stage7a-canonical-runtime', label: 'legacy-runtime-token-3' }].forEach(function (item) {
       _smokeAssert_(rawJavaScript.indexOf(item.token) === -1, `У JavaScript.html залишився legacy runtime marker: ${item.label}`);
     });
-    _smokeAssert_(rawSidebar.indexOf('Stage 6A bootstrap contract') === -1, 'У Sidebar.html залишився legacy bootstrap comment marker');
+    _smokeAssert_(rawSidebar.indexOf('Stage 7A bootstrap contract') === -1, 'У Sidebar.html залишився legacy bootstrap comment marker');
     _smokeAssert_(runtimeContract.policyMarker === 'stage7-sidebar-runtime', 'policyMarker має бути stage7-sidebar-runtime');
-    _smokeAssert_(STAGE6A_CONFIG.ACTIVE_RUNTIME_MARKER === 'stage7-sidebar-runtime', 'ACTIVE_RUNTIME_MARKER має бути stage7-sidebar-runtime');
+    _smokeAssert_(STAGE7A_CONFIG.ACTIVE_RUNTIME_MARKER === 'stage7-sidebar-runtime', 'ACTIVE_RUNTIME_MARKER має бути stage7-sidebar-runtime');
     return 'runtime-wording-ok';
   });
 
@@ -525,7 +525,7 @@ function runStage5SmokeTests(options) {
 
   _smokePush_(report, 'lifecycle retention cleanup api contract', function () {
     _smokeAssert_(_smokeHasFn_('apiStage5RunLifecycleRetentionCleanup'), 'apiStage5RunLifecycleRetentionCleanup відсутній');
-    _smokeAssert_(STAGE4_CONFIG && STAGE4_CONFIG.JOBS && STAGE4_CONFIG.JOBS.LIFECYCLE_RETENTION_CLEANUP === 'lifecycleRetentionCleanup', 'JOBS.LIFECYCLE_RETENTION_CLEANUP має бути lifecycleRetentionCleanup');
+    _smokeAssert_(STAGE7_CONFIG && STAGE7_CONFIG.JOBS && STAGE7_CONFIG.JOBS.LIFECYCLE_RETENTION_CLEANUP === 'lifecycleRetentionCleanup', 'JOBS.LIFECYCLE_RETENTION_CLEANUP має бути lifecycleRetentionCleanup');
     return 'retention-cleanup-contract-ok';
   });
 
@@ -545,7 +545,7 @@ function runStage5SmokeTests(options) {
     ];
 
     texts.forEach(function (text) {
-      [{ token: 'Stage 4.2', label: 'legacy-diagnostics-token-1' }, { token: 'Stage 5 health bridge', label: 'legacy-diagnostics-token-2' }, { token: 'Stage 5 compatibility diagnostics', label: 'legacy-diagnostics-token-3' }, { token: 'Stage 5 quick compatibility diagnostics', label: 'legacy-diagnostics-token-4' }, { token: 'Stage 5 full compatibility diagnostics', label: 'legacy-diagnostics-token-5' }, { token: 'Stage 5 structural compatibility diagnostics', label: 'legacy-diagnostics-token-6' }].forEach(function (item) {
+      [{ token: 'Stage 7.2', label: 'legacy-diagnostics-token-1' }, { token: 'Stage 7 health bridge', label: 'legacy-diagnostics-token-2' }, { token: 'Stage 7 compatibility diagnostics', label: 'legacy-diagnostics-token-3' }, { token: 'Stage 7 quick compatibility diagnostics', label: 'legacy-diagnostics-token-4' }, { token: 'Stage 7 full compatibility diagnostics', label: 'legacy-diagnostics-token-5' }, { token: 'Stage 7 structural compatibility diagnostics', label: 'legacy-diagnostics-token-6' }].forEach(function (item) {
         _smokeAssert_(String(text).indexOf(item.token) === -1, `У public diagnostics wording залишився legacy marker: ${item.label}`);
       });
     });
@@ -553,7 +553,7 @@ function runStage5SmokeTests(options) {
     _smokeAssert_(String(full.summary || '').indexOf('Stage 7.1.2 — Security & Ops Hardened Baseline (Final Clean)') !== -1, 'Stage 7.1 wording не знайдено в diagnostics summary');
     _smokeAssert_((sunset.checks || []).some(function (item) { return item.name === 'Compatibility split report (informational)'; }), 'Informational compatibility split report не знайдено');
     _smokeAssert_((sunset.checks || []).every(function (item) { return item.name !== 'Canonical vs compatibility split'; }), 'Залишився старий compatibility split check name');
-    _smokeAssert_((quick.checks || []).every(function (item) { return item.name !== 'Stage5 baseline health bridge'; }), 'У quick diagnostics залишився старий baseline health marker');
+    _smokeAssert_((quick.checks || []).every(function (item) { return item.name !== 'Stage7 baseline health bridge'; }), 'У quick diagnostics залишився старий baseline health marker');
     return 'diagnostics-wording-ok';
   });
 
@@ -572,7 +572,7 @@ function runStage5SmokeTests(options) {
         result && result.data && result.data.result && result.data.result.summary || ''
       ];
       texts.forEach(function (text) {
-        [{ token: 'Stage 4.2', label: 'legacy-maintenance-token-1' }, { token: 'Stage 5 jobs', label: 'legacy-maintenance-token-2' }, { token: 'Stage 5 health check', label: 'legacy-maintenance-token-3' }, { token: 'Stage 5 full health check', label: 'legacy-maintenance-token-4' }, { token: 'Stage 5 diagnostics', label: 'legacy-maintenance-token-5' }, { token: 'Stage 5 regression tests', label: 'legacy-maintenance-token-6' }, { token: 'Stage 5 job runtime', label: 'legacy-maintenance-token-7' }].forEach(function (item) {
+        [{ token: 'Stage 7.2', label: 'legacy-maintenance-token-1' }, { token: 'Stage 7 jobs', label: 'legacy-maintenance-token-2' }, { token: 'Stage 7 health check', label: 'legacy-maintenance-token-3' }, { token: 'Stage 7 full health check', label: 'legacy-maintenance-token-4' }, { token: 'Stage 7 diagnostics', label: 'legacy-maintenance-token-5' }, { token: 'Stage 7 regression tests', label: 'legacy-maintenance-token-6' }, { token: 'Stage 7 job runtime', label: 'legacy-maintenance-token-7' }].forEach(function (item) {
           _smokeAssert_(String(text).indexOf(item.token) === -1, `У maintenance response залишився legacy marker: ${item.label}`);
         });
       });
@@ -584,7 +584,7 @@ function runStage5SmokeTests(options) {
 
   _smokePush_(report, 'diagnostics modes available', function () {
     ['runStage5QuickDiagnostics_', 'runStage5StructuralDiagnostics_', 'runStage5OperationalDiagnostics_', 'runStage5SunsetDiagnostics_', 'runStage5FullDiagnostics_'].forEach(function (fnName) {
-      _smokeAssert_(_stage3HasFn_(fnName), `${fnName} відсутній`);
+      _smokeAssert_(_stage7HasFn_(fnName), `${fnName} відсутній`);
     });
     return 'diagnostics-modes-ok';
   });
@@ -619,8 +619,8 @@ function runStage5SmokeTests(options) {
   _smokePush_(report, 'hardening domain test suite', function () {
     const domain = runStage6ADomainTests_({ dryRun: true });
     _smokeAssert_(Array.isArray(domain.checks), 'runStage6ADomainTests_() не повернув checks[]');
-    _smokeAssert_(domain.total >= 20, 'Замало Stage 6A domain tests');
-    if (!domain.ok) throw new Error('Stage 6A domain tests не повинні мати FAIL');
+    _smokeAssert_(domain.total >= 20, 'Замало Stage 7A domain tests');
+    if (!domain.ok) throw new Error('Stage 7A domain tests не повинні мати FAIL');
     return `tests=${domain.total}`;
   });
 

@@ -1,9 +1,9 @@
 /**
- * OperationSafety.gs — Stage 6A safety helpers for write-scenario hardening.
+ * OperationSafety.gs — Stage 7A safety helpers for write-scenario hardening.
  */
 
-const Stage6ASafety_ = (function() {
-  const PREFIX = 'STAGE6A:SAFETY:';
+const Stage7ASafety_ = (function() {
+  const PREFIX = 'STAGE7A:SAFETY:';
 
   function _props() {
     return PropertiesService.getDocumentProperties();
@@ -29,7 +29,7 @@ const Stage6ASafety_ = (function() {
   }
 
   function _rows(value) {
-    return [...new Set(stage4AsArray_(value).map(Number).filter(Number.isFinite))].sort(function(a, b) { return a - b; });
+    return [...new Set(stage7AsArray_(value).map(Number).filter(Number.isFinite))].sort(function(a, b) { return a - b; });
   }
 
   function canonicalizePayload(scenario, payload) {
@@ -50,7 +50,7 @@ const Stage6ASafety_ = (function() {
         return {
           mode: String(input.mode || 'check'),
           date: String(input.dateStr || input.date || ''),
-          issueTypes: [...new Set(stage4AsArray_(input.issueTypes).map(String))].sort(),
+          issueTypes: [...new Set(stage7AsArray_(input.issueTypes).map(String))].sort(),
           limit: Number(input.limit || 0),
           dryRun: !!input.dryRun
         };
@@ -74,7 +74,7 @@ const Stage6ASafety_ = (function() {
   }
 
   function _ttlMs(ttlSec) {
-    return Math.max(Number(ttlSec || STAGE4_CONFIG.IDEMPOTENCY_TTL_SEC || 21600), 1) * 1000;
+    return Math.max(Number(ttlSec || STAGE7_CONFIG.IDEMPOTENCY_TTL_SEC || 21600), 1) * 1000;
   }
 
   function _readJson(key) {
@@ -150,7 +150,7 @@ const Stage6ASafety_ = (function() {
       fingerprint: fingerprint,
       status: 'ACTIVE',
       ts: Date.now(),
-      startedAt: stage4NowIso_()
+      startedAt: stage7NowIso_()
     }));
 
     return {
@@ -183,7 +183,7 @@ const Stage6ASafety_ = (function() {
       fingerprint: fingerprint,
       status: String(cfg.status || 'SUCCESS'),
       ts: Date.now(),
-      finishedAt: stage4NowIso_(),
+      finishedAt: stage7NowIso_(),
       appliedChangesCount: Number(cfg.appliedChangesCount || 0),
       skippedChangesCount: Number(cfg.skippedChangesCount || 0),
       partial: !!cfg.partial,

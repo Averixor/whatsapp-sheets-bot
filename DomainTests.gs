@@ -1,5 +1,5 @@
 /**
- * DomainTests.gs — Stage 6A isolated domain test suite.
+ * DomainTests.gs — Stage 7A isolated domain test suite.
  */
 
 function _domainAssert_(condition, message) {
@@ -20,7 +20,7 @@ function runStage6ADomainTests_(options) {
   const opts = options || {};
   const report = {
     ok: true,
-    stage: 'stage6a-domain-tests',
+    stage: 'stage7a-domain-tests',
     ts: new Date().toISOString(),
     checks: [],
     warnings: []
@@ -59,8 +59,8 @@ function runStage6ADomainTests_(options) {
 
   _domainPush_(report, 'templates.preview vs final mode', function() {
     const data = { date: '01.01.2026' };
-    const preview = Stage4Templates_.preview('DAY_SUMMARY_HEADER', data, { maxLen: 5 });
-    const full = Stage4Templates_.render('DAY_SUMMARY_HEADER', data, { preview: false });
+    const preview = Stage7Templates_.preview('DAY_SUMMARY_HEADER', data, { maxLen: 5 });
+    const full = Stage7Templates_.render('DAY_SUMMARY_HEADER', data, { preview: false });
     _domainAssert_(preview.length <= 6, 'Preview не обрізається');
     _domainAssert_(full.indexOf('01.01.2026') !== -1, 'Final render пошкоджений');
     return 'preview=' + preview;
@@ -299,7 +299,7 @@ function runStage6ADomainTests_(options) {
   report.passed = report.checks.filter(function(item) { return item.status === 'OK'; }).length;
   report.failed = report.checks.filter(function(item) { return item.status === 'FAIL'; }).length;
   report.summary = report.ok
-    ? 'Stage 6A domain tests OK'
-    : 'Stage 6A domain tests FAIL';
+    ? 'Stage 7A domain tests OK'
+    : 'Stage 7A domain tests FAIL';
   return report;
 }

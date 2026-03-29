@@ -1,5 +1,5 @@
 /**
- * DataAccess.gs — canonical data-access layer для stage 3.
+ * DataAccess.gs — canonical data-access layer для stage 7.
  */
 
 const DataAccess_ = (function() {

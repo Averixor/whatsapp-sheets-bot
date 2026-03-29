@@ -1,6 +1,6 @@
 
 /**
- * PreviewLinkService.gs — stage 5 preview/link helper service.
+ * PreviewLinkService.gs — stage 7 preview/link helper service.
  */
 
 const PreviewLinkService_ = (function() {

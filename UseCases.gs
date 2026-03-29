@@ -1,9 +1,9 @@
 /**
- * UseCases.gs — application / use-case layer для stage 4.
+ * UseCases.gs — application / use-case layer для stage 7.
  */
 
-function _stage4RowsToChangeList_(rows, type) {
-  return stage4AsArray_(rows).map(function(item) {
+function _stage7RowsToChangeList_(rows, type) {
+  return stage7AsArray_(rows).map(function(item) {
     return {
       type: type || 'row',
       row: item.row,
@@ -14,8 +14,8 @@ function _stage4RowsToChangeList_(rows, type) {
   });
 }
 
-function _stage4GroupContiguousRows_(rows) {
-  const sorted = [...new Set(stage4AsArray_(rows).map(Number).filter(Number.isFinite))].sort(function(a, b) { return a - b; });
+function _stage7GroupContiguousRows_(rows) {
+  const sorted = [...new Set(stage7AsArray_(rows).map(Number).filter(Number.isFinite))].sort(function(a, b) { return a - b; });
   const groups = [];
   sorted.forEach(function(row) {
     const last = groups[groups.length - 1];
@@ -29,10 +29,10 @@ function _stage4GroupContiguousRows_(rows) {
   return groups;
 }
 
-function _stage4ApplyPanelState_(rowNumbers, sentValue, statusText) {
+function _stage7ApplyPanelState_(rowNumbers, sentValue, statusText) {
   const panel = DataAccess_.getSheet('SEND_PANEL', null, true);
   const schema = SheetSchemas_.get('SEND_PANEL');
-  const groups = _stage4GroupContiguousRows_(rowNumbers);
+  const groups = _stage7GroupContiguousRows_(rowNumbers);
 
   groups.forEach(function(group) {
     const count = group.rows.length;
@@ -50,15 +50,15 @@ function _stage4ApplyPanelState_(rowNumbers, sentValue, statusText) {
   return SendPanelRepository_.readRows();
 }
 
-function _stage4GetPanelReadyRows_() {
+function _stage7GetPanelReadyRows_() {
   return SendPanelRepository_.readRows().filter(function(item) {
     return shouldTreatRowAsReadyToOpen_(item);
   });
 }
 
-function _stage6AVerifyPanelStatuses_(rows, expectedStatus, expectedSent) {
+function _stage7AVerifyPanelStatuses_(rows, expectedStatus, expectedSent) {
   const selected = SendPanelRepository_.readRows().filter(function(item) {
-    return stage4AsArray_(rows).map(Number).indexOf(Number(item.row)) !== -1;
+    return stage7AsArray_(rows).map(Number).indexOf(Number(item.row)) !== -1;
   });
   const expectStatus = expectedStatus !== null && expectedStatus !== undefined && expectedStatus !== '';
   const expectSent = expectedSent !== null && expectedSent !== undefined;
@@ -76,9 +76,9 @@ function _stage6AVerifyPanelStatuses_(rows, expectedStatus, expectedSent) {
   };
 }
 
-function _stage6AVerifySendPanelBuild_(execution) {
+function _stage7AVerifySendPanelBuild_(execution) {
   const result = execution && execution.result || {};
-  const rows = stage4AsArray_(result.rows);
+  const rows = stage7AsArray_(result.rows);
   const stats = result.stats || SendPanelRepository_.buildStats(rows);
   return {
     ok: rows.length > 0 || !!result.persisted,
@@ -89,20 +89,20 @@ function _stage6AVerifySendPanelBuild_(execution) {
   };
 }
 
-function _stage4CreateNextMonthCore_(payload) {
+function _stage7CreateNextMonthCore_(payload) {
   const ss = SpreadsheetApp.getActive();
   const explicitSource = payload && payload.sourceMonth ? validateMonthSwitch_(payload.sourceMonth).sheet : getBotSheet_();
   const src = explicitSource;
   const srcName = String(src.getName()).trim();
 
-  _stage4Assert_(/^\d{2}$/.test(srcName), '_stage4CreateNextMonthCore_', { sheet: srcName }, `Активний лист "${srcName}" не є місячним`);
+  _stage7Assert_(/^\d{2}$/.test(srcName), '_stage7CreateNextMonthCore_', { sheet: srcName }, `Активний лист "${srcName}" не є місячним`);
 
   let nextNum = parseInt(srcName, 10) + 1;
   if (nextNum > 12) nextNum = 1;
   if (nextNum < 1) nextNum = 1;
 
   const nextName = String(nextNum).padStart(2, '0');
-  _stage4Assert_(!ss.getSheetByName(nextName), '_stage4CreateNextMonthCore_', { sourceMonth: srcName, nextMonth: nextName }, `Лист "${nextName}" вже існує`);
+  _stage7Assert_(!ss.getSheetByName(nextName), '_stage7CreateNextMonthCore_', { sourceMonth: srcName, nextMonth: nextName }, `Лист "${nextName}" вже існує`);
 
   const newSheet = src.copyTo(ss).setName(nextName);
   const srcMY = _inferMonthYearFromSheet_(src);
@@ -128,7 +128,7 @@ function _stage4CreateNextMonthCore_(payload) {
   };
 }
 
-const Stage4UseCases_ = (function() {
+const Stage7UseCases_ = (function() {
   function generateSendPanelForDate(options) {
     const payload = Object.assign({}, options || {});
     return WorkflowOrchestrator_.run({
@@ -199,7 +199,7 @@ const Stage4UseCases_ = (function() {
         };
       },
       verify: function(input, beforeState, plan, execution) {
-        return _stage6AVerifySendPanelBuild_(execution);
+        return _stage7AVerifySendPanelBuild_(execution);
       }
     });
   }
@@ -276,7 +276,7 @@ const Stage4UseCases_ = (function() {
         };
       },
       verify: function(input, beforeState, plan, execution) {
-        return _stage6AVerifySendPanelBuild_(execution);
+        return _stage7AVerifySendPanelBuild_(execution);
       }
     });
   }
@@ -331,7 +331,7 @@ const Stage4UseCases_ = (function() {
           success: true,
           message: `Сумісний маршрут pending виконано без зміни стану рядків`,
           result: result,
-          changes: _stage4RowsToChangeList_(targetRows, 'markPending'),
+          changes: _stage7RowsToChangeList_(targetRows, 'markPending'),
           affectedSheets: [CONFIG.SEND_PANEL_SHEET],
           affectedEntities: targetRows.map(function(item) { return item.fio; }),
           appliedChangesCount: result.updatedRows.length,
@@ -346,7 +346,7 @@ const Stage4UseCases_ = (function() {
         };
       },
       verify: function(input) {
-        return input.dryRun ? { ok: true, verifiedRows: 0, mismatchCount: 0 } : _stage6AVerifyPanelStatuses_(input.rowNumbers, null, false);
+        return input.dryRun ? { ok: true, verifiedRows: 0, mismatchCount: 0 } : _stage7AVerifyPanelStatuses_(input.rowNumbers, null, false);
       }
     });
   }
@@ -405,7 +405,7 @@ const Stage4UseCases_ = (function() {
           success: true,
           message: `Позначено ${result.updatedRows.length} рядків`,
           result: result,
-          changes: _stage4RowsToChangeList_(targetRows, 'markSent'),
+          changes: _stage7RowsToChangeList_(targetRows, 'markSent'),
           affectedSheets: [CONFIG.SEND_PANEL_SHEET],
           affectedEntities: targetRows.map(function(item) { return item.fio; }),
           appliedChangesCount: result.updatedRows.length,
@@ -421,7 +421,7 @@ const Stage4UseCases_ = (function() {
         };
       },
       verify: function(input) {
-        return input.dryRun ? { ok: true, verifiedRows: 0, mismatchCount: 0 } : _stage6AVerifyPanelStatuses_(input.rowNumbers, null, true);
+        return input.dryRun ? { ok: true, verifiedRows: 0, mismatchCount: 0 } : _stage7AVerifyPanelStatuses_(input.rowNumbers, null, true);
       }
     });
   }
@@ -476,7 +476,7 @@ const Stage4UseCases_ = (function() {
           success: true,
           message: `Знято статус відправки з ${result.updatedRows.length} рядків`,
           result: result,
-          changes: _stage4RowsToChangeList_(targetRows, 'markUnsent'),
+          changes: _stage7RowsToChangeList_(targetRows, 'markUnsent'),
           affectedSheets: [CONFIG.SEND_PANEL_SHEET],
           affectedEntities: targetRows.map(function(item) { return item.fio; }),
           appliedChangesCount: result.updatedRows.length,
@@ -491,7 +491,7 @@ const Stage4UseCases_ = (function() {
         };
       },
       verify: function(input) {
-        return input.dryRun ? { ok: true, verifiedRows: 0, mismatchCount: 0 } : _stage6AVerifyPanelStatuses_(input.rowNumbers, null, false);
+        return input.dryRun ? { ok: true, verifiedRows: 0, mismatchCount: 0 } : _stage7AVerifyPanelStatuses_(input.rowNumbers, null, false);
       }
     });
   }
@@ -515,7 +515,7 @@ const Stage4UseCases_ = (function() {
         };
       },
       readBefore: function() {
-        const readyRows = _stage4GetPanelReadyRows_();
+        const readyRows = _stage7GetPanelReadyRows_();
         return {
           readyRows: readyRows,
           allRows: SendPanelRepository_.readRows()
@@ -569,7 +569,7 @@ const Stage4UseCases_ = (function() {
             updatedRows: result.updatedRows,
             stats: result.stats
           },
-          changes: _stage4RowsToChangeList_(queue, 'markSentAuto'),
+          changes: _stage7RowsToChangeList_(queue, 'markSentAuto'),
           affectedSheets: [CONFIG.SEND_PANEL_SHEET],
           affectedEntities: queue.map(function(item) { return item.fio; }),
           appliedChangesCount: queue.length,
@@ -585,8 +585,8 @@ const Stage4UseCases_ = (function() {
       },
       verify: function(input, beforeState, plan, execution) {
         if (input.dryRun) return { ok: true, verifiedRows: 0, mismatchCount: 0 };
-        const updatedRows = stage4AsArray_(execution && execution.result && execution.result.updatedRows);
-        return _stage6AVerifyPanelStatuses_(updatedRows, null, true);
+        const updatedRows = stage7AsArray_(execution && execution.result && execution.result.updatedRows);
+        return _stage7AVerifyPanelStatuses_(updatedRows, null, true);
       }
     });
   }
@@ -904,7 +904,7 @@ const Stage4UseCases_ = (function() {
         return { payload: input, warnings: [] };
       },
       execute: function(input, beforeState, plan, context) {
-        const created = _stage4CreateNextMonthCore_(input);
+        const created = _stage7CreateNextMonthCore_(input);
         return {
           success: true,
           message: `Місяць "${created.createdMonth}" створено`,
@@ -1027,13 +1027,13 @@ const Stage4UseCases_ = (function() {
     };
 
     Object.keys(allDocProps).forEach(function(key) {
-      if (key.indexOf('STAGE5:JOB_RUNTIME:ACTIVE:') === 0) {
+      if (key.indexOf('STAGE7:JOB_RUNTIME:ACTIVE:') === 0) {
         docProps.deleteProperty(key);
         report.runtimeActiveCleared += 1;
         return;
       }
 
-      if (key.indexOf('STAGE6A:SAFETY:') === 0 && key.indexOf(':ACTIVE:') !== -1) {
+      if (key.indexOf('STAGE7A:SAFETY:') === 0 && key.indexOf(':ACTIVE:') !== -1) {
         docProps.deleteProperty(key);
         report.safetyActiveCleared += 1;
       }
@@ -1058,7 +1058,7 @@ const Stage4UseCases_ = (function() {
         const opts = options && typeof options === 'object' ? options : {};
         const abandoned = OperationRepository_.abandonAllActive('restart-bot', {
           excludeOperationId: opts.excludeOperationId || '',
-          excludeOperationIds: stage4AsArray_(opts.excludeOperationIds)
+          excludeOperationIds: stage7AsArray_(opts.excludeOperationIds)
         });
         report.stage7ActiveCleared = Number(abandoned && abandoned.total || 0);
       } catch (_) {}
@@ -1167,7 +1167,7 @@ const Stage4UseCases_ = (function() {
                 type: 'restartBot',
                 restarted: true,
                 month: month,
-                restartedAt: stage4NowIso_()
+                restartedAt: stage7NowIso_()
               }, restartReport),
               changes: [{
                 type: 'restartBot',

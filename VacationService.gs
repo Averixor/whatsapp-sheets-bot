@@ -1,6 +1,6 @@
 
 /**
- * VacationService.gs — stage 5 domain service for vacations / birthdays.
+ * VacationService.gs — stage 7 domain service for vacations / birthdays.
  */
 
 const VacationService_ = (function() {

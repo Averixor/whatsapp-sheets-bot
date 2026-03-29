@@ -6,8 +6,8 @@
 - Packaging policy: root bundle is GAS-ready; historical materials live under `_extras/history/`.
 
 ## Canonical layers
-- Application API: `Stage4ServerApi.gs`
-- Maintenance API: `Stage5MaintenanceApi.gs`
+- Application API: `Stage7ServerApi.gs`
+- Maintenance API: `Stage7MaintenanceApi.gs`
 - Compatibility facade: `SidebarServer.gs`
 - Use cases: `UseCases.gs`
 - Workflow orchestration: `WorkflowOrchestrator.gs`

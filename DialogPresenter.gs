@@ -1,6 +1,6 @@
 
 /**
- * DialogPresenter.gs — stage 5 presentation-only dialog layer.
+ * DialogPresenter.gs — stage 7 presentation-only dialog layer.
  */
 
 const DialogPresenter_ = (function() {

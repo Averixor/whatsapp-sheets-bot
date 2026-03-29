@@ -40,17 +40,17 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
   }
 
   function _appendAudit_(message, record) {
-    if (typeof Stage4AuditTrail_ !== 'object' || !Stage4AuditTrail_.record) return;
-    Stage4AuditTrail_.record({
+    if (typeof Stage7AuditTrail_ !== 'object' || !Stage7AuditTrail_.record) return;
+    Stage7AuditTrail_.record({
       timestamp: new Date(),
-      operationId: 'security-' + stage4UniqueId_('access'),
+      operationId: 'security-' + stage7UniqueId_('access'),
       scenario: 'security.accessViolation',
       level: 'SECURITY',
       status: 'BLOCKED',
       initiator: record.displayName || record.email || record.currentKey || 'unknown',
       dryRun: false,
       partial: false,
-      affectedSheets: [appGetCore('ALERTS_SHEET', 'ALERTS_LOG'), STAGE4_CONFIG.AUDIT_SHEET, CONFIG.LOG_SHEET],
+      affectedSheets: [appGetCore('ALERTS_SHEET', 'ALERTS_LOG'), STAGE7_CONFIG.AUDIT_SHEET, CONFIG.LOG_SHEET],
       affectedEntities: [record.personCallsign || record.displayName || record.email || record.currentKey || 'unknown'],
       appliedChangesCount: 1,
       skippedChangesCount: 0,
@@ -62,8 +62,8 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
   }
 
   function _appendLegacyLog_(message, record) {
-    if (typeof Stage4AuditTrail_ === 'object' && Stage4AuditTrail_.writeCompactLegacyLog) {
-      Stage4AuditTrail_.writeCompactLegacyLog({
+    if (typeof Stage7AuditTrail_ === 'object' && Stage7AuditTrail_.writeCompactLegacyLog) {
+      Stage7AuditTrail_.writeCompactLegacyLog({
         timestamp: new Date(),
         level: 'SECURITY',
         scenario: record.action || 'accessViolation',
@@ -138,7 +138,7 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
       'Прив\'язаний позивний: ' + (record.personCallsign || 'не задано'),
       '',
       'Деталі:',
-      stage4SafeStringify_(info || {}, 9000)
+      stage7SafeStringify_(info || {}, 9000)
     ].join('\n');
 
     var mailResult = { sent: false, recipients: [] };

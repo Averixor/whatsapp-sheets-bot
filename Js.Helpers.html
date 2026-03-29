@@ -111,7 +111,7 @@
 
       await loadAccessDescriptor();
 
-      const data = await Stage4Api.getMonths();
+      const data = await Stage7Api.getMonths();
 
       if (data?.months) STATE.monthsList = data.months;
 
@@ -259,7 +259,7 @@
       switch (action) {
         case 'generatePanel': {
           primeWhatsAppSenderTab();
-          const result = await ActionDispatcher.run('generatePanel', () => Stage4Api.generatePanelForDate({ date: _todayStr_() }));
+          const result = await ActionDispatcher.run('generatePanel', () => Stage7Api.generatePanelForDate({ date: _todayStr_() }));
           await displayPanelResult(result);
           break;
         }
@@ -297,7 +297,7 @@
           break;
 
         case 'createNextMonth': {
-          const result = await ActionDispatcher.run('createNextMonth', () => Stage4Api.createNextMonth({ switchToNewMonth: true }));
+          const result = await ActionDispatcher.run('createNextMonth', () => Stage7Api.createNextMonth({ switchToNewMonth: true }));
           if (result?.success) {
             logToConsole(`✓ ${result.message}`, 'success');
             showStandardResult('Створення місяця');
@@ -309,7 +309,7 @@
         }
 
         case 'vacationReminder': {
-          const result = await ActionDispatcher.run('checkVacationsAndBirthdays', () => Stage4Api.checkVacationsAndBirthdays(_todayStr_()));
+          const result = await ActionDispatcher.run('checkVacationsAndBirthdays', () => Stage7Api.checkVacationsAndBirthdays(_todayStr_()));
           if (result?.success) {
             showStandardResult('Нагадування про відпустки');
             displayInResult('vacationResult', Object.assign({}, result.vacations || {}, { message: result.message || '' }));
@@ -321,7 +321,7 @@
         }
 
         case 'birthdayCheck': {
-          const result = await ActionDispatcher.run('checkBirthdays', () => Stage4Api.checkVacationsAndBirthdays(_todayStr_()));
+          const result = await ActionDispatcher.run('checkBirthdays', () => Stage7Api.checkVacationsAndBirthdays(_todayStr_()));
           if (result?.success) {
             showStandardResult('🎂 Дні Народження');
             displayBirthdayResult(result.birthdays || {});

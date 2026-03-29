@@ -1,6 +1,6 @@
 
 /**
- * SpreadsheetActionsApi.gs — canonical public stage 5 spreadsheet/manual action API.
+ * SpreadsheetActionsApi.gs — canonical public stage 7 spreadsheet/manual action API.
  */
 
 function apiPreviewSelectionMessage(options) {

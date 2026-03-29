@@ -1,13 +1,13 @@
 
 /**
- * Reconciliation.gs — stage 5 reconciliation 2.0 with targeted safe repair.
+ * Reconciliation.gs — stage 7 reconciliation 2.0 with targeted safe repair.
  */
 
 const Reconciliation_ = (function () {
   function _indexRows(rows) {
     const map = {};
     const duplicates = [];
-    stage4AsArray_(rows).forEach(function (row) {
+    stage7AsArray_(rows).forEach(function (row) {
       const key = makeSendPanelKey_(row.fio, row.phone, row.code);
       if (!key || key === '||') return;
       if (!map[key]) map[key] = [];
@@ -106,8 +106,8 @@ const Reconciliation_ = (function () {
       actualRows: actualRows || [],
       issues: issues,
       summary: {
-        expectedCount: stage4AsArray_(expectedRows).length,
-        actualCount: stage4AsArray_(actualRows).length,
+        expectedCount: stage7AsArray_(expectedRows).length,
+        actualCount: stage7AsArray_(actualRows).length,
         duplicateCount: actualIndex.duplicates.length,
         issueCount: issues.length
       }
@@ -164,7 +164,7 @@ const Reconciliation_ = (function () {
 
   function _expectedRowMap(check) {
     const map = {};
-    stage4AsArray_(check.expectedRows).forEach(function (item) {
+    stage7AsArray_(check.expectedRows).forEach(function (item) {
       map[makeSendPanelKey_(item.fio, item.phone, item.code)] = item;
     });
     return map;
@@ -181,8 +181,8 @@ const Reconciliation_ = (function () {
 
   function previewRepairPlan(issues, options) {
     const opts = options || {};
-    const allowedTypes = stage4AsArray_(opts.issueTypes).map(String);
-    const selected = stage4AsArray_(issues).filter(function (item) {
+    const allowedTypes = stage7AsArray_(opts.issueTypes).map(String);
+    const selected = stage7AsArray_(issues).filter(function (item) {
       return !allowedTypes.length || allowedTypes.indexOf(item.type) !== -1;
     });
     return {
@@ -203,7 +203,7 @@ const Reconciliation_ = (function () {
   function previewRepair(options) {
     const opts = options || {};
     const check = compareMonthlyToSendPanel(String(opts.date || opts.dateStr || _todayStr_()).trim());
-    const allowedTypes = stage4AsArray_(opts.issueTypes).map(String);
+    const allowedTypes = stage7AsArray_(opts.issueTypes).map(String);
     const selected = check.issues.filter(function (item) {
       return !allowedTypes.length || allowedTypes.indexOf(item.type) !== -1;
     });
@@ -262,7 +262,7 @@ const Reconciliation_ = (function () {
 
   function _deleteRowsDescending(rows) {
     const panel = DataAccess_.getSheet('SEND_PANEL', null, true);
-    [...new Set(stage4AsArray_(rows).map(Number).filter(Number.isFinite))]
+    [...new Set(stage7AsArray_(rows).map(Number).filter(Number.isFinite))]
       .sort(function (a, b) { return b - a; })
       .forEach(function (row) { panel.deleteRow(row); });
   }
@@ -270,17 +270,17 @@ const Reconciliation_ = (function () {
   function repairSelectedIssues(options) {
     const opts = Object.assign({
       dryRun: true,
-      limit: STAGE5_CONFIG.MAX_SAFE_REPAIR_ITEMS
+      limit: STAGE7_CONFIG.MAX_SAFE_REPAIR_ITEMS
     }, options || {});
 
-    const operationId = String(opts.operationId || stage4UniqueId_('repairSelectedIssues'));
+    const operationId = String(opts.operationId || stage7UniqueId_('repairSelectedIssues'));
     const check = compareMonthlyToSendPanel(String(opts.date || opts.dateStr || _todayStr_()).trim());
     const expectedMap = _expectedRowMap(check);
     const actualMap = _actualRowMap(check);
-    const allowedTypes = stage4AsArray_(opts.issueTypes).map(String);
+    const allowedTypes = stage7AsArray_(opts.issueTypes).map(String);
     const selected = check.issues.filter(function (item) {
       return item.repairable && (!allowedTypes.length || allowedTypes.indexOf(item.type) !== -1);
-    }).slice(0, Number(opts.limit) || STAGE5_CONFIG.MAX_SAFE_REPAIR_ITEMS);
+    }).slice(0, Number(opts.limit) || STAGE7_CONFIG.MAX_SAFE_REPAIR_ITEMS);
 
     const repairs = [];
     const warnings = [];
@@ -325,7 +325,7 @@ const Reconciliation_ = (function () {
       }
 
       if (issue.type === 'duplicateSendPanelRow') {
-        const rows = stage4AsArray_(issue.rows).map(Number).filter(Number.isFinite).sort(function (a, b) { return a - b; });
+        const rows = stage7AsArray_(issue.rows).map(Number).filter(Number.isFinite).sort(function (a, b) { return a - b; });
         const rowsToDelete = rows.slice(1);
         if (opts.dryRun) {
           repairs.push({ type: issue.type, key: issue.key, rowsToDelete: rowsToDelete, dryRun: true });
@@ -369,9 +369,9 @@ const Reconciliation_ = (function () {
   }
 
   function verifyRepairResult(beforeCheck, afterCheck) {
-    const afterIssues = stage4AsArray_(afterCheck && afterCheck.issues);
+    const afterIssues = stage7AsArray_(afterCheck && afterCheck.issues);
     return {
-      beforeIssues: stage4AsArray_(beforeCheck && beforeCheck.issues).length,
+      beforeIssues: stage7AsArray_(beforeCheck && beforeCheck.issues).length,
       remainingIssues: afterIssues.length,
       criticalRemaining: afterIssues.filter(function (item) { return item.severity === 'CRITICAL'; }).length
     };

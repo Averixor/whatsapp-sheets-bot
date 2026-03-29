@@ -162,7 +162,7 @@
         return;
       }
 
-      const result = await ActionDispatcher.run('markPanelRowsAsSentAuto', () => Stage4Api.markAsSent([rowNum]), { showLoader: false });
+      const result = await ActionDispatcher.run('markPanelRowsAsSentAuto', () => Stage7Api.markAsSent([rowNum]), { showLoader: false });
       if (!result?.success) throw new Error(result?.error || 'Не вдалось зафіксувати відправку');
 
       if (Array.isArray(result.data)) {
@@ -190,7 +190,7 @@
       const rowNum = Number(item?.row);
       if (!rowNum) return;
 
-      const result = await ActionDispatcher.run('markPanelRowsAsUnsent', () => Stage4Api.markAsUnsent([rowNum]), { showLoader: false });
+      const result = await ActionDispatcher.run('markPanelRowsAsUnsent', () => Stage7Api.markAsUnsent([rowNum]), { showLoader: false });
       if (!result?.success) throw new Error(result?.error || 'Не вдалося позначити як не відправлено');
 
       if (Array.isArray(result.data)) {
@@ -244,7 +244,7 @@
 
           const rowNum = Number(item.row);
           if (rowNum) {
-            const result = await ActionDispatcher.run('markPanelRowsAsSentBatchItem', () => Stage4Api.markAsSent([rowNum]), { showLoader: false });
+            const result = await ActionDispatcher.run('markPanelRowsAsSentBatchItem', () => Stage7Api.markAsSent([rowNum]), { showLoader: false });
             if (Array.isArray(result?.data)) {
               setCurrentPanelData(result.data);
             }
@@ -616,7 +616,7 @@
 
     try {
       if (action === 'daySummary') {
-        const result = await ActionDispatcher.run('buildDaySummary', () => Stage4Api.buildDaySummary(STATE.selectedDate));
+        const result = await ActionDispatcher.run('buildDaySummary', () => Stage7Api.buildDaySummary(STATE.selectedDate));
         if (result?.success) {
           STATE.lastSummaryText = result.summary || '';
           STATE.lastSummaryDate = STATE.selectedDate;
@@ -625,7 +625,7 @@
           displayInResult('error', { error: result?.error || 'Невідома помилка' });
         }
       } else {
-        const result = await ActionDispatcher.run('buildDetailedSummary', () => Stage4Api.buildDetailedSummary(STATE.selectedDate));
+        const result = await ActionDispatcher.run('buildDetailedSummary', () => Stage7Api.buildDetailedSummary(STATE.selectedDate));
         if (result?.success) {
           STATE.lastDetailedText = result.summary || '';
           STATE.lastDetailedDate = STATE.selectedDate;
@@ -645,7 +645,7 @@
   async function showMonthSwitcher() {
     if (!STATE.monthsList.length) {
       try {
-        const data = await Stage4Api.getMonths();
+        const data = await Stage7Api.getMonths();
 
         if (data?.months) {
           STATE.monthsList = data.months;
@@ -702,7 +702,7 @@
     if (!select) return;
 
     try {
-      const result = await ActionDispatcher.run('switchBotToMonth', () => Stage4Api.switchMonth(select.value));
+      const result = await ActionDispatcher.run('switchBotToMonth', () => Stage7Api.switchMonth(select.value));
       if (result?.success) {
         STATE.currentMonth = result.month;
         updateMonthBadge(STATE.currentMonth);

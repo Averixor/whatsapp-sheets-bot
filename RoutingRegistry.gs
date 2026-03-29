@@ -18,7 +18,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
     getMonthsList: Object.freeze({
       routeName: 'sidebar.getMonthsList',
       publicApiMethod: 'apiStage4GetMonthsList',
-      useCase: 'Stage4UseCases_.listMonths',
+      useCase: 'Stage7UseCases_.listMonths',
       category: 'sidebar',
       compatibilityStatus: 'canonical',
       mode: 'read',
@@ -32,7 +32,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
     getSidebarData: Object.freeze({
       routeName: 'sidebar.getSidebarData',
       publicApiMethod: 'apiStage4GetSidebarData',
-      useCase: 'Stage4UseCases_.loadCalendarDay',
+      useCase: 'Stage7UseCases_.loadCalendarDay',
       category: 'sidebar',
       compatibilityStatus: 'canonical',
       mode: 'read',
@@ -46,7 +46,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
     getSendPanelData: Object.freeze({
       routeName: 'sidebar.getSendPanelData',
       publicApiMethod: 'apiStage4GetSendPanelData',
-      useCase: 'Stage4UseCases_.getSendPanelData',
+      useCase: 'Stage7UseCases_.getSendPanelData',
       category: 'sidebar',
       compatibilityStatus: 'canonical',
       mode: 'read',
@@ -60,7 +60,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
     generateSendPanelForDate: Object.freeze({
       routeName: 'sidebar.generateSendPanelForDate',
       publicApiMethod: 'apiGenerateSendPanelForDate',
-      useCase: 'Stage4UseCases_.generateSendPanelForDate',
+      useCase: 'Stage7UseCases_.generateSendPanelForDate',
       category: 'sidebar',
       compatibilityStatus: 'canonical',
       mode: 'write',
@@ -74,7 +74,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
     generateSendPanelForRange: Object.freeze({
       routeName: 'sidebar.generateSendPanelForRange',
       publicApiMethod: 'apiGenerateSendPanelForRange',
-      useCase: 'Stage4UseCases_.generateSendPanelForRange',
+      useCase: 'Stage7UseCases_.generateSendPanelForRange',
       category: 'sidebar',
       compatibilityStatus: 'canonical',
       mode: 'write',
@@ -88,7 +88,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
     markPanelRowsAsSent: Object.freeze({
       routeName: 'sidebar.markPanelRowsAsSent',
       publicApiMethod: 'apiMarkPanelRowsAsSent',
-      useCase: 'Stage4UseCases_.markPanelRowsAsSent',
+      useCase: 'Stage7UseCases_.markPanelRowsAsSent',
       category: 'sidebar',
       compatibilityStatus: 'canonical',
       mode: 'write',
@@ -102,7 +102,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
     markPanelRowsAsUnsent: Object.freeze({
       routeName: 'sidebar.markPanelRowsAsUnsent',
       publicApiMethod: 'apiMarkPanelRowsAsUnsent',
-      useCase: 'Stage4UseCases_.markPanelRowsAsUnsent',
+      useCase: 'Stage7UseCases_.markPanelRowsAsUnsent',
       category: 'sidebar',
       compatibilityStatus: 'canonical',
       mode: 'write',
@@ -116,7 +116,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
     sendPendingRows: Object.freeze({
       routeName: 'sidebar.sendPendingRows',
       publicApiMethod: 'apiSendPendingRows',
-      useCase: 'Stage4UseCases_.sendPendingRows',
+      useCase: 'Stage7UseCases_.sendPendingRows',
       category: 'sidebar',
       compatibilityStatus: 'canonical',
       mode: 'write',
@@ -130,7 +130,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
     buildDaySummary: Object.freeze({
       routeName: 'sidebar.buildDaySummary',
       publicApiMethod: 'apiBuildDaySummary',
-      useCase: 'Stage4UseCases_.buildDaySummary',
+      useCase: 'Stage7UseCases_.buildDaySummary',
       category: 'sidebar',
       compatibilityStatus: 'canonical',
       mode: 'read',
@@ -144,7 +144,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
     buildDetailedSummary: Object.freeze({
       routeName: 'sidebar.buildDetailedSummary',
       publicApiMethod: 'apiBuildDetailedSummary',
-      useCase: 'Stage4UseCases_.buildDetailedSummary',
+      useCase: 'Stage7UseCases_.buildDetailedSummary',
       category: 'sidebar',
       compatibilityStatus: 'canonical',
       mode: 'read',
@@ -158,7 +158,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
     openPersonCard: Object.freeze({
       routeName: 'sidebar.openPersonCard',
       publicApiMethod: 'apiOpenPersonCard',
-      useCase: 'Stage4UseCases_.openPersonCard',
+      useCase: 'Stage7UseCases_.openPersonCard',
       category: 'sidebar',
       compatibilityStatus: 'canonical',
       mode: 'read',
@@ -172,7 +172,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
     checkVacationsAndBirthdays: Object.freeze({
       routeName: 'sidebar.checkVacationsAndBirthdays',
       publicApiMethod: 'apiCheckVacationsAndBirthdays',
-      useCase: 'Stage4UseCases_.checkVacationsAndBirthdays',
+      useCase: 'Stage7UseCases_.checkVacationsAndBirthdays',
       category: 'sidebar',
       compatibilityStatus: 'canonical',
       mode: 'read',
@@ -186,7 +186,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
     switchBotToMonth: Object.freeze({
       routeName: 'sidebar.switchBotToMonth',
       publicApiMethod: 'apiStage4SwitchBotToMonth',
-      useCase: 'Stage4UseCases_.switchBotToMonth',
+      useCase: 'Stage7UseCases_.switchBotToMonth',
       category: 'sidebar',
       compatibilityStatus: 'canonical',
       mode: 'write',
@@ -200,7 +200,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
     createNextMonth: Object.freeze({
       routeName: 'sidebar.createNextMonth',
       publicApiMethod: 'apiCreateNextMonthStage4',
-      useCase: 'Stage4UseCases_.createNextMonth',
+      useCase: 'Stage7UseCases_.createNextMonth',
       category: 'sidebar',
       compatibilityStatus: 'canonical',
       mode: 'write',
@@ -214,7 +214,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
     runReconciliation: Object.freeze({
       routeName: 'sidebar.runReconciliation',
       publicApiMethod: 'apiRunReconciliation',
-      useCase: 'Stage4UseCases_.runReconciliation',
+      useCase: 'Stage7UseCases_.runReconciliation',
       category: 'sidebar',
       compatibilityStatus: 'canonical',
       mode: 'write-conditional',
@@ -238,18 +238,18 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
   }),
 
   maintenance: Object.freeze({
-    clearCache: Object.freeze({ routeName: 'maintenance.clearCache', publicApiMethod: 'apiStage5ClearCache', useCase: 'Stage4UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['clearCache'], verifyAfterWrite: false }),
-    clearLog: Object.freeze({ routeName: 'maintenance.clearLog', publicApiMethod: 'apiStage5ClearLog', useCase: 'Stage4UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['clearLog'], verifyAfterWrite: false }),
-    clearPhoneCache: Object.freeze({ routeName: 'maintenance.clearPhoneCache', publicApiMethod: 'apiStage5ClearPhoneCache', useCase: 'Stage4UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['clearPhoneCache'], verifyAfterWrite: false }),
-    restartBot: Object.freeze({ routeName: 'maintenance.restartBot', publicApiMethod: 'apiStage5RestartBot', useCase: 'Stage4UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['restartBot'], verifyAfterWrite: false }),
-    setupVacationTriggers: Object.freeze({ routeName: 'maintenance.setupVacationTriggers', publicApiMethod: 'apiStage5SetupVacationTriggers', useCase: 'Stage4UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['setupTrigger'], verifyAfterWrite: false }),
-    cleanupDuplicateTriggers: Object.freeze({ routeName: 'maintenance.cleanupDuplicateTriggers', publicApiMethod: 'apiStage5CleanupDuplicateTriggers', useCase: 'Stage4UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['cleanupTriggers'], verifyAfterWrite: false }),
-    debugPhones: Object.freeze({ routeName: 'maintenance.debugPhones', publicApiMethod: 'apiStage5DebugPhones', useCase: 'Stage4UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['debugPhones'], verifyAfterWrite: false }),
+    clearCache: Object.freeze({ routeName: 'maintenance.clearCache', publicApiMethod: 'apiStage5ClearCache', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['clearCache'], verifyAfterWrite: false }),
+    clearLog: Object.freeze({ routeName: 'maintenance.clearLog', publicApiMethod: 'apiStage5ClearLog', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['clearLog'], verifyAfterWrite: false }),
+    clearPhoneCache: Object.freeze({ routeName: 'maintenance.clearPhoneCache', publicApiMethod: 'apiStage5ClearPhoneCache', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['clearPhoneCache'], verifyAfterWrite: false }),
+    restartBot: Object.freeze({ routeName: 'maintenance.restartBot', publicApiMethod: 'apiStage5RestartBot', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['restartBot'], verifyAfterWrite: false }),
+    setupVacationTriggers: Object.freeze({ routeName: 'maintenance.setupVacationTriggers', publicApiMethod: 'apiStage5SetupVacationTriggers', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['setupTrigger'], verifyAfterWrite: false }),
+    cleanupDuplicateTriggers: Object.freeze({ routeName: 'maintenance.cleanupDuplicateTriggers', publicApiMethod: 'apiStage5CleanupDuplicateTriggers', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['cleanupTriggers'], verifyAfterWrite: false }),
+    debugPhones: Object.freeze({ routeName: 'maintenance.debugPhones', publicApiMethod: 'apiStage5DebugPhones', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['debugPhones'], verifyAfterWrite: false }),
     buildBirthdayLink: Object.freeze({ routeName: 'maintenance.buildBirthdayLink', publicApiMethod: 'apiStage5BuildBirthdayLink', useCase: 'apiStage5BuildBirthdayLink', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
-    runMaintenanceScenario: Object.freeze({ routeName: 'maintenance.runMaintenanceScenario', publicApiMethod: 'apiRunStage5MaintenanceScenario', useCase: 'Stage4UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write-conditional', lockRequired: true, dryRunSupported: true, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
-    installJobs: Object.freeze({ routeName: 'maintenance.installJobs', publicApiMethod: 'apiInstallStage5Jobs', useCase: 'Stage4Triggers_.installManagedTriggers', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
-    listJobs: Object.freeze({ routeName: 'maintenance.listJobs', publicApiMethod: 'apiListStage5Jobs', useCase: 'Stage4Triggers_.listJobs', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
-    runJob: Object.freeze({ routeName: 'maintenance.runJob', publicApiMethod: 'apiRunStage5Job', useCase: 'Stage4Triggers_.runJob', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write-conditional', lockRequired: true, dryRunSupported: true, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: true }),
+    runMaintenanceScenario: Object.freeze({ routeName: 'maintenance.runMaintenanceScenario', publicApiMethod: 'apiRunStage5MaintenanceScenario', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write-conditional', lockRequired: true, dryRunSupported: true, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
+    installJobs: Object.freeze({ routeName: 'maintenance.installJobs', publicApiMethod: 'apiInstallStage5Jobs', useCase: 'Stage7Triggers_.installManagedTriggers', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
+    listJobs: Object.freeze({ routeName: 'maintenance.listJobs', publicApiMethod: 'apiListStage5Jobs', useCase: 'Stage7Triggers_.listJobs', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
+    runJob: Object.freeze({ routeName: 'maintenance.runJob', publicApiMethod: 'apiRunStage5Job', useCase: 'Stage7Triggers_.runJob', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write-conditional', lockRequired: true, dryRunSupported: true, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: true }),
     healthCheck: Object.freeze({ routeName: 'maintenance.healthCheck', publicApiMethod: 'apiStage5HealthCheck', useCase: 'runStage5DiagnosticsByMode_', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: true, uiAllowed: true, clientActionAliases: ['healthCheck'], verifyAfterWrite: false }),
     runDiagnostics: Object.freeze({ routeName: 'maintenance.runDiagnostics', publicApiMethod: 'apiRunStage5Diagnostics', useCase: 'runStage5DiagnosticsByMode_', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: true, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
     runRegressionTests: Object.freeze({ routeName: 'maintenance.runRegressionTests', publicApiMethod: 'apiRunStage5RegressionTests', useCase: 'runStage5SmokeTests', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: true, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
@@ -257,16 +257,16 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
     listPendingRepairs: Object.freeze({ routeName: 'maintenance.listPendingRepairs', publicApiMethod: 'apiStage5ListPendingRepairs', useCase: 'OperationRepository_.listPendingRepairs', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['pendingRepairs'], verifyAfterWrite: false }),
     getOperationDetails: Object.freeze({ routeName: 'maintenance.getOperationDetails', publicApiMethod: 'apiStage5GetOperationDetails', useCase: 'OperationRepository_.getOperationDetails', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['operationDetails'], verifyAfterWrite: false }),
     runRepair: Object.freeze({ routeName: 'maintenance.runRepair', publicApiMethod: 'apiStage5RunRepair', useCase: 'OperationRepository_.runRepair', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write-conditional', lockRequired: true, dryRunSupported: true, uiAllowed: true, clientActionAliases: ['runRepair'], verifyAfterWrite: true }),
-    runLifecycleRetentionCleanup: Object.freeze({ routeName: 'maintenance.runLifecycleRetentionCleanup', publicApiMethod: 'apiStage5RunLifecycleRetentionCleanup', useCase: 'Stage4UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['lifecycleRetentionCleanup'], verifyAfterWrite: false })
+    runLifecycleRetentionCleanup: Object.freeze({ routeName: 'maintenance.runLifecycleRetentionCleanup', publicApiMethod: 'apiStage5RunLifecycleRetentionCleanup', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['lifecycleRetentionCleanup'], verifyAfterWrite: false })
   })
 });
 
-function _stage6ADeepCopy_(value) {
+function _stage7ADeepCopy_(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
 function getStage6ARoutingRegistry_() {
-  return _stage6ADeepCopy_(WASB_STAGE7_ROUTING_REGISTRY_STORE_);
+  return _stage7ADeepCopy_(WASB_STAGE7_ROUTING_REGISTRY_STORE_);
 }
 
 function getRoutingRegistry_() {

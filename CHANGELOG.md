@@ -3,7 +3,7 @@
 ## 2026-03-29 — 7.1.2-final-clean
 - removed extra historical markdown files from the root and reduced active documentation to 5 files
 - moved all historical reports under `_extras/history/`
-- removed Stage 3 legacy wrappers and retired unused spreadsheet/dialog compatibility layers
+- removed Stage 7 legacy wrappers and retired unused spreadsheet/dialog compatibility layers
 - extracted client security runtime into `Js.Security.html`
 - aligned metadata, diagnostics, and bundle index to the final clean layout
 

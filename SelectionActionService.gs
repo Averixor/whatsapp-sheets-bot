@@ -1,6 +1,6 @@
 
 /**
- * SelectionActionService.gs — stage 5 spreadsheet/manual selection domain service.
+ * SelectionActionService.gs — stage 7 spreadsheet/manual selection domain service.
  */
 
 const SelectionActionService_ = (function() {

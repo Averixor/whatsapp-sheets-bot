@@ -49,10 +49,10 @@ const PROJECT_DOCUMENTATION_MAP_ = Object.freeze({
 });
 
 const PROJECT_CANONICAL_LAYERS_ = Object.freeze({
-  applicationApi: 'Stage4ServerApi.gs',
-  sidebarApplicationApi: 'Stage4ServerApi.gs',
+  applicationApi: 'Stage7ServerApi.gs',
+  sidebarApplicationApi: 'Stage7ServerApi.gs',
   spreadsheetActionApi: 'SpreadsheetActionsApi.gs',
-  maintenanceApi: 'Stage5MaintenanceApi.gs',
+  maintenanceApi: 'Stage7MaintenanceApi.gs',
   useCases: 'UseCases.gs',
   workflow: 'WorkflowOrchestrator.gs',
   compatibility: 'SidebarServer.gs',
@@ -64,7 +64,7 @@ const PROJECT_CANONICAL_LAYERS_ = Object.freeze({
   dialogTemplates: 'DialogTemplates.gs'
 });
 
-const PROJECT_STAGE4_CANONICAL_API_MAP_ = Object.freeze({
+const PROJECT_STAGE7_CANONICAL_API_MAP_ = Object.freeze({
   application: Object.freeze([
     'apiStage4GetMonthsList',
     'apiStage4GetSidebarData',
@@ -149,8 +149,8 @@ const PROJECT_STAGE4_CANONICAL_API_MAP_ = Object.freeze({
   ])
 });
 
-const PROJECT_STAGE5_PUBLIC_API_MAP_ = Object.freeze({
-  application: PROJECT_STAGE4_CANONICAL_API_MAP_.application,
+const PROJECT_STAGE7_PUBLIC_API_MAP_ = Object.freeze({
+  application: PROJECT_STAGE7_CANONICAL_API_MAP_.application,
   spreadsheet: Object.freeze([
     'apiPreviewSelectionMessage',
     'apiPreviewMultipleMessages',
@@ -161,11 +161,11 @@ const PROJECT_STAGE5_PUBLIC_API_MAP_ = Object.freeze({
     'apiLogPreparedMessages',
     'apiRunSelectionDiagnostics'
   ]),
-  maintenance: PROJECT_STAGE4_CANONICAL_API_MAP_.maintenance,
-  compatibility: PROJECT_STAGE4_CANONICAL_API_MAP_.compatibility
+  maintenance: PROJECT_STAGE7_CANONICAL_API_MAP_.maintenance,
+  compatibility: PROJECT_STAGE7_CANONICAL_API_MAP_.compatibility
 });
 
-const PROJECT_STAGE4_CLIENT_ROUTING_POLICY_ = Object.freeze({
+const PROJECT_STAGE7_CLIENT_ROUTING_POLICY_ = Object.freeze({
   getMonthsList: 'apiStage4GetMonthsList',
   getSidebarData: 'apiStage4GetSidebarData',
   getSendPanelData: 'apiStage4GetSendPanelData',
@@ -196,7 +196,7 @@ const PROJECT_STAGE4_CLIENT_ROUTING_POLICY_ = Object.freeze({
   lifecycleRetentionCleanup: 'apiStage5RunLifecycleRetentionCleanup'
 });
 
-const PROJECT_STAGE5_CLIENT_ROUTING_POLICY_ = Object.freeze({
+const PROJECT_STAGE7_CLIENT_ROUTING_GROUPS_ = Object.freeze({
   sidebar: Object.freeze({
     getMonthsList: 'apiStage4GetMonthsList',
     getSidebarData: 'apiStage4GetSidebarData',
@@ -254,18 +254,18 @@ const PROJECT_STAGE5_CLIENT_ROUTING_POLICY_ = Object.freeze({
 });
 
 const PROJECT_MAINTENANCE_POLICY_ = Object.freeze({
-  policy: 'canonical-stage5-maintenance-with-stage4-compat-facade',
-  canonicalFile: 'Stage5MaintenanceApi.gs',
-  compatibilityFile: 'Stage4MaintenanceApi.gs',
-  canonicalMaintenanceApi: 'Stage5MaintenanceApi.gs',
-  compatibilityFacade: 'Stage4MaintenanceApi.gs',
+  policy: 'canonical-stage7-maintenance-with-stage7-compat-facade',
+  canonicalFile: 'Stage7MaintenanceApi.gs',
+  compatibilityFile: 'Stage7CompatibilityMaintenanceApi.gs',
+  canonicalMaintenanceApi: 'Stage7MaintenanceApi.gs',
+  compatibilityFacade: 'Stage7CompatibilityMaintenanceApi.gs',
   diagnosticsEntrypoint: 'apiRunStage5Diagnostics',
   healthEntrypoint: 'apiStage5HealthCheck'
 });
 
 const PROJECT_HARDENING_OVERLAY_ = Object.freeze({
-  label: 'Stage 6A hardening evolved into Stage 7 lifecycle baseline',
-  lineage: 'stage6a-to-stage7-lifecycle-overlay'
+  label: 'Stage 7A hardening evolved into Stage 7 lifecycle baseline',
+  lineage: 'stage7a-to-stage7-lifecycle-overlay'
 });
 
 const PROJECT_CLIENT_RUNTIME_POLICY_ = Object.freeze({
@@ -350,10 +350,10 @@ const PROJECT_BUNDLE_FILE_INDEX_ = Object.freeze([
   "SmokeTests.gs",
   "SpreadsheetActionsApi.gs",
   "SpreadsheetProtection.gs",
-  "Stage4Config.gs",
-  "Stage4MaintenanceApi.gs",
-  "Stage4ServerApi.gs",
-  "Stage5MaintenanceApi.gs",
+  "Stage7Config.gs",
+  "Stage7MaintenanceApi.gs",
+  "Stage7ServerApi.gs",
+  "Stage7MaintenanceApi.gs",
   "Styles.html",
   "Summaries.gs",
   "SummaryRepository.gs",
@@ -413,7 +413,7 @@ const PROJECT_BUNDLE_METADATA_ = Object.freeze({
     localWorkflowOptional: true,
     notes: ['The release zip must not include .git or node_modules.', 'Non-runtime documentation and import helpers live under _extras/.', 'No .clasp files are required or shipped for the web-editor workflow.']
   }),
-  maintenanceLayerStatus: 'stage5-canonical-maintenance-api',
+  maintenanceLayerStatus: 'stage7-canonical-maintenance-api',
   compatibilityPolicyMarker: 'stage7-compatible',
   sunsetPolicyMarker: 'stage7-sunset-governed',
   manifestIncluded: true,
@@ -453,19 +453,19 @@ function getStage5MaintenancePolicy_() {
 }
 
 function getStage4CanonicalApiMap_() {
-  return _projectMetaDeepCopy_(PROJECT_STAGE4_CANONICAL_API_MAP_);
+  return _projectMetaDeepCopy_(PROJECT_STAGE7_CANONICAL_API_MAP_);
 }
 
 function getStage5PublicApiMap_() {
-  return _projectMetaDeepCopy_(PROJECT_STAGE5_PUBLIC_API_MAP_);
+  return _projectMetaDeepCopy_(PROJECT_STAGE7_PUBLIC_API_MAP_);
 }
 
 function getStage4ClientRoutingPolicy_() {
-  return _projectMetaDeepCopy_(PROJECT_STAGE4_CLIENT_ROUTING_POLICY_);
+  return _projectMetaDeepCopy_(PROJECT_STAGE7_CLIENT_ROUTING_POLICY_);
 }
 
 function getStage5ClientRoutingPolicy_() {
-  return _projectMetaDeepCopy_(PROJECT_STAGE5_CLIENT_ROUTING_POLICY_);
+  return _projectMetaDeepCopy_(PROJECT_STAGE7_CLIENT_ROUTING_POLICY_);
 }
 
 function getStage5CanonicalLayerMap_() {

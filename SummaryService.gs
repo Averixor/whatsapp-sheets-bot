@@ -1,6 +1,6 @@
 
 /**
- * SummaryService.gs — stage 5 domain service for summaries.
+ * SummaryService.gs — stage 7 domain service for summaries.
  */
 
 const SummaryService_ = (function() {

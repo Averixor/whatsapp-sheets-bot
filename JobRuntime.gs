@@ -1,6 +1,6 @@
 
 /**
- * JobRuntime.gs — stage 5 runtime observability layer.
+ * JobRuntime.gs — stage 7 runtime observability layer.
  */
 
 const JobRuntime_ = (function() {
@@ -53,7 +53,7 @@ const JobRuntime_ = (function() {
     const ctx = Object.assign({
       source: 'manual',
       dryRun: false,
-      operationId: stage4UniqueId_(jobName || 'job')
+      operationId: stage7UniqueId_(jobName || 'job')
     }, context || {});
 
     const backoff = JobRuntimeRepository_.getBackoff(jobName);
