@@ -1,7 +1,7 @@
 /************ ПАНЕЛЬ ВІДПРАВКИ ************/
 
 var SEND_PANEL_STATE_STORE_PREFIX_ = 'SEND_PANEL_SENT_V2|';
-var SEND_PANEL_WHATSAPP_TARGET_ = 'WAPB_WHATSAPP_SENDER_TAB';
+var SEND_PANEL_WHATSAPP_TARGET_ = '_blank';
 
 function extractHyperlinkUrl_(formula) {
   const m = String(formula || '').match(/HYPERLINK\("([^"]+)"/i);
@@ -683,7 +683,7 @@ function showSendPanelDialog_(items) {
 
   <div class="stats">
     <div><b>Схема роботи:</b> відкриваєш повідомлення у WhatsApp, і рядок одразу автоматично фіксується як відправлений.</div>
-    <div class="hint">Використовується одна і та сама вкладка WhatsApp. Нові вкладки на кожне повідомлення не плодяться.</div>
+    <div class="hint">Панель намагається перевикористовувати вже відкриту вкладку WhatsApp. Якщо браузер не дозволить — повідомлення відкриється у новій вкладці.</div>
   </div>
 
   <div class="card">
@@ -706,6 +706,7 @@ function showSendPanelDialog_(items) {
     const items = ${safeJson};
     const WA_TARGET = ${safeTarget};
     let currentIndex = 0;
+    let waWindow = null;
 
     const progressEl = document.getElementById('progress');
     const metaEl = document.getElementById('meta');
@@ -764,8 +765,17 @@ function showSendPanelDialog_(items) {
 
     function prepareWhatsAppTab(){
       try {
-        window.open('https://web.whatsapp.com/', WA_TARGET);
-        log('🟢 Вкладка WhatsApp підготовлена: ' + WA_TARGET);
+        if (waWindow && !waWindow.closed) {
+          waWindow.focus();
+          log('🟢 Вкладка WhatsApp уже підготовлена');
+          return;
+        }
+        waWindow = window.open('https://web.whatsapp.com/', '_blank', 'noopener,noreferrer');
+        if (waWindow) {
+          log('🟢 Вкладка WhatsApp підготовлена');
+        } else {
+          log('✕ Браузер не дозволив автоматично відкрити вкладку WhatsApp');
+        }
       } catch (e) {
         log('✕ Не вдалося відкрити вкладку WhatsApp: ' + (e && e.message ? e.message : e));
       }
@@ -779,7 +789,12 @@ function showSendPanelDialog_(items) {
       }
 
       try {
-        window.open(item.url, WA_TARGET);
+        if (waWindow && !waWindow.closed) {
+          waWindow.location.replace(item.url);
+          waWindow.focus();
+        } else {
+          waWindow = window.open(item.url, '_blank', 'noopener,noreferrer');
+        }
         log('📱 Відкрито у вкладці WhatsApp: ' + (item.fio || 'без імені'));
 
         google.script.run

@@ -220,7 +220,7 @@ function openPersonCardByCallsignAndDate_(callsign, dateStr) {
           ${nextVacHtml}
 
           <div class="actions">
-            ${data.waLink ? `<a class="btn primary" href="${data.waLink}" target="WAPB_WHATSAPP_SENDER_TAB">WhatsApp</a>` : ''}
+            ${data.waLink ? `<a class="btn primary" href="${data.waLink}" target="_blank">WhatsApp</a>` : ''}
             <button class="btn" onclick="navigator.clipboard.writeText(document.getElementById('msg').innerText)">Копіювати</button>
             <button class="btn" onclick="openCalendar()">Календар</button>
             <button class="btn" onclick="openMainSidebar()">В меню</button>

@@ -294,9 +294,15 @@
         } catch (_) {}
       }
 
+      const opened = window.open(link, '_blank', 'noopener,noreferrer');
+      if (opened) {
+        STATE.waSenderWindow = opened;
+        return opened;
+      }
+
       const anchor = document.createElement('a');
       anchor.href = link;
-      anchor.target = WA_SENDER_TARGET;
+      anchor.target = '_blank';
       anchor.rel = 'noopener noreferrer';
       anchor.style.display = 'none';
       document.body.appendChild(anchor);
@@ -306,7 +312,9 @@
     } catch (error) {
       console.error('openLinkSafe error:', error);
       try {
-        return window.open(String(url || '').trim(), WA_SENDER_TARGET, 'noopener,noreferrer');
+        const fallback = window.open(String(url || '').trim(), '_blank', 'noopener,noreferrer');
+        if (fallback) STATE.waSenderWindow = fallback;
+        return fallback;
       } catch (_) {
         return null;
       }

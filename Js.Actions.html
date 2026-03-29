@@ -358,7 +358,7 @@
         : '';
 
     const waButton = data.waLink
-      ? `<a class="person-card__btn person-card__btn--primary" href="${escapeAttr(data.waLink)}" target="${escapeAttr(WA_SENDER_TARGET)}" rel="noopener noreferrer">WhatsApp</a>`
+      ? `<a class="person-card__btn person-card__btn--primary" href="${escapeAttr(data.waLink)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>`
       : `<button class="person-card__btn" type="button" disabled>WhatsApp</button>`;
 
     root.innerHTML = `

@@ -136,7 +136,7 @@
             <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
               ${isReady ? `<button class="result-link" onclick="SidebarApp.sendOneFromPanel(${index})" style="font-size:0.7rem; padding:4px 8px; border:none;">Надіслати</button>` : ''}
               ${isSent ? `<button class="result-link" onclick="SidebarApp.rejectSendFromPanel(${index})" style="font-size:0.7rem; padding:4px 8px; border:none;">Повернути</button>` : ''}
-              <a href="${escapeAttr(item.link)}" target="${escapeAttr(WA_SENDER_TARGET)}" rel="noopener noreferrer" style="font-size:0.7rem; color:#888; text-decoration:underline;">(відкрити)</a>
+              <a href="${escapeAttr(item.link)}" target="_blank" rel="noopener noreferrer" style="font-size:0.7rem; color:#888; text-decoration:underline;">(відкрити)</a>
             </div>` : ''}
         </div>
       `;
