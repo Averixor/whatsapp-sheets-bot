@@ -2,7 +2,7 @@
  * ServiceSheetsBootstrap.gs — explicit bootstrap helpers for service journal sheets.
  */
 
-function bootstrapWapbRuntimeAndAlertsSheets() {
+function bootstraWasbRuntimeAndAlertsSheets() {
   const runtime = (typeof JobRuntimeRepository_ === 'object' && JobRuntimeRepository_.ensureSheet)
     ? JobRuntimeRepository_.ensureSheet()
     : { success: false, sheet: (typeof STAGE5_CONFIG !== 'undefined' ? STAGE5_CONFIG.JOB_RUNTIME_SHEET : 'JOB_RUNTIME_LOG') };
@@ -25,7 +25,7 @@ function bootstrapWapbRuntimeAndAlertsSheets() {
 
 function apiStage5BootstrapRuntimeAndAlertsSheets() {
   if (typeof AccessControl_ === 'object' && AccessControl_.assertRoleAtLeast) AccessControl_.assertRoleAtLeast('admin', 'bootstrap runtime and alerts sheets');
-  const result = bootstrapWapbRuntimeAndAlertsSheets();
+  const result = bootstrapWasbRuntimeAndAlertsSheets();
   return _stage5BuildMaintenanceResponse_(
     result.success !== false,
     result.message || 'Службові листи журналів підготовлено',
