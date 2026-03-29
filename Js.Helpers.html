@@ -93,7 +93,7 @@
   }
 
   function getAccessRoleLabel_(role) {
-    const map = { viewer: 'Перегляд', operator: 'Оператор', admin: 'Адміністратор', sysadmin: 'Сис. адміністратор' };
+    const map = { viewer: 'Перегляд', operator: 'Оператор', admin: 'Адмін', sysadmin: 'Сис. адмін' };
     return map[String(role || 'viewer').trim().toLowerCase()] || 'Перегляд';
   }
 
