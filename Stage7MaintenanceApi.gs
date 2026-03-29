@@ -1,8 +1,7 @@
 /**
- * Stage7MaintenanceApi.gs — canonical maintenance / admin / diagnostics API with preserved Stage 7 naming inside the Stage 7.1 release.
+ * Stage7MaintenanceApi.gs — canonical maintenance / admin / diagnostics API for the Stage 7 baseline.
  *
- * The public entrypoints remain Stage 7–named by design. Stage7MaintenanceApi.gs is retained only
- * as a thin compatibility facade for historical callers.
+ * Historical Stage 4 / Stage 5 aliases live in Stage7CompatibilityMaintenanceApi.gs.
  * Compatibility wrappers live in Stage7CompatibilityMaintenanceApi.gs.
  */
 
@@ -43,7 +42,7 @@ function _stage7AssertAdminAccess_(actionLabel) {
 }
 
 
-function apiStage5BootstrapAccessSheet() {
+function apiStage7BootstrapAccessSheet() {
   _stage7AssertRole_('admin', 'bootstrap access sheet');
   const result = (typeof AccessControl_ === 'object' && AccessControl_.bootstrapSheet)
     ? AccessControl_.bootstrapSheet()
@@ -58,7 +57,7 @@ function apiStage5BootstrapAccessSheet() {
   );
 }
 
-function apiStage5GetAccessDescriptor() {
+function apiStage7GetAccessDescriptor() {
   const descriptor = (typeof AccessControl_ === 'object')
     ? AccessControl_.describe()
     : { role: 'guest', knownUser: false, reason: 'AccessControl_ недоступний' };
@@ -71,7 +70,7 @@ function apiStage5GetAccessDescriptor() {
   );
 }
 
-function apiStage5DebugAccess() {
+function apiStage7DebugAccess() {
   const descriptor = (typeof AccessControl_ === 'object')
     ? AccessControl_.describe()
     : { role: 'guest', knownUser: false, reason: 'AccessControl_ недоступний' };
@@ -84,7 +83,7 @@ function apiStage5DebugAccess() {
   );
 }
 
-function apiStage5ReportAccessViolation(actionName, details) {
+function apiStage7ReportAccessViolation(actionName, details) {
   const result = (typeof AccessEnforcement_ === 'object' && AccessEnforcement_.reportViolation)
     ? AccessEnforcement_.reportViolation(actionName || '', details || {})
     : { success: false, message: 'AccessEnforcement_ недоступний' };
@@ -98,7 +97,7 @@ function apiStage5ReportAccessViolation(actionName, details) {
   );
 }
 
-function apiStage5ApplyProtections(options) {
+function apiStage7ApplyProtections(options) {
   _stage7AssertRole_('sysadmin', 'apply spreadsheet protections');
   const result = (typeof applySpreadsheetProtections_ === 'function')
     ? applySpreadsheetProtections_(options || {})
@@ -113,32 +112,32 @@ function apiStage5ApplyProtections(options) {
   );
 }
 
-function apiStage5ClearCache() {
+function apiStage7ClearCache() {
   _stage7AssertRole_('sysadmin', 'clear cache');
   return Stage7UseCases_.runMaintenanceScenario({ type: 'cleanupCaches' });
 }
 
-function apiStage5ClearLog() {
+function apiStage7ClearLog() {
   _stage7AssertRole_('admin', 'clear log');
   return Stage7UseCases_.runMaintenanceScenario({ type: 'clearLog' });
 }
 
-function apiStage5ClearPhoneCache() {
+function apiStage7ClearPhoneCache() {
   _stage7AssertRole_('sysadmin', 'clear phone cache');
   return Stage7UseCases_.runMaintenanceScenario({ type: 'clearPhoneCache' });
 }
 
-function apiStage5RestartBot() {
+function apiStage7RestartBot() {
   _stage7AssertRole_('sysadmin', 'restart bot');
   return Stage7UseCases_.runMaintenanceScenario({ type: 'restartBot' });
 }
 
-function apiStage5SetupVacationTriggers() {
+function apiStage7SetupVacationTriggers() {
   _stage7AssertRole_('sysadmin', 'setup triggers');
   return Stage7UseCases_.runMaintenanceScenario({ type: 'setupVacationTriggers' });
 }
 
-function apiStage5CleanupDuplicateTriggers(functionName) {
+function apiStage7CleanupDuplicateTriggers(functionName) {
   _stage7AssertRole_('sysadmin', 'cleanup duplicate triggers');
   return Stage7UseCases_.runMaintenanceScenario({
     type: 'cleanupDuplicateTriggers',
@@ -146,12 +145,12 @@ function apiStage5CleanupDuplicateTriggers(functionName) {
   });
 }
 
-function apiStage5DebugPhones() {
+function apiStage7DebugPhones() {
   _stage7AssertRole_('maintainer', 'debug phones');
   return Stage7UseCases_.runMaintenanceScenario({ type: 'debugPhones' });
 }
 
-function apiStage5BuildBirthdayLink(phone, name) {
+function apiStage7BuildBirthdayLink(phone, name) {
   return WorkflowOrchestrator_.run({
     scenario: 'stage7BuildBirthdayLink',
     payload: {
@@ -165,7 +164,7 @@ function apiStage5BuildBirthdayLink(phone, name) {
     execute: function(input) {
       const legacy = normalizeServerResponse_(
         buildBirthdayLink(input.phone || '', input.name || ''),
-        'apiStage5BuildBirthdayLink',
+        'apiStage7BuildBirthdayLink',
         {}
       );
       const result = Object.assign({
@@ -188,15 +187,15 @@ function apiStage5BuildBirthdayLink(phone, name) {
   });
 }
 
-function apiRunStage5MaintenanceScenario(options) {
+function apiRunStage7MaintenanceScenario(options) {
   _stage7AssertRole_('admin', 'run maintenance scenario');
   return Stage7UseCases_.runMaintenanceScenario(options || {});
 }
 
-function apiInstallStage5Jobs() {
+function apiInstallStage7Jobs() {
   _stage7AssertRole_('sysadmin', 'install jobs');
   return WorkflowOrchestrator_.run({
-    scenario: 'installStage5Jobs',
+    scenario: 'installStage7Jobs',
     payload: {},
     write: true,
     execute: function() {
@@ -219,22 +218,22 @@ function apiInstallStage5Jobs() {
   });
 }
 
-function apiListStage5Jobs() {
+function apiListStage7Jobs() {
   _stage7AssertRole_('sysadmin', 'list jobs');
   return _stage7BuildMaintenanceResponse_(
     true,
     'Jobs перелічено',
     { jobs: Stage7Triggers_.listJobs() },
-    'listStage5Jobs'
+    'listStage7Jobs'
   );
 }
 
-function apiRunStage5Job(jobName, options) {
+function apiRunStage7Job(jobName, options) {
   _stage7AssertRole_('sysadmin', 'run job');
   return Stage7Triggers_.runJob(jobName, options || {});
 }
 
-function runStage5DiagnosticsByMode_(options) {
+function runStage7DiagnosticsByMode_(options) {
   const opts = options || {};
   const mode = String(opts.mode || 'full').toLowerCase();
 
@@ -247,7 +246,7 @@ function runStage5DiagnosticsByMode_(options) {
   return runStage5FullDiagnostics_(opts);
 }
 
-function apiStage5HealthCheck(options) {
+function apiStage7HealthCheck(options) {
   _stage7AssertRole_('maintainer', 'health check');
   const opts = Object.assign({}, options || {});
   const resolvedMode = opts.mode
@@ -256,7 +255,7 @@ function apiStage5HealthCheck(options) {
       ? 'full'
       : 'quick');
 
-  const report = runStage5DiagnosticsByMode_(Object.assign({}, opts, { mode: resolvedMode }));
+  const report = runStage7DiagnosticsByMode_(Object.assign({}, opts, { mode: resolvedMode }));
   return _stage7BuildMaintenanceResponse_(
     report.ok,
     report.summary || ('full' === resolvedMode ? 'Повну перевірку системи завершено' : 'Перевірку системи завершено'),
@@ -266,9 +265,9 @@ function apiStage5HealthCheck(options) {
   );
 }
 
-function apiRunStage5Diagnostics(options) {
+function apiRunStage7Diagnostics(options) {
   _stage7AssertRole_('maintainer', 'run diagnostics');
-  const report = runStage5DiagnosticsByMode_(options || {});
+  const report = runStage7DiagnosticsByMode_(options || {});
   return _stage7BuildMaintenanceResponse_(
     report.ok,
     report.summary || 'Діагностику системи завершено',
@@ -278,7 +277,7 @@ function apiRunStage5Diagnostics(options) {
   );
 }
 
-function apiRunStage5RegressionTests(options) {
+function apiRunStage7RegressionTests(options) {
   _stage7AssertRole_('admin', 'run regression tests');
   const report = runStage5SmokeTests(options || {});
   return _stage7BuildMaintenanceResponse_(
@@ -290,21 +289,21 @@ function apiRunStage5RegressionTests(options) {
   );
 }
 
-function apiListStage5JobRuntime() {
+function apiListStage7JobRuntime() {
   _stage7AssertRole_('admin', 'list job runtime');
   const report = JobRuntime_.buildRuntimeReport();
   return _stage7BuildMaintenanceResponse_(
     true,
     'Job runtime перелічено',
     report,
-    'listStage5JobRuntime',
+    'listStage7JobRuntime',
     [],
     { affectedSheets: [STAGE7_CONFIG.JOB_RUNTIME_SHEET] }
   );
 }
 
 
-function apiStage5ListPendingRepairs(filters) {
+function apiStage7ListPendingRepairs(filters) {
   _stage7AssertRole_('maintainer', 'list pending repairs');
   return _stage7BuildMaintenanceResponse_(
     true,
@@ -316,7 +315,7 @@ function apiStage5ListPendingRepairs(filters) {
   );
 }
 
-function apiStage5GetOperationDetails(operationId) {
+function apiStage7GetOperationDetails(operationId) {
   _stage7AssertRole_('maintainer', 'get operation details');
   const normalizedId = String(operationId || '').trim();
   if (!normalizedId) {
@@ -340,7 +339,7 @@ function apiStage5GetOperationDetails(operationId) {
   );
 }
 
-function apiStage5RunRepair(operationId, options) {
+function apiStage7RunRepair(operationId, options) {
   _stage7AssertRole_('sysadmin', 'run repair');
   if (typeof OperationRepository_ !== 'object') {
     return _stage7BuildMaintenanceResponse_(false, 'Сховище виправлення недоступне', { success: false }, 'stage7RunRepair', ['Сховище операцій недоступне']);
@@ -380,7 +379,7 @@ function apiStage5RunRepair(operationId, options) {
 }
 
 
-function apiStage5RunLifecycleRetentionCleanup() {
+function apiStage7RunLifecycleRetentionCleanup() {
   _stage7AssertRole_('sysadmin', 'cleanup lifecycle retention');
   return Stage7UseCases_.runMaintenanceScenario({ type: 'cleanupLifecycleRetention' });
 }

@@ -1,92 +1,55 @@
 /**
- * Stage7MaintenanceApi.gs — compatibility-only facade for historical Stage 7.x maintenance callers.
+ * Stage7CompatibilityMaintenanceApi.gs — historical maintenance aliases.
  *
- * Canonical maintenance entrypoints live in Stage7MaintenanceApi.gs.
- * This file intentionally keeps thin wrappers only.
+ * All Stage 4 / Stage 5 maintenance entrypoints are preserved here as thin wrappers,
+ * while the canonical maintenance surface lives in Stage7MaintenanceApi.gs.
  */
 
-function apiStage4ClearCache() {
-  return apiStage5ClearCache();
-}
+function apiStage4ClearCache() { return apiStage7ClearCache(); }
+function apiStage4ClearLog() { return apiStage7ClearLog(); }
+function apiStage4ClearPhoneCache() { return apiStage7ClearPhoneCache(); }
+function apiStage4RestartBot() { return apiStage7RestartBot(); }
+function apiStage4SetupVacationTriggers() { return apiStage7SetupVacationTriggers(); }
+function apiStage4CleanupDuplicateTriggers(functionName) { return apiStage7CleanupDuplicateTriggers(functionName || ''); }
+function apiStage4DebugPhones() { return apiStage7DebugPhones(); }
+function apiStage4BuildBirthdayLink(phone, name) { return apiStage7BuildBirthdayLink(phone || '', name || ''); }
+function apiRunMaintenanceScenario(options) { return apiRunStage7MaintenanceScenario(options || {}); }
+function apiInstallStage4Jobs() { return apiInstallStage7Jobs(); }
+function apiListStage4Jobs() { return apiListStage7Jobs(); }
+function apiRunStage4Job(jobName, options) { return apiRunStage7Job(jobName, options || {}); }
+function apiStage4HealthCheck(options) { return apiStage7HealthCheck(options || {}); }
+function apiRunStage4RegressionTests(options) { return apiRunStage7RegressionTests(options || {}); }
+function apiStage4ListPendingRepairs(filters) { return apiStage7ListPendingRepairs(filters || {}); }
+function apiStage4GetOperationDetails(operationId) { return apiStage7GetOperationDetails(operationId || ''); }
+function apiStage4RunRepair(operationId, options) { return apiStage7RunRepair(operationId || '', options || {}); }
+function apiStage4RunLifecycleRetentionCleanup() { return apiStage7RunLifecycleRetentionCleanup(); }
+function apiStage4GetAccessDescriptor() { return apiStage7GetAccessDescriptor(); }
+function apiStage4ApplyProtections(options) { return apiStage7ApplyProtections(options || {}); }
+function apiStage4BootstrapAccessSheet() { return apiStage7BootstrapAccessSheet(); }
 
-function apiStage4ClearLog() {
-  return apiStage5ClearLog();
-}
-
-function apiStage4ClearPhoneCache() {
-  return apiStage5ClearPhoneCache();
-}
-
-function apiStage4RestartBot() {
-  return apiStage5RestartBot();
-}
-
-function apiStage4SetupVacationTriggers() {
-  return apiStage5SetupVacationTriggers();
-}
-
-function apiStage4CleanupDuplicateTriggers(functionName) {
-  return apiStage5CleanupDuplicateTriggers(functionName || '');
-}
-
-function apiStage4DebugPhones() {
-  return apiStage5DebugPhones();
-}
-
-function apiStage4BuildBirthdayLink(phone, name) {
-  return apiStage5BuildBirthdayLink(phone || '', name || '');
-}
-
-function apiRunMaintenanceScenario(options) {
-  return apiRunStage5MaintenanceScenario(options || {});
-}
-
-function apiInstallStage4Jobs() {
-  return apiInstallStage5Jobs();
-}
-
-function apiListStage4Jobs() {
-  return apiListStage5Jobs();
-}
-
-function apiRunStage4Job(jobName, options) {
-  return apiRunStage5Job(jobName, options || {});
-}
-
-function apiStage4HealthCheck(options) {
-  return apiStage5HealthCheck(options || {});
-}
-
-function apiRunStage4RegressionTests(options) {
-  return apiRunStage5RegressionTests(options || {});
-}
-
-
-function apiStage4ListPendingRepairs(filters) {
-  return apiStage5ListPendingRepairs(filters || {});
-}
-
-function apiStage4GetOperationDetails(operationId) {
-  return apiStage5GetOperationDetails(operationId || '');
-}
-
-function apiStage4RunRepair(operationId, options) {
-  return apiStage5RunRepair(operationId || '', options || {});
-}
-
-
-function apiStage4RunLifecycleRetentionCleanup() {
-  return apiStage5RunLifecycleRetentionCleanup();
-}
-
-function apiStage4GetAccessDescriptor() {
-  return apiStage5GetAccessDescriptor();
-}
-
-function apiStage4ApplyProtections(options) {
-  return apiStage5ApplyProtections(options || {});
-}
-
-function apiStage4BootstrapAccessSheet() {
-  return apiStage5BootstrapAccessSheet();
-}
+function apiStage5BootstrapAccessSheet() { return apiStage7BootstrapAccessSheet(); }
+function apiStage5GetAccessDescriptor() { return apiStage7GetAccessDescriptor(); }
+function apiStage5DebugAccess() { return apiStage7DebugAccess(); }
+function apiStage5ReportAccessViolation(actionName, details) { return apiStage7ReportAccessViolation(actionName || '', details || {}); }
+function apiStage5ApplyProtections(options) { return apiStage7ApplyProtections(options || {}); }
+function apiStage5ClearCache() { return apiStage7ClearCache(); }
+function apiStage5ClearLog() { return apiStage7ClearLog(); }
+function apiStage5ClearPhoneCache() { return apiStage7ClearPhoneCache(); }
+function apiStage5RestartBot() { return apiStage7RestartBot(); }
+function apiStage5SetupVacationTriggers() { return apiStage7SetupVacationTriggers(); }
+function apiStage5CleanupDuplicateTriggers(functionName) { return apiStage7CleanupDuplicateTriggers(functionName || ''); }
+function apiStage5DebugPhones() { return apiStage7DebugPhones(); }
+function apiStage5BuildBirthdayLink(phone, name) { return apiStage7BuildBirthdayLink(phone || '', name || ''); }
+function apiRunStage5MaintenanceScenario(options) { return apiRunStage7MaintenanceScenario(options || {}); }
+function apiInstallStage5Jobs() { return apiInstallStage7Jobs(); }
+function apiListStage5Jobs() { return apiListStage7Jobs(); }
+function apiRunStage5Job(jobName, options) { return apiRunStage7Job(jobName, options || {}); }
+function apiStage5HealthCheck(options) { return apiStage7HealthCheck(options || {}); }
+function apiRunStage5Diagnostics(options) { return apiRunStage7Diagnostics(options || {}); }
+function apiRunStage5RegressionTests(options) { return apiRunStage7RegressionTests(options || {}); }
+function apiListStage5JobRuntime() { return apiListStage7JobRuntime(); }
+function apiStage5ListPendingRepairs(filters) { return apiStage7ListPendingRepairs(filters || {}); }
+function apiStage5GetOperationDetails(operationId) { return apiStage7GetOperationDetails(operationId || ''); }
+function apiStage5RunRepair(operationId, options) { return apiStage7RunRepair(operationId || '', options || {}); }
+function apiStage5RunLifecycleRetentionCleanup() { return apiStage7RunLifecycleRetentionCleanup(); }
+function apiStage5BootstrapRuntimeAndAlertsSheets() { return apiStage7BootstrapRuntimeAndAlertsSheets(); }

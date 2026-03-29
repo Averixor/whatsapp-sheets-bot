@@ -23,7 +23,7 @@ function bootstrapWasbRuntimeAndAlertsSheets() {
   };
 }
 
-function apiStage5BootstrapRuntimeAndAlertsSheets() {
+function apiStage7BootstrapRuntimeAndAlertsSheets() {
   if (typeof AccessControl_ === 'object' && AccessControl_.assertRoleAtLeast) AccessControl_.assertRoleAtLeast('admin', 'bootstrap runtime and alerts sheets');
   const result = bootstrapWasbRuntimeAndAlertsSheets();
   return _stage7BuildMaintenanceResponse_(

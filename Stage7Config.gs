@@ -1,41 +1,24 @@
 /**
- * Stage7Config.gs — уніфікована конфігурація застосунку
+ * Stage7Config.gs — unified application configuration for the canonical Stage 7 baseline.
  *
- * APP_CONFIG - єдине джерело правди
- * STAGE7_CONFIG / STAGE7_CONFIG / STAGE7A_CONFIG - містки сумісності
- *
- * Оновлено: додано функції для роботи з блокуваннями (marker-based + LockService)
- * Рекомендована схема для критичних операцій:
- *
- * function criticalOperation() {
- *   return withScriptLock_(function() {
- *     if (!tryAcquireLock('opName', ttlSec)) throw new Error('Вже виконується');
- *     try {
- *       // логіка
- *     } finally {
- *       releaseLock('opName');
- *     }
- *   }, timeoutMs);
- * }
+ * APP_CONFIG is the source of truth.
+ * STAGE7_CONFIG is the canonical flattened runtime view used by the current code.
+ * STAGE7_COMPAT_STAGE4_CONFIG / STAGE7_COMPAT_STAGE5_CONFIG / STAGE7A_CONFIG are compatibility views.
  */
 
-// ==========================================================
-// КАНОНІЧНА КОНФІГУРАЦІЯ
-// ==========================================================
-
-var APP_CONFIG = (typeof APP_CONFIG !== 'undefined') ? APP_CONFIG : null;
-var STAGE7_CONFIG = (typeof STAGE7_CONFIG !== 'undefined') ? STAGE7_CONFIG : null;
-var STAGE7A_CONFIG = (typeof STAGE7A_CONFIG !== 'undefined') ? STAGE7A_CONFIG : null;
+var APP_CONFIG = (typeof APP_CONFIG !== 'undefined' && APP_CONFIG) ? APP_CONFIG : null;
+var STAGE7_CONFIG = (typeof STAGE7_CONFIG !== 'undefined' && STAGE7_CONFIG) ? STAGE7_CONFIG : null;
+var STAGE7_COMPAT_STAGE4_CONFIG = (typeof STAGE7_COMPAT_STAGE4_CONFIG !== 'undefined' && STAGE7_COMPAT_STAGE4_CONFIG) ? STAGE7_COMPAT_STAGE4_CONFIG : null;
+var STAGE7_COMPAT_STAGE5_CONFIG = (typeof STAGE7_COMPAT_STAGE5_CONFIG !== 'undefined' && STAGE7_COMPAT_STAGE5_CONFIG) ? STAGE7_COMPAT_STAGE5_CONFIG : null;
+var STAGE7A_CONFIG = (typeof STAGE7A_CONFIG !== 'undefined' && STAGE7A_CONFIG) ? STAGE7A_CONFIG : null;
 
 function buildAppConfig_() {
   return Object.freeze({
-    CURRENT_VERSION: '7.1.2-final-clean',
-
+    CURRENT_VERSION: '7.1.2-canonical-selfcontained',
     CORE: Object.freeze({
       AUDIT_SHEET: 'AUDIT_LOG',
       AUDIT_HEADER_ROW: 1,
       RUNTIME_SHEET: 'JOB_RUNTIME_LOG',
-
       OPS_LOG_SHEET: 'OPS_LOG',
       ACTIVE_OPERATIONS_SHEET: 'ACTIVE_OPERATIONS',
       CHECKPOINTS_SHEET: 'CHECKPOINTS',
@@ -47,24 +30,19 @@ function buildAppConfig_() {
       AUDIT_RETENTION_DAYS: 180,
       JOB_BACKOFF_MINUTES: 30,
       JOB_FAILURE_ALERT_THRESHOLD: 3,
-
       MAX_BATCH_ROWS: 250,
       MAX_RANGE_DAYS: 31,
       MAX_REPAIR_ITEMS: 500,
       MAX_REPAIR_ITEMS_SAFE: 250,
       MAX_RUNTIME_HISTORY: 50,
       MAX_RUNTIME_LOG_ROWS: 500,
-
       LOCK_TIMEOUT_MS: 15000,
       IDEMPOTENCY_TTL_SEC: 1000,
       SAFETY_TTL_SEC: 1000,
-
       TEMPLATE_PREVIEW_LIMIT: 3800,
       ACTIVE_RUNTIME_MARKER: 'stage7-sidebar-runtime'
     }),
-
     FLAGS: Object.freeze({
-      // Stage 7
       stage7UseCases: true,
       auditTrail: true,
       reconciliation: true,
@@ -72,8 +50,6 @@ function buildAppConfig_() {
       canonicalMaintenanceApi: true,
       safeRepair: true,
       dryRunByDefaultForRepair: true,
-
-      // Stage 7
       spreadsheetActionApi: true,
       dialogPresentationLayer: true,
       clientModularIncludes: true,
@@ -84,14 +60,10 @@ function buildAppConfig_() {
       templateGovernance: true,
       compatibilitySunset: true,
       diagnostics3: true,
-
-      // Stage 7
       stage7OperationLifecycle: true,
       stage7SidebarFirst: true,
       stage7StaleDetector: true,
       stage7RepairFlow: true,
-
-      // Stage 7A
       routingRegistry: true,
       safetyRegistry: true,
       enrichedWriteContract: true,
@@ -99,7 +71,6 @@ function buildAppConfig_() {
       stage7ADomainTests: true,
       fullVerboseDiagnostics: true
     }),
-
     JOBS: Object.freeze({
       DAILY_VACATIONS_AND_BIRTHDAYS: 'dailyVacationsAndBirthdays',
       SCHEDULED_RECONCILIATION: 'scheduledReconciliation',
@@ -127,40 +98,24 @@ function getAppConfig_() {
   return ensureAppConfig_();
 }
 
-// ==========================================================
-// ФУНКЦІЇ ДОСТУПУ
-// ==========================================================
-
 function appGetFlag(flagName, defaultValue) {
   if (!flagName) return !!defaultValue;
-
   const flags = getAppConfig_().FLAGS || {};
-  if (Object.prototype.hasOwnProperty.call(flags, flagName)) {
-    return !!flags[flagName];
-  }
-
+  if (Object.prototype.hasOwnProperty.call(flags, flagName)) return !!flags[flagName];
   return !!defaultValue;
 }
 
 function appGetCore(key, defaultValue) {
   if (!key) return defaultValue;
-
   const core = getAppConfig_().CORE || {};
-  if (Object.prototype.hasOwnProperty.call(core, key)) {
-    return core[key];
-  }
-
+  if (Object.prototype.hasOwnProperty.call(core, key)) return core[key];
   return defaultValue;
 }
 
 function appGetJob(key, defaultValue) {
   if (!key) return defaultValue;
-
   const jobs = getAppConfig_().JOBS || {};
-  if (Object.prototype.hasOwnProperty.call(jobs, key)) {
-    return jobs[key];
-  }
-
+  if (Object.prototype.hasOwnProperty.call(jobs, key)) return jobs[key];
   return defaultValue;
 }
 
@@ -172,13 +127,57 @@ function appGetSafetyTtlSec() {
   return Number(appGetCore('SAFETY_TTL_SEC', 1000)) || 1000;
 }
 
-// ==========================================================
-// МІСТКИ СУМІСНОСТІ
-// ==========================================================
+function buildStage7Config_() {
+  const app = getAppConfig_();
+  return Object.freeze({
+    VERSION: '7.1.2-canonical-selfcontained',
+    CURRENT_VERSION: app.CURRENT_VERSION,
+    AUDIT_SHEET: app.CORE.AUDIT_SHEET,
+    AUDIT_HEADER_ROW: app.CORE.AUDIT_HEADER_ROW,
+    JOB_RUNTIME_SHEET: app.CORE.RUNTIME_SHEET,
+    RUNTIME_SHEET: app.CORE.RUNTIME_SHEET,
+    OPS_LOG_SHEET: app.CORE.OPS_LOG_SHEET,
+    ACTIVE_OPERATIONS_SHEET: app.CORE.ACTIVE_OPERATIONS_SHEET,
+    CHECKPOINTS_SHEET: app.CORE.CHECKPOINTS_SHEET,
+    ACCESS_SHEET: app.CORE.ACCESS_SHEET,
+    ALERTS_SHEET: app.CORE.ALERTS_SHEET,
+    OPS_HOT_RETENTION_DAYS: app.CORE.OPS_HOT_RETENTION_DAYS,
+    ACTIVE_STALE_GRACE_HOURS: app.CORE.ACTIVE_STALE_GRACE_HOURS,
+    LOG_RETENTION_DAYS: app.CORE.LOG_RETENTION_DAYS,
+    AUDIT_RETENTION_DAYS: app.CORE.AUDIT_RETENTION_DAYS,
+    JOB_BACKOFF_MINUTES: app.CORE.JOB_BACKOFF_MINUTES,
+    JOB_FAILURE_ALERT_THRESHOLD: app.CORE.JOB_FAILURE_ALERT_THRESHOLD,
+    MAX_BATCH_ROWS: app.CORE.MAX_BATCH_ROWS,
+    MAX_RANGE_DAYS: app.CORE.MAX_RANGE_DAYS,
+    MAX_REPAIR_ITEMS: app.CORE.MAX_REPAIR_ITEMS,
+    MAX_SAFE_REPAIR_ITEMS: app.CORE.MAX_REPAIR_ITEMS_SAFE,
+    MAX_RUNTIME_HISTORY: app.CORE.MAX_RUNTIME_HISTORY,
+    MAX_RUNTIME_LOG_ROWS: app.CORE.MAX_RUNTIME_LOG_ROWS,
+    LOCK_TIMEOUT_MS: app.CORE.LOCK_TIMEOUT_MS,
+    IDEMPOTENCY_TTL_SEC: app.CORE.IDEMPOTENCY_TTL_SEC,
+    SAFETY_TTL_SEC: app.CORE.SAFETY_TTL_SEC,
+    TEMPLATE_PREVIEW_LIMIT: app.CORE.TEMPLATE_PREVIEW_LIMIT,
+    ACTIVE_RUNTIME_MARKER: app.CORE.ACTIVE_RUNTIME_MARKER,
+    FEATURE_FLAGS: Object.freeze(Object.assign({}, app.FLAGS)),
+    JOBS: Object.freeze(Object.assign({}, app.JOBS)),
+    APP: app
+  });
+}
+
+function ensureStage7Config_() {
+  if (!STAGE7_CONFIG || typeof STAGE7_CONFIG !== 'object' || !STAGE7_CONFIG.FEATURE_FLAGS || !STAGE7_CONFIG.JOBS) {
+    STAGE7_CONFIG = buildStage7Config_();
+  }
+  return STAGE7_CONFIG;
+}
+
+function getStage7Config_() {
+  return ensureStage7Config_();
+}
 
 function buildStage4Config_() {
   return Object.freeze({
-    VERSION: '4.2.0',
+    VERSION: '4.2.0-compat',
     AUDIT_SHEET: appGetCore('AUDIT_SHEET', 'AUDIT_LOG'),
     AUDIT_HEADER_ROW: appGetCore('AUDIT_HEADER_ROW', 1),
     MAX_BATCH_ROWS: appGetCore('MAX_BATCH_ROWS', 250),
@@ -187,7 +186,6 @@ function buildStage4Config_() {
     LOCK_TIMEOUT_MS: appGetCore('LOCK_TIMEOUT_MS', 15000),
     IDEMPOTENCY_TTL_SEC: appGetIdempotencyTtlSec(),
     TEMPLATE_PREVIEW_LIMIT: appGetCore('TEMPLATE_PREVIEW_LIMIT', 3800),
-
     FEATURE_FLAGS: Object.freeze({
       stage7UseCases: appGetFlag('stage7UseCases', true),
       auditTrail: appGetFlag('auditTrail', true),
@@ -197,7 +195,6 @@ function buildStage4Config_() {
       safeRepair: appGetFlag('safeRepair', true),
       dryRunByDefaultForRepair: appGetFlag('dryRunByDefaultForRepair', true)
     }),
-
     JOBS: Object.freeze({
       DAILY_VACATIONS_AND_BIRTHDAYS: appGetJob('DAILY_VACATIONS_AND_BIRTHDAYS', 'dailyVacationsAndBirthdays'),
       SCHEDULED_RECONCILIATION: appGetJob('SCHEDULED_RECONCILIATION', 'scheduledReconciliation'),
@@ -212,27 +209,49 @@ function buildStage4Config_() {
   });
 }
 
+function getStage4Config_() {
+  if (!STAGE7_COMPAT_STAGE4_CONFIG || typeof STAGE7_COMPAT_STAGE4_CONFIG !== 'object' || !STAGE7_COMPAT_STAGE4_CONFIG.FEATURE_FLAGS) {
+    STAGE7_COMPAT_STAGE4_CONFIG = buildStage4Config_();
+  }
+  return STAGE7_COMPAT_STAGE4_CONFIG;
+}
+
 function buildStage5Config_() {
   return Object.freeze({
-    VERSION: '5.0.2-final-rc2',
+    VERSION: '5.0.2-final-rc2-compat',
     JOB_RUNTIME_SHEET: appGetCore('RUNTIME_SHEET', 'JOB_RUNTIME_LOG'),
     MAX_RUNTIME_HISTORY: appGetCore('MAX_RUNTIME_HISTORY', 50),
     MAX_RUNTIME_LOG_ROWS: appGetCore('MAX_RUNTIME_LOG_ROWS', 500),
     MAX_SAFE_REPAIR_ITEMS: appGetCore('MAX_REPAIR_ITEMS_SAFE', 250),
-
+    AUDIT_SHEET: appGetCore('AUDIT_SHEET', 'AUDIT_LOG'),
+    AUDIT_HEADER_ROW: appGetCore('AUDIT_HEADER_ROW', 1),
+    LOCK_TIMEOUT_MS: appGetCore('LOCK_TIMEOUT_MS', 15000),
+    IDEMPOTENCY_TTL_SEC: appGetIdempotencyTtlSec(),
+    MAX_BATCH_ROWS: appGetCore('MAX_BATCH_ROWS', 250),
+    MAX_RANGE_DAYS: appGetCore('MAX_RANGE_DAYS', 31),
+    MAX_REPAIR_ITEMS: appGetCore('MAX_REPAIR_ITEMS', 500),
+    TEMPLATE_PREVIEW_LIMIT: appGetCore('TEMPLATE_PREVIEW_LIMIT', 3800),
     FEATURE_FLAGS: Object.freeze({
       spreadsheetActionApi: appGetFlag('spreadsheetActionApi', true),
       dialogPresentationLayer: appGetFlag('dialogPresentationLayer', true),
-      clientModularIncludes: appGetFlag('clientModularIncludes', false),
-      clientMonolithicRuntime: appGetFlag('clientMonolithicRuntime', true),
+      clientModularIncludes: appGetFlag('clientModularIncludes', true),
+      clientMonolithicRuntime: appGetFlag('clientMonolithicRuntime', false),
       domainServices: appGetFlag('domainServices', true),
       reconciliation2: appGetFlag('reconciliation2', true),
       jobRuntime: appGetFlag('jobRuntime', true),
       templateGovernance: appGetFlag('templateGovernance', true),
       compatibilitySunset: appGetFlag('compatibilitySunset', true),
       diagnostics3: appGetFlag('diagnostics3', true)
-    })
+    }),
+    JOBS: Object.freeze(Object.assign({}, getStage7Config_().JOBS))
   });
+}
+
+function getStage5Config_() {
+  if (!STAGE7_COMPAT_STAGE5_CONFIG || typeof STAGE7_COMPAT_STAGE5_CONFIG !== 'object' || !STAGE7_COMPAT_STAGE5_CONFIG.FEATURE_FLAGS) {
+    STAGE7_COMPAT_STAGE5_CONFIG = buildStage5Config_();
+  }
+  return STAGE7_COMPAT_STAGE5_CONFIG;
 }
 
 function buildStage6AConfig_() {
@@ -240,7 +259,6 @@ function buildStage6AConfig_() {
     VERSION: '6A.0.0-hardening',
     SAFETY_TTL_SEC: appGetSafetyTtlSec(),
     ACTIVE_RUNTIME_MARKER: appGetCore('ACTIVE_RUNTIME_MARKER', 'stage7-sidebar-runtime'),
-
     FEATURE_FLAGS: Object.freeze({
       routingRegistry: appGetFlag('routingRegistry', true),
       safetyRegistry: appGetFlag('safetyRegistry', true),
@@ -252,13 +270,6 @@ function buildStage6AConfig_() {
   });
 }
 
-function getStage5Config_() {
-  if (!STAGE7_CONFIG || typeof STAGE7_CONFIG !== 'object' || !STAGE7_CONFIG.FEATURE_FLAGS) {
-    STAGE7_CONFIG = buildStage5Config_();
-  }
-  return STAGE7_CONFIG;
-}
-
 function getStage6AConfig_() {
   if (!STAGE7A_CONFIG || typeof STAGE7A_CONFIG !== 'object' || !STAGE7A_CONFIG.FEATURE_FLAGS) {
     STAGE7A_CONFIG = buildStage6AConfig_();
@@ -266,17 +277,15 @@ function getStage6AConfig_() {
   return STAGE7A_CONFIG;
 }
 
-STAGE7_CONFIG = buildStage4Config_();
-STAGE7_CONFIG = getStage5Config_();
+APP_CONFIG = ensureAppConfig_();
+STAGE7_CONFIG = ensureStage7Config_();
+STAGE7_COMPAT_STAGE4_CONFIG = getStage4Config_();
+STAGE7_COMPAT_STAGE5_CONFIG = getStage5Config_();
 STAGE7A_CONFIG = getStage6AConfig_();
-
-// ==========================================================
-// ФУНКЦІЇ ДОСТУПУ ДЛЯ СУМІСНОСТІ
-// ==========================================================
 
 function stage7GetFeatureFlag_(flagName, defaultValue) {
   if (!flagName) return !!defaultValue;
-  const flags = getStage5Config_().FEATURE_FLAGS || {};
+  const flags = getStage7Config_().FEATURE_FLAGS || {};
   if (Object.prototype.hasOwnProperty.call(flags, flagName)) return !!flags[flagName];
   return !!defaultValue;
 }
@@ -287,10 +296,6 @@ function stage7AGetFeatureFlag_(flagName, defaultValue) {
   if (Object.prototype.hasOwnProperty.call(flags, flagName)) return !!flags[flagName];
   return !!defaultValue;
 }
-
-// ==========================================================
-// ЗАСТАРІЛІ УТИЛІТИ (ЗБЕРЕЖЕНІ ДЛЯ СУМІСНОСТІ)
-// ==========================================================
 
 function stage7NowIso_() {
   return new Date().toISOString();
@@ -310,25 +315,14 @@ function stage7UniqueId_(prefix) {
 }
 
 function stage7SafeStringify_(value, maxLen) {
-  const hasExplicitLimit =
-    maxLen !== undefined &&
-    maxLen !== null &&
-    maxLen !== '';
-
-  const limit = hasExplicitLimit
-    ? Math.max(Number(maxLen) || 0, 0)
-    : 512;
-
+  const hasExplicitLimit = maxLen !== undefined && maxLen !== null && maxLen !== '';
+  const limit = hasExplicitLimit ? Math.max(Number(maxLen) || 0, 0) : 512;
   try {
     const text = JSON.stringify(value === undefined ? null : value);
-    return limit > 0 && text.length > limit
-      ? text.slice(0, limit) + '…'
-      : text;
+    return limit > 0 && text.length > limit ? text.slice(0, limit) + '…' : text;
   } catch (e) {
     const fallback = String(value);
-    return limit > 0 && fallback.length > limit
-      ? fallback.slice(0, limit) + '…'
-      : fallback;
+    return limit > 0 && fallback.length > limit ? fallback.slice(0, limit) + '…' : fallback;
   }
 }
 
@@ -340,57 +334,25 @@ function stage7AsArray_(value) {
 
 function stage7MergeWarnings_() {
   const merged = [];
-
   Array.prototype.slice.call(arguments).forEach(function(part) {
     stage7AsArray_(part).forEach(function(item) {
       if (!item) return;
       merged.push(String(item));
     });
   });
-
   return Array.from(new Set(merged));
 }
 
-// ==========================================================
-// КАНОНІЧНІ УТИЛІТИ
-// ==========================================================
-
 var AppUtils = (typeof AppUtils !== 'undefined' && AppUtils) ? AppUtils : Object.freeze({
-  nowIso: function() {
-    return new Date().toISOString();
-  },
-
-  generateId: function(prefix) {
-    return stage7UniqueId_(prefix || 'op');
-  },
-
-  safeStringify: function(value, maxLen) {
-    return stage7SafeStringify_(value, maxLen);
-  },
-
-  asArray: function(value) {
-    return stage7AsArray_(value);
-  },
-
-  mergeWarnings: function() {
-    return stage7MergeWarnings_.apply(null, arguments);
-  }
+  nowIso: function() { return new Date().toISOString(); },
+  generateId: function(prefix) { return stage7UniqueId_(prefix || 'op'); },
+  safeStringify: function(value, maxLen) { return stage7SafeStringify_(value, maxLen); },
+  asArray: function(value) { return stage7AsArray_(value); },
+  mergeWarnings: function() { return stage7MergeWarnings_.apply(null, arguments); }
 });
 
-// ==========================================================
-// ФУНКЦІЇ ДЛЯ РОБОТИ З БЛОКУВАННЯМИ
-// ==========================================================
-
-/** Префікс для ключів marker-lock у кеші/сховищі. */
 var LOCK_KEY_PREFIX = (typeof LOCK_KEY_PREFIX !== 'undefined' && LOCK_KEY_PREFIX) ? LOCK_KEY_PREFIX : 'app_lock_';
 
-/**
- * Нормалізує повний ключ marker-lock.
- *
- * @param {string} lockKey
- * @returns {string}
- * @private
- */
 function getFullLockKey_(lockKey) {
   if (!lockKey || typeof lockKey !== 'string') {
     throw new Error('Невірний ключ блокування');
@@ -398,11 +360,6 @@ function getFullLockKey_(lockKey) {
   return LOCK_KEY_PREFIX + lockKey;
 }
 
-/**
- * Безпечний alert: у ручному UI показує alert, без UI — пише у Logger.
- *
- * @param {string} message
- */
 function safeAlert_(message) {
   try {
     SpreadsheetApp.getUi().alert(message);
@@ -411,16 +368,6 @@ function safeAlert_(message) {
   }
 }
 
-/**
- * Перевіряє marker-lock у вказаному store.
- * Якщо marker прострочений або битий — автоматично видаляє.
- *
- * @param {*} store
- * @param {string} fullKey
- * @param {string} label
- * @returns {boolean}
- * @private
- */
 function checkLockStore_(store, fullKey, label) {
   const value = store.getProperty(fullKey);
   if (value === null) return false;

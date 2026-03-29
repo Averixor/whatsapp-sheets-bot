@@ -18,45 +18,45 @@ const DeprecatedRegistry_ = Object.freeze({
 });
 
 const STAGE7_MAINTENANCE_WRAPPER_MAP_ = Object.freeze([
-  DeprecatedRegistry_.add('apiStage4ClearCache', 'apiStage5ClearCache', 'Stage 7.2'),
-  DeprecatedRegistry_.add('apiStage4ClearLog', 'apiStage5ClearLog', 'Stage 7.2'),
-  DeprecatedRegistry_.add('apiStage4ClearPhoneCache', 'apiStage5ClearPhoneCache', 'Stage 7.2'),
-  DeprecatedRegistry_.add('apiStage4RestartBot', 'apiStage5RestartBot', 'Stage 7.2'),
-  DeprecatedRegistry_.add('apiStage4SetupVacationTriggers', 'apiStage5SetupVacationTriggers', 'Stage 7.2'),
-  DeprecatedRegistry_.add('apiStage4CleanupDuplicateTriggers', 'apiStage5CleanupDuplicateTriggers', 'Stage 7.2'),
-  DeprecatedRegistry_.add('apiStage4DebugPhones', 'apiStage5DebugPhones', 'Stage 7.2'),
-  DeprecatedRegistry_.add('apiStage4BuildBirthdayLink', 'apiStage5BuildBirthdayLink', 'Stage 7.2'),
-  DeprecatedRegistry_.add('apiStage4HealthCheck', 'apiStage5HealthCheck', 'Stage 7.2'),
-  DeprecatedRegistry_.add('apiRunStage4RegressionTests', 'apiRunStage5RegressionTests', 'Stage 7.2'),
-  DeprecatedRegistry_.add('apiStage4ListPendingRepairs', 'apiStage5ListPendingRepairs', 'Stage 7.2'),
-  DeprecatedRegistry_.add('apiStage4GetOperationDetails', 'apiStage5GetOperationDetails', 'Stage 7.2'),
-  DeprecatedRegistry_.add('apiStage4RunRepair', 'apiStage5RunRepair', 'Stage 7.2'),
-  DeprecatedRegistry_.add('apiStage4RunLifecycleRetentionCleanup', 'apiStage5RunLifecycleRetentionCleanup', 'Stage 7.2'),
-  DeprecatedRegistry_.add('apiStage4GetAccessDescriptor', 'apiStage5GetAccessDescriptor', 'Stage 7.2'),
-  DeprecatedRegistry_.add('apiStage4ApplyProtections', 'apiStage5ApplyProtections', 'Stage 7.2'),
-  DeprecatedRegistry_.add('apiStage4BootstrapAccessSheet', 'apiStage5BootstrapAccessSheet', 'Stage 7.2')
+  DeprecatedRegistry_.add('apiStage4ClearCache', 'apiStage7ClearCache', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4ClearLog', 'apiStage7ClearLog', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4ClearPhoneCache', 'apiStage7ClearPhoneCache', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4RestartBot', 'apiStage7RestartBot', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4SetupVacationTriggers', 'apiStage7SetupVacationTriggers', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4CleanupDuplicateTriggers', 'apiStage7CleanupDuplicateTriggers', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4DebugPhones', 'apiStage7DebugPhones', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4BuildBirthdayLink', 'apiStage7BuildBirthdayLink', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4HealthCheck', 'apiStage7HealthCheck', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiRunStage4RegressionTests', 'apiRunStage7RegressionTests', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4ListPendingRepairs', 'apiStage7ListPendingRepairs', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4GetOperationDetails', 'apiStage7GetOperationDetails', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4RunRepair', 'apiStage7RunRepair', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4RunLifecycleRetentionCleanup', 'apiStage7RunLifecycleRetentionCleanup', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4GetAccessDescriptor', 'apiStage7GetAccessDescriptor', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4ApplyProtections', 'apiStage7ApplyProtections', 'Stage 7.2'),
+  DeprecatedRegistry_.add('apiStage4BootstrapAccessSheet', 'apiStage7BootstrapAccessSheet', 'Stage 7.2')
 ]);
 
 const STAGE7_COMPATIBILITY_MAP_ = Object.freeze([
   {
     name: 'getMonthsList',
-    replacement: 'apiStage4GetMonthsList()',
+    replacement: 'apiStage7GetMonthsList()',
     scope: 'SidebarServer.gs',
     status: 'compatibility-only',
     uiAllowed: false,
     risk: 'medium',
     sunset: 'remove after all external sidebar callers are migrated',
-    verifySourceToken: 'apiStage4GetMonthsList'
+    verifySourceToken: 'apiStage7GetMonthsList'
   },
   {
     name: 'getSidebarData',
-    replacement: 'apiStage4GetSidebarData(dateStr)',
+    replacement: 'apiStage7GetSidebarData(dateStr)',
     scope: 'SidebarServer.gs',
     status: 'compatibility-only',
     uiAllowed: false,
     risk: 'medium',
     sunset: 'remove after all external sidebar callers are migrated',
-    verifySourceToken: 'apiStage4GetSidebarData'
+    verifySourceToken: 'apiStage7GetSidebarData'
   },
   {
     name: 'generateSendPanelSidebar',
@@ -70,13 +70,13 @@ const STAGE7_COMPATIBILITY_MAP_ = Object.freeze([
   },
   {
     name: 'getSendPanelSidebarData',
-    replacement: 'apiStage4GetSendPanelData()',
+    replacement: 'apiStage7GetSendPanelData()',
     scope: 'SidebarServer.gs',
     status: 'compatibility-only',
     uiAllowed: false,
     risk: 'medium',
     sunset: 'remove after all external sidebar callers are migrated',
-    verifySourceToken: 'apiStage4GetSendPanelData'
+    verifySourceToken: 'apiStage7GetSendPanelData'
   },
   {
     name: 'getDaySummaryByDate',
@@ -110,23 +110,23 @@ const STAGE7_COMPATIBILITY_MAP_ = Object.freeze([
   },
   {
     name: 'createNextMonthSheetSidebar',
-    replacement: 'apiCreateNextMonthStage4({ switchToNewMonth: true })',
+    replacement: 'apiStage7CreateNextMonth({ switchToNewMonth: true })',
     scope: 'SidebarServer.gs',
     status: 'compatibility-only',
     uiAllowed: false,
     risk: 'medium',
     sunset: 'remove after all external sidebar callers are migrated',
-    verifySourceToken: 'apiCreateNextMonthStage4'
+    verifySourceToken: 'apiStage7CreateNextMonth'
   },
   {
     name: 'switchBotToMonthSidebar',
-    replacement: 'apiStage4SwitchBotToMonth(monthSheetName)',
+    replacement: 'apiStage7SwitchBotToMonth(monthSheetName)',
     scope: 'SidebarServer.gs',
     status: 'compatibility-only',
     uiAllowed: false,
     risk: 'medium',
     sunset: 'remove after all external sidebar callers are migrated',
-    verifySourceToken: 'apiStage4SwitchBotToMonth'
+    verifySourceToken: 'apiStage7SwitchBotToMonth'
   },
   {
     name: 'markMultipleAsSentFromSidebar',
@@ -150,17 +150,17 @@ const STAGE7_COMPATIBILITY_MAP_ = Object.freeze([
   },
   {
     name: 'apiGetMonthsList',
-    replacement: 'apiStage4GetMonthsList()',
+    replacement: 'apiStage7GetMonthsList()',
     scope: 'removed Stage7 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
     risk: 'medium',
     sunset: 'remove after all stage 7 callers are migrated',
-    verifySourceToken: 'apiStage4GetMonthsList'
+    verifySourceToken: 'apiStage7GetMonthsList'
   },
   {
     name: 'apiGetSidebarData',
-    replacement: 'apiStage4GetSidebarData(dateStr)',
+    replacement: 'apiStage7GetSidebarData(dateStr)',
     scope: 'removed Stage7 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
@@ -180,7 +180,7 @@ const STAGE7_COMPATIBILITY_MAP_ = Object.freeze([
   },
   {
     name: 'apiGetSendPanelData',
-    replacement: 'apiStage4GetSendPanelData()',
+    replacement: 'apiStage7GetSendPanelData()',
     scope: 'removed Stage7 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
@@ -260,7 +260,7 @@ const STAGE7_COMPATIBILITY_MAP_ = Object.freeze([
   },
   {
     name: 'apiSwitchBotToMonth',
-    replacement: 'apiStage4SwitchBotToMonth(monthSheetName)',
+    replacement: 'apiStage7SwitchBotToMonth(monthSheetName)',
     scope: 'removed Stage7 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,
@@ -270,7 +270,7 @@ const STAGE7_COMPATIBILITY_MAP_ = Object.freeze([
   },
   {
     name: 'apiCreateNextMonth',
-    replacement: 'apiCreateNextMonthStage4(options)',
+    replacement: 'apiStage7CreateNextMonth(options)',
     scope: 'removed Stage7 legacy api',
     status: 'legacy-api-wrapper',
     uiAllowed: false,

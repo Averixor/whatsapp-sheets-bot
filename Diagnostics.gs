@@ -1650,7 +1650,7 @@ function debugSendPanelNow() {
   let apiError = '';
 
   try {
-    const response = apiStage4GetSendPanelData();
+    const response = apiStage7GetSendPanelData();
     const result = (response && response.data && response.data.result) ? response.data.result : {};
     apiRowsCount = Array.isArray(result.rows) ? result.rows.length : 0;
     apiMonth = result.month || '';
@@ -1705,7 +1705,7 @@ function debugSendPanelBridge_() {
   }
 
   try {
-    const apiResponse = apiStage4GetSendPanelData();
+    const apiResponse = apiStage7GetSendPanelData();
     out.apiSuccess = !!apiResponse?.success;
     out.apiRowsCount = Array.isArray(apiResponse?.data?.result?.rows)
       ? apiResponse.data.result.rows.length
@@ -2072,9 +2072,9 @@ function _diagBuildStage7CoreChecks_(options) {
   _stage7PushCheck_(checks, 'OperationRepository available', typeof OperationRepository_ === 'object' ? 'OK' : 'FAIL', typeof OperationRepository_, 'Підключіть OperationRepository.gs');
   _stage7PushCheck_(checks, 'WorkflowOrchestrator available', typeof WorkflowOrchestrator_ === 'object' ? 'OK' : 'FAIL', typeof WorkflowOrchestrator_, 'Перевірте WorkflowOrchestrator.gs');
 
-  var hasList = _stage7HasFn_('apiStage5ListPendingRepairs');
-  var hasRepair = _stage7HasFn_('apiStage5RunRepair');
-  var hasRetentionCleanup = _stage7HasFn_('apiStage5RunLifecycleRetentionCleanup');
+  var hasList = _stage7HasFn_('apiStage7ListPendingRepairs');
+  var hasRepair = _stage7HasFn_('apiStage7RunRepair');
+  var hasRetentionCleanup = _stage7HasFn_('apiStage7RunLifecycleRetentionCleanup');
   _stage7PushCheck_(checks, 'Lifecycle maintenance API', hasList && hasRepair ? 'OK' : 'FAIL', 'list=' + hasList + ', repair=' + hasRepair, 'Додайте maintenance API для repair flow');
   _stage7PushCheck_(checks, 'Lifecycle retention cleanup API', hasRetentionCleanup ? 'OK' : 'WARN', 'cleanup=' + hasRetentionCleanup, 'Додайте окремий maintenance flow для lifecycle retention cleanup');
   _stage7PushCheck_(checks, 'Stage7 compatibility facade declared', _stage7HasFn_('apiStage4ClearCache') && _stage7HasFn_('apiStage4HealthCheck') ? 'OK' : 'WARN', 'wrappers preserved=' + (_stage7HasFn_('apiStage4ClearCache') && _stage7HasFn_('apiStage4HealthCheck')), 'Compatibility wrappers можуть лишатися лише для зовнішніх історичних викликів');

@@ -1,17 +1,7 @@
 /************ ПАНЕЛЬ ВІДПРАВКИ ************/
 
 var SEND_PANEL_STATE_STORE_PREFIX_ = 'SEND_PANEL_SENT_V2|';
-var SEND_PANEL_WHATSAPP_TARGET_ = 'WA_SENDER_WINDOW';
-
-
-function getSendPanelWhatsAppTarget_() {
-  try {
-    if (typeof SendPanelConstants_ !== 'undefined' && SendPanelConstants_ && SendPanelConstants_.WA_SENDER_TARGET) {
-      return String(SendPanelConstants_.WA_SENDER_TARGET).trim() || 'WA_SENDER_WINDOW';
-    }
-  } catch (_) {}
-  return String(SEND_PANEL_WHATSAPP_TARGET_ || 'WA_SENDER_WINDOW').trim() || 'WA_SENDER_WINDOW';
-}
+var SEND_PANEL_WHATSAPP_TARGET_ = '_blank';
 
 function extractHyperlinkUrl_(formula) {
   const m = String(formula || '').match(/HYPERLINK\("([^"]+)"/i);
@@ -784,8 +774,7 @@ function showSendPanelDialog_(items) {
           log('🟢 Вкладка WhatsApp уже підготовлена');
           return;
         }
-        waWindow = window.open('https://web.whatsapp.com/', WA_SENDER_TARGET, 'noopener,noreferrer')
-          || window.open('https://web.whatsapp.com/', '_blank', 'noopener,noreferrer');
+        waWindow = window.open('https://web.whatsapp.com/', WA_SENDER_TARGET, 'noopener,noreferrer');
         if (waWindow) {
           log('🟢 Вкладка WhatsApp підготовлена');
         } else {
@@ -819,8 +808,7 @@ function showSendPanelDialog_(items) {
           waWindow.location.replace(item.url);
           waWindow.focus();
         } else {
-          waWindow = window.open(item.url, WA_SENDER_TARGET, 'noopener,noreferrer')
-            || window.open(item.url, '_blank', 'noopener,noreferrer');
+          waWindow = window.open(item.url, WA_SENDER_TARGET, 'noopener,noreferrer');
           if (waWindow) {
             try { waWindow.focus(); } catch (_) {}
           }

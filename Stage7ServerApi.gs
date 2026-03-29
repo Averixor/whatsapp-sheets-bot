@@ -1,23 +1,23 @@
 /**
- * Stage7ServerApi.gs — stable sidebar / operational application API retained in the final baseline.
+ * Stage7ServerApi.gs — canonical Stage 7 application API.
  *
- * В этом файле живут только прикладные сценарии.
- * Maintenance / admin / diagnostics routes live in Stage7MaintenanceApi.gs; Stage7MaintenanceApi.gs remains compatibility-only.
+ * Stage 7 is the only canonical application surface in this baseline.
+ * Historical Stage 4 aliases live in Stage7CompatibilityApi.gs.
  */
 
-function apiStage4GetMonthsList() {
+function apiStage7GetMonthsList() {
   return Stage7UseCases_.listMonths({});
 }
 
-function apiStage4GetSidebarData(dateStr) {
+function apiStage7GetSidebarData(dateStr) {
   return Stage7UseCases_.loadCalendarDay({ date: dateStr || _todayStr_() });
 }
 
-function apiStage4GetSendPanelData() {
+function apiStage7GetSendPanelData() {
   return Stage7UseCases_.getSendPanelData({});
 }
 
-function apiStage4SwitchBotToMonth(monthSheetName) {
+function apiStage7SwitchBotToMonth(monthSheetName) {
   return Stage7UseCases_.switchBotToMonth({ month: monthSheetName || '' });
 }
 
@@ -68,7 +68,7 @@ function apiCheckVacationsAndBirthdays(dateStr) {
   return Stage7UseCases_.checkVacationsAndBirthdays({ date: dateStr || _todayStr_() });
 }
 
-function apiCreateNextMonthStage4(options) {
+function apiStage7CreateNextMonth(options) {
   return Stage7UseCases_.createNextMonth(options || {});
 }
 

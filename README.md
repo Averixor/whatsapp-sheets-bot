@@ -21,11 +21,11 @@ Historical reports and one-off notes were moved to `_extras/history/` so the roo
 ## Quick import checklist
 1. Upload all root `.gs`, `.html`, and `appsscript.json` files into the GAS web editor.
 2. Keep only `_extras/history/` as reference; it is not a runtime dependency.
-3. Run `apiStage5BootstrapRuntimeAndAlertsSheets()` once.
-4. Run `apiStage5BootstrapAccessSheet()` once.
+3. Run `apiStage7BootstrapRuntimeAndAlertsSheets()` once.
+4. Run `apiStage7BootstrapAccessSheet()` once.
 5. Fill `ACCESS` with roles and user keys.
 6. Verify the `🧑‍💻` block in the sidebar for each user.
-7. Enable protections with `apiStage5ApplyProtections({ dryRun: false })` when the access sheet is ready.
+7. Enable protections with `apiStage7ApplyProtections({ dryRun: false })` when the access sheet is ready.
 
 ## ACCESS columns
 Required columns:

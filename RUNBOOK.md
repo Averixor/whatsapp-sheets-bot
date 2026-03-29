@@ -8,11 +8,11 @@
 
 ## Initial bootstrap
 Run in this order:
-1. `apiStage5BootstrapRuntimeAndAlertsSheets()`
-2. `apiStage5BootstrapAccessSheet()`
-3. `apiStage5ApplyProtections({ dryRun: true })`
+1. `apiStage7BootstrapRuntimeAndAlertsSheets()`
+2. `apiStage7BootstrapAccessSheet()`
+3. `apiStage7ApplyProtections({ dryRun: true })`
 4. fill `ACCESS`
-5. `apiStage5ApplyProtections({ dryRun: false })`
+5. `apiStage7ApplyProtections({ dryRun: false })`
 
 ## ACCESS setup
 For each user:

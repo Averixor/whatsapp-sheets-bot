@@ -208,11 +208,11 @@ function testCommanderPhone() {
 
 // ==================== THIN COMPATIBILITY WRAPPERS ====================
 function getMonthsList() {
-  return apiStage4GetMonthsList();
+  return apiStage7GetMonthsList();
 }
 
 function getSidebarData(dateStr) {
-  return apiStage4GetSidebarData(dateStr || _todayStr_());
+  return apiStage7GetSidebarData(dateStr || _todayStr_());
 }
 
 function generateSendPanelSidebar(options) {
@@ -220,7 +220,7 @@ function generateSendPanelSidebar(options) {
 }
 
 function getSendPanelSidebarData() {
-  return apiStage4GetSendPanelData();
+  return apiStage7GetSendPanelData();
 }
 
 function getDaySummaryByDate(dateStr) {
@@ -236,11 +236,11 @@ function checkVacationsAndNotifySidebar(dateStr) {
 }
 
 function createNextMonthSheetSidebar() {
-  return apiCreateNextMonthStage4({ switchToNewMonth: true });
+  return apiStage7CreateNextMonth({ switchToNewMonth: true });
 }
 
 function switchBotToMonthSidebar(monthSheetName) {
-  return apiStage4SwitchBotToMonth(monthSheetName || '');
+  return apiStage7SwitchBotToMonth(monthSheetName || '');
 }
 
 function markMultipleAsSentFromSidebar(rowNumbers, opts) {

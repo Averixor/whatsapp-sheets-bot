@@ -17,7 +17,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
   sidebar: Object.freeze({
     getMonthsList: Object.freeze({
       routeName: 'sidebar.getMonthsList',
-      publicApiMethod: 'apiStage4GetMonthsList',
+      publicApiMethod: 'apiStage7GetMonthsList',
       useCase: 'Stage7UseCases_.listMonths',
       category: 'sidebar',
       compatibilityStatus: 'canonical',
@@ -31,7 +31,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
 
     getSidebarData: Object.freeze({
       routeName: 'sidebar.getSidebarData',
-      publicApiMethod: 'apiStage4GetSidebarData',
+      publicApiMethod: 'apiStage7GetSidebarData',
       useCase: 'Stage7UseCases_.loadCalendarDay',
       category: 'sidebar',
       compatibilityStatus: 'canonical',
@@ -45,7 +45,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
 
     getSendPanelData: Object.freeze({
       routeName: 'sidebar.getSendPanelData',
-      publicApiMethod: 'apiStage4GetSendPanelData',
+      publicApiMethod: 'apiStage7GetSendPanelData',
       useCase: 'Stage7UseCases_.getSendPanelData',
       category: 'sidebar',
       compatibilityStatus: 'canonical',
@@ -185,7 +185,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
 
     switchBotToMonth: Object.freeze({
       routeName: 'sidebar.switchBotToMonth',
-      publicApiMethod: 'apiStage4SwitchBotToMonth',
+      publicApiMethod: 'apiStage7SwitchBotToMonth',
       useCase: 'Stage7UseCases_.switchBotToMonth',
       category: 'sidebar',
       compatibilityStatus: 'canonical',
@@ -199,7 +199,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
 
     createNextMonth: Object.freeze({
       routeName: 'sidebar.createNextMonth',
-      publicApiMethod: 'apiCreateNextMonthStage4',
+      publicApiMethod: 'apiStage7CreateNextMonth',
       useCase: 'Stage7UseCases_.createNextMonth',
       category: 'sidebar',
       compatibilityStatus: 'canonical',
@@ -238,26 +238,26 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (typeof WASB_STAGE7_ROUTING_REGISTRY_S
   }),
 
   maintenance: Object.freeze({
-    clearCache: Object.freeze({ routeName: 'maintenance.clearCache', publicApiMethod: 'apiStage5ClearCache', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['clearCache'], verifyAfterWrite: false }),
-    clearLog: Object.freeze({ routeName: 'maintenance.clearLog', publicApiMethod: 'apiStage5ClearLog', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['clearLog'], verifyAfterWrite: false }),
-    clearPhoneCache: Object.freeze({ routeName: 'maintenance.clearPhoneCache', publicApiMethod: 'apiStage5ClearPhoneCache', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['clearPhoneCache'], verifyAfterWrite: false }),
-    restartBot: Object.freeze({ routeName: 'maintenance.restartBot', publicApiMethod: 'apiStage5RestartBot', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['restartBot'], verifyAfterWrite: false }),
-    setupVacationTriggers: Object.freeze({ routeName: 'maintenance.setupVacationTriggers', publicApiMethod: 'apiStage5SetupVacationTriggers', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['setupTrigger'], verifyAfterWrite: false }),
-    cleanupDuplicateTriggers: Object.freeze({ routeName: 'maintenance.cleanupDuplicateTriggers', publicApiMethod: 'apiStage5CleanupDuplicateTriggers', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['cleanupTriggers'], verifyAfterWrite: false }),
-    debugPhones: Object.freeze({ routeName: 'maintenance.debugPhones', publicApiMethod: 'apiStage5DebugPhones', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['debugPhones'], verifyAfterWrite: false }),
-    buildBirthdayLink: Object.freeze({ routeName: 'maintenance.buildBirthdayLink', publicApiMethod: 'apiStage5BuildBirthdayLink', useCase: 'apiStage5BuildBirthdayLink', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
-    runMaintenanceScenario: Object.freeze({ routeName: 'maintenance.runMaintenanceScenario', publicApiMethod: 'apiRunStage5MaintenanceScenario', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write-conditional', lockRequired: true, dryRunSupported: true, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
-    installJobs: Object.freeze({ routeName: 'maintenance.installJobs', publicApiMethod: 'apiInstallStage5Jobs', useCase: 'Stage7Triggers_.installManagedTriggers', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
-    listJobs: Object.freeze({ routeName: 'maintenance.listJobs', publicApiMethod: 'apiListStage5Jobs', useCase: 'Stage7Triggers_.listJobs', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
-    runJob: Object.freeze({ routeName: 'maintenance.runJob', publicApiMethod: 'apiRunStage5Job', useCase: 'Stage7Triggers_.runJob', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write-conditional', lockRequired: true, dryRunSupported: true, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: true }),
-    healthCheck: Object.freeze({ routeName: 'maintenance.healthCheck', publicApiMethod: 'apiStage5HealthCheck', useCase: 'runStage5DiagnosticsByMode_', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: true, uiAllowed: true, clientActionAliases: ['healthCheck'], verifyAfterWrite: false }),
-    runDiagnostics: Object.freeze({ routeName: 'maintenance.runDiagnostics', publicApiMethod: 'apiRunStage5Diagnostics', useCase: 'runStage5DiagnosticsByMode_', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: true, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
-    runRegressionTests: Object.freeze({ routeName: 'maintenance.runRegressionTests', publicApiMethod: 'apiRunStage5RegressionTests', useCase: 'runStage5SmokeTests', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: true, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
-    listJobRuntime: Object.freeze({ routeName: 'maintenance.listJobRuntime', publicApiMethod: 'apiListStage5JobRuntime', useCase: 'JobRuntime_.buildRuntimeReport', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
-    listPendingRepairs: Object.freeze({ routeName: 'maintenance.listPendingRepairs', publicApiMethod: 'apiStage5ListPendingRepairs', useCase: 'OperationRepository_.listPendingRepairs', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['pendingRepairs'], verifyAfterWrite: false }),
-    getOperationDetails: Object.freeze({ routeName: 'maintenance.getOperationDetails', publicApiMethod: 'apiStage5GetOperationDetails', useCase: 'OperationRepository_.getOperationDetails', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['operationDetails'], verifyAfterWrite: false }),
-    runRepair: Object.freeze({ routeName: 'maintenance.runRepair', publicApiMethod: 'apiStage5RunRepair', useCase: 'OperationRepository_.runRepair', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write-conditional', lockRequired: true, dryRunSupported: true, uiAllowed: true, clientActionAliases: ['runRepair'], verifyAfterWrite: true }),
-    runLifecycleRetentionCleanup: Object.freeze({ routeName: 'maintenance.runLifecycleRetentionCleanup', publicApiMethod: 'apiStage5RunLifecycleRetentionCleanup', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['lifecycleRetentionCleanup'], verifyAfterWrite: false })
+    clearCache: Object.freeze({ routeName: 'maintenance.clearCache', publicApiMethod: 'apiStage7ClearCache', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['clearCache'], verifyAfterWrite: false }),
+    clearLog: Object.freeze({ routeName: 'maintenance.clearLog', publicApiMethod: 'apiStage7ClearLog', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['clearLog'], verifyAfterWrite: false }),
+    clearPhoneCache: Object.freeze({ routeName: 'maintenance.clearPhoneCache', publicApiMethod: 'apiStage7ClearPhoneCache', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['clearPhoneCache'], verifyAfterWrite: false }),
+    restartBot: Object.freeze({ routeName: 'maintenance.restartBot', publicApiMethod: 'apiStage7RestartBot', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['restartBot'], verifyAfterWrite: false }),
+    setupVacationTriggers: Object.freeze({ routeName: 'maintenance.setupVacationTriggers', publicApiMethod: 'apiStage7SetupVacationTriggers', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['setupTrigger'], verifyAfterWrite: false }),
+    cleanupDuplicateTriggers: Object.freeze({ routeName: 'maintenance.cleanupDuplicateTriggers', publicApiMethod: 'apiStage7CleanupDuplicateTriggers', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['cleanupTriggers'], verifyAfterWrite: false }),
+    debugPhones: Object.freeze({ routeName: 'maintenance.debugPhones', publicApiMethod: 'apiStage7DebugPhones', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['debugPhones'], verifyAfterWrite: false }),
+    buildBirthdayLink: Object.freeze({ routeName: 'maintenance.buildBirthdayLink', publicApiMethod: 'apiStage7BuildBirthdayLink', useCase: 'apiStage7BuildBirthdayLink', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
+    runMaintenanceScenario: Object.freeze({ routeName: 'maintenance.runMaintenanceScenario', publicApiMethod: 'apiRunStage7MaintenanceScenario', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write-conditional', lockRequired: true, dryRunSupported: true, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
+    installJobs: Object.freeze({ routeName: 'maintenance.installJobs', publicApiMethod: 'apiInstallStage7Jobs', useCase: 'Stage7Triggers_.installManagedTriggers', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
+    listJobs: Object.freeze({ routeName: 'maintenance.listJobs', publicApiMethod: 'apiListStage7Jobs', useCase: 'Stage7Triggers_.listJobs', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
+    runJob: Object.freeze({ routeName: 'maintenance.runJob', publicApiMethod: 'apiRunStage7Job', useCase: 'Stage7Triggers_.runJob', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write-conditional', lockRequired: true, dryRunSupported: true, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: true }),
+    healthCheck: Object.freeze({ routeName: 'maintenance.healthCheck', publicApiMethod: 'apiStage7HealthCheck', useCase: 'runStage7DiagnosticsByMode_', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: true, uiAllowed: true, clientActionAliases: ['healthCheck'], verifyAfterWrite: false }),
+    runDiagnostics: Object.freeze({ routeName: 'maintenance.runDiagnostics', publicApiMethod: 'apiRunStage7Diagnostics', useCase: 'runStage7DiagnosticsByMode_', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: true, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
+    runRegressionTests: Object.freeze({ routeName: 'maintenance.runRegressionTests', publicApiMethod: 'apiRunStage7RegressionTests', useCase: 'runStage5SmokeTests', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: true, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
+    listJobRuntime: Object.freeze({ routeName: 'maintenance.listJobRuntime', publicApiMethod: 'apiListStage7JobRuntime', useCase: 'JobRuntime_.buildRuntimeReport', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: [], verifyAfterWrite: false }),
+    listPendingRepairs: Object.freeze({ routeName: 'maintenance.listPendingRepairs', publicApiMethod: 'apiStage7ListPendingRepairs', useCase: 'OperationRepository_.listPendingRepairs', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['pendingRepairs'], verifyAfterWrite: false }),
+    getOperationDetails: Object.freeze({ routeName: 'maintenance.getOperationDetails', publicApiMethod: 'apiStage7GetOperationDetails', useCase: 'OperationRepository_.getOperationDetails', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'read', lockRequired: false, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['operationDetails'], verifyAfterWrite: false }),
+    runRepair: Object.freeze({ routeName: 'maintenance.runRepair', publicApiMethod: 'apiStage7RunRepair', useCase: 'OperationRepository_.runRepair', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write-conditional', lockRequired: true, dryRunSupported: true, uiAllowed: true, clientActionAliases: ['runRepair'], verifyAfterWrite: true }),
+    runLifecycleRetentionCleanup: Object.freeze({ routeName: 'maintenance.runLifecycleRetentionCleanup', publicApiMethod: 'apiStage7RunLifecycleRetentionCleanup', useCase: 'Stage7UseCases_.runMaintenanceScenario', category: 'maintenance', compatibilityStatus: 'canonical', mode: 'write', lockRequired: true, dryRunSupported: false, uiAllowed: true, clientActionAliases: ['lifecycleRetentionCleanup'], verifyAfterWrite: false })
   })
 });
 

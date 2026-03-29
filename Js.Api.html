@@ -3,7 +3,7 @@
 
   var Stage7Api = {
     async getMonths() {
-      const response = await Api.run('apiStage4GetMonthsList');
+      const response = await Api.run('apiStage7GetMonthsList');
       const result = unwrapStage4Result(response) || {};
       return {
         success: !!response?.success,
@@ -20,7 +20,7 @@
     },
 
     async getSidebarData(dateStr = '') {
-      const response = await Api.run('apiStage4GetSidebarData', dateStr || '');
+      const response = await Api.run('apiStage7GetSidebarData', dateStr || '');
       const result = unwrapStage4Result(response) || {};
       return {
         success: !!response?.success,
@@ -39,7 +39,7 @@
     },
 
     async getSendPanelData() {
-      return adaptStage4PanelResponse(await Api.run('apiStage4GetSendPanelData'));
+      return adaptStage4PanelResponse(await Api.run('apiStage7GetSendPanelData'));
     },
 
     async generatePanelForDate(options = {}) {
@@ -137,7 +137,7 @@
     },
 
     async createNextMonth(options = {}) {
-      const response = await Api.run('apiCreateNextMonthStage4', options);
+      const response = await Api.run('apiStage7CreateNextMonth', options);
       const result = unwrapStage4Result(response) || {};
       return {
         success: !!response?.success,
@@ -156,7 +156,7 @@
     },
 
     async switchMonth(month) {
-      const response = await Api.run('apiStage4SwitchBotToMonth', month || '');
+      const response = await Api.run('apiStage7SwitchBotToMonth', month || '');
       const result = unwrapStage4Result(response) || {};
       return {
         success: !!response?.success,
@@ -175,27 +175,27 @@
   };
 
   var MaintenanceApi = {
-    clearCache: async () => adaptStage4UtilityResponse(await Api.run('apiStage5ClearCache')),
-    clearLog: async () => adaptStage4UtilityResponse(await Api.run('apiStage5ClearLog')),
-    clearPhoneCache: async () => adaptStage4UtilityResponse(await Api.run('apiStage5ClearPhoneCache')),
-    restartBot: async () => adaptStage4UtilityResponse(await Api.run('apiStage5RestartBot')),
-    setupVacationTriggers: async () => adaptStage4UtilityResponse(await Api.run('apiStage5SetupVacationTriggers')),
-    cleanupDuplicateTriggers: async (functionName) => adaptStage4UtilityResponse(await Api.run('apiStage5CleanupDuplicateTriggers', functionName)),
-    debugPhones: async () => adaptStage4UtilityResponse(await Api.run('apiStage5DebugPhones')),
-    buildBirthdayLink: async (phone, name) => adaptStage4UtilityResponse(await Api.run('apiStage5BuildBirthdayLink', phone, name)),
-    runMaintenance: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiRunStage5MaintenanceScenario', options)),
-    listJobs: async () => adaptStage4UtilityResponse(await Api.run('apiListStage5Jobs')),
-    installJobs: async () => adaptStage4UtilityResponse(await Api.run('apiInstallStage5Jobs')),
-    runJob: async (jobName, options = {}) => adaptStage4UtilityResponse(await Api.run('apiRunStage5Job', jobName, options)),
-    healthCheck: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage5HealthCheck', options)),
-    runRegressionTests: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiRunStage5RegressionTests', options)),
-    listPendingRepairs: async (filters = {}) => adaptStage4UtilityResponse(await Api.run('apiStage5ListPendingRepairs', filters)),
-    getOperationDetails: async (operationId) => adaptStage4UtilityResponse(await Api.run('apiStage5GetOperationDetails', operationId || '')),
-    runRepair: async (operationId, options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage5RunRepair', operationId || '', options)),
-    getAccessDescriptor: async () => adaptStage4UtilityResponse(await Api.run('apiStage5GetAccessDescriptor')),
-    debugAccess: async () => adaptStage4UtilityResponse(await Api.run('apiStage5DebugAccess')),
-    applyProtections: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage5ApplyProtections', options)),
-    bootstrapAccessSheet: async () => adaptStage4UtilityResponse(await Api.run('apiStage5BootstrapAccessSheet'))
+    clearCache: async () => adaptStage4UtilityResponse(await Api.run('apiStage7ClearCache')),
+    clearLog: async () => adaptStage4UtilityResponse(await Api.run('apiStage7ClearLog')),
+    clearPhoneCache: async () => adaptStage4UtilityResponse(await Api.run('apiStage7ClearPhoneCache')),
+    restartBot: async () => adaptStage4UtilityResponse(await Api.run('apiStage7RestartBot')),
+    setupVacationTriggers: async () => adaptStage4UtilityResponse(await Api.run('apiStage7SetupVacationTriggers')),
+    cleanupDuplicateTriggers: async (functionName) => adaptStage4UtilityResponse(await Api.run('apiStage7CleanupDuplicateTriggers', functionName)),
+    debugPhones: async () => adaptStage4UtilityResponse(await Api.run('apiStage7DebugPhones')),
+    buildBirthdayLink: async (phone, name) => adaptStage4UtilityResponse(await Api.run('apiStage7BuildBirthdayLink', phone, name)),
+    runMaintenance: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiRunStage7MaintenanceScenario', options)),
+    listJobs: async () => adaptStage4UtilityResponse(await Api.run('apiListStage7Jobs')),
+    installJobs: async () => adaptStage4UtilityResponse(await Api.run('apiInstallStage7Jobs')),
+    runJob: async (jobName, options = {}) => adaptStage4UtilityResponse(await Api.run('apiRunStage7Job', jobName, options)),
+    healthCheck: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7HealthCheck', options)),
+    runRegressionTests: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiRunStage7RegressionTests', options)),
+    listPendingRepairs: async (filters = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7ListPendingRepairs', filters)),
+    getOperationDetails: async (operationId) => adaptStage4UtilityResponse(await Api.run('apiStage7GetOperationDetails', operationId || '')),
+    runRepair: async (operationId, options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7RunRepair', operationId || '', options)),
+    getAccessDescriptor: async () => adaptStage4UtilityResponse(await Api.run('apiStage7GetAccessDescriptor')),
+    debugAccess: async () => adaptStage4UtilityResponse(await Api.run('apiStage7DebugAccess')),
+    applyProtections: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7ApplyProtections', options)),
+    bootstrapAccessSheet: async () => adaptStage4UtilityResponse(await Api.run('apiStage7BootstrapAccessSheet'))
   };
 
   var SidebarApi = {

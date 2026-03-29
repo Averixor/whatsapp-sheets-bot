@@ -167,20 +167,20 @@ function runStage4ScenarioTests(options) {
     warnings: []
   };
 
-  _runContractTest_(report, 'apiStage4GetMonthsList', function () {
-    const result = apiStage4GetMonthsList();
+  _runContractTest_(report, 'apiStage7GetMonthsList', function () {
+    const result = apiStage7GetMonthsList();
     _smokeAssert_(Array.isArray(result.data.result.months), 'months[] не повернуто');
     return result;
   });
 
-  _runContractTest_(report, 'apiStage4GetSidebarData', function () {
-    const result = apiStage4GetSidebarData(testDate);
+  _runContractTest_(report, 'apiStage7GetSidebarData', function () {
+    const result = apiStage7GetSidebarData(testDate);
     _smokeAssert_(Array.isArray(result.data.result.personnel), 'personnel[] не повернуто');
     return result;
   }, { skipOnError: true });
 
-  _runContractTest_(report, 'apiStage4GetSendPanelData', function () {
-    const result = apiStage4GetSendPanelData();
+  _runContractTest_(report, 'apiStage7GetSendPanelData', function () {
+    const result = apiStage7GetSendPanelData();
     _smokeAssert_(Array.isArray(result.data.result.rows), 'rows[] не повернуто');
     return result;
   }, { skipOnError: true });
@@ -232,12 +232,12 @@ function runStage4ScenarioTests(options) {
     return apiCheckVacationsAndBirthdays(testDate);
   });
 
-  _runContractTest_(report, 'apiStage4SwitchBotToMonth', function () {
-    return apiStage4SwitchBotToMonth(getBotMonthSheetName_());
+  _runContractTest_(report, 'apiStage7SwitchBotToMonth', function () {
+    return apiStage7SwitchBotToMonth(getBotMonthSheetName_());
   });
 
-  _runContractTest_(report, 'apiCreateNextMonthStage4', function () {
-    return apiCreateNextMonthStage4({ dryRun: true, switchToNewMonth: false });
+  _runContractTest_(report, 'apiStage7CreateNextMonth', function () {
+    return apiStage7CreateNextMonth({ dryRun: true, switchToNewMonth: false });
   }, { skipOnError: true });
 
   _runContractTest_(report, 'apiRunReconciliation', function () {
@@ -369,20 +369,20 @@ function runStage5ScenarioTests(options) {
     return result;
   }, { skipOnError: true });
 
-  _runContractTest_(report, 'apiStage5HealthCheck', function () {
-    const result = apiStage5HealthCheck({ mode: 'quick' });
+  _runContractTest_(report, 'apiStage7HealthCheck', function () {
+    const result = apiStage7HealthCheck({ mode: 'quick' });
     _smokeAssert_(Array.isArray(result.data.result.checks), 'checks[] не повернуто');
     return result;
   }, { skipOnError: true });
 
-  _runContractTest_(report, 'apiRunStage5Diagnostics', function () {
-    const result = apiRunStage5Diagnostics({ mode: 'structural' });
+  _runContractTest_(report, 'apiRunStage7Diagnostics', function () {
+    const result = apiRunStage7Diagnostics({ mode: 'structural' });
     _smokeAssert_(Array.isArray(result.data.result.checks), 'checks[] не повернуто');
     return result;
   }, { skipOnError: true });
 
-  _runContractTest_(report, 'apiRunStage5RegressionTests', function () {
-    const result = apiRunStage5RegressionTests({ dryRun: true });
+  _runContractTest_(report, 'apiRunStage7RegressionTests', function () {
+    const result = apiRunStage7RegressionTests({ dryRun: true });
     _smokeAssert_(Array.isArray(result.data.result.checks), 'checks[] не повернуто');
     return result;
   }, { skipOnError: true });
@@ -524,7 +524,7 @@ function runStage5SmokeTests(options) {
 
 
   _smokePush_(report, 'lifecycle retention cleanup api contract', function () {
-    _smokeAssert_(_smokeHasFn_('apiStage5RunLifecycleRetentionCleanup'), 'apiStage5RunLifecycleRetentionCleanup відсутній');
+    _smokeAssert_(_smokeHasFn_('apiStage7RunLifecycleRetentionCleanup'), 'apiStage7RunLifecycleRetentionCleanup відсутній');
     _smokeAssert_(STAGE7_CONFIG && STAGE7_CONFIG.JOBS && STAGE7_CONFIG.JOBS.LIFECYCLE_RETENTION_CLEANUP === 'lifecycleRetentionCleanup', 'JOBS.LIFECYCLE_RETENTION_CLEANUP має бути lifecycleRetentionCleanup');
     return 'retention-cleanup-contract-ok';
   });
@@ -533,8 +533,8 @@ function runStage5SmokeTests(options) {
     const quick = runStage5QuickDiagnostics_({ mode: 'quick' });
     const full = runStage5FullDiagnostics_({ mode: 'full' });
     const sunset = runStage5SunsetDiagnostics_({ mode: 'compatibility sunset' });
-    const maintHealth = apiStage5HealthCheck({ mode: 'quick' });
-    const maintDiagnostics = apiRunStage5Diagnostics({ mode: 'full' });
+    const maintHealth = apiStage7HealthCheck({ mode: 'quick' });
+    const maintDiagnostics = apiRunStage7Diagnostics({ mode: 'full' });
     const texts = [
       quick.summary || '',
       full.summary || '',
@@ -560,11 +560,11 @@ function runStage5SmokeTests(options) {
 
   _smokePush_(report, 'maintenance public wording is release-neutral', function () {
     const responses = [
-      apiStage5HealthCheck({ mode: 'quick' }),
-      apiRunStage5Diagnostics({ mode: 'quick' }),
-      apiRunStage5RegressionTests({ dryRun: true }),
-      apiListStage5JobRuntime(),
-      apiListStage5Jobs()
+      apiStage7HealthCheck({ mode: 'quick' }),
+      apiRunStage7Diagnostics({ mode: 'quick' }),
+      apiRunStage7RegressionTests({ dryRun: true }),
+      apiListStage7JobRuntime(),
+      apiListStage7Jobs()
     ];
     responses.forEach(function (result) {
       const texts = [
@@ -678,15 +678,15 @@ function runStage5SmokeTests(options) {
 
 
   _smokePush_(report, 'maintenance repair api contract', function () {
-    ['apiStage5ListPendingRepairs', 'apiStage5GetOperationDetails', 'apiStage5RunRepair'].forEach(function (name) {
+    ['apiStage7ListPendingRepairs', 'apiStage7GetOperationDetails', 'apiStage7RunRepair'].forEach(function (name) {
       _smokeAssert_(_smokeHasFn_(name), name + ' відсутній');
     });
     return 'repair-api-ok';
   });
 
   _smokePush_(report, 'pending repairs visibility contract', function () {
-    const result = apiStage5ListPendingRepairs({});
-    _assertStage4Meta_(result, 'apiStage5ListPendingRepairs');
+    const result = apiStage7ListPendingRepairs({});
+    _assertStage4Meta_(result, 'apiStage7ListPendingRepairs');
     const payload = result && result.data && result.data.result ? result.data.result : {};
     _smokeAssert_(typeof payload.total === 'number', 'total pending repairs не повернуто');
     _smokeAssert_(Array.isArray(payload.operations), 'operations[] не повернуто');
