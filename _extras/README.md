@@ -1,64 +1,47 @@
-# whatsapp-sheets-bot — Stage 7.1.1 Final Stabilized Repair Baseline
+# WAPB — Google Apps Script release bundle
 
-> This repack is prepared for **Google Apps Script Web Editor use without VS Code**.
-> Local PowerShell / Node helper scripts are **not included** in this archive.
-> See `GAS_WEB_EDITOR_IMPORT_GUIDE.md` for the import flow.
+This is the web-editor-ready WAPB bundle for Google Apps Script.
 
-This archive is the **Stage 7.1.1 Final Stabilized Repair Baseline** with preserved SEND_PANEL stabilization and lifecycle hardening.
+## What is active in this release
+- **Strict user-key access model** based on `Session.getTemporaryActiveUserKey()`.
+- **Controlled key rotation** with automatic promotion `user_key_prev -> user_key_current`.
+- **Optional emergency migration bridge** by email, disabled by default and intended only for temporary rollout.
+- **Viewer hardening**: viewer can see the personnel list, but may open only their own card and cannot open the detailed summary.
+- **Role-separated maintenance access**: maintainer, admin, sysadmin, owner are split by real permissions instead of one giant admin bucket.
+- **GAS-friendly packaging**: root contains only `.gs`, `.html`, and `appsscript.json`; non-runtime materials live in `_extras/`.
 
-## What is included
+## Main documents
+- `ARCHITECTURE.md` — current architecture, layers, access model, client/runtime notes.
+- `RUNBOOK.md` — setup, migration, deployment, post-import checks, and operational procedures.
+- `SECURITY.md` — roles, access rules, key rotation, alerts, audit, protections.
+- `CHANGELOG.md` — concise release history for maintainers.
 
-- All active `.gs` source files
-- All active `.html` source files
-- `appsscript.json`
-- Active root documentation:
-  - `README.md`
-  - `ARCHITECTURE.md`
-  - `RUNBOOK.md`
-  - `STAGE7_REPORT.md`
+Historical reports and one-off notes were moved to `_extras/history/` so the active docs stop looking like a hydra with twenty heads.
 
-## What was fixed in this build
+## Quick import checklist
+1. Upload all root `.gs`, `.html`, and `appsscript.json` files into the GAS web editor.
+2. Keep the files from `_extras/` only as reference; they are not runtime dependencies.
+3. Run `apiStage5BootstrapRuntimeAndAlertsSheets()` once.
+4. Run `apiStage5BootstrapAccessSheet()` once.
+5. Fill `ACCESS` with roles and user keys.
+6. Verify the `🧑‍💻` block in the sidebar for each user.
+7. Enable protections with `apiStage5ApplyProtections({ dryRun: false })` when the access sheet is ready.
 
-- SEND_PANEL treats sidebar opening of the stored Action link as the sending fixation point.
-- Canonical status model is preserved:
-  - `Status`: `✔` або `✘`
-  - `Sent`: `✔` або `✘`
-  - `Action`: готове посилання з листа
-  - `✕ ...`
-- SEND_PANEL rebuild preserves state from the sheet for the same panel date.
-- Panel date is read from explicit SEND_PANEL metadata instead of silently falling back to "today".
-- WhatsApp links use one named sender tab instead of `_blank`.
-- Sidebar flow supports manual confirmation after opening a chat.
-- Diagnostics/reporting are aligned with the actual web-editor-ready package.
+## ACCESS columns
+Required columns:
+- `email`
+- `role`
+- `enabled`
+- `note`
+- `display_name`
+- `person_callsign`
+- `user_key_current`
+- `user_key_prev`
+- `last_seen_at`
+- `last_rotated_at`
 
-## What is intentionally not included
+## Migration note
+The project now assumes **strict user-key access**. The only fallback left is the **explicit emergency migration bridge** controlled by script property:
+- `WAPB_ACCESS_MIGRATION_EMAIL_BRIDGE = true`
 
-- `.git`
-- `node_modules`
-- `.clasp.json`
-- `.clasp.json.example`
-- local PowerShell helper scripts such as `dev-shell.ps1`, `gas-push.ps1`, `gas-status.ps1`, `repair-deps.ps1`, `watch-sync-simple.ps1`
-
-## Main files to review first
-
-- `SendPanelConstants.gs`
-- `SendPanel.gs`
-- `SendPanelRepository.gs`
-- `SendPanelService.gs`
-- `UseCases.gs`
-- `Js.Core.html`
-- `Js.State.html`
-- `Js.Render.html`
-- `Js.Diagnostics.html`
-- `ProjectMetadata.gs`
-
-## Archive composition
-
-This release is a **web-editor-ready** package. The source of truth is the set of files physically present in the archive root.
-
-## Active documentation set
-
-- `README.md`
-- `ARCHITECTURE.md`
-- `RUNBOOK.md`
-- `STAGE7_REPORT.md`
+Leave it off in normal operation. Turn it on only during a short migration window, then turn it back off when keys are registered.

@@ -1,133 +1,96 @@
-# Architecture — Stage 7.1.1 Final Stabilized Repair Baseline
+# WAPB Architecture
 
-## Release truth model
+## Runtime shape
+- Server runtime: Google Apps Script.
+- UI runtime: `Sidebar.html` + `JavaScript.html` include chain (`Js.Core`, `Js.State`, `Js.Api`, `Js.Render`, `Js.Diagnostics`, `Js.Helpers`, `Js.Events`, `Js.Actions`).
+- Packaging policy: root bundle is GAS-ready; auxiliary materials live under `_extras/`.
 
-The project is now described as:
+## Canonical layers
+- Application API: `Stage4ServerApi.gs`
+- Maintenance API: `Stage5MaintenanceApi.gs`
+- Compatibility facade: `SidebarServer.gs`
+- Use cases: `UseCases.gs`
+- Workflow orchestration: `WorkflowOrchestrator.gs`
+- Access control: `AccessControl.gs`
+- Access enforcement / alerts: `AccessEnforcement.gs`
+- Diagnostics: `Diagnostics.gs`
+- Regression suite: `SmokeTests.gs`
 
-- **Release stage:** `Stage 7.1.1 — Final Stabilized Repair Baseline`
-- **Functional lineage:** stabilized **Stage 5 Final RC2** baseline + preserved **Stage 6A** hardening overlay
-- **Maintenance API lineage:** Stage 5 canonical maintenance API remains active by design
-- **Compatibility lineage:** Stage 4 compatibility facade remains intentionally preserved
-- **Semantic status:** active wording, comments, diagnostics summaries, and smoke expectations are aligned to the final release identity
+## Role model
+Internal roles:
+- `guest`
+- `viewer`
+- `operator`
+- `maintainer`
+- `admin`
+- `sysadmin`
+- `owner`
 
-This removes the last visible split-brain leftovers where the bundle worked as one release but talked like several generations were still wrestling in the stairwell.
+Role order:
+`guest < viewer < operator < maintainer < admin < sysadmin < owner`
 
-## Canonical runtime and layers
+Display labels are intentionally preserved:
+- guest → Гість
+- viewer → Перегляд
+- operator → Оператор
+- maintainer → Редактор
+- admin → Адмін
+- sysadmin → Сис. адмін
+- owner → Власник
 
-### Public application API
-- `Stage4ServerApi.gs` — stable sidebar / operational application surface
-- `SpreadsheetActionsApi.gs` — canonical spreadsheet/manual action API
-- `Stage5MaintenanceApi.gs` — canonical maintenance / diagnostics / jobs API
+## Access model
+Primary identity is `Session.getTemporaryActiveUserKey()`.
 
-### Application / orchestration
-- `UseCases.gs`
-- `WorkflowOrchestrator.gs`
-- `Validation.gs`
-- `AuditTrail.gs`
+Resolution order:
+1. `ACCESS.user_key_current`
+2. `ACCESS.user_key_prev`
+3. optional **emergency migration bridge by email** if explicitly enabled by script property
+4. bootstrap-owner only when the system has no configured access at all
 
-### Domain services
-- `SendPanelService.gs`
-- `SummaryService.gs`
-- `VacationService.gs`
-- `PreviewLinkService.gs`
-- `SelectionActionService.gs`
+### Rotation logic
+When the current session key matches `user_key_prev`:
+- previous `user_key_current` is moved to `user_key_prev`
+- current session key is written into `user_key_current`
+- `last_rotated_at` is updated
+- `last_seen_at` is updated
 
-### Repository / data access
-- `SendPanelRepository.gs`
-- `SummaryRepository.gs`
-- `VacationsRepository.gs`
-- `PersonsRepository.gs`
-- `DictionaryRepository.gs`
-- `DataAccess.gs`
+This makes the 30-day Google key rotation survivable without manual firefighting on every user.
 
-### Presentation
-- `DialogPresenter.gs`
-- `DialogTemplates.gs`
-- `Sidebar.html`
-- `Styles.html`
-- `JavaScript.html` — active modular client runtime
-- `Js.*.html` — active modular client artifacts
+### Why this is the “ideal enough” policy here
+- No silent fallback to viewer.
+- No silent fallback to sysadmin.
+- No role-based guesswork.
+- Migration fallback exists, but only behind an explicit switch.
+- Rotation is automatic when Google gives a new temporary key.
 
-### Reconciliation / maintenance / observability
-- `Reconciliation.gs`
-- `Triggers.gs`
-- `JobRuntime.gs`
-- `JobRuntimeRepository.gs`
-- `Diagnostics.gs`
-- `SmokeTests.gs`
+## Security boundaries
+- Viewer can open only their own card.
+- Viewer cannot open the detailed summary.
+- Operator and higher can use working tools.
+- Maintainer can run diagnostics and inspect operational state.
+- Admin manages access and logs.
+- Sysadmin handles protections, triggers, repairs, cache/system maintenance.
+- Owner has full priority access.
 
-### Template governance
-- `Templates.gs`
-- `TemplateRegistry.gs`
-- `TemplateResolver.gs`
+## Service sheets
+Protected / audited sheets:
+- `ACCESS`
+- `OPS_LOG`
+- `ACTIVE_OPERATIONS`
+- `CHECKPOINTS`
+- `AUDIT_LOG`
+- `JOB_RUNTIME_LOG`
+- `ALERTS_LOG`
 
-### Compatibility / historical bridge
-- `Stage4MaintenanceApi.gs`
-- `SidebarServer.gs`
-- `Stage3ServerApi.gs`
-- `Actions.gs`
-- `Dialogs.gs`
-- `DeprecatedRegistry.gs`
+## Client runtime cleanup
+The client runtime is still modular HTML Service JS, but it is leaner now:
+- role gating is centralized with `data-role-min`
+- action access is centralized via a single role map
+- repeated legacy UI guards were collapsed into shared helpers
+- old one-off permission checks were reduced to server-backed policy
 
-## Client bootstrap policy
+## Tests
+- `SmokeTests.gs` remains the regression entrypoint.
+- Access and security dry-run E2E checks are included to validate role separation and key-rotation behaviour without modifying business data.
 
-The active client runtime remains deliberately conservative:
-
-1. `showSidebar()` renders `Sidebar.html`
-2. `Sidebar.html` includes `Styles.html`
-3. `Sidebar.html` loads `JavaScript.html` via `includeTemplate('JavaScript')`
-4. `JavaScript.html` contains the full active runtime script
-
-The modular `Js.*.html` runtime chain is production-active in this release and must remain aligned with `JavaScript.html`.
-
-## Diagnostics model
-
-The diagnostics stack is split into three honest buckets:
-
-- **active release diagnostics** — Stage 7.1.1 — Final Stabilized Repair Baseline wording
-- **historical / compatibility diagnostics** — clearly marked as historical lineage
-- **informational compatibility reporting** — explicitly labeled as informational, not masked as an acceptance assert
-
-This keeps compatibility lineage visible without letting it cosplay as the active release identity.
-
-## Documentation hierarchy
-
-### Active root docs
-- `README.md`
-- `ARCHITECTURE.md`
-- `RUNBOOK.md`
-- `STAGE7_REPORT.md`
-
-### Canonical reference docs
-- `docs/reference/PUBLIC_API_STAGE5.md`
-- `docs/reference/CHANGELOG_STAGE5.md`
-- `docs/reference/STAGE5_REPORT.md`
-- `docs/reference/STAGE6A_REPORT.md`
-- `docs/reference/SPREADSHEET_ACTION_API.md`
-- `docs/reference/JOBS_RUNTIME.md`
-- `docs/reference/SUNSET_POLICY.md`
-
-### Historical docs
-Everything in `docs/archive/` is historical or archival material and must not be interpreted as active.
-
-## Packaging policy
-
-The release follows **root manifest policy**:
-
-- `appsscript.json` lives in bundle root
-- No `.clasp` files are required in the web-editor-ready bundle
-
-This layout is aligned with metadata, diagnostics, smoke tests, and archive naming.
-
-## Intentional non-goals of the final freeze
-
-This stage does not:
-
-- replace the modular runtime
-- migrate to TypeScript / bundlers / React / Vite
-- redesign sidebar UX
-- rewrite SEND_PANEL logic
-- remove Stage 4 compatibility
-- change domain semantics of summaries, vacations, birthdays, or reconciliation
-
-It is a semantic cleanup and release freeze, not a new feature stage.
+Historical stage reports, reference maps, and transition notes were moved to `_extras/history/`.
