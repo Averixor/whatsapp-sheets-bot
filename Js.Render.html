@@ -152,6 +152,10 @@
     }
 
     STATE._panelSingleSendLock = true;
+
+    let rowNum = 0;
+    let optimisticApplied = false;
+
     try {
       const item = Array.isArray(STATE.currentPanelData) ? STATE.currentPanelData[index] : null;
       if (!item?.link) return;
@@ -162,19 +166,20 @@
 
       if (!STATE.DIAG_TEST_MODE) openLinkSafe(item.link);
 
-      const rowNum = Number(item.row);
-      if (!rowNum) {
-        showSendPanel();
-        return;
-      }
+      rowNum = Number(item.row);
 
-      const result = await ActionDispatcher.run('markPanelRowsAsSentAuto', () => Stage7Api.markAsSent([rowNum]), { showLoader: false });
-      if (!result?.success) throw new Error(result?.error || 'Не вдалось зафіксувати відправку');
+      if (rowNum) {
+        const optimisticRows = clonePanelRows_(STATE.currentPanelData);
+        const optimisticIndex = optimisticRows.findIndex(function(row) {
+          return Number(row && row.row) === rowNum;
+        });
 
-      if (Array.isArray(result.data)) {
-        setCurrentPanelData(result.data);
-      } else {
-        await refreshSendPanelDataFromServer({ silent: true });
+        if (optimisticIndex !== -1) {
+          optimisticRows[optimisticIndex].sent = true;
+          optimisticRows[optimisticIndex]._optimisticSent = true;
+          setCurrentPanelData(optimisticRows);
+          optimisticApplied = true;
+        }
       }
 
       logToConsole('Чат відкрито', 'success');
@@ -183,11 +188,54 @@
       logToConsole(`Помилка відкриття чату: ${normalizeError(error)}`, 'error');
       try { await refreshSendPanelDataFromServer({ silent: true }); } catch (_) {}
       showSendPanel();
+      return;
     } finally {
       setTimeout(function() {
         STATE._panelSingleSendLock = false;
-      }, 350);
+      }, 250);
     }
+
+    if (!rowNum) return;
+
+    (async function finalizeSingleSendCommit(targetRow, hadOptimisticState) {
+      try {
+        const result = await ActionDispatcher.run(
+          'markPanelRowsAsSentAuto',
+          () => Stage7Api.markAsSent([targetRow]),
+          { showLoader: false }
+        );
+
+        if (!result?.success) {
+          throw new Error(result?.error || 'Не вдалось зафіксувати відправку');
+        }
+
+        if (Array.isArray(result.data)) {
+          setCurrentPanelData(result.data);
+        } else {
+          await refreshSendPanelDataFromServer({ silent: true });
+        }
+      } catch (error) {
+        if (hadOptimisticState) {
+          try {
+            const revertedRows = clonePanelRows_(STATE.currentPanelData);
+            const revertedIndex = revertedRows.findIndex(function(row) {
+              return Number(row && row.row) === targetRow;
+            });
+
+            if (revertedIndex !== -1 && revertedRows[revertedIndex]._optimisticSent) {
+              revertedRows[revertedIndex].sent = false;
+              delete revertedRows[revertedIndex]._optimisticSent;
+              setCurrentPanelData(revertedRows, { preserveLastNonEmpty: true });
+            }
+          } catch (_) {}
+        }
+
+        logToConsole(`Помилка фіксації відправки: ${normalizeError(error)}`, 'error');
+        try { await refreshSendPanelDataFromServer({ silent: true }); } catch (_) {}
+      } finally {
+        showSendPanel();
+      }
+    })(rowNum, optimisticApplied);
   }
 
   async function confirmSendFromPanel(index) {
