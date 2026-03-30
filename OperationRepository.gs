@@ -52,6 +52,17 @@ const OperationRepository_ = (function() {
     __DEFAULT__: 12
   });
 
+  function _activeFinishedVisibilityMinutes() {
+    var value = Number(appGetCore('ACTIVE_FINISHED_VISIBILITY_MINUTES', 30) || 30);
+    return isFinite(value) && value > 0 ? value : 30;
+  }
+
+  function _activeFinishedExpiresAtText(baseDate) {
+    var date = baseDate instanceof Date ? new Date(baseDate.getTime()) : _now();
+    date.setMinutes(date.getMinutes() + _activeFinishedVisibilityMinutes());
+    return _iso(date);
+  }
+
   function _ss() { return SpreadsheetApp.getActive(); }
   function _tz() { return (typeof getTimeZone_ === 'function' ? getTimeZone_() : Session.getScriptTimeZone()) || Session.getScriptTimeZone(); }
   function _now() { return new Date(); }
@@ -418,10 +429,14 @@ const OperationRepository_ = (function() {
       _updateActiveRow(operationId, {
         Status: toStatus,
         LastHeartbeat: updates.LastHeartbeat,
-        ExpiresAt: updates.ExpiresAt || current.ExpiresAt || ''
+        ExpiresAt: updates.ExpiresAt || current.ExpiresAt || _activeFinishedExpiresAtText(_now())
       });
     } else if (FINAL_STATUSES[toStatus] || toStatus === 'NEEDS_REPAIR') {
-      _removeActiveRow(operationId);
+      _updateActiveRow(operationId, {
+        Status: toStatus,
+        LastHeartbeat: updates.LastHeartbeat,
+        ExpiresAt: _activeFinishedExpiresAtText(_now())
+      });
     } else {
       _updateActiveRow(operationId, {
         Status: toStatus,
@@ -710,7 +725,15 @@ const OperationRepository_ = (function() {
     });
 
     _rowsAsObjects(activeSheet).slice().reverse().forEach(function(item) {
-      if (String(item.Status || '') !== 'FAILED_STALE') return;
+      var status = String(item.Status || '').trim();
+      if (status && status !== 'STARTED') {
+        var expiresAtMs = new Date(String(item.ExpiresAt || '')).getTime();
+        if (!isFinite(expiresAtMs) || expiresAtMs >= _now().getTime()) return;
+        activeSheet.deleteRow(item.__row);
+        removedActiveStale++;
+        return;
+      }
+      if (status !== 'FAILED_STALE') return;
       var classifiedMs = new Date(String(item.LastHeartbeat || item.StartedAt || '')).getTime();
       if (!isFinite(classifiedMs) || classifiedMs >= staleCutoffMs) return;
       activeSheet.deleteRow(item.__row);
