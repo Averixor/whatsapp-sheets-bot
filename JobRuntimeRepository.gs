@@ -140,6 +140,23 @@ const JobRuntimeRepository_ = (function() {
     return true;
   }
 
+
+function clearStorage() {
+  const props = _props();
+  const allProps = props.getProperties() || {};
+  let removed = 0;
+  Object.keys(allProps).forEach(function(key) {
+    if (key.indexOf(LAST_PREFIX) === 0 ||
+        key.indexOf(HISTORY_PREFIX) === 0 ||
+        key.indexOf(ACTIVE_PREFIX) === 0 ||
+        key.indexOf(BACKOFF_PREFIX) === 0) {
+      props.deleteProperty(key);
+      removed++;
+    }
+  });
+  return { success: true, removedKeys: removed };
+}
+
   function buildStoragePolicyReport() {
     const props = _props().getProperties();
     const historyKeys = Object.keys(props).filter(function(key) { return key.indexOf(HISTORY_PREFIX) === 0; }).length;
@@ -180,6 +197,7 @@ const JobRuntimeRepository_ = (function() {
     setActive: setActive,
     getActive: getActive,
     clearActive: clearActive,
+    clearStorage: clearStorage,
     buildStoragePolicyReport: buildStoragePolicyReport,
     listLastRuns: listLastRuns
   };
