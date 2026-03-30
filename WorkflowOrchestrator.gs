@@ -34,6 +34,97 @@ function buildStage4Response_(success, message, error, result, changes, meta, di
 }
 
 const WorkflowOrchestrator_ = (function() {
+  function _safeAccessDescriptor() {
+    try {
+      if (typeof AccessControl_ === 'object' && AccessControl_ && typeof AccessControl_.describe === 'function') {
+        return AccessControl_.describe() || null;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  function _cleanText(value) {
+    return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
+  }
+
+  function _maskKey(value) {
+    const key = _cleanText(value);
+    if (!key) return '';
+    if (key.length <= 10) return key;
+    return key.slice(0, 6) + '…' + key.slice(-4);
+  }
+
+  function _compactJson(value) {
+    try {
+      const json = JSON.stringify(value == null ? null : value);
+      return json.length > 240 ? (json.slice(0, 237) + '...') : json;
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function _buildInitiator(payload, descriptor) {
+    if (payload && payload.initiator) return String(payload.initiator);
+    if (payload && payload.trigger) return 'trigger';
+
+    const parts = [];
+    const d = descriptor || null;
+    if (d) {
+      const displayName = _cleanText(d.displayName);
+      const email = _cleanText(d.email);
+      const callsign = _cleanText(d.personCallsign);
+      const role = _cleanText(d.role);
+      const key = _maskKey(d.currentKey);
+      if (displayName) parts.push(displayName);
+      if (email && parts.indexOf(email) === -1) parts.push(email);
+      if (callsign) parts.push('callsign:' + callsign);
+      if (role) parts.push('role:' + role);
+      if (key) parts.push('key:' + key);
+    }
+
+    if (!parts.length) {
+      const fallbackEmail = (typeof Session !== 'undefined' && Session && typeof Session.getActiveUser === 'function')
+        ? _cleanText(Session.getActiveUser().getEmail && Session.getActiveUser().getEmail())
+        : '';
+      if (fallbackEmail) parts.push(fallbackEmail);
+    }
+
+    return parts.length ? parts.join(' | ') : 'manual';
+  }
+
+  function _buildRunSource(cfg, payload, route, rawScenario) {
+    if (payload && payload.source) return String(payload.source);
+    if (payload && payload.trigger) return 'trigger';
+
+    const parts = [];
+    if (route && route.routeName) parts.push('route:' + route.routeName);
+    if (route && route.publicApiMethod) parts.push('api:' + route.publicApiMethod);
+    if (cfg && cfg.publicApiMethod && (!route || cfg.publicApiMethod !== route.publicApiMethod)) parts.push('api:' + cfg.publicApiMethod);
+    if (cfg && cfg.routeName && (!route || cfg.routeName !== route.routeName)) parts.push('route:' + cfg.routeName);
+    if (rawScenario) parts.push('scenario:' + rawScenario);
+    return parts.length ? parts.join(' | ') : 'manual';
+  }
+
+  function _buildStartNote(rawScenario, payload, route, initiator, runSource) {
+    const action = _cleanText(rawScenario || 'operation');
+    const params = [];
+    ['date', 'month', 'fromDate', 'toDate', 'row', 'rowNumber'].forEach(function(key) {
+      if (payload && payload[key] !== undefined && payload[key] !== null && String(payload[key]).trim() !== '') {
+        params.push(key + '=' + String(payload[key]).trim());
+      }
+    });
+    if (payload && Array.isArray(payload.rowNumbers) && payload.rowNumbers.length) {
+      params.push('rows=' + payload.rowNumbers.join(','));
+    }
+    if (payload && payload.dryRun) params.push('dryRun=true');
+
+    const sourceLabel = route && route.routeName ? route.routeName : runSource;
+    let note = 'started ' + action + ' via ' + _cleanText(sourceLabel || 'manual') + ' by ' + _cleanText(initiator || 'manual');
+    const payloadPreview = _compactJson(payload);
+    if (params.length) note += ' [' + params.join(', ') + ']';
+    else if (payloadPreview && payloadPreview !== '{}' && payloadPreview !== 'null') note += ' [payload=' + payloadPreview + ']';
+    return note;
+  }
   function _acquireLock(lockRequired, timeoutMs) {
     if (!lockRequired) return null;
     const lock = LockService.getDocumentLock();
@@ -146,6 +237,14 @@ const WorkflowOrchestrator_ = (function() {
       if (lock) diagnostics.lifecycle.push('lock.acquired');
 
       if (cfg.write && typeof OperationRepository_ === 'object') {
+        const accessDescriptor = _safeAccessDescriptor();
+        const resolvedInitiator = _buildInitiator(payload, accessDescriptor);
+        const resolvedRunSource = _buildRunSource(cfg, payload, route, rawScenario);
+        const startNote = _buildStartNote(rawScenario, payload, route, resolvedInitiator, resolvedRunSource);
+
+        if (!payload.initiator) payload.initiator = resolvedInitiator;
+        if (!payload.source) payload.source = resolvedRunSource;
+
         lifecycle = OperationRepository_.beginExecution({
           scenario: rawScenario,
           rawScenario: rawScenario,
@@ -153,8 +252,9 @@ const WorkflowOrchestrator_ = (function() {
           operationId: operationId,
           dryRun: dryRun,
           parentOperationId: payload.parentOperationId || '',
-          initiator: payload.initiator || (payload.trigger ? 'trigger' : 'manual'),
-          runSource: payload.source || (payload.trigger ? 'trigger' : 'manual'),
+          initiator: resolvedInitiator,
+          runSource: resolvedRunSource,
+          startNote: startNote,
           lockHolder: lock ? 'document-lock' : ''
         });
         diagnostics.idempotencyFingerprint = lifecycle.fingerprint || '';
