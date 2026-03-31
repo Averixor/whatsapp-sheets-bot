@@ -54,18 +54,18 @@
       <div class="menu-section active" id="menuSection">
         <div class="menu-grid">
 
-          <button id="btnGeneratePanel" class="menu-item" data-role-min="operator" onclick="SidebarApp.handleMenuAction('generatePanel')" title="Створити панель відправки на сьогодні">
+          <button id="btnGeneratePanel" class="menu-item" data-role-min="maintainer" onclick="SidebarApp.handleMenuAction('generatePanel')" title="Створити панель відправки на сьогодні">
             <span class="menu-icon">🎲</span><span class="menu-text">Панель відправок</span>
           </button>
 
-          <button id="sendUnsentBtn" class="btn btn" data-role-min="operator" onclick="SidebarApp.handleMenuAction('sendUnsent')" title="Немає невідправлених" disabled>🚀 Невідправлені
+          <button id="sendUnsentBtn" class="btn btn" data-role-min="maintainer" onclick="SidebarApp.handleMenuAction('sendUnsent')" title="Немає невідправлених" disabled>🚀 Невідправлені
           </button>
 
           <button id="btnDetailedSummary" class="menu-item" data-role-min="operator" onclick="SidebarApp.handleMenuAction('detailedDay')" title="Детальне зведення за день">
             <span class="menu-icon">🪬</span><span class="menu-text">Детальне зведення</span>
           </button>
 
-          <button id="btnDaySummary" class="menu-item" data-role-min="viewer" onclick="SidebarApp.handleMenuAction('daySummary')" title="Коротке зведення за день">
+          <button id="btnDaySummary" class="menu-item" data-role-min="operator" onclick="SidebarApp.handleMenuAction('daySummary')" title="Коротке зведення за день">
             <span class="menu-icon">1️⃣</span><span class="menu-text">Зведення дня</span>
           </button>
 
@@ -73,19 +73,19 @@
             <button id="btnOpenPersonnelModal" class="btn personnel-launch-btn" data-role-min="viewer" type="button">🪖 Особовий склад</button>
           </div>
 
-          <button id="btnCreateNextMonth" class="menu-item" data-role-min="operator" onclick="SidebarApp.handleMenuAction('createNextMonth')" title="Створити аркуш наступного місяця">
+          <button id="btnCreateNextMonth" class="menu-item" data-role-min="maintainer" onclick="SidebarApp.handleMenuAction('createNextMonth')" title="Створити аркуш наступного місяця">
             <span class="menu-icon">🗓️</span><span class="menu-text">Новий аркуш місяця</span>
           </button>
 
-          <button id="btnSwitchMonth" class="menu-item" data-role-min="operator" onclick="SidebarApp.handleMenuAction('switchMonth')" title="Перемкнути бота на інший місяць">
+          <button id="btnSwitchMonth" class="menu-item" data-role-min="maintainer" onclick="SidebarApp.handleMenuAction('switchMonth')" title="Перемкнути бота на інший місяць">
             <span class="menu-icon">🏃‍♂️‍➡️✈️</span><span class="menu-text">Перемістити бота</span>
           </button>
 
-          <button id="btnVacationReminder" class="menu-item" data-role-min="operator" onclick="SidebarApp.handleMenuAction('vacationReminder')" title="Перевірити відпустки">
+          <button id="btnVacationReminder" class="menu-item" data-role-min="maintainer" onclick="SidebarApp.handleMenuAction('vacationReminder')" title="Перевірити відпустки">
             <span class="menu-icon">🏖️</span><span class="menu-text">Відпустки</span>
           </button>
 
-          <button id="btnBirthdayCheck" class="menu-item" data-role-min="operator" onclick="SidebarApp.handleMenuAction('birthdayCheck')" title="Перевірити іменинників">
+          <button id="btnBirthdayCheck" class="menu-item" data-role-min="maintainer" onclick="SidebarApp.handleMenuAction('birthdayCheck')" title="Перевірити іменинників">
             <span class="menu-icon">🎂</span><span class="menu-text">Дні народження</span>
           </button>
 
