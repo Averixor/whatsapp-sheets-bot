@@ -16,7 +16,7 @@ function apiStage4BuildBirthdayLink(phone, name) { return apiStage7BuildBirthday
 function apiRunMaintenanceScenario(options) { return apiRunStage7MaintenanceScenario(options || {}); }
 function apiInstallStage4Jobs() { return apiInstallStage7Jobs(); }
 function apiListStage4Jobs() { return apiListStage7Jobs(); }
-function apiRunStage4Job(jobName, options) { return apiRunStage7Job(jobName, options || {}); }
+function apiRunStage4Job(jobName, options) { return apiRunStage7Job(jobName, Object.assign({}, options || {}, { entryPoint: 'apiRunStage4Job' })); }
 function apiStage4HealthCheck(options) { return apiStage7HealthCheck(options || {}); }
 function apiRunStage4RegressionTests(options) { return apiRunStage7RegressionTests(options || {}); }
 function apiStage4ListPendingRepairs(filters) { return apiStage7ListPendingRepairs(filters || {}); }
@@ -43,7 +43,7 @@ function apiStage5BuildBirthdayLink(phone, name) { return apiStage7BuildBirthday
 function apiRunStage5MaintenanceScenario(options) { return apiRunStage7MaintenanceScenario(options || {}); }
 function apiInstallStage5Jobs() { return apiInstallStage7Jobs(); }
 function apiListStage5Jobs() { return apiListStage7Jobs(); }
-function apiRunStage5Job(jobName, options) { return apiRunStage7Job(jobName, options || {}); }
+function apiRunStage5Job(jobName, options) { return apiRunStage7Job(jobName, Object.assign({}, options || {}, { entryPoint: 'apiRunStage5Job' })); }
 function apiStage5HealthCheck(options) { return apiStage7HealthCheck(options || {}); }
 function apiRunStage5Diagnostics(options) { return apiRunStage7Diagnostics(options || {}); }
 function apiRunStage5RegressionTests(options) { return apiRunStage7RegressionTests(options || {}); }
