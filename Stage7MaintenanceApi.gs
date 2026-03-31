@@ -229,8 +229,18 @@ function apiListStage7Jobs() {
 }
 
 function apiRunStage7Job(jobName, options) {
-  _stage7AssertRole_('sysadmin', 'run job');
-  return Stage7Triggers_.runJob(jobName, options || {});
+  const descriptor = _stage7AssertRole_('sysadmin', 'run job') || {};
+  const opts = Object.assign({}, options || {}, {
+    trigger: false,
+    source: String((options && options.source) || 'manual'),
+    entryPoint: String((options && options.entryPoint) || 'apiRunStage7Job'),
+    initiatorEmail: String((options && options.initiatorEmail) || descriptor.email || ''),
+    initiatorName: String((options && options.initiatorName) || descriptor.displayName || descriptor.email || ''),
+    initiatorRole: String((options && options.initiatorRole) || descriptor.role || ''),
+    initiatorCallsign: String((options && options.initiatorCallsign) || descriptor.personCallsign || ''),
+    userDescriptor: descriptor
+  });
+  return Stage7Triggers_.runJob(jobName, opts);
 }
 
 function runStage7DiagnosticsByMode_(options) {
