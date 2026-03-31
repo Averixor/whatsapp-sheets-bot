@@ -21,9 +21,9 @@ const AccessControl_ = (function() {
   const ROLE_ORDER = Object.freeze({ guest: 0, viewer: 1, operator: 2, maintainer: 3, admin: 4, sysadmin: 5, owner: 6 });
   const ROLE_VALUES = Object.freeze(['guest', 'viewer', 'operator', 'maintainer', 'admin', 'sysadmin', 'owner']);
   const ROLE_METADATA = Object.freeze({
-    guest: Object.freeze({ label: 'Гість', note: 'Гість / Спостерігач • лише безпечний перегляд' }),
-    viewer: Object.freeze({ label: 'Перегляд', note: 'Перегляд • тільки своя картка, без детального зведення' }),
-    operator: Object.freeze({ label: 'Оператор', note: 'Оператор • робочий доступ до карток, зведень і SEND_PANEL' }),
+    guest: Object.freeze({ label: 'Гість', note: 'Гість • лише безпечний перегляд' }),
+    viewer: Object.freeze({ label: 'Спостерігач', note: 'Спостерігач • тільки своя картка' }),
+    operator: Object.freeze({ label: 'Оператор', note: 'Оператор • робочий доступ до карток, зведень' }),
     maintainer: Object.freeze({ label: 'Редактор', note: 'Редактор • розширений робочий доступ, перевірка і супровід' }),
     admin: Object.freeze({ label: 'Адмін', note: 'Адмін • керування доступом, журналами і системними інструментами' }),
     sysadmin: Object.freeze({ label: 'Сис. адмін', note: 'Сис. адмін • повне технічне обслуговування, repair і тригери' }),
@@ -545,13 +545,13 @@ const AccessControl_ = (function() {
       case 'guest':
         return ['безпечний перегляд'];
       case 'viewer':
-        return ['список особового складу', 'власна картка', 'коротке зведення'];
+        return ['власна картка'];
       case 'operator':
-        return ['усі картки', 'коротке зведення', 'детальне зведення', 'SEND_PANEL', 'робочі дії'];
+        return ['усі картки', 'коротке зведення', 'детальне зведення'];
       case 'maintainer':
-        return ['усі дії operator', 'діагностика', 'перевірка стану системи', 'перегляд pending repairs'];
+        return ['усі дії operator', 'SEND_PANEL', 'робочі дії', 'діагностика', 'перевірка стану системи', 'перегляд pending repairs'];
       case 'admin':
-        return ['усі дії maintainer', 'керування ACCESS', 'журнали порушень', 'адмін-дії'];
+        return ['усі дії maintainer', 'керування ACCESS', 'журнали порушень', 'системні інструменти'];
       case 'sysadmin':
         return ['усі дії admin', 'repair', 'protections', 'triggers', 'кеші', 'технічне обслуговування'];
       case 'owner':
