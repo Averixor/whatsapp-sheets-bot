@@ -143,6 +143,45 @@ const Stage7Triggers_ = (function() {
     };
   }
 
+  function _getRuntimeDescriptor(options) {
+    const opts = options || {};
+    if (opts.userDescriptor && typeof opts.userDescriptor === 'object') {
+      return opts.userDescriptor;
+    }
+    if (opts.trigger) {
+      return {
+        email: '',
+        displayName: 'system-trigger',
+        role: 'system',
+        personCallsign: ''
+      };
+    }
+    if (typeof AccessControl_ === 'object' && typeof AccessControl_.describe === 'function') {
+      try {
+        return AccessControl_.describe() || {};
+      } catch (_) {}
+    }
+    return {};
+  }
+
+  function _buildRuntimeContext(registryItem, options) {
+    const opts = Object.assign({ trigger: true, initiator: 'trigger', source: 'trigger' }, options || {});
+    const descriptor = _getRuntimeDescriptor(opts);
+    const source = opts.source || (opts.trigger ? 'trigger' : 'manual');
+    return {
+      source: source,
+      dryRun: !!opts.dryRun,
+      operationId: opts.operationId || stage7UniqueId_(registryItem.jobName),
+      initiatorEmail: String(opts.initiatorEmail || descriptor.email || ''),
+      initiatorName: String(opts.initiatorName || descriptor.displayName || (opts.trigger ? 'system-trigger' : '')),
+      initiatorRole: String(opts.initiatorRole || descriptor.role || (opts.trigger ? 'system' : '')),
+      initiatorCallsign: String(opts.initiatorCallsign || descriptor.personCallsign || ''),
+      entryPoint: String(opts.entryPoint || (opts.trigger ? registryItem.handler : 'Stage7Triggers_.runJob')),
+      triggerId: String(opts.triggerId || ''),
+      notes: String(opts.notes || (opts.trigger ? ('trigger:' + registryItem.handler) : 'manual job launch'))
+    };
+  }
+
   function _executeJob(registryItem, options) {
     const opts = Object.assign({ trigger: true, initiator: 'trigger', source: 'trigger' }, options || {});
     switch (registryItem.jobName) {
@@ -182,11 +221,7 @@ const Stage7Triggers_ = (function() {
       return _executeJob(registryItem, opts);
     }
 
-    return JobRuntime_.observe(registryItem.jobName, {
-      source: opts.source || (opts.trigger ? 'trigger' : 'manual'),
-      dryRun: !!opts.dryRun,
-      operationId: opts.operationId || stage7UniqueId_(registryItem.jobName)
-    }, function() {
+    return JobRuntime_.observe(registryItem.jobName, _buildRuntimeContext(registryItem, opts), function() {
       return _executeJob(registryItem, opts);
     });
   }
