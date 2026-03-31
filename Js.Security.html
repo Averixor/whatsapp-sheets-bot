@@ -5,7 +5,7 @@
   }
 
   function getAccessRoleLabel_(role) {
-    const map = { guest: 'Гість', viewer: 'Перегляд', operator: 'Оператор', maintainer: 'Редактор', admin: 'Адмін', sysadmin: 'Сис. адмін', owner: 'Власник' };
+    const map = { guest: 'Гість', viewer: 'Спостерігач', operator: 'Оператор', maintainer: 'Редактор', admin: 'Адмін', sysadmin: 'Сис. адмін', owner: 'Власник' };
     return map[String(role || 'guest').trim().toLowerCase()] || 'Гість';
   }
 
@@ -20,7 +20,7 @@
   }
 
   function hasDaySummaryAccess_() {
-    return hasRoleAtLeast_('viewer');
+    return hasRoleAtLeast_('operator');
   }
 
   function hasDetailedSummaryAccess_() {
@@ -28,7 +28,7 @@
   }
 
   function hasWorkingAccess_() {
-    return hasRoleAtLeast_('operator');
+    return hasRoleAtLeast_('maintainer');
   }
 
   function hasMaintainerAccess_() {
@@ -145,10 +145,10 @@
       return 'Усе добре. Користувача впізнано як редактора. Розширені робочі дії дозволені, але системне адміністрування приховане.';
     }
     if (role === 'operator') {
-      return 'Усе добре. Користувача впізнано як оператора. Робочі дії дозволені, а небезпечні системні дії приховані.';
+      return 'Усе добре. Користувача впізнано як оператора. Доступні всі картки та зведення, а SEND_PANEL і робочі дії приховані.';
     }
     if (role === 'viewer') {
-      return 'Користувача визначено в режимі перегляду. Він може бачити список ОС, але відкривати тільки власну картку.';
+      return 'Користувача визначено як спостерігача. Він може відкривати тільки власну картку.';
     }
     return 'Користувача визначено як гостя. Це найобмеженіший рівень безпечного перегляду.';
   }
@@ -169,10 +169,10 @@
       return 'Перевірте, чи цей сеанс Google Apps Script віддає temporary user key. Без нього строгий user key-доступ не підтвердиться.';
     }
     if (role === 'guest') {
-      return 'Запишіть людині роль guest або підвищіть її до viewer / operator, якщо потрібні додаткові розділи.';
+      return 'Запишіть людині роль guest або підвищіть її до viewer / operator, якщо потрібен доступ до карток чи зведень.';
     }
     if (role === 'viewer') {
-      return 'Перевірте ACCESS: user_key_current без пробілів, роль одна з guest/viewer/operator/maintainer/admin/sysadmin/owner, enabled = TRUE. Для viewer також заповніть person_callsign.';
+      return 'Перевірте ACCESS: user_key_current без пробілів, роль одна з guest/viewer/operator/maintainer/admin/sysadmin/owner, enabled = TRUE. Для viewer обов’язково заповніть person_callsign.';
     }
     return 'Додаткових дій не потрібно. Якщо панель поводиться не так, як роль у звіті, проблема вже не в доступі, а в UI або окремій кнопці.';
   }
@@ -376,14 +376,14 @@
 
   function getActionRequiredRole_(actionName) {
     const map = {
-      daySummary: 'viewer',
+      daySummary: 'operator',
       detailedDay: 'operator',
-      generatePanel: 'operator',
-      sendUnsent: 'operator',
-      createNextMonth: 'operator',
-      switchMonth: 'operator',
-      vacationReminder: 'operator',
-      birthdayCheck: 'operator',
+      generatePanel: 'maintainer',
+      sendUnsent: 'maintainer',
+      createNextMonth: 'maintainer',
+      switchMonth: 'maintainer',
+      vacationReminder: 'maintainer',
+      birthdayCheck: 'maintainer',
       debugPhones: 'maintainer',
       healthCheck: 'maintainer',
       pendingRepairs: 'maintainer',
