@@ -1,6 +1,6 @@
-
 /**
  * JobRuntime.gs — stage 7 runtime observability layer.
+ * Extended to populate enriched JOB_RUNTIME_LOG fields.
  */
 
 const JobRuntime_ = (function() {
@@ -28,12 +28,15 @@ const JobRuntime_ = (function() {
       'resource exhausted',
       'timed out',
       'timeout'
-    ].some(function(token) { return message.indexOf(token) !== -1; });
+    ].some(function(token) {
+      return message.indexOf(token) !== -1;
+    });
   }
 
   function _notifyRepeatedFailures(jobName, error, streak, backoff) {
     const threshold = Number(appGetCore('JOB_FAILURE_ALERT_THRESHOLD', 3)) || 3;
     if (streak < threshold || typeof AlertsRepository_ !== 'object') return;
+
     try {
       AlertsRepository_.appendAlert({
         timestamp: new Date(),
@@ -49,28 +52,99 @@ const JobRuntime_ = (function() {
     } catch (_) {}
   }
 
-  function observe(jobName, context, fn) {
+  function _safeString(value) {
+    return value === null || value === undefined ? '' : String(value);
+  }
+
+  function _safeEmail() {
+    try {
+      return _safeString(Session.getActiveUser().getEmail());
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function _resolveDescriptorFallback() {
+    if (typeof AccessControl_ === 'object' && typeof AccessControl_.describe === 'function') {
+      try {
+        return AccessControl_.describe() || {};
+      } catch (_) {}
+    }
+    return {};
+  }
+
+  function _buildContext(jobName, context) {
+    const baseDescriptor = _resolveDescriptorFallback();
     const ctx = Object.assign({
       source: 'manual',
       dryRun: false,
-      operationId: stage7UniqueId_(jobName || 'job')
+      operationId: stage7UniqueId_(jobName || 'job'),
+      initiatorEmail: '',
+      initiatorName: '',
+      initiatorRole: '',
+      initiatorCallsign: '',
+      entryPoint: '',
+      triggerId: '',
+      notes: ''
     }, context || {});
 
-    const backoff = JobRuntimeRepository_.getBackoff(jobName);
+    if (!ctx.initiatorEmail && ctx.source !== 'trigger') {
+      ctx.initiatorEmail = baseDescriptor.email || _safeEmail();
+    }
+
+    return {
+      source: _safeString(ctx.source || 'manual'),
+      dryRun: !!ctx.dryRun,
+      operationId: _safeString(ctx.operationId || stage7UniqueId_(jobName || 'job')),
+      initiatorEmail: _safeString(ctx.initiatorEmail || baseDescriptor.email || ''),
+      initiatorName: _safeString(ctx.initiatorName || baseDescriptor.displayName || baseDescriptor.email || ''),
+      initiatorRole: _safeString(ctx.initiatorRole || baseDescriptor.role || ''),
+      initiatorCallsign: _safeString(ctx.initiatorCallsign || baseDescriptor.personCallsign || ''),
+      entryPoint: _safeString(ctx.entryPoint),
+      triggerId: _safeString(ctx.triggerId),
+      notes: _safeString(ctx.notes)
+    };
+  }
+
+  function _appendRuntimeRecord(jobName, startedAt, finishedAt, status, ctx, message, errorText) {
+    JobRuntimeRepository_.append({
+      jobName: _safeString(jobName || 'unknownJob'),
+      tsStart: startedAt.toISOString(),
+      tsEnd: finishedAt.toISOString(),
+      status: _safeString(status),
+      source: ctx.source,
+      dryRun: !!ctx.dryRun,
+      operationId: ctx.operationId,
+      durationMs: finishedAt.getTime() - startedAt.getTime(),
+      message: _safeString(message),
+      error: _safeString(errorText),
+      initiatorEmail: ctx.initiatorEmail,
+      initiatorName: ctx.initiatorName,
+      initiatorRole: ctx.initiatorRole,
+      initiatorCallsign: ctx.initiatorCallsign,
+      entryPoint: ctx.entryPoint,
+      triggerId: ctx.triggerId,
+      notes: ctx.notes
+    });
+  }
+
+  function observe(jobName, context, fn) {
+    const safeJobName = _safeString(jobName || 'unknownJob');
+    const ctx = _buildContext(safeJobName, context);
+    const startedAt = new Date();
+
+    const backoff = JobRuntimeRepository_.getBackoff(safeJobName);
     if (backoff && Number(backoff.untilTs || 0) > Date.now()) {
-      const startedAt = new Date();
-      JobRuntimeRepository_.append({
-        jobName: String(jobName || 'unknownJob'),
-        tsStart: startedAt.toISOString(),
-        tsEnd: startedAt.toISOString(),
-        status: 'SKIPPED',
-        source: ctx.source || 'manual',
-        dryRun: !!ctx.dryRun,
-        operationId: ctx.operationId,
-        durationMs: 0,
-        message: 'Backoff active until ' + new Date(Number(backoff.untilTs)).toISOString(),
-        error: ''
-      });
+      _appendRuntimeRecord(
+        safeJobName,
+        startedAt,
+        startedAt,
+        'SKIPPED',
+        ctx,
+        'Backoff active until ' + new Date(Number(backoff.untilTs)).toISOString(),
+        ''
+      );
+
       return {
         success: true,
         skipped: true,
@@ -78,69 +152,77 @@ const JobRuntime_ = (function() {
         backoff: backoff
       };
     }
+
     if (backoff) {
-      try { JobRuntimeRepository_.clearBackoff(jobName); } catch (_) {}
+      try {
+        JobRuntimeRepository_.clearBackoff(safeJobName);
+      } catch (_) {}
     }
 
-    const active = JobRuntimeRepository_.getActive(jobName);
+    const active = JobRuntimeRepository_.getActive(safeJobName);
     if (active && Number(active.ts || 0) && (Date.now() - Number(active.ts || 0)) < 60 * 60 * 1000) {
-      throw new Error(`Job "${jobName}" уже виконується або був запущений надто недавно`);
+      throw new Error('Job "' + safeJobName + '" уже виконується або був запущений надто недавно');
     }
 
-    JobRuntimeRepository_.setActive(jobName, {
+    JobRuntimeRepository_.setActive(safeJobName, {
       operationId: ctx.operationId,
-      source: ctx.source || 'manual',
-      dryRun: !!ctx.dryRun
+      source: ctx.source,
+      dryRun: !!ctx.dryRun,
+      initiatorEmail: ctx.initiatorEmail,
+      initiatorName: ctx.initiatorName,
+      initiatorRole: ctx.initiatorRole,
+      initiatorCallsign: ctx.initiatorCallsign,
+      entryPoint: ctx.entryPoint,
+      triggerId: ctx.triggerId,
+      notes: ctx.notes
     });
 
-    const startedAt = new Date();
     try {
       const result = fn();
       const finishedAt = new Date();
 
-      JobRuntimeRepository_.append({
-        jobName: String(jobName || 'unknownJob'),
-        tsStart: startedAt.toISOString(),
-        tsEnd: finishedAt.toISOString(),
-        status: 'SUCCESS',
-        source: ctx.source || 'manual',
-        dryRun: !!ctx.dryRun,
-        operationId: ctx.operationId,
-        durationMs: finishedAt.getTime() - startedAt.getTime(),
-        message: (result && result.message) ? result.message : 'OK',
-        error: ''
-      });
-      try { JobRuntimeRepository_.clearBackoff(jobName); } catch (_) {}
+      _appendRuntimeRecord(
+        safeJobName,
+        startedAt,
+        finishedAt,
+        'SUCCESS',
+        ctx,
+        (result && result.message) ? result.message : 'OK',
+        ''
+      );
+
+      try {
+        JobRuntimeRepository_.clearBackoff(safeJobName);
+      } catch (_) {}
 
       return result;
     } catch (e) {
       const finishedAt = new Date();
 
-      JobRuntimeRepository_.append({
-        jobName: String(jobName || 'unknownJob'),
-        tsStart: startedAt.toISOString(),
-        tsEnd: finishedAt.toISOString(),
-        status: 'ERROR',
-        source: ctx.source || 'manual',
-        dryRun: !!ctx.dryRun,
-        operationId: ctx.operationId,
-        durationMs: finishedAt.getTime() - startedAt.getTime(),
-        message: '',
-        error: e && e.message ? e.message : String(e)
-      });
+      _appendRuntimeRecord(
+        safeJobName,
+        startedAt,
+        finishedAt,
+        'ERROR',
+        ctx,
+        '',
+        e && e.message ? e.message : String(e)
+      );
 
       let backoffState = null;
       if (_looksQuotaLikeError(e)) {
-        backoffState = JobRuntimeRepository_.setBackoff(jobName, {
+        backoffState = JobRuntimeRepository_.setBackoff(safeJobName, {
           untilTs: Date.now() + ((Number(appGetCore('JOB_BACKOFF_MINUTES', 30)) || 30) * 60 * 1000),
           reason: e && e.message ? e.message : String(e)
         });
       }
-      _notifyRepeatedFailures(jobName, e, _failureStreak(jobName), backoffState);
 
+      _notifyRepeatedFailures(safeJobName, e, _failureStreak(safeJobName), backoffState);
       throw e;
     } finally {
-      try { JobRuntimeRepository_.clearActive(jobName); } catch (_) {}
+      try {
+        JobRuntimeRepository_.clearActive(safeJobName);
+      } catch (_) {}
     }
   }
 
@@ -162,7 +244,9 @@ const JobRuntime_ = (function() {
       const history = getHistory(item.jobName);
       const consecutiveFailures = history
         .slice(0, 5)
-        .filter(function(entry) { return entry.status === 'ERROR'; })
+        .filter(function(entry) {
+          return entry.status === 'ERROR';
+        })
         .length;
 
       return Object.assign({}, item, {
@@ -177,9 +261,15 @@ const JobRuntime_ = (function() {
         return String(a.jobName || '').localeCompare(String(b.jobName || ''));
       }),
       totalJobs: jobs.length,
-      staleJobs: jobs.filter(function(item) { return item.stale; }).length,
-      failedJobs: jobs.filter(function(item) { return item.status === 'ERROR'; }).length,
-      repeatedFailures: jobs.filter(function(item) { return item.consecutiveFailures >= 2; }).length,
+      staleJobs: jobs.filter(function(item) {
+        return item.stale;
+      }).length,
+      failedJobs: jobs.filter(function(item) {
+        return item.status === 'ERROR';
+      }).length,
+      repeatedFailures: jobs.filter(function(item) {
+        return item.consecutiveFailures >= 2;
+      }).length,
       storagePolicy: JobRuntimeRepository_.buildStoragePolicyReport()
     };
   }
