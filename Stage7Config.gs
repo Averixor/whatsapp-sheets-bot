@@ -666,3 +666,53 @@ function clearKnownBlockingCacheLocksNow() {
     removedCacheKeys: knownKeys
   };
 }
+
+// -----------------------------------------------------------------------------
+// Legacy Stage 4 / Stage 5 / Stage 6A helper aliases kept for wider-project
+// compatibility when the old config files are removed.
+// -----------------------------------------------------------------------------
+
+var STAGE4_CONFIG = (typeof STAGE4_CONFIG !== 'undefined' && STAGE4_CONFIG) ? STAGE4_CONFIG : null;
+var STAGE5_CONFIG = (typeof STAGE5_CONFIG !== 'undefined' && STAGE5_CONFIG) ? STAGE5_CONFIG : null;
+var STAGE6A_CONFIG = (typeof STAGE6A_CONFIG !== 'undefined' && STAGE6A_CONFIG) ? STAGE6A_CONFIG : null;
+
+function stage4NowIso_() {
+  return stage7NowIso_();
+}
+
+function stage4UniqueId_(prefix) {
+  return stage7UniqueId_(prefix);
+}
+
+function stage4SafeStringify_(value) {
+  return stage7SafeStringify_(value);
+}
+
+function stage4AsArray_(value) {
+  return stage7AsArray_(value);
+}
+
+function stage4MergeWarnings_() {
+  return stage7MergeWarnings_.apply(null, arguments);
+}
+
+function stage4GetFeatureFlag_(flagName, fallback) {
+  return stage7GetFeatureFlag_(flagName, fallback);
+}
+
+function stage5GetFeatureFlag_(flagName, fallback) {
+  return stage7GetFeatureFlag_(flagName, fallback);
+}
+
+function stage6AGetFeatureFlag_(flagName, fallback) {
+  return stage7AGetFeatureFlag_(flagName, fallback);
+}
+
+function ensureLegacyStageConfigAliases_() {
+  if (!STAGE4_CONFIG) STAGE4_CONFIG = getStage4Config_();
+  if (!STAGE5_CONFIG) STAGE5_CONFIG = getStage5Config_();
+  if (!STAGE6A_CONFIG) STAGE6A_CONFIG = getStage6AConfig_();
+  return true;
+}
+
+ensureLegacyStageConfigAliases_();
