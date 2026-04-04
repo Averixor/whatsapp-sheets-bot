@@ -214,6 +214,20 @@ const WorkflowOrchestrator_ = (function() {
     return null;
   }
 
+  function _resolveLockScope(cfg, scenario) {
+    const explicit = _cleanText(cfg && cfg.lockScope);
+    if (explicit === 'execute' || explicit === 'workflow') return explicit;
+
+    switch (String(scenario || '')) {
+      case 'markPanelRowsAsSent':
+      case 'markPanelRowsAsUnsent':
+        return 'execute';
+      default:
+        return 'workflow';
+    }
+  }
+
+
   function _buildDuplicateResponse_(scenario, operationId, dryRun, route, lock, lockRequired, startedAt, diagnostics, context, warnings, lifecycle) {
     const previous = lifecycle && lifecycle.previous || {};
     const safeWarnings = mergeWorkflowWarnings_(
@@ -279,6 +293,7 @@ const WorkflowOrchestrator_ = (function() {
     const dryRun = !!payload.dryRun;
     const route = _routeDescriptor(cfg, rawScenario);
     const lockRequired = cfg.lock !== false && !!cfg.write;
+    const lockScope = _resolveLockScope(cfg, rawScenario);
     const retrySafe = cfg.retrySafe !== false;
 
     let operationId = (typeof OperationRepository_ === 'object')
@@ -296,6 +311,7 @@ const WorkflowOrchestrator_ = (function() {
     }, cfg.context || {});
 
     let lock = null;
+    let lockUsed = false;
     let beforeState = null;
     let plan = null;
     let execution = null;
@@ -323,11 +339,19 @@ const WorkflowOrchestrator_ = (function() {
 
       context.operationId = operationId;
 
-      lock = _acquireLock(lockRequired, cfg.lockTimeoutMs);
-      diagnostics.lock = !!lock;
-      diagnostics.lockRequired = !!lockRequired;
+      if (lockRequired && lockScope === 'workflow') {
+        lock = _acquireLock(true, cfg.lockTimeoutMs);
+        diagnostics.lock = !!lock;
+        diagnostics.lockRequired = !!lockRequired;
+        diagnostics.lockScope = lockScope;
+        lockUsed = !!lock;
 
-      if (lock) diagnostics.lifecycle.push('lock.acquired');
+        if (lock) diagnostics.lifecycle.push('lock.acquired');
+      } else {
+        diagnostics.lock = false;
+        diagnostics.lockRequired = !!lockRequired;
+        diagnostics.lockScope = lockScope;
+      }
 
       if (cfg.write && typeof OperationRepository_ === 'object') {
         const accessDescriptor = _safeAccessDescriptor();
@@ -421,7 +445,23 @@ const WorkflowOrchestrator_ = (function() {
           OperationRepository_.heartbeat(operationId, 'before-execute');
         }
 
-        execution = cfg.execute(payload, beforeState, plan, context) || {};
+        if (lockRequired && lockScope === 'execute') {
+          lock = _acquireLock(true, cfg.lockTimeoutMs);
+          diagnostics.lock = !!lock;
+          lockUsed = !!lock;
+
+          if (lock) diagnostics.lifecycle.push('lock.acquired.execute');
+        }
+
+        try {
+          execution = cfg.execute(payload, beforeState, plan, context) || {};
+        } finally {
+          if (lockRequired && lockScope === 'execute') {
+            _releaseLock(lock);
+            if (lock) diagnostics.lifecycle.push('lock.released.execute');
+            lock = null;
+          }
+        }
       } else {
         execution = {
           result: null,
@@ -503,7 +543,7 @@ const WorkflowOrchestrator_ = (function() {
         dryRun: dryRun,
         partial: !!execution.partial,
         retrySafe: retrySafe,
-        lockUsed: !!lock,
+        lockUsed: !!lockUsed,
         lockRequired: !!lockRequired,
         durationMs: new Date().getTime() - startedAt.getTime(),
         sync: sync || null,
@@ -633,7 +673,7 @@ const WorkflowOrchestrator_ = (function() {
           dryRun: dryRun,
           partial: false,
           retrySafe: retrySafe,
-          lockUsed: !!lock,
+          lockUsed: !!lockUsed,
           lockRequired: !!lockRequired,
           durationMs: diagnostics.durationMs,
           verification: verification || null,
