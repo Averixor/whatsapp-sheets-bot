@@ -48,7 +48,7 @@ const DialogTemplates_ = (function () {
       <div style="text-align:center;padding:8px 4px 2px 4px;">
         <p style="margin:0 0 14px 0;color:#334155;">${esc((data && data.description) || 'Натисніть, щоб відкрити WhatsApp')}</p>
         <a href="${safe}" target="_blank" style="display:inline-block;padding:12px 24px;background:#25D366;color:#fff;text-decoration:none;border-radius:10px;font-weight:700;">
-          📱 ВІДКРИТИ
+          ВІДКРИТИ
         </a>
       </div>
     `;
@@ -60,15 +60,15 @@ const DialogTemplates_ = (function () {
     const safe = PreviewLinkService_.safeWaLink(item.link || '');
     const body = `
       <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:14px;">
-        <div style="margin-bottom:6px;"><b>📅 Дата:</b> ${esc(item.reportDateStr || '')}</div>
-        <div style="margin-bottom:6px;"><b>👤 ПІБ:</b> ${esc(item.fio || '')}</div>
-        <div style="margin-bottom:6px;"><b>📞 Телефон:</b> ${esc(item.phone || '')}</div>
-        <div><b>🆔 Код / клітинка:</b> ${esc(item.code || '')} ${item.cell ? '(' + esc(item.cell) + ')' : ''}</div>
+        <div style="margin-bottom:6px;"><b>Дата:</b> ${esc(item.reportDateStr || '')}</div>
+        <div style="margin-bottom:6px;"><b>ПІБ:</b> ${esc(item.fio || '')}</div>
+        <div style="margin-bottom:6px;"><b>Телефон:</b> ${esc(item.phone || '')}</div>
+        <div><b>Код / клітинка:</b> ${esc(item.code || '')} ${item.cell ? '(' + esc(item.cell) + ')' : ''}</div>
       </div>
       <textarea id="msgText" readonly style="width:100%;height:180px;border:1px solid #cbd5e1;border-radius:10px;padding:12px;box-sizing:border-box;">${esc(item.message || '')}</textarea>
       <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;">
-        <button onclick="copyTextSmart(document.getElementById('msgText').value)" style="padding:10px 16px;border:none;border-radius:10px;background:#0ea5e9;color:#fff;font-weight:700;cursor:pointer;">📋 Копіювати</button>
-        <a href="${safe}" target="_blank" style="display:inline-block;padding:10px 16px;border-radius:10px;background:#25D366;color:#fff;text-decoration:none;font-weight:700;">📱 Відкрити</a>
+        <button onclick="copyTextSmart(document.getElementById('msgText').value)" style="padding:10px 16px;border:none;border-radius:10px;background:#0ea5e9;color:#fff;font-weight:700;cursor:pointer;">Копіювати</button>
+        <a href="${safe}" target="_blank" style="display:inline-block;padding:10px 16px;border-radius:10px;background:#25D366;color:#fff;text-decoration:none;font-weight:700;">Відкрити</a>
       </div>
     `;
     return baseShell((data && data.title) || 'Повідомлення', body, 620, 480);
@@ -93,7 +93,7 @@ const DialogTemplates_ = (function () {
 
     const errorsBlock = errors.length ? `
       <div style="border:1px solid #fecaca;background:#fff1f2;border-radius:12px;padding:12px;margin-bottom:12px;">
-        <div style="font-weight:700;color:#991b1b;margin-bottom:8px;">⁈ Помилки підготовки: ${errors.length}</div>
+        <div style="font-weight:700;color:#991b1b;margin-bottom:8px;">Помилки підготовки: ${errors.length}</div>
         ${errors.map(function (item) {
       return `<div style="font-size:12px;color:#7f1d1d;margin-bottom:4px;">${esc(item.cell || '')} ${esc(item.message || '')}</div>`;
     }).join('')}
@@ -114,8 +114,8 @@ const DialogTemplates_ = (function () {
       <div style="margin-bottom:10px;color:#334155;">Дата: <b>${esc(item.date || '')}</b></div>
       <textarea id="summaryText" readonly style="width:100%;height:260px;border:1px solid #cbd5e1;border-radius:10px;padding:12px;box-sizing:border-box;">${esc(item.summary || '')}</textarea>
       <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;">
-        <button onclick="copyTextSmart(document.getElementById('summaryText').value)" style="padding:10px 16px;border:none;border-radius:10px;background:#0ea5e9;color:#fff;font-weight:700;cursor:pointer;">📋 Копіювати</button>
-        ${item.link ? `<a href="${PreviewLinkService_.safeWaLink(item.link)}" target="_blank" style="display:inline-block;padding:10px 16px;border-radius:10px;background:#25D366;color:#fff;text-decoration:none;font-weight:700;">📱 Відкрити</a>` : ''}
+        <button onclick="copyTextSmart(document.getElementById('summaryText').value)" style="padding:10px 16px;border:none;border-radius:10px;background:#0ea5e9;color:#fff;font-weight:700;cursor:pointer;">Копіювати</button>
+        ${item.link ? `<a href="${PreviewLinkService_.safeWaLink(item.link)}" target="_blank" style="display:inline-block;padding:10px 16px;border-radius:10px;background:#25D366;color:#fff;text-decoration:none;font-weight:700;">Відкрити</a>` : ''}
       </div>
     `;
     return baseShell(item.title || 'Зведення', body, 620, 520);
