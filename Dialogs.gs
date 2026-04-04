@@ -22,7 +22,7 @@ function showLinkDialogSimple_(title, url) {
 function showSingleDialog_(p, logged) {
   return DialogPresenter_.showSinglePayloadPreview(
     PreviewLinkService_.buildSinglePreview(p || {}, {
-      title: logged ? '✓ Записано в LOG' : '📱 Повідомлення',
+      title: logged ? 'Записано в LOG' : 'Повідомлення',
       logged: !!logged
     })
   );
@@ -31,7 +31,7 @@ function showSingleDialog_(p, logged) {
 function showMultipleDialog_(payloads, errors, logged) {
   return DialogPresenter_.showMultiplePayloadPreview(
     PreviewLinkService_.buildMultiplePreview(payloads || [], errors || [], {
-      title: logged ? '✓ Записано в LOG' : '📦 Пакет повідомлень',
+      title: logged ? 'Записано в LOG' : 'Пакет повідомлень',
       logged: !!logged
     })
   );
