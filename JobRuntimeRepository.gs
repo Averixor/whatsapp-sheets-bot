@@ -192,7 +192,6 @@ const JobRuntimeRepository_ = (function() {
       sh.appendRow(_recordToRow(item));
       _trimLogSheet(sh);
     } catch (_) {
-      // intentionally silent: properties journal remains the fallback state store
     }
 
     return item;
