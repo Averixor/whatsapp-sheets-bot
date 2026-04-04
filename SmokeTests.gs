@@ -89,6 +89,31 @@ function _smokeHasFn_(name) {
   return typeof _smokeResolveFn_(target) === 'function' || _smokeHasRouteApi_(target);
 }
 
+function _smokeResolveAccessSecurityRunner_() {
+  if (typeof runAccessSecurityE2ETests_ === 'function') {
+    return {
+      name: 'runAccessSecurityE2ETests_',
+      fn: runAccessSecurityE2ETests_
+    };
+  }
+
+  if (typeof runAccessPolicyChecks === 'function') {
+    return {
+      name: 'runAccessPolicyChecks',
+      fn: runAccessPolicyChecks
+    };
+  }
+
+  if (typeof runAllPolicyChecks === 'function') {
+    return {
+      name: 'runAllPolicyChecks',
+      fn: runAllPolicyChecks
+    };
+  }
+
+  return null;
+}
+
 function _smokePush_(report, name, fn, options) {
   const opts = options || {};
   try {
@@ -248,10 +273,6 @@ function runStage4ScenarioTests(options) {
     return apiRunMaintenanceScenario({ type: 'healthCheck', shallow: true });
   });
 
-
-
-
-
   _smokePush_(report, 'jobs api contract suite', function () {
     [apiListStage4Jobs(), apiInstallStage4Jobs()].forEach(function (result, idx) {
       _assertStage4Meta_(result, 'jobs#' + (idx + 1));
@@ -303,8 +324,6 @@ function runStage4ScenarioTests(options) {
     });
     return 'diagnostics-modes-ok';
   });
-
-
 
   return report;
 }
@@ -436,6 +455,7 @@ function runStage5SmokeTests(options) {
       '_extras/history/CANONICAL_APIS_STAGE7_FINAL_STABILIZED.md',
       '_extras/history/SCHEMA.md',
       'AccessE2ETests.gs',
+      'AccessPolicyChecks.gs',
       'OperationRepository.gs',
       'AccessControl.gs',
       'ServiceSheetsBootstrap.gs',
@@ -520,9 +540,6 @@ function runStage5SmokeTests(options) {
     return 'runtime-wording-ok';
   });
 
-
-
-
   _smokePush_(report, 'lifecycle retention cleanup api contract', function () {
     _smokeAssert_(_smokeHasFn_('apiStage7RunLifecycleRetentionCleanup'), 'apiStage7RunLifecycleRetentionCleanup відсутній');
     _smokeAssert_(STAGE7_CONFIG && STAGE7_CONFIG.JOBS && STAGE7_CONFIG.JOBS.LIFECYCLE_RETENTION_CLEANUP === 'lifecycleRetentionCleanup', 'JOBS.LIFECYCLE_RETENTION_CLEANUP має бути lifecycleRetentionCleanup');
@@ -557,7 +574,6 @@ function runStage5SmokeTests(options) {
     return 'diagnostics-wording-ok';
   });
 
-
   _smokePush_(report, 'maintenance public wording is release-neutral', function () {
     const responses = [
       apiStage7HealthCheck({ mode: 'quick' }),
@@ -579,8 +595,6 @@ function runStage5SmokeTests(options) {
     });
     return 'maintenance-wording-ok';
   });
-
-
 
   _smokePush_(report, 'diagnostics modes available', function () {
     ['runStage5QuickDiagnostics_', 'runStage5StructuralDiagnostics_', 'runStage5OperationalDiagnostics_', 'runStage5SunsetDiagnostics_', 'runStage5FullDiagnostics_'].forEach(function (fnName) {
@@ -646,7 +660,6 @@ function runStage5SmokeTests(options) {
     return 'contract-ok';
   });
 
-
   _smokePush_(report, 'lifecycle repository contract', function () {
     _smokeAssert_(typeof OperationRepository_ === 'object', 'OperationRepository_ відсутній');
     _smokeAssert_(typeof OperationRepository_.buildFingerprint === 'function', 'buildFingerprint() відсутній');
@@ -658,14 +671,20 @@ function runStage5SmokeTests(options) {
     return 'lifecycle-contract-ok';
   });
 
-
   _smokePush_(report, 'access security e2e dry-run', function () {
-    _smokeAssert_(typeof runAccessSecurityE2ETests_ === 'function', 'runAccessSecurityE2ETests_ відсутній');
-    const e2e = runAccessSecurityE2ETests_({ dryRun: true });
+    const runner = _smokeResolveAccessSecurityRunner_();
+    _smokeAssert_(runner && typeof runner.fn === 'function', 'Access security runner відсутній');
+
+    const e2e = runner.fn({
+      dryRun: true,
+      safeTestEnvironment: true
+    });
+
     _smokeAssert_(e2e && Array.isArray(e2e.checks), 'Access E2E не повернув checks[]');
     _smokeAssert_(e2e.checks.length >= 8, 'Замало access security E2E checks');
+    _smokeAssert_(e2e.status !== 'BLOCKED', 'Access security E2E повернув BLOCKED');
     _smokeAssert_(e2e.ok !== false, 'Access security E2E повернув ok=false');
-    return `checks=${e2e.checks.length}`;
+    return `runner=${runner.name}; checks=${e2e.checks.length}`;
   });
 
   _smokePush_(report, 'security hardening helpers', function () {
@@ -675,7 +694,6 @@ function runStage5SmokeTests(options) {
     _smokeAssert_(typeof cleanupLogsAndAuditRetention_ === 'function', 'cleanupLogsAndAuditRetention_ відсутня');
     return 'security-helpers-ok';
   });
-
 
   _smokePush_(report, 'maintenance repair api contract', function () {
     ['apiStage7ListPendingRepairs', 'apiStage7GetOperationDetails', 'apiStage7RunRepair'].forEach(function (name) {
