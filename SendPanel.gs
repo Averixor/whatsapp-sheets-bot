@@ -243,7 +243,7 @@ function ensureSendPanelStructure_(panel, botMonth, panelDate) {
 
   panel.getRange(1, 1, 1, 7)
     .merge()
-    .setValue(`🤖 Активний місяць: ${safeMonth} | Дата панелі: ${safeDate}`)
+    .setValue(`Активний місяць: ${safeMonth} | Дата панелі: ${safeDate}`)
     .setFontWeight('bold')
     .setFontSize(12)
     .setHorizontalAlignment('center')
@@ -484,7 +484,7 @@ function generateSendPanel() {
   try {
     const result = rebuildSendPanelCore_();
     result.panel.activate();
-    ui.alert(`✓ Панель створена (${result.rowsWritten} записів)\nМісяць бота: ${result.month}`);
+    ui.alert(`Панель створена (${result.rowsWritten} записів)\nМісяць бота: ${result.month}`);
   } catch (e) {
     ui.alert(`✕ ${e && e.message ? e.message : String(e)}`);
   }
@@ -493,12 +493,12 @@ function generateSendPanel() {
 function sendAllFromSendPanel() {
   const ui = SpreadsheetApp.getUi();
   const panel = SpreadsheetApp.getActive().getSheetByName(CONFIG.SEND_PANEL_SHEET);
-  if (!panel) return ui.alert('✕ Спочатку створіть панель');
+  if (!panel) return ui.alert('Спочатку створіть панель');
 
   normalizeSendPanelDailyState_(panel);
 
   const last = panel.getLastRow();
-  if (last < CONFIG.SEND_PANEL_DATA_START_ROW) return ui.alert('✕ Панель порожня');
+  if (last < CONFIG.SEND_PANEL_DATA_START_ROW) return ui.alert('Панель порожня');
 
   const countRows = last - (CONFIG.SEND_PANEL_DATA_START_ROW - 1);
   const values = panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 1, countRows, 7).getDisplayValues();
@@ -525,7 +525,7 @@ function sendAllFromSendPanel() {
     }
   }
 
-  if (!items.length) return ui.alert('✓ На сьогодні все вже підтверджено як відправлене');
+  if (!items.length) return ui.alert('На сьогодні все вже підтверджено як відправлене');
   showSendPanelDialog_(items);
 }
 
@@ -678,7 +678,7 @@ function showSendPanelDialog_(items) {
   </style>
 </head>
 <body>
-  <h3>📤 Автофіксація відправки WhatsApp</h3>
+  <h3>Автофіксація відправки WhatsApp</h3>
 
   <div class="stats">
     <div><b>Схема роботи:</b> відкриваєш повідомлення у WhatsApp, і рядок одразу автоматично фіксується як відправлений.</div>
@@ -691,12 +691,12 @@ function showSendPanelDialog_(items) {
   </div>
 
   <div class="buttons">
-    <button class="btn-wa" id="btnPrepare">🟢 Підготувати вкладку WhatsApp</button>
-    <button class="btn-open" id="btnOpen">📱 Відкрити поточне</button>
-    <button class="btn-ok" id="btnConfirm" style="display:none;">✓ Підтверджено</button>
-    <button class="btn-no" id="btnReject">↩️ Не відправлено</button>
-    <button class="btn-skip" id="btnSkip">⏭️ Пропустити</button>
-    <button class="btn-close" id="btnClose">✖ Закрити</button>
+    <button class="btn-wa" id="btnPrepare">Підготувати вкладку WhatsApp</button>
+    <button class="btn-open" id="btnOpen">Відкрити поточне</button>
+    <button class="btn-ok" id="btnConfirm" style="display:none;">Підтверджено</button>
+    <button class="btn-no" id="btnReject">Не відправлено</button>
+    <button class="btn-skip" id="btnSkip">Пропустити</button>
+    <button class="btn-close" id="btnClose">Закрити</button>
   </div>
 
   <div id="log">Готово до роботи...</div>
@@ -745,7 +745,7 @@ function showSendPanelDialog_(items) {
       const item = getCurrentItem();
 
       if (!item) {
-        progressEl.innerHTML = '<span class="done">✓ Усі записи оброблені</span>';
+        progressEl.innerHTML = '<span class="done">Усі записи оброблені</span>';
         metaEl.innerHTML = '<div><b>Статус</b></div><div>Більше немає повідомлень у черзі.</div>';
         btnOpen.disabled = true;
         btnConfirm.disabled = true;
@@ -770,34 +770,34 @@ function showSendPanelDialog_(items) {
       try {
         if (waWindow && !waWindow.closed) {
           waWindow.focus();
-          log('🟢 Вкладка WhatsApp уже підготовлена');
+          log('Вкладка WhatsApp уже підготовлена');
           return;
         }
         waWindow = window.open('https://web.whatsapp.com/', WA_SENDER_TARGET, 'noopener,noreferrer');
         if (waWindow) {
-          log('🟢 Вкладка WhatsApp підготовлена');
+          log('Вкладка WhatsApp підготовлена');
         } else {
-          log('✕ Браузер не дозволив автоматично відкрити вкладку WhatsApp');
+          log('Браузер не дозволив автоматично відкрити вкладку WhatsApp');
         }
       } catch (e) {
-        log('✕ Не вдалося відкрити вкладку WhatsApp: ' + (e && e.message ? e.message : e));
+        log('Не вдалося відкрити вкладку WhatsApp: ' + (e && e.message ? e.message : e));
       }
     }
 
     function openCurrent(){
       const item = getCurrentItem();
       if (!item) {
-        log('✓ Черга порожня');
+        log('Черга порожня');
         return;
       }
       if (openInProgress) {
-        log('⏳ Відкриття вже виконується, зачекай');
+        log('Відкриття вже виконується, зачекай');
         return;
       }
 
       const now = Date.now();
       if (lastOpenedUrl === item.url && (now - lastOpenedAt) < 1500) {
-        log('⏳ Повторне відкриття того самого посилання заблоковано');
+        log('Повторне відкриття того самого посилання заблоковано');
         return;
       }
 
@@ -814,20 +814,20 @@ function showSendPanelDialog_(items) {
         }
         lastOpenedUrl = item.url;
         lastOpenedAt = now;
-        log('📱 Відкрито у вкладці WhatsApp: ' + (item.fio || 'без імені'));
+        log('Відкрито у вкладці WhatsApp: ' + (item.fio || 'без імені'));
 
         google.script.run
           .withSuccessHandler(function(){
-            log('✅ Автоматично зафіксовано як відправлене: ' + (item.fio || 'без імені'));
+            log('Автоматично зафіксовано як відправлене: ' + (item.fio || 'без імені'));
             currentIndex++;
             renderCurrent();
           })
           .withFailureHandler(function(err){
-            log('✕ Помилка автофіксації: ' + (err && err.message ? err.message : err));
+            log('Помилка автофіксації: ' + (err && err.message ? err.message : err));
           })
           .markSendPanelSent_(item.row);
       } catch (e) {
-        log('✕ Не вдалося відкрити повідомлення: ' + (e && e.message ? e.message : e));
+        log('Не вдалося відкрити повідомлення: ' + (e && e.message ? e.message : e));
       } finally {
         setTimeout(function(){ openInProgress = false; }, 350);
       }
@@ -839,12 +839,12 @@ function showSendPanelDialog_(items) {
 
       google.script.run
         .withSuccessHandler(function(){
-          log('✓ Підтверджено як відправлене: ' + (item.fio || 'без імені'));
+          log('Підтверджено як відправлене: ' + (item.fio || 'без імені'));
           currentIndex++;
           renderCurrent();
         })
         .withFailureHandler(function(err){
-          log('✕ Помилка підтвердження: ' + (err && err.message ? err.message : err));
+          log('Помилка підтвердження: ' + (err && err.message ? err.message : err));
         })
         .markSendPanelSent_(item.row);
     }
@@ -855,12 +855,12 @@ function showSendPanelDialog_(items) {
 
       google.script.run
         .withSuccessHandler(function(){
-          log('↩️ Позначено як НЕ відправлене: ' + (item.fio || 'без імені'));
+          log('Позначено як НЕ відправлене: ' + (item.fio || 'без імені'));
           currentIndex++;
           renderCurrent();
         })
         .withFailureHandler(function(err){
-          log('✕ Помилка скидання статусу: ' + (err && err.message ? err.message : err));
+          log('Помилка скидання статусу: ' + (err && err.message ? err.message : err));
         })
         .markSendPanelUnsent_(item.row);
     }
@@ -869,7 +869,7 @@ function showSendPanelDialog_(items) {
       const item = getCurrentItem();
       if (!item) return;
 
-      log('⏭️ Пропущено: ' + (item.fio || 'без імені'));
+      log('Пропущено: ' + (item.fio || 'без імені'));
       currentIndex++;
       renderCurrent();
     }
@@ -887,5 +887,5 @@ function showSendPanelDialog_(items) {
 </html>
   `).setWidth(760).setHeight(620);
 
-  SpreadsheetApp.getUi().showModalDialog(html, '🚀 Підтвердження відправки');
+  SpreadsheetApp.getUi().showModalDialog(html, 'Підтвердження відправки');
 }
