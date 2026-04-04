@@ -160,6 +160,7 @@ const SendPanelFastPaths_ = (function() {
 
     panel.getRange(dataStartRow, 1, Math.max(1, dataLastRow - dataStartRow + 1), 7).setBackground(null);
     try { panel.setFrozenRows(headerRow); } catch (_) {}
+    try { applyColumnWidthsStandardsToSheet_(panel); } catch (_) {}
     setSendPanelMetadata_(panel, safeMonth, safeDate);
   }
 
@@ -299,19 +300,22 @@ const SendPanelFastPaths_ = (function() {
     var rowCount = lastRow - (dataStartRow - 1);
     var values = panel.getRange(dataStartRow, 1, rowCount, 7).getDisplayValues();
     var formulas = panel.getRange(dataStartRow, 7, rowCount, 1).getFormulas().flat();
+    var sentColumnValues = [];
+    var actionColumnValues = [];
     var updatedRows = [];
 
     for (var i = 0; i < rowCount; i++) {
-      if (!isSendPanelSentMark_(values[i][5])) continue;
-      var absoluteRow = dataStartRow + i;
+      var isSent = isSendPanelSentMark_(values[i][5]);
       var status = normalizeSendPanelStatus_(values[i][4]);
       var link = extractHyperlinkUrl_(formulas[i] || '');
-      panel.getRange(absoluteRow, 6).setValue(getSendPanelUnsentMark_());
-      panel.getRange(absoluteRow, 7).setValue(resolveSendPanelActionCellValue_(link, status, false));
-      updatedRows.push(absoluteRow);
+      sentColumnValues.push([isSent ? getSendPanelUnsentMark_() : values[i][5]]);
+      actionColumnValues.push([isSent ? resolveSendPanelActionCellValue_(link, status, false) : (formulas[i] || values[i][6] || '')]);
+      if (isSent) updatedRows.push(dataStartRow + i);
     }
 
     if (updatedRows.length) {
+      panel.getRange(dataStartRow, 6, rowCount, 1).setValues(sentColumnValues);
+      panel.getRange(dataStartRow, 7, rowCount, 1).setValues(actionColumnValues);
       _applyVisualStateToRows_(panel, updatedRows);
     }
 
