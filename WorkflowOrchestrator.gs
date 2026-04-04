@@ -2,10 +2,58 @@
  * WorkflowOrchestrator.gs — lifecycle orchestration for Stage 7 reliability hardening.
  */
 
+function normalizeWorkflowWarning_(item) {
+  if (item === null || item === undefined || item === '') return '';
+
+  if (typeof item === 'string') return item;
+
+  if (typeof item === 'object') {
+    if (item.message && item.code) return '[' + item.code + '] ' + item.message;
+    if (item.message) return String(item.message);
+    if (item.text) return String(item.text);
+    if (item.code) return String(item.code);
+
+    try {
+      return JSON.stringify(item);
+    } catch (e) {
+      return String(item);
+    }
+  }
+
+  return String(item);
+}
+
+function normalizeWorkflowWarnings_(warnings) {
+  if (!Array.isArray(warnings)) return [];
+
+  var out = [];
+  warnings.forEach(function(item) {
+    var normalized = normalizeWorkflowWarning_(item);
+    if (!normalized) return;
+    out.push(normalized);
+  });
+
+  return Array.from(new Set(out));
+}
+
+function mergeWorkflowWarnings_() {
+  var merged = [];
+  Array.prototype.slice.call(arguments).forEach(function(part) {
+    if (!Array.isArray(part)) part = stage7AsArray_(part);
+    part.forEach(function(item) {
+      var normalized = normalizeWorkflowWarning_(item);
+      if (!normalized) return;
+      merged.push(normalized);
+    });
+  });
+  return Array.from(new Set(merged));
+}
+
 function buildStage4Response_(success, message, error, result, changes, meta, diagnostics, context, warnings) {
   const safeMeta = meta || {};
   const safeDiagnostics = diagnostics || null;
-  const normalizedWarnings = Array.isArray(warnings) ? warnings.filter(Boolean).map(String) : [];
+  const normalizedWarnings = normalizeWorkflowWarnings_(warnings);
+
   return {
     success: !!success,
     message: String(message || ''),
@@ -75,6 +123,7 @@ const WorkflowOrchestrator_ = (function() {
       const callsign = _cleanText(d.personCallsign);
       const role = _cleanText(d.role);
       const key = _maskKey(d.currentKey);
+
       if (displayName) parts.push(displayName);
       if (email && parts.indexOf(email) === -1) parts.push(email);
       if (callsign) parts.push('callsign:' + callsign);
@@ -83,9 +132,11 @@ const WorkflowOrchestrator_ = (function() {
     }
 
     if (!parts.length) {
-      const fallbackEmail = (typeof Session !== 'undefined' && Session && typeof Session.getActiveUser === 'function')
-        ? _cleanText(Session.getActiveUser().getEmail && Session.getActiveUser().getEmail())
-        : '';
+      const fallbackEmail =
+        (typeof Session !== 'undefined' && Session && typeof Session.getActiveUser === 'function')
+          ? _cleanText(Session.getActiveUser().getEmail && Session.getActiveUser().getEmail())
+          : '';
+
       if (fallbackEmail) parts.push(fallbackEmail);
     }
 
@@ -99,32 +150,46 @@ const WorkflowOrchestrator_ = (function() {
     const parts = [];
     if (route && route.routeName) parts.push('route:' + route.routeName);
     if (route && route.publicApiMethod) parts.push('api:' + route.publicApiMethod);
-    if (cfg && cfg.publicApiMethod && (!route || cfg.publicApiMethod !== route.publicApiMethod)) parts.push('api:' + cfg.publicApiMethod);
-    if (cfg && cfg.routeName && (!route || cfg.routeName !== route.routeName)) parts.push('route:' + cfg.routeName);
+    if (cfg && cfg.publicApiMethod && (!route || cfg.publicApiMethod !== route.publicApiMethod)) {
+      parts.push('api:' + cfg.publicApiMethod);
+    }
+    if (cfg && cfg.routeName && (!route || cfg.routeName !== route.routeName)) {
+      parts.push('route:' + cfg.routeName);
+    }
     if (rawScenario) parts.push('scenario:' + rawScenario);
+
     return parts.length ? parts.join(' | ') : 'manual';
   }
 
   function _buildStartNote(rawScenario, payload, route, initiator, runSource) {
     const action = _cleanText(rawScenario || 'operation');
     const params = [];
+
     ['date', 'month', 'fromDate', 'toDate', 'row', 'rowNumber'].forEach(function(key) {
       if (payload && payload[key] !== undefined && payload[key] !== null && String(payload[key]).trim() !== '') {
         params.push(key + '=' + String(payload[key]).trim());
       }
     });
+
     if (payload && Array.isArray(payload.rowNumbers) && payload.rowNumbers.length) {
       params.push('rows=' + payload.rowNumbers.join(','));
     }
+
     if (payload && payload.dryRun) params.push('dryRun=true');
 
     const sourceLabel = route && route.routeName ? route.routeName : runSource;
     let note = 'started ' + action + ' via ' + _cleanText(sourceLabel || 'manual') + ' by ' + _cleanText(initiator || 'manual');
+
     const payloadPreview = _compactJson(payload);
-    if (params.length) note += ' [' + params.join(', ') + ']';
-    else if (payloadPreview && payloadPreview !== '{}' && payloadPreview !== 'null') note += ' [payload=' + payloadPreview + ']';
+    if (params.length) {
+      note += ' [' + params.join(', ') + ']';
+    } else if (payloadPreview && payloadPreview !== '{}' && payloadPreview !== 'null') {
+      note += ' [payload=' + payloadPreview + ']';
+    }
+
     return note;
   }
+
   function _acquireLock(lockRequired, timeoutMs) {
     if (!lockRequired) return null;
     const lock = LockService.getDocumentLock();
@@ -134,7 +199,9 @@ const WorkflowOrchestrator_ = (function() {
 
   function _releaseLock(lock) {
     if (!lock) return;
-    try { lock.releaseLock(); } catch (_) {}
+    try {
+      lock.releaseLock();
+    } catch (_) {}
   }
 
   function _routeDescriptor(cfg, scenario) {
@@ -149,6 +216,11 @@ const WorkflowOrchestrator_ = (function() {
 
   function _buildDuplicateResponse_(scenario, operationId, dryRun, route, lock, lockRequired, startedAt, diagnostics, context, warnings, lifecycle) {
     const previous = lifecycle && lifecycle.previous || {};
+    const safeWarnings = mergeWorkflowWarnings_(
+      warnings,
+      ['Сценарій уже виконувався або щойно був успішно завершений']
+    );
+
     const meta = {
       stage: STAGE7_CONFIG.VERSION,
       hardeningStage: '7',
@@ -165,7 +237,10 @@ const WorkflowOrchestrator_ = (function() {
       lockUsed: !!lock,
       lockRequired: !!lockRequired,
       durationMs: new Date().getTime() - startedAt.getTime(),
-      lifecycle: lifecycle ? { fingerprint: lifecycle.fingerprint || '', reason: lifecycle.reason || '' } : null,
+      lifecycle: lifecycle ? {
+        fingerprint: lifecycle.fingerprint || '',
+        reason: lifecycle.reason || ''
+      } : null,
       idempotency: {
         fingerprint: lifecycle && lifecycle.fingerprint || '',
         reason: lifecycle && lifecycle.reason || '',
@@ -173,7 +248,18 @@ const WorkflowOrchestrator_ = (function() {
         previousFinishedAt: previous && previous.TimestampFinished ? String(previous.TimestampFinished) : ''
       }
     };
-    return buildStage4Response_(true, 'Повторний запуск безпечно подавлено', null, null, [], meta, diagnostics, context, warnings.concat(['Сценарій уже виконувався або щойно був успішно завершений']));
+
+    return buildStage4Response_(
+      true,
+      'Повторний запуск безпечно подавлено',
+      null,
+      null,
+      [],
+      meta,
+      diagnostics,
+      context,
+      safeWarnings
+    );
   }
 
   function run(spec) {
@@ -194,6 +280,7 @@ const WorkflowOrchestrator_ = (function() {
     const route = _routeDescriptor(cfg, rawScenario);
     const lockRequired = cfg.lock !== false && !!cfg.write;
     const retrySafe = cfg.retrySafe !== false;
+
     let operationId = (typeof OperationRepository_ === 'object')
       ? OperationRepository_.makeOperationId(rawScenario, payload, payload.operationId)
       : String(payload.operationId || stage7UniqueId_(rawScenario));
@@ -221,19 +308,25 @@ const WorkflowOrchestrator_ = (function() {
 
       if (typeof cfg.validate === 'function') {
         const validated = cfg.validate(payload, context) || {};
-        if (validated.payload && typeof validated.payload === 'object') payload = validated.payload;
-        warnings.push.apply(warnings, stage7MergeWarnings_(validated.warnings));
+
+        if (validated.payload && typeof validated.payload === 'object') {
+          payload = validated.payload;
+        }
+
+        warnings.push.apply(warnings, mergeWorkflowWarnings_(validated.warnings));
         diagnostics.lifecycle.push('payload.validated');
       }
 
       operationId = (typeof OperationRepository_ === 'object')
         ? OperationRepository_.makeOperationId(rawScenario, payload, payload.operationId)
         : operationId;
+
       context.operationId = operationId;
 
       lock = _acquireLock(lockRequired, cfg.lockTimeoutMs);
       diagnostics.lock = !!lock;
       diagnostics.lockRequired = !!lockRequired;
+
       if (lock) diagnostics.lifecycle.push('lock.acquired');
 
       if (cfg.write && typeof OperationRepository_ === 'object') {
@@ -257,12 +350,27 @@ const WorkflowOrchestrator_ = (function() {
           startNote: startNote,
           lockHolder: lock ? 'document-lock' : ''
         });
+
         diagnostics.idempotencyFingerprint = lifecycle.fingerprint || '';
         diagnostics.lifecycle.push('lifecycle.preflight');
+
         if (lifecycle.suppressed) {
           diagnostics.lifecycle.push('idempotency.fingerprint.suppressed');
-          return _buildDuplicateResponse_(rawScenario, operationId, dryRun, route, lock, lockRequired, startedAt, diagnostics, context, warnings, lifecycle);
+          return _buildDuplicateResponse_(
+            rawScenario,
+            operationId,
+            dryRun,
+            route,
+            lock,
+            lockRequired,
+            startedAt,
+            diagnostics,
+            context,
+            warnings,
+            lifecycle
+          );
         }
+
         operationId = lifecycle.operationId || operationId;
         context.operationId = operationId;
         context.parentOperationId = lifecycle.parentOperationId || payload.parentOperationId || '';
@@ -270,9 +378,13 @@ const WorkflowOrchestrator_ = (function() {
       }
 
       if (typeof cfg.readBefore === 'function') {
-        if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') OperationRepository_.heartbeat(operationId, 'before-read');
+        if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') {
+          OperationRepository_.heartbeat(operationId, 'before-read');
+        }
+
         beforeState = cfg.readBefore(payload, context);
         diagnostics.lifecycle.push('state.read');
+
         if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') {
           OperationRepository_.saveCheckpoint({
             operationId: operationId,
@@ -285,10 +397,14 @@ const WorkflowOrchestrator_ = (function() {
       }
 
       if (typeof cfg.plan === 'function') {
-        if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') OperationRepository_.heartbeat(operationId, 'before-plan');
+        if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') {
+          OperationRepository_.heartbeat(operationId, 'before-plan');
+        }
+
         plan = cfg.plan(payload, beforeState, context) || {};
-        warnings.push.apply(warnings, stage7MergeWarnings_(plan.warnings));
+        warnings.push.apply(warnings, mergeWorkflowWarnings_(plan.warnings));
         diagnostics.lifecycle.push('plan.built');
+
         if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') {
           OperationRepository_.saveCheckpoint({
             operationId: operationId,
@@ -301,12 +417,20 @@ const WorkflowOrchestrator_ = (function() {
       }
 
       if (typeof cfg.execute === 'function') {
-        if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') OperationRepository_.heartbeat(operationId, 'before-execute');
+        if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') {
+          OperationRepository_.heartbeat(operationId, 'before-execute');
+        }
+
         execution = cfg.execute(payload, beforeState, plan, context) || {};
       } else {
-        execution = { result: null, changes: [], warnings: [] };
+        execution = {
+          result: null,
+          changes: [],
+          warnings: []
+        };
       }
-      warnings.push.apply(warnings, stage7MergeWarnings_(execution.warnings));
+
+      warnings.push.apply(warnings, mergeWorkflowWarnings_(execution.warnings));
       diagnostics.lifecycle.push(dryRun ? 'execute.dryRun' : 'execute.applied');
 
       if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') {
@@ -326,17 +450,24 @@ const WorkflowOrchestrator_ = (function() {
 
       if (typeof cfg.sync === 'function') {
         sync = cfg.sync(payload, beforeState, plan, execution, context) || {};
-        warnings.push.apply(warnings, stage7MergeWarnings_(sync.warnings));
+        warnings.push.apply(warnings, mergeWorkflowWarnings_(sync.warnings));
         diagnostics.lifecycle.push('ui.sync.prepared');
       }
 
       if (typeof cfg.verify === 'function') {
-        if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') OperationRepository_.heartbeat(operationId, 'before-verify');
+        if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') {
+          OperationRepository_.heartbeat(operationId, 'before-verify');
+        }
+
         verification = cfg.verify(payload, beforeState, plan, execution, context) || {};
-        warnings.push.apply(warnings, stage7MergeWarnings_(verification.warnings));
+        warnings.push.apply(warnings, mergeWorkflowWarnings_(verification.warnings));
         diagnostics.verification = verification;
         diagnostics.lifecycle.push('verification.completed');
-        if (verification && verification.partial === true) execution.partial = true;
+
+        if (verification && verification.partial === true) {
+          execution.partial = true;
+        }
+
         if (cfg.write && !dryRun && typeof OperationRepository_ === 'object') {
           OperationRepository_.saveCheckpoint({
             operationId: operationId,
@@ -344,13 +475,18 @@ const WorkflowOrchestrator_ = (function() {
             processedUpTo: 'verification.complete',
             lastProcessedEntity: stage7AsArray_(execution.affectedEntities)[0] || '',
             lastProcessedRow: stage7AsArray_(payload.rowNumbers)[0] || '',
-            checkpointPayload: { verificationResult: OperationRepository_._classifyVerification(verification) },
+            checkpointPayload: {
+              verificationResult: OperationRepository_._classifyVerification(verification)
+            },
             verificationSnapshot: verification
           });
         }
       }
 
-      const lifecycleScenario = (typeof OperationRepository_ === 'object') ? OperationRepository_.canonicalScenario(rawScenario, payload) : rawScenario;
+      const lifecycleScenario = (typeof OperationRepository_ === 'object')
+        ? OperationRepository_.canonicalScenario(rawScenario, payload)
+        : rawScenario;
+
       const meta = Object.assign({
         stage: STAGE7_CONFIG.VERSION,
         hardeningStage: diagnostics.hardeningStage,
@@ -372,7 +508,11 @@ const WorkflowOrchestrator_ = (function() {
         durationMs: new Date().getTime() - startedAt.getTime(),
         sync: sync || null,
         verification: verification || null,
-        repairNeeded: !dryRun && cfg.write && (!!(execution && execution.success === false) || (verification && verification.ok === false) || (verification && verification.partial === true)),
+        repairNeeded: !dryRun && cfg.write && (
+          !!(execution && execution.success === false) ||
+          (verification && verification.ok === false) ||
+          (verification && verification.partial === true)
+        ),
         diagnosticsSummary: {
           lifecycle: diagnostics.lifecycle.slice(),
           fingerprint: diagnostics.idempotencyFingerprint || ''
@@ -403,7 +543,9 @@ const WorkflowOrchestrator_ = (function() {
           success: execution.success !== false,
           message: response.message,
           repairNeeded: meta.repairNeeded,
-          transitionReason: (verification && verification.ok === false) ? 'post-write-verification-failed' : 'commit-complete'
+          transitionReason: (verification && verification.ok === false)
+            ? 'post-write-verification-failed'
+            : 'commit-complete'
         });
       }
 
@@ -421,7 +563,7 @@ const WorkflowOrchestrator_ = (function() {
           affectedEntities: meta.affectedEntities,
           appliedChangesCount: meta.appliedChangesCount,
           skippedChangesCount: meta.skippedChangesCount,
-          warnings: warnings,
+          warnings: normalizeWorkflowWarnings_(warnings),
           payload: payload,
           before: beforeState,
           after: execution.result,
@@ -431,6 +573,7 @@ const WorkflowOrchestrator_ = (function() {
           error: null,
           context: context
         });
+
         Stage7AuditTrail_.writeCompactLegacyLog({
           timestamp: new Date(),
           operationId: operationId,
@@ -458,7 +601,12 @@ const WorkflowOrchestrator_ = (function() {
             errorMessage: e && e.message ? e.message : String(e),
             transitionReason: 'exception'
           });
-          OperationRepository_.appendNote(operationId, e && e.message ? e.message : String(e), 'workflow');
+
+          OperationRepository_.appendNote(
+            operationId,
+            e && e.message ? e.message : String(e),
+            'workflow'
+          );
         } catch (_) {}
       }
 
@@ -471,7 +619,9 @@ const WorkflowOrchestrator_ = (function() {
         {
           stage: STAGE7_CONFIG.VERSION,
           hardeningStage: diagnostics.hardeningStage,
-          scenario: (typeof OperationRepository_ === 'object') ? OperationRepository_.canonicalScenario(rawScenario, payload) : rawScenario,
+          scenario: (typeof OperationRepository_ === 'object')
+            ? OperationRepository_.canonicalScenario(rawScenario, payload)
+            : rawScenario,
           rawScenario: rawScenario,
           operationId: operationId,
           route: route,
@@ -508,7 +658,7 @@ const WorkflowOrchestrator_ = (function() {
           affectedEntities: [],
           appliedChangesCount: 0,
           skippedChangesCount: 0,
-          warnings: warnings,
+          warnings: normalizeWorkflowWarnings_(warnings),
           payload: payload,
           before: beforeState,
           after: null,
@@ -518,6 +668,7 @@ const WorkflowOrchestrator_ = (function() {
           error: response.error,
           context: context
         });
+
         Stage7AuditTrail_.writeCompactLegacyLog({
           timestamp: new Date(),
           operationId: operationId,
