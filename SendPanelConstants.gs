@@ -84,11 +84,25 @@ function getSendPanelActionSentLabel_() {
   return SendPanelConstants_.ACTION_SENT_LABEL;
 }
 
+function resolveSendPanelFormulaArgSeparator_() {
+  try {
+    const locale = String(SpreadsheetApp.getActive().getSpreadsheetLocale() || '').trim().toLowerCase();
+    if (!locale) return ';';
+    const commaFirstLocales = ['en', 'zh', 'ja', 'ko'];
+    return commaFirstLocales.some(function(prefix) {
+      return locale.indexOf(prefix) === 0;
+    }) ? ',' : ';';
+  } catch (e) {
+    return ';';
+  }
+}
+
 function buildSendPanelActionFormula_(url, label) {
   const safeUrl = String(url || '').trim();
   if (!safeUrl) return '';
   const safeLabel = String(label || getSendPanelActionReadyLabel_()).replace(/"/g, '""');
-  return `=HYPERLINK("${safeUrl.replace(/"/g, '""')}"; "${safeLabel}")`;
+  const separator = resolveSendPanelFormulaArgSeparator_();
+  return `=HYPERLINK("${safeUrl.replace(/"/g, '""')}"${separator} "${safeLabel}")`;
 }
 
 function resolveSendPanelActionCellValue_(url, status, sent) {
