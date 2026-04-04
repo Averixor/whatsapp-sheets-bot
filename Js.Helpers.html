@@ -41,7 +41,7 @@
     if (!consoleEl) return;
 
     consoleEl.innerHTML = '';
-    logToConsole('🧹 Консоль очищено', 'info');
+    logToConsole('Консоль очищено', 'info');
   }
 
   function scrollConsole(direction) {
@@ -63,7 +63,7 @@
 
       resultContent.insertAdjacentHTML('afterbegin', `
         <div class="result-item" id="sendingProgress">
-          <div class="result-label">📤 Прогрес відправки</div>
+          <div class="result-label">Прогрес відправки</div>
           <div class="progress-bar">
             <div id="progressFill" class="progress-fill"></div>
           </div>
@@ -313,7 +313,7 @@
           if (result?.success) {
             showStandardResult('Нагадування про відпустки');
             displayInResult('vacationResult', Object.assign({}, result.vacations || {}, { message: result.message || '' }));
-            logToConsole('🏖️ Нагадування про відпустки перевірено', 'success');
+            logToConsole('Нагадування про відпустки перевірено', 'success');
           } else {
             displayInResult('error', { error: result?.error || 'Невідома помилка' });
           }
@@ -323,9 +323,9 @@
         case 'birthdayCheck': {
           const result = await ActionDispatcher.run('checkBirthdays', () => Stage7Api.checkVacationsAndBirthdays(_todayStr_()));
           if (result?.success) {
-            showStandardResult('🎂 Дні Народження');
+            showStandardResult('Дні Народження');
             displayBirthdayResult(result.birthdays || {});
-            logToConsole('🎂 Перевірка ДН виконана', 'success');
+            logToConsole('Перевірка ДН виконана', 'success');
           } else {
             displayInResult('error', { error: result?.error || 'Невідома помилка' });
           }
@@ -352,7 +352,7 @@
 
           const data = result.data || {};
           logToConsole(
-            '🔐 Access debug: role=' + String(data.role || 'guest') +
+            'Access debug: role=' + String(data.role || 'guest') +
             ', registered=' + String(!!data.registered) +
             ', source=' + String(data.source || 'default') +
             ', key=' + String(data.currentKey ? maskAccessKey_(data.currentKey) : '∅'),

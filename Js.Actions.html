@@ -175,7 +175,7 @@
         data.commanderMessages.forEach(row => {
           html += `
             <div style="${itemStyle}">
-              <div style="${fioStyle}">🎂 ${esc(row.callsign || row.fio)}</div>
+              <div style="${fioStyle}">ДН: ${esc(row.callsign || row.fio)}</div>
               <div style="font-size:12px;color:#374151;margin-top:4px;">
                 ${esc(row.fio)} • ${esc(row.birthday || '')}
               </div>
@@ -203,7 +203,7 @@
         data.birthdayMessages.forEach(person => {
           html += `
             <div style="${itemStyle}">
-              <div style="${fioStyle}">🎂 ${esc(person.displayName || person.fio)}</div>
+              <div style="${fioStyle}">ДН: ${esc(person.displayName || person.fio)}</div>
               <div style="font-size:12px;color:#374151;margin-top:4px;">
                 ${esc(person.fio)} • ${esc(person.birthday || '')}
               </div>
@@ -232,13 +232,13 @@
       if (Array.isArray(data.today) && data.today.length > 0) {
         html += `
           <div style="background:#fff3e0;border:1px solid #ff9800;border-left:4px solid #ff9800;border-radius:14px;padding:12px;margin-bottom:12px;">
-            <div style="font-weight:800;font-size:13px;color:#e65100;margin-bottom:10px;">🎂 СЬОГОДНІ ДН (${data.today.length})</div>
+            <div style="font-weight:800;font-size:13px;color:#e65100;margin-bottom:10px;">ДН: СЬОГОДНІ ДН (${data.today.length})</div>
         `;
 
         data.today.forEach(person => {
           html += `
             <div style="${itemStyle}">
-              <div style="${fioStyle}">🎉 ${esc(person.displayName || person.fio)}</div>
+              <div style="${fioStyle}">Вітання: ${esc(person.displayName || person.fio)}</div>
               <div style="font-size:12px;color:#374151;margin-top:4px;">
                 ${esc(person.fio)} • ${esc(person.birthday)}
               </div>
@@ -263,13 +263,13 @@
         data.tomorrow.forEach(person => {
           html += `
             <div style="${itemStyle}">
-              <div style="${fioStyle}">🎂 ${esc(person.displayName || person.fio)}</div>
+              <div style="${fioStyle}">ДН: ${esc(person.displayName || person.fio)}</div>
               <div style="font-size:12px;color:#374151;margin-top:4px;">
                 ${esc(person.fio)} • ${esc(person.birthday)}
               </div>
               ${
                 person.phone
-                  ? `<button style="${btnStyle}background:#1565C0;" onclick="SidebarApp.openBirthdayWA('${escapeJsString(person.phone)}', '${escapeJsString(person.displayName || person.fio)}')">📱 Підготувати привітання</button>`
+                  ? `<button style="${btnStyle}background:#1565C0;" onclick="SidebarApp.openBirthdayWA('${escapeJsString(person.phone)}', '${escapeJsString(person.displayName || person.fio)}')">Підготувати привітання</button>`
                   : `<div style="color:#888;font-size:12px;margin-top:6px;">⁈ Немає телефону</div>`
               }
             </div>
@@ -283,7 +283,7 @@
     if (!html) {
       html = `
         <div class="result-item">
-          <div class="result-label">🎂 Дні народження</div>
+          <div class="result-label">ДН: Дні народження</div>
           <div class="result-value" style="color:var(--text-secondary);">
             На сьогодні немає нагадувань по днях народження.
           </div>
@@ -320,7 +320,7 @@
     }
 
     if (!STATE.DIAG_TEST_MODE) openLinkSafe(link);
-    logToConsole('📱 WhatsApp відкрито', 'success');
+    logToConsole('WhatsApp відкрито', 'success');
   }
 
   // =========================
@@ -353,7 +353,7 @@
       }
 
       renderPersonCard(data);
-      logToConsole(`👤 Відкрито картку: ${data.callsign || callsign}`, 'success');
+      logToConsole(`Відкрито картку: ${data.callsign || callsign}`, 'success');
     } catch (error) {
       const msg = normalizeError(error);
       showError(msg);
@@ -558,7 +558,7 @@
 
         btn.type = 'button';
         btn.className = 'personnel-card';
-        btn.textContent = allowed ? callsign : (callsign + ' 🔒');
+        btn.textContent = allowed ? callsign : (callsign + ' [lock]');
         btn.classList.toggle('is-locked', !allowed);
         btn.setAttribute('aria-disabled', allowed ? 'false' : 'true');
         btn.title = allowed ? callsign : 'Доступно лише до власної картки';
@@ -632,7 +632,7 @@
         retryDelayMs: 450,
         reason: 'manual-reload'
       });
-      logToConsole(`🔄 SEND_PANEL перечитано: ${Array.isArray(rows) ? rows.length : 0} рядків`, 'success');
+      logToConsole(`SEND_PANEL перечитано: ${Array.isArray(rows) ? rows.length : 0} рядків`, 'success');
       showSendPanel();
     } catch (error) {
       logToConsole(`✕ Не вдалося перечитати SEND_PANEL: ${normalizeError(error)}`, 'error');

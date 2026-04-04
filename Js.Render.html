@@ -1174,8 +1174,8 @@
                     <div><strong>#${Number(item.row || 0)}</strong> ${escapeHtml(item.fio || '—')}</div>
                     <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:4px;">
                       ${escapeHtml(formatPhone(item.phone || '—'))}
-                      ${item.role ? `<br>🏷 ${escapeHtml(item.role)}` : ''}
-                      ${item.birthday ? `<br>🎂 ${escapeHtml(item.birthday)}` : ''}
+                      ${item.role ? `<br>Роль: ${escapeHtml(item.role)}` : ''}
+                      ${item.birthday ? `<br>ДН: ${escapeHtml(item.birthday)}` : ''}
                     </div>
                   </div>
                 `).join('')}
@@ -1296,7 +1296,7 @@ function renderPendingRepairsTable_(items) {
 
   return `
     <div class="result-item">
-      <div class="result-label">🛠 - ${items.length}</div>
+      <div class="result-label">Потребують виправлення: ${items.length}</div>
       <div class="result-value" style="display:grid; gap:10px;">
         ${items.map(item => `
           <div style="padding:10px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-glass);">

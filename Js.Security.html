@@ -750,7 +750,7 @@
 
     const consoleMessage = buildAccessBannerMessage_(access);
     if (consoleMessage) {
-      logToConsole('🛡 ' + consoleMessage, access.knownUser ? 'info' : 'warning');
+      logToConsole(consoleMessage, access.knownUser ? 'info' : 'warning');
     }
 
     updateRestrictedUi_();
