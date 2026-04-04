@@ -204,7 +204,6 @@ function cleanupOldSendPanelSentState_(keepDays) {
   return cleanupOldSendPanelStateMaps_(keepDays);
 }
 
-
 function getSendPanelStatusFormula_() {
   return '=ARRAYFORMULA(IF(A3:A40&B3:B40&C3:C40&D3:D40="";"";IF((A3:A40<>"")*(B3:B40<>"")*(C3:C40<>"")*(D3:D40<>"");"✔";"✘")))';
 }
