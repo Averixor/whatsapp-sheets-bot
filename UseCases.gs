@@ -89,6 +89,18 @@ function _stage7AVerifySendPanelBuild_(execution) {
   };
 }
 
+function _stage7BuildSendPanelWarnings_(stats) {
+  const safeStats = stats || {};
+  const errorCount = Number(safeStats.errorCount || 0);
+  const warnings = [];
+
+  if (errorCount > 0) {
+    warnings.push(`У SEND_PANEL є рядки, не готові до відправки: ${errorCount}`);
+  }
+
+  return warnings;
+}
+
 function _stage7CreateNextMonthCore_(payload) {
   const ss = SpreadsheetApp.getActive();
   const explicitSource = payload && payload.sourceMonth ? validateMonthSwitch_(payload.sourceMonth).sheet : getBotSheet_();
@@ -164,7 +176,7 @@ const Stage7UseCases_ = (function() {
             affectedEntities: [],
             plannedRows: stats.totalCount || 0
           },
-          warnings: (stats.blockedCount || stats.errorCount || 0) > 0 ? [`У SEND_PANEL є заблоковані рядки: ${stats.blockedCount || stats.errorCount || 0}`] : []
+          warnings: _stage7BuildSendPanelWarnings_(stats)
         };
       },
       execute: function(input, beforeState, plan) {
@@ -188,7 +200,7 @@ const Stage7UseCases_ = (function() {
           meta: {
             stats: stats
           },
-          warnings: (stats.blockedCount || stats.errorCount || 0) > 0 ? [`У SEND_PANEL є заблоковані рядки: ${stats.blockedCount || stats.errorCount || 0}`] : []
+          warnings: _stage7BuildSendPanelWarnings_(stats)
         };
       },
       sync: function(input, beforeState, plan, execution) {
@@ -655,7 +667,7 @@ const Stage7UseCases_ = (function() {
           affectedEntities: [],
           appliedChangesCount: 0,
           skippedChangesCount: 0,
-          warnings: (stats.blockedCount || stats.errorCount || 0) > 0 ? ['У SEND_PANEL є заблоковані рядки: ' + (stats.blockedCount || stats.errorCount || 0)] : []
+          warnings: _stage7BuildSendPanelWarnings_(stats)
         };
       }
     });
