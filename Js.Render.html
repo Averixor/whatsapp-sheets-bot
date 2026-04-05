@@ -1280,6 +1280,57 @@ async function restartBot() {
   }
 }
 
+function getPendingRepairsCacheTtlMs_() {
+  return 30000;
+}
+
+function readPendingRepairsCache_() {
+  const cached = STATE._pendingRepairsCache || null;
+  if (!cached || !Array.isArray(cached.items)) return null;
+  if ((Date.now() - Number(cached.ts || 0)) > getPendingRepairsCacheTtlMs_()) return null;
+  return cached;
+}
+
+function writePendingRepairsCache_(items, skippedWithoutOperationId) {
+  STATE._pendingRepairsCache = {
+    ts: Date.now(),
+    items: Array.isArray(items) ? items.slice() : [],
+    skippedWithoutOperationId: Number(skippedWithoutOperationId || 0)
+  };
+}
+
+function invalidatePendingRepairsCache_() {
+  STATE._pendingRepairsCache = null;
+}
+
+function readOperationDetailsCache_(operationId) {
+  const key = String(operationId || '').trim();
+  if (!key) return null;
+  const map = STATE._operationDetailsCache || {};
+  const cached = map[key];
+  if (!cached) return null;
+  if ((Date.now() - Number(cached.ts || 0)) > getPendingRepairsCacheTtlMs_()) return null;
+  return cached.details || null;
+}
+
+function writeOperationDetailsCache_(operationId, details) {
+  const key = String(operationId || '').trim();
+  if (!key) return;
+  if (!STATE._operationDetailsCache || typeof STATE._operationDetailsCache !== 'object') {
+    STATE._operationDetailsCache = {};
+  }
+  STATE._operationDetailsCache[key] = {
+    ts: Date.now(),
+    details: details || {}
+  };
+}
+
+function invalidateOperationDetailsCache_(operationId) {
+  const key = String(operationId || '').trim();
+  if (!key || !STATE._operationDetailsCache || typeof STATE._operationDetailsCache !== 'object') return;
+  delete STATE._operationDetailsCache[key];
+}
+
 function renderPendingRepairsTable_(items) {
   if (!Array.isArray(items) || !items.length) {
     return `
@@ -1311,15 +1362,28 @@ function renderPendingRepairsTable_(items) {
   `;
 }
 
-async function showPendingRepairs() {
+async function showPendingRepairs(forceRefresh) {
   assertAdminAction_('pendingRepairs');
   logToConsole('Завантаження операцій, що потрібно виправити...', 'info');
   showStandardResult('Операції, що потрібно виправити');
+
+  const cached = forceRefresh ? null : readPendingRepairsCache_();
+  if (cached) {
+    let cachedHtml = renderPendingRepairsTable_(cached.items);
+    if (cached.skippedWithoutOperationId > 0) {
+      cachedHtml += `<div class="result-item"><div class="result-label">Пропущені записи</div><div class="result-value">${escapeHtml(String(cached.skippedWithoutOperationId))} запис(ів) без коректного operationId не показано в списку repair.</div></div>`;
+    }
+    setHtml('resultContent', cachedHtml);
+    logToConsole('📦 Список repair-операцій взято з короткого кешу', 'info');
+    return;
+  }
+
   setHtml('resultContent', '<div class="result-item"><div class="result-value">Завантаження...</div></div>');
   try {
     const result = await ActionDispatcher.run('listPendingRepairs', () => MaintenanceApi.listPendingRepairs(), { successMessage: '' });
     const items = result?.operations || result?.data?.operations || [];
     const skippedWithoutOperationId = Number(result?.skippedWithoutOperationId || result?.data?.skippedWithoutOperationId || 0);
+    writePendingRepairsCache_(items, skippedWithoutOperationId);
     let html = renderPendingRepairsTable_(items);
     if (skippedWithoutOperationId > 0) {
       html += `<div class="result-item"><div class="result-label">Пропущені записи</div><div class="result-value">${escapeHtml(String(skippedWithoutOperationId))} запис(ів) без коректного operationId не показано в списку repair.</div></div>`;
@@ -1332,7 +1396,7 @@ async function showPendingRepairs() {
   }
 }
 
-async function showOperationDetails(operationId) {
+async function showOperationDetails(operationId, forceRefresh) {
   assertAdminAction_('operationDetails');
   const opId = String(operationId || '').trim();
   if (!opId) {
@@ -1341,12 +1405,20 @@ async function showOperationDetails(operationId) {
     return;
   }
   showStandardResult('Деталі операції');
-  setHtml('resultContent', '<div class="result-item"><div class="result-value">Завантаження деталей...</div></div>');
+
+  const cachedDetails = forceRefresh ? null : readOperationDetailsCache_(opId);
+  if (!cachedDetails) {
+    setHtml('resultContent', '<div class="result-item"><div class="result-value">Завантаження деталей...</div></div>');
+  }
   try {
-    const result = await ActionDispatcher.run('getOperationDetails', () => MaintenanceApi.getOperationDetails(opId), { successMessage: '' });
-    const details = result?.operation ? result : (result?.data || {});
-    const operation = details.operation || {};
-    const checkpoints = Array.isArray(details.checkpoints) ? details.checkpoints : [];
+    const details = cachedDetails || (function() { return null; })();
+    const resolved = details || (function(result) { return result?.operation ? result : (result?.data || {}); })(await ActionDispatcher.run('getOperationDetails', () => MaintenanceApi.getOperationDetails(opId), { successMessage: '' }));
+    writeOperationDetailsCache_(opId, resolved);
+    const operation = resolved.operation || {};
+    const checkpoints = Array.isArray(resolved.checkpoints) ? resolved.checkpoints : [];
+    if (cachedDetails) {
+      logToConsole('📦 Деталі операції взято з короткого кешу', 'info');
+    }
     setHtml('resultContent', `
       <div class="result-item">
         <div class="result-label">Ідентифікатор операції</div>
@@ -1395,9 +1467,11 @@ async function runRepair(operationId) {
   setHtml('resultContent', '<div class="result-item"><div class="result-value">Запускаю виправлення...</div></div>');
   try {
     const result = await ActionDispatcher.run('runRepair', () => MaintenanceApi.runRepair(opId), { successMessage: '' });
+    invalidatePendingRepairsCache_();
+    invalidateOperationDetailsCache_(opId);
     if (result?.success) {
       showToast('Виправлення виконано');
-      await showOperationDetails(result.operationId || opId);
+      await showOperationDetails(result.operationId || opId, true);
     } else {
       setHtml('resultContent', `<div class="result-item"><div class="result-value">✕ ${escapeHtml(translateLifecycleText(result?.error || result?.message || 'Repair failed'))}</div></div>`);
       showToast('Виправлення завершилося з помилкою');
