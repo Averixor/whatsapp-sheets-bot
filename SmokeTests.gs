@@ -147,8 +147,12 @@ function _assertUnifiedContract_(result, functionName) {
 }
 
 function _pickTestDate_() {
-  const dates = PersonsRepository_.getAvailableDates();
-  return dates.length ? dates[0] : _todayStr_();
+  try {
+    const dates = PersonsRepository_.getAvailableDates();
+    return dates.length ? dates[0] : _todayStr_();
+  } catch (_) {
+    return _todayStr_();
+  }
 }
 
 function _pickTestCallsign_() {
@@ -719,4 +723,13 @@ function runStage5SmokeTests(options) {
   });
 
   return report;
+}
+
+
+function RunSmokeTests(options) {
+  return runSmokeTests(options || {});
+}
+
+function RunScenarioTests(options) {
+  return runScenarioTests(options || {});
 }
