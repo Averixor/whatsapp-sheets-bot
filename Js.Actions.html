@@ -647,15 +647,6 @@
     window.__WASB_BOOTSTRAP_STATE__ = { startedAt: new Date().toISOString(), status: 'starting' };
     registerGlobalRuntimeEvents_();
     await initSidebar();
-    try {
-      await refreshSendPanelDataFromServer({
-        silent: true,
-        preserveNonEmpty: true,
-        retries: 0,
-        retryDelayMs: 0,
-        reason: 'sidebar-load-prime'
-      });
-    } catch (_) {}
     updateSendUnsentButtonState();
     initPersonnelModal();
     registerLegacyPersonnelButtons();
