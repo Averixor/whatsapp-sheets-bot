@@ -157,7 +157,7 @@ function _pickTestDate_() {
 
 function _pickTestCallsign_() {
   try {
-    return (typeof PersonsRepository_ !== 'undefined' && PersonsRepository_ && typeof PersonsRepository_.getAnyCallsign === 'function')
+    return (typeof PersonsRepository_ === 'object' && PersonsRepository_ && typeof PersonsRepository_.getAnyCallsign === 'function')
       ? (PersonsRepository_.getAnyCallsign() || '')
       : '';
   } catch (_) {
@@ -304,9 +304,9 @@ function runStage4ScenarioTests(options) {
     getStage4CompatibilityMap_()
       .filter(function (item) { return !!item.verifySourceToken; })
       .forEach(function (item) {
-        if (!_smokeHasFn_(item.name)) return;
-        const fn = _smokeResolveFn_(item.name);
-        const src = String(fn);
+        const resolved = _smokeResolveFn_(item.name);
+        if (typeof resolved !== 'function') return;
+        const src = String(resolved);
         _smokeAssert_(src.indexOf(item.verifySourceToken) !== -1, `${item.name} не веде до ${item.verifySourceToken}`);
       });
     return 'wrapper-sources-ok';
@@ -411,10 +411,15 @@ function runStage5ScenarioTests(options) {
     return result;
   }, { skipOnError: true });
 
-  _runContractTest_(report, 'apiRunStage7RegressionTests', function () {
-    const result = apiRunStage7RegressionTests({ dryRun: true });
-    _smokeAssert_(Array.isArray(result.data.result.checks), 'checks[] не повернуто');
-    return result;
+  _smokePush_(report, 'apiRunStage7RegressionTests contract (non-reentrant)', function () {
+    _smokeAssert_(typeof apiRunStage7RegressionTests === 'function', 'apiRunStage7RegressionTests відсутній');
+    const route = (typeof getRoutingRegistry_ === 'function' ? getRoutingRegistry_() : {}) || {};
+    const hasCanonicalRoute = Object.keys(route).some(function (key) {
+      const item = route[key];
+      return item && item.publicApiMethod === 'apiRunStage7RegressionTests' && item.useCase === 'runStage5SmokeTests';
+    });
+    _smokeAssert_(hasCanonicalRoute, 'Routing registry не веде apiRunStage7RegressionTests до runStage5SmokeTests');
+    return 'self-recursive invocation intentionally skipped';
   }, { skipOnError: true });
 
   return report;
