@@ -795,8 +795,13 @@
         const message = result && (result.error || result.message) || 'Не вдалося виконати вхід';
         setAccessLoginLoading_(false, 'Підтверджую вхід...');
         setAccessLoginModalMessage_(message, true);
-        showToast(message);
         await loadAccessDescriptor();
+        if (callsignInput) {
+          callsignInput.disabled = false;
+          callsignInput.focus();
+          callsignInput.select();
+        }
+        if (identifierInput) identifierInput.disabled = false;
         return;
       }
 
@@ -811,6 +816,12 @@
       setAccessLoginLoading_(false, 'Підтверджую вхід...');
       setAccessLoginModalMessage_(message, true);
       showToast(message);
+      if (callsignInput) {
+        callsignInput.disabled = false;
+        callsignInput.focus();
+        callsignInput.select();
+      }
+      if (identifierInput) identifierInput.disabled = false;
     }
   }
 
@@ -975,12 +986,7 @@
     STATE._accessDescriptorRequestId = requestId;
 
     try {
-      let descriptor = null;
-      try {
-        descriptor = await Stage7Api.getAccessDescriptorLite();
-      } catch (_) {
-        descriptor = await MaintenanceApi.getAccessDescriptor();
-      }
+      const descriptor = await MaintenanceApi.getAccessDescriptor();
       const raw = descriptor && descriptor.data
         ? descriptor.data
         : { role: 'guest', isAdmin: false, knownUser: false, reasonString: '' };
