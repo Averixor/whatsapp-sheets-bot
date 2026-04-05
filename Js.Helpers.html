@@ -93,44 +93,54 @@
   // =========================
   // INIT
   // =========================
-  async function initSidebar() {
-    showLoading();
-    hidePersonCard();
+async function initSidebar() {
+  showLoading();
+  hidePersonCard();
 
-    try {
-      const consoleOpen = localStorage.getItem('consoleOpen') === 'true';
-      if (consoleOpen && !STATE.consoleInitialized) {
-        $id('consoleSection')?.classList?.add('open');
-        $id('consoleToggle')?.classList?.add('open');
+  try {
+    const consoleOpen = localStorage.getItem('consoleOpen') === 'true';
+    if (consoleOpen && !STATE.consoleInitialized) {
+      $id('consoleSection')?.classList?.add('open');
+      $id('consoleToggle')?.classList?.add('open');
 
-        const arrow = $id('consoleArrow');
-        if (arrow) arrow.textContent = '▲';
+      const arrow = $id('consoleArrow');
+      if (arrow) arrow.textContent = '▲';
 
-        STATE.consoleInitialized = true;
-      }
-
-      await loadAccessDescriptor();
-
-      const data = await Stage7Api.getMonths();
-
-      if (data?.months) STATE.monthsList = data.months;
-
-      if (data?.current) {
-        STATE.currentMonth = data.current;
-        updateMonthBadge(STATE.currentMonth);
-      }
-
-      logToConsole('✓ Панель готова до роботи', 'success');
-    } catch (error) {
-      logToConsole(`✕ Помилка ініціалізації: ${normalizeError(error)}`, 'error');
-    } finally {
-      hideLoading();
+      STATE.consoleInitialized = true;
     }
+
+    const bootstrap = await Stage7Api.bootstrapSidebar();
+    const rawAccess = bootstrap && bootstrap.access
+      ? bootstrap.access
+      : { role: 'guest', isAdmin: false, knownUser: false, reasonString: '' };
+
+    STATE.access = typeof normalizeAccessForUi_ === 'function'
+      ? normalizeAccessForUi_(rawAccess)
+      : rawAccess;
+
+    if (typeof applyAccessPolicyUI === 'function') {
+      applyAccessPolicyUI();
+    }
+
+    if (Array.isArray(bootstrap && bootstrap.months)) {
+      STATE.monthsList = bootstrap.months.slice();
+    }
+
+    if (bootstrap && bootstrap.current) {
+      STATE.currentMonth = bootstrap.current;
+      updateMonthBadge(STATE.currentMonth);
+    }
+
+    logToConsole('✓ Панель готова до роботи', 'success');
+  } catch (error) {
+    logToConsole(`✕ Помилка ініціалізації: ${normalizeError(error)}`, 'error');
+  } finally {
+    hideLoading();
   }
+}
 
 
-
-  function formatOperationDate(value) {
+function formatOperationDate(value) {
     const raw = String(value || '').trim();
     if (!raw) return '—';
     const parsed = new Date(raw);
