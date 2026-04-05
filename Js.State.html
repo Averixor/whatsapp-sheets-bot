@@ -399,8 +399,17 @@
     if (el) el.style.display = 'block';
   }
 
+  function hideToast() {
+    const toast = $id('appToast');
+    if (!toast) return;
+    clearTimeout(window.__toastTimer__);
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-50%) translateY(6px)';
+    toast.textContent = '';
+  }
+
   function showToast(message) {
-    const msg = String(message || '');
+    const msg = String(message || '').trim();
     if (!msg) return;
 
     let toast = $id('appToast');
@@ -409,25 +418,27 @@
       toast = document.createElement('div');
       toast.id = 'appToast';
       toast.style.position = 'fixed';
-      toast.style.bottom = '16px';
       toast.style.left = '50%';
-      toast.style.transform = 'translateX(-50%)';
+      toast.style.bottom = '10px';
+      toast.style.transform = 'translateX(-50%) translateY(6px)';
       toast.style.zIndex = '9999';
-      toast.style.padding = '10px 14px';
-      toast.style.borderRadius = '16px';
-      toast.style.background = 'var(--whatsapp-dark)';
+      toast.style.padding = '8px 10px';
+      toast.style.borderRadius = '12px';
+      toast.style.background = 'rgba(15, 23, 42, 0.96)';
       toast.style.color = 'white';
-      toast.style.fontSize = '13px';
-      toast.style.lineHeight = '1.45';
-      toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
-      toast.style.width = 'calc(100% - 24px)';
-      toast.style.maxWidth = '320px';
+      toast.style.fontSize = '12px';
+      toast.style.lineHeight = '1.35';
+      toast.style.boxShadow = '0 4px 10px rgba(0,0,0,0.18)';
+      toast.style.width = 'auto';
+      toast.style.maxWidth = 'min(240px, calc(100% - 28px))';
+      toast.style.minWidth = '0';
       toast.style.textAlign = 'center';
       toast.style.whiteSpace = 'normal';
       toast.style.wordBreak = 'break-word';
       toast.style.pointerEvents = 'none';
       toast.style.opacity = '0';
-      toast.style.transition = 'opacity .18s ease, transform .18s ease';
+      toast.style.display = 'block';
+      toast.style.transition = 'opacity .16s ease, transform .16s ease';
       document.body.appendChild(toast);
     }
 
@@ -437,9 +448,8 @@
 
     clearTimeout(window.__toastTimer__);
     window.__toastTimer__ = setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateX(-50%) translateY(6px)';
-    }, 1800);
+      hideToast();
+    }, 1400);
   }
 
   function showMenu() {
