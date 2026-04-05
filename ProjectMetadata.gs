@@ -25,8 +25,10 @@ const PROJECT_DOCUMENTATION_MAP_ = Object.freeze({
     changelog: 'CHANGELOG.md'
   }),
   historical: Object.freeze([
+    '_extras/history/README.md',
     '_extras/history/ACCESS_VIEWER_RESTRICTIONS_2026-03-29.md',
     '_extras/history/AUDIT_REPORT_2026-03-24.md',
+    '_extras/history/CANONICALIZATION_AUDIT_2026-03-29.md',
     '_extras/history/CANONICAL_APIS_STAGE7_FINAL_STABILIZED.md',
     '_extras/history/CHANGELOG_STAGE7_FINAL_STABILIZED.md',
     '_extras/history/COMMANDS_TERMINAL.md',
@@ -37,14 +39,20 @@ const PROJECT_DOCUMENTATION_MAP_ = Object.freeze({
     '_extras/history/FINAL_STABILIZATION_REPORT_2026-03-26.md',
     '_extras/history/GAS_WEB_EDITOR_IMPORT_GUIDE.md',
     '_extras/history/IMPLEMENTATION_REPORT_2026-03-22.md',
+    '_extras/history/PATCH_NOTES_ACCESS_LOGIN_BY_CALLSIGN_2026-04-05.txt',
+    '_extras/history/PATCH_NOTES_LOGIN_IDENTIFIER_CALLSIGN_2026-04-05.txt',
+    '_extras/history/PATCH_NOTES_LOGIN_IDENTIFIER_CALLSIGN_GPS_LOADING_2026-04-05.txt',
     '_extras/history/RELEASE_NAMING_HOTFIX_2026-03-26.md',
     '_extras/history/RESOLVER_HOTFIX_2026-03-26.md',
     '_extras/history/SCHEMA.md',
+    '_extras/history/SELF_CONTAINMENT_AUDIT_2026-03-29.md',
+    '_extras/history/SELF_CONTAINMENT_VERIFICATION_REPORT_2026-03-29.md',
     '_extras/history/SEND_PANEL_TZ_IMPLEMENTATION_2026-03-26.md',
     '_extras/history/STABILIZATION_CHECK_REPORT_STAGE7_FINAL.md',
     '_extras/history/STABILIZATION_NOTES_2026-03-22.md',
     '_extras/history/STAGE7_REPORT.md',
-    '_extras/history/TZ_EXECUTION_REPORT_2026-03-28.md'
+    '_extras/history/TZ_EXECUTION_REPORT_2026-03-28.md',
+    '_extras/history/TZ_EXECUTION_REPORT_2026-03-29.md'
   ])
 });
 

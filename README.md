@@ -1,47 +1,121 @@
-# WASB — Google Apps Script release bundle
+# WASB — Google Apps Script bundle
 
-This is the web-editor-ready WASB bundle for Google Apps Script.
+WASB is a spreadsheet-bound Google Apps Script bundle for personnel tracking, daily summaries, person cards, calendar views, send-panel workflows, and operational maintenance inside a single Google Sheets project.
+
+This repository is packaged for the **GAS web editor first**:
+- runtime files stay in the repository root (`.gs`, `.html`, `appsscript.json`)
+- active operational documentation stays in the repository root
+- historical notes and one-off reports live under `_extras/history/`
+
+## Active release baseline
+- **Stage:** 7.1
+- **Release label:** Stage 7.1.2 — Security & Ops Hardened Baseline (Final Clean)
+- **Identity model:** strict user-key access based on `Session.getTemporaryActiveUserKey()`
+- **Current access flow:** automatic key recognition first, self-bind login by **email/phone + callsign** only when the current key is not registered
+- **Runtime style:** modular HtmlService sidebar (`Sidebar.html` → `JavaScript.html` → `Js.*` chain)
+- **Packaging policy:** exactly **5 active root markdown documents**
 
 ## What is active in this release
-- **Strict user-key access model** based on `Session.getTemporaryActiveUserKey()`.
-- **Controlled key rotation** with automatic promotion `user_key_prev -> user_key_current`.
-- **Optional emergency migration bridge** by email, disabled by default and intended only for temporary rollout.
-- **Viewer hardening**: viewer can see the personnel list, but may open only their own card and cannot open the detailed summary.
-- **Role-separated maintenance access**: maintainer, admin, sysadmin, owner are split by real permissions instead of one giant admin bucket.
-- **GAS-friendly packaging**: root contains `.gs`, `.html`, `appsscript.json`, and exactly 5 active markdown docs; historical materials live in `_extras/history/`.
+- strict user-key access with no silent fallback to elevated roles
+- automatic promotion from `user_key_prev_hash` to `user_key_current_hash` when Google rotates the temporary user key
+- optional emergency email bridge controlled by script property and disabled by default
+- viewer hardening: viewer may see the personnel list, but may open only their own card and cannot open the detailed summary
+- role-separated maintenance access: maintainer, admin, sysadmin, and owner have different server-side permissions
+- lightweight sidebar bootstrap and read-only access descriptor support for faster UI startup
 
-## Main documents
-- `ARCHITECTURE.md` — current architecture, layers, access model, client/runtime notes.
-- `RUNBOOK.md` — setup, migration, deployment, post-import checks, and operational procedures.
-- `SECURITY.md` — roles, access rules, key rotation, alerts, audit, protections.
-- `CHANGELOG.md` — concise release history for maintainers.
+## Documentation map
+These are the only active root markdown files:
+- `README.md` — release overview, layout, quick start, document map
+- `ARCHITECTURE.md` — runtime shape, canonical layers, data flow, service sheets, client/runtime policy
+- `RUNBOOK.md` — import, bootstrap, access setup, deploy checks, troubleshooting, rollback rules
+- `SECURITY.md` — identity, login flow, roles, lockouts, alerts, protections, security boundaries
+- `CHANGELOG.md` — concise release history for maintainers
 
-Historical reports and one-off notes were moved to `_extras/history/` so the root stays concise and operational.
+Additional documentation:
+- `_extras/README.md` — what is stored under `_extras/`
+- `_extras/history/README.md` — index and rules for archived reports, patch notes, and migration-era materials
+
+## Repository layout
+```text
+.
+├── *.gs / *.html / appsscript.json   # GAS runtime files
+├── README.md                         # active docs
+├── ARCHITECTURE.md
+├── RUNBOOK.md
+├── SECURITY.md
+├── CHANGELOG.md
+└── _extras/
+    ├── README.md                     # extras index
+    ├── history/                      # archived reports, patch notes, one-off notes
+    ├── tools/                        # local validation helpers
+    └── backups/                      # non-runtime backups
+```
 
 ## Quick import checklist
-1. Upload all root `.gs`, `.html`, and `appsscript.json` files into the GAS web editor.
-2. Keep only `_extras/history/` as reference; it is not a runtime dependency.
-3. Run `apiStage7BootstrapRuntimeAndAlertsSheets()` once.
-4. Run `apiStage7BootstrapAccessSheet()` once.
-5. Fill `ACCESS` with roles and user keys.
-6. Verify the `🧑‍💻` block in the sidebar for each user.
-7. Enable protections with `apiStage7ApplyProtections({ dryRun: false })` when the access sheet is ready.
+1. Open the spreadsheet-bound Apps Script project.
+2. Upload all root `.gs`, `.html`, and `appsscript.json` files.
+3. Ignore `_extras/` during import. It is reference material only.
+4. Run `apiStage7BootstrapRuntimeAndAlertsSheets()` once.
+5. Run `apiStage7BootstrapAccessSheet()` once.
+6. Fill the `ACCESS` sheet.
+7. Run `apiStage7ApplyProtections({ dryRun: true })` and review the report.
+8. Run `apiStage7ApplyProtections({ dryRun: false })` after `ACCESS` is correct.
+9. Run `apiStage7QuickHealthCheck()`.
+10. Verify the `🧑‍💻` sidebar block for each role you actually use.
 
-## ACCESS columns
-Required columns:
+## ACCESS sheet schema
+The bootstrap creates these columns:
 - `email`
+- `phone`
 - `role`
 - `enabled`
 - `note`
 - `display_name`
 - `person_callsign`
-- `user_key_current`
-- `user_key_prev`
+- `self_bind_allowed`
+- `user_key_current_hash`
+- `user_key_prev_hash`
 - `last_seen_at`
 - `last_rotated_at`
+- `failed_attempts`
+- `locked_until_ms`
 
-## Migration note
-The project now assumes **strict user-key access**. The only fallback left is the **explicit emergency migration bridge** controlled by script property:
+Notes:
+- `email` and/or `phone` are used for self-bind login by identifier + callsign.
+- `user_key_current_hash` and `user_key_prev_hash` store **hashes**, not raw keys.
+- `person_callsign` is mandatory for viewers and for self-bind workflows tied to a callsign.
+- `self_bind_allowed` should be explicitly controlled for any record that may use the self-bind flow.
+
+## Identity and login in one minute
+1. The server first tries to recognize the current session by `Session.getTemporaryActiveUserKey()`.
+2. If the current key is already registered, the user is admitted by key.
+3. If the key is not registered but self-bind is allowed for a matching record, the user logs in with **email or phone + callsign**.
+4. The server binds the current key hash to that record.
+5. If Google rotates the temporary key and the new one matches `user_key_prev_hash`, the system promotes it automatically.
+
+Regular users do **not** need to manually copy hashes during normal operation.
+
+## Emergency migration bridge
+Script property:
 - `WASB_ACCESS_MIGRATION_EMAIL_BRIDGE = true`
 
-Leave it off in normal operation. Turn it on only during a short migration window, then turn it back off when keys are registered.
+Keep it **off** in normal operation.
+Turn it on only for a short migration window when users are moving from email-based access to user-key registration.
+Turn it back off immediately after the needed keys are registered.
+
+## High-value maintenance entrypoints
+- `apiStage7QuickHealthCheck()` — shallow health report for routine checks
+- `apiStage7HealthCheck()` — full health report
+- `apiRunStage7Diagnostics()` — structured diagnostics report
+- `apiRunStage7RegressionTests()` — regression suite entrypoint
+- `apiStage7ApplyProtections()` — spreadsheet protections
+- `apiStage7BootstrapRuntimeAndAlertsSheets()` — service sheet bootstrap
+- `apiStage7BootstrapAccessSheet()` — `ACCESS` bootstrap
+
+## Non-goals for this bundle
+- it is not an external-backend rewrite
+- it is not a framework migration
+- it is not a generic multi-tenant SaaS product
+- it does not treat UI visibility as the security boundary
+
+For operational details, continue in `RUNBOOK.md`. For access and role rules, go to `SECURITY.md`.
