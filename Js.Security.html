@@ -90,6 +90,11 @@
     return Number.isFinite(n) ? n : (fallback || 0);
   }
 
+
+  function getSupportHelpText_() {
+    return 'Зверніться по допомогу до ШАХТАРА';
+  }
+
   function maskHash_(value) {
     const hash = safeString_(value);
     if (!hash) return '';
@@ -377,11 +382,11 @@
     }
 
     if (keyAvailable && !registered && !canSelfBind) {
-      return 'Цей сеанс бачить ключ користувача, але самостійна прив’язка для нього недоступна. Зверніться до власника або адміністратора' + (supportEmail ? ' (' + supportEmail + ')' : '') + '.';
+      return 'Цей сеанс бачить ключ користувача, але самостійна прив’язка для нього недоступна. ' + getSupportHelpText_() + '.';
     }
 
     if (!keyAvailable) {
-      return 'Оновіть панель і повторіть перевірку. Якщо ключ знову не визначиться — зверніться до власника або адміністратора' + (supportEmail ? ' (' + supportEmail + ')' : '') + '.';
+      return 'Оновіть панель і повторіть перевірку. Якщо ключ знову не визначиться — ' + getSupportHelpText_().toLowerCase() + '.';
     }
 
     if (role === 'viewer') {
@@ -439,7 +444,7 @@
       'last_seen_at: ' + lastSeenAt,
       'last_rotated_at: ' + lastRotatedAt,
       'Стан ротації: ' + rotationState,
-      'Контакт для допомоги: ' + supportEmail,
+      'Контакт для допомоги: ШАХТАР',
       'Стан: ' + reason,
       '',
       'Що це означає:',
@@ -522,23 +527,20 @@
 
     modal = document.createElement('div');
     modal.id = 'accessLoginModal';
-    modal.style.display = 'none';
-    modal.style.position = 'fixed';
-    modal.style.inset = '0';
-    modal.style.zIndex = '9999';
+    modal.className = 'access-login-modal';
     modal.innerHTML = [
-      '<div id="accessLoginModalBackdrop" style="position:absolute; inset:0; background:rgba(0,0,0,0.55);"></div>',
-      '<div style="position:relative; max-width:420px; margin:36px auto; background:var(--surface-color, #111827); color:var(--text-primary, #fff); border:1px solid var(--border-color, rgba(255,255,255,0.12)); border-radius:16px; box-shadow:0 18px 48px rgba(0,0,0,0.35); overflow:hidden;">',
-      '  <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 18px; border-bottom:1px solid var(--border-color, rgba(255,255,255,0.12));">',
+      '<div id="accessLoginModalBackdrop" class="access-login-modal__backdrop"></div>',
+      '<div class="access-login-modal__dialog">',
+      '  <div class="access-login-modal__header">',
       '    <div>',
-      '      <div style="font-size:1rem; font-weight:700;">Увійти за позивним</div>',
-      '      <div id="accessLoginModalSubtext" style="font-size:0.82rem; color:var(--text-secondary, #9ca3af); margin-top:4px;">Виберіть свій позивний зі списку</div>',
+      '      <div class="access-login-modal__title">Увійти за позивним</div>',
+      '      <div id="accessLoginModalSubtext" class="access-login-modal__subtext">Виберіть свій позивний зі списку</div>',
       '    </div>',
       '    <button type="button" id="btnCloseAccessLoginModal" class="access-login-modal__close">Вихід</button>',
       '  </div>',
-      '  <div style="padding:16px 18px;">',
-      '    <div id="accessLoginModalMessage" style="display:none; margin-bottom:12px; font-size:0.85rem; line-height:1.45;"></div>',
-      '    <div id="accessLoginModalBody" style="display:grid; gap:8px;"></div>',
+      '  <div class="access-login-modal__content">',
+      '    <div id="accessLoginModalMessage" class="access-login-modal__message"></div>',
+      '    <div id="accessLoginModalBody" class="access-login-modal__body is-single"></div>',
       '  </div>',
       '</div>'
     ].join('');
@@ -580,26 +582,24 @@
     if (!body) return;
 
     const items = Array.isArray(callsigns)
-      ? callsigns.map(function (value) { return safeString_(value); }).filter(Boolean)
+      ? callsigns.map(function (v) { return safeString_(v); }).filter(Boolean)
       : [];
+
+    body.className = 'access-login-modal__body ' + (items.length <= 1 ? 'is-single' : 'is-multi');
 
     if (!items.length) {
       body.innerHTML = '<div class="access-login-modal__empty">Немає доступних позивних для самостійного входу.</div>';
-      setAccessLoginModalMessage_(supportEmail ? ('Зверніться по допомогу: ' + supportEmail) : '', false);
+      setAccessLoginModalMessage_(getSupportHelpText_() + '.', false);
       return;
     }
 
-    const gridClass = items.length === 1
-      ? 'access-login-modal__callsigns access-login-modal__callsigns--single'
-      : 'access-login-modal__callsigns access-login-modal__callsigns--multi';
-
-    body.innerHTML = '<div class="' + gridClass + '">' + items.map(function (callsign) {
+    body.innerHTML = items.map(function (callsign) {
       const esc = escapeHtml(callsign);
       const attr = escapeJsString(callsign);
-      return '<button type="button" class="access-login-modal__callsign-btn" onclick="submitAccessLoginCallsign_(\'' + attr + '\')"><span>' + esc + '</span></button>';
-    }).join('') + '</div>';
+      return '<button type="button" class="access-login-modal__btn" onclick="submitAccessLoginCallsign_(\'' + attr + '\')">' + esc + '</button>';
+    }).join('');
 
-    setAccessLoginModalMessage_(supportEmail ? ('Якщо ваш позивний уже зайнятий або відсутній — зверніться: ' + supportEmail) : '', false);
+    setAccessLoginModalMessage_('Якщо ваш позивний уже зайнятий або відсутній — ' + getSupportHelpText_().toLowerCase() + '.', false);
   }
 
   async function openAccessLoginFlow() {
@@ -627,7 +627,8 @@
     state.loading = true;
     const body = document.getElementById('accessLoginModalBody');
     if (body) {
-      body.innerHTML = '<div style="font-size:0.9rem; color:var(--text-secondary, #9ca3af);">Завантажую список позивних...</div>';
+      body.className = 'access-login-modal__body is-single';
+      body.innerHTML = '<div class="access-login-modal__empty">Завантажую список позивних...</div>';
     }
     setAccessLoginModalMessage_('', false);
 
@@ -641,9 +642,10 @@
       renderAccessLoginCallsigns_(state.lastCallsigns, safeString_(data.supportEmail || access.supportEmail));
     } catch (error) {
       if (body) {
-        body.innerHTML = '<div style="font-size:0.9rem; color:var(--danger-color, #f87171);">' + escapeHtml(normalizeError(error)) + '</div>';
+        body.className = 'access-login-modal__body is-single';
+        body.innerHTML = '<div class="access-login-modal__empty" style="color:var(--danger-color, #f87171);">' + escapeHtml(normalizeError(error)) + '</div>';
       }
-      setAccessLoginModalMessage_(access.supportEmail ? ('Зверніться по допомогу: ' + access.supportEmail) : '', true);
+      setAccessLoginModalMessage_(getSupportHelpText_() + '.', true);
     } finally {
       state.loading = false;
     }
@@ -660,8 +662,7 @@
       const data = result && result.data ? result.data : {};
       if (!result || !result.success) {
         const message = result && (result.error || result.message) || 'Не вдалося виконати вхід';
-        const supportEmail = safeString_(data.supportEmail || (STATE.access && STATE.access.supportEmail));
-        setAccessLoginModalMessage_(message + (supportEmail ? ' Зверніться: ' + supportEmail : ''), true);
+        setAccessLoginModalMessage_(message + ' ' + getSupportHelpText_() + '.', true);
         showToast(message);
         return;
       }
@@ -707,7 +708,7 @@
     const explanation = buildAccessDebugExplanation_(access);
     const advice = buildAccessDebugAdvice_(access);
     const reportText = buildAccessDebugReportText_(access);
-    const supportEmail = access.supportEmail || 'Немає';
+    const supportEmail = 'ШАХТАР';
     const showHashButtons = !!access.currentKeyHashFull && !!access.isAdmin;
 
     return `

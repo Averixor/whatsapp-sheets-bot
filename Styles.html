@@ -1530,115 +1530,27 @@
   }
 
   .personnel-modal__close {
-    min-width: 84px;
-    height: 36px;
+    min-width: 96px;
+    height: 38px;
     padding: 0 14px;
     border: 1px solid var(--border-color);
-    border-radius: 11px;
+    border-radius: 12px;
     background: var(--bg-secondary);
-    color: var(--text-secondary);
+    color: var(--text-primary);
+    font-weight: 700;
     cursor: pointer;
     transition: 0.18s ease;
     flex-shrink: 0;
-    font-weight: 700;
-    font-size: 0.88rem;
-    line-height: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    white-space: nowrap;
+    text-align: center;
   }
 
   .personnel-modal__close:hover {
     background: var(--bg-hover);
     border-color: var(--border-strong);
     color: var(--text-primary);
-  }
-
-  .access-login-modal__close {
-    min-width: 84px;
-    height: 36px;
-    padding: 0 14px;
-    border: 1px solid var(--border-color);
-    border-radius: 11px;
-    background: var(--bg-secondary);
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: 0.18s ease;
-    flex-shrink: 0;
-    font-weight: 700;
-    font-size: 0.88rem;
-    line-height: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    white-space: nowrap;
-  }
-
-  .access-login-modal__close:hover {
-    background: var(--bg-hover);
-    border-color: var(--border-strong);
-    color: var(--text-primary);
-  }
-
-
-  .access-login-modal__empty {
-    padding: 12px 4px;
-    font-size: 0.9rem;
-    line-height: 1.45;
-    color: var(--text-secondary);
-    text-align: center;
-  }
-
-  .access-login-modal__callsigns {
-    display: grid;
-    gap: 10px;
-    width: 100%;
-  }
-
-  .access-login-modal__callsigns--single {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .access-login-modal__callsigns--multi {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .access-login-modal__callsign-btn {
-    width: 100%;
-    min-height: 56px;
-    padding: 12px 14px;
-    border-radius: 14px;
-    border: 1px solid var(--border-color);
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: 0.18s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    box-sizing: border-box;
-    font-weight: 700;
-    font-size: 1rem;
-    line-height: 1.2;
-  }
-
-  .access-login-modal__callsign-btn span {
-    display: block;
-    width: 100%;
-    text-align: center;
-    word-break: break-word;
-  }
-
-  .access-login-modal__callsign-btn:hover {
-    background: var(--bg-hover);
-    border-color: var(--border-strong);
-    color: var(--text-primary);
-  }
-
-  .access-login-modal__callsign-btn:active {
-    transform: translateY(1px);
   }
 
   .personnel-modal__controls {
@@ -1706,8 +1618,8 @@
     transition: 0.18s ease;
     display: flex;
     align-items: center;
-    justify-content: flex-start;
-    text-align: left;
+    justify-content: center;
+    text-align: center;
     font-weight: 600;
     letter-spacing: 0.2px;
     user-select: none;
@@ -1749,6 +1661,132 @@
     color: var(--text-muted);
     font-size: 0.92rem;
   }
+
+
+
+  .access-login-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: none;
+  }
+
+  .access-login-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+  }
+
+  .access-login-modal__dialog {
+    position: relative;
+    max-width: 420px;
+    margin: 36px auto;
+    background: var(--surface-color, #111827);
+    color: var(--text-primary, #fff);
+    border: 1px solid var(--border-color, rgba(255,255,255,0.12));
+    border-radius: 16px;
+    box-shadow: 0 18px 48px rgba(0,0,0,0.35);
+    overflow: hidden;
+  }
+
+  .access-login-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.12));
+  }
+
+  .access-login-modal__title {
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .access-login-modal__subtext {
+    font-size: 0.82rem;
+    color: var(--text-secondary, #9ca3af);
+    margin-top: 4px;
+  }
+
+  .access-login-modal__close {
+    min-width: 96px;
+    height: 38px;
+    padding: 0 14px;
+    border: 1px solid var(--border-color, rgba(255,255,255,0.12));
+    border-radius: 12px;
+    background: var(--bg-secondary, rgba(255,255,255,0.04));
+    color: var(--text-primary, #fff);
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.18s ease;
+  }
+
+  .access-login-modal__close:hover {
+    background: var(--bg-hover, rgba(255,255,255,0.08));
+    border-color: var(--border-strong, rgba(255,255,255,0.2));
+  }
+
+  .access-login-modal__content {
+    padding: 16px 18px;
+  }
+
+  .access-login-modal__message {
+    display: none;
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text-secondary, #9ca3af);
+  }
+
+  .access-login-modal__body {
+    display: grid;
+    gap: 10px;
+  }
+
+  .access-login-modal__body.is-single {
+    grid-template-columns: 1fr;
+  }
+
+  .access-login-modal__body.is-multi {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .access-login-modal__btn {
+    min-height: 52px;
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid var(--border-color, rgba(255,255,255,0.12));
+    background: var(--bg-secondary, rgba(255,255,255,0.04));
+    color: var(--text-primary, #fff);
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.18s ease;
+    word-break: break-word;
+  }
+
+  .access-login-modal__btn:hover {
+    border-color: var(--whatsapp-teal, #0ea5e9);
+    background: var(--bg-hover, rgba(255,255,255,0.08));
+    color: var(--whatsapp-teal, #0ea5e9);
+  }
+
+  .access-login-modal__empty {
+    padding: 14px 10px;
+    text-align: center;
+    color: var(--text-secondary, #9ca3af);
+    font-size: 0.9rem;
+  }
+
 
   .hidden {
     display: none !important;
