@@ -156,7 +156,13 @@ function _pickTestDate_() {
 }
 
 function _pickTestCallsign_() {
-  return PersonsRepository_.getAnyCallsign() || '';
+  try {
+    return (typeof PersonsRepository_ !== 'undefined' && PersonsRepository_ && typeof PersonsRepository_.getAnyCallsign === 'function')
+      ? (PersonsRepository_.getAnyCallsign() || '')
+      : '';
+  } catch (_) {
+    return '';
+  }
 }
 
 function _assertStage4Meta_(result, functionName) {
@@ -298,8 +304,9 @@ function runStage4ScenarioTests(options) {
     getStage4CompatibilityMap_()
       .filter(function (item) { return !!item.verifySourceToken; })
       .forEach(function (item) {
-        if (!_stage7HasFn_(item.name)) return;
-        const src = String(_global_()[item.name]);
+        if (!_smokeHasFn_(item.name)) return;
+        const fn = _smokeResolveFn_(item.name);
+        const src = String(fn);
         _smokeAssert_(src.indexOf(item.verifySourceToken) !== -1, `${item.name} не веде до ${item.verifySourceToken}`);
       });
     return 'wrapper-sources-ok';
@@ -324,7 +331,7 @@ function runStage4ScenarioTests(options) {
 
   _smokePush_(report, 'stage7 diagnostics modes available', function () {
     ['runHistoricalQuickDiagnosticsInternal_', 'runHistoricalStructuralDiagnosticsInternal_', 'runHistoricalCompatibilityDiagnosticsInternal_', 'runHistoricalFullDiagnosticsInternal_'].forEach(function (fnName) {
-      _smokeAssert_(_stage7HasFn_(fnName), `${fnName} відсутній`);
+      _smokeAssert_(_smokeHasFn_(fnName), `${fnName} відсутній`);
     });
     return 'diagnostics-modes-ok';
   });
@@ -602,7 +609,7 @@ function runStage5SmokeTests(options) {
 
   _smokePush_(report, 'diagnostics modes available', function () {
     ['runStage5QuickDiagnostics_', 'runStage5StructuralDiagnostics_', 'runStage5OperationalDiagnostics_', 'runStage5SunsetDiagnostics_', 'runStage5FullDiagnostics_'].forEach(function (fnName) {
-      _smokeAssert_(_stage7HasFn_(fnName), `${fnName} відсутній`);
+      _smokeAssert_(_smokeHasFn_(fnName), `${fnName} відсутній`);
     });
     return 'diagnostics-modes-ok';
   });

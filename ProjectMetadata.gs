@@ -51,8 +51,7 @@ const PROJECT_DOCUMENTATION_MAP_ = Object.freeze({
     '_extras/history/STABILIZATION_CHECK_REPORT_STAGE7_FINAL.md',
     '_extras/history/STABILIZATION_NOTES_2026-03-22.md',
     '_extras/history/STAGE7_REPORT.md',
-    '_extras/history/TZ_EXECUTION_REPORT_2026-03-28.md',
-    '_extras/history/TZ_EXECUTION_REPORT_2026-03-29.md'
+    '_extras/history/TZ_EXECUTION_REPORT_2026-03-28.md'
   ])
 });
 
@@ -400,6 +399,24 @@ const PROJECT_BUNDLE_FILE_INDEX_ = Object.freeze([
   "_extras/tools/package.json",
   "_extras/tools/static-checks.js",
   "_extras/tools/validate-gs-syntax.js",
+  "AccessPolicyChecks.gs",
+  "Actions.gs",
+  "Dialogs.gs",
+  "SendPanelFastPaths.gs",
+  "Stage7CompatibilityApi.gs",
+  "Stage7CompatibilityMaintenanceApi.gs",
+  "_extras/README.md",
+  "_extras/backups/AccessControl.gs.bak",
+  "_extras/history/CANONICALIZATION_AUDIT_2026-03-29.md",
+  "_extras/history/PATCH_NOTES_ACCESS_LOGIN_BY_CALLSIGN_2026-04-05.txt",
+  "_extras/history/PATCH_NOTES_LOGIN_IDENTIFIER_CALLSIGN_2026-04-05.txt",
+  "_extras/history/PATCH_NOTES_LOGIN_IDENTIFIER_CALLSIGN_GPS_LOADING_2026-04-05.txt",
+  "_extras/history/README.md",
+  "_extras/history/SELF_CONTAINMENT_AUDIT_2026-03-29.md",
+  "_extras/history/SELF_CONTAINMENT_VERIFICATION_REPORT_2026-03-29.md",
+  "_extras/package.json",
+  "_extras/static-checks.js",
+  "_extras/validate-gs-syntax.js",
   "appsscript.json"
 ]);
 
