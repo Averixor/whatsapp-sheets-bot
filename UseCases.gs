@@ -1301,21 +1301,35 @@ const Stage7UseCases_ = (function() {
           partial: false
             };
 
-          case 'healthCheck':
+          case 'healthCheck': {
+            const diagnosticsMode = input.mode
+              ? String(input.mode).toLowerCase()
+              : (input.shallow ? 'quick' : 'full');
+            const diagnosticsReport = (diagnosticsMode === 'quick')
+              ? runStage5QuickDiagnostics_({
+                  mode: 'quick',
+                  shallow: true,
+                  includeStage3Base: false,
+                  includeCompatibilityLayer: false,
+                  includeReconciliationPreview: false
+                })
+              : runStage5FullDiagnostics_({
+                  mode: diagnosticsMode,
+                  shallow: !!input.shallow,
+                  includeReconciliationPreview: input.includeReconciliationPreview
+                });
             return {
               success: true,
-              message: 'Health check виконано',
-              result: runStage5FullDiagnostics_({
-                shallow: !!input.shallow,
-                includeReconciliationPreview: input.includeReconciliationPreview
-              }),
+              message: diagnosticsMode === 'quick' ? 'Quick health check виконано' : 'Health check виконано',
+              result: diagnosticsReport,
               changes: [],
               affectedSheets: [],
               affectedEntities: [],
               appliedChangesCount: 0,
               skippedChangesCount: 0,
-          partial: false
+              partial: false
             };
+          }
 
           default:
             return {
