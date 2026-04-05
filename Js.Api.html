@@ -225,6 +225,7 @@
     installJobs: async () => adaptStage4UtilityResponse(await Api.run('apiInstallStage7Jobs')),
     runJob: async (jobName, options = {}) => adaptStage4UtilityResponse(await Api.run('apiRunStage7Job', jobName, options)),
     healthCheck: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7HealthCheck', options)),
+    quickHealthCheck: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7QuickHealthCheck', options)),
     runRegressionTests: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiRunStage7RegressionTests', options)),
     listPendingRepairs: async (filters = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7ListPendingRepairs', filters)),
     getOperationDetails: async (operationId) => adaptStage4UtilityResponse(await Api.run('apiStage7GetOperationDetails', operationId || '')),
@@ -270,7 +271,13 @@
   };
 
   var DiagnosticsApi = {
-    healthCheck: MaintenanceApi.healthCheck,
+    healthCheck: async (options = {}) => {
+      const opts = Object.assign({}, options || {});
+      const wantsQuick = String(opts.mode || '').toLowerCase() === 'quick' || (opts.shallow !== false && !opts.includeStage3Base && !opts.includeCompatibilityLayer && !opts.includeReconciliationPreview);
+      return wantsQuick
+        ? MaintenanceApi.quickHealthCheck(opts)
+        : MaintenanceApi.healthCheck(opts);
+    },
     runRegressionTests: MaintenanceApi.runRegressionTests
   };
 </script>
