@@ -1,134 +1,125 @@
 /**
  * Stage7ServerApi.gs — canonical Stage 7 application API.
  *
- * Hot-path read routes are intentionally short here.
- * Heavy orchestration stays for write / repair / maintenance scenarios.
+ * Stage 7 is the only canonical application surface in this baseline.
+ * Historical Stage 4 aliases live in Stage7CompatibilityApi.gs.
  */
 
-function _stage7FastBuildResponse_(success, message, result, context, warnings, meta) {
-  if (typeof buildStage4Response_ === 'function') {
-    return buildStage4Response_(
-      !!success,
-      message || '',
-      success ? null : (message || 'Операцію не виконано'),
-      result,
-      [],
-      Object.assign({
-        scenario: context && context.scenario || '',
-        affectedSheets: meta && meta.affectedSheets || [],
-        affectedEntities: meta && meta.affectedEntities || [],
-        appliedChangesCount: 0,
-        skippedChangesCount: 0,
-        partial: false,
-        retrySafe: true,
-        lockUsed: false,
-        lockRequired: false
-      }, meta || {}),
-      null,
-      context || null,
-      Array.isArray(warnings) ? warnings : []
-    );
-  }
-
+function _stage7FastContext_(scenario) {
+  const stage = (typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_().stageVersion : '7.0.0');
   return {
-    success: !!success,
-    message: String(message || ''),
-    error: success ? null : String(message || 'Операцію не виконано'),
-    data: {
-      result: result === undefined ? null : result,
-      changes: [],
-      meta: Object.assign({}, meta || {}),
-      diagnostics: null
-    },
-    context: context || null,
-    warnings: Array.isArray(warnings) ? warnings : []
-  };
-}
-
-function _stage7FastContext_(scenario, routeName, publicApiMethod) {
-  return {
-    scenario: String(scenario || ''),
-    routeName: routeName || '',
-    publicApiMethod: publicApiMethod || '',
+    stage: stage,
+    scenario: scenario,
+    layer: 'application',
     fastPath: true
   };
 }
 
-function _stage7FastDescriptor_() {
-  return (typeof AccessControl_ === 'object' && AccessControl_ && typeof AccessControl_.describe === 'function')
-    ? AccessControl_.describe({ includeSensitiveDebug: false })
-    : {
-        role: 'guest',
-        enabled: false,
-        knownUser: false,
-        registered: false,
-        reason: { code: 'access.unavailable', message: 'AccessControl_ недоступний' },
-        reasonString: 'AccessControl_ недоступний'
-      };
+function _stage7FastMeta_(scenario, extraMeta) {
+  return Object.assign({
+    stage: (typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_().stageVersion : '7.0.0'),
+    scenario: scenario,
+    operationId: typeof stage7UniqueId_ === 'function' ? stage7UniqueId_(scenario) : (scenario + '_' + Date.now()),
+    affectedSheets: [],
+    affectedEntities: [],
+    appliedChangesCount: 0,
+    skippedChangesCount: 0,
+    dryRun: true,
+    partial: false,
+    retrySafe: true,
+    lockUsed: false,
+    lockRequired: false
+  }, extraMeta || {});
 }
 
-function _stage7FastListMonthsCore_() {
+function _stage7FastResponse_(scenario, message, result, warnings, extraMeta) {
+  const meta = _stage7FastMeta_(scenario, extraMeta);
+  return buildStage4Response_(
+    true,
+    message || '',
+    null,
+    result === undefined ? null : result,
+    [],
+    meta,
+    null,
+    _stage7FastContext_(scenario),
+    warnings || []
+  );
+}
+
+function apiStage7GetAccessDescriptorLite() {
+  const descriptor = (typeof AccessControl_ === 'object' && AccessControl_ && typeof AccessControl_.describe === 'function')
+    ? AccessControl_.describe({ includeSensitiveDebug: false })
+    : { role: 'guest', isAdmin: false, knownUser: false, reasonString: 'AccessControl_ недоступний' };
+
+  const warnings = [];
+  if (descriptor && descriptor.reason && descriptor.reason.message && descriptor.reason.code !== 'access.ok' && descriptor.reason.code !== 'access.ok.bootstrap') {
+    warnings.push(String(descriptor.reason.message));
+  }
+
+  return _stage7FastResponse_(
+    'getAccessDescriptorLite',
+    descriptor && descriptor.isAdmin ? 'Роль доступу визначено' : 'Доступ визначено',
+    descriptor,
+    warnings
+  );
+}
+
+function apiStage7BootstrapSidebar() {
+  const descriptor = (typeof AccessControl_ === 'object' && AccessControl_ && typeof AccessControl_.describe === 'function')
+    ? AccessControl_.describe({ includeSensitiveDebug: false })
+    : { role: 'guest', isAdmin: false, knownUser: false, reasonString: 'AccessControl_ недоступний' };
+
   const ss = SpreadsheetApp.getActive();
   const months = ss.getSheets()
     .map(function(sheet) { return sheet.getName(); })
     .filter(function(name) { return /^\d{2}$/.test(name); })
     .sort();
-  return {
-    months: months,
-    current: getBotMonthSheetName_()
-  };
-}
+  const current = getBotMonthSheetName_();
 
-function apiStage7GetAccessDescriptorLite() {
-  const descriptor = _stage7FastDescriptor_();
-  return _stage7FastBuildResponse_(
-    true,
-    descriptor && descriptor.isAdmin ? 'Роль доступу визначено' : 'Доступ визначено',
-    descriptor,
-    _stage7FastContext_('getAccessDescriptorLite', 'sidebar.bootstrapAccess', 'apiStage7GetAccessDescriptorLite'),
-    [],
-    { affectedSheets: [appGetCore('ACCESS_SHEET', 'ACCESS')] }
-  );
-}
+  const warnings = [];
+  if (descriptor && descriptor.reason && descriptor.reason.message && descriptor.reason.code !== 'access.ok' && descriptor.reason.code !== 'access.ok.bootstrap') {
+    warnings.push(String(descriptor.reason.message));
+  }
 
-function apiStage7BootstrapSidebar() {
-  const descriptor = _stage7FastDescriptor_();
-  const monthsInfo = _stage7FastListMonthsCore_();
-
-  return _stage7FastBuildResponse_(
-    true,
-    'Sidebar bootstrap готовий',
+  return _stage7FastResponse_(
+    'bootstrapSidebar',
+    'Базові дані сайдбару завантажено',
     {
       access: descriptor,
-      months: monthsInfo.months,
-      current: monthsInfo.current
+      months: months,
+      current: current
     },
-    _stage7FastContext_('bootstrapSidebar', 'sidebar.bootstrap', 'apiStage7BootstrapSidebar'),
-    [],
-    { affectedSheets: monthsInfo.months.slice() }
+    warnings,
+    { affectedSheets: months }
   );
 }
 
 function apiStage7GetMonthsList() {
-  const result = _stage7FastListMonthsCore_();
-  return _stage7FastBuildResponse_(
-    true,
+  const ss = SpreadsheetApp.getActive();
+  const months = ss.getSheets()
+    .map(function(sheet) { return sheet.getName(); })
+    .filter(function(name) { return /^\d{2}$/.test(name); })
+    .sort();
+  const current = getBotMonthSheetName_();
+
+  return _stage7FastResponse_(
+    'listMonths',
     'Місяці завантажено',
-    result,
-    _stage7FastContext_('listMonths', 'sidebar.getMonths', 'apiStage7GetMonthsList'),
+    { months: months, current: current },
     [],
-    { affectedSheets: result.months.slice() }
+    { affectedSheets: months }
   );
 }
 
 function apiStage7GetSidebarData(dateStr) {
   const info = validateDatePayload_({ date: dateStr || _todayStr_() }, 'date');
-  const sidebar = PersonsRepository_.getSidebarPersonnel(info.payload.dateStr || info.payload.date);
-  return _stage7FastBuildResponse_(
-    true,
+  const sidebar = PersonsRepository_.getSidebarPersonnel(info.payload.dateStr || info.payload.date || _todayStr_());
+
+  return _stage7FastResponse_(
+    'loadCalendarDay',
     'Дані дня завантажено',
     sidebar,
-    _stage7FastContext_('loadCalendarDay', 'sidebar.loadCalendarDay', 'apiStage7GetSidebarData'),
     [],
     { affectedSheets: [sidebar.month || getBotMonthSheetName_()] }
   );
@@ -145,8 +136,8 @@ function apiStage7GetSendPanelData() {
     ? (SendPanelRepository_.getPanelMetadata() || {})
     : {};
 
-  return _stage7FastBuildResponse_(
-    true,
+  return _stage7FastResponse_(
+    'getSendPanelData',
     'SEND_PANEL перечитано',
     {
       rows: rows,
@@ -154,9 +145,8 @@ function apiStage7GetSendPanelData() {
       month: panelMeta.month || getBotMonthSheetName_(),
       date: panelMeta.date || ''
     },
-    _stage7FastContext_('getSendPanelData', 'sidebar.getSendPanelData', 'apiStage7GetSendPanelData'),
-    typeof _stage7BuildSendPanelWarnings_ === 'function' ? _stage7BuildSendPanelWarnings_(stats) : [],
-    { affectedSheets: [CONFIG.SEND_PANEL_SHEET, panelMeta.month || getBotMonthSheetName_()] }
+    [],
+    { affectedSheets: [CONFIG.SEND_PANEL_SHEET, getBotMonthSheetName_()].filter(Boolean) }
   );
 }
 
@@ -255,21 +245,22 @@ function apiOpenPersonCard(callsign, dateStr) {
     callsign: callsign || '',
     date: dateStr || _todayStr_()
   });
-
   if (typeof AccessEnforcement_ === 'object' && AccessEnforcement_.assertCanOpenPersonCard) {
     AccessEnforcement_.assertCanOpenPersonCard(info.payload.callsign || '', info.payload.dateStr || info.payload.date || '');
   }
 
   const person = PersonsRepository_.getPersonByCallsign(info.payload.callsign, info.payload.dateStr || info.payload.date);
-  const warnings = person.phone ? [] : ['Для бійця не знайдено телефон'];
+  const warnings = person && person.phone ? [] : ['Для бійця не знайдено телефон'];
 
-  return _stage7FastBuildResponse_(
-    true,
+  return _stage7FastResponse_(
+    'openPersonCard',
     'Картку бійця зібрано',
     person,
-    _stage7FastContext_('openPersonCard', 'sidebar.openPersonCard', 'apiOpenPersonCard'),
     warnings,
-    { affectedSheets: [person.sheet || getBotMonthSheetName_()], affectedEntities: [person.callsign || person.fio || ''] }
+    {
+      affectedSheets: [person.sheet || getBotMonthSheetName_()].filter(Boolean),
+      affectedEntities: [person.callsign || person.fio || ''].filter(Boolean)
+    }
   );
 }
 
@@ -283,21 +274,25 @@ function apiCheckVacationsAndBirthdays(dateStr) {
     AccessEnforcement_.assertCanUseWorkingActions('checkVacationsAndBirthdays', { requestedDate: info.payload.dateStr || info.payload.date || '' });
   }
 
-  const targetDate = DateUtils_.parseUaDate(info.payload.dateStr || info.payload.date) || new Date();
-  const vacations = runVacationEngine_(targetDate) || {};
-  const birthdays = runBirthdayEngine_(targetDate) || {};
+  const daily = (typeof VacationService_ === 'object' && VacationService_ && typeof VacationService_.check === 'function')
+    ? VacationService_.check(info.payload.dateStr || info.payload.date || _todayStr_())
+    : {
+        date: info.payload.dateStr || info.payload.date || _todayStr_(),
+        vacations: runVacationEngine_(DateUtils_.parseUaDate(info.payload.dateStr || info.payload.date) || new Date()) || {},
+        birthdays: runBirthdayEngine_(DateUtils_.parseUaDate(info.payload.dateStr || info.payload.date) || new Date()) || {}
+      };
 
-  return _stage7FastBuildResponse_(
-    true,
+  return _stage7FastResponse_(
+    'checkVacationsAndBirthdays',
     'Перевірку відпусток і ДН виконано',
     {
-      date: info.payload.dateStr || info.payload.date,
-      vacations: vacations,
-      birthdays: birthdays
+      date: daily.date || info.payload.dateStr || info.payload.date || _todayStr_(),
+      vacations: daily.vacations || {},
+      birthdays: daily.birthdays || {},
+      summary: daily.summary || {}
     },
-    _stage7FastContext_('checkVacationsAndBirthdays', 'sidebar.checkVacationsAndBirthdays', 'apiCheckVacationsAndBirthdays'),
     [],
-    { affectedSheets: [getBotMonthSheetName_(), CONFIG.PHONES_SHEET] }
+    { affectedSheets: [getBotMonthSheetName_(), CONFIG.PHONES_SHEET].filter(Boolean) }
   );
 }
 
