@@ -1,0 +1,182 @@
+.sidebar-container {
+    width: 580px;
+    max-width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-primary);
+    box-shadow: var(--shadow-lg);
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+    overflow: hidden;
+    animation: slideIn 0.28s ease-out;
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  .header {
+    background: linear-gradient(145deg, #0ea5e9, #0369a1);
+    color: white;
+    padding: var(--space-sm) var(--space-md);
+    box-shadow: var(--shadow-sm);
+    flex-shrink: 0;
+  }
+
+  .header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+  }
+
+  .logo {
+    font-size: 1.1rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  .whatsapp-icon {
+    font-size: 1.3rem;
+  }
+
+  .header-logo {
+    gap: 10px;
+  }
+
+  .header-tool-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.12);
+    color: inherit;
+    cursor: pointer;
+    transition: var(--transition);
+    padding: 0;
+  }
+
+  .header-tool-btn:hover,
+  .header-tool-btn:focus-visible {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.34);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
+    outline: none;
+  }
+
+  .status-badge {
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(8px);
+    padding: 5px 12px;
+    border-radius: var(--radius-xl);
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    white-space: nowrap;
+    transition: var(--transition);
+  }
+
+  .status-badge:hover {
+    background: rgba(255, 255, 255, 0.22);
+    transform: translateY(-1px);
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--success-color);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.4);
+    border-radius: 50%;
+    display: inline-block;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+
+    50% {
+      transform: scale(1.35);
+      opacity: 0.75;
+    }
+  }
+
+  .status-text {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .main-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: var(--bg-secondary);
+    padding: var(--space-sm);
+    scrollbar-width: thin;
+    scrollbar-color: #475569 #111827;
+  }
+
+  .main-content::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .main-content::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .main-content::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 10px;
+  }
+
+  .main-content::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+  }
+
+  .menu-section,
+  .result-section {
+    width: 100%;
+    display: none;
+  }
+
+  .menu-section.active,
+  .result-section.active {
+    display: block;
+    animation: fadeIn 0.22s ease;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(5px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  
