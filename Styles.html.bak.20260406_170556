@@ -490,19 +490,11 @@
   }
 
   .result-header {
-    position: sticky;
-    top: 0;
-    z-index: 40;
     margin-bottom: var(--space-sm);
     display: flex;
     align-items: center;
     gap: var(--space-sm);
     flex-wrap: wrap;
-    padding: 8px 0 10px;
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.94));
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
   }
 
   .back-button {

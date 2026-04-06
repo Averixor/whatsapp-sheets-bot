@@ -1,0 +1,95 @@
+[1mdiff --git a/Js.Security.html b/Js.Security.html[m
+[1mindex 8d13050..302bd2b 100644[m
+[1m--- a/Js.Security.html[m
+[1m+++ b/Js.Security.html[m
+[36m@@ -827,6 +827,42 @@[m
+     }[m
+   }[m
+ [m
+[32m+[m
+[32m+[m[32m  function buildAccessTechDetailsText_(access) {[m
+[32m+[m[32m    const normalized = normalizeAccessForUi_(access || {});[m
+[32m+[m[32m    const raw = (access && (access.raw || access)) || {};[m
+[32m+[m[32m    const lines = [[m
+[32m+[m[32m      'Технічні деталі:',[m
+[32m+[m[32m      'Стан: ' + (normalized.reasonString || 'Немає'),[m
+[32m+[m[32m      'Код стану: ' + (normalized.reasonCode || 'немає'),[m
+[32m+[m[32m      'Примітка: ' + (normalized.note || ''),[m
+[32m+[m[32m      'Свій позивний: ' + (normalized.personCallsign || ''),[m
+[32m+[m[32m      'last_seen_at: ' + (normalized.lastSeenAt || 'Немає'),[m
+[32m+[m[32m      'last_rotated_at: ' + (normalized.lastRotatedAt || 'Немає'),[m
+[32m+[m[32m      'Стан ротації: ' + (normalized.rotationState || 'Невідомо'),[m
+[32m+[m[32m      '',[m
+[32m+[m[32m      'RAW JSON:',[m
+[32m+[m[32m      JSON.stringify(raw, null, 2)[m
+[32m+[m[32m    ];[m
+[32m+[m[32m    return lines.join('\n');[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  function buildAccessCombinedReportText_(access) {[m
+[32m+[m[32m    const report = String(buildAccessDebugReportText_(access || {}) || '').trim();[m
+[32m+[m[32m    const tech = String(buildAccessTechDetailsText_(access || {}) || '').trim();[m
+[32m+[m[32m    if (!report) return tech;[m
+[32m+[m[32m    if (!tech) return report;[m
+[32m+[m[32m    return report + '\n\n' + tech;[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  function copyAccessDebugTechDetails() {[m
+[32m+[m[32m    copyResultText(buildAccessTechDetailsText_(STATE.access || {}));[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  function copyAccessDebugFullReport() {[m
+[32m+[m[32m    copyResultText(buildAccessCombinedReportText_(STATE.access || {}));[m
+[32m+[m[32m  }[m
+[32m+[m
+   function renderAccessDebugResult_(accessRaw) {[m
+     const access = normalizeAccessForUi_(accessRaw);[m
+     const state = ensureAccessDebugState_();[m
+[36m@@ -863,6 +899,8 @@[m
+         <div class="result-value">[m
+           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">[m
+             <button class="btn btn-primary" type="button" onclick="SidebarApp.copyResultText('${escapeJsString(reportText)}')">Копіювати звіт</button>[m
+[32m+[m[32m            <button class="btn" type="button" onclick="copyAccessDebugFullReport()">Копіювати все</button>[m
+[32m+[m[32m            <button class="btn" type="button" onclick="copyAccessDebugTechDetails()">Копіювати тех. деталі</button>[m
+             ${access.selfBindRequired && access.canSelfBind ? '<button class="btn" type="button" onclick="openAccessLoginFlow()">Увійти</button>' : ''}[m
+             ${showHashButtons ? '<button class="btn" type="button" id="accessDebugToggleHashBtn" onclick="toggleAccessDebugHash()">Показати повний hash</button>' : ''}[m
+             ${showHashButtons ? '<button class="btn" type="button" id="accessDebugCopyHashBtn" onclick="copyAccessDebugHash()">Копіювати повний hash</button>' : ''}[m
+[36m@@ -1099,10 +1137,14 @@[m
+   window.getAllowedActionsText_ = getAllowedActionsText_;[m
+   window.getRotationModeLabel_ = getRotationModeLabel_;[m
+   window.buildAccessDebugReportText_ = buildAccessDebugReportText_;[m
+[32m+[m[32m  window.buildAccessTechDetailsText_ = buildAccessTechDetailsText_;[m
+[32m+[m[32m  window.buildAccessCombinedReportText_ = buildAccessCombinedReportText_;[m
+   window.ensureAccessDebugState_ = ensureAccessDebugState_;[m
+   window.updateAccessDebugHashUi_ = updateAccessDebugHashUi_;[m
+   window.toggleAccessDebugHash = toggleAccessDebugHash;[m
+   window.copyAccessDebugHash = copyAccessDebugHash;[m
+[32m+[m[32m  window.copyAccessDebugTechDetails = copyAccessDebugTechDetails;[m
+[32m+[m[32m  window.copyAccessDebugFullReport = copyAccessDebugFullReport;[m
+   window.openAccessLoginFlow = openAccessLoginFlow;[m
+   window.closeAccessLoginModal = closeAccessLoginModal;[m
+   window.submitAccessLoginForm_ = submitAccessLoginForm_;[m
+[1mdiff --git a/Styles.html b/Styles.html[m
+[1mindex 78ba97b..aa5f537 100644[m
+[1m--- a/Styles.html[m
+[1m+++ b/Styles.html[m
+[36m@@ -490,11 +490,19 @@[m
+   }[m
+ [m
+   .result-header {[m
+[32m+[m[32m    position: sticky;[m
+[32m+[m[32m    top: 0;[m
+[32m+[m[32m    z-index: 40;[m
+     margin-bottom: var(--space-sm);[m
+     display: flex;[m
+     align-items: center;[m
+     gap: var(--space-sm);[m
+     flex-wrap: wrap;[m
+[32m+[m[32m    padding: 8px 0 10px;[m
+[32m+[m[32m    background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.94));[m
+[32m+[m[32m    backdrop-filter: blur(8px);[m
+[32m+[m[32m    -webkit-backdrop-filter: blur(8px);[m
+[32m+[m[32m    border-bottom: 1px solid rgba(148, 163, 184, 0.14);[m
+   }[m
+ [m
+   .back-button {[m

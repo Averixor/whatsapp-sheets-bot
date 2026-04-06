@@ -827,42 +827,6 @@
     }
   }
 
-
-  function buildAccessTechDetailsText_(access) {
-    const normalized = normalizeAccessForUi_(access || {});
-    const raw = (access && (access.raw || access)) || {};
-    const lines = [
-      'Технічні деталі:',
-      'Стан: ' + (normalized.reasonString || 'Немає'),
-      'Код стану: ' + (normalized.reasonCode || 'немає'),
-      'Примітка: ' + (normalized.note || ''),
-      'Свій позивний: ' + (normalized.personCallsign || ''),
-      'last_seen_at: ' + (normalized.lastSeenAt || 'Немає'),
-      'last_rotated_at: ' + (normalized.lastRotatedAt || 'Немає'),
-      'Стан ротації: ' + (normalized.rotationState || 'Невідомо'),
-      '',
-      'RAW JSON:',
-      JSON.stringify(raw, null, 2)
-    ];
-    return lines.join('\n');
-  }
-
-  function buildAccessCombinedReportText_(access) {
-    const report = String(buildAccessDebugReportText_(access || {}) || '').trim();
-    const tech = String(buildAccessTechDetailsText_(access || {}) || '').trim();
-    if (!report) return tech;
-    if (!tech) return report;
-    return report + '\n\n' + tech;
-  }
-
-  function copyAccessDebugTechDetails() {
-    copyResultText(buildAccessTechDetailsText_(STATE.access || {}));
-  }
-
-  function copyAccessDebugFullReport() {
-    copyResultText(buildAccessCombinedReportText_(STATE.access || {}));
-  }
-
   function renderAccessDebugResult_(accessRaw) {
     const access = normalizeAccessForUi_(accessRaw);
     const state = ensureAccessDebugState_();
@@ -899,8 +863,6 @@
         <div class="result-value">
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
             <button class="btn btn-primary" type="button" onclick="SidebarApp.copyResultText('${escapeJsString(reportText)}')">Копіювати звіт</button>
-            <button class="btn" type="button" onclick="copyAccessDebugFullReport()">Копіювати все</button>
-            <button class="btn" type="button" onclick="copyAccessDebugTechDetails()">Копіювати тех. деталі</button>
             ${access.selfBindRequired && access.canSelfBind ? '<button class="btn" type="button" onclick="openAccessLoginFlow()">Увійти</button>' : ''}
             ${showHashButtons ? '<button class="btn" type="button" id="accessDebugToggleHashBtn" onclick="toggleAccessDebugHash()">Показати повний hash</button>' : ''}
             ${showHashButtons ? '<button class="btn" type="button" id="accessDebugCopyHashBtn" onclick="copyAccessDebugHash()">Копіювати повний hash</button>' : ''}
@@ -1137,14 +1099,10 @@
   window.getAllowedActionsText_ = getAllowedActionsText_;
   window.getRotationModeLabel_ = getRotationModeLabel_;
   window.buildAccessDebugReportText_ = buildAccessDebugReportText_;
-  window.buildAccessTechDetailsText_ = buildAccessTechDetailsText_;
-  window.buildAccessCombinedReportText_ = buildAccessCombinedReportText_;
   window.ensureAccessDebugState_ = ensureAccessDebugState_;
   window.updateAccessDebugHashUi_ = updateAccessDebugHashUi_;
   window.toggleAccessDebugHash = toggleAccessDebugHash;
   window.copyAccessDebugHash = copyAccessDebugHash;
-  window.copyAccessDebugTechDetails = copyAccessDebugTechDetails;
-  window.copyAccessDebugFullReport = copyAccessDebugFullReport;
   window.openAccessLoginFlow = openAccessLoginFlow;
   window.closeAccessLoginModal = closeAccessLoginModal;
   window.submitAccessLoginForm_ = submitAccessLoginForm_;
