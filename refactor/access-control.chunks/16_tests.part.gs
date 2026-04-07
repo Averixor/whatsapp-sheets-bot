@@ -89,7 +89,7 @@
     if (results.failed.length) {
       Logger.log('Failed tests:', results.failed);
     } else {
-      Logger.log('✅ All tests passed!');
+      Logger.log('✓ All tests passed!');
     }
 
     return results;

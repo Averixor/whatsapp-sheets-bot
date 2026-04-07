@@ -670,7 +670,7 @@ function collectPayloads_(sheet, ranges) {
       payloads.push(buildPayloadForCell_(sheet, row, col, phonesMap, dictMap));
       if (payloads.length >= CONFIG.MAX_PAYLOADS) {
         limited = true;
-        errors.push(`⁈ Ліміт ${CONFIG.MAX_PAYLOADS} досягнуто`);
+        errors.push(`⚠ Ліміт ${CONFIG.MAX_PAYLOADS} досягнуто`);
         return true;
       }
     } catch (e) {

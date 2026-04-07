@@ -28,7 +28,7 @@ function checkSheets() {
           ? '✓ Лист "' + item.name + '" знайдено'
           : (item.required
             ? '✕ Обов\'язковий лист "' + item.name + '" не знайдено'
-            : '⁈ Лист "' + item.name + '" не знайдено')
+            : '⚠ Лист "' + item.name + '" не знайдено')
       });
     });
 
@@ -46,7 +46,7 @@ function checkSheets() {
       status: existingMonths.length > 0 ? 'OK' : 'WARN',
       message: existingMonths.length > 0
         ? '✓ Місячні листи: ' + existingMonths.join(', ')
-        : '⁈ Не знайдено жодного місячного листа'
+        : '⚠ Не знайдено жодного місячного листа'
     });
 
   } catch (e) {

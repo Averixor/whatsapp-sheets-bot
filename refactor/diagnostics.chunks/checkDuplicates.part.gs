@@ -10,7 +10,7 @@ function checkDuplicates() {
         type: 'duplicates_skip',
         name: 'PHONES',
         status: 'WARN',
-        message: '⁈ Лист PHONES не знайдено або порожній'
+        message: '⚠ Лист PHONES не знайдено або порожній'
       });
       DIAGNOSTICS.results.duplicates = report;
       return report;
@@ -107,7 +107,7 @@ function checkDuplicates() {
           type: 'duplicate',
           name: 'duplicate',
           status: 'WARN',
-          message: '⁈ ' + message
+          message: '⚠ ' + message
         });
       });
     }

@@ -66,7 +66,7 @@
     const value = String(text ?? '');
 
     if (!value) {
-      showToast('⁈ Нічого копіювати');
+      showToast('⚠ Нічого копіювати');
       return;
     }
 
@@ -216,7 +216,7 @@
                   : (
                       person.phone
                         ? `<button style="${btnStyle}" onclick="SidebarApp.openBirthdayWA('${escapeJsString(person.phone)}', '${escapeJsString(person.displayName || person.fio)}')">Привітати у WhatsApp</button>`
-                        : `<div style="color:#888;font-size:12px;margin-top:6px;">⁈ Немає телефону</div>`
+                        : `<div style="color:#888;font-size:12px;margin-top:6px;">⚠ Немає телефону</div>`
                     )
               }
             </div>
@@ -270,7 +270,7 @@
               ${
                 person.phone
                   ? `<button style="${btnStyle}background:#1565C0;" onclick="SidebarApp.openBirthdayWA('${escapeJsString(person.phone)}', '${escapeJsString(person.displayName || person.fio)}')">📱 Підготувати привітання</button>`
-                  : `<div style="color:#888;font-size:12px;margin-top:6px;">⁈ Немає телефону</div>`
+                  : `<div style="color:#888;font-size:12px;margin-top:6px;">⚠ Немає телефону</div>`
               }
             </div>
           `;
@@ -328,7 +328,7 @@
   // =========================
   async function openPersonCardByCallsign_(callsign, dateStr = '') {
     if (!callsign) {
-      showToast('⁈ Позивний не вказано');
+      showToast('⚠ Позивний не вказано');
       return;
     }
 
@@ -450,7 +450,7 @@
 
   async function openPersonCalendarFromCard(callsign) {
     if (!callsign) {
-      showToast('⁈ Позивний не вказано');
+      showToast('⚠ Позивний не вказано');
       return;
     }
 
@@ -467,7 +467,7 @@
     const el = $id('personCardMessage');
 
     if (!el) {
-      showToast('⁈ Немає тексту для копіювання');
+      showToast('⚠ Немає тексту для копіювання');
       return;
     }
 

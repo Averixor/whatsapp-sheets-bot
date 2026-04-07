@@ -299,7 +299,7 @@
             }
           }
           if (!Array.isArray(panelRows) || panelRows.length === 0) {
-            logToConsole('⁈ SEND_PANEL порожній навіть після перечитування', 'warning');
+            logToConsole('⚠ SEND_PANEL порожній навіть після перечитування', 'warning');
           }
           showSendPanel();
           break;
@@ -420,7 +420,7 @@
           break;
 
         default:
-          logToConsole(`⁈ Невідома дія: ${action}`, 'warning');
+          logToConsole(`⚠ Невідома дія: ${action}`, 'warning');
       }
     } catch (error) {
       handleError(error);

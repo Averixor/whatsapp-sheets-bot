@@ -28,7 +28,7 @@ function checkSheets() {
           ? '✓ Лист "' + item.name + '" знайдено'
           : (item.required
             ? '✕ Обов\'язковий лист "' + item.name + '" не знайдено'
-            : '⁈ Лист "' + item.name + '" не знайдено')
+            : '⚠ Лист "' + item.name + '" не знайдено')
       });
     });
 
@@ -46,7 +46,7 @@ function checkSheets() {
       status: existingMonths.length > 0 ? 'OK' : 'WARN',
       message: existingMonths.length > 0
         ? '✓ Місячні листи: ' + existingMonths.join(', ')
-        : '⁈ Не знайдено жодного місячного листа'
+        : '⚠ Не знайдено жодного місячного листа'
     });
 
   } catch (e) {
@@ -114,7 +114,7 @@ function checkDuplicates() {
         type: 'duplicates_skip',
         name: 'PHONES',
         status: 'WARN',
-        message: '⁈ Лист PHONES не знайдено або порожній'
+        message: '⚠ Лист PHONES не знайдено або порожній'
       });
       DIAGNOSTICS.results.duplicates = report;
       return report;
@@ -211,7 +211,7 @@ function checkDuplicates() {
           type: 'duplicate',
           name: 'duplicate',
           status: 'WARN',
-          message: '⁈ ' + message
+          message: '⚠ ' + message
         });
       });
     }

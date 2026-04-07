@@ -323,7 +323,7 @@ function healthCheck() {
       details: [
         `Відпустки: ${hasVac ? `✓ (${vac.length} шт)` : '✕ немає'}`,
         `ДН: ${hasBd ? `✓ (${bd.length} шт)` : '✕ немає'}`,
-        dupVac || dupBd ? '⁈ Є дублікати тригерів' : ''
+        dupVac || dupBd ? '⚠ Є дублікати тригерів' : ''
       ].filter(Boolean).join('\n'),
       howTo: (!hasVac || !hasBd)
         ? 'Натисніть "⏰ Створити тригер"'
