@@ -14,11 +14,11 @@ function _smokeHasRouteApi_(fnName) {
   const target = String(fnName || '').trim();
   if (!target) return false;
   try {
-    if (typeof getStage6ARouteByApiMethod_ === 'function') return !!getStage6ARouteByApiMethod_(target);
+    if (typeof getRoutingRouteByApiMethod_ === 'function') return !!getRoutingRouteByApiMethod_(target);
   } catch (e) { }
   try {
-    if (typeof listStage6ARoutes_ === 'function') {
-      return (listStage6ARoutes_() || []).some(function (item) {
+    if (typeof listRoutingRoutes_ === 'function') {
+      return (listRoutingRoutes_() || []).some(function (item) {
         return item && item.publicApiMethod === target;
       });
     }
@@ -185,7 +185,7 @@ function runScenarioTests(options) {
 }
 
 function runSmokeTests(options) {
-  return runStage5SmokeTests(options || {});
+  return runRegressionTestSuite(options || {});
 }
 
 function runStage4ScenarioTests(options) {
@@ -416,16 +416,16 @@ function runStage5ScenarioTests(options) {
     const route = (typeof getRoutingRegistry_ === 'function' ? getRoutingRegistry_() : {}) || {};
     const hasCanonicalRoute = Object.keys(route).some(function (key) {
       const item = route[key];
-      return item && item.publicApiMethod === 'apiRunStage7RegressionTests' && item.useCase === 'runStage5SmokeTests';
+      return item && item.publicApiMethod === 'apiRunStage7RegressionTests' && item.useCase === 'runRegressionTestSuite';
     });
-    _smokeAssert_(hasCanonicalRoute, 'Routing registry не веде apiRunStage7RegressionTests до runStage5SmokeTests');
+    _smokeAssert_(hasCanonicalRoute, 'Routing registry не веде apiRunStage7RegressionTests до runRegressionTestSuite');
     return 'self-recursive invocation intentionally skipped';
   }, { skipOnError: true });
 
   return report;
 }
 
-function runStage5SmokeTests(options) {
+function runRegressionTestSuite(options) {
   const opts = options || {};
   const meta = typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_() : PROJECT_BUNDLE_METADATA_;
   const docs = typeof getProjectDocumentationMap_ === 'function' ? getProjectDocumentationMap_() : {};
@@ -563,9 +563,9 @@ function runStage5SmokeTests(options) {
   });
 
   _smokePush_(report, 'public diagnostics wording is stage7-1', function () {
-    const quick = runStage5QuickDiagnostics_({ mode: 'quick' });
-    const full = runStage5FullDiagnostics_({ mode: 'full' });
-    const sunset = runStage5SunsetDiagnostics_({ mode: 'compatibility sunset' });
+    const quick = runQuickDiagnostics_({ mode: 'quick' });
+    const full = runFullDiagnostics_({ mode: 'full' });
+    const sunset = runSunsetDiagnostics_({ mode: 'compatibility sunset' });
     const maintHealth = apiStage7HealthCheck({ mode: 'quick' });
     const maintDiagnostics = apiRunStage7Diagnostics({ mode: 'full' });
     const texts = [
@@ -613,15 +613,15 @@ function runStage5SmokeTests(options) {
   });
 
   _smokePush_(report, 'diagnostics modes available', function () {
-    ['runStage5QuickDiagnostics_', 'runStage5StructuralDiagnostics_', 'runStage5OperationalDiagnostics_', 'runStage5SunsetDiagnostics_', 'runStage5FullDiagnostics_'].forEach(function (fnName) {
+    ['runQuickDiagnostics_', 'runStructuralDiagnostics_', 'runOperationalDiagnostics_', 'runSunsetDiagnostics_', 'runFullDiagnostics_'].forEach(function (fnName) {
       _smokeAssert_(_smokeHasFn_(fnName), `${fnName} відсутній`);
     });
     return 'diagnostics-modes-ok';
   });
 
   _smokePush_(report, 'diagnostics suite', function () {
-    const diagnostics = runStage5FullDiagnostics_({ mode: 'full' });
-    _smokeAssert_(Array.isArray(diagnostics.checks), 'runStage5FullDiagnostics_() не повернув checks[]');
+    const diagnostics = runFullDiagnostics_({ mode: 'full' });
+    _smokeAssert_(Array.isArray(diagnostics.checks), 'runFullDiagnostics_() не повернув checks[]');
     return `checks=${diagnostics.checks.length}`;
   }, { skipOnError: true });
 
@@ -655,7 +655,7 @@ function runStage5SmokeTests(options) {
   });
 
   _smokePush_(report, 'hardening routing registry coverage', function () {
-    const coverage = getStage6ARouteCoverageReport_();
+    const coverage = getRouteCoverageReport_();
     _smokeAssert_(coverage.total >= 20, 'routing registry надто малий');
     _smokeAssert_(coverage.criticalWrites === coverage.lockCoverage, 'Не всі critical writes мають lock coverage');
     return `routes=${coverage.total}`;
@@ -669,7 +669,7 @@ function runStage5SmokeTests(options) {
   });
 
   _smokePush_(report, 'safety-aware response contract', function () {
-    const response = buildStage4Response_(true, 'OK', null, {}, [], { operationId: 'op', scenario: 'x', dryRun: false, affectedSheets: ['SEND_PANEL'], affectedEntities: ['x'], appliedChangesCount: 1, skippedChangesCount: 0, partial: false, retrySafe: true, lockUsed: true }, { lifecycle: [] }, { scenario: 'x' }, []);
+    const response = buildServerResponse_(true, 'OK', null, {}, [], { operationId: 'op', scenario: 'x', dryRun: false, affectedSheets: ['SEND_PANEL'], affectedEntities: ['x'], appliedChangesCount: 1, skippedChangesCount: 0, partial: false, retrySafe: true, lockUsed: true }, { lifecycle: [] }, { scenario: 'x' }, []);
     ['operationId', 'scenario', 'dryRun', 'affectedSheets', 'affectedEntities', 'appliedChangesCount', 'skippedChangesCount', 'partial', 'retrySafe', 'lockUsed'].forEach(function (field) {
       _smokeAssert_(field in response, `Response missing ${field}`);
     });

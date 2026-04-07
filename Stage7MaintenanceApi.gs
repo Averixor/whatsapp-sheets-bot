@@ -1,8 +1,8 @@
 /**
  * Stage7MaintenanceApi.gs — canonical maintenance / admin / diagnostics API for the Stage 7 baseline.
  *
- * Historical Stage 4 / Stage 5 aliases live in Stage7CompatibilityMaintenanceApi.gs.
- * Compatibility wrappers live in Stage7CompatibilityMaintenanceApi.gs.
+ * Historical Stage 4 / Stage 5 aliases live in LegacyMaintenanceAliases.gs.
+ * Compatibility wrappers live in LegacyMaintenanceAliases.gs.
  */
 
 function _stage7BuildMaintenanceResponse_(success, message, report, scenario, warnings, extraMeta) {
@@ -17,7 +17,7 @@ function _stage7BuildMaintenanceResponse_(success, message, report, scenario, wa
     dryRun: true
   }, extraMeta || {});
 
-  return buildStage4Response_(
+  return buildServerResponse_(
     success !== false,
     message,
     null,
@@ -338,17 +338,17 @@ function apiRunStage7Job(jobName, options) {
   return Stage7Triggers_.runJob(jobName, opts);
 }
 
-function runStage7DiagnosticsByMode_(options) {
+function runDiagnosticsByMode_(options) {
   const opts = options || {};
   const mode = String(opts.mode || 'full').toLowerCase();
 
-  if (mode === 'quick') return runStage5QuickDiagnostics_(opts);
-  if (mode === 'structural') return runStage5StructuralDiagnostics_(opts);
-  if (mode === 'operational') return runStage5OperationalDiagnostics_(opts);
-  if (mode === 'compatibility' || mode === 'compatibility sunset' || mode === 'sunset') return runStage5SunsetDiagnostics_(opts);
-  if (mode === 'full-verbose' || mode === 'verbose') return runStage5FullVerboseDiagnostics_(opts);
-  if (mode === 'stage7a-hardening') return runStage6AHardeningDiagnostics_(opts);
-  return runStage5FullDiagnostics_(opts);
+  if (mode === 'quick') return runQuickDiagnostics_(opts);
+  if (mode === 'structural') return runStructuralDiagnostics_(opts);
+  if (mode === 'operational') return runOperationalDiagnostics_(opts);
+  if (mode === 'compatibility' || mode === 'compatibility sunset' || mode === 'sunset') return runSunsetDiagnostics_(opts);
+  if (mode === 'full-verbose' || mode === 'verbose') return runFullVerboseDiagnostics_(opts);
+  if (mode === 'stage7a-hardening') return runHardeningDiagnostics_(opts);
+  return runFullDiagnostics_(opts);
 }
 
 function apiStage7QuickHealthCheck(options) {
@@ -361,7 +361,7 @@ function apiStage7QuickHealthCheck(options) {
     includeReconciliationPreview: false
   });
 
-  const report = runStage7DiagnosticsByMode_(opts);
+  const report = runDiagnosticsByMode_(opts);
   return _stage7BuildMaintenanceResponse_(
     report.ok,
     report.summary || 'Швидку перевірку системи завершено',
@@ -380,7 +380,7 @@ function apiStage7HealthCheck(options) {
       ? 'full'
       : 'quick');
 
-  const report = runStage7DiagnosticsByMode_(Object.assign({}, opts, { mode: resolvedMode }));
+  const report = runDiagnosticsByMode_(Object.assign({}, opts, { mode: resolvedMode }));
   return _stage7BuildMaintenanceResponse_(
     report.ok,
     report.summary || ('full' === resolvedMode ? 'Повну перевірку системи завершено' : 'Перевірку системи завершено'),
@@ -392,7 +392,7 @@ function apiStage7HealthCheck(options) {
 
 function apiRunStage7Diagnostics(options) {
   _stage7AssertRole_('maintainer', 'run diagnostics');
-  const report = runStage7DiagnosticsByMode_(options || {});
+  const report = runDiagnosticsByMode_(options || {});
   return _stage7BuildMaintenanceResponse_(
     report.ok,
     report.summary || 'Діагностику системи завершено',
@@ -404,7 +404,7 @@ function apiRunStage7Diagnostics(options) {
 
 function apiRunStage7RegressionTests(options) {
   _stage7AssertRole_('admin', 'run regression tests');
-  const report = runStage5SmokeTests(options || {});
+  const report = runRegressionTestSuite(options || {});
   return _stage7BuildMaintenanceResponse_(
     report.ok,
     report.ok ? 'Регресійні тести пройдено' : 'У регресійних тестах є збої',

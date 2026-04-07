@@ -1,4 +1,4 @@
-function runStage6AHardeningDiagnostics_(options) {
+function runHardeningDiagnostics_(options) {
   var opts = options || {};
   var extra = [];
   _diagAppendPendingRepairsCheck_(extra);

@@ -194,7 +194,7 @@ const SendPanelFastPaths_ = (function() {
       meta.appliedChangesCount = Number(stats.totalCount || 0);
     }
 
-    return buildStage4Response_(
+    return buildServerResponse_(
       true,
       message,
       null,

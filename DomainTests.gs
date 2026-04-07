@@ -269,19 +269,19 @@ function runStage6ADomainTests_(options) {
 
   // Routing / lifecycle / contract
   _domainPush_(report, 'routing.route resolution', function() {
-    const route = getStage6ARouteByApiMethod_('apiGenerateSendPanelForDate');
+    const route = getRoutingRouteByApiMethod_('apiGenerateSendPanelForDate');
     _domainAssert_(route && route.routeName === 'sidebar.generateSendPanelForDate', 'Route resolution by API method зламана');
     return route.routeName;
   });
 
   _domainPush_(report, 'routing.action normalization', function() {
-    const normalized = normalizeStage6AUiAction_('generatePanel');
+    const normalized = normalizeRoutingUiAction_('generatePanel');
     _domainAssert_(normalized === 'sidebar.generateSendPanelForDate', 'UI action normalization зламана');
     return normalized;
   });
 
   _domainPush_(report, 'contract normalization / top-level fields', function() {
-    const response = buildStage4Response_(true, 'OK', null, { a: 1 }, [], { scenario: 'x', operationId: 'op1', dryRun: false, affectedSheets: ['SEND_PANEL'], partial: false, retrySafe: true, lockUsed: true }, { lifecycle: ['response.built'] }, { scenario: 'x' }, []);
+    const response = buildServerResponse_(true, 'OK', null, { a: 1 }, [], { scenario: 'x', operationId: 'op1', dryRun: false, affectedSheets: ['SEND_PANEL'], partial: false, retrySafe: true, lockUsed: true }, { lifecycle: ['response.built'] }, { scenario: 'x' }, []);
     _domainAssert_(response.operationId === 'op1', 'operationId має дублюватися у top-level');
     _domainAssert_(response.retrySafe === true, 'retrySafe має бути true');
     _domainAssert_(response.lockUsed === true, 'lockUsed має бути true');
@@ -289,7 +289,7 @@ function runStage6ADomainTests_(options) {
   });
 
   _domainPush_(report, 'contract.partial success formatting', function() {
-    const response = buildStage4Response_(true, 'PARTIAL', null, {}, [], { scenario: 'x', operationId: 'op2', partial: true, skippedChangesCount: 2, appliedChangesCount: 1, retrySafe: true }, { lifecycle: ['response.built'] }, { scenario: 'x' }, ['warning']);
+    const response = buildServerResponse_(true, 'PARTIAL', null, {}, [], { scenario: 'x', operationId: 'op2', partial: true, skippedChangesCount: 2, appliedChangesCount: 1, retrySafe: true }, { lifecycle: ['response.built'] }, { scenario: 'x' }, ['warning']);
     _domainAssert_(response.partial === true, 'partial має бути true');
     _domainAssert_(response.skippedChangesCount === 2, 'skippedChangesCount має бути 2');
     return 'partial-ok';

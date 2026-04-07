@@ -10,7 +10,7 @@ const DeprecatedRegistry_ = Object.freeze({
       replacement: String(replacement || '').trim(),
       sunset: String(sunset || '').trim() || 'planned',
       status: 'compatibility-wrapper',
-      scope: 'Stage7CompatibilityMaintenanceApi.gs',
+      scope: 'LegacyMaintenanceAliases.gs',
       uiAllowed: false,
       risk: 'low'
     });

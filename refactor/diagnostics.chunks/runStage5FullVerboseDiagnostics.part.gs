@@ -1,6 +1,6 @@
-function runStage5FullVerboseDiagnostics_(options) {
-  var base = runStage5FullDiagnostics_(options || {});
-  var hardening = runStage6AHardeningDiagnostics_({ mode: 'stage7-hardening' });
+function runFullVerboseDiagnostics_(options) {
+  var base = runFullDiagnostics_(options || {});
+  var hardening = runHardeningDiagnostics_({ mode: 'stage7-hardening' });
   return _diagBuildReport_(
     _diagMergeChecks_(base.checks || [], hardening.checks || []),
     'full-verbose',

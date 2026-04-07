@@ -263,9 +263,9 @@ const PROJECT_STAGE7_CLIENT_ROUTING_GROUPS_ = Object.freeze({
 const PROJECT_MAINTENANCE_POLICY_ = Object.freeze({
   policy: 'canonical-stage7-maintenance-with-stage7-compat-facade',
   canonicalFile: 'Stage7MaintenanceApi.gs',
-  compatibilityFile: 'Stage7CompatibilityMaintenanceApi.gs',
+  compatibilityFile: 'LegacyMaintenanceAliases.gs',
   canonicalMaintenanceApi: 'Stage7MaintenanceApi.gs',
-  compatibilityFacade: 'Stage7CompatibilityMaintenanceApi.gs',
+  compatibilityFacade: 'LegacyMaintenanceAliases.gs',
   diagnosticsEntrypoint: 'apiRunStage7Diagnostics',
   healthEntrypoint: 'apiStage7HealthCheck'
 });
@@ -403,8 +403,8 @@ const PROJECT_BUNDLE_FILE_INDEX_ = Object.freeze([
   "Actions.gs",
   "Dialogs.gs",
   "SendPanelFastPaths.gs",
-  "Stage7CompatibilityApi.gs",
-  "Stage7CompatibilityMaintenanceApi.gs",
+  "LegacyApiAliases.gs",
+  "LegacyMaintenanceAliases.gs",
   "_extras/README.md",
   "_extras/backups/AccessControl.gs.bak",
   "_extras/history/CANONICALIZATION_AUDIT_2026-03-29.md",
@@ -473,27 +473,23 @@ function getProjectDocumentationMap_() {
   return _projectMetaDeepCopy_(PROJECT_DOCUMENTATION_MAP_);
 }
 
-function getStage5MaintenancePolicy_() {
+function getMaintenancePolicy_() {
   return _projectMetaDeepCopy_(PROJECT_MAINTENANCE_POLICY_);
 }
 
-function getStage4CanonicalApiMap_() {
+function getCanonicalApiMap_() {
   return _projectMetaDeepCopy_(PROJECT_STAGE7_CANONICAL_API_MAP_);
 }
 
-function getStage5PublicApiMap_() {
+function getPublicApiMap_() {
   return _projectMetaDeepCopy_(PROJECT_STAGE7_PUBLIC_API_MAP_);
 }
 
-function getStage4ClientRoutingPolicy_() {
+function getClientRoutingPolicy_() {
   return _projectMetaDeepCopy_(PROJECT_STAGE7_CLIENT_ROUTING_POLICY_);
 }
 
-function getStage5ClientRoutingPolicy_() {
-  return _projectMetaDeepCopy_(PROJECT_STAGE7_CLIENT_ROUTING_POLICY_);
-}
-
-function getStage5CanonicalLayerMap_() {
+function getCanonicalLayerMap_() {
   return _projectMetaDeepCopy_(PROJECT_CANONICAL_LAYERS_);
 }
 

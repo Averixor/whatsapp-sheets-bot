@@ -49,7 +49,7 @@ function mergeWorkflowWarnings_() {
   return Array.from(new Set(merged));
 }
 
-function buildStage4Response_(success, message, error, result, changes, meta, diagnostics, context, warnings) {
+function buildServerResponse_(success, message, error, result, changes, meta, diagnostics, context, warnings) {
   const safeMeta = meta || {};
   const safeDiagnostics = diagnostics || null;
   const normalizedWarnings = normalizeWorkflowWarnings_(warnings);
@@ -205,11 +205,11 @@ const WorkflowOrchestrator_ = (function() {
   }
 
   function _routeDescriptor(cfg, scenario) {
-    if (cfg && cfg.routeName && typeof getStage6ARouteByName_ === 'function') {
-      return getStage6ARouteByName_(cfg.routeName);
+    if (cfg && cfg.routeName && typeof getRoutingRouteByName_ === 'function') {
+      return getRoutingRouteByName_(cfg.routeName);
     }
-    if (cfg && cfg.publicApiMethod && typeof getStage6ARouteByApiMethod_ === 'function') {
-      return getStage6ARouteByApiMethod_(cfg.publicApiMethod);
+    if (cfg && cfg.publicApiMethod && typeof getRoutingRouteByApiMethod_ === 'function') {
+      return getRoutingRouteByApiMethod_(cfg.publicApiMethod);
     }
     return null;
   }
@@ -263,7 +263,7 @@ const WorkflowOrchestrator_ = (function() {
       }
     };
 
-    return buildStage4Response_(
+    return buildServerResponse_(
       true,
       'Повторний запуск безпечно подавлено',
       null,
@@ -561,7 +561,7 @@ const WorkflowOrchestrator_ = (function() {
 
       diagnostics.lifecycle.push('response.built');
 
-      const response = buildStage4Response_(
+      const response = buildServerResponse_(
         execution.success !== false,
         execution.message || cfg.successMessage || 'Операцію виконано',
         null,
@@ -650,7 +650,7 @@ const WorkflowOrchestrator_ = (function() {
         } catch (_) {}
       }
 
-      const response = buildStage4Response_(
+      const response = buildServerResponse_(
         false,
         '',
         e && e.message ? e.message : String(e),

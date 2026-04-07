@@ -1,4 +1,4 @@
-function runStage5SunsetDiagnostics_(options) {
+function runSunsetDiagnostics_(options) {
   var opts = options || {};
   var checks = [];
   _diagAppendCompatibilitySplitCheck_(checks);

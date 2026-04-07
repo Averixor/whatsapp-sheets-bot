@@ -3,14 +3,14 @@ function _diagHasRouteApi_(fnName) {
   if (!target) return false;
 
   try {
-    if (typeof getStage6ARouteByApiMethod_ === 'function') {
-      return !!getStage6ARouteByApiMethod_(target);
+    if (typeof getRoutingRouteByApiMethod_ === 'function') {
+      return !!getRoutingRouteByApiMethod_(target);
     }
   } catch (_) {}
 
   try {
-    if (typeof listStage6ARoutes_ === 'function') {
-      return (listStage6ARoutes_() || []).some(function(item) {
+    if (typeof listRoutingRoutes_ === 'function') {
+      return (listRoutingRoutes_() || []).some(function(item) {
         return item && item.publicApiMethod === target;
       });
     }

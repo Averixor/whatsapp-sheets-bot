@@ -98,7 +98,7 @@ function runHistoricalStructuralDiagnosticsInternal_(options) {
   const checks = [];
   const warnings = [];
   const meta = typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_() : PROJECT_BUNDLE_METADATA_;
-  const apiMap = typeof getStage4CanonicalApiMap_ === 'function' ? getStage4CanonicalApiMap_() : null;
+  const apiMap = typeof getCanonicalApiMap_ === 'function' ? getCanonicalApiMap_() : null;
   const routing = typeof getStage4ClientRoutingPolicy_ === 'function' ? getStage4ClientRoutingPolicy_() : null;
 
   _stage7PushCheck_(

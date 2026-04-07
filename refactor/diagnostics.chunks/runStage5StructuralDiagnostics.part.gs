@@ -1,4 +1,4 @@
-function runStage5StructuralDiagnostics_(options) {
+function runStructuralDiagnostics_(options) {
   var opts = options || {};
   var checks = _diagMergeChecks_(
     _diagNormalizeReportChecks_(checkSheets(), 'Sheets'),

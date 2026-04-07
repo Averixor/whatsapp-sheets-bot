@@ -1,5 +1,5 @@
 /**
- * Stage7CompatibilityApi.gs — canonical compatibility aliases for the Stage 7 baseline.
+ * LegacyApiAliases.gs — canonical compatibility aliases for the Stage 7 baseline.
  *
  * This file intentionally centralizes:
  * 1) historical Stage 4 application aliases;

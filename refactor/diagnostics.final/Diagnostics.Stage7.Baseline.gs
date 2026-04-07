@@ -324,7 +324,7 @@ function runStage5MetadataConsistencyCheck_() {
   const checks = [];
   const meta = typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_() : PROJECT_BUNDLE_METADATA_;
   const docs = typeof getProjectDocumentationMap_ === 'function' ? getProjectDocumentationMap_() : {};
-  const maintenancePolicy = typeof getStage5MaintenancePolicy_ === 'function' ? getStage5MaintenancePolicy_() : (meta && meta.maintenanceLayerPolicy) || {};
+  const maintenancePolicy = typeof getMaintenancePolicy_ === 'function' ? getMaintenancePolicy_() : (meta && meta.maintenanceLayerPolicy) || {};
   const release = typeof getProjectReleaseNaming_ === 'function' ? getProjectReleaseNaming_() : (meta && meta.release) || {};
 
   _stage7PushCheck_(checks, 'Project bundle metadata', meta ? 'OK' : 'FAIL', meta ? 'PROJECT_BUNDLE_METADATA_ доступний' : 'PROJECT_BUNDLE_METADATA_ не знайдено', meta ? '' : 'Додайте ProjectMetadata.gs');
@@ -344,7 +344,7 @@ function runStage5MetadataConsistencyCheck_() {
   _stage7PushCheck_(checks, 'Sunset policy marker', meta.sunsetPolicyMarker === 'stage7-sunset-governed' ? 'OK' : 'WARN', `sunsetPolicyMarker=${meta.sunsetPolicyMarker || 'n/a'}`, 'Зафіксуйте Stage 7 sunset policy marker');
 
   _stage7PushCheck_(checks, 'Canonical maintenance file', maintenancePolicy && maintenancePolicy.canonicalFile === 'Stage7MaintenanceApi.gs' ? 'OK' : 'FAIL', maintenancePolicy && maintenancePolicy.canonicalFile ? maintenancePolicy.canonicalFile : 'Не задано', 'Оновіть maintenance policy');
-  _stage7PushCheck_(checks, 'Compatibility maintenance facade', maintenancePolicy && maintenancePolicy.compatibilityFile === 'Stage7CompatibilityMaintenanceApi.gs' ? 'OK' : 'WARN', maintenancePolicy && maintenancePolicy.compatibilityFile ? maintenancePolicy.compatibilityFile : 'Не задано', 'Явно позначте compatibility facade');
+  _stage7PushCheck_(checks, 'Compatibility maintenance facade', maintenancePolicy && maintenancePolicy.compatibilityFile === 'LegacyMaintenanceAliases.gs' ? 'OK' : 'WARN', maintenancePolicy && maintenancePolicy.compatibilityFile ? maintenancePolicy.compatibilityFile : 'Не задано', 'Явно позначте compatibility facade');
 
   const clientRuntimePolicy = meta && meta.clientRuntimePolicy || {};
   _stage7PushCheck_(checks, 'Client runtime file', clientRuntimePolicy.runtimeFile === 'JavaScript.html' ? 'OK' : 'FAIL', clientRuntimePolicy.runtimeFile || 'Не задано', 'Зафіксуйте JavaScript.html як canonical runtime');
@@ -384,14 +384,14 @@ function runStage5MetadataConsistencyCheck_() {
 
   return checks;
 }
-function runStage5QuickDiagnostics_(options) {
+function runQuickDiagnostics_(options) {
   var opts = options || {};
   var legacyHealth = _diagNormalizeReportChecks_(healthCheck(), 'Health');
   var stage7 = _diagBuildStage7CoreChecks_({ includeRuntimeTemplate: false });
   var checks = _diagMergeChecks_(legacyHealth, stage7);
   return _diagBuildReport_(checks, opts.mode || 'quick', 'Stage 7 quick diagnostics');
 }
-function runStage5StructuralDiagnostics_(options) {
+function runStructuralDiagnostics_(options) {
   var opts = options || {};
   var checks = _diagMergeChecks_(
     _diagNormalizeReportChecks_(checkSheets(), 'Sheets'),
@@ -400,7 +400,7 @@ function runStage5StructuralDiagnostics_(options) {
   );
   return _diagBuildReport_(checks, opts.mode || 'structural', 'Stage 7 structural diagnostics');
 }
-function runStage5OperationalDiagnostics_(options) {
+function runOperationalDiagnostics_(options) {
   var opts = options || {};
   var extra = [];
   _diagAppendPendingRepairsCheck_(extra);
@@ -414,13 +414,13 @@ function runStage5OperationalDiagnostics_(options) {
   );
   return _diagBuildReport_(checks, opts.mode || 'operational', 'Stage 7 operational diagnostics');
 }
-function runStage5SunsetDiagnostics_(options) {
+function runSunsetDiagnostics_(options) {
   var opts = options || {};
   var checks = [];
   _diagAppendCompatibilitySplitCheck_(checks);
   return _diagBuildReport_(_diagNormalizeReportChecks_({ checks: checks }), opts.mode || 'compatibility sunset', 'Stage 7 compatibility diagnostics');
 }
-function runStage6AHardeningDiagnostics_(options) {
+function runHardeningDiagnostics_(options) {
   var opts = options || {};
   var extra = [];
   _diagAppendPendingRepairsCheck_(extra);
@@ -431,7 +431,7 @@ function runStage6AHardeningDiagnostics_(options) {
   );
   return _diagBuildReport_(checks, opts.mode || 'stage7-hardening', 'Stage 7 lifecycle hardening diagnostics');
 }
-function runStage5FullDiagnostics_(options) {
+function runFullDiagnostics_(options) {
   var opts = options || {};
   var extra = [];
   _diagAppendPendingRepairsCheck_(extra);
@@ -450,9 +450,9 @@ function runStage5FullDiagnostics_(options) {
 
   return _diagBuildReport_(checks, opts.mode || 'full', _releaseStageLabel_());
 }
-function runStage5FullVerboseDiagnostics_(options) {
-  var base = runStage5FullDiagnostics_(options || {});
-  var hardening = runStage6AHardeningDiagnostics_({ mode: 'stage7-hardening' });
+function runFullVerboseDiagnostics_(options) {
+  var base = runFullDiagnostics_(options || {});
+  var hardening = runHardeningDiagnostics_({ mode: 'stage7-hardening' });
   return _diagBuildReport_(
     _diagMergeChecks_(base.checks || [], hardening.checks || []),
     'full-verbose',

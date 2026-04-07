@@ -496,7 +496,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
     healthCheck: Object.freeze({
       routeName: 'maintenance.healthCheck',
       publicApiMethod: 'apiStage7HealthCheck',
-      useCase: 'runStage7DiagnosticsByMode_',
+      useCase: 'runDiagnosticsByMode_',
       category: 'maintenance',
       compatibilityStatus: 'canonical',
       mode: 'read',
@@ -509,7 +509,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
     runDiagnostics: Object.freeze({
       routeName: 'maintenance.runDiagnostics',
       publicApiMethod: 'apiRunStage7Diagnostics',
-      useCase: 'runStage7DiagnosticsByMode_',
+      useCase: 'runDiagnosticsByMode_',
       category: 'maintenance',
       compatibilityStatus: 'canonical',
       mode: 'read',
@@ -522,7 +522,7 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
     runRegressionTests: Object.freeze({
       routeName: 'maintenance.runRegressionTests',
       publicApiMethod: 'apiRunStage7RegressionTests',
-      useCase: 'runStage5SmokeTests',
+      useCase: 'runRegressionTestSuite',
       category: 'maintenance',
       compatibilityStatus: 'canonical',
       mode: 'read',
@@ -601,19 +601,19 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
 });
 
 // Допоміжні функції
-function _stage7ADeepCopy_(value) {
+function _routingRegistryDeepCopy_(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function getStage6ARoutingRegistry_() {
-  return _stage7ADeepCopy_(WASB_STAGE7_ROUTING_REGISTRY_STORE_);
+function getRoutingRegistryStore_() {
+  return _routingRegistryDeepCopy_(WASB_STAGE7_ROUTING_REGISTRY_STORE_);
 }
 
 function getRoutingRegistry_() {
-  return listStage6ARoutes_();
+  return listRoutingRoutes_();
 }
 
-function listStage6ARoutes_() {
+function listRoutingRoutes_() {
   var groups = WASB_STAGE7_ROUTING_REGISTRY_STORE_ || {};
   var out = [];
   Object.keys(groups).forEach(function(group) {
@@ -624,23 +624,23 @@ function listStage6ARoutes_() {
   return out;
 }
 
-function getStage6ARouteByName_(routeName) {
+function getRoutingRouteByName_(routeName) {
   var target = String(routeName || '').trim();
-  return listStage6ARoutes_().find(function(item) {
+  return listRoutingRoutes_().find(function(item) {
     return item.routeName === target;
   }) || null;
 }
 
-function getStage6ARouteByApiMethod_(methodName) {
+function getRoutingRouteByApiMethod_(methodName) {
   var target = String(methodName || '').trim();
-  return listStage6ARoutes_().find(function(item) {
+  return listRoutingRoutes_().find(function(item) {
     return item.publicApiMethod === target;
   }) || null;
 }
 
-function getStage6AUiActionMap_() {
+function getRoutingUiActionMap_() {
   var map = {};
-  listStage6ARoutes_().forEach(function(item) {
+  listRoutingRoutes_().forEach(function(item) {
     (item.clientActionAliases || []).forEach(function(alias) {
       map[String(alias)] = item.routeName;
     });
@@ -648,21 +648,21 @@ function getStage6AUiActionMap_() {
   return map;
 }
 
-function normalizeStage6AUiAction_(action) {
+function normalizeRoutingUiAction_(action) {
   var safe = String(action || '').trim();
-  var map = getStage6AUiActionMap_();
+  var map = getRoutingUiActionMap_();
   return map[safe] || safe;
 }
 
-function getStage6ACriticalWriteRoutes_() {
-  return listStage6ARoutes_().filter(function(item) {
+function getCriticalWriteRoutes_() {
+  return listRoutingRoutes_().filter(function(item) {
     return String(item.mode || '').indexOf('write') === 0;
   });
 }
 
-function getStage6ARouteCoverageReport_() {
-  var routes = listStage6ARoutes_();
-  var critical = getStage6ACriticalWriteRoutes_();
+function getRouteCoverageReport_() {
+  var routes = listRoutingRoutes_();
+  var critical = getCriticalWriteRoutes_();
   return {
     total: routes.length,
     groups: [...new Set(routes.map(function(item) { return item.group; }))],

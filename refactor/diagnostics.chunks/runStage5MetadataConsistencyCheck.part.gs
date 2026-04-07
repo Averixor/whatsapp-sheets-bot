@@ -2,7 +2,7 @@ function runStage5MetadataConsistencyCheck_() {
   const checks = [];
   const meta = typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_() : PROJECT_BUNDLE_METADATA_;
   const docs = typeof getProjectDocumentationMap_ === 'function' ? getProjectDocumentationMap_() : {};
-  const maintenancePolicy = typeof getStage5MaintenancePolicy_ === 'function' ? getStage5MaintenancePolicy_() : (meta && meta.maintenanceLayerPolicy) || {};
+  const maintenancePolicy = typeof getMaintenancePolicy_ === 'function' ? getMaintenancePolicy_() : (meta && meta.maintenanceLayerPolicy) || {};
   const release = typeof getProjectReleaseNaming_ === 'function' ? getProjectReleaseNaming_() : (meta && meta.release) || {};
 
   _stage7PushCheck_(checks, 'Project bundle metadata', meta ? 'OK' : 'FAIL', meta ? 'PROJECT_BUNDLE_METADATA_ доступний' : 'PROJECT_BUNDLE_METADATA_ не знайдено', meta ? '' : 'Додайте ProjectMetadata.gs');
@@ -22,7 +22,7 @@ function runStage5MetadataConsistencyCheck_() {
   _stage7PushCheck_(checks, 'Sunset policy marker', meta.sunsetPolicyMarker === 'stage7-sunset-governed' ? 'OK' : 'WARN', `sunsetPolicyMarker=${meta.sunsetPolicyMarker || 'n/a'}`, 'Зафіксуйте Stage 7 sunset policy marker');
 
   _stage7PushCheck_(checks, 'Canonical maintenance file', maintenancePolicy && maintenancePolicy.canonicalFile === 'Stage7MaintenanceApi.gs' ? 'OK' : 'FAIL', maintenancePolicy && maintenancePolicy.canonicalFile ? maintenancePolicy.canonicalFile : 'Не задано', 'Оновіть maintenance policy');
-  _stage7PushCheck_(checks, 'Compatibility maintenance facade', maintenancePolicy && maintenancePolicy.compatibilityFile === 'Stage7CompatibilityMaintenanceApi.gs' ? 'OK' : 'WARN', maintenancePolicy && maintenancePolicy.compatibilityFile ? maintenancePolicy.compatibilityFile : 'Не задано', 'Явно позначте compatibility facade');
+  _stage7PushCheck_(checks, 'Compatibility maintenance facade', maintenancePolicy && maintenancePolicy.compatibilityFile === 'LegacyMaintenanceAliases.gs' ? 'OK' : 'WARN', maintenancePolicy && maintenancePolicy.compatibilityFile ? maintenancePolicy.compatibilityFile : 'Не задано', 'Явно позначте compatibility facade');
 
   const clientRuntimePolicy = meta && meta.clientRuntimePolicy || {};
   _stage7PushCheck_(checks, 'Client runtime file', clientRuntimePolicy.runtimeFile === 'JavaScript.html' ? 'OK' : 'FAIL', clientRuntimePolicy.runtimeFile || 'Не задано', 'Зафіксуйте JavaScript.html як canonical runtime');

@@ -1,4 +1,4 @@
-function runStage5QuickDiagnostics_(options) {
+function runQuickDiagnostics_(options) {
   var opts = options || {};
   var legacyHealth = _diagNormalizeReportChecks_(healthCheck(), 'Health');
   var stage7 = _diagBuildStage7CoreChecks_({ includeRuntimeTemplate: false });

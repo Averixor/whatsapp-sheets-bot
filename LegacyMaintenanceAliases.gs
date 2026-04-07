@@ -1,5 +1,5 @@
 /**
- * Stage7CompatibilityMaintenanceApi.gs — canonical maintenance compatibility aliases.
+ * LegacyMaintenanceAliases.gs — canonical maintenance compatibility aliases.
  *
  * This file intentionally centralizes:
  * 1) historical Stage 4 maintenance aliases;
@@ -244,5 +244,5 @@ function apiRunRegressionTests(options) {
 // -----------------------------------------------------------------------------
 
 function runStage5DiagnosticsByMode_(options) {
-  return runStage7DiagnosticsByMode_(options || {});
+  return runDiagnosticsByMode_(options || {});
 }

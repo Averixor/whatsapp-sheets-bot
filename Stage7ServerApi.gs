@@ -2,7 +2,7 @@
  * Stage7ServerApi.gs — canonical Stage 7 application API.
  *
  * Stage 7 is the only canonical application surface in this baseline.
- * Historical Stage 4 aliases live in Stage7CompatibilityApi.gs.
+ * Historical Stage 4 aliases live in LegacyApiAliases.gs.
  */
 
 function _stage7FastContext_(scenario) {
@@ -34,7 +34,7 @@ function _stage7FastMeta_(scenario, extraMeta) {
 
 function _stage7FastResponse_(scenario, message, result, warnings, extraMeta) {
   const meta = _stage7FastMeta_(scenario, extraMeta);
-  return buildStage4Response_(
+  return buildServerResponse_(
     true,
     message || '',
     null,

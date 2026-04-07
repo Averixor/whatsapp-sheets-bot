@@ -1291,7 +1291,7 @@ const Stage7UseCases_ = (function() {
               message: 'Post-create-month перевірку виконано',
               result: {
                 month: input.month || getBotMonthSheetName_(),
-                health: runStage5FullDiagnostics_({ mode: 'full' })
+                health: runFullDiagnostics_({ mode: 'full' })
               },
               changes: [],
               affectedSheets: [input.month || getBotMonthSheetName_()],
@@ -1306,14 +1306,14 @@ const Stage7UseCases_ = (function() {
               ? String(input.mode).toLowerCase()
               : (input.shallow ? 'quick' : 'full');
             const diagnosticsReport = (diagnosticsMode === 'quick')
-              ? runStage5QuickDiagnostics_({
+              ? runQuickDiagnostics_({
                   mode: 'quick',
                   shallow: true,
                   includeStage3Base: false,
                   includeCompatibilityLayer: false,
                   includeReconciliationPreview: false
                 })
-              : runStage5FullDiagnostics_({
+              : runFullDiagnostics_({
                   mode: diagnosticsMode,
                   shallow: !!input.shallow,
                   includeReconciliationPreview: input.includeReconciliationPreview
@@ -1336,7 +1336,7 @@ const Stage7UseCases_ = (function() {
               success: true,
               message: 'Quick maintenance виконано',
               result: {
-                health: runStage5FullDiagnostics_({ mode: 'full' })
+                health: runFullDiagnostics_({ mode: 'full' })
               },
               changes: [],
               affectedSheets: [],

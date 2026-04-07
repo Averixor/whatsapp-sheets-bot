@@ -1,4 +1,4 @@
-function runStage5OperationalDiagnostics_(options) {
+function runOperationalDiagnostics_(options) {
   var opts = options || {};
   var extra = [];
   _diagAppendPendingRepairsCheck_(extra);
