@@ -376,7 +376,11 @@
 
         text += `${icon} [${status || '?'}] ${name}\n`;
         if (details) text += `   Деталі: ${details}\n`;
-        if (recommendation) text += `   ${isPseudo ? 'Примітка' : 'Як виправити'}: ${String(recommendation).replace(/\n/g, ' ')}\n`;
+        if (recommendation && status !== 'OK' && !isPseudo) {
+          text += `   Як виправити: ${String(recommendation).replace(/\n/g, ' ')}\n`;
+        } else if (recommendation && isPseudo) {
+          text += `   Примітка: ${String(recommendation).replace(/\n/g, ' ')}\n`;
+        }
         text += `\n`;
       });
 
