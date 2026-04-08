@@ -1,3 +1,0 @@
-function runAllDiagnostics() {
-  return runDiagnostics();
-}
