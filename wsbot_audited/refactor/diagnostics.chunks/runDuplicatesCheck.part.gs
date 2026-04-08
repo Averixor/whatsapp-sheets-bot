@@ -1,0 +1,3 @@
+function runDuplicatesCheck() {
+  return checkDuplicates();
+}

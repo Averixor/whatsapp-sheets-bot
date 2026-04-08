@@ -1,0 +1,10 @@
+
+backup/
+
+*.bak
+*.bak.*
+
+*.bak
+*.bak.*
+
+_tmp/

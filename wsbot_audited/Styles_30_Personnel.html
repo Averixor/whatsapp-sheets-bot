@@ -1,0 +1,241 @@
+/* VACATION ALERTS */
+  .vacation-alerts {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .vacation-alerts__list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 10px;
+  }
+
+  .vacation-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 14px;
+    color: var(--text-primary);
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+  }
+
+  .vacation-card:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .vacation-card--commander {
+    border-left: 4px solid var(--warning-color);
+    background:
+      linear-gradient(180deg, rgba(245, 158, 11, 0.10) 0%, rgba(245, 158, 11, 0.04) 100%),
+      var(--bg-secondary);
+  }
+
+  .vacation-card--soldier {
+    border-left: 4px solid var(--success-color);
+    background:
+      linear-gradient(180deg, rgba(34, 197, 94, 0.10) 0%, rgba(34, 197, 94, 0.04) 100%),
+      var(--bg-secondary);
+  }
+
+  .vacation-card__name {
+    color: var(--text-primary);
+    font-weight: 700;
+    font-size: 0.95rem;
+    line-height: 1.35;
+    margin-bottom: 6px;
+    word-break: break-word;
+  }
+
+  .vacation-card__text {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .vacation-card__meta {
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    line-height: 1.45;
+    word-break: break-word;
+  }
+
+  .vacation-card__btn {
+    width: 100%;
+    margin-top: 12px;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .vacation-card__empty {
+    margin-top: 10px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+
+  /* PERSON CARD */
+  #personCardContainer {
+    margin-top: var(--space-sm);
+  }
+
+  .person-card {
+    margin-top: 12px;
+    padding: 16px;
+    border-radius: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    backdrop-filter: blur(8px);
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+  }
+
+  .person-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md), var(--shadow-glow);
+    border-color: rgba(14, 165, 233, 0.4);
+  }
+
+  .person-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .person-card__callsign {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .person-card__rank {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  .person-card__grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px 12px;
+    margin-bottom: 14px;
+  }
+
+  .person-card__label {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  .person-card__value {
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    word-break: break-word;
+  }
+
+  .person-card__section {
+    margin: 12px 0;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+  }
+
+  .person-card__section--warn {
+    background: rgba(245, 158, 11, 0.08);
+  }
+
+  .person-card__section--info {
+    background: rgba(14, 165, 233, 0.08);
+  }
+
+  .person-card__section-title {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+  }
+
+  .person-card__vac-row {
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+
+  .person-card__actions {
+    display: flex;
+    gap: 8px;
+    margin: 14px 0;
+  }
+
+  .person-card__btn {
+    flex: 1;
+    min-height: 38px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+  }
+
+  .person-card__btn:hover:not(:disabled) {
+    background: var(--bg-hover);
+    border-color: var(--border-strong);
+    transform: translateY(-1px);
+  }
+
+  .person-card__btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .person-card__btn--primary {
+    background: linear-gradient(135deg, var(--whatsapp-teal), var(--whatsapp-teal-dark));
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 3px 10px rgba(14, 165, 233, 0.3);
+  }
+
+  .person-card__btn--primary:hover {
+    box-shadow: 0 6px 18px rgba(14, 165, 233, 0.45);
+  }
+
+  .person-card__message-label {
+    margin-bottom: 8px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  .person-card__message {
+    margin: 0;
+    padding: 12px;
+    border-radius: 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    font-size: 0.9rem;
+    font-family: var(--font-mono);
+    max-height: 280px;
+    overflow-y: auto;
+  }
+
+  .person-card-error {
+    margin-top: 12px;
+    padding: 14px;
+    border-radius: 12px;
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    color: #fecaca;
+  }

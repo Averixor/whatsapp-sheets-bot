@@ -1,0 +1,268 @@
+/* CALENDAR */
+  .calendar-container {
+    width: 100%;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-sm);
+    margin-bottom: var(--space-sm);
+    backdrop-filter: blur(8px);
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+  }
+
+  .calendar-container:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md), var(--shadow-glow);
+  }
+
+  .calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-sm);
+  }
+
+  .calendar-nav {
+    display: flex;
+    gap: var(--space-xs);
+  }
+
+  .calendar-nav-btn {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: var(--space-xs) var(--space-sm);
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: var(--transition);
+    color: var(--text-primary);
+  }
+
+  .calendar-nav-btn:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-strong);
+  }
+
+  .calendar-month-year {
+    font-weight: 500;
+    font-size: 1rem;
+    color: var(--whatsapp-green);
+  }
+
+  .calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    margin-bottom: var(--space-xs);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+
+  .calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+
+  .calendar-day {
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: var(--transition);
+    border: 1px solid transparent;
+    color: var(--text-primary);
+    width: 100%;
+    min-width: 0;
+  }
+
+  .calendar-day:hover:not(.empty) {
+    background: rgba(14, 165, 233, 0.18);
+    transform: scale(1.06);
+  }
+
+  .calendar-day.selected {
+    background: linear-gradient(135deg, var(--whatsapp-teal), var(--whatsapp-teal-dark));
+    color: white;
+    font-weight: 500;
+    border-color: var(--whatsapp-teal-dark);
+    box-shadow: var(--shadow-glow);
+  }
+
+  .calendar-day.empty {
+    background: transparent;
+    cursor: default;
+    pointer-events: none;
+  }
+
+  .calendar-day.today {
+    border: 2px solid var(--whatsapp-green);
+    font-weight: bold;
+  }
+
+  .calendar-actions {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: var(--space-sm);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* CONSOLE */
+  .console-wrapper {
+    flex-shrink: 0;
+    border-top: 1px solid var(--border-color);
+    background: var(--console-bg);
+  }
+
+  .console-toggle {
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    background: #0f172a;
+    color: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: var(--transition);
+    border-bottom: 1px solid #1e293b;
+  }
+
+  .console-toggle:hover {
+    background: #1e293b;
+  }
+
+  .console-toggle-icon {
+    font-size: 1.1rem;
+  }
+
+  .console-toggle-arrow {
+    margin-left: auto;
+    transition: transform 0.2s ease;
+  }
+
+  .console-toggle.open .console-toggle-arrow {
+    transform: rotate(180deg);
+  }
+
+  .console-section {
+    height: 200px;
+    background: var(--console-bg);
+    display: none;
+    flex-direction: column;
+  }
+
+  .console-section.open {
+    display: flex;
+    animation: slideDown 0.22s ease;
+  }
+
+  @keyframes slideDown {
+    from {
+      height: 0;
+      opacity: 0;
+    }
+
+    to {
+      height: 200px;
+      opacity: 1;
+    }
+  }
+
+  .console-header {
+    background: #0f172a;
+    padding: var(--space-xs) var(--space-sm);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+    border-bottom: 1px solid #1e293b;
+  }
+
+  .console-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  .console-icon {
+    font-size: 1rem;
+  }
+
+  .console-actions {
+    display: flex;
+    gap: var(--space-xs);
+  }
+
+  .console-btn {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: var(--space-xs);
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+    font-size: 0.9rem;
+  }
+
+  .console-btn:hover {
+    background: #1e293b;
+    color: white;
+  }
+
+  .console-content {
+    flex: 1;
+    padding: var(--space-xs);
+    overflow-y: auto;
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    color: var(--console-text);
+    scroll-behavior: smooth;
+    background: #020617;
+    line-height: 1.55;
+  }
+
+  .log-entry {
+    margin-bottom: 2px;
+    padding: 2px var(--space-xs);
+    border-radius: var(--radius-sm);
+    word-wrap: break-word;
+    border-left: 2px solid transparent;
+  }
+
+  .log-time {
+    color: #64748b;
+    margin-right: var(--space-xs);
+    font-size: 0.9rem;
+    user-select: none;
+  }
+
+  .log-success {
+    color: #86efac;
+    border-left-color: #86efac;
+  }
+
+  .log-error {
+    color: #fca5a5;
+    border-left-color: #fca5a5;
+  }
+
+  .log-warning {
+    color: #fde047;
+    border-left-color: #fde047;
+  }
+
+  .log-info {
+    color: #93c5fd;
+    border-left-color: #93c5fd;
+  }

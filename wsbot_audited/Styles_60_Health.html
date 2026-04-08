@@ -1,0 +1,92 @@
+/* HEALTH */
+  .health-wrap {
+    margin-top: var(--space-sm);
+    padding: var(--space-sm);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+  }
+
+  .health-scroll-container {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .health-item {
+    padding: var(--space-sm);
+    border-radius: var(--radius-md);
+    margin: var(--space-xs) 0;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    transition: var(--transition);
+  }
+
+  .health-item.ok {
+    border-color: rgba(34, 197, 94, 0.6);
+    background: rgba(34, 197, 94, 0.12);
+  }
+
+  .health-item.warn {
+    border-color: rgba(245, 158, 11, 0.8);
+    background: rgba(245, 158, 11, 0.12);
+  }
+
+  .health-item.bad {
+    border-color: rgba(239, 68, 68, 0.8);
+    background: rgba(239, 68, 68, 0.12);
+  }
+
+  .health-title {
+    font-weight: 600;
+    display: flex;
+    gap: var(--space-xs);
+    align-items: baseline;
+    flex-wrap: wrap;
+    color: var(--text-primary);
+  }
+
+  .health-badges {
+    font-size: 0.9em;
+    opacity: 0.9;
+    color: var(--text-secondary);
+  }
+
+  .health-details {
+    margin-top: var(--space-xs);
+    font-size: 0.9em;
+    opacity: 0.9;
+    white-space: pre-line;
+    color: var(--text-primary);
+  }
+
+  .how-to-box {
+    margin-top: var(--space-xs);
+    padding: var(--space-xs);
+    background: rgba(255, 255, 255, 0.06);
+    border-left: 3px solid var(--error-color);
+    font-size: 0.9em;
+    white-space: pre-line;
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+  }
+
+  .health-item.bad.sev-critical {
+    border-width: 2px;
+    animation: pulse-critical 1.8s ease-in-out infinite;
+  }
+
+  @keyframes pulse-critical {
+
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+
+    25% {
+      transform: translateX(-2px);
+    }
+
+    75% {
+      transform: translateX(2px);
+    }
+  }

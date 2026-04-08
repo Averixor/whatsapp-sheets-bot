@@ -1,0 +1,3 @@
+function runSheetsCheck() {
+  return checkSheets();
+}

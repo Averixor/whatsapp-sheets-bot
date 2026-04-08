@@ -1,0 +1,283 @@
+<script>
+  // Js.Api — active Stage 7.1 runtime fragment.
+
+  var Stage7Api = {
+    async getMonths() {
+      const response = await Api.run('apiStage7GetMonthsList');
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success,
+        message: response?.message || '',
+        error: response?.error || null,
+        data: result,
+        months: Array.isArray(result.months) ? result.months : [],
+        current: result.current || '',
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response
+      };
+    },
+
+    async bootstrapSidebar() {
+      const response = await Api.run('apiStage7BootstrapSidebar');
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success,
+        message: response?.message || '',
+        error: response?.error || null,
+        data: result,
+        access: result.access || null,
+        months: Array.isArray(result.months) ? result.months : [],
+        current: result.current || '',
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response
+      };
+    },
+
+    async getAccessDescriptorLite() {
+      const response = await Api.run('apiStage7GetAccessDescriptorLite');
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success,
+        message: response?.message || '',
+        error: response?.error || null,
+        data: result,
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response
+      };
+    },
+
+    async getSidebarData(dateStr = '') {
+      const response = await Api.run('apiStage7GetSidebarData', dateStr || '');
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success,
+        message: response?.message || '',
+        error: response?.error || null,
+        data: Array.isArray(result.personnel) ? result.personnel : [],
+        personnel: Array.isArray(result.personnel) ? result.personnel : [],
+        count: Number(result.count || (Array.isArray(result.personnel) ? result.personnel.length : 0)),
+        month: result.month || '',
+        date: result.date || '',
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response
+      };
+    },
+
+    async getSendPanelData() {
+      return adaptStage4PanelResponse(await Api.run('apiStage7GetSendPanelData'));
+    },
+
+    async generatePanelForDate(options = {}) {
+      return adaptStage4PanelResponse(await Api.run('apiGenerateSendPanelForDate', options));
+    },
+
+    async generatePanelForRange(options = {}) {
+      const response = await Api.run('apiGenerateSendPanelForRange', options);
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success,
+        message: response?.message || '',
+        error: response?.error || null,
+        data: result,
+        range: result.range || null,
+        reports: Array.isArray(result.reports) ? result.reports : [],
+        persisted: result.persisted || null,
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response
+      };
+    },
+
+    async markAsPending(rows, options = {}) {
+      return adaptStage4PanelResponse(await Api.run('apiMarkPanelRowsAsPending', rows, options));
+    },
+
+    async markAsSent(rows, options = {}) {
+      return adaptStage4PanelResponse(await Api.run('apiMarkPanelRowsAsSent', rows, options));
+    },
+
+    async markAsSentFast(rows, options = {}) {
+      return adaptStage4PanelResponse(await Api.run('apiMarkPanelRowsAsSentFast', rows, options));
+    },
+
+    async markAsUnsent(rows, options = {}) {
+      return adaptStage4PanelResponse(await Api.run('apiMarkPanelRowsAsUnsent', rows, options));
+    },
+
+    async sendPendingRows(options = {}) {
+      const response = await Api.run('apiSendPendingRows', options);
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success,
+        message: response?.message || '',
+        error: response?.error || null,
+        data: result,
+        queue: Array.isArray(result.queue) ? result.queue : [],
+        rows: Array.isArray(result.rows) ? result.rows : [],
+        updatedRows: Array.isArray(result.updatedRows) ? result.updatedRows : [],
+        stats: result.stats || {},
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response
+      };
+    },
+
+    async buildDaySummary(dateStr = '') {
+      return adaptStage4SummaryResponse(await Api.run('apiBuildDaySummary', dateStr || ''));
+    },
+
+    async buildDetailedSummary(dateStr = '') {
+      return adaptStage4SummaryResponse(await Api.run('apiBuildDetailedSummary', dateStr || ''), true);
+    },
+
+    async openPersonCard(callsign, dateStr = '') {
+      const response = await Api.run('apiOpenPersonCard', callsign || '', dateStr || '');
+      const result = unwrapStage4Result(response) || {};
+      return Object.assign({
+        success: !!response?.success,
+        message: response?.message || '',
+        error: response?.error || null,
+        data: result,
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response
+      }, result || {});
+    },
+
+    async checkVacationsAndBirthdays(dateStr = '') {
+      const response = await Api.run('apiCheckVacationsAndBirthdays', dateStr || '');
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success,
+        message: response?.message || '',
+        error: response?.error || null,
+        data: result,
+        date: result.date || '',
+        vacations: result.vacations || {},
+        birthdays: result.birthdays || {},
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response
+      };
+    },
+
+    async createNextMonth(options = {}) {
+      const response = await Api.run('apiStage7CreateNextMonth', options);
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success,
+        message: response?.message || '',
+        error: response?.error || null,
+        data: result,
+        month: result.createdMonth || '',
+        createdMonth: result.createdMonth || '',
+        sourceMonth: result.sourceMonth || '',
+        switched: !!result.switched,
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response
+      };
+    },
+
+    async switchMonth(month) {
+      const response = await Api.run('apiStage7SwitchBotToMonth', month || '');
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success,
+        message: response?.message || '',
+        error: response?.error || null,
+        data: result,
+        month: result.month || '',
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response
+      };
+    },
+
+    runReconciliation: (options = {}) => Api.run('apiRunReconciliation', options)
+  };
+
+  var MaintenanceApi = {
+    clearCache: async () => adaptStage4UtilityResponse(await Api.run('apiStage7ClearCache')),
+    clearLog: async () => adaptStage4UtilityResponse(await Api.run('apiStage7ClearLog')),
+    clearPhoneCache: async () => adaptStage4UtilityResponse(await Api.run('apiStage7ClearPhoneCache')),
+    restartBot: async () => adaptStage4UtilityResponse(await Api.run('apiStage7RestartBot')),
+    setupVacationTriggers: async () => adaptStage4UtilityResponse(await Api.run('apiStage7SetupVacationTriggers')),
+    cleanupDuplicateTriggers: async (functionName) => adaptStage4UtilityResponse(await Api.run('apiStage7CleanupDuplicateTriggers', functionName)),
+    debugPhones: async () => adaptStage4UtilityResponse(await Api.run('apiStage7DebugPhones')),
+    buildBirthdayLink: async (phone, name) => adaptStage4UtilityResponse(await Api.run('apiStage7BuildBirthdayLink', phone, name)),
+    runMaintenance: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiRunStage7MaintenanceScenario', options)),
+    listJobs: async () => adaptStage4UtilityResponse(await Api.run('apiListStage7Jobs')),
+    installJobs: async () => adaptStage4UtilityResponse(await Api.run('apiInstallStage7Jobs')),
+    runJob: async (jobName, options = {}) => adaptStage4UtilityResponse(await Api.run('apiRunStage7Job', jobName, options)),
+    healthCheck: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7HealthCheck', options)),
+    quickHealthCheck: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7QuickHealthCheck', options)),
+    runRegressionTests: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiRunStage7RegressionTests', options)),
+    listPendingRepairs: async (filters = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7ListPendingRepairs', filters)),
+    getOperationDetails: async (operationId) => adaptStage4UtilityResponse(await Api.run('apiStage7GetOperationDetails', operationId || '')),
+    runRepair: async (operationId, options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7RunRepair', operationId || '', options)),
+    getAccessDescriptor: async () => adaptStage4UtilityResponse(await Api.run('apiStage7GetAccessDescriptor')),
+    debugAccess: async () => adaptStage4UtilityResponse(await Api.run('apiStage7DebugAccess')),
+    listBindableCallsigns: async () => adaptStage4UtilityResponse(await Api.run('apiStage7ListBindableCallsigns')),
+    bindCurrentKeyToCallsign: async (callsign) => adaptStage4UtilityResponse(await Api.run('apiStage7BindCurrentKeyToCallsign', callsign || '')),
+    loginByIdentifierAndCallsign: async (payload = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7LoginByIdentifierAndCallsign', payload || {})),
+    applyProtections: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7ApplyProtections', options)),
+    bootstrapAccessSheet: async () => adaptStage4UtilityResponse(await Api.run('apiStage7BootstrapAccessSheet'))
+  };
+
+  var SidebarApi = {
+    getMonths: Stage7Api.getMonths,
+    getSidebarData: Stage7Api.getSidebarData,
+    generatePanel: Stage7Api.generatePanelForDate,
+    getSendPanel: Stage7Api.getSendPanelData,
+    markAsPending: Stage7Api.markAsPending,
+    markAsSent: Stage7Api.markAsSent,
+    markAsUnsent: Stage7Api.markAsUnsent,
+    getVacations: async (dateStr) => Stage7Api.checkVacationsAndBirthdays(dateStr || ''),
+    getBirthdays: async (dateStr) => Stage7Api.checkVacationsAndBirthdays(dateStr || ''),
+    createNextMonth: Stage7Api.createNextMonth,
+    switchMonth: Stage7Api.switchMonth,
+    clearCache: MaintenanceApi.clearCache,
+    clearLog: MaintenanceApi.clearLog,
+    clearPhoneCache: MaintenanceApi.clearPhoneCache,
+    restartBot: MaintenanceApi.restartBot,
+    setupVacationTriggers: MaintenanceApi.setupVacationTriggers,
+    cleanupDuplicateTriggers: MaintenanceApi.cleanupDuplicateTriggers,
+    debugPhones: MaintenanceApi.debugPhones
+  };
+
+  var SummaryApi = {
+    getDaySummary: Stage7Api.buildDaySummary,
+    getDetailedDaySummary: Stage7Api.buildDetailedSummary
+  };
+
+  var CardApi = {
+    getPersonCard: Stage7Api.openPersonCard,
+    buildBirthdayLink: MaintenanceApi.buildBirthdayLink
+  };
+
+  var DiagnosticsApi = {
+    healthCheck: async (options = {}) => {
+      const opts = Object.assign({}, options || {});
+      const wantsQuick = String(opts.mode || '').toLowerCase() === 'quick' || (opts.shallow !== false && !opts.includeStage3Base && !opts.includeCompatibilityLayer && !opts.includeReconciliationPreview);
+      return wantsQuick
+        ? MaintenanceApi.quickHealthCheck(opts)
+        : MaintenanceApi.healthCheck(opts);
+    },
+    runRegressionTests: MaintenanceApi.runRegressionTests
+  };
+</script>

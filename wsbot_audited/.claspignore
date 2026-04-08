@@ -1,0 +1,13 @@
+**/.git/**
+**/.github/**
+refactor/**
+backup/**
+tools/**
+_extras/**
+*.bak
+*.disabled
+README.md
+RUNBOOK.md
+ARCHITECTURE.md
+CHANGELOG.md
+SECURITY.md
