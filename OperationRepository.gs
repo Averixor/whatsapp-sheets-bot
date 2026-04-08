@@ -880,3 +880,11 @@ const OperationRepository_ = (function() {
     _classifyVerification: _classifyVerification
   };
 })();
+
+
+function _normalizeOperationId(value) {
+  var normalized = _normalizeText(value || '');
+  if (!normalized) return '';
+  return normalized.replace(/\s+/g, ' ').trim();
+}
+
