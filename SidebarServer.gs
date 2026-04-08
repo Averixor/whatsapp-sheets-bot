@@ -205,3 +205,26 @@ function testCommanderPhone() {
     ui.alert('✕ Помилка', String(e && e.message ? e.message : e), ui.ButtonSet.OK);
   }
 }
+
+
+// ==================== REQUIRED HEALTHCHECK BRIDGE WRAPPERS ====================
+function generateSendPanelSidebar(options) {
+  return apiGenerateSendPanelForDate(options || {});
+}
+
+function getSendPanelSidebarData() {
+  return apiStage7GetSendPanelData();
+}
+
+function getDaySummaryByDate(dateStr) {
+  return apiBuildDaySummary(dateStr || _todayStr_());
+}
+
+function getDetailedDaySummaryByDate(dateStr) {
+  return apiBuildDetailedSummary(dateStr || _todayStr_());
+}
+
+function markMultipleAsSentFromSidebar(rowNumbers, opts) {
+  return apiMarkPanelRowsAsSent(rowNumbers, opts || {});
+}
+
