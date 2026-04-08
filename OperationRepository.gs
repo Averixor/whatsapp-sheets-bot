@@ -151,6 +151,8 @@ const OperationRepository_ = (function() {
     headers.forEach(function(header, hIdx) { out[header] = row[hIdx]; });
     return out;
   });
+  }
+
   function _sameOperationId(left, right) {
     var a = _normalizeOperationId(left);
     var b = _normalizeOperationId(right);
