@@ -221,7 +221,6 @@ const Stage7AuditTrail_ = (function () {
 
       return true;
     }
-  }
 
   function _rowFromEntry_(entry) {
     const e = _normalizeEntry_(entry);
