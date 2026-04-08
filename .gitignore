@@ -8,3 +8,5 @@ backup/
 *.bak.*
 
 _tmp/
+*.bak
+*.phase1.bak
