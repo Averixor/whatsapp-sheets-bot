@@ -1,25 +1,257 @@
 const SYSTEM_SHEETS_REGISTRY_ = Object.freeze([
-  { name: 'ACCESS', schemaKey: null, headers: ['Email', 'Name', 'Role', 'Callsign', 'Status', 'UpdatedAt'] },
+  {
+    name: 'ACCESS',
+    schemaKey: null,
+    headers: [
+      'Електронна пошта',
+      'Телефон',
+      'Роль',
+      'Активний',
+      'Примітка',
+      "Ім'я",
+      'Позивний',
+      'Самоприв'язка дозволена',
+      'Хеш поточного ключа',
+      'Хеш попереднього ключа',
+      'Востаннє бачили',
+      'Востаннє оновлено',
+      'Невдалі спроби',
+      'Заблоковано до (мс)'
+    ]
+  },
 
-  { name: 'SEND_PANEL', schemaKey: 'sendPanel' },
-  { name: 'DICT', schemaKey: 'dict' },
-  { name: 'DICT_SUM', schemaKey: 'dictSum' },
-  { name: 'PHONES', schemaKey: 'phones' },
+  {
+    name: 'LOG',
+    schemaKey: null,
+    headers: [
+      'Мітка часу',
+      'Дата звіту',
+      'Аркуш',
+      'Клітинка',
+      'ПІБ',
+      'Телефон',
+      'Код',
+      'Служба',
+      'Місце',
+      'Завдання',
+      'Повідомлення',
+      'Посилання'
+    ]
+  },
 
-  { name: 'JOB_RUNTIME_LOG', schemaKey: null, headers: ['Timestamp', 'JobName', 'TsStart', 'TsEnd', 'Status', 'Source', 'OperationId', 'Message', 'Error', 'InitiatorEmail', 'InitiatorName', 'InitiatorRole', 'InitiatorCallsign', 'EntryPoint', 'TriggerId', 'Notes'] },
-  { name: 'CHECKPOINTS', schemaKey: null, headers: ['Timestamp', 'CheckpointKey', 'Value', 'Meta'] },
-  { name: 'OPS_LOG', schemaKey: null, headers: ['Timestamp', 'OperationId', 'Scenario', 'Status', 'Message', 'Error', 'Context'] },
-  { name: 'ALERTS_LOG', schemaKey: null, headers: ['Timestamp', 'Level', 'Code', 'Message', 'Context', 'CreatedBy'] },
-  { name: 'ACTIVE_OPERATIONS', schemaKey: null, headers: ['OperationId', 'Scenario', 'Status', 'StartedAt', 'UpdatedAt', 'Initiator', 'Context'] },
-  { name: 'AUDIT_LOG', schemaKey: null, headers: ['Timestamp', 'OperationId', 'Scenario', 'Level', 'Status', 'Initiator', 'DryRun', 'Partial', 'AffectedSheets', 'AffectedEntities', 'AppliedChangesCount', 'SkippedChangesCount', 'Warnings', 'Payload', 'Before', 'After', 'Changes', 'Diagnostics', 'Message', 'Error', 'Context'] },
+  {
+    name: 'TEMPLATES',
+    schemaKey: null,
+    headers: [
+      'КЛЮЧ',
+      'ТЕКСТ',
+      'АКТИВНИЙ',
+      'ПІДКАЗКА ТЕГІВ',
+      'ПРИМІТКА'
+    ]
+  },
 
-  { name: 'TEMPLATES', schemaKey: null, headers: ['Key', 'Title', 'Body', 'Channel', 'Lang', 'Active', 'UpdatedAt'] },
-  { name: 'LOG', schemaKey: 'log' },
-  { name: 'VACATIONS', schemaKey: 'vacations' },
+  {
+    name: 'AUDIT_LOG',
+    schemaKey: null,
+    headers: [
+      'Мітка часу',
+      'ID Операції',
+      'Сценарій',
+      'Рівень',
+      'Статус',
+      'Ініціатор',
+      'Тестовий запуск',
+      'Частково',
+      'Зачеплені аркуші',
+      'Зачеплені об'єкти',
+      'Застосовані зміни',
+      'Пропущені зміни',
+      'Попередження',
+      'Дані JSON',
+      'Стан ДО',
+      'Стан ПІСЛЯ',
+      'Зміни JSON',
+      'Діагностика JSON',
+      'Повідомлення',
+      'Помилка'
+    ]
+  },
 
-  { name: 'ІСТОРІЯ_ЗВЕДЕНЬ', schemaKey: null, headers: ['Timestamp', 'Date', 'SummaryType', 'Payload', 'Author'] },
-  { name: 'Графік_відпусток', schemaKey: null, headers: ['ПІБ', 'Початок', 'Кінець', 'Номер', 'Активна', 'Notify'] }
+  {
+    name: 'ACTIVE_OPERATIONS',
+    schemaKey: null,
+    headers: [
+      'ID Операції',
+      'Сценарій',
+      'Відбиток',
+      'Статус',
+      'Початок',
+      'Останній сигнал',
+      'Ініціатор',
+      'Джерело запуску',
+      'Закінчується о',
+      'Власник блокування',
+      'ID батьківської операції',
+      'Нотатки',
+      'Дані JSON'
+    ]
+  },
+
+  {
+    name: 'ALERTS_LOG',
+    schemaKey: null,
+    headers: [
+      'Мітка часу',
+      'Тип',
+      'Важливість',
+      'Дія',
+      'Результат',
+      'Роль',
+      "Ім'я",
+      'Ключ користувача',
+      'Ел. пошта',
+      'Джерело',
+      'Повідомлення',
+      'Деталі JSON'
+    ]
+  },
+
+  {
+    name: 'OPS_LOG',
+    schemaKey: null,
+    headers: [
+      'Час початку',
+      'Час завершення',
+      'ID Операції',
+      'ID батьківської операції',
+      'Сценарій',
+      'Вихідний сценарій',
+      'Ініціатор',
+      'Джерело запуску',
+      'Статус',
+      'Відбиток',
+      'Зачеплені рядки',
+      'Зачеплені об'єкти',
+      'Результат перевірки',
+      'Потрібен ремонт',
+      'Помилка',
+      'Причина переходу',
+      'Нотатки',
+      'Вирішено операцією (ID)',
+      'Вирішено о',
+      'Статус вирішення',
+      'Останній сигнал',
+      'Закінчується о',
+      'Дані JSON',
+      'Результат JSON',
+      'Кількість чекпоїнтів'
+    ]
+  },
+
+  {
+    name: 'CHECKPOINTS',
+    schemaKey: null,
+    headers: [
+      'ID Операції',
+      'Індекс точки',
+      'Оброблено до',
+      'Останній об'єкт',
+      'Останній рядок',
+      'Мітка часу точки',
+      'Дані точки',
+      'СSnapshot перевірки'
+    ]
+  },
+
+  {
+    name: 'JOB_RUNTIME_LOG',
+    schemaKey: null,
+    headers: [
+      'Час початку',
+      'Час завершення',
+      'Назва завдання',
+      'Статус',
+      'Джерело',
+      'Тривалість (мс)',
+      'Тестовий запуск',
+      'ID операції',
+      'Повідомлення',
+      'Помилка',
+      'Email ініціатора',
+      "Ім'я ініціатора",
+      'Роль ініціатора',
+      'Позивний ініціатора',
+      'Точка входу',
+      'ID тригера',
+      'Нотатки'
+    ]
+  },
+
+  {
+    name: 'PHONES',
+    schemaKey: null,
+    headers: [
+      'ПІБ',
+      'Телефон',
+      'Роль',
+      'День народження',
+      'Запасний телефон'
+    ]
+  },
+
+  {
+    name: 'VACATIONS',
+    schemaKey: null,
+    headers: [
+      'ПІБ',
+      'Початок',
+      'Кінець',
+      'Номер',
+      'Активна',
+      'Сповістити',
+      'Примітка'
+    ]
+  },
+
+  {
+    name: 'DICT_SUM',
+    schemaKey: null,
+    headers: [
+      'Код',
+      'Мітка',
+      'Порядок',
+      'Показувати нулі'
+    ]
+  },
+
+  {
+    name: 'DICT',
+    schemaKey: null,
+    headers: [
+      'Код',
+      'Служба',
+      'Місце',
+      'Завдання'
+    ]
+  },
+
+  {
+    name: 'SEND_PANEL',
+    schemaKey: null,
+    headers: [
+      'ПІБ',
+      'Телефон',
+      'Код',
+      'Завдання',
+      'Статус',
+      'Відправлено',
+      'Дія'
+    ]
+  }
 ]);
+
+);
 
 function getAllSystemSheetNames_() {
   return SYSTEM_SHEETS_REGISTRY_.map(function(item) { return item.name; });
@@ -31,10 +263,7 @@ function _systemSheetRecordByName_(name) {
     if (SYSTEM_SHEETS_REGISTRY_[i].name === target) return SYSTEM_SHEETS_REGISTRY_[i];
   }
   return null;
-}
-
-function _buildHeadersFromSchema_(schema) {
-  const fields = (schema && schema.fields) || {};
+}const fields = (schema && schema.fields) || {};
   const names = Object.keys(fields);
   const headers = [];
   names.forEach(function(fieldName) {
