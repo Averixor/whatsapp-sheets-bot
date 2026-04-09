@@ -52,7 +52,7 @@ const SHEET_SCHEMAS = Object.freeze({
     headerRow: Number(CONFIG.DATE_ROW) || 1,
     dateRow: Number(CONFIG.DATE_ROW) || 1,
     codeRangeA1: CONFIG.CODE_RANGE_A1,
-    osFioRangeA1: CONFIG.OS_FIO_RANGE,
+    osFioRangeA1: CONFIG.OS_FML_RANGE,
     dataStartRow: _monthlyMatrix_().startRow,
     dataEndRow: _monthlyMatrix_().endRow,
     matrix: _monthlyMatrix_(),
@@ -98,7 +98,7 @@ const SHEET_SCHEMAS = Object.freeze({
       birthday: { col: 4, type: 'date|string', required: false, allowBlank: true, label: 'День народження' }
     }),
     headerAliases: Object.freeze({
-      fio: ['ПІБ', 'ПІБ/ФІО', 'ФІО', 'FIO'],
+      fio: ['ПІБ', 'ПІБ/ФІО', 'ФІО', 'FML'],
       phone: ['Телефон', 'Phone'],
       role: ['Роль', 'Role'],
       birthday: ['День народження', 'Birthday']
@@ -177,7 +177,7 @@ const SHEET_SCHEMAS = Object.freeze({
     required: false,
     columns: Object.freeze({ fio: 1, phone: 2, code: 3, tasks: 4, status: 5, sent: 6, action: 7 }),
     fields: Object.freeze({
-      fio:    { col: 1, type: 'string', required: true,  allowBlank: false, label: 'FIO' },
+      fio:    { col: 1, type: 'string', required: true,  allowBlank: false, label: 'FML' },
       phone:  { col: 2, type: 'string', required: false, allowBlank: true,  label: 'Phone' },
       code:   { col: 3, type: 'string', required: true,  allowBlank: false, label: 'Code' },
       tasks:  { col: 4, type: 'string', required: false, allowBlank: true,  label: 'Tasks' },
@@ -186,7 +186,7 @@ const SHEET_SCHEMAS = Object.freeze({
       action: { col: 7, type: 'string', required: false, allowBlank: true,  label: 'Action' }
     }),
     headerAliases: Object.freeze({
-      fio: ['ПІБ', 'ФІО', 'FIO'],
+      fio: ['ПІБ', 'ФІО', 'FML'],
       phone: ['Телефон', 'Phone'],
       code: ['Код', 'Code'],
       tasks: ['Завдання', 'Tasks'],
@@ -259,7 +259,7 @@ const SHEET_SCHEMAS = Object.freeze({
       reportDateStr: { col: 2, type: 'string', required: false, allowBlank: true, label: 'ReportDate' },
       sheet:         { col: 3, type: 'string', required: false, allowBlank: true, label: 'Sheet' },
       cell:          { col: 4, type: 'string', required: false, allowBlank: true, label: 'Cell' },
-      fio:           { col: 5, type: 'string', required: false, allowBlank: true, label: 'FIO' },
+      fio:           { col: 5, type: 'string', required: false, allowBlank: true, label: 'FML' },
       phone:         { col: 6, type: 'string', required: false, allowBlank: true, label: 'Phone' },
       code:          { col: 7, type: 'string', required: false, allowBlank: true, label: 'Code' },
       service:       { col: 8, type: 'string', required: false, allowBlank: true, label: 'Service' },

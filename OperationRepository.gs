@@ -883,8 +883,6 @@ const OperationRepository_ = (function() {
 
 
 function _normalizeOperationId(value) {
-  var normalized = _normalizeText(value || '');
-  if (!normalized) return '';
-  return normalized.replace(/\s+/g, ' ').trim();
+  return String(value == null ? '' : value).trim();
 }
 

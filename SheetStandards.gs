@@ -1,5 +1,8 @@
 /************ СТАНДАРТИ ДЛЯ ЛИСТІВ ************/
 function applyGlobalSheetStandards_() {
+  if (typeof ensureAllSystemSheets_ === 'function') {
+    try { ensureAllSystemSheets_(); } catch (_) {}
+  }
   const ss = SpreadsheetApp.getActive();
   ss.getSheets().forEach(sh => {
     const name = sh.getName();

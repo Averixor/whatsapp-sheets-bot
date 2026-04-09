@@ -10,11 +10,11 @@ const CONFIG = {
 
   // Координати даних
   PHONE_COL: 1,
-  FIO_COL: 7,
+  FML_COL: 7,
   DATE_ROW: 1,
   CALLSIGN_COL: 2,
   CODE_RANGE_A1: 'H2:AL40',
-  OS_FIO_RANGE_A1: 'G2:G40',
+  OS_FML_RANGE_A1: 'G2:G40',
 
   // Технічні параметри
   TZ: Session.getScriptTimeZone(),
@@ -44,7 +44,7 @@ const CONFIG = {
 /** Налаштування для автоматизації місяців **/
 const MONTHLY_CONFIG = {
   DATE_ROW: CONFIG.DATE_ROW,
-  FIO_COL: CONFIG.FIO_COL,
+  FML_COL: CONFIG.FML_COL,
   FIRST_DATA_ROW: 2,
   LAST_DATA_ROW: 40,
   CLEAR_RANGES: [CONFIG.CODE_RANGE_A1],

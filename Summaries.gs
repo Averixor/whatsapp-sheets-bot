@@ -17,16 +17,16 @@ function buildDaySummaryForColumn_(sheet, col) {
     freq[code] = (freq[code] || 0) + 1;
   });
 
-  const osRangeA1 = CONFIG.OS_FIO_RANGE_A1 || CONFIG.OS_FIO_RANGE;
+  const osRangeA1 = CONFIG.OS_FML_RANGE_A1 || CONFIG.OS_FML_RANGE;
   if (!osRangeA1) {
-    throw new Error('У CONFIG не задано OS_FIO_RANGE_A1');
+    throw new Error('У CONFIG не задано OS_FML_RANGE_A1');
   }
 
   const total = sheet
     .getRange(osRangeA1)
     .getDisplayValues()
     .flat()
-    .map(v => normalizeFIO_(v))
+    .map(v => normalizeFML_(v))
     .filter(Boolean)
     .length;
 
@@ -72,7 +72,7 @@ function buildDaySummaryForColumn_(sheet, col) {
 function collectPeopleDetailed_(sheet, col) {
   const ref = sheet.getRange(CONFIG.CODE_RANGE_A1);
   const codes = sheet.getRange(ref.getRow(), col, ref.getNumRows(), 1).getDisplayValues().flat();
-  const fios = sheet.getRange(ref.getRow(), CONFIG.FIO_COL, ref.getNumRows(), 1).getDisplayValues().flat();
+  const fios = sheet.getRange(ref.getRow(), CONFIG.FML_COL, ref.getNumRows(), 1).getDisplayValues().flat();
 
   const people = [], seen = new Set();
   for (let i = 0; i < codes.length; i++) {

@@ -222,6 +222,40 @@ const Stage7AuditTrail_ = (function () {
       return true;
     }
 
+  function _ensureSheet_() {
+    const cfg = _getSheetConfig_();
+    const sh = _getOrCreateSheet_();
+    _ensureHeader_(sh, cfg.headerRow);
+    return sh;
+  }
+
+  function _normalizeEntry_(entry) {
+    const e = _sanitizeEntry_(entry || {});
+    return {
+      timestamp: e.timestamp || _now_(),
+      operationId: String(e.operationId || ''),
+      scenario: String(e.scenario || ''),
+      level: String(e.level || DEFAULT_LEVEL),
+      status: String(e.status || ''),
+      initiator: String(e.initiator || ''),
+      dryRun: _toBoolean_(e.dryRun),
+      partial: _toBoolean_(e.partial),
+      affectedSheets: _asArray_(e.affectedSheets),
+      affectedEntities: _asArray_(e.affectedEntities),
+      appliedChangesCount: _toCount_(e.appliedChangesCount),
+      skippedChangesCount: _toCount_(e.skippedChangesCount),
+      warnings: _asArray_(e.warnings),
+      payload: e.payload,
+      before: e.before,
+      after: e.after,
+      changes: e.changes,
+      diagnostics: e.diagnostics,
+      message: String(e.message || ''),
+      error: _safeErrorString_(e.error),
+      context: e.context || {}
+    };
+  }
+
   function _rowFromEntry_(entry) {
     const e = _normalizeEntry_(entry);
 
@@ -263,11 +297,22 @@ const Stage7AuditTrail_ = (function () {
 
   function _withDocumentLock_(fn) {
     const lock = LockService.getDocumentLock();
-    lock.waitLock(LOCK_TIMEOUT_MS);
+    let acquired = false;
+
+    try {
+      acquired = lock.tryLock(250);
+    } catch (_) {
+      acquired = false;
+    }
+
     try {
       return fn();
     } finally {
-      lock.releaseLock();
+      if (acquired) {
+        try {
+          lock.releaseLock();
+        } catch (_) {}
+      }
     }
   }
 

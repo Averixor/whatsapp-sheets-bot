@@ -246,7 +246,7 @@ function loadPhonesIndex_() {
 
       if (!fio && !role && !callsign) continue;
 
-      const fioNorm = normalizeFIO_(fio);
+      const fioNorm = normalizeFML_(fio);
       const roleNorm = _normCallsignKey_(role);
       const callsignNorm = _normCallsignKey_(callsign);
       const item = {
@@ -372,7 +372,7 @@ function findPhone_(criteria, options) {
   const index = _normalizePhonesLookupSource_(opts.index || opts.phones || loadPhonesIndex_());
   const request = (criteria && typeof criteria === 'object') ? criteria : { role: criteria };
   const fio = String(request.fio || '').trim();
-  const fioNorm = String(request.fioNorm || normalizeFIO_(fio)).trim();
+  const fioNorm = String(request.fioNorm || normalizeFML_(fio)).trim();
   const role = String(request.role || '').trim();
   const roleNorm = _normCallsignKey_(role);
   const callsign = String(request.callsign || '').trim();
@@ -568,11 +568,11 @@ function buildPayloadForCell_(sheet, row, col, phonesMap, dictMap) {
     throw buildContextError_('buildPayloadForCell_', baseContext, `Клітинка поза межами матриці ${CONFIG.CODE_RANGE_A1}`);
   }
 
-  const fioRaw = String(sheet.getRange(row, CONFIG.FIO_COL).getDisplayValue() || '').trim();
+  const fioRaw = String(sheet.getRange(row, CONFIG.FML_COL).getDisplayValue() || '').trim();
   if (!fioRaw) {
     throw buildContextError_('buildPayloadForCell_', baseContext, 'ПІБ порожнє');
   }
-  const fioNorm = normalizeFIO_(fioRaw);
+  const fioNorm = normalizeFML_(fioRaw);
 
   const dateCell = sheet.getRange(Number(CONFIG.DATE_ROW) || 1, col);
   const reportDate = DateUtils_.normalizeDate(dateCell.getValue(), dateCell.getDisplayValue());

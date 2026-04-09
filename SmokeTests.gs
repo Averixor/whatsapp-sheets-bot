@@ -165,6 +165,10 @@ function _pickTestCallsign_() {
   }
 }
 
+function _pickTestCallsign() {
+  return _pickTestCallsign_();
+}
+
 function _assertStage4Meta_(result, functionName) {
   _assertUnifiedContract_(result, functionName);
   _smokeAssert_(result.data && typeof result.data === 'object', `${functionName}() не повернув data object`);

@@ -10,7 +10,7 @@ function extractHyperlinkUrl_(formula) {
 
 function makeSendPanelKey_(f, p, c) {
   return [
-    normalizeFIO_(f || ''),
+    normalizeFML_(f || ''),
     String(p || '').replace(/[^\d]/g, ''),
     String(c || '').trim()
   ].join('|');
@@ -250,7 +250,7 @@ function ensureSendPanelStructure_(panel, botMonth, panelDate) {
     .setBackground('#fff3cd');
 
   panel.getRange(CONFIG.SEND_PANEL_HEADER_ROW, 1, 1, 7)
-    .setValues([['FIO', 'Phone', 'Code', 'Tasks', 'Status', 'Sent', 'Action']])
+    .setValues([['FML', 'Phone', 'Code', 'Tasks', 'Status', 'Sent', 'Action']])
     .setFontWeight('bold')
     .setHorizontalAlignment('center')
     .setBackground(null);
@@ -381,7 +381,7 @@ function rebuildSendPanelCore_() {
   const start = ref.getRow();
   const num = ref.getNumRows();
   const codes = source.getRange(start, col, num, 1).getDisplayValues();
-  const fios = source.getRange(start, CONFIG.FIO_COL, num, 1).getDisplayValues();
+  const fios = source.getRange(start, CONFIG.FML_COL, num, 1).getDisplayValues();
 
   for (let i = 0; i < num; i++) {
     const code = String(codes[i][0] || '').trim();

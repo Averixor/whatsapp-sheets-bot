@@ -16,12 +16,12 @@ function healthCheck() {
     };
   });
 
-  _runHealthCheckItem_(report, 'CONFIG.OS_FIO_RANGE_A1', 'CRITICAL', function () {
-    const a1 = CONFIG.OS_FIO_RANGE_A1 || CONFIG.OS_FIO_RANGE;
+  _runHealthCheckItem_(report, 'CONFIG.OS_FML_RANGE_A1', 'CRITICAL', function () {
+    const a1 = CONFIG.OS_FML_RANGE_A1 || CONFIG.OS_FML_RANGE;
     return {
       status: a1 ? 'OK' : 'FAIL',
-      details: a1 ? `Використовується діапазон: ${a1}` : 'OS_FIO_RANGE_A1 / OS_FIO_RANGE не задано',
-      howTo: a1 ? '' : 'Додайте в CONFIG поле OS_FIO_RANGE_A1, наприклад "G2:G40"'
+      details: a1 ? `Використовується діапазон: ${a1}` : 'OS_FML_RANGE_A1 / OS_FML_RANGE не задано',
+      howTo: a1 ? '' : 'Додайте в CONFIG поле OS_FML_RANGE_A1, наприклад "G2:G40"'
     };
   });
 

@@ -57,7 +57,7 @@ const SendPanelFastPaths_ = (function() {
     const dateCol = ctx.col;
 
     const codeValues = source.getRange(startRow, dateCol, rowCount, 1).getDisplayValues();
-    const fioValues = source.getRange(startRow, CONFIG.FIO_COL, rowCount, 1).getDisplayValues();
+    const fioValues = source.getRange(startRow, CONFIG.FML_COL, rowCount, 1).getDisplayValues();
     const brValues = source.getRange(startRow, 6, rowCount, 1).getDisplayValues();
 
     const phonesIndex = DictionaryRepository_.getPhonesIndex();
@@ -70,7 +70,7 @@ const SendPanelFastPaths_ = (function() {
       if (!code || !fioRaw) continue;
 
       try {
-        var fioNorm = normalizeFIO_(fioRaw);
+        var fioNorm = normalizeFML_(fioRaw);
         var phone = findPhone_({ fio: fioRaw, fioNorm: fioNorm }, { index: phonesIndex }) || '';
         var phoneDigits = phone ? String(phone).replace(/[^\d+]/g, '') : '';
         var waPhone = phoneDigits ? (phoneDigits.charAt(0) === '+' ? phoneDigits : '+' + phoneDigits) : '';
@@ -153,7 +153,7 @@ const SendPanelFastPaths_ = (function() {
       .setBackground('#fff3cd');
 
     panel.getRange(headerRow, 1, 1, 7)
-      .setValues([['FIO', 'Phone', 'Code', 'Tasks', 'Status', 'Sent', 'Action']])
+      .setValues([['FML', 'Phone', 'Code', 'Tasks', 'Status', 'Sent', 'Action']])
       .setFontWeight('bold')
       .setHorizontalAlignment('center')
       .setBackground(null);

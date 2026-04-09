@@ -120,7 +120,7 @@ const SendPanelRepository_ = (function() {
     const start = ref.getRow();
     const num = ref.getNumRows();
     const codes = source.getRange(start, ctx.col, num, 1).getDisplayValues();
-    const fios = source.getRange(start, CONFIG.FIO_COL, num, 1).getDisplayValues();
+    const fios = source.getRange(start, CONFIG.FML_COL, num, 1).getDisplayValues();
 
     const rows = [];
     const payloads = [];

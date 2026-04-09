@@ -1,6 +1,17 @@
 {
-  "scriptId": "1AB7o3GPo41RchW5k_LAWrgwsIujcfNBQpvqHP5faLldTs0hFglbWI85_", 
-  "rootDir": ".",
-  "scriptExtensions": [".gs", ".js"],
-  "htmlExtensions": [".html"]
+  "scriptId": "1AB7o3GPo41RchW5k_LAWrgwsIujcfNBQpvqHP5faLldTs0hFglbWI85_",
+  "rootDir": "",
+  "projectId": "robust-resource-491113-t2",
+  "scriptExtensions": [
+    ".gs",
+    ".js"
+  ],
+  "htmlExtensions": [
+    ".html"
+  ],
+  "jsonExtensions": [
+    ".json"
+  ],
+  "filePushOrder": [],
+  "skipSubdirectories": false
 }

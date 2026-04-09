@@ -42,7 +42,7 @@ function _numberToVacationWord_(num) {
   return String(num || '').trim();
 }
 
-function normalizeFIO_(str) {
+function normalizeFML_(str) {
   if (!str) return '';
   return String(str)
     .toLowerCase()
@@ -120,7 +120,7 @@ function loadPhonesProfiles_() {
   (index.items || []).forEach(function(item) {
     if (!item || typeof item !== 'object') return;
     const fioKey = _normFioForProfiles_(item.fio || '');
-    const normKey = normalizeFIO_(item.fio || '');
+    const normKey = normalizeFML_(item.fio || '');
     const callsignKey = _normCallsignKey_(item.callsign || item.role || '');
     const roleKey = _normCallsignKey_(item.role || item.callsign || '');
 
@@ -236,7 +236,7 @@ function _getPhoneByFio_(fio) {
     }
     const phonesMap = _safeLoadPhonesMap_();
     const raw = String(fio || '').trim();
-    const norm = normalizeFIO_(raw);
+    const norm = normalizeFML_(raw);
     return phonesMap[raw] || phonesMap[norm] || '';
   } catch (e) {
     console.error('Помилка _getPhoneByFio_:', e);
@@ -251,9 +251,9 @@ function _getCallsignByFio_(fio) {
     const phonesSheet = ss.getSheetByName(CONFIG.PHONES_SHEET);
     if (!phonesSheet || phonesSheet.getLastRow() < 2) return '';
     const data = phonesSheet.getRange(2, 1, phonesSheet.getLastRow() - 1, 3).getValues();
-    const normFio = normalizeFIO_(fio);
+    const normFio = normalizeFML_(fio);
     for (const row of data) {
-      const rowFio = normalizeFIO_(row[0] || '');
+      const rowFio = normalizeFML_(row[0] || '');
       if (rowFio === normFio) return String(row[2] || '').trim();
     }
   } catch (e) {

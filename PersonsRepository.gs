@@ -149,7 +149,7 @@ var PersonsRepository_ = PersonsRepository_ || (function() {
     const startRow = ref.getRow();
     const numRows = ref.getNumRows();
     const codes = ctx.sheet.getRange(startRow, ctx.col, numRows, 1).getDisplayValues();
-    const fios = ctx.sheet.getRange(startRow, CONFIG.FIO_COL, numRows, 1).getDisplayValues();
+    const fios = ctx.sheet.getRange(startRow, CONFIG.FML_COL, numRows, 1).getDisplayValues();
 
     const personnel = [];
     for (let i = 0; i < numRows; i++) {

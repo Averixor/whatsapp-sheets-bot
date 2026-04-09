@@ -4,7 +4,7 @@ const PERSON_POSITION_COL = 3;
 const PERSON_OSHS_COL = 4;
 const PERSON_RANK_COL = 5;
 const PERSON_BR_DAYS_COL = 6;
-const PERSON_FIO_COL = 7;
+const PERSON_FML_COL = 7;
 
 function _getSheetByDateStr_(dateStr) {
   const d = DateUtils_.parseUaDate(dateStr);
