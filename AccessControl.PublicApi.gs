@@ -206,7 +206,7 @@
       }
 
       const enabledCol = raw.headerMap.enabled;
-      const rawEnabled = enabledCol ? String(raw.rawRow[enabledCol - 1] || '').trim().toLowerCase() : 'true';
+      const rawEnabled = enabledCol ? String(raw.rawRow[enabledCol - 1] === '' || raw.rawRow[enabledCol - 1] === null ? 'true' : raw.rawRow[enabledCol - 1]).trim().toLowerCase() : 'true';
       const isValidEnabled = ['true', 'false', '1', '0', 'yes', 'no', 'так', 'ні', ''].includes(rawEnabled);
       if (!isValidEnabled) {
         issues.push('Рядок ' + rowNum + ': некоректне значення enabled "' + rawEnabled + '"');
@@ -299,7 +299,7 @@
       }
 
       const enabledCol = raw.headerMap.enabled;
-      const rawEnabled = enabledCol ? String(raw.rawRow[enabledCol - 1] || '').trim().toLowerCase() : 'true';
+      const rawEnabled = enabledCol ? String(raw.rawRow[enabledCol - 1] === '' || raw.rawRow[enabledCol - 1] === null ? 'true' : raw.rawRow[enabledCol - 1]).trim().toLowerCase() : 'true';
       const isValidEnabled = ['true', 'false', '1', '0', 'yes', 'no', 'так', 'ні', ''].includes(rawEnabled);
       if (!isValidEnabled) {
         diagnostics.dataIntegrity.invalidEnabledValues.push({ row: rowNum, enabled: rawEnabled });

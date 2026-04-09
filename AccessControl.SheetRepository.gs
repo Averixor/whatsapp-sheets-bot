@@ -116,9 +116,9 @@
     const enabledCol = headerMap.enabled;
     if (!enabledCol) return;
     const rule = SpreadsheetApp.newDataValidation()
-      .requireValueInList(['TRUE', 'FALSE'], true)
+      .requireCheckbox()
       .setAllowInvalid(false)
-      .setHelpText('TRUE - активний, FALSE - заблокований адміністратором')
+      .setHelpText('Прапорець: увімкнено / вимкнено')
       .build();
     sh.getRange(2, enabledCol, MAX_SHEET_ROWS - 1, 1).setDataValidation(rule);
   }
@@ -244,11 +244,11 @@
     if (entry.email !== undefined) updates.email = entry.email;
     if (entry.phone !== undefined) updates.phone = normalizePhone_(entry.phone);
     if (entry.role !== undefined) updates.role = normalizeRole_(entry.role);
-    if (entry.enabled !== undefined) updates.enabled = entry.enabled ? 'TRUE' : 'FALSE';
+    if (entry.enabled !== undefined) updates.enabled = !!entry.enabled;
     if (entry.note !== undefined) updates.note = entry.note;
     if (entry.displayName !== undefined) updates.display_name = entry.displayName;
     if (entry.personCallsign !== undefined) updates.person_callsign = normalizeCallsign_(entry.personCallsign);
-    if (entry.selfBindAllowed !== undefined) updates.self_bind_allowed = entry.selfBindAllowed ? 'TRUE' : 'FALSE';
+    if (entry.selfBindAllowed !== undefined) updates.self_bind_allowed = !!entry.selfBindAllowed;
     if (entry.userKeyCurrentHash !== undefined) updates.user_key_current_hash = entry.userKeyCurrentHash;
     if (entry.userKeyPrevHash !== undefined) updates.user_key_prev_hash = entry.userKeyPrevHash;
     if (entry.lastSeenAt !== undefined) updates.last_seen_at = entry.lastSeenAt;
