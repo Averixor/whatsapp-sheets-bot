@@ -76,16 +76,16 @@ function runStage6ADomainTests_(options) {
 
   _domainPush_(report, 'phone lookup canonical index contract', function() {
     const index = {
-      byFio: { 'Петренко Іван Іванович': '+380661111111' },
+      byFml: { 'Петренко Іван Іванович': '+380661111111' },
       byNorm: { 'петренко іван іванович': '+380661111111' },
       byRole: { 'ГРАФ': '+380662222222' },
       byCallsign: { 'РОЛАНД': '+380663333333' },
       items: []
     };
-    const byFio = findPhone_({ fio: 'Петренко Іван Іванович' }, { index: index });
+    const byFml = findPhone_({ fml: 'Петренко Іван Іванович' }, { index: index });
     const byRole = findPhone_({ role: 'ГРАФ' }, { index: index });
     const byCallsign = findPhone_({ callsign: 'роланд' }, { index: index });
-    _domainAssert_(byFio === '+380661111111', 'findPhone_() не знайшов телефон по fio');
+    _domainAssert_(byFml === '+380661111111', 'findPhone_() не знайшов телефон по fml');
     _domainAssert_(byRole === '+380662222222', 'findPhone_() не знайшов телефон по role');
     _domainAssert_(byCallsign === '+380663333333', 'findPhone_() не знайшов телефон по callsign');
     return 'canonical-lookup-ok';
@@ -93,8 +93,8 @@ function runStage6ADomainTests_(options) {
 
   _domainPush_(report, 'sendPanel.normalize rows', function() {
     const rows = SendPanelService_.normalizeRows([
-      { fio: ' Петренко ', phone: "'+380661234567", code: ' БР ', status: getSendPanelReadyStatus_(), sent: false },
-      { fio: '', phone: '', code: '', status: '', sent: false }
+      { fml: ' Петренко ', phone: "'+380661234567", code: ' БР ', status: getSendPanelReadyStatus_(), sent: false },
+      { fml: '', phone: '', code: '', status: '', sent: false }
     ]);
     _domainAssert_(rows.length === 1, 'normalizeRows повинен відкидати порожні рядки');
     _domainAssert_(rows[0].phone === '+380661234567', 'Телефон не нормалізовано');
@@ -103,9 +103,9 @@ function runStage6ADomainTests_(options) {
 
   _domainPush_(report, 'sendPanel.duplicate detection', function() {
     const duplicates = SendPanelService_.findDuplicateKeys([
-      { fio: 'Петренко', phone: '+380661234567', code: 'БР' },
-      { fio: 'Петренко', phone: '+380661234567', code: 'БР' },
-      { fio: 'Іванов', phone: '+380661234568', code: 'КП' }
+      { fml: 'Петренко', phone: '+380661234567', code: 'БР' },
+      { fml: 'Петренко', phone: '+380661234567', code: 'БР' },
+      { fml: 'Іванов', phone: '+380661234568', code: 'КП' }
     ]);
     _domainAssert_(duplicates.length === 1, 'Duplicate detection повинен знайти 1 ключ');
     return duplicates[0];
@@ -140,7 +140,7 @@ function runStage6ADomainTests_(options) {
   // Reconciliation pure compare
   _domainPush_(report, 'reconciliation.compare missing rows', function() {
     const result = Reconciliation_.compareRows([
-      { fio: 'Петренко', phone: '+380661234567', code: 'БР', status: getSendPanelReadyStatus_(), link: 'x', row: 3 }
+      { fml: 'Петренко', phone: '+380661234567', code: 'БР', status: getSendPanelReadyStatus_(), link: 'x', row: 3 }
     ], []);
     const types = result.issues.map(function(item) { return item.type; });
     _domainAssert_(types.indexOf('missingExpectedItem') !== -1, 'Не знайдено missingExpectedItem');
@@ -149,7 +149,7 @@ function runStage6ADomainTests_(options) {
 
   _domainPush_(report, 'reconciliation.compare extra rows', function() {
     const result = Reconciliation_.compareRows([], [
-      { fio: 'Петренко', phone: '+380661234567', code: 'БР', status: getSendPanelReadyStatus_(), link: 'x', row: 3 }
+      { fml: 'Петренко', phone: '+380661234567', code: 'БР', status: getSendPanelReadyStatus_(), link: 'x', row: 3 }
     ]);
     const types = result.issues.map(function(item) { return item.type; });
     _domainAssert_(types.indexOf('orphanSendPanelRow') !== -1, 'Не знайдено orphanSendPanelRow');
@@ -158,10 +158,10 @@ function runStage6ADomainTests_(options) {
 
   _domainPush_(report, 'reconciliation.compare duplicates', function() {
     const result = Reconciliation_.compareRows([
-      { fio: 'Петренко', phone: '+380661234567', code: 'БР', status: getSendPanelReadyStatus_(), link: 'x', row: 3 }
+      { fml: 'Петренко', phone: '+380661234567', code: 'БР', status: getSendPanelReadyStatus_(), link: 'x', row: 3 }
     ], [
-      { fio: 'Петренко', phone: '+380661234567', code: 'БР', status: getSendPanelReadyStatus_(), link: 'x', row: 3 },
-      { fio: 'Петренко', phone: '+380661234567', code: 'БР', status: getSendPanelReadyStatus_(), link: 'x', row: 4 }
+      { fml: 'Петренко', phone: '+380661234567', code: 'БР', status: getSendPanelReadyStatus_(), link: 'x', row: 3 },
+      { fml: 'Петренко', phone: '+380661234567', code: 'БР', status: getSendPanelReadyStatus_(), link: 'x', row: 4 }
     ]);
     const types = result.issues.map(function(item) { return item.type; });
     _domainAssert_(types.indexOf('duplicateSendPanelRow') !== -1, 'Не знайдено duplicateSendPanelRow');
@@ -170,9 +170,9 @@ function runStage6ADomainTests_(options) {
 
   _domainPush_(report, 'reconciliation.compare stale statuses', function() {
     const result = Reconciliation_.compareRows([
-      { fio: 'Петренко', phone: '+380661234567', code: 'БР', status: getSendPanelReadyStatus_(), link: 'x', row: 3, sent: false }
+      { fml: 'Петренко', phone: '+380661234567', code: 'БР', status: getSendPanelReadyStatus_(), link: 'x', row: 3, sent: false }
     ], [
-      { fio: 'Петренко', phone: '+380661234567', code: 'БР', status: '???', link: 'x', row: 3, sent: false }
+      { fml: 'Петренко', phone: '+380661234567', code: 'БР', status: '???', link: 'x', row: 3, sent: false }
     ]);
     const types = result.issues.map(function(item) { return item.type; });
     _domainAssert_(types.indexOf('staleStatus') !== -1, 'Не знайдено staleStatus');

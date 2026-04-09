@@ -360,7 +360,7 @@ function debugPhones() {
       return idx >= 0 ? idx : fallbackIndex;
     }
 
-    const fioCol = findCol(['піб', 'фіо', 'fio'], 0);
+    const fmlCol = findCol(['піб', 'фіо', 'fml'], 0);
     const phoneCol = findCol(['тел', 'телефон', 'phones', 'phone'], 1);
     const roleCol = findCol(['роль', 'позив', 'callsign', 'role'], 2);
     const birthdayCol = findCol(['дн', 'д.н', 'дата народ', 'день народ', 'birthday'], 3);
@@ -393,16 +393,16 @@ function debugPhones() {
 
     for (let i = 1; i < values.length; i++) {
       const row = values[i];
-      const fio = String(row[fioCol] || '').trim();
+      const fml = String(row[fmlCol] || '').trim();
       const phone = cleanPhone(row[phoneCol]);
       const role = String(row[roleCol] || '').trim();
       const birthday = cleanBirthday(row[birthdayCol]);
 
-      if (!fio && !phone && !role && !birthday) continue;
+      if (!fml && !phone && !role && !birthday) continue;
 
       contacts.push({
         row: i + 1,
-        fio: fio,
+        fml: fml,
         phone: phone,
         role: role,
         birthday: birthday,

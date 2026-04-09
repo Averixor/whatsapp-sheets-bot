@@ -259,7 +259,7 @@ function apiOpenPersonCard(callsign, dateStr) {
     warnings,
     {
       affectedSheets: [person.sheet || getBotMonthSheetName_()].filter(Boolean),
-      affectedEntities: [person.callsign || person.fio || ''].filter(Boolean)
+      affectedEntities: [person.callsign || person.fml || ''].filter(Boolean)
     }
   );
 }

@@ -72,18 +72,18 @@ function buildDaySummaryForColumn_(sheet, col) {
 function collectPeopleDetailed_(sheet, col) {
   const ref = sheet.getRange(CONFIG.CODE_RANGE_A1);
   const codes = sheet.getRange(ref.getRow(), col, ref.getNumRows(), 1).getDisplayValues().flat();
-  const fios = sheet.getRange(ref.getRow(), CONFIG.FML_COL, ref.getNumRows(), 1).getDisplayValues().flat();
+  const fmls = sheet.getRange(ref.getRow(), CONFIG.FML_COL, ref.getNumRows(), 1).getDisplayValues().flat();
 
   const people = [], seen = new Set();
   for (let i = 0; i < codes.length; i++) {
     const code = String(codes[i] || '').trim();
-    const fio = String(fios[i] || '').trim();
-    if (!code || !fio) continue;
-    const surname = fio.split(' ')[0];
+    const fml = String(fmls[i] || '').trim();
+    if (!code || !fml) continue;
+    const surname = fml.split(' ')[0];
     const key = surname + '|' + code;
     if (seen.has(key)) continue;
     seen.add(key);
-    people.push({ code, fullName: fio, surname });
+    people.push({ code, fullName: fml, surname });
   }
   return people;
 }

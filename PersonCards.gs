@@ -49,12 +49,12 @@ function _formatPhoneDisplay_(phone) {
   return String(phone);
 }
 
-function getNextVacationForFio_(fio) {
-  return VacationsRepository_.getNextForFio(fio, _todayStr_());
+function getNextVacationForFml_(fml) {
+  return VacationsRepository_.getNextForFml(fml, _todayStr_());
 }
 
-function getVacationInfoByFio_(fio, dateStr) {
-  return VacationsRepository_.getCurrentForFio(fio, dateStr);
+function getVacationInfoByFml_(fml, dateStr) {
+  return VacationsRepository_.getCurrentForFml(fml, dateStr);
 }
 
 function getPersonGroupForDate_(sheet, row, dateStr) {
@@ -192,7 +192,7 @@ function openPersonCardByCallsignAndDate_(callsign, dateStr) {
 
           <div class="grid">
             <div class="lbl">ПІБ</div>
-            <div class="val">${HtmlUtils_.escapeHtml(data.fio)}</div>
+            <div class="val">${HtmlUtils_.escapeHtml(data.fml)}</div>
 
             <div class="lbl">Звання</div>
             <div class="val">${HtmlUtils_.escapeHtml(data.rank)}</div>

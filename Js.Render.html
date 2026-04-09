@@ -132,7 +132,7 @@
         <div class="result-item" style="border-left:3px solid ${statusColor}; padding-left:8px; margin-bottom:8px; ${isSent ? 'opacity:0.92;' : ''}">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
             <div>
-              <div><b>${escapeHtml(item.fio || '')}</b></div>
+              <div><b>${escapeHtml(item.fml || '')}</b></div>
               <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:2px;">
                 ${escapeHtml(formatPhone(item.phone || ''))}
               </div>
@@ -790,7 +790,7 @@
       vacData.commanderMessages.forEach(row => {
         html += `
           <div class="vacation-card vacation-card--commander">
-            <div class="vacation-card__name">${esc(row.fio)}</div>
+            <div class="vacation-card__name">${esc(row.fml)}</div>
             <div class="vacation-card__text">${esc(row.message)}</div>
             ${
               row.link
@@ -817,7 +817,7 @@
       vacData.soldierMessages.forEach(row => {
         html += `
           <div class="vacation-card vacation-card--soldier">
-            <div class="vacation-card__name">${esc(row.fio)}</div>
+            <div class="vacation-card__name">${esc(row.fml)}</div>
             <div class="vacation-card__meta">
               ${esc(row.startDate)} — ${esc(row.endDate)} | ${esc(row.vacationWord)}
             </div>
@@ -1167,7 +1167,7 @@
               <div style="display:grid; gap:8px;">
                 ${preview.map(item => `
                   <div style="padding:8px; border:1px solid var(--border-color); border-radius:10px; background:var(--bg-glass);">
-                    <div><strong>#${Number(item.row || 0)}</strong> ${escapeHtml(item.fio || '—')}</div>
+                    <div><strong>#${Number(item.row || 0)}</strong> ${escapeHtml(item.fml || '—')}</div>
                     <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:4px;">
                       ${escapeHtml(formatPhone(item.phone || '—'))}
                       ${item.role ? `<br>🏷 ${escapeHtml(item.role)}` : ''}

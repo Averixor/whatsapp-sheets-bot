@@ -56,7 +56,7 @@ function writeLogsBatch_(items) {
       o.reportDateStr || '',
       o.sheet || '',
       o.cell || '',
-      o.fio || '',
+      o.fml || '',
       o.phone || '',
       o.code || '',
       o.service || '',

@@ -189,7 +189,7 @@ function loadPhonesIndex_() {
   }
 
   const out = {
-    byFio: {},
+    byFml: {},
     byNorm: {},
     byRole: {},
     byCallsign: {},
@@ -209,11 +209,11 @@ function loadPhonesIndex_() {
 
     const values = sh.getDataRange().getValues();
     const headers = values[0] || [];
-    const cFio = _phonesFindColumnIndex_(headers, [
+    const cFml = _phonesFindColumnIndex_(headers, [
       function(h) { return h.includes('піб'); },
       function(h) { return h.includes('фіо'); },
       function(h) { return h.includes('фио'); },
-      function(h) { return h.includes('fio'); }
+      function(h) { return h.includes('fml'); }
     ], 0);
     const cPhone = _phonesFindColumnIndex_(headers, [
       function(h) { return h.includes('тел'); },
@@ -238,20 +238,20 @@ function loadPhonesIndex_() {
 
     for (let r = 1; r < values.length; r++) {
       const row = values[r] || [];
-      const fio = String(row[cFio] || '').trim();
+      const fml = String(row[cFml] || '').trim();
       const phone = normalizePhone_(row[cPhone]);
       const role = String(row[cRole] || '').trim();
       const callsign = String(row[cCallsign] || '').trim() || role;
       const birthday = _phonesFormatBirthday_(row[cBirth]);
 
-      if (!fio && !role && !callsign) continue;
+      if (!fml && !role && !callsign) continue;
 
-      const fioNorm = normalizeFML_(fio);
+      const fmlNorm = normalizeFML_(fml);
       const roleNorm = _normCallsignKey_(role);
       const callsignNorm = _normCallsignKey_(callsign);
       const item = {
-        fio: fio,
-        fioNorm: fioNorm,
+        fml: fml,
+        fmlNorm: fmlNorm,
         phone: phone,
         role: role,
         roleNorm: roleNorm,
@@ -264,8 +264,8 @@ function loadPhonesIndex_() {
       out.items.push(item);
 
       if (phone) {
-        if (fio) out.byFio[fio] = phone;
-        if (fioNorm) out.byNorm[fioNorm] = phone;
+        if (fml) out.byFml[fml] = phone;
+        if (fmlNorm) out.byNorm[fmlNorm] = phone;
         if (role) out.byRole[role] = phone;
         if (roleNorm) out.byRole[roleNorm] = phone;
         if (callsign) out.byCallsign[callsign] = phone;
@@ -299,8 +299,8 @@ function loadPhonesMap_() {
   const map = {};
   const index = loadPhonesIndex_();
 
-  Object.keys(index.byFio || {}).forEach(function(keyName) {
-    map[keyName] = index.byFio[keyName];
+  Object.keys(index.byFml || {}).forEach(function(keyName) {
+    map[keyName] = index.byFml[keyName];
   });
   Object.keys(index.byNorm || {}).forEach(function(keyName) {
     map[keyName] = index.byNorm[keyName];
@@ -322,13 +322,13 @@ function loadPhonesMap_() {
 }
 
 function _normalizePhonesLookupSource_(source) {
-  if (source && typeof source === 'object' && source.byFio && source.byNorm && source.byRole && source.byCallsign) {
+  if (source && typeof source === 'object' && source.byFml && source.byNorm && source.byRole && source.byCallsign) {
     return source;
   }
 
   if (source && typeof source === 'object') {
     return {
-      byFio: {},
+      byFml: {},
       byNorm: {},
       byRole: {},
       byCallsign: {},
@@ -342,16 +342,16 @@ function _normalizePhonesLookupSource_(source) {
 
 function _legacyPhoneLookup_(legacyMap, criteria) {
   const map = legacyMap || {};
-  const fio = String(criteria && criteria.fio || '').trim();
-  const fioNorm = String(criteria && criteria.fioNorm || '').trim();
+  const fml = String(criteria && criteria.fml || '').trim();
+  const fmlNorm = String(criteria && criteria.fmlNorm || '').trim();
   const role = String(criteria && criteria.role || '').trim();
   const roleNorm = _normCallsignKey_(role);
   const callsign = String(criteria && criteria.callsign || '').trim();
   const callsignNorm = _normCallsignKey_(callsign);
 
   const candidates = [
-    fio,
-    fioNorm,
+    fml,
+    fmlNorm,
     callsign,
     callsignNorm,
     role,
@@ -371,8 +371,8 @@ function findPhone_(criteria, options) {
   const opts = options || {};
   const index = _normalizePhonesLookupSource_(opts.index || opts.phones || loadPhonesIndex_());
   const request = (criteria && typeof criteria === 'object') ? criteria : { role: criteria };
-  const fio = String(request.fio || '').trim();
-  const fioNorm = String(request.fioNorm || normalizeFML_(fio)).trim();
+  const fml = String(request.fml || '').trim();
+  const fmlNorm = String(request.fmlNorm || normalizeFML_(fml)).trim();
   const role = String(request.role || '').trim();
   const roleNorm = _normCallsignKey_(role);
   const callsign = String(request.callsign || '').trim();
@@ -383,9 +383,9 @@ function findPhone_(criteria, options) {
     index.byCallsign && index.byCallsign[callsignNorm],
     index.byRole && index.byRole[role],
     index.byRole && index.byRole[roleNorm],
-    index.byFio && index.byFio[fio],
-    index.byNorm && index.byNorm[fioNorm],
-    _legacyPhoneLookup_(index.legacyMap, { fio: fio, fioNorm: fioNorm, role: role, callsign: callsign })
+    index.byFml && index.byFml[fml],
+    index.byNorm && index.byNorm[fmlNorm],
+    _legacyPhoneLookup_(index.legacyMap, { fml: fml, fmlNorm: fmlNorm, role: role, callsign: callsign })
   ];
 
   for (let i = 0; i < candidates.length; i++) {
@@ -410,8 +410,8 @@ function findPhone_(criteria, options) {
   return '';
 }
 
-function findPhoneByFio_(fio, options) {
-  return findPhone_({ fio: fio }, options || {});
+function findPhoneByFml_(fml, options) {
+  return findPhone_({ fml: fml }, options || {});
 }
 
 function findPhoneByCallsign_(callsign, options) {
@@ -568,11 +568,11 @@ function buildPayloadForCell_(sheet, row, col, phonesMap, dictMap) {
     throw buildContextError_('buildPayloadForCell_', baseContext, `Клітинка поза межами матриці ${CONFIG.CODE_RANGE_A1}`);
   }
 
-  const fioRaw = String(sheet.getRange(row, CONFIG.FML_COL).getDisplayValue() || '').trim();
-  if (!fioRaw) {
+  const fmlRaw = String(sheet.getRange(row, CONFIG.FML_COL).getDisplayValue() || '').trim();
+  if (!fmlRaw) {
     throw buildContextError_('buildPayloadForCell_', baseContext, 'ПІБ порожнє');
   }
-  const fioNorm = normalizeFML_(fioRaw);
+  const fmlNorm = normalizeFML_(fmlRaw);
 
   const dateCell = sheet.getRange(Number(CONFIG.DATE_ROW) || 1, col);
   const reportDate = DateUtils_.normalizeDate(dateCell.getValue(), dateCell.getDisplayValue());
@@ -584,7 +584,7 @@ function buildPayloadForCell_(sheet, row, col, phonesMap, dictMap) {
   const isEmptyCell = !cellValue;
 
   const phoneSource = phonesMap || loadPhonesIndex_();
-  let phone = findPhone_({ fio: fioRaw, fioNorm: fioNorm }, { index: phoneSource }) || '';
+  let phone = findPhone_({ fml: fmlRaw, fmlNorm: fmlNorm }, { index: phoneSource }) || '';
   const phoneDigits = phone ? String(phone).replace(/[^\d+]/g, '') : '';
   const waPhone = phoneDigits ? (phoneDigits.startsWith('+') ? phoneDigits : '+' + phoneDigits) : '';
 
@@ -619,7 +619,7 @@ function buildPayloadForCell_(sheet, row, col, phonesMap, dictMap) {
     sheet: sheet.getName(),
     cell: a1,
     row, col,
-    fio: fioRaw,
+    fml: fmlRaw,
     phone: waPhone,
     code,
     service,
@@ -750,7 +750,7 @@ function buildAggregatedPayloadsForPhone_(phone, items) {
   const footer = ['', '*(´ ｡_ ｡｀)*   *⨥*   *(´｡ _｡ ｀)*'].join('\n');
 
   const blocks = items.map(item => {
-    const lines = [`• ${item.fio}`];
+    const lines = [`• ${item.fml}`];
     if (item.service) lines.push(`  Вид служби: ${item.service}`);
     if (item.place) lines.push(`  Місце: ${item.place}`);
     if (item.tasks) lines.push(`  Завдання: ${item.tasks}`);
@@ -767,7 +767,7 @@ function buildAggregatedPayloadsForPhone_(phone, items) {
       sheet: getBotMonthSheetName_(),
       cell: 'MULTI',
       row: '', col: '',
-      fio: `ГРУПА (${items.length} записів)${partNo}`,
+      fml: `ГРУПА (${items.length} записів)${partNo}`,
       phone,
       code: 'MULTI',
       service: '', place: '', tasks: '',

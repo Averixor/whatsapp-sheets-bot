@@ -52,7 +52,7 @@ const SHEET_SCHEMAS = Object.freeze({
     headerRow: Number(CONFIG.DATE_ROW) || 1,
     dateRow: Number(CONFIG.DATE_ROW) || 1,
     codeRangeA1: CONFIG.CODE_RANGE_A1,
-    osFioRangeA1: CONFIG.OS_FML_RANGE,
+    osFmlRangeA1: CONFIG.OS_FML_RANGE,
     dataStartRow: _monthlyMatrix_().startRow,
     dataEndRow: _monthlyMatrix_().endRow,
     matrix: _monthlyMatrix_(),
@@ -63,7 +63,7 @@ const SHEET_SCHEMAS = Object.freeze({
       oshs: 4,
       rank: 5,
       brDays: 6,
-      fio: 7
+      fml: 7
     }),
     fields: Object.freeze({
       phone:    { col: 1, type: 'string', required: false, allowBlank: true, label: 'Телефон' },
@@ -72,12 +72,12 @@ const SHEET_SCHEMAS = Object.freeze({
       oshs:     { col: 4, type: 'string', required: false, allowBlank: true, label: 'ОШС' },
       rank:     { col: 5, type: 'string', required: false, allowBlank: true, label: 'Звання' },
       brDays:   { col: 6, type: 'number|string', required: false, allowBlank: true, label: 'Дні БР' },
-      fio:      { col: 7, type: 'string', required: true,  allowBlank: false, label: 'ПІБ' }
+      fml:      { col: 7, type: 'string', required: true,  allowBlank: false, label: 'ПІБ' }
     }),
-    keyFields: ['callsign', 'fio'],
-    requiredFields: ['callsign', 'fio'],
+    keyFields: ['callsign', 'fml'],
+    requiredFields: ['callsign', 'fml'],
     nullableFields: ['phone', 'position', 'oshs', 'rank', 'brDays'],
-    searchableFields: ['callsign', 'fio'],
+    searchableFields: ['callsign', 'fml'],
     notes: 'Канонічне джерело щоденних кодів і статусів для sidebar/SEND_PANEL/зведень.'
   }),
 
@@ -90,23 +90,23 @@ const SHEET_SCHEMAS = Object.freeze({
     headerRow: 1,
     dataStartRow: 2,
     required: true,
-    columns: Object.freeze({ fio: 1, phone: 2, role: 3, birthday: 4 }),
+    columns: Object.freeze({ fml: 1, phone: 2, role: 3, birthday: 4 }),
     fields: Object.freeze({
-      fio:      { col: 1, type: 'string', required: true,  allowBlank: false, label: 'ПІБ' },
+      fml:      { col: 1, type: 'string', required: true,  allowBlank: false, label: 'ПІБ' },
       phone:    { col: 2, type: 'string', required: false, allowBlank: true,  label: 'Телефон' },
       role:     { col: 3, type: 'string', required: false, allowBlank: true,  label: 'Роль' },
       birthday: { col: 4, type: 'date|string', required: false, allowBlank: true, label: 'День народження' }
     }),
     headerAliases: Object.freeze({
-      fio: ['ПІБ', 'ПІБ/ФІО', 'ФІО', 'FML'],
+      fml: ['ПІБ', 'ПІБ/ФІО', 'ФІО', 'FML'],
       phone: ['Телефон', 'Phone'],
       role: ['Роль', 'Role'],
       birthday: ['День народження', 'Birthday']
     }),
-    keyFields: ['fio', 'role'],
-    requiredFields: ['fio'],
+    keyFields: ['fml', 'role'],
+    requiredFields: ['fml'],
     nullableFields: ['phone', 'role', 'birthday'],
-    searchableFields: ['fio', 'role', 'phone']
+    searchableFields: ['fml', 'role', 'phone']
   }),
 
   dict: Object.freeze({
@@ -175,9 +175,9 @@ const SHEET_SCHEMAS = Object.freeze({
     headerRow: Number(CONFIG.SEND_PANEL_HEADER_ROW) || 2,
     dataStartRow: Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3,
     required: false,
-    columns: Object.freeze({ fio: 1, phone: 2, code: 3, tasks: 4, status: 5, sent: 6, action: 7 }),
+    columns: Object.freeze({ fml: 1, phone: 2, code: 3, tasks: 4, status: 5, sent: 6, action: 7 }),
     fields: Object.freeze({
-      fio:    { col: 1, type: 'string', required: true,  allowBlank: false, label: 'FML' },
+      fml:    { col: 1, type: 'string', required: true,  allowBlank: false, label: 'FML' },
       phone:  { col: 2, type: 'string', required: false, allowBlank: true,  label: 'Phone' },
       code:   { col: 3, type: 'string', required: true,  allowBlank: false, label: 'Code' },
       tasks:  { col: 4, type: 'string', required: false, allowBlank: true,  label: 'Tasks' },
@@ -186,7 +186,7 @@ const SHEET_SCHEMAS = Object.freeze({
       action: { col: 7, type: 'string', required: false, allowBlank: true,  label: 'Action' }
     }),
     headerAliases: Object.freeze({
-      fio: ['ПІБ', 'ФІО', 'FML'],
+      fml: ['ПІБ', 'ФІО', 'FML'],
       phone: ['Телефон', 'Phone'],
       code: ['Код', 'Code'],
       tasks: ['Завдання', 'Tasks'],
@@ -194,10 +194,10 @@ const SHEET_SCHEMAS = Object.freeze({
       sent: ['Відправлено', 'Sent'],
       action: ['Дія', 'Action']
     }),
-    keyFields: ['fio', 'phone', 'code'],
-    requiredFields: ['fio', 'code'],
+    keyFields: ['fml', 'phone', 'code'],
+    requiredFields: ['fml', 'code'],
     nullableFields: ['phone', 'tasks', 'status', 'sent', 'action'],
-    searchableFields: ['fio', 'phone', 'code', 'status']
+    searchableFields: ['fml', 'phone', 'code', 'status']
   }),
 
   vacations: Object.freeze({
@@ -210,7 +210,7 @@ const SHEET_SCHEMAS = Object.freeze({
     dataStartRow: 2,
     required: false,
     columns: Object.freeze({
-      fio: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.NAME_COL) || 1),
+      fml: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.NAME_COL) || 1),
       startDate: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.START_COL) || 2),
       endDate: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.END_COL) || 3),
       vacationNo: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.NUM_COL) || 4),
@@ -218,17 +218,17 @@ const SHEET_SCHEMAS = Object.freeze({
       notify: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.NOTIFY_COL) || 6)
     }),
     fields: Object.freeze({
-      fio:        { col: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.NAME_COL) || 1), type: 'string', required: true,  allowBlank: false, label: 'ПІБ' },
+      fml:        { col: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.NAME_COL) || 1), type: 'string', required: true,  allowBlank: false, label: 'ПІБ' },
       startDate:  { col: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.START_COL) || 2), type: 'date|string', required: true, allowBlank: false, label: 'Початок' },
       endDate:    { col: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.END_COL) || 3), type: 'date|string', required: true, allowBlank: false, label: 'Кінець' },
       vacationNo: { col: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.NUM_COL) || 4), type: 'string', required: false, allowBlank: true, label: 'Номер' },
       active:     { col: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.ACTIVE_COL) || 5), type: 'boolean|string', required: false, allowBlank: true, label: 'Активна' },
       notify:     { col: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.NOTIFY_COL) || 6), type: 'boolean|string', required: false, allowBlank: true, label: 'Notify' }
     }),
-    keyFields: ['fio', 'startDate', 'endDate'],
-    requiredFields: ['fio', 'startDate', 'endDate'],
+    keyFields: ['fml', 'startDate', 'endDate'],
+    requiredFields: ['fml', 'startDate', 'endDate'],
     nullableFields: ['vacationNo', 'active', 'notify'],
-    searchableFields: ['fio', 'vacationNo', 'active']
+    searchableFields: ['fml', 'vacationNo', 'active']
   }),
 
   log: Object.freeze({
@@ -245,7 +245,7 @@ const SHEET_SCHEMAS = Object.freeze({
       reportDateStr: 2,
       sheet: 3,
       cell: 4,
-      fio: 5,
+      fml: 5,
       phone: 6,
       code: 7,
       service: 8,
@@ -259,7 +259,7 @@ const SHEET_SCHEMAS = Object.freeze({
       reportDateStr: { col: 2, type: 'string', required: false, allowBlank: true, label: 'ReportDate' },
       sheet:         { col: 3, type: 'string', required: false, allowBlank: true, label: 'Sheet' },
       cell:          { col: 4, type: 'string', required: false, allowBlank: true, label: 'Cell' },
-      fio:           { col: 5, type: 'string', required: false, allowBlank: true, label: 'FML' },
+      fml:           { col: 5, type: 'string', required: false, allowBlank: true, label: 'FML' },
       phone:         { col: 6, type: 'string', required: false, allowBlank: true, label: 'Phone' },
       code:          { col: 7, type: 'string', required: false, allowBlank: true, label: 'Code' },
       service:       { col: 8, type: 'string', required: false, allowBlank: true, label: 'Service' },
@@ -268,10 +268,10 @@ const SHEET_SCHEMAS = Object.freeze({
       message:       { col: 11, type: 'string', required: false, allowBlank: true, label: 'Message' },
       link:          { col: 12, type: 'string', required: false, allowBlank: true, label: 'Link' }
     }),
-    keyFields: ['timestamp', 'fio', 'code'],
+    keyFields: ['timestamp', 'fml', 'code'],
     requiredFields: ['timestamp'],
-    nullableFields: ['reportDateStr', 'sheet', 'cell', 'fio', 'phone', 'code', 'service', 'place', 'tasks', 'message', 'link'],
-    searchableFields: ['fio', 'phone', 'code', 'sheet']
+    nullableFields: ['reportDateStr', 'sheet', 'cell', 'fml', 'phone', 'code', 'service', 'place', 'tasks', 'message', 'link'],
+    searchableFields: ['fml', 'phone', 'code', 'sheet']
   })
 });
 
