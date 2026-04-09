@@ -15,7 +15,7 @@ function applyGlobalSheetStandards_() {
 
     if (typeof stage7IsRequiredNonMonthSheet_ === 'function' && stage7IsRequiredNonMonthSheet_(name)) {
       try {
-        sh.setFrozenRows(0);
+        sh.setFrozenRows(1);
         sh.setFrozenColumns(0);
       } catch (_) {}
       if (typeof stage7ApplyTableTheme_ === 'function') {
