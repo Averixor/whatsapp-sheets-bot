@@ -305,9 +305,6 @@ function clearLogCore_() {
     { name: (typeof STAGE7_CONFIG !== 'undefined' ? (STAGE7_CONFIG.AUDIT_SHEET || 'AUDIT_LOG') : 'AUDIT_LOG'), headerRows: (typeof STAGE7_CONFIG !== 'undefined' ? (STAGE7_CONFIG.AUDIT_HEADER_ROW || 1) : 1), ensure: function() { try { ensureAuditTrailSheet_(); } catch (_) {} } },
     { name: (typeof appGetCore === 'function' ? appGetCore('ALERTS_SHEET', 'ALERTS_LOG') : 'ALERTS_LOG'), headerRows: 1, ensure: function() { try { AlertsRepository_.ensureSheet(); } catch (_) {} } },
     { name: (typeof STAGE7_CONFIG !== 'undefined' ? (STAGE7_CONFIG.JOB_RUNTIME_SHEET || 'JOB_RUNTIME_LOG') : 'JOB_RUNTIME_LOG'), headerRows: 1, ensure: function() { try { JobRuntimeRepository_.ensureSheet(); } catch (_) {} } },
-    { name: (typeof appGetCore === 'function' ? appGetCore('OPS_LOG_SHEET', 'OPS_LOG') : 'OPS_LOG'), headerRows: 1 },
-    { name: (typeof appGetCore === 'function' ? appGetCore('ACTIVE_OPERATIONS_SHEET', 'ACTIVE_OPERATIONS') : 'ACTIVE_OPERATIONS'), headerRows: 1 },
-    { name: (typeof appGetCore === 'function' ? appGetCore('CHECKPOINTS_SHEET', 'CHECKPOINTS') : 'CHECKPOINTS'), headerRows: 1 }
   ];
 
   const clearedSheets = [];
