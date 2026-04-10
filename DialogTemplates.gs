@@ -61,7 +61,7 @@ const DialogTemplates_ = (function () {
     const body = `
       <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:14px;">
         <div style="margin-bottom:6px;"><b>Дата:</b> ${esc(item.reportDateStr || '')}</div>
-        <div style="margin-bottom:6px;"><b>ПІБ:</b> ${esc(item.fml || '')}</div>
+        <div style="margin-bottom:6px;"><b>ПІБ:</b> ${esc(item.fio || '')}</div>
         <div style="margin-bottom:6px;"><b>Телефон:</b> ${esc(item.phone || '')}</div>
         <div><b>Код / клітинка:</b> ${esc(item.code || '')} ${item.cell ? '(' + esc(item.cell) + ')' : ''}</div>
       </div>
@@ -80,7 +80,7 @@ const DialogTemplates_ = (function () {
     const cards = items.map(function (item, index) {
       return `
         <div style="border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:10px;background:#fff;">
-          <div style="font-weight:700;color:#0f172a;margin-bottom:4px;">${index + 1}. ${esc(item.fml || '')}</div>
+          <div style="font-weight:700;color:#0f172a;margin-bottom:4px;">${index + 1}. ${esc(item.fio || '')}</div>
           <div style="font-size:12px;color:#475569;margin-bottom:8px;">${esc(item.phone || '')} · ${esc(item.code || '')} ${item.cell ? '· ' + esc(item.cell) : ''}</div>
           <textarea readonly style="width:100%;height:92px;border:1px solid #cbd5e1;border-radius:8px;padding:8px;box-sizing:border-box;">${esc(item.message || '')}</textarea>
           <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">

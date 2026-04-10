@@ -60,7 +60,7 @@ var PersonsRepository_ = PersonsRepository_ || (function() {
       schema.columns.oshs,
       schema.columns.rank,
       schema.columns.brDays,
-      schema.columns.fml
+      schema.columns.fio
     );
 
     const values = sh.getRange(matrix.startRow, 1, rowCount, width).getDisplayValues();
@@ -72,7 +72,7 @@ var PersonsRepository_ = PersonsRepository_ || (function() {
         oshs: String(row[schema.columns.oshs - 1] || '').trim(),
         rank: String(row[schema.columns.rank - 1] || '').trim(),
         brDays: String(row[schema.columns.brDays - 1] || '').trim(),
-        fml: String(row[schema.columns.fml - 1] || '').trim(),
+        fio: String(row[schema.columns.fio - 1] || '').trim(),
         _meta: {
           rowNumber: matrix.startRow + idx,
           sheetName: sh.getName()
@@ -88,10 +88,10 @@ var PersonsRepository_ = PersonsRepository_ || (function() {
     }) || null;
   }
 
-  function findRowByFml(fml, sheet) {
-    const key = _normFml_(fml);
+  function findRowByFio(fio, sheet) {
+    const key = _normFio_(fio);
     return getMonthlyRows(sheet).find(function(item) {
-      return _normFml_(item.fml) === key;
+      return _normFio_(item.fio) === key;
     }) || null;
   }
 
@@ -115,14 +115,14 @@ var PersonsRepository_ = PersonsRepository_ || (function() {
     }
 
     const payload = getPayloadByRow(item._meta.rowNumber, safeDate, sheet);
-    const profile = DictionaryRepository_.getProfileByCallsign(item.callsign) || DictionaryRepository_.getProfileByFml(item.fml) || null;
-    const phone = item.phone || payload.phone || DictionaryRepository_.getPhoneByFml(item.fml) || DictionaryRepository_.getPhoneByCallsign(item.callsign) || DictionaryRepository_.getPhoneByRole(item.callsign) || '';
+    const profile = DictionaryRepository_.getProfileByCallsign(item.callsign) || DictionaryRepository_.getProfileByFio(item.fio) || null;
+    const phone = item.phone || payload.phone || DictionaryRepository_.getPhoneByFio(item.fio) || DictionaryRepository_.getPhoneByCallsign(item.callsign) || DictionaryRepository_.getPhoneByRole(item.callsign) || '';
     const prevSheet = getPrevMonthSheetByDate(safeDate);
     const prevRow = prevSheet ? findRowByCallsign(item.callsign, prevSheet) : null;
 
     return {
       callsign: item.callsign,
-      fml: item.fml,
+      fio: item.fio,
       rank: item.rank,
       position: item.position,
       oshs: item.oshs,
@@ -137,8 +137,8 @@ var PersonsRepository_ = PersonsRepository_ || (function() {
       col: payload.col,
       message: payload.message || '',
       waLink: payload.link || '',
-      nextVacation: VacationsRepository_.getNextForFml(item.fml, safeDate),
-      vac: VacationsRepository_.getCurrentForFml(item.fml, safeDate),
+      nextVacation: VacationsRepository_.getNextForFio(item.fio, safeDate),
+      vac: VacationsRepository_.getCurrentForFio(item.fio, safeDate),
       phoneDisplay: _formatPhoneDisplay_(phone)
     };
   }
@@ -149,18 +149,18 @@ var PersonsRepository_ = PersonsRepository_ || (function() {
     const startRow = ref.getRow();
     const numRows = ref.getNumRows();
     const codes = ctx.sheet.getRange(startRow, ctx.col, numRows, 1).getDisplayValues();
-    const fmls = ctx.sheet.getRange(startRow, CONFIG.FML_COL, numRows, 1).getDisplayValues();
+    const fios = ctx.sheet.getRange(startRow, CONFIG.FIO_COL, numRows, 1).getDisplayValues();
 
     const personnel = [];
     for (let i = 0; i < numRows; i++) {
       const code = String(codes[i][0] || '').trim();
-      const fml = String(fmls[i][0] || '').trim();
-      if (!code || !fml) continue;
+      const fio = String(fios[i][0] || '').trim();
+      if (!code || !fio) continue;
 
       try {
         const payload = getPayloadByRow(startRow + i, ctx.dateStr, ctx.sheet);
         personnel.push({
-          fml: payload.fml,
+          fio: payload.fio,
           phone: payload.phone,
           code: payload.code,
           service: payload.service,
@@ -175,7 +175,7 @@ var PersonsRepository_ = PersonsRepository_ || (function() {
         });
       } catch (e) {
         personnel.push({
-          fml: fml,
+          fio: fio,
           phone: '—',
           code: code,
           service: '—',
@@ -237,7 +237,7 @@ var PersonsRepository_ = PersonsRepository_ || (function() {
     getDateContext: getDateContext,
     getMonthlyRows: getMonthlyRows,
     findRowByCallsign: findRowByCallsign,
-    findRowByFml: findRowByFml,
+    findRowByFio: findRowByFio,
     getPayloadByRow: getPayloadByRow,
     getPersonByCallsign: getPersonByCallsign,
     getSidebarPersonnel: getSidebarPersonnel,

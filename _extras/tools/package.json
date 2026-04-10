@@ -1,0 +1,10 @@
+{
+  "name": "wasb-final-clean-tools",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "check:syntax": "node validate-gs-syntax.js",
+    "check:static": "node static-checks.js",
+    "ci": "npm run check:syntax && npm run check:static"
+  }
+}

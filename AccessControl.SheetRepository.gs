@@ -22,24 +22,7 @@
     const headers = sh.getRange(1, 1, 1, lastColumn).getValues()[0];
     const map = {};
     for (let i = 0; i < headers.length; i++) {
-      const raw = String(headers[i] || '').trim().toLowerCase();
-      const aliases = {
-        'електронна пошта': 'email',
-        'телефон': 'phone',
-        'роль': 'role',
-        'увімкнено': 'enabled',
-        'примітка': 'note',
-        "ім’я для відображення": 'display_name',
-        'позивний': 'person_callsign',
-        'самоприв’язка дозволена': 'self_bind_allowed',
-        'поточний хеш ключа': 'user_key_current_hash',
-        'попередній хеш ключа': 'user_key_prev_hash',
-        'остання активність': 'last_seen_at',
-        'остання ротація': 'last_rotated_at',
-        'невдалі спроби': 'failed_attempts',
-        'блокування до (ms)': 'locked_until_ms'
-      };
-      const key = aliases[raw] || raw;
+      const key = String(headers[i] || '').trim().toLowerCase();
       if (key) map[key] = i + 1;
     }
     return map;
@@ -116,9 +99,9 @@
     const enabledCol = headerMap.enabled;
     if (!enabledCol) return;
     const rule = SpreadsheetApp.newDataValidation()
-      .requireCheckbox()
+      .requireValueInList(['TRUE', 'FALSE'], true)
       .setAllowInvalid(false)
-      .setHelpText('Прапорець: увімкнено / вимкнено')
+      .setHelpText('TRUE - активний, FALSE - заблокований адміністратором')
       .build();
     sh.getRange(2, enabledCol, MAX_SHEET_ROWS - 1, 1).setDataValidation(rule);
   }
@@ -244,11 +227,11 @@
     if (entry.email !== undefined) updates.email = entry.email;
     if (entry.phone !== undefined) updates.phone = normalizePhone_(entry.phone);
     if (entry.role !== undefined) updates.role = normalizeRole_(entry.role);
-    if (entry.enabled !== undefined) updates.enabled = !!entry.enabled;
+    if (entry.enabled !== undefined) updates.enabled = entry.enabled ? 'TRUE' : 'FALSE';
     if (entry.note !== undefined) updates.note = entry.note;
     if (entry.displayName !== undefined) updates.display_name = entry.displayName;
     if (entry.personCallsign !== undefined) updates.person_callsign = normalizeCallsign_(entry.personCallsign);
-    if (entry.selfBindAllowed !== undefined) updates.self_bind_allowed = !!entry.selfBindAllowed;
+    if (entry.selfBindAllowed !== undefined) updates.self_bind_allowed = entry.selfBindAllowed ? 'TRUE' : 'FALSE';
     if (entry.userKeyCurrentHash !== undefined) updates.user_key_current_hash = entry.userKeyCurrentHash;
     if (entry.userKeyPrevHash !== undefined) updates.user_key_prev_hash = entry.userKeyPrevHash;
     if (entry.lastSeenAt !== undefined) updates.last_seen_at = entry.lastSeenAt;
@@ -291,3 +274,4 @@
     _writeEntryByHeaderMap_(sheetRow, mapped);
     return mapped;
   }
+

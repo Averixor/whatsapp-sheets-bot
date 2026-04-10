@@ -8,7 +8,7 @@ const Reconciliation_ = (function () {
     const map = {};
     const duplicates = [];
     stage7AsArray_(rows).forEach(function (row) {
-      const key = makeSendPanelKey_(row.fml, row.phone, row.code);
+      const key = makeSendPanelKey_(row.fio, row.phone, row.code);
       if (!key || key === '||') return;
       if (!map[key]) map[key] = [];
       map[key].push(row);
@@ -42,7 +42,7 @@ const Reconciliation_ = (function () {
         const sample = expectedIndex.map[key][0];
         issues.push(_issue('missingExpectedItem', 'CRITICAL', true, {
           key: key,
-          fml: sample.fml,
+          fio: sample.fio,
           code: sample.code,
           expectedStatus: sample.status,
           expectedRow: sample.row
@@ -55,7 +55,7 @@ const Reconciliation_ = (function () {
         const sample = actualIndex.map[key][0];
         issues.push(_issue('orphanSendPanelRow', 'WARN', true, {
           key: key,
-          fml: sample.fml,
+          fio: sample.fio,
           code: sample.code,
           actualStatus: sample.status,
           actualRow: sample.row
@@ -67,7 +67,7 @@ const Reconciliation_ = (function () {
       const sample = actualIndex.map[key][0];
       issues.push(_issue('duplicateSendPanelRow', 'CRITICAL', true, {
         key: key,
-        fml: sample.fml,
+        fio: sample.fio,
         code: sample.code,
         count: actualIndex.map[key].length,
         rows: actualIndex.map[key].map(function (item) { return item.row; })
@@ -84,7 +84,7 @@ const Reconciliation_ = (function () {
       if (!act.link && exp.link) {
         issues.push(_issue('brokenActionLink', 'WARN', true, {
           key: key,
-          fml: act.fml,
+          fio: act.fio,
           code: act.code,
           actualRow: act.row
         }));
@@ -93,7 +93,7 @@ const Reconciliation_ = (function () {
       if (_allowedStatuses().indexOf(status) === -1 && !status.startsWith(getSendPanelErrorPrefix_())) {
         issues.push(_issue('staleStatus', 'WARN', true, {
           key: key,
-          fml: act.fml,
+          fio: act.fio,
           code: act.code,
           actualStatus: act.status,
           actualRow: act.row
@@ -165,7 +165,7 @@ const Reconciliation_ = (function () {
   function _expectedRowMap(check) {
     const map = {};
     stage7AsArray_(check.expectedRows).forEach(function (item) {
-      map[makeSendPanelKey_(item.fml, item.phone, item.code)] = item;
+      map[makeSendPanelKey_(item.fio, item.phone, item.code)] = item;
     });
     return map;
   }
@@ -185,7 +185,6 @@ const Reconciliation_ = (function () {
     const selected = stage7AsArray_(issues).filter(function (item) {
       return !allowedTypes.length || allowedTypes.indexOf(item.type) !== -1;
     });
-    
     return {
       selectedCount: selected.length,
       repairableCount: selected.filter(function (item) { return item.repairable; }).length,
@@ -238,15 +237,14 @@ const Reconciliation_ = (function () {
     const formattedPhone = String(expectedRow.phone || '').trim().startsWith('+')
       ? "'" + String(expectedRow.phone || '').trim()
       : String(expectedRow.phone || '').trim();
-    const status = deriveSendPanelStatusFromInputs_(expectedRow.fml || '', formattedPhone || '', expectedRow.code || '', expectedRow.tasks || '');
+    const status = deriveSendPanelStatusFromInputs_(expectedRow.fio || '', formattedPhone || '', expectedRow.code || '', expectedRow.tasks || '');
 
     panel.getRange(nextRow, 1, 1, 4).setValues([[
-      expectedRow.fml || '',
+      expectedRow.fio || '',
       formattedPhone || '',
       expectedRow.code || '',
       expectedRow.tasks || ''
     ]]);
-
     panel.getRange(nextRow, 6, 1, 2).setValues([[
       expectedRow.sent === true ? getSendPanelSentMark_() : getSendPanelUnsentMark_(),
       resolveSendPanelActionCellValue_(expectedRow.link || '', status, expectedRow.sent === true)

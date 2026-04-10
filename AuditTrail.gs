@@ -51,7 +51,7 @@ const Stage7AuditTrail_ = (function () {
     return {
       AUDIT_SHEET: DEFAULT_AUDIT_SHEET,
       AUDIT_HEADER_ROW: DEFAULT_HEADER_ROW
-    }
+    };
   }
 
   function _normalizeSheetName_(value) {
@@ -75,7 +75,7 @@ const Stage7AuditTrail_ = (function () {
     return {
       sheetName: _normalizeSheetName_(cfg.AUDIT_SHEET),
       headerRow: _normalizeHeaderRow_(cfg.AUDIT_HEADER_ROW)
-    }
+    };
   }
 
   function _asArray_(value) {
@@ -185,42 +185,34 @@ const Stage7AuditTrail_ = (function () {
     const width = Math.max(sheet.getLastColumn(), HEADERS.length, 1);
     return sheet.getRange(headerRow, 1, 1, width).getValues()[0];
   }
-    function _isHeaderValid_(sheet, headerRow) {
-      if (sheet.getLastRow() < headerRow) return false;
 
-      const headerLabels = (typeof stage7GetServiceSheetHeaderLabels_ === 'function')
-        ? stage7GetServiceSheetHeaderLabels_(_getSheetConfig_().sheetName, HEADERS)
-        : HEADERS.slice();
+  function _isHeaderValid_(sheet, headerRow) {
+    if (sheet.getLastRow() < headerRow) return false;
 
-      const existing = _readHeaderRow_(sheet, headerRow);
-      for (let i = 0; i < headerLabels.length; i++) {
-        if (String(existing[i] || '').trim() !== headerLabels[i]) {
-          return false;
-        }
+    const existing = _readHeaderRow_(sheet, headerRow);
+    for (let i = 0; i < HEADERS.length; i++) {
+      if (String(existing[i] || '').trim() !== HEADERS[i]) {
+        return false;
       }
-      return true;
+    }
+    return true;
+  }
+
+  function _ensureHeader_(sheet, headerRow) {
+    const valid = _isHeaderValid_(sheet, headerRow);
+    if (valid) return false;
+
+    sheet.getRange(headerRow, 1, 1, HEADERS.length).setValues([HEADERS]);
+    sheet.getRange(headerRow, 1, 1, HEADERS.length)
+      .setFontWeight('bold')
+      .setBackground('#e8eaed');
+
+    if (sheet.getFrozenRows() !== headerRow) {
+      sheet.setFrozenRows(headerRow);
     }
 
-    function _ensureHeader_(sheet, headerRow) {
-      const valid = _isHeaderValid_(sheet, headerRow);
-      if (valid) return false;
-
-      const headerLabels = (typeof stage7GetServiceSheetHeaderLabels_ === 'function')
-        ? stage7GetServiceSheetHeaderLabels_(_getSheetConfig_().sheetName, HEADERS)
-        : HEADERS.slice();
-
-      sheet.getRange(headerRow, 1, 1, HEADERS.length).setValues([headerLabels]);
-
-      if (typeof stage7ApplyTableTheme_ === 'function') {
-        stage7ApplyTableTheme_(sheet, headerRow, HEADERS.length, { freeze: false });
-      } else {
-        sheet.getRange(headerRow, 1, 1, HEADERS.length)
-          .setFontWeight('bold')
-          .setBackground('#e8eaed');
-      }
-
-      return true;
-    }
+    return true;
+  }
 
   function _ensureSheet_() {
     const cfg = _getSheetConfig_();
@@ -297,22 +289,11 @@ const Stage7AuditTrail_ = (function () {
 
   function _withDocumentLock_(fn) {
     const lock = LockService.getDocumentLock();
-    let acquired = false;
-
-    try {
-      acquired = lock.tryLock(250);
-    } catch (_) {
-      acquired = false;
-    }
-
+    lock.waitLock(LOCK_TIMEOUT_MS);
     try {
       return fn();
     } finally {
-      if (acquired) {
-        try {
-          lock.releaseLock();
-        } catch (_) {}
-      }
+      lock.releaseLock();
     }
   }
 
@@ -322,7 +303,7 @@ const Stage7AuditTrail_ = (function () {
         success: true,
         written: 0,
         sheet: _getSheetConfig_().sheetName
-      }
+      };
     }
 
     return _withDocumentLock_(function () {
@@ -336,7 +317,7 @@ const Stage7AuditTrail_ = (function () {
         sheet: sh.getName(),
         fromRow: targetRow,
         toRow: targetRow + rows.length - 1
-      }
+      };
     });
   }
 
@@ -351,14 +332,14 @@ const Stage7AuditTrail_ = (function () {
         sheet: sh.getName(),
         lastRow: sh.getLastRow(),
         headers: HEADERS.slice()
-      }
+      };
     } catch (e) {
       const errMsg = e && e.message ? e.message : String(e);
       Logger.log('[Stage7AuditTrail] ensureSheet error: ' + errMsg);
       return {
         success: false,
         error: errMsg
-      }
+      };
     }
   }
 
@@ -368,7 +349,7 @@ const Stage7AuditTrail_ = (function () {
         success: false,
         error: 'Entry is empty',
         written: 0
-      }
+      };
     }
 
     try {
@@ -380,7 +361,7 @@ const Stage7AuditTrail_ = (function () {
         success: false,
         error: errMsg,
         written: 0
-      }
+      };
     }
   }
 
@@ -395,7 +376,7 @@ const Stage7AuditTrail_ = (function () {
         success: false,
         error: errMsg,
         written: 0
-      }
+      };
     }
   }
 
@@ -410,7 +391,7 @@ const Stage7AuditTrail_ = (function () {
         return {
           success: false,
           error: 'LogsRepository not available'
-        }
+        };
       }
 
       const e = _normalizeEntry_(entry || {});
@@ -421,7 +402,7 @@ const Stage7AuditTrail_ = (function () {
         reportDateStr: dateStr,
         sheet: e.affectedSheets[0] || '',
         cell: e.operationId || '',
-        fml: e.affectedEntities[0] || '',
+        fio: e.affectedEntities[0] || '',
         phone: '',
         code: '',
         service: '',
@@ -432,7 +413,7 @@ const Stage7AuditTrail_ = (function () {
           1000
         ),
         link: ''
-      }
+      };
 
       return LogsRepository_.writeBatch([legacyRow]);
     } catch (err) {
@@ -441,7 +422,7 @@ const Stage7AuditTrail_ = (function () {
       return {
         success: false,
         error: errMsg
-      }
+      };
     }
   }
 

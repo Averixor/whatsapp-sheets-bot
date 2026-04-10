@@ -50,23 +50,6 @@ function _isEnabled_(v) {
 }
 
 /** Забираем карту шаблонов из листа (и кладём в Cache) */
-function ensureTemplatesSheet_() {
-  if (typeof stage7EnsureSimpleSheet_ === 'function') {
-    return stage7EnsureSimpleSheet_(
-      TEMPLATES_SHEET_NAME,
-      (typeof stage7GetServiceSheetHeaderLabels_ === 'function')
-        ? stage7GetServiceSheetHeaderLabels_(TEMPLATES_SHEET_NAME, ['KEY', 'TEXT', 'ENABLED', 'TAGS_HINT', 'NOTE'])
-        : ['Ключ', 'Текст', 'Увімкнено', 'Підказки тегів', 'Примітка'],
-      { freeze: false }
-    );
-  }
-
-  const ss = SpreadsheetApp.getActive();
-  let sh = ss.getSheetByName(TEMPLATES_SHEET_NAME);
-  if (!sh) sh = ss.insertSheet(TEMPLATES_SHEET_NAME);
-  return sh;
-}
-
 function _loadTemplatesMap_() {
   const cache = CacheService.getScriptCache();
   const primaryKey = _templatesCacheKey_();
@@ -88,7 +71,9 @@ function _loadTemplatesMap_() {
     } catch (e) {}
   }
 
-  const sh = ensureTemplatesSheet_();
+  const ss = SpreadsheetApp.getActive();
+  const sh = ss.getSheetByName(TEMPLATES_SHEET_NAME);
+  if (!sh) return {}; // листа нет — вернём пусто (HealthCheck скажет как исправить)
 
   const lastRow = sh.getLastRow();
   if (lastRow < 2) return {};

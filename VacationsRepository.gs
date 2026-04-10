@@ -11,7 +11,7 @@ const VacationsRepository_ = (function() {
 
     return rows.map(function(item) {
       return {
-        fml: String(item.fml || '').trim(),
+        fio: String(item.fio || '').trim(),
         startDateRaw: item.startDate,
         endDateRaw: item.endDate,
         vacationNo: String(item.vacationNo || '').trim(),
@@ -24,18 +24,18 @@ const VacationsRepository_ = (function() {
     });
   }
 
-  function findByFml(fml) {
-    const key = _normFml_(fml);
+  function findByFio(fio) {
+    const key = _normFio_(fio);
     return listAll().filter(function(item) {
-      return _normFml_(item.fml) === key;
+      return _normFio_(item.fio) === key;
     });
   }
 
-  function getCurrentForFml(fml, dateStr) {
+  function getCurrentForFio(fio, dateStr) {
     const target = DateUtils_.parseUaDate(dateStr) || new Date();
     target.setHours(12, 0, 0, 0);
 
-    const matches = findByFml(fml).filter(function(item) {
+    const matches = findByFio(fio).filter(function(item) {
       if (!item.active || !item.startDate || !item.endDate) return false;
       return target.getTime() >= item.startDate.getTime() && target.getTime() <= item.endDate.getTime();
     });
@@ -52,11 +52,11 @@ const VacationsRepository_ = (function() {
     };
   }
 
-  function getNextForFml(fml, dateStr) {
+  function getNextForFio(fio, dateStr) {
     const target = DateUtils_.parseUaDate(dateStr) || new Date();
     target.setHours(0, 0, 0, 0);
 
-    const future = findByFml(fml).filter(function(item) {
+    const future = findByFio(fio).filter(function(item) {
       return item.active && item.startDate && item.endDate && item.startDate.getTime() >= target.getTime();
     }).map(function(item) {
       return {
@@ -75,8 +75,8 @@ const VacationsRepository_ = (function() {
 
   return {
     listAll: listAll,
-    findByFml: findByFml,
-    getCurrentForFml: getCurrentForFml,
-    getNextForFml: getNextForFml
+    findByFio: findByFio,
+    getCurrentForFio: getCurrentForFio,
+    getNextForFio: getNextForFio
   };
 })();

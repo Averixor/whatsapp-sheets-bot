@@ -58,7 +58,7 @@ function runStage3HealthCheck_(options) {
     'SummaryRepository_',
     'LogsRepository_'
   ].forEach(function(name) {
-    const resolved = _diagResolveSymbolStage7_(name);
+    const resolved = _stage7ResolveSymbol_(name);
     const exists = typeof resolved === 'object' || typeof resolved === 'function';
     _stage7PushCheck_(checks, `Repository ${name}`, exists ? 'OK' : 'FAIL', exists ? 'Доступний' : 'Не знайдено', exists ? '' : 'Перевірте файл stage 7 repository');
   });
@@ -88,9 +88,9 @@ function runStage3HealthCheck_(options) {
 
   try {
     const contractChecks = [
-      apiStage7GetMonthsList(),
-      apiStage7GetSendPanelData(),
-      apiCheckVacationsAndBirthdays(_todayStr_())
+      apiGetMonthsList(),
+      apiGetSendPanelData(),
+      apiGetBirthdays(_todayStr_())
     ];
 
     contractChecks.forEach(function(result, idx) {
@@ -141,6 +141,7 @@ function runStage3HealthCheck_(options) {
   };
 }
 
+
 // =========================
 // STAGE 7 DIAGNOSTICS 2.0
 // =========================
@@ -173,7 +174,7 @@ function runStage4HealthCheck_(options) {
     'Stage7Triggers_',
     'Stage7Templates_'
   ].forEach(function(name) {
-    const resolved = _diagResolveSymbolStage7_(name);
+    const resolved = _stage7ResolveSymbol_(name);
     const exists = typeof resolved === 'object' || typeof resolved === 'function';
     _stage7PushCheck_(
       checks,
@@ -319,7 +320,6 @@ function runStage4HealthCheck_(options) {
     ts: new Date().toISOString()
   };
 }
-
 function runStage5MetadataConsistencyCheck_() {
   const checks = [];
   const meta = typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_() : PROJECT_BUNDLE_METADATA_;
@@ -344,7 +344,7 @@ function runStage5MetadataConsistencyCheck_() {
   _stage7PushCheck_(checks, 'Sunset policy marker', meta.sunsetPolicyMarker === 'stage7-sunset-governed' ? 'OK' : 'WARN', `sunsetPolicyMarker=${meta.sunsetPolicyMarker || 'n/a'}`, 'Зафіксуйте Stage 7 sunset policy marker');
 
   _stage7PushCheck_(checks, 'Canonical maintenance file', maintenancePolicy && maintenancePolicy.canonicalFile === 'Stage7MaintenanceApi.gs' ? 'OK' : 'FAIL', maintenancePolicy && maintenancePolicy.canonicalFile ? maintenancePolicy.canonicalFile : 'Не задано', 'Оновіть maintenance policy');
-  _stage7PushCheck_(checks, 'Canonical maintenance policy', maintenancePolicy && !maintenancePolicy.compatibilityFile ? 'OK' : 'WARN', maintenancePolicy && !maintenancePolicy.compatibilityFile ? 'legacy facade removed' : (maintenancePolicy && maintenancePolicy.compatibilityFile ? maintenancePolicy.compatibilityFile : 'Не задано'), 'Приберіть legacy maintenance facade з metadata/policy');
+  _stage7PushCheck_(checks, 'Compatibility maintenance facade', maintenancePolicy && maintenancePolicy.compatibilityFile === 'LegacyMaintenanceAliases.gs' ? 'OK' : 'WARN', maintenancePolicy && maintenancePolicy.compatibilityFile ? maintenancePolicy.compatibilityFile : 'Не задано', 'Явно позначте compatibility facade');
 
   const clientRuntimePolicy = meta && meta.clientRuntimePolicy || {};
   _stage7PushCheck_(checks, 'Client runtime file', clientRuntimePolicy.runtimeFile === 'JavaScript.html' ? 'OK' : 'FAIL', clientRuntimePolicy.runtimeFile || 'Не задано', 'Зафіксуйте JavaScript.html як canonical runtime');
@@ -384,7 +384,6 @@ function runStage5MetadataConsistencyCheck_() {
 
   return checks;
 }
-
 function runQuickDiagnostics_(options) {
   var opts = options || {};
   var legacyHealth = _diagNormalizeReportChecks_(healthCheck(), 'Health');
@@ -392,7 +391,6 @@ function runQuickDiagnostics_(options) {
   var checks = _diagMergeChecks_(legacyHealth, stage7);
   return _diagBuildReport_(checks, opts.mode || 'quick', 'Stage 7 quick diagnostics');
 }
-
 function runStructuralDiagnostics_(options) {
   var opts = options || {};
   var checks = _diagMergeChecks_(
@@ -402,7 +400,6 @@ function runStructuralDiagnostics_(options) {
   );
   return _diagBuildReport_(checks, opts.mode || 'structural', 'Stage 7 structural diagnostics');
 }
-
 function runOperationalDiagnostics_(options) {
   var opts = options || {};
   var extra = [];
@@ -417,14 +414,12 @@ function runOperationalDiagnostics_(options) {
   );
   return _diagBuildReport_(checks, opts.mode || 'operational', 'Stage 7 operational diagnostics');
 }
-
 function runSunsetDiagnostics_(options) {
   var opts = options || {};
   var checks = [];
   _diagAppendCompatibilitySplitCheck_(checks);
   return _diagBuildReport_(_diagNormalizeReportChecks_({ checks: checks }), opts.mode || 'compatibility sunset', 'Stage 7 compatibility diagnostics');
 }
-
 function runHardeningDiagnostics_(options) {
   var opts = options || {};
   var extra = [];
@@ -436,7 +431,6 @@ function runHardeningDiagnostics_(options) {
   );
   return _diagBuildReport_(checks, opts.mode || 'stage7-hardening', 'Stage 7 lifecycle hardening diagnostics');
 }
-
 function runFullDiagnostics_(options) {
   var opts = options || {};
   var extra = [];
@@ -456,7 +450,6 @@ function runFullDiagnostics_(options) {
 
   return _diagBuildReport_(checks, opts.mode || 'full', _releaseStageLabel_());
 }
-
 function runFullVerboseDiagnostics_(options) {
   var base = runFullDiagnostics_(options || {});
   var hardening = runHardeningDiagnostics_({ mode: 'stage7-hardening' });

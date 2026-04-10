@@ -109,11 +109,11 @@ function _veRaportEnabled_() {
   return true;
 }
 
-function _veNormId_(fml) {
+function _veNormId_(fio) {
   try {
-    if (typeof _normFmlVac_ === 'function') return _normFmlVac_(fml);
+    if (typeof _normFioVac_ === 'function') return _normFioVac_(fio);
   } catch (_) { }
-  return String(fml || '')
+  return String(fio || '')
     .toLowerCase()
     .replace(/[ʼ'`’"]/g, '')
     .replace(/\s+/g, '_')
@@ -234,7 +234,7 @@ function _vePrepareData_(data) {
       data.callsign || '',
     callsign: data.callsign ||
       data.name || '',
-    fml: data.fml || '',
+    fio: data.fio || '',
     surname: data.surname || '',
     startDate: data.startDate ||
       data.date_start || '',
@@ -328,9 +328,9 @@ function _veProfilesList_() {
     const profiles = loadPhonesProfiles_();
     if (!profiles)
       return [];
-    if (profiles.byFml &&
-      typeof profiles.byFml === 'object') {
-      return Object.values(profiles.byFml);
+    if (profiles.byFio &&
+      typeof profiles.byFio === 'object') {
+      return Object.values(profiles.byFio);
     }
     if (Array.isArray(profiles))
       return profiles;
@@ -383,22 +383,22 @@ function _veBuildVacationCommanderMessage_(kind, data) {
       return _veRenderTemplateOrFallback_(
         VACATION_ENGINE_CONFIG.COMMANDER_RAPORT_TEMPLATE,
         d,
-        `Боєць ${d.callsign} (${d.fml}) планує йти у відпустку через ${d.days} днів.\nУ період: ${d.startDate} - ${d.endDate}\n\nНеобхідно нагадати ШАХТАРЮ щоб він написав рапорт.`
+        `Боєць ${d.callsign} (${d.fio}) планує йти у відпустку через ${d.days} днів.\nУ період: ${d.startDate} - ${d.endDate}\n\nНеобхідно нагадати ШАХТАРЮ щоб він написав рапорт.`
       );
     case 'soon_3':
       return _veRenderTemplateOrFallback_(
         VACATION_ENGINE_CONFIG.COMMANDER_SOON3_TEMPLATE,
         d,
-        `Боєць ${d.callsign} (${d.fml}) через 3 дні йде у відпустку.\nПеріод: ${d.startDate} - ${d.endDate}`
+        `Боєць ${d.callsign} (${d.fio}) через 3 дні йде у відпустку.\nПеріод: ${d.startDate} - ${d.endDate}`
       );
     case 'tomorrow':
       return _veRenderTemplateOrFallback_(
         VACATION_ENGINE_CONFIG.COMMANDER_TODAY_TEMPLATE,
         d,
-        `Боєць ${d.callsign} (${d.fml}) Завтра йде у відпустку!\nПеріод: ${d.startDate} - ${d.endDate}\n\nНе турбувати!`
+        `Боєць ${d.callsign} (${d.fio}) Завтра йде у відпустку!\nПеріод: ${d.startDate} - ${d.endDate}\n\nНе турбувати!`
       );
     default:
-      return `Нагадування по відпустці: ${d.callsign} (${d.fml}).`;
+      return `Нагадування по відпустці: ${d.callsign} (${d.fio}).`;
   }
 }
 
@@ -437,13 +437,13 @@ function runVacationEngine_(targetDate) {
     const commanderPhone = VACATION_ENGINE_CONFIG.NOTIFY_COMMANDER ?
       _veCommanderPhone_() : '';
     for (const row of rows) {
-      const fml = String(row[VACATION_ENGINE_CONFIG.NAME_COL - 1] || '').trim();
+      const fio = String(row[VACATION_ENGINE_CONFIG.NAME_COL - 1] || '').trim();
       const startValue = row[VACATION_ENGINE_CONFIG.START_COL - 1];
       const endValue = row[VACATION_ENGINE_CONFIG.END_COL - 1];
       const vacationWordRaw = String(row[VACATION_ENGINE_CONFIG.NUM_COL - 1] || '').trim();
       const isActive = _veBool_(row[VACATION_ENGINE_CONFIG.ACTIVE_COL - 1], false);
       const notifyPerson = _veBool_(row[VACATION_ENGINE_CONFIG.NOTIFY_COL - 1], true);
-      if (!fml || !isActive) continue;
+      if (!fio || !isActive) continue;
       result.debug.activeRows++;
       const startDate = _veParseDate_(startValue);
       const endDate = _veParseDate_(endValue);
@@ -452,18 +452,18 @@ function runVacationEngine_(targetDate) {
       const daysUntil = Math.round((startDate.getTime() - today.getTime()) / 86400000);
       if (daysUntil < 0) continue;
       result.debug.futureRows++;
-      const surname = fml.split(' ')[0] || fml;
+      const surname = fio.split(' ')[0] || fio;
       const callsign =
-        (typeof _getCallsignByFml_ ===
-          'function' ? _getCallsignByFml_(fml) : '') ||
+        (typeof _getCallsignByFio_ ===
+          'function' ? _getCallsignByFio_(fio) : '') ||
         surname;
-      const name = String(callsign || surname || fml).trim();
+      const name = String(callsign || surname || fio).trim();
       const vacationNum = _veVacationWordToNumber_(vacationWordRaw);
       const vacationWord = _veNumberToVacationWord_(vacationNum);
       const startStr = Utilities.formatDate(startDate, tz, 'dd.MM.yyyy');
       const endStr = Utilities.formatDate(endDate, tz, 'dd.MM.yyyy');
       const baseData = {
-        fml: fml,
+        fio: fio,
         surname: surname,
         callsign: callsign,
         name: name,
@@ -479,20 +479,20 @@ function runVacationEngine_(targetDate) {
       };
 
       const soldierPhone =
-        notifyPerson && typeof _getPhoneByFml_ === 'function'
-          ? _getPhoneByFml_(fml)
+        notifyPerson && typeof _getPhoneByFio_ === 'function'
+          ? _getPhoneByFio_(fio)
           : '';
 
       if (raportEnabled && VACATION_ENGINE_CONFIG.RAPORT_DAYS.includes(daysUntil)) {
         result.raportReminders.push({
-          fml: fml,
+          fio: fio,
           surname: surname,
           callsign: callsign,
           startDate: startStr,
           endDate: endStr,
           daysUntil: daysUntil,
           vacationWord: vacationWord,
-          id: `raport_${_veNormId_(fml)}_${startStr}_${daysUntil}`
+          id: `raport_${_veNormId_(fio)}_${startStr}_${daysUntil}`
         });
 
         if (commanderPhone) {
@@ -500,7 +500,7 @@ function runVacationEngine_(targetDate) {
             'report', baseData);
           result.commanderMessages.push({
             type: 'commander_report',
-            fml: fml,
+            fio: fio,
             callsign: callsign,
             daysUntil: daysUntil,
             startDate: startStr,
@@ -508,7 +508,7 @@ function runVacationEngine_(targetDate) {
             vacationWord: vacationWord,
             message: commanderMessage,
             link: _veWaLink_(commanderPhone, commanderMessage),
-            id: `commander_report_${_veNormId_(fml)}_${startStr}_${daysUntil}`
+            id: `commander_report_${_veNormId_(fio)}_${startStr}_${daysUntil}`
           });
         }
 
@@ -517,7 +517,7 @@ function runVacationEngine_(targetDate) {
             'report', baseData);
           result.soldierMessages.push({
             type: 'soldier_report',
-            fml: fml,
+            fio: fio,
             surname: surname,
             callsign: callsign,
             phone: soldierPhone,
@@ -528,11 +528,11 @@ function runVacationEngine_(targetDate) {
             vacationWord: vacationWord,
             message: soldierMessage,
             link: _veWaLink_(soldierPhone, soldierMessage),
-            id: `soldier_report_${_veNormId_(fml)}_${startStr}_${daysUntil}`
+            id: `soldier_report_${_veNormId_(fio)}_${startStr}_${daysUntil}`
           });
         }
         result.debug.processed.push(
-          `РАПОРТ: ${fml} (
+          `РАПОРТ: ${fio} (
             ${daysUntil})
           `);
         continue;
@@ -544,7 +544,7 @@ function runVacationEngine_(targetDate) {
 
           result.commanderMessages.push({
             type: 'commander_soon_3',
-            fml: fml,
+            fio: fio,
             callsign: callsign,
             daysUntil: 3,
             startDate: startStr,
@@ -552,7 +552,7 @@ function runVacationEngine_(targetDate) {
             vacationWord: vacationWord,
             message: commanderMessage,
             link: _veWaLink_(commanderPhone, commanderMessage),
-            id: `commander_soon3_${_veNormId_(fml)}_${startStr}`
+            id: `commander_soon3_${_veNormId_(fio)}_${startStr}`
           });
         }
 
@@ -561,7 +561,7 @@ function runVacationEngine_(targetDate) {
 
           result.soldierMessages.push({
             type: 'soldier_soon_3',
-            fml: fml,
+            fio: fio,
             surname: surname,
             callsign: callsign,
             phone: soldierPhone,
@@ -572,10 +572,10 @@ function runVacationEngine_(targetDate) {
             vacationWord: vacationWord,
             message: soldierMessage,
             link: _veWaLink_(soldierPhone, soldierMessage),
-            id: `soldier_soon3_${_veNormId_(fml)}_${startStr}`
+            id: `soldier_soon3_${_veNormId_(fio)}_${startStr}`
           });
         }
-        result.debug.processed.push(`ЗА 3 ДНІ: ${fml}`);
+        result.debug.processed.push(`ЗА 3 ДНІ: ${fio}`);
         continue;
       }
 
@@ -585,7 +585,7 @@ function runVacationEngine_(targetDate) {
 
           result.commanderMessages.push({
             type: 'commander_tomorrow',
-            fml: fml,
+            fio: fio,
             callsign: callsign,
             daysUntil: 1,
             startDate: startStr,
@@ -593,7 +593,7 @@ function runVacationEngine_(targetDate) {
             vacationWord: vacationWord,
             message: commanderMessage,
             link: _veWaLink_(commanderPhone, commanderMessage),
-            id: `commander_tomorrow_${_veNormId_(fml)}_${startStr}`
+            id: `commander_tomorrow_${_veNormId_(fio)}_${startStr}`
           });
         }
 
@@ -602,7 +602,7 @@ function runVacationEngine_(targetDate) {
 
           result.soldierMessages.push({
             type: 'soldier_tomorrow',
-            fml: fml,
+            fio: fio,
             surname: surname,
             callsign: callsign,
             phone: soldierPhone,
@@ -613,11 +613,11 @@ function runVacationEngine_(targetDate) {
             vacationWord: vacationWord,
             message: soldierMessage,
             link: _veWaLink_(soldierPhone, soldierMessage),
-            id: `soldier_tomorrow_${_veNormId_(fml)}_${startStr}`
+            id: `soldier_tomorrow_${_veNormId_(fio)}_${startStr}`
           });
         }
 
-        result.debug.processed.push(`ЗА 1 ДЕНЬ: ${fml}`);
+        result.debug.processed.push(`ЗА 1 ДЕНЬ: ${fio}`);
       }
     }
 
@@ -685,7 +685,7 @@ function _veBuildBirthdayCommanderMessage_(data) {
     return _veRenderTemplateOrFallback_(
       BIRTHDAY_ENGINE_CONFIG.COMMANDER_TEMPLATE_3,
       d,
-      `🎂 Нагадування: у ${d.callsign} (${d.fml}) через 3 дні День Народження (${d.birthday}).`
+      `🎂 Нагадування: у ${d.callsign} (${d.fio}) через 3 дні День Народження (${d.birthday}).`
     );
   }
 
@@ -693,14 +693,14 @@ function _veBuildBirthdayCommanderMessage_(data) {
     return _veRenderTemplateOrFallback_(
       BIRTHDAY_ENGINE_CONFIG.COMMANDER_TEMPLATE_2,
       d,
-      `🎂 Нагадування: у ${d.callsign} (${d.fml}) через 2 дні День Народження (${d.birthday}).`
+      `🎂 Нагадування: у ${d.callsign} (${d.fio}) через 2 дні День Народження (${d.birthday}).`
     );
   }
 
   return _veRenderTemplateOrFallback_(
     BIRTHDAY_ENGINE_CONFIG.COMMANDER_TEMPLATE_1,
     d,
-    `🎂 Нагадування: у ${d.callsign} (${d.fml}) завтра День Народження (${d.birthday}).`
+    `🎂 Нагадування: у ${d.callsign} (${d.fio}) завтра День Народження (${d.birthday}).`
   );
 }
 
@@ -713,7 +713,7 @@ function _veBuildBirthdayGreetingMessage_(data) {
       callsign: d.name || d.callsign || '',
       name: d.name || d.callsign || '',
       age: d.age || '',
-      fml: d.fml || ''
+      fio: d.fio || ''
     });
   }
 
@@ -748,7 +748,7 @@ function runBirthdayEngine_(targetDate) {
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      if (!item || !item.fml || !item.birthday) continue;
+      if (!item || !item.fio || !item.birthday) continue;
 
       const birth = _veParseBirthdayParts_(item.birthday);
       if (!birth) continue;
@@ -763,12 +763,12 @@ function runBirthdayEngine_(targetDate) {
       const daysUntil = Math.round((nextBirthday.getTime() - today.getTime()) / 86400000);
       if ([3, 2, 1, 0].indexOf(daysUntil) === -1) continue;
 
-      const callsign = String(item.role || '').trim() || String(item.fml).split(' ')[0];
-      const name = callsign || item.fml;
+      const callsign = String(item.role || '').trim() || String(item.fio).split(' ')[0];
+      const name = callsign || item.fio;
       const age = (birth.year && daysUntil === 0) ? (today.getFullYear() - birth.year) : null;
 
       const baseData = {
-        fml: item.fml,
+        fio: item.fio,
         callsign: callsign,
         name: name,
         phone: item.phone || '',
@@ -782,13 +782,13 @@ function runBirthdayEngine_(targetDate) {
 
         result.commanderMessages.push({
           type: 'birthday_commander_notice',
-          fml: item.fml,
+          fio: item.fio,
           callsign: callsign,
           birthday: item.birthday,
           daysUntil: daysUntil,
           message: message,
           link: _veWaLink_(commanderPhone, message),
-          id: `birthday_commander_${_veNormId_(item.fml)}_${daysUntil}`
+          id: `birthday_commander_${_veNormId_(item.fio)}_${daysUntil}`
         });
       }
 
@@ -798,18 +798,18 @@ function runBirthdayEngine_(targetDate) {
 
         result.birthdayMessages.push({
           type: 'birthday_person_greeting',
-          fml: item.fml,
+          fio: item.fio,
           displayName: name,
           birthday: item.birthday,
           daysUntil: 0,
           phone: phone,
           message: message,
           link: phone ? _veWaLink_(phone, message) : '',
-          id: `birthday_person_${_veNormId_(item.fml)}`
+          id: `birthday_person_${_veNormId_(item.fio)}`
         });
       }
 
-      result.debug.push(`${item.fml}: ${daysUntil}`);
+      result.debug.push(`${item.fio}: ${daysUntil}`);
     }
 
     result.commanderMessages.sort(function (a, b) { return b.daysUntil - a.daysUntil; });

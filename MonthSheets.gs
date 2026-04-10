@@ -93,19 +93,16 @@ function switchBotToSheet() {
   const html = HtmlService.createHtmlOutput(`
     <div style="font-family:Arial;padding:16px">
       <h3 style="margin:0 0 12px;color:#075e54">⇄ Перемкнути бота на місяць</h3>
-
       <div style="margin:10px 0">
         <div style="font-size:12px;color:#666;margin-bottom:6px">Поточний: <b>${HtmlUtils_.escapeHtml(current)}</b></div>
         <select id="m" style="padding:10px;width:100%;border:1px solid #ddd;border-radius:10px;font-size:16px">
           ${options}
         </select>
       </div>
-
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
         <button onclick="google.script.host.close()" style="padding:10px 14px;border:1px solid #ddd;border-radius:10px;background:#f8f9fa;cursor:pointer">Скасувати</button>
         <button onclick="go()" style="padding:10px 16px;border:0;border-radius:10px;background:#25D366;color:#fff;font-weight:bold;cursor:pointer">✓ Перемкнути</button>
       </div>
-      
       <script>
         function go(){
           const v = document.getElementById('m').value;

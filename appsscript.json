@@ -9,6 +9,6 @@
     "https://www.googleapis.com/auth/userinfo.email"
   ],
   "executionApi": {
-    "access": "ANYONE"
+    "access": "MYSELF"
   }
 }

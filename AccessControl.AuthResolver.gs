@@ -23,6 +23,8 @@
     return Object.assign({}, _policyCache);
   }
 
+
+
   // ==================== UNIFIED USER RESOLVER ====================
 
   function _resolveAccessSubject_(context, options = {}) {
@@ -643,3 +645,4 @@
       allowedActions: listAllowedActionsForRole_(role)
     };
   }
+

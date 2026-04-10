@@ -28,7 +28,7 @@ function sendFromSidebar(personData) {
       reportDateStr: personData.date || '',
       sheet: getBotMonthSheetName_(),
       cell: `${String.fromCharCode(64 + Number(personData.col || 0))}${personData.row || ''}`,
-      fml: personData.fml || '',
+      fio: personData.fio || '',
       phone: personData.phone || '',
       code: personData.code || '',
       service: personData.service || '',
@@ -69,7 +69,7 @@ function sendAllFromSidebar(personnelList) {
         reportDateStr: item.date || '',
         sheet: getBotMonthSheetName_(),
         cell: `${String.fromCharCode(64 + Number(item.col || 0))}${item.row || ''}`,
-        fml: item.fml || '',
+        fio: item.fio || '',
         phone: item.phone || '',
         code: item.code || '',
         service: item.service || '',
@@ -111,7 +111,7 @@ function sendDaySummaryToCommanderSidebar(dateStr, summaryText) {
       reportDateStr: dateStr || '',
       sheet: 'COMMANDER',
       cell: 'SUMMARY',
-      fml: `Командир (${CONFIG.COMMANDER_ROLE})`,
+      fio: `Командир (${CONFIG.COMMANDER_ROLE})`,
       phone: phone,
       code: 'SUMMARY',
       message: String(summaryText).substring(0, 100) + '...',
@@ -146,7 +146,7 @@ function sendDetailedToCommanderSidebar(dateStr, detailedText) {
       reportDateStr: dateStr || '',
       sheet: 'COMMANDER',
       cell: 'DETAILED',
-      fml: `Командир (${CONFIG.COMMANDER_ROLE})`,
+      fio: `Командир (${CONFIG.COMMANDER_ROLE})`,
       phone: phone,
       code: 'DETAILED',
       message: String(detailedText).substring(0, 100) + '...',
@@ -167,21 +167,24 @@ function testCommanderPhone() {
     let result = `🔍 ПОШУК ТЕЛЕФОНУ КОМАНДИРА
 `;
     result += `============================
+
 `;
     result += `Роль в конфігу: "${role}"
+
 `;
     result += `📞 Canonical lookup: ${findPhone_({ role: role }) || '✕'}
 `;
     result += `📞 byRole[${role}]: ${phoneIndex && phoneIndex.byRole ? (phoneIndex.byRole[role] || phoneIndex.byRole[_normCallsignKey_(role)] || '✕') : '✕'}
 `;
     result += `📞 byCallsign[${role}]: ${phoneIndex && phoneIndex.byCallsign ? (phoneIndex.byCallsign[role] || phoneIndex.byCallsign[_normCallsignKey_(role)] || '✕') : '✕'}
+
 `;
     result += `📋 Можливі кандидати:
 `;
 
     let found = 0;
     (phoneIndex && Array.isArray(phoneIndex.items) ? phoneIndex.items : []).forEach(function(item) {
-      const probe = [item.role, item.callsign, item.fml].filter(Boolean).join(' | ');
+      const probe = [item.role, item.callsign, item.fio].filter(Boolean).join(' | ');
       const upperProbe = probe.toUpperCase();
       if (upperProbe.indexOf('КОМАНДИР') !== -1 || upperProbe.indexOf('КВ') !== -1 || upperProbe.indexOf('ГРАФ') !== -1 || upperProbe.indexOf(String(role || '').toUpperCase()) !== -1) {
         result += `  ${probe} → ${item.phone || '—'}
@@ -192,6 +195,7 @@ function testCommanderPhone() {
 
     if (!found) {
       result += `  (нічого не знайдено)
+
 `;
       result += `✕ В листі PHONES немає запису для командира. Додайте роль або позивний "${role}".`;
     }
@@ -202,7 +206,15 @@ function testCommanderPhone() {
   }
 }
 
-// ==================== REQUIRED HEALTHCHECK BRIDGE WRAPPERS ====================
+// ==================== THIN COMPATIBILITY WRAPPERS ====================
+function getMonthsList() {
+  return apiStage7GetMonthsList();
+}
+
+function getSidebarData(dateStr) {
+  return apiStage7GetSidebarData(dateStr || _todayStr_());
+}
+
 function generateSendPanelSidebar(options) {
   return apiGenerateSendPanelForDate(options || {});
 }
@@ -219,6 +231,22 @@ function getDetailedDaySummaryByDate(dateStr) {
   return apiBuildDetailedSummary(dateStr || _todayStr_());
 }
 
+function checkVacationsAndNotifySidebar(dateStr) {
+  return apiCheckVacationsAndBirthdays(dateStr || _todayStr_());
+}
+
+function createNextMonthSheetSidebar() {
+  return apiStage7CreateNextMonth({ switchToNewMonth: true });
+}
+
+function switchBotToMonthSidebar(monthSheetName) {
+  return apiStage7SwitchBotToMonth(monthSheetName || '');
+}
+
 function markMultipleAsSentFromSidebar(rowNumbers, opts) {
   return apiMarkPanelRowsAsSent(rowNumbers, opts || {});
+}
+
+function markMultipleAsUnsentFromSidebar(rowNumbers, opts) {
+  return apiMarkPanelRowsAsUnsent(rowNumbers, opts || {});
 }

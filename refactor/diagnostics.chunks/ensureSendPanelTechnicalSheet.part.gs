@@ -19,7 +19,7 @@ function _ensureSendPanelTechnicalSheet_() {
 
   if (sh.getLastRow() < 2) {
     sh.getRange(2, 1, 1, 7)
-      .setValues([['FML', 'Phone', 'Code', 'Tasks', 'Status', 'Sent', 'Action']])
+      .setValues([['FIO', 'Phone', 'Code', 'Tasks', 'Status', 'Sent', 'Action']])
       .setFontWeight('bold')
       .setHorizontalAlignment('center')
       .setBackground('#f0f0f0');

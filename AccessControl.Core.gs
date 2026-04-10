@@ -94,6 +94,8 @@
     'locked_until_ms'
   ]);
 
+
+
   // ==================== REASON CODES ====================
   const REASON_CODES = Object.freeze({
     OK: 'access.ok',
@@ -117,6 +119,8 @@
     SELF_BIND_IDENTIFIER_MISMATCH: 'access.self_bind.identifier_mismatch',
     SELF_BIND_LOGIN_BLOCKED: 'access.self_bind.login_blocked'
   });
+
+
 
   // ==================== UTILITIES ====================
 
@@ -377,6 +381,8 @@
     return Math.round(Number(durationMs || 0) / 60000);
   }
 
+
+
   // ==================== HASHING ====================
 
   function hashRawUserKey_(rawKey) {
@@ -424,3 +430,4 @@
     }
     return '';
   }
+

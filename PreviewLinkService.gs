@@ -36,7 +36,7 @@ const PreviewLinkService_ = (function() {
       title: opts.title || 'Повідомлення',
       logged: !!opts.logged,
       item: {
-        fml: item.fml || '',
+        fio: item.fio || '',
         phone: item.phone || '',
         code: item.code || '',
         cell: item.cell || '',
@@ -57,7 +57,7 @@ const PreviewLinkService_ = (function() {
       count: list.length,
       items: list.map(function(item) {
         return {
-          fml: item.fml || '',
+          fio: item.fio || '',
           phone: item.phone || '',
           code: item.code || '',
           cell: item.cell || '',
@@ -71,7 +71,7 @@ const PreviewLinkService_ = (function() {
           ? { message: item }
           : {
               cell: item.cell || '',
-              fml: item.fml || '',
+              fio: item.fio || '',
               code: item.code || '',
               message: item.error || item.message || ''
             };

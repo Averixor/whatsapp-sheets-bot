@@ -30,12 +30,12 @@ function checkDuplicates() {
       });
     }
 
-    const fmlCol = findCol(['піб', 'фіо', 'фио']);
+    const fioCol = findCol(['піб', 'фіо', 'фио']);
     const callsignCol = findCol(['позив', 'callsign', 'роль']);
     const phoneCol = findCol(['тел', 'phone']);
 
     const counters = {
-      fml: {},
+      fio: {},
       callsign: {},
       phone: {}
     };
@@ -43,11 +43,11 @@ function checkDuplicates() {
     data.forEach(function (row, idx) {
       const r = idx + 2;
 
-      if (fmlCol >= 0) {
-        const fml = String(row[fmlCol] || '').trim().toUpperCase();
-        if (fml) {
-          if (!counters.fml[fml]) counters.fml[fml] = [];
-          counters.fml[fml].push(r);
+      if (fioCol >= 0) {
+        const fio = String(row[fioCol] || '').trim().toUpperCase();
+        if (fio) {
+          if (!counters.fio[fio]) counters.fio[fio] = [];
+          counters.fio[fio].push(r);
         }
       }
 
@@ -70,7 +70,7 @@ function checkDuplicates() {
 
     const dups = [];
 
-    Object.entries(counters.fml).forEach(function (entry) {
+    Object.entries(counters.fio).forEach(function (entry) {
       const value = entry[0];
       const rows = entry[1];
       if (rows.length > 1) {

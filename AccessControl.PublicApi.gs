@@ -35,6 +35,8 @@
     return null;
   }
 
+
+
   // ==================== ASSERT / ENFORCEMENT ====================
 
   function assertRoleAtLeast(requiredRole, actionLabel) {
@@ -78,6 +80,8 @@
     return descriptor;
   }
 
+
+
   // ==================== EMAIL ROLE LISTS ====================
 
   function listEmailsByRole(role) {
@@ -108,6 +112,8 @@
     return _findByEmailInSheet_(normalizedEmail, { includeLocked: true, includeDisabled: true });
   }
 
+
+
   // ==================== ROLE HELPERS ====================
 
   function getRoleMeta_(role) {
@@ -134,6 +140,8 @@
       default: return ['безпечний перегляд'];
     }
   }
+
+
 
   // ==================== VALIDATION & DIAGNOSTICS ====================
 
@@ -206,7 +214,7 @@
       }
 
       const enabledCol = raw.headerMap.enabled;
-      const rawEnabled = enabledCol ? String(raw.rawRow[enabledCol - 1] === '' || raw.rawRow[enabledCol - 1] === null ? 'true' : raw.rawRow[enabledCol - 1]).trim().toLowerCase() : 'true';
+      const rawEnabled = enabledCol ? String(raw.rawRow[enabledCol - 1] || '').trim().toLowerCase() : 'true';
       const isValidEnabled = ['true', 'false', '1', '0', 'yes', 'no', 'так', 'ні', ''].includes(rawEnabled);
       if (!isValidEnabled) {
         issues.push('Рядок ' + rowNum + ': некоректне значення enabled "' + rawEnabled + '"');
@@ -228,7 +236,7 @@
         exists: !!sh,
         headersPresent: SHEET_HEADERS.every(h => headerMap[h] !== undefined),
         missingHeaders: SHEET_HEADERS.filter(h => headerMap[h] === undefined),
-        headersCanonical: sh ? (typeof stage7AccessHeadersCanonical_ === 'function' ? stage7AccessHeadersCanonical_(sh) : sh.getRange(1, 1, 1, SHEET_HEADERS.length).getValues()[0].every((v, i) => v === SHEET_HEADERS[i])) : false
+        headersCanonical: sh ? sh.getRange(1, 1, 1, SHEET_HEADERS.length).getValues()[0].every((v, i) => v === SHEET_HEADERS[i]) : false
       },
       dataIntegrity: {
         duplicateEmails: [],
@@ -299,7 +307,7 @@
       }
 
       const enabledCol = raw.headerMap.enabled;
-      const rawEnabled = enabledCol ? String(raw.rawRow[enabledCol - 1] === '' || raw.rawRow[enabledCol - 1] === null ? 'true' : raw.rawRow[enabledCol - 1]).trim().toLowerCase() : 'true';
+      const rawEnabled = enabledCol ? String(raw.rawRow[enabledCol - 1] || '').trim().toLowerCase() : 'true';
       const isValidEnabled = ['true', 'false', '1', '0', 'yes', 'no', 'так', 'ні', ''].includes(rawEnabled);
       if (!isValidEnabled) {
         diagnostics.dataIntegrity.invalidEnabledValues.push({ row: rowNum, enabled: rawEnabled });
@@ -341,6 +349,8 @@
       }
     };
   }
+
+
 
   // ==================== SHEET UI ====================
 
@@ -405,6 +415,8 @@
 
     _invalidateAccessCaches_();
   }
+
+
 
   // ==================== TESTS ====================
 
@@ -502,6 +514,8 @@
 
     return results;
   }
+
+
 
   // ==================== EXPORTS ====================
 

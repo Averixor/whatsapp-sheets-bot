@@ -8,27 +8,22 @@ function _ensureLogSheet_() {
   }
 
   const headers = [
-    'Часова позначка',
-    'Дата звіту',
-    'Аркуш',
-    'Комірка',
-    'ПІБ',
-    'Телефон',
-    'Код',
-    'Служба',
-    'Місце',
-    'Завдання',
-    'Повідомлення',
-    'Посилання'
+    'Timestamp',
+    'ReportDate',
+    'Sheet',
+    'Cell',
+    'FIO',
+    'Phone',
+    'Code',
+    'Service',
+    'Place',
+    'Tasks',
+    'Message',
+    'Link'
   ];
 
   if (sh.getLastRow() === 0) {
     sh.getRange(1, 1, 1, headers.length).setValues([headers]);
-  }
-
-  if (typeof stage7ApplyTableTheme_ === 'function') {
-    stage7ApplyTableTheme_(sh, 1, headers.length, { freeze: false, headerBackground: '#f0f0f0' });
-  } else {
     sh.getRange(1, 1, 1, headers.length)
       .setFontWeight('bold')
       .setBackground('#f0f0f0');
@@ -56,7 +51,7 @@ function writeLogsBatch_(items) {
       o.reportDateStr || '',
       o.sheet || '',
       o.cell || '',
-      o.fml || '',
+      o.fio || '',
       o.phone || '',
       o.code || '',
       o.service || '',

@@ -1,0 +1,21 @@
+Patched on 2026-04-05
+
+Main changes:
+- Login flow rewritten from callsign-picker to identifier + callsign.
+- User now enters email/phone and callsign, then presses "Увійти".
+- Access descriptor no longer increments failed attempts during background checks.
+- Failed login attempts are counted only on explicit login submit.
+- Threshold for explicit login lockout: 5 failed attempts.
+- Lockout duration for explicit login: 30 minutes.
+- Suspicious explicit login attempts are reported through AccessEnforcement alerts/email path.
+- Help text wording updated to: "Зверніться за допомогою до ШАХТАРЯ".
+- Sysadmin label normalized to "Сисадмін".
+- ACCESS schema extended with phone column.
+
+Modified files:
+- AccessControl.gs
+- Stage7MaintenanceApi.gs
+- Js.Api.html
+- Js.Security.html
+- Styles.html
+- AccessEnforcement.gs

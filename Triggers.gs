@@ -17,49 +17,42 @@ const Stage7Triggers_ = (function() {
         kind: 'timeBased',
         description: 'Щоденна перевірка відпусток і днів народження'
       },
-
       scheduledReconciliation: {
         jobName: cfg.JOBS.SCHEDULED_RECONCILIATION,
         handler: 'stage7JobScheduledReconciliation',
         kind: 'timeBased',
         description: 'Періодична reconciliation-перевірка'
       },
-
       scheduledHealthCheck: {
         jobName: cfg.JOBS.SCHEDULED_HEALTHCHECK,
         handler: 'stage7JobScheduledHealthCheck',
         kind: 'timeBased',
         description: 'Періодичний health-check'
       },
-
       cleanupCaches: {
         jobName: cfg.JOBS.CLEANUP_CACHES,
         handler: 'stage7JobCleanupCaches',
         kind: 'timeBased',
         description: 'Технічне очищення кешів'
       },
-
       staleOperationDetector: {
         jobName: cfg.JOBS.STALE_OPERATION_DETECTOR,
         handler: 'stage7JobDetectStaleOperations',
         kind: 'timeBased',
         description: 'Пошук завислих lifecycle-операцій'
       },
-
       lifecycleRetentionCleanup: {
         jobName: cfg.JOBS.LIFECYCLE_RETENTION_CLEANUP,
         handler: 'stage7JobLifecycleRetentionCleanup',
         kind: 'timeBased',
         description: 'Retention cleanup для OPS/ACTIVE/CHECKPOINTS/LOG/AUDIT'
       },
-
       accessAuditEdit: {
         jobName: cfg.JOBS.ACCESS_AUDIT_EDIT,
         handler: 'stage7SecurityAuditOnEdit',
         kind: 'spreadsheetEdit',
         description: 'Сповіщення про підозрілі/заборонені редагування таблиці'
       },
-
       accessAuditChange: {
         jobName: cfg.JOBS.ACCESS_AUDIT_CHANGE,
         handler: 'stage7SecurityAuditOnChange',
@@ -257,9 +250,11 @@ function stage7JobCleanupCaches() {
   return Stage7Triggers_.runJob(STAGE7_CONFIG.JOBS.CLEANUP_CACHES, { trigger: true, initiator: 'trigger', source: 'trigger' });
 }
 
+
 function stage7JobDetectStaleOperations() {
   return Stage7Triggers_.runJob(STAGE7_CONFIG.JOBS.STALE_OPERATION_DETECTOR, { trigger: true, initiator: 'trigger', source: 'trigger' });
 }
+
 
 function stage7JobLifecycleRetentionCleanup() {
   return Stage7Triggers_.runJob(STAGE7_CONFIG.JOBS.LIFECYCLE_RETENTION_CLEANUP, { trigger: true, initiator: 'trigger', source: 'trigger' });

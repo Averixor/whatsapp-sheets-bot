@@ -10,7 +10,6 @@ const SendPanelService_ = (function() {
   function preview(dateStr) {
     return SendPanelRepository_.preview(assertUaDateString_(dateStr));
   }
-
 /**
  * SendPanelService.gs — stage 7 domain service for SEND_PANEL.
  *
@@ -54,7 +53,7 @@ const SendPanelService_ = (function() {
   function normalizeRows(rows) {
     return stage7AsArray_(rows).map(function(item) {
       return {
-        fml: String(item && item.fml || '').trim(),
+        fio: String(item && item.fio || '').trim(),
         phone: String(item && item.phone || '').replace(/^'/, '').trim(),
         code: String(item && item.code || '').trim(),
         tasks: String(item && item.tasks || '—').trim() || '—',
@@ -63,7 +62,7 @@ const SendPanelService_ = (function() {
         sent: item && item.sent === true
       };
     }).filter(function(item) {
-      return item.fml || item.phone || item.code;
+      return item.fio || item.phone || item.code;
     });
   }
 
@@ -71,7 +70,7 @@ const SendPanelService_ = (function() {
     const seen = {};
     const duplicates = [];
     normalizeRows(rows).forEach(function(item) {
-      const key = makeSendPanelKey_(item.fml, item.phone, item.code);
+      const key = makeSendPanelKey_(item.fio, item.phone, item.code);
       if (!key || key === '||') return;
       seen[key] = (seen[key] || 0) + 1;
       if (seen[key] === 2) duplicates.push(key);
@@ -164,7 +163,7 @@ const SendPanelService_ = (function() {
   function normalizeRows(rows) {
     return stage7AsArray_(rows).map(function(item) {
       return {
-        fml: String(item && item.fml || '').trim(),
+        fio: String(item && item.fio || '').trim(),
         phone: String(item && item.phone || '').replace(/^'/, '').trim(),
         code: String(item && item.code || '').trim(),
         tasks: String(item && item.tasks || '—').trim() || '—',
@@ -173,7 +172,7 @@ const SendPanelService_ = (function() {
         sent: item && item.sent === true
       };
     }).filter(function(item) {
-      return item.fml || item.phone || item.code;
+      return item.fio || item.phone || item.code;
     });
   }
 
@@ -181,7 +180,7 @@ const SendPanelService_ = (function() {
     const seen = {};
     const duplicates = [];
     normalizeRows(rows).forEach(function(item) {
-      const key = makeSendPanelKey_(item.fml, item.phone, item.code);
+      const key = makeSendPanelKey_(item.fio, item.phone, item.code);
       if (!key || key === '||') return;
       seen[key] = (seen[key] || 0) + 1;
       if (seen[key] === 2) duplicates.push(key);

@@ -63,7 +63,6 @@
           <h1 class="logo header-logo" title="WhatsApp-Sheets-Bot">
             <span>WASB</span>
           </h1>
-
           <button
             type="button"
             class="header-tool-btn"
@@ -83,7 +82,6 @@
     </header>
 
     <main class="main-content" id="mainContent">
-
       <div id="accessBanner" class="access-banner" style="display:none;" aria-live="polite" aria-atomic="true">
         <div id="accessBannerText" class="access-banner__text"></div>
       </div>
@@ -197,7 +195,6 @@
 
           <div class="health-actions" data-role-min="maintainer" style="grid-column: span 2; display:none;">
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:8px;">
-
               <button
                 class="btn btn-secondary"
                 data-role-min="maintainer"
@@ -303,7 +300,6 @@
 
       <section class="result-section" id="resultSection" aria-labelledby="resultTitle">
         <div class="result-header">
-
           <button
             class="back-button"
             type="button"
@@ -312,7 +308,6 @@
             <span class="back-icon" aria-hidden="true">↩</span>
             <span>Назад</span>
           </button>
-
           <h2 id="resultTitle">Результат</h2>
         </div>
         <div class="result-content" id="resultContent" aria-live="polite"></div>
@@ -336,12 +331,10 @@
 
       <div class="console-section" id="consoleSection">
         <div class="console-header">
-
           <h2 class="console-title" id="consoleSectionTitle">
             <span class="console-icon" aria-hidden="true">✓</span>
             <span>Лог виконання</span>
           </h2>
-
           <div class="console-actions">
             <button
               class="console-btn"
@@ -351,7 +344,6 @@
               aria-label="Скопіювати лог">
               📋
             </button>
-
             <button
               class="console-btn"
               type="button"
@@ -360,7 +352,6 @@
               aria-label="Очистити консоль">
               🗑️
             </button>
-
             <button
               class="console-btn"
               type="button"
@@ -369,7 +360,6 @@
               aria-label="Прокрутити консоль вгору">
               ↥
             </button>
-
             <button
               class="console-btn"
               type="button"
@@ -378,14 +368,11 @@
               aria-label="Прокрутити консоль вниз">
               ↧
             </button>
-
           </div>
         </div>
-
         <div class="console-content" id="consoleOutput" role="log" aria-live="polite" aria-relevant="additions text">
           <div class="log-entry log-info"><span class="log-time">[ініціалізація]</span> Консоль готова до роботи</div>
         </div>
-
       </div>
     </section>
 
@@ -406,7 +393,6 @@
           </div>
           <button class="personnel-modal__close" id="btnClosePersonnelModal" type="button" aria-label="Закрити вікно особового складу">Закрити</button>
         </div>
-
         <div class="personnel-modal__controls">
           <label for="personnelSearchInput" class="sr-only">Пошук за позивним</label>
           <input
@@ -418,7 +404,6 @@
             aria-describedby="personnelModalCount"
             autocomplete="off" />
         </div>
-
         <div class="personnel-modal__body">
           <div class="personnel-grid" id="personnelGrid" aria-label="Список особового складу"></div>
           <div class="personnel-empty hidden" id="personnelEmptyState" aria-live="polite">Нічого не знайдено</div>
@@ -430,4 +415,5 @@
   <!-- Active bootstrap policy: Sidebar.html loads Stage 7 modular runtime through includeTemplate(JavaScript), and JavaScript.html aggregates Js.* fragments. -->
   <?!= includeTemplate('JavaScript'); ?>
 </body>
+
 </html>

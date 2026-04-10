@@ -132,7 +132,7 @@
         <div class="result-item" style="border-left:3px solid ${statusColor}; padding-left:8px; margin-bottom:8px; ${isSent ? 'opacity:0.92;' : ''}">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
             <div>
-              <div><b>${escapeHtml(item.fml || '')}</b></div>
+              <div><b>${escapeHtml(item.fio || '')}</b></div>
               <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:2px;">
                 ${escapeHtml(formatPhone(item.phone || ''))}
               </div>
@@ -140,7 +140,6 @@
                 ${escapeHtml(item.code || '')} ${escapeHtml(item.date || '')}
               </div>
             </div>
-
             <div>
               <span style="font-size:0.7rem; padding:2px 6px; background:${statusColor}20; border-radius:4px;">
                 ${escapeHtml(actionText)}
@@ -164,6 +163,7 @@
 
     setHtml('resultContent', html);
   }
+
 
   function getPanelAnchorDate_() {
     const explicitDate = String(STATE.currentPanelDate || '').trim();
@@ -502,6 +502,7 @@
     }
   }
 
+
   function startSendingUnsent() {
     if (STATE._panelBatchSendLock) {
       logToConsole('Серія відправки вже запущена', 'warning');
@@ -789,7 +790,7 @@
       vacData.commanderMessages.forEach(row => {
         html += `
           <div class="vacation-card vacation-card--commander">
-            <div class="vacation-card__name">${esc(row.fml)}</div>
+            <div class="vacation-card__name">${esc(row.fio)}</div>
             <div class="vacation-card__text">${esc(row.message)}</div>
             ${
               row.link
@@ -816,7 +817,7 @@
       vacData.soldierMessages.forEach(row => {
         html += `
           <div class="vacation-card vacation-card--soldier">
-            <div class="vacation-card__name">${esc(row.fml)}</div>
+            <div class="vacation-card__name">${esc(row.fio)}</div>
             <div class="vacation-card__meta">
               ${esc(row.startDate)} — ${esc(row.endDate)} | ${esc(row.vacationWord)}
             </div>
@@ -1088,7 +1089,6 @@
         setHtml('resultContent', `
           <div class="result-item">
             <div class="result-label" style="color: var(--success-color);">Успішно</div>
-
             <div class="result-value">
               <p>${escapeHtml(result.message || '').split('\n').join('<br>')}</p>
               <p style="font-size:0.8rem; color:var(--text-secondary); margin-top:8px;">
@@ -1137,6 +1137,7 @@
     }
   }
 
+
   async function debugPhones() {
     assertAdminAction_('debugPhones');
     logToConsole('Діагностика PHONES...', 'info');
@@ -1162,12 +1163,11 @@
         ? `
           <div class="result-item">
             <div class="result-label">Перші записи</div>
-
             <div class="result-value">
               <div style="display:grid; gap:8px;">
                 ${preview.map(item => `
                   <div style="padding:8px; border:1px solid var(--border-color); border-radius:10px; background:var(--bg-glass);">
-                    <div><strong>#${Number(item.row || 0)}</strong> ${escapeHtml(item.fml || '—')}</div>
+                    <div><strong>#${Number(item.row || 0)}</strong> ${escapeHtml(item.fio || '—')}</div>
                     <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:4px;">
                       ${escapeHtml(formatPhone(item.phone || '—'))}
                       ${item.role ? `<br>🏷 ${escapeHtml(item.role)}` : ''}
@@ -1199,7 +1199,6 @@
 
         <div class="result-item">
           <div class="result-label">Статистика</div>
-
           <div class="result-value">
             Усього контактів: <strong>${Number(stats.total || contacts.length || 0)}</strong><br>
             З телефонами: <strong>${Number(stats.withPhone || 0)}</strong><br>
@@ -1227,6 +1226,7 @@
     }
   }
 
+
   async function applyProtections() {
     assertAdminAction_('applyProtections');
     if (!confirm('Застосувати захист до службових листів?')) return;
@@ -1240,15 +1240,12 @@
       setHtml('resultContent', `
         <div class="result-item">
           <div class="result-label" style="color: var(--success-color);">Результат</div>
-
           <div class="result-value">${escapeHtml(result?.message || 'Захист застосовано')}</div>
         </div>
-
         <div class="result-item">
           <div class="result-label">Захищені листи</div>
           <div class="result-value">${protectedSheets.length ? protectedSheets.map(escapeHtml).join('<br>') : '—'}</div>
         </div>
-
         ${warnings.length ? `<div class="result-item"><div class="result-label">Попередження</div><div class="result-value">${warnings.map(escapeHtml).join('<br>')}</div></div>` : ''}
       `);
       showToast('Захист службових листів застосовано');
@@ -1347,7 +1344,6 @@ function renderPendingRepairsTable_(items) {
   return `
     <div class="result-item">
       <div class="result-label">🛠 - ${items.length}</div>
-
       <div class="result-value" style="display:grid; gap:10px;">
         ${items.map(item => `
           <div style="padding:10px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-glass);">
@@ -1428,32 +1424,26 @@ async function showOperationDetails(operationId, forceRefresh) {
         <div class="result-label">Ідентифікатор операції</div>
         <div class="result-value">${escapeHtml(operation.OperationId || opId || '')}</div>
       </div>
-
       <div class="result-item">
         <div class="result-label">Сценарій / Статус</div>
         <div class="result-value">${escapeHtml(translateLifecycleScenario(operation.Scenario || ''))} • ${escapeHtml(translateLifecycleStatus(operation.Status || ''))}</div>
       </div>
-
       <div class="result-item">
         <div class="result-label">Відбиток операції</div>
         <div class="result-value">${escapeHtml(operation.Fingerprint || '')}</div>
       </div>
-
       <div class="result-item">
         <div class="result-label">Затронуті сутності</div>
         <div class="result-value">${escapeHtml(operation.AffectedEntities || '') || '—'}</div>
       </div>
-
       <div class="result-item">
         <div class="result-label">Перевірка / Результат виправлення</div>
         <div class="result-value">${escapeHtml(translateLifecycleText(operation.VerificationResult || '')) || '—'} / ${escapeHtml(translateLifecycleText(operation.ResolutionStatus || '')) || '—'}</div>
       </div>
-
       <div class="result-item">
         <div class="result-label">Примітки</div>
         <div class="result-value" style="white-space:pre-wrap;">${escapeHtml(translateLifecycleText(operation.Notes || '')) || '—'}</div>
       </div>
-
       <div class="result-item">
         <div class="result-label">Контекст контрольних точок</div>
         <div class="result-value">${checkpoints.length ? checkpoints.map(cp => `${escapeHtml(String(cp.CheckpointIndex || ''))}: ${escapeHtml(String(cp.ProcessedUpTo || ''))}`).join('<br>') : '—'}</div>

@@ -243,7 +243,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: [],
       verifyAfterWrite: false
     }),
-
     previewMultipleMessages: Object.freeze({
       routeName: 'spreadsheet.previewMultipleMessages',
       publicApiMethod: 'apiPreviewMultipleMessages',
@@ -257,7 +256,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: [],
       verifyAfterWrite: false
     }),
-
     previewGroupedMessages: Object.freeze({
       routeName: 'spreadsheet.previewGroupedMessages',
       publicApiMethod: 'apiPreviewGroupedMessages',
@@ -271,7 +269,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: [],
       verifyAfterWrite: false
     }),
-
     prepareRangeMessages: Object.freeze({
       routeName: 'spreadsheet.prepareRangeMessages',
       publicApiMethod: 'apiPrepareRangeMessages',
@@ -285,7 +282,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: [],
       verifyAfterWrite: false
     }),
-
     buildCommanderSummaryPreview: Object.freeze({
       routeName: 'spreadsheet.buildCommanderSummaryPreview',
       publicApiMethod: 'apiBuildCommanderSummaryPreview',
@@ -299,7 +295,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: [],
       verifyAfterWrite: false
     }),
-
     buildCommanderSummaryLink: Object.freeze({
       routeName: 'spreadsheet.buildCommanderSummaryLink',
       publicApiMethod: 'apiBuildCommanderSummaryLink',
@@ -313,7 +308,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: [],
       verifyAfterWrite: false
     }),
-
     logPreparedMessages: Object.freeze({
       routeName: 'spreadsheet.logPreparedMessages',
       publicApiMethod: 'apiLogPreparedMessages',
@@ -327,7 +321,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: [],
       verifyAfterWrite: false
     }),
-
     runSelectionDiagnostics: Object.freeze({
       routeName: 'spreadsheet.runSelectionDiagnostics',
       publicApiMethod: 'apiRunSelectionDiagnostics',
@@ -357,7 +350,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: ['clearCache'],
       verifyAfterWrite: false
     }),
-
     clearLog: Object.freeze({
       routeName: 'maintenance.clearLog',
       publicApiMethod: 'apiStage7ClearLog',
@@ -371,7 +363,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: ['clearLog'],
       verifyAfterWrite: false
     }),
-
     clearPhoneCache: Object.freeze({
       routeName: 'maintenance.clearPhoneCache',
       publicApiMethod: 'apiStage7ClearPhoneCache',
@@ -385,7 +376,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: ['clearPhoneCache'],
       verifyAfterWrite: false
     }),
-
     restartBot: Object.freeze({
       routeName: 'maintenance.restartBot',
       publicApiMethod: 'apiStage7RestartBot',
@@ -399,7 +389,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: ['restartBot'],
       verifyAfterWrite: false
     }),
-
     setupVacationTriggers: Object.freeze({
       routeName: 'maintenance.setupVacationTriggers',
       publicApiMethod: 'apiStage7SetupVacationTriggers',
@@ -413,7 +402,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: ['setupTrigger'],
       verifyAfterWrite: false
     }),
-
     cleanupDuplicateTriggers: Object.freeze({
       routeName: 'maintenance.cleanupDuplicateTriggers',
       publicApiMethod: 'apiStage7CleanupDuplicateTriggers',
@@ -427,7 +415,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: ['cleanupTriggers'],
       verifyAfterWrite: false
     }),
-
     debugPhones: Object.freeze({
       routeName: 'maintenance.debugPhones',
       publicApiMethod: 'apiStage7DebugPhones',
@@ -441,7 +428,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: ['debugPhones'],
       verifyAfterWrite: false
     }),
-
     buildBirthdayLink: Object.freeze({
       routeName: 'maintenance.buildBirthdayLink',
       publicApiMethod: 'apiStage7BuildBirthdayLink',
@@ -455,7 +441,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: [],
       verifyAfterWrite: false
     }),
-
     runMaintenanceScenario: Object.freeze({
       routeName: 'maintenance.runMaintenanceScenario',
       publicApiMethod: 'apiRunStage7MaintenanceScenario',
@@ -469,7 +454,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: [],
       verifyAfterWrite: false
     }),
-
     installJobs: Object.freeze({
       routeName: 'maintenance.installJobs',
       publicApiMethod: 'apiInstallStage7Jobs',
@@ -483,7 +467,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: [],
       verifyAfterWrite: false
     }),
-
     listJobs: Object.freeze({
       routeName: 'maintenance.listJobs',
       publicApiMethod: 'apiListStage7Jobs',
@@ -497,7 +480,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: [],
       verifyAfterWrite: false
     }),
-
     runJob: Object.freeze({
       routeName: 'maintenance.runJob',
       publicApiMethod: 'apiRunStage7Job',
@@ -511,7 +493,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: [],
       verifyAfterWrite: true
     }),
-
     healthCheck: Object.freeze({
       routeName: 'maintenance.healthCheck',
       publicApiMethod: 'apiStage7HealthCheck',
@@ -525,7 +506,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: ['healthCheck'],
       verifyAfterWrite: false
     }),
-
     runDiagnostics: Object.freeze({
       routeName: 'maintenance.runDiagnostics',
       publicApiMethod: 'apiRunStage7Diagnostics',
@@ -539,7 +519,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: [],
       verifyAfterWrite: false
     }),
-
     runRegressionTests: Object.freeze({
       routeName: 'maintenance.runRegressionTests',
       publicApiMethod: 'apiRunStage7RegressionTests',
@@ -553,7 +532,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: [],
       verifyAfterWrite: false
     }),
-
     listJobRuntime: Object.freeze({
       routeName: 'maintenance.listJobRuntime',
       publicApiMethod: 'apiListStage7JobRuntime',
@@ -567,7 +545,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: [],
       verifyAfterWrite: false
     }),
-
     listPendingRepairs: Object.freeze({
       routeName: 'maintenance.listPendingRepairs',
       publicApiMethod: 'apiStage7ListPendingRepairs',
@@ -581,7 +558,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: ['pendingRepairs'],
       verifyAfterWrite: false
     }),
-
     getOperationDetails: Object.freeze({
       routeName: 'maintenance.getOperationDetails',
       publicApiMethod: 'apiStage7GetOperationDetails',
@@ -595,7 +571,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: ['operationDetails'],
       verifyAfterWrite: false
     }),
-
     runRepair: Object.freeze({
       routeName: 'maintenance.runRepair',
       publicApiMethod: 'apiStage7RunRepair',
@@ -609,7 +584,6 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       clientActionAliases: ['runRepair'],
       verifyAfterWrite: true
     }),
-
     runLifecycleRetentionCleanup: Object.freeze({
       routeName: 'maintenance.runLifecycleRetentionCleanup',
       publicApiMethod: 'apiStage7RunLifecycleRetentionCleanup',

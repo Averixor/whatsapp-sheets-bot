@@ -10,7 +10,7 @@ function _stage7PushCheck_(checks, name, status, details, recommendation) {
     lowerName.indexOf('compatibility ') === 0 ||
     lowerName.indexOf('wrapper source ') === 0 ||
     lowerName.indexOf('ui-ban marker ') === 0 ||
-    lowerDetails.indexOf('deprecated-helper-wrapper') !== -1 ||
+    lowerDetails.indexOf('compatibility-only') !== -1 ||
     lowerDetails.indexOf('замінити на ') !== -1 ||
     lowerDetails.indexOf('compatibility wrappers intentionally remain') !== -1;
 
@@ -46,22 +46,24 @@ function _stage7PushCheck_(checks, name, status, details, recommendation) {
     howTo: recommendation || ''
   });
 }
-
 function _projectBundleHas_(path) {
   return typeof isProjectBundleFilePresent_ === 'function' ? isProjectBundleFilePresent_(path) : false;
 }
-
 function _projectBundleMissing_(paths) {
   return typeof getMissingProjectBundleFiles_ === 'function' ? getMissingProjectBundleFiles_(paths || []) : (paths || []).slice();
 }
-
 function _isProjectDocPath_(path) {
   const value = String(path || '').trim();
   if (!value) return false;
   if (/^[A-Z0-9_\-]+\.md$/i.test(value)) return true;
   return value.indexOf('_extras/history/') === 0;
 }
-
+function _isArchivePath_(path) {
+  return _isProjectDocPath_(path);
+}
+function _isReferencePath_(path) {
+  return _isProjectDocPath_(path);
+}
 function _diagPushPathCheck_(checks, name, path, expectedKind) {
   const present = _projectBundleHas_(path);
   _stage7PushCheck_(
@@ -72,7 +74,6 @@ function _diagPushPathCheck_(checks, name, path, expectedKind) {
     present ? '' : `Відсутній файл ${path}`
   );
 }
-
 function _diagGlobal_() {
   try {
     if (typeof globalThis !== 'undefined') return globalThis;
@@ -82,7 +83,6 @@ function _diagGlobal_() {
   } catch (_) {}
   return {};
 }
-
 function _diagResolvePath_(scope, path) {
   var parts = String(path || '').trim().split('.').filter(Boolean);
   var current = scope;
@@ -92,7 +92,6 @@ function _diagResolvePath_(scope, path) {
   }
   return current;
 }
-
 function _diagHasRouteApi_(fnName) {
   var target = String(fnName || '').trim();
   if (!target) return false;
@@ -127,7 +126,6 @@ function _diagHasRouteApi_(fnName) {
 
   return false;
 }
-
 function _diagResolveKnownSymbolStage7_(name) {
   switch (String(name || '').trim()) {
     case 'DataAccess_': return typeof DataAccess_ !== 'undefined' ? DataAccess_ : undefined;
@@ -150,7 +148,6 @@ function _diagResolveKnownSymbolStage7_(name) {
     default: return undefined;
   }
 }
-
 function _diagResolveSymbolStage7_(name) {
   var target = String(name || '').trim();
   if (!target) return undefined;
@@ -181,20 +178,19 @@ function _diagResolveSymbolStage7_(name) {
 
   return undefined;
 }
-
 function _fnExists_(name) {
   return typeof _diagResolveSymbolStage7_(name) === 'function';
 }
-
+function _stage7ResolveSymbol_(name) {
+  return _diagResolveSymbolStage7_(name);
+}
 function _stage7HasFn_(name) {
   return typeof _diagResolveSymbolStage7_(name) === 'function';
 }
-
 function _releaseStageLabel_() {
   var meta = typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_() : null;
   return meta && meta.stageLabel ? meta.stageLabel : 'Stage 7.1.2 — Security & Ops Hardened Baseline (Final Clean)';
 }
-
 function _diagNormalizeStatus_(status) {
   var normalized = String(status || 'WARN').toUpperCase();
   if (normalized === 'ERROR') return 'FAIL';
@@ -205,7 +201,6 @@ function _diagNormalizeStatus_(status) {
   if (normalized === 'PSEUDO-COMPAT') return 'PSEUDO';
   return normalized;
 }
-
 function _diagResolveSeverity_(status, rawSeverity) {
   var sev = String(rawSeverity || '').toUpperCase();
   if (sev) return sev;
@@ -214,7 +209,6 @@ function _diagResolveSeverity_(status, rawSeverity) {
   if (s === 'WARN') return 'WARN';
   return 'INFO';
 }
-
 function _diagIsPseudoLikeCheck_(check) {
   var explicitStatus = String(check && check.status || '').toUpperCase();
   if (explicitStatus === 'PSEUDO' || explicitStatus === 'COMPAT' || explicitStatus === 'LEGACY-COMPAT' || explicitStatus === 'PSEUDO-COMPAT') {
@@ -228,11 +222,10 @@ function _diagIsPseudoLikeCheck_(check) {
     title.indexOf('compatibility ') === 0 ||
     title.indexOf('wrapper source ') === 0 ||
     title.indexOf('ui-ban marker ') === 0 ||
-    details.indexOf('deprecated-helper-wrapper') !== -1 ||
+    details.indexOf('compatibility-only') !== -1 ||
     details.indexOf('замінити на ') !== -1 ||
     details.indexOf('compatibility wrappers intentionally remain') !== -1;
 }
-
 function _diagResolveUiGroup_(check) {
   var explicit = String(check && check.uiGroup || '').toLowerCase();
   if (explicit === 'critical' || explicit === 'warnings' || explicit === 'pseudo' || explicit === 'compatibility' || explicit === 'ok') {
@@ -247,7 +240,6 @@ function _diagResolveUiGroup_(check) {
   if (status === 'PSEUDO' || (looksPseudo && status === 'OK')) return 'pseudo';
   return 'ok';
 }
-
 function _diagNormalizeCheck_(check, titlePrefix) {
   var title = String((check && (check.title || check.name)) || '').trim();
   if (!title) title = 'Unnamed check';
@@ -286,7 +278,6 @@ function _diagNormalizeReportChecks_(report, titlePrefix) {
     return _diagNormalizeCheck_(item, titlePrefix || '');
   });
 }
-
 function _diagMergeChecks_() {
   var merged = [];
   var seen = {};
@@ -303,13 +294,11 @@ function _diagMergeChecks_() {
 
   return merged;
 }
-
 function _diagBuildWarningsFromChecks_(checks) {
   return (checks || [])
     .filter(function(item) { return item && item.status === 'WARN'; })
     .map(function(item) { return item.title; });
 }
-
 function _diagBuildCounts_(checks) {
   var list = Array.isArray(checks) ? checks : [];
   var counts = {
@@ -351,7 +340,6 @@ function _diagBuildCounts_(checks) {
 
   return counts;
 }
-
 function _diagBuildReport_(checks, mode, summaryPrefix) {
   var list = Array.isArray(checks) ? checks : [];
   var counts = _diagBuildCounts_(list);
@@ -368,7 +356,6 @@ function _diagBuildReport_(checks, mode, summaryPrefix) {
     ts: new Date().toISOString()
   };
 }
-
 function _diagServiceSheetCheck_(checks, name) {
   try {
     var ss = SpreadsheetApp.getActive();
@@ -384,7 +371,6 @@ function _diagServiceSheetCheck_(checks, name) {
     _stage7PushCheck_(checks, 'Service sheet ' + name, 'FAIL', e && e.message ? e.message : String(e), 'Перевірте доступ до SpreadsheetApp');
   }
 }
-
 function _diagBuildStage7CoreChecks_(options) {
   var opts = options || {};
   var checks = [];
@@ -409,6 +395,7 @@ function _diagBuildStage7CoreChecks_(options) {
   var hasRetentionCleanup = _stage7HasFn_('apiStage7RunLifecycleRetentionCleanup');
   _stage7PushCheck_(checks, 'Lifecycle maintenance API', hasList && hasRepair ? 'OK' : 'FAIL', 'list=' + hasList + ', repair=' + hasRepair, 'Додайте maintenance API для repair flow');
   _stage7PushCheck_(checks, 'Lifecycle retention cleanup API', hasRetentionCleanup ? 'OK' : 'WARN', 'cleanup=' + hasRetentionCleanup, 'Додайте окремий maintenance flow для lifecycle retention cleanup');
+  _stage7PushCheck_(checks, 'Stage7 compatibility facade declared', _stage7HasFn_('apiStage4ClearCache') && _stage7HasFn_('apiStage4HealthCheck') ? 'OK' : 'WARN', 'wrappers preserved=' + (_stage7HasFn_('apiStage4ClearCache') && _stage7HasFn_('apiStage4HealthCheck')), 'Compatibility wrappers можуть лишатися лише для зовнішніх історичних викликів');
 
   ['OPS_LOG', 'ACTIVE_OPERATIONS', 'CHECKPOINTS'].forEach(function(name) {
     _diagServiceSheetCheck_(checks, name);
@@ -435,7 +422,6 @@ function _diagBuildStage7CoreChecks_(options) {
 
   return _diagNormalizeReportChecks_({ checks: checks });
 }
-
 function _diagAppendPendingRepairsCheck_(checks) {
   try {
     var pending = typeof OperationRepository_ === 'object' && typeof OperationRepository_.listPendingRepairs === 'function'
@@ -446,7 +432,6 @@ function _diagAppendPendingRepairsCheck_(checks) {
     _stage7PushCheck_(checks, 'Pending repairs visibility', 'FAIL', e && e.message ? e.message : String(e), 'Перевірте OperationRepository_.listPendingRepairs()');
   }
 }
-
 function _diagAppendCompatibilitySplitCheck_(checks) {
   try {
     var sunset = typeof getCompatibilitySunsetReport_ === 'function' ? getCompatibilitySunsetReport_() : { total: 0, counts: {} };
@@ -455,7 +440,6 @@ function _diagAppendCompatibilitySplitCheck_(checks) {
     _stage7PushCheck_(checks, 'Compatibility split report (informational)', 'WARN', e && e.message ? e.message : String(e), 'Перевірте DeprecatedRegistry.gs');
   }
 }
-
 function _diagAppendLifecyclePolicyCheck_(checks) {
   try {
     var policy = typeof OperationRepository_ === 'object' && typeof OperationRepository_.buildLifecyclePolicyReport === 'function'

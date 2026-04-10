@@ -2,7 +2,7 @@
  * Stage7ServerApi.gs — canonical Stage 7 application API.
  *
  * Stage 7 is the only canonical application surface in this baseline.
- * Historical Stage 4 aliases removed; canonical application API is Stage7ServerApi.gs.
+ * Historical Stage 4 aliases live in LegacyApiAliases.gs.
  */
 
 function _stage7FastContext_(scenario) {
@@ -259,7 +259,7 @@ function apiOpenPersonCard(callsign, dateStr) {
     warnings,
     {
       affectedSheets: [person.sheet || getBotMonthSheetName_()].filter(Boolean),
-      affectedEntities: [person.callsign || person.fml || ''].filter(Boolean)
+      affectedEntities: [person.callsign || person.fio || ''].filter(Boolean)
     }
   );
 }

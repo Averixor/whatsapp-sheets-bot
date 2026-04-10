@@ -35,7 +35,6 @@ function buildAppConfig_() {
       TEMPLATE_PREVIEW_LIMIT: 3800,
       ACTIVE_RUNTIME_MARKER: 'stage7-sidebar-runtime'
     }),
-
     FLAGS: Object.freeze({
       stage7UseCases: true,
       auditTrail: true,
@@ -65,7 +64,6 @@ function buildAppConfig_() {
       stage7ADomainTests: true,
       fullVerboseDiagnostics: true
     }),
-
     JOBS: Object.freeze({
       DAILY_VACATIONS_AND_BIRTHDAYS: 'dailyVacationsAndBirthdays',
       SCHEDULED_RECONCILIATION: 'scheduledReconciliation',

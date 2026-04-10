@@ -16,12 +16,12 @@ function healthCheck() {
     };
   });
 
-  _runHealthCheckItem_(report, 'CONFIG.OS_FML_RANGE_A1', 'CRITICAL', function () {
-    const a1 = CONFIG.OS_FML_RANGE_A1 || CONFIG.OS_FML_RANGE;
+  _runHealthCheckItem_(report, 'CONFIG.OS_FIO_RANGE_A1', 'CRITICAL', function () {
+    const a1 = CONFIG.OS_FIO_RANGE_A1 || CONFIG.OS_FIO_RANGE;
     return {
       status: a1 ? 'OK' : 'FAIL',
-      details: a1 ? `Використовується діапазон: ${a1}` : 'OS_FML_RANGE_A1 / OS_FML_RANGE не задано',
-      howTo: a1 ? '' : 'Додайте в CONFIG поле OS_FML_RANGE_A1, наприклад "G2:G40"'
+      details: a1 ? `Використовується діапазон: ${a1}` : 'OS_FIO_RANGE_A1 / OS_FIO_RANGE не задано',
+      howTo: a1 ? '' : 'Додайте в CONFIG поле OS_FIO_RANGE_A1, наприклад "G2:G40"'
     };
   });
 
@@ -176,13 +176,13 @@ function healthCheck() {
 
   _runHealthCheckItem_(report, 'Телефонний index', 'CRITICAL', function () {
     const index = typeof loadPhonesIndex_ === 'function' ? loadPhonesIndex_() : null;
-    const ok = !!(index && index.byFml && index.byNorm && index.byRole && index.byCallsign);
+    const ok = !!(index && index.byFio && index.byNorm && index.byRole && index.byCallsign);
     const items = ok && Array.isArray(index.items) ? index.items.length : 0;
 
     return {
       status: ok && items > 0 ? 'OK' : 'FAIL',
       details: ok
-        ? `items=${items}; byFml=${Object.keys(index.byFml || {}).length}; byRole=${Object.keys(index.byRole || {}).length}; byCallsign=${Object.keys(index.byCallsign || {}).length}`
+        ? `items=${items}; byFio=${Object.keys(index.byFio || {}).length}; byRole=${Object.keys(index.byRole || {}).length}; byCallsign=${Object.keys(index.byCallsign || {}).length}`
         : 'loadPhonesIndex_() не повернув канонічну структуру',
       howTo: ok && items > 0 ? '' : 'Перевірте Stage 7 phone-layer і очистіть кеш телефонів'
     };

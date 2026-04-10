@@ -6,7 +6,7 @@ const DictionaryRepository_ = (function() {
   function getPhonesIndex() {
     return typeof loadPhonesIndex_ === 'function'
       ? loadPhonesIndex_()
-      : { byFml: {}, byNorm: {}, byRole: {}, byCallsign: {}, items: [] };
+      : { byFio: {}, byNorm: {}, byRole: {}, byCallsign: {}, items: [] };
   }
 
   function getPhonesMap() {
@@ -29,8 +29,8 @@ const DictionaryRepository_ = (function() {
     return findPhone_({ role: role });
   }
 
-  function getPhoneByFml(fml) {
-    return findPhone_({ fml: fml });
+  function getPhoneByFio(fio) {
+    return findPhone_({ fio: fio });
   }
 
   function getPhoneByCallsign(callsign) {
@@ -43,10 +43,10 @@ const DictionaryRepository_ = (function() {
     return (profiles && profiles.byCallsign && profiles.byCallsign[key]) || null;
   }
 
-  function getProfileByFml(fml) {
+  function getProfileByFio(fio) {
     const profiles = getProfiles();
-    const key = _normFmlForProfiles_(fml);
-    return (profiles && profiles.byFml && profiles.byFml[key]) || null;
+    const key = _normFioForProfiles_(fio);
+    return (profiles && profiles.byFio && profiles.byFio[key]) || null;
   }
 
   function getDictEntry(code) {
@@ -61,10 +61,10 @@ const DictionaryRepository_ = (function() {
     getDictMap: getDictMap,
     getSummaryRules: getSummaryRules,
     getPhoneByRole: getPhoneByRole,
-    getPhoneByFml: getPhoneByFml,
+    getPhoneByFio: getPhoneByFio,
     getPhoneByCallsign: getPhoneByCallsign,
     getProfileByCallsign: getProfileByCallsign,
-    getProfileByFml: getProfileByFml,
+    getProfileByFio: getProfileByFio,
     getDictEntry: getDictEntry
   };
 })();

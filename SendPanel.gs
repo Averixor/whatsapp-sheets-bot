@@ -10,7 +10,7 @@ function extractHyperlinkUrl_(formula) {
 
 function makeSendPanelKey_(f, p, c) {
   return [
-    normalizeFML_(f || ''),
+    normalizeFIO_(f || ''),
     String(p || '').replace(/[^\d]/g, ''),
     String(c || '').trim()
   ].join('|');
@@ -90,10 +90,10 @@ function readSendPanelSentMap_(panel) {
   ).getValues();
 
   vals.forEach(row => {
-    const [fml, phone, code, tasks, status, sent, action] = row;
-    if (!fml || !code) return;
+    const [fio, phone, code, tasks, status, sent, action] = row;
+    if (!fio || !code) return;
 
-    const key = makeSendPanelKey_(fml, phone, code);
+    const key = makeSendPanelKey_(fio, phone, code);
     map[key] = isSendPanelSentMark_(sent);
   });
 
@@ -208,8 +208,8 @@ function getSendPanelStatusFormula_() {
   return '=ARRAYFORMULA(IF(A3:A40&B3:B40&C3:C40&D3:D40="";"";IF((A3:A40<>"")*(B3:B40<>"")*(C3:C40<>"")*(D3:D40<>"");"✔";"✘")))';
 }
 
-function deriveSendPanelStatusFromInputs_(fml, phone, code, tasks) {
-  const values = [fml, phone, code, tasks].map(function(item) {
+function deriveSendPanelStatusFromInputs_(fio, phone, code, tasks) {
+  const values = [fio, phone, code, tasks].map(function(item) {
     return String(item || '').trim();
   });
   return values.every(Boolean) ? getSendPanelReadyStatus_() : getSendPanelBlockedStatus_();
@@ -250,7 +250,7 @@ function ensureSendPanelStructure_(panel, botMonth, panelDate) {
     .setBackground('#fff3cd');
 
   panel.getRange(CONFIG.SEND_PANEL_HEADER_ROW, 1, 1, 7)
-    .setValues([['FML', 'Phone', 'Code', 'Tasks', 'Status', 'Sent', 'Action']])
+    .setValues([['FIO', 'Phone', 'Code', 'Tasks', 'Status', 'Sent', 'Action']])
     .setFontWeight('bold')
     .setHorizontalAlignment('center')
     .setBackground(null);
@@ -300,12 +300,12 @@ function readSendPanelStateObjectMap_(panel) {
   const formulas = sheet.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 7, rowCount, 1).getFormulas().flat();
 
   values.forEach(function(row, index) {
-    const fml = String(row[0] || '').trim();
+    const fio = String(row[0] || '').trim();
     const phone = String(row[1] || '').replace(/^'/, '').trim();
     const code = String(row[2] || '').trim();
-    if (!fml || !code) return;
+    if (!fio || !code) return;
 
-    const key = makeSendPanelKey_(fml, phone, code);
+    const key = makeSendPanelKey_(fio, phone, code);
     map[key] = {
       status: normalizeSendPanelStatus_(row[4]),
       sent: isSendPanelSentMark_(row[5]),
@@ -335,10 +335,10 @@ function normalizeSendPanelDailyState_(panel) {
   const actions = [];
 
   for (let i = 0; i < rowCount; i++) {
-    const fml = String(values[i][0] || '').trim();
+    const fio = String(values[i][0] || '').trim();
     const phone = String(values[i][1] || '').replace(/^'/, '').trim();
     const code = String(values[i][2] || '').trim();
-    const key = makeSendPanelKey_(fml, phone, code);
+    const key = makeSendPanelKey_(fio, phone, code);
     const link = extractHyperlinkUrl_(formulas[i] || '');
     const status = normalizeSendPanelStatus_(values[i][4]);
     const sent = !!(sentMap[key] === true || isSendPanelSentMark_(values[i][5]));
@@ -381,16 +381,16 @@ function rebuildSendPanelCore_() {
   const start = ref.getRow();
   const num = ref.getNumRows();
   const codes = source.getRange(start, col, num, 1).getDisplayValues();
-  const fmls = source.getRange(start, CONFIG.FML_COL, num, 1).getDisplayValues();
+  const fios = source.getRange(start, CONFIG.FIO_COL, num, 1).getDisplayValues();
 
   for (let i = 0; i < num; i++) {
     const code = String(codes[i][0] || '').trim();
-    const fml = String(fmls[i][0] || '').trim();
-    if (!code || !fml) continue;
+    const fio = String(fios[i][0] || '').trim();
+    if (!code || !fio) continue;
 
     try {
       const payload = buildPayloadForCell_(source, start + i, col, phones, dict);
-      const key = makeSendPanelKey_(payload.fml, payload.phone, payload.code);
+      const key = makeSendPanelKey_(payload.fio, payload.phone, payload.code);
       const sentToday = sentMap[key] === true;
 
       let formattedPhone = String(payload.phone || '').trim();
@@ -399,17 +399,17 @@ function rebuildSendPanelCore_() {
       }
 
       rows.push([
-        payload.fml,
+        payload.fio,
         formattedPhone || '',
         payload.code,
         payload.tasks || '',
-        deriveSendPanelStatusFromInputs_(payload.fml, formattedPhone, payload.code, payload.tasks),
+        deriveSendPanelStatusFromInputs_(payload.fio, formattedPhone, payload.code, payload.tasks),
         sentToday ? getSendPanelSentMark_() : getSendPanelUnsentMark_(),
-        resolveSendPanelActionCellValue_(payload.link, deriveSendPanelStatusFromInputs_(payload.fml, formattedPhone, payload.code, payload.tasks), sentToday)
+        resolveSendPanelActionCellValue_(payload.link, deriveSendPanelStatusFromInputs_(payload.fio, formattedPhone, payload.code, payload.tasks), sentToday)
       ]);
     } catch (e) {
       rows.push([
-        fml,
+        fio,
         '',
         code,
         '',
@@ -426,6 +426,7 @@ function rebuildSendPanelCore_() {
 
   panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 1, rows.length, 7).setValues(rows);
   ensureSendPanelStatusFormula_(panel);
+  applyColumnWidthsStandardsToSheet_(panel);
   panel.setFrozenRows(CONFIG.SEND_PANEL_HEADER_ROW);
   normalizeSendPanelDailyState_(panel);
 
@@ -451,7 +452,7 @@ function readSendPanelSidebarData_() {
   const formulas = panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 7, dataRowCount, 1).getFormulas().flat();
 
   return values.map((row, index) => ({
-    fml: String(row[0] || '').trim(),
+    fio: String(row[0] || '').trim(),
     phone: String(row[1] || '').replace(/^'/, '').trim() || '—',
     code: String(row[2] || '').trim(),
     tasks: String(row[3] || '').trim() || '—',
@@ -459,7 +460,7 @@ function readSendPanelSidebarData_() {
     sent: isSendPanelSentMark_(row[5]),
     link: extractHyperlinkUrl_(formulas[index] || ''),
     row: CONFIG.SEND_PANEL_DATA_START_ROW + index
-  })).filter(item => item.fml || item.code || item.phone !== '—');
+  })).filter(item => item.fio || item.code || item.phone !== '—');
 }
 
 function buildSendPanelSidebarResponse_(meta) {
@@ -516,7 +517,7 @@ function sendAllFromSendPanel() {
       items.push({
         url: url,
         row: CONFIG.SEND_PANEL_DATA_START_ROW + i,
-        fml: String(values[i][0] || '').trim(),
+        fio: String(values[i][0] || '').trim(),
         phone: String(values[i][1] || '').replace(/^'/, '').trim(),
         code: String(values[i][2] || '').trim(),
         tasks: String(values[i][3] || '').trim()
@@ -532,15 +533,15 @@ function markSendPanelSent_(row) {
   const panel = SpreadsheetApp.getActive().getSheetByName(CONFIG.SEND_PANEL_SHEET);
   if (!panel) return false;
 
-  const fml = String(panel.getRange(row, 1).getDisplayValue() || '').trim();
+  const fio = String(panel.getRange(row, 1).getDisplayValue() || '').trim();
   const phone = String(panel.getRange(row, 2).getDisplayValue() || '').replace(/^'/, '').trim();
   const code = String(panel.getRange(row, 3).getDisplayValue() || '').trim();
   const status = String(panel.getRange(row, 5).getDisplayValue() || '').trim();
 
-  if (!fml || !code) return false;
+  if (!fio || !code) return false;
   if (normalizeSendPanelStatus_(status) !== getSendPanelReadyStatus_()) return false;
 
-  const key = makeSendPanelKey_(fml, phone, code);
+  const key = makeSendPanelKey_(fio, phone, code);
   const dateStr = getSendPanelToday_();
   const map = readSendPanelStateMap_(dateStr);
 
@@ -557,15 +558,15 @@ function markSendPanelUnsent_(row) {
   const panel = SpreadsheetApp.getActive().getSheetByName(CONFIG.SEND_PANEL_SHEET);
   if (!panel) return false;
 
-  const fml = String(panel.getRange(row, 1).getDisplayValue() || '').trim();
+  const fio = String(panel.getRange(row, 1).getDisplayValue() || '').trim();
   const phone = String(panel.getRange(row, 2).getDisplayValue() || '').replace(/^'/, '').trim();
   const code = String(panel.getRange(row, 3).getDisplayValue() || '').trim();
   const status = String(panel.getRange(row, 5).getDisplayValue() || '').trim();
 
-  if (!fml || !code) return false;
+  if (!fio || !code) return false;
   if (normalizeSendPanelStatus_(status) !== getSendPanelReadyStatus_()) return false;
 
-  const key = makeSendPanelKey_(fml, phone, code);
+  const key = makeSendPanelKey_(fio, phone, code);
   const dateStr = getSendPanelToday_();
   const map = readSendPanelStateMap_(dateStr);
 
@@ -759,7 +760,7 @@ function showSendPanelDialog_(items) {
         ' &nbsp; | &nbsp; <b>Залишилось:</b> ' + (items.length - currentIndex);
 
       metaEl.innerHTML =
-        '<b>ПІБ</b><div>' + escapeHtml(item.fml || '—') + '</div>' +
+        '<b>ПІБ</b><div>' + escapeHtml(item.fio || '—') + '</div>' +
         '<b>Телефон</b><div>' + escapeHtml(item.phone || '—') + '</div>' +
         '<b>Код</b><div>' + escapeHtml(item.code || '—') + '</div>' +
         '<b>Завдання</b><div>' + escapeHtml(item.tasks || '—') + '</div>';
@@ -813,11 +814,11 @@ function showSendPanelDialog_(items) {
         }
         lastOpenedUrl = item.url;
         lastOpenedAt = now;
-        log('Відкрито у вкладці WhatsApp: ' + (item.fml || 'без імені'));
+        log('Відкрито у вкладці WhatsApp: ' + (item.fio || 'без імені'));
 
         google.script.run
           .withSuccessHandler(function(){
-            log('Автоматично зафіксовано як відправлене: ' + (item.fml || 'без імені'));
+            log('Автоматично зафіксовано як відправлене: ' + (item.fio || 'без імені'));
             currentIndex++;
             renderCurrent();
           })
@@ -838,7 +839,7 @@ function showSendPanelDialog_(items) {
 
       google.script.run
         .withSuccessHandler(function(){
-          log('Підтверджено як відправлене: ' + (item.fml || 'без імені'));
+          log('Підтверджено як відправлене: ' + (item.fio || 'без імені'));
           currentIndex++;
           renderCurrent();
         })
@@ -854,7 +855,7 @@ function showSendPanelDialog_(items) {
 
       google.script.run
         .withSuccessHandler(function(){
-          log('Позначено як НЕ відправлене: ' + (item.fml || 'без імені'));
+          log('Позначено як НЕ відправлене: ' + (item.fio || 'без імені'));
           currentIndex++;
           renderCurrent();
         })
@@ -868,7 +869,7 @@ function showSendPanelDialog_(items) {
       const item = getCurrentItem();
       if (!item) return;
 
-      log('Пропущено: ' + (item.fml || 'без імені'));
+      log('Пропущено: ' + (item.fio || 'без імені'));
       currentIndex++;
       renderCurrent();
     }

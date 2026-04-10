@@ -15,58 +15,21 @@ const OperationRepository_ = (function() {
   });
 
   const OPS_HEADERS = Object.freeze([
-    'TimestampStarted', 
-    'TimestampFinished', 
-    'OperationId', 
-    'ParentOperationId', 
-    'Scenario', 
-    'RawScenario',
-    'Initiator', 
-    'RunSource', 
-    'Status', 
-    'Fingerprint', 
-    'AffectedRows', 
-    'AffectedEntities',
-    'VerificationResult', 
-    'RepairNeeded', 
-    'ErrorMessage', 
-    'TransitionReason', 
-    'Notes',
-    'ResolvedByOperationId', 
-    'ResolvedAt', 
-    'ResolutionStatus', 
-    'LastHeartbeat', 
-    'ExpiresAt',
-    'PayloadJson',
-    'ResultJson', 
-    'CheckpointCount'
+    'TimestampStarted', 'TimestampFinished', 'OperationId', 'ParentOperationId', 'Scenario', 'RawScenario',
+    'Initiator', 'RunSource', 'Status', 'Fingerprint', 'AffectedRows', 'AffectedEntities',
+    'VerificationResult', 'RepairNeeded', 'ErrorMessage', 'TransitionReason', 'Notes',
+    'ResolvedByOperationId', 'ResolvedAt', 'ResolutionStatus', 'LastHeartbeat', 'ExpiresAt',
+    'PayloadJson', 'ResultJson', 'CheckpointCount'
   ]);
 
   const ACTIVE_HEADERS = Object.freeze([
-    'OperationId', 
-    'Scenario', 
-    'Fingerprint', 
-    'Status', 
-    'StartedAt', 
-    'LastHeartbeat',
-    'Initiator', 
-    'RunSource', 
-    'ExpiresAt', 
-    'LockHolder', 
-    'ParentOperationId', 
-    'Notes', 
-    'PayloadJson'
+    'OperationId', 'Scenario', 'Fingerprint', 'Status', 'StartedAt', 'LastHeartbeat',
+    'Initiator', 'RunSource', 'ExpiresAt', 'LockHolder', 'ParentOperationId', 'Notes', 'PayloadJson'
   ]);
 
   const CHECKPOINT_HEADERS = Object.freeze([
-    'OperationId', 
-    'CheckpointIndex', 
-    'ProcessedUpTo', 
-    'LastProcessedEntity', 
-    'LastProcessedRow',
-    'CheckpointTimestamp', 
-    'CheckpointPayload', 
-    'VerificationSnapshot'
+    'OperationId', 'CheckpointIndex', 'ProcessedUpTo', 'LastProcessedEntity', 'LastProcessedRow',
+    'CheckpointTimestamp', 'CheckpointPayload', 'VerificationSnapshot'
   ]);
 
   const FINAL_STATUSES = Object.freeze({ COMMITTED: true, FAILED: true, FAILED_STALE: true, ABANDONED: true, CANCELLED: true });
@@ -120,38 +83,14 @@ const OperationRepository_ = (function() {
   }
 
   function _sheet(name, headers) {
-  var ss = _ss();
-  var sh = ss.getSheetByName(name);
-  if (!sh) {
-    sh = ss.insertSheet(name);
-  }
-
-  var headerLabels = (typeof stage7GetServiceSheetHeaderLabels_ === 'function')
-    ? stage7GetServiceSheetHeaderLabels_(name, headers)
-    : headers.slice();
-
-  if (sh.getMaxColumns() < headerLabels.length) {
-    sh.insertColumnsAfter(sh.getMaxColumns(), headerLabels.length - sh.getMaxColumns());
-  }
-
-  var current = sh.getRange(1, 1, 1, headerLabels.length).getValues()[0];
-  var same = true;
-  for (var i = 0; i < headerLabels.length; i++) {
-    if (String(current[i] || '') !== String(headerLabels[i] || '')) {
-      same = false;
-      break;
+    var ss = _ss();
+    var sh = ss.getSheetByName(name);
+    if (!sh) {
+      sh = ss.insertSheet(name);
+      sh.getRange(1, 1, 1, headers.length).setValues([headers.slice()]);
+      sh.setFrozenRows(1);
     }
-  }
-
-  if (!same) {
-    sh.getRange(1, 1, 1, headerLabels.length).setValues([headerLabels.slice()]);
-  }
-
-  if (typeof stage7ApplyTableTheme_ === 'function') {
-    stage7ApplyTableTheme_(sh, 1, headerLabels.length, { freeze: false });
-  }
-
-  return sh;
+    return sh;
   }
 
   function ensureServiceSheets() {
@@ -170,24 +109,20 @@ const OperationRepository_ = (function() {
   }
 
   function _rowsAsObjects(sheet) {
-  var lastRow = sheet.getLastRow();
-  if (lastRow < 2) return [];
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 2) return [];
+    var map = _headerMap(sheet);
+    var values = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+    var headers = Object.keys(map);
+    return values.map(function(row, idx) {
+      var out = { __row: idx + 2 };
+      headers.forEach(function(header) { out[header] = row[map[header] - 1]; });
+      return out;
+    });
+  }
 
-  var name = String(sheet.getName() || '').trim();
-  var headers = [];
-  if (name === SHEETS.OPS) headers = OPS_HEADERS.slice();
-  else if (name === SHEETS.ACTIVE) headers = ACTIVE_HEADERS.slice();
-  else if (name === SHEETS.CHECKPOINTS) headers = CHECKPOINT_HEADERS.slice();
-  else headers = (sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0] || []).map(function(v) { return String(v || ''); });
-
-  var width = Math.min(sheet.getLastColumn(), headers.length);
-  var values = sheet.getRange(2, 1, lastRow - 1, width).getValues();
-
-  return values.map(function(row, idx) {
-    var out = { __row: idx + 2 };
-    headers.forEach(function(header, hIdx) { out[header] = row[hIdx]; });
-    return out;
-  });
+  function _normalizeOperationId(value) {
+    return String(value == null ? '' : value).trim();
   }
 
   function _sameOperationId(left, right) {
@@ -917,7 +852,3 @@ const OperationRepository_ = (function() {
     _classifyVerification: _classifyVerification
   };
 })();
-
-function _normalizeOperationId(value) {
-  return String(value == null ? '' : value).trim();
-}

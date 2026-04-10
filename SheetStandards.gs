@@ -1,40 +1,44 @@
 /************ СТАНДАРТИ ДЛЯ ЛИСТІВ ************/
 function applyGlobalSheetStandards_() {
-  if (typeof ensureAllSystemSheets_ === 'function') {
-    try { ensureAllSystemSheets_(); } catch (_) {}
-  }
   const ss = SpreadsheetApp.getActive();
   ss.getSheets().forEach(sh => {
     const name = sh.getName();
-    const isMonth = /^\d{2}$/.test(name);
-
-    if (isMonth) {
+    if (/^\d{2}$/.test(name) || name === CONFIG.SEND_PANEL_SHEET) {
+      applyFontStandardsToSheet_(sh);
       applyFreezeStandardsToSheet_(sh);
-      return;
-    }
-
-    if (typeof stage7IsRequiredNonMonthSheet_ === 'function' && stage7IsRequiredNonMonthSheet_(name)) {
-      try {
-        sh.setFrozenRows(1);
-        sh.setFrozenColumns(0);
-      } catch (_) {}
-      if (typeof stage7ApplyTableTheme_ === 'function') {
-        stage7ApplyTableTheme_(sh, 1, Math.max(sh.getLastColumn(), 1), { freeze: false });
-      }
+      applyColumnWidthsStandardsToSheet_(sh);
     }
   });
 }
 
+function applyFontStandardsToSheet_(sheet) {
+  const maxR = sheet.getMaxRows();
+  const maxC = sheet.getMaxColumns();
+  if (maxR < 1 || maxC < 1) return;
+  sheet.getRange(1, 1, maxR, maxC)
+    .setFontFamily('Times New Roman')
+    .setFontSize(12);
+}
+
 function applyFreezeStandardsToSheet_(sheet) {
   try {
-    if (/^\d{2}$/.test(String(sheet.getName() || '').trim())) {
-      sheet.setFrozenRows(1);
-      sheet.setFrozenColumns(7);
-    } else {
-      sheet.setFrozenRows(1);
-      sheet.setFrozenColumns(0);
-    }
+    sheet.setFrozenRows(1);
+    sheet.setFrozenColumns(7);
   } catch (e) { }
+}
+
+function applyColumnWidthsStandardsToSheet_(sheet) {
+  const isSendPanel = sheet.getName() === CONFIG.SEND_PANEL_SHEET;
+  const maxCols = sheet.getMaxColumns();
+  const widths = isSendPanel
+    ? [320, 120, 80, 150, 80, 80, 120].slice(0, maxCols)
+    : [110, 110, 110, 110, 150, 40, 315].slice(0, maxCols);
+
+  widths.forEach((w, i) => {
+    if (Number(w) > 0) {
+      try { sheet.setColumnWidth(i + 1, w); } catch (e) { }
+    }
+  });
 }
 
 /************ ПОШУК СЬОГОДНІШНЬОГО СТОВПЦЯ ************/

@@ -172,7 +172,6 @@
       logToConsole(`✕ Health Check: ${normalizeError(error)}`, 'error');
     }
   }
-
   function splitHealthChecksByGroup(checks) {
     const groups = {
       critical: [],
@@ -203,7 +202,7 @@
         title.indexOf('compatibility ') === 0 ||
         title.indexOf('wrapper source ') === 0 ||
         title.indexOf('ui-ban marker ') === 0 ||
-        details.indexOf('deprecated-helper-wrapper') !== -1 ||
+        details.indexOf('compatibility-only') !== -1 ||
         details.indexOf('замінити на ') !== -1;
 
       if (looksCompatibility) {
@@ -256,7 +255,6 @@
       </div>
     `;
   }
-
   function renderCheckItemCompact(check) {
     const status = String(check?.status || '').toUpperCase();
     const ok = typeof check?.ok === 'boolean' ? check.ok : status === 'OK';
@@ -283,7 +281,6 @@
   function renderCheckItem(check) {
     return renderCheckItemCompact(check);
   }
-
   function renderHealthReport(report) {
     if (!report || !report.checks) {
       return `
@@ -379,11 +376,7 @@
 
         text += `${icon} [${status || '?'}] ${name}\n`;
         if (details) text += `   Деталі: ${details}\n`;
-        if (recommendation && status !== 'OK' && !isPseudo) {
-          text += `   Як виправити: ${String(recommendation).replace(/\n/g, ' ')}\n`;
-        } else if (recommendation && isPseudo) {
-          text += `   Примітка: ${String(recommendation).replace(/\n/g, ' ')}\n`;
-        }
+        if (recommendation) text += `   ${isPseudo ? 'Примітка' : 'Як виправити'}: ${String(recommendation).replace(/\n/g, ' ')}\n`;
         text += `\n`;
       });
 

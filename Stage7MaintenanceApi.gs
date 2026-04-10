@@ -1,8 +1,8 @@
 /**
  * Stage7MaintenanceApi.gs — canonical maintenance / admin / diagnostics API for the Stage 7 baseline.
  *
- * Historical Stage 4 / Stage 5 aliases removed; canonical maintenance API is Stage7MaintenanceApi.gs.
- * Legacy compatibility wrappers removed; canonical maintenance API is Stage7MaintenanceApi.gs.
+ * Historical Stage 4 / Stage 5 aliases live in LegacyMaintenanceAliases.gs.
+ * Compatibility wrappers live in LegacyMaintenanceAliases.gs.
  */
 
 function _stage7BuildMaintenanceResponse_(success, message, report, scenario, warnings, extraMeta) {
@@ -427,6 +427,7 @@ function apiListStage7JobRuntime() {
   );
 }
 
+
 function apiStage7ListPendingRepairs(filters) {
   _stage7AssertRole_('maintainer', 'list pending repairs');
   return _stage7BuildMaintenanceResponse_(
@@ -501,6 +502,7 @@ function apiStage7RunRepair(operationId, options) {
     );
   }
 }
+
 
 function apiStage7RunLifecycleRetentionCleanup() {
   _stage7AssertRole_('sysadmin', 'cleanup lifecycle retention');
