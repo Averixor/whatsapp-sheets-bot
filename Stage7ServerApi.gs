@@ -284,7 +284,7 @@ function apiCheckVacationsAndBirthdays(dateStr) {
 
   return _stage7FastResponse_(
     'checkVacationsAndBirthdays',
-    'Перевірку відпусток і ДН виконано',
+    'Перевірку відпусток виконано',
     {
       date: daily.date || info.payload.dateStr || info.payload.date || _todayStr_(),
       vacations: daily.vacations || {},
