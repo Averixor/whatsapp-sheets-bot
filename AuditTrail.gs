@@ -402,7 +402,7 @@ const Stage7AuditTrail_ = (function () {
         reportDateStr: dateStr,
         sheet: e.affectedSheets[0] || '',
         cell: e.operationId || '',
-        fio: e.affectedEntities[0] || '',
+        fml: e.affectedEntities[0] || '',
         phone: '',
         code: '',
         service: '',

@@ -10,11 +10,11 @@ const CONFIG = {
 
   // Координати даних
   PHONE_COL: 1,
-  FIO_COL: 7,
+  FML_COL: 7,
   DATE_ROW: 1,
   CALLSIGN_COL: 2,
   CODE_RANGE_A1: 'H2:AL40',
-  OS_FIO_RANGE_A1: 'G2:G40',
+  OS_FML_RANGE_A1: 'G2:G40',
 
   // Технічні параметри
   TZ: Session.getScriptTimeZone(),
@@ -44,7 +44,7 @@ const CONFIG = {
 /** Налаштування для автоматизації місяців **/
 const MONTHLY_CONFIG = {
   DATE_ROW: CONFIG.DATE_ROW,
-  FIO_COL: CONFIG.FIO_COL,
+  FML_COL: CONFIG.FML_COL,
   FIRST_DATA_ROW: 2,
   LAST_DATA_ROW: 40,
   CLEAR_RANGES: [CONFIG.CODE_RANGE_A1],
@@ -360,7 +360,7 @@ function debugPhones() {
       return idx >= 0 ? idx : fallbackIndex;
     }
 
-    const fioCol = findCol(['піб', 'фіо', 'fio'], 0);
+    const fmlCol = findCol(['піб', 'фіо', 'fml'], 0);
     const phoneCol = findCol(['тел', 'телефон', 'phones', 'phone'], 1);
     const roleCol = findCol(['роль', 'позив', 'callsign', 'role'], 2);
     const birthdayCol = findCol(['дн', 'д.н', 'дата народ', 'день народ', 'birthday'], 3);
@@ -393,16 +393,16 @@ function debugPhones() {
 
     for (let i = 1; i < values.length; i++) {
       const row = values[i];
-      const fio = String(row[fioCol] || '').trim();
+      const fml = String(row[fmlCol] || '').trim();
       const phone = cleanPhone(row[phoneCol]);
       const role = String(row[roleCol] || '').trim();
       const birthday = cleanBirthday(row[birthdayCol]);
 
-      if (!fio && !phone && !role && !birthday) continue;
+      if (!fml && !phone && !role && !birthday) continue;
 
       contacts.push({
         row: i + 1,
-        fio: fio,
+        fml: fml,
         phone: phone,
         role: role,
         birthday: birthday,

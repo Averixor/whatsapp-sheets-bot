@@ -42,7 +42,7 @@ function _numberToVacationWord_(num) {
   return String(num || '').trim();
 }
 
-function normalizeFIO_(str) {
+function normalizeFML_(str) {
   if (!str) return '';
   return String(str)
     .toLowerCase()
@@ -55,7 +55,7 @@ function _normCallsignKey_(callsign) {
   return String(callsign || '').trim().toUpperCase();
 }
 
-function _normFio_(s) {
+function _normFml_(s) {
   if (!s) return '';
   return String(s)
     .trim()
@@ -64,11 +64,11 @@ function _normFio_(s) {
     .replace(/[’'`"ʼ]/g, "'");
 }
 
-function _normFioForProfiles_(s) {
-  return _normFio_(s);
+function _normFmlForProfiles_(s) {
+  return _normFml_(s);
 }
 
-function _normFioVac_(str) {
+function _normFmlVac_(str) {
   if (!str) return '';
   return String(str)
     .toLowerCase()
@@ -86,7 +86,7 @@ function normalizePhone_(v) {
 }
 
 function loadPhonesProfiles_() {
-  const empty = { byCallsign: {}, byFio: {}, byNorm: {}, byRole: {}, items: [], versionMarker: 'stage7-phones-profiles-v3' };
+  const empty = { byCallsign: {}, byFml: {}, byNorm: {}, byRole: {}, items: [], versionMarker: 'stage7-phones-profiles-v3' };
   if (typeof loadPhonesIndex_ !== 'function') {
     return empty;
   }
@@ -101,7 +101,7 @@ function loadPhonesProfiles_() {
     if (!cached) continue;
     try {
       const parsed = JSON.parse(cached);
-      if (parsed && typeof parsed === 'object' && parsed.byFio && parsed.byNorm && parsed.byRole && parsed.byCallsign) {
+      if (parsed && typeof parsed === 'object' && parsed.byFml && parsed.byNorm && parsed.byRole && parsed.byCallsign) {
         return parsed;
       }
     } catch (e) {}
@@ -110,7 +110,7 @@ function loadPhonesProfiles_() {
   const index = loadPhonesIndex_();
   const out = {
     byCallsign: {},
-    byFio: {},
+    byFml: {},
     byNorm: {},
     byRole: {},
     items: Array.isArray(index.items) ? index.items.slice() : [],
@@ -119,12 +119,12 @@ function loadPhonesProfiles_() {
 
   (index.items || []).forEach(function(item) {
     if (!item || typeof item !== 'object') return;
-    const fioKey = _normFioForProfiles_(item.fio || '');
-    const normKey = normalizeFIO_(item.fio || '');
+    const fmlKey = _normFmlForProfiles_(item.fml || '');
+    const normKey = normalizeFML_(item.fml || '');
     const callsignKey = _normCallsignKey_(item.callsign || item.role || '');
     const roleKey = _normCallsignKey_(item.role || item.callsign || '');
 
-    if (fioKey) out.byFio[fioKey] = item;
+    if (fmlKey) out.byFml[fmlKey] = item;
     if (normKey) out.byNorm[normKey] = item;
     if (callsignKey) out.byCallsign[callsignKey] = item;
     if (roleKey) out.byRole[roleKey] = item;
@@ -145,16 +145,16 @@ function getDisplayName_(personOrName) {
   try {
     if (!personOrName) return '';
     if (typeof personOrName === 'string') {
-      const fio = personOrName.trim();
-      const parts = fio.split(/\s+/).filter(Boolean);
+      const fml = personOrName.trim();
+      const parts = fml.split(/\s+/).filter(Boolean);
       return parts[1] || parts[0] || '';
     }
     const person = personOrName;
     if (person.callsign && String(person.callsign).trim()) return String(person.callsign).trim();
     if (person.role && String(person.role).trim()) return String(person.role).trim();
-    const fio = String(person.fio || '').trim();
-    if (!fio) return '';
-    const parts = fio.split(/\s+/).filter(Boolean);
+    const fml = String(person.fml || '').trim();
+    if (!fml) return '';
+    const parts = fml.split(/\s+/).filter(Boolean);
     return parts[1] || parts[0] || '';
   } catch (e) {
     console.error('Помилка getDisplayName_:', e);
@@ -228,36 +228,36 @@ function _safeLoadPhonesMap_() {
   return {};
 }
 
-function _getPhoneByFio_(fio) {
-  if (!fio) return '';
+function _getPhoneByFml_(fml) {
+  if (!fml) return '';
   try {
     if (typeof findPhone_ === 'function') {
-      return findPhone_({ fio: fio });
+      return findPhone_({ fml: fml });
     }
     const phonesMap = _safeLoadPhonesMap_();
-    const raw = String(fio || '').trim();
-    const norm = normalizeFIO_(raw);
+    const raw = String(fml || '').trim();
+    const norm = normalizeFML_(raw);
     return phonesMap[raw] || phonesMap[norm] || '';
   } catch (e) {
-    console.error('Помилка _getPhoneByFio_:', e);
+    console.error('Помилка _getPhoneByFml_:', e);
     return '';
   }
 }
 
-function _getCallsignByFio_(fio) {
-  if (!fio) return '';
+function _getCallsignByFml_(fml) {
+  if (!fml) return '';
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const phonesSheet = ss.getSheetByName(CONFIG.PHONES_SHEET);
     if (!phonesSheet || phonesSheet.getLastRow() < 2) return '';
     const data = phonesSheet.getRange(2, 1, phonesSheet.getLastRow() - 1, 3).getValues();
-    const normFio = normalizeFIO_(fio);
+    const normFml = normalizeFML_(fml);
     for (const row of data) {
-      const rowFio = normalizeFIO_(row[0] || '');
-      if (rowFio === normFio) return String(row[2] || '').trim();
+      const rowFml = normalizeFML_(row[0] || '');
+      if (rowFml === normFml) return String(row[2] || '').trim();
     }
   } catch (e) {
-    console.error('Помилка _getCallsignByFio_:', e);
+    console.error('Помилка _getCallsignByFml_:', e);
   }
   return '';
 }

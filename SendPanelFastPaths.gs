@@ -26,7 +26,7 @@ const SendPanelFastPaths_ = (function() {
   function _rowToObject_(rowValues, rowNumber, actionFormula, panelDate) {
     const values = Array.isArray(rowValues) ? rowValues : [];
     return {
-      fio: String(values[0] || '').trim(),
+      fml: String(values[0] || '').trim(),
       phone: String(values[1] || '').replace(/^'/, '').trim() || '—',
       code: String(values[2] || '').trim(),
       tasks: String(values[3] || '').trim() || '—',
@@ -43,7 +43,7 @@ const SendPanelFastPaths_ = (function() {
     return (Array.isArray(rows) ? rows : []).map(function(row, index) {
       return _rowToObject_(row, startRow + index, row[6] || '', dateStr);
     }).filter(function(item) {
-      return item.fio || item.code || item.phone !== '—';
+      return item.fml || item.code || item.phone !== '—';
     });
   }
 
@@ -57,7 +57,7 @@ const SendPanelFastPaths_ = (function() {
     const dateCol = ctx.col;
 
     const codeValues = source.getRange(startRow, dateCol, rowCount, 1).getDisplayValues();
-    const fioValues = source.getRange(startRow, CONFIG.FIO_COL, rowCount, 1).getDisplayValues();
+    const fmlValues = source.getRange(startRow, CONFIG.FML_COL, rowCount, 1).getDisplayValues();
     const brValues = source.getRange(startRow, 6, rowCount, 1).getDisplayValues();
 
     const phonesIndex = DictionaryRepository_.getPhonesIndex();
@@ -66,12 +66,12 @@ const SendPanelFastPaths_ = (function() {
 
     for (var i = 0; i < rowCount; i++) {
       var code = String(codeValues[i] && codeValues[i][0] || '').trim();
-      var fioRaw = String(fioValues[i] && fioValues[i][0] || '').trim();
-      if (!code || !fioRaw) continue;
+      var fmlRaw = String(fmlValues[i] && fmlValues[i][0] || '').trim();
+      if (!code || !fmlRaw) continue;
 
       try {
-        var fioNorm = normalizeFIO_(fioRaw);
-        var phone = findPhone_({ fio: fioRaw, fioNorm: fioNorm }, { index: phonesIndex }) || '';
+        var fmlNorm = normalizeFML_(fmlRaw);
+        var phone = findPhone_({ fml: fmlRaw, fmlNorm: fmlNorm }, { index: phonesIndex }) || '';
         var phoneDigits = phone ? String(phone).replace(/[^\d+]/g, '') : '';
         var waPhone = phoneDigits ? (phoneDigits.charAt(0) === '+' ? phoneDigits : '+' + phoneDigits) : '';
 
@@ -93,10 +93,10 @@ const SendPanelFastPaths_ = (function() {
         var safeMessage = trimToEncoded_(msg, CONFIG.MAX_WA_TEXT);
         var formattedPhone = waPhone && waPhone.charAt(0) === '+' ? ("'" + waPhone) : String(waPhone || '').trim();
         var link = waPhone ? ('https://wa.me/' + waPhone.replace('+', '') + '?text=' + encodeURIComponent(safeMessage)) : '';
-        var status = deriveSendPanelStatusFromInputs_(fioRaw, formattedPhone, code, tasks);
+        var status = deriveSendPanelStatusFromInputs_(fmlRaw, formattedPhone, code, tasks);
 
         rows.push([
-          fioRaw,
+          fmlRaw,
           formattedPhone || '',
           code,
           tasks || '',
@@ -106,7 +106,7 @@ const SendPanelFastPaths_ = (function() {
         ]);
       } catch (error) {
         rows.push([
-          fioRaw,
+          fmlRaw,
           '',
           code,
           '',
@@ -153,7 +153,7 @@ const SendPanelFastPaths_ = (function() {
       .setBackground('#fff3cd');
 
     panel.getRange(headerRow, 1, 1, 7)
-      .setValues([['FIO', 'Phone', 'Code', 'Tasks', 'Status', 'Sent', 'Action']])
+      .setValues([['FML', 'Phone', 'Code', 'Tasks', 'Status', 'Sent', 'Action']])
       .setFontWeight('bold')
       .setHorizontalAlignment('center')
       .setBackground(null);
@@ -359,7 +359,7 @@ const SendPanelFastPaths_ = (function() {
     var formula = panel.getRange(row, 7, 1, 1).getFormulas()[0][0] || '';
     var item = _rowToObject_(values, row, formula, meta.date || '');
 
-    if (!item.fio && !item.code && item.phone === '—') {
+    if (!item.fml && !item.code && item.phone === '—') {
       throw new Error('Рядок SEND_PANEL порожній');
     }
 

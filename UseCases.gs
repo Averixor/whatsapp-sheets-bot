@@ -7,7 +7,7 @@ function _stage7RowsToChangeList_(rows, type) {
     return {
       type: type || 'row',
       row: item.row,
-      fio: item.fio || '',
+      fml: item.fml || '',
       code: item.code || '',
       status: item.status || ''
     };
@@ -331,7 +331,7 @@ const Stage7UseCases_ = (function() {
             },
             changes: [],
             affectedSheets: [CONFIG.SEND_PANEL_SHEET],
-            affectedEntities: targetRows.map(function(item) { return item.fio; }),
+            affectedEntities: targetRows.map(function(item) { return item.fml; }),
             appliedChangesCount: 0,
             skippedChangesCount: 0,
             partial: false
@@ -345,7 +345,7 @@ const Stage7UseCases_ = (function() {
           result: result,
           changes: _stage7RowsToChangeList_(targetRows, 'markPending'),
           affectedSheets: [CONFIG.SEND_PANEL_SHEET],
-          affectedEntities: targetRows.map(function(item) { return item.fio; }),
+          affectedEntities: targetRows.map(function(item) { return item.fml; }),
           appliedChangesCount: result.updatedRows.length,
           skippedChangesCount: 0,
           partial: false
@@ -404,7 +404,7 @@ const Stage7UseCases_ = (function() {
             },
             changes: [],
             affectedSheets: [CONFIG.SEND_PANEL_SHEET],
-            affectedEntities: targetRows.map(function(item) { return item.fio; }),
+            affectedEntities: targetRows.map(function(item) { return item.fml; }),
             appliedChangesCount: 0,
             skippedChangesCount: alreadySent.length,
             partial: false,
@@ -419,7 +419,7 @@ const Stage7UseCases_ = (function() {
           result: result,
           changes: _stage7RowsToChangeList_(targetRows, 'markSent'),
           affectedSheets: [CONFIG.SEND_PANEL_SHEET],
-          affectedEntities: targetRows.map(function(item) { return item.fio; }),
+          affectedEntities: targetRows.map(function(item) { return item.fml; }),
           appliedChangesCount: result.updatedRows.length,
           skippedChangesCount: alreadySent.length,
           partial: alreadySent.length > 0,
@@ -476,7 +476,7 @@ const Stage7UseCases_ = (function() {
             },
             changes: [],
             affectedSheets: [CONFIG.SEND_PANEL_SHEET],
-            affectedEntities: targetRows.map(function(item) { return item.fio; }),
+            affectedEntities: targetRows.map(function(item) { return item.fml; }),
             appliedChangesCount: 0,
             skippedChangesCount: 0,
           partial: false
@@ -490,7 +490,7 @@ const Stage7UseCases_ = (function() {
           result: result,
           changes: _stage7RowsToChangeList_(targetRows, 'markUnsent'),
           affectedSheets: [CONFIG.SEND_PANEL_SHEET],
-          affectedEntities: targetRows.map(function(item) { return item.fio; }),
+          affectedEntities: targetRows.map(function(item) { return item.fml; }),
           appliedChangesCount: result.updatedRows.length,
           skippedChangesCount: 0,
           partial: false
@@ -564,7 +564,7 @@ const Stage7UseCases_ = (function() {
             },
             changes: [],
             affectedSheets: [CONFIG.SEND_PANEL_SHEET],
-            affectedEntities: queue.map(function(item) { return item.fio; }),
+            affectedEntities: queue.map(function(item) { return item.fml; }),
             appliedChangesCount: 0,
             skippedChangesCount: 0,
           partial: false
@@ -583,7 +583,7 @@ const Stage7UseCases_ = (function() {
           },
           changes: _stage7RowsToChangeList_(queue, 'markSentAuto'),
           affectedSheets: [CONFIG.SEND_PANEL_SHEET],
-          affectedEntities: queue.map(function(item) { return item.fio; }),
+          affectedEntities: queue.map(function(item) { return item.fml; }),
           appliedChangesCount: queue.length,
           skippedChangesCount: 0,
           partial: false
@@ -778,7 +778,7 @@ const Stage7UseCases_ = (function() {
           result: person,
           changes: [],
           affectedSheets: [person.sheet],
-          affectedEntities: [person.callsign || person.fio],
+          affectedEntities: [person.callsign || person.fml],
           appliedChangesCount: 0,
           skippedChangesCount: 0,
           warnings: person.phone ? [] : ['Для бійця не знайдено телефон']

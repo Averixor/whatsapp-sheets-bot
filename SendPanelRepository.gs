@@ -50,7 +50,7 @@ const SendPanelRepository_ = (function() {
     return rowNumbers.map(function(row) {
       const values = valuesByRow[row] || [];
       return {
-        fio: String(values[0] || '').trim(),
+        fml: String(values[0] || '').trim(),
         phone: String(values[1] || '').replace(/^'/, '').trim() || '—',
         code: String(values[2] || '').trim(),
         tasks: String(values[3] || '').trim() || '—',
@@ -60,7 +60,7 @@ const SendPanelRepository_ = (function() {
         row: row
       };
     }).filter(function(item) {
-      return item.fio || item.code || item.phone !== '—';
+      return item.fml || item.code || item.phone !== '—';
     });
   }
 
@@ -78,7 +78,7 @@ const SendPanelRepository_ = (function() {
 
     return values.map(function(row, index) {
       return {
-        fio: String(row[0] || '').trim(),
+        fml: String(row[0] || '').trim(),
         phone: String(row[1] || '').replace(/^'/, '').trim() || '—',
         code: String(row[2] || '').trim(),
         tasks: String(row[3] || '').trim() || '—',
@@ -88,7 +88,7 @@ const SendPanelRepository_ = (function() {
         row: schema.dataStartRow + index
       };
     }).filter(function(item) {
-      return item.fio || item.code || item.phone !== '—';
+      return item.fml || item.code || item.phone !== '—';
     });
   }
 
@@ -120,15 +120,15 @@ const SendPanelRepository_ = (function() {
     const start = ref.getRow();
     const num = ref.getNumRows();
     const codes = source.getRange(start, ctx.col, num, 1).getDisplayValues();
-    const fios = source.getRange(start, CONFIG.FIO_COL, num, 1).getDisplayValues();
+    const fmls = source.getRange(start, CONFIG.FML_COL, num, 1).getDisplayValues();
 
     const rows = [];
     const payloads = [];
 
     for (let i = 0; i < num; i++) {
       const code = String(codes[i][0] || '').trim();
-      const fio = String(fios[i][0] || '').trim();
-      if (!code || !fio) continue;
+      const fml = String(fmls[i][0] || '').trim();
+      if (!code || !fml) continue;
 
       try {
         const payload = buildPayloadForCell_(source, start + i, ctx.col, phones, dict);
@@ -137,10 +137,10 @@ const SendPanelRepository_ = (function() {
           formattedPhone = "'" + formattedPhone;
         }
 
-        const effectiveStatus = deriveSendPanelStatusFromInputs_(payload.fio, formattedPhone, payload.code, payload.tasks);
+        const effectiveStatus = deriveSendPanelStatusFromInputs_(payload.fml, formattedPhone, payload.code, payload.tasks);
 
         rows.push([
-          payload.fio,
+          payload.fml,
           formattedPhone || '',
           payload.code,
           payload.tasks || '',
@@ -152,7 +152,7 @@ const SendPanelRepository_ = (function() {
         payloads.push(payload);
       } catch (e) {
         rows.push([
-          fio,
+          fml,
           '',
           code,
           '',
@@ -180,7 +180,7 @@ const SendPanelRepository_ = (function() {
     const built = buildRowsForDate(dateStr);
     const mapped = built.rows.map(function(row, index) {
       return {
-        fio: String(row[0] || '').trim(),
+        fml: String(row[0] || '').trim(),
         phone: String(row[1] || '').replace(/^'/, '').trim() || '—',
         code: String(row[2] || '').trim(),
         tasks: String(row[3] || '').trim() || '—',
@@ -323,7 +323,7 @@ const SendPanelRepository_ = (function() {
         reportDateStr: getSendPanelMetadata_(panel).date || _todayStr_(),
         sheet: CONFIG.SEND_PANEL_SHEET,
         cell: `ROW:${item.row}`,
-        fio: item.fio,
+        fml: item.fml,
         phone: item.phone,
         code: item.code,
         service: '',

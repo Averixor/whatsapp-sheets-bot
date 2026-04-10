@@ -40,9 +40,9 @@
 
 ## Module changelog
 ### DataAccess.gs
-- Added canonical `loadPhonesIndex_()` with structured indexes: `byFio`, `byNorm`, `byRole`, `byCallsign`, `items`.
+- Added canonical `loadPhonesIndex_()` with structured indexes: `byFml`, `byNorm`, `byRole`, `byCallsign`, `items`.
 - Converted `loadPhonesMap_()` into a controlled compatibility projection over the canonical index.
-- Added canonical `findPhone_()` lookup that supports `fio`, `fioNorm`, `role`, `callsign`.
+- Added canonical `findPhone_()` lookup that supports `fml`, `fmlNorm`, `role`, `callsign`.
 - Kept `findPhoneByRole_()` as a compatibility wrapper over the new lookup.
 - Made `buildPayloadForCell_()` consume canonical lookup logic even when callers still pass legacy flat maps.
 - Switched payload collection paths to use the canonical phone index.
@@ -50,7 +50,7 @@
 ### Utils.gs
 - Reworked `loadPhonesProfiles_()` into a compatibility facade built from the canonical phone index.
 - Added new cache key helpers for flat/index/profile phone caches.
-- Updated `_getPhoneByFio_()` to use the canonical phone lookup first.
+- Updated `_getPhoneByFml_()` to use the canonical phone lookup first.
 - Expanded cache clearing to remove both old and new phone cache generations.
 
 ### DateUtils.gs
@@ -95,7 +95,7 @@
 
 ### DomainTests.gs
 - Added coverage for `{{name}}` template rendering.
-- Added coverage for canonical phone lookup over `fio`, `role`, `callsign`.
+- Added coverage for canonical phone lookup over `fml`, `role`, `callsign`.
 
 ### ProjectMetadata.gs
 - Updated release naming to final stabilized repair baseline.

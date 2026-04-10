@@ -24,7 +24,7 @@ function apiPreviewSelectionMessage(options) {
 
         changes: [],
         affectedSheets: [prepared.sheetName],
-        affectedEntities: [prepared.payload.fio || '']
+        affectedEntities: [prepared.payload.fml || '']
       };
     }
   });
@@ -47,7 +47,7 @@ function apiPreviewMultipleMessages(options) {
 
         changes: [],
         affectedSheets: [prepared.sheetName],
-        affectedEntities: (prepared.payloads || []).map(function(item) { return item.fio || ''; })
+        affectedEntities: (prepared.payloads || []).map(function(item) { return item.fml || ''; })
       };
     }
   });
@@ -70,7 +70,7 @@ function apiPreviewGroupedMessages(options) {
 
         changes: [],
         affectedSheets: [prepared.sheetName],
-        affectedEntities: (prepared.payloads || []).map(function(item) { return item.fio || ''; })
+        affectedEntities: (prepared.payloads || []).map(function(item) { return item.fml || ''; })
       };
     }
   });
@@ -93,7 +93,7 @@ function apiPrepareRangeMessages(options) {
 
         changes: [],
         affectedSheets: [prepared.sheetName],
-        affectedEntities: (prepared.payloads || []).map(function(item) { return item.fio || ''; })
+        affectedEntities: (prepared.payloads || []).map(function(item) { return item.fml || ''; })
       };
     }
   });
@@ -192,7 +192,7 @@ function apiLogPreparedMessages(options) {
         }],
         
         affectedSheets: [prepared.sheetName, CONFIG.LOG_SHEET],
-        affectedEntities: (prepared.payloads || []).map(function(item) { return item.fio || ''; }),
+        affectedEntities: (prepared.payloads || []).map(function(item) { return item.fml || ''; }),
         appliedChangesCount: input.dryRun ? 0 : (prepared.payloads || []).length,
         skippedChangesCount: input.dryRun ? (prepared.payloads || []).length : 0
       };

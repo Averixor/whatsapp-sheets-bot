@@ -28,7 +28,7 @@ function sendFromSidebar(personData) {
       reportDateStr: personData.date || '',
       sheet: getBotMonthSheetName_(),
       cell: `${String.fromCharCode(64 + Number(personData.col || 0))}${personData.row || ''}`,
-      fio: personData.fio || '',
+      fml: personData.fml || '',
       phone: personData.phone || '',
       code: personData.code || '',
       service: personData.service || '',
@@ -69,7 +69,7 @@ function sendAllFromSidebar(personnelList) {
         reportDateStr: item.date || '',
         sheet: getBotMonthSheetName_(),
         cell: `${String.fromCharCode(64 + Number(item.col || 0))}${item.row || ''}`,
-        fio: item.fio || '',
+        fml: item.fml || '',
         phone: item.phone || '',
         code: item.code || '',
         service: item.service || '',
@@ -111,7 +111,7 @@ function sendDaySummaryToCommanderSidebar(dateStr, summaryText) {
       reportDateStr: dateStr || '',
       sheet: 'COMMANDER',
       cell: 'SUMMARY',
-      fio: `Командир (${CONFIG.COMMANDER_ROLE})`,
+      fml: `Командир (${CONFIG.COMMANDER_ROLE})`,
       phone: phone,
       code: 'SUMMARY',
       message: String(summaryText).substring(0, 100) + '...',
@@ -146,7 +146,7 @@ function sendDetailedToCommanderSidebar(dateStr, detailedText) {
       reportDateStr: dateStr || '',
       sheet: 'COMMANDER',
       cell: 'DETAILED',
-      fio: `Командир (${CONFIG.COMMANDER_ROLE})`,
+      fml: `Командир (${CONFIG.COMMANDER_ROLE})`,
       phone: phone,
       code: 'DETAILED',
       message: String(detailedText).substring(0, 100) + '...',
@@ -184,7 +184,7 @@ function testCommanderPhone() {
 
     let found = 0;
     (phoneIndex && Array.isArray(phoneIndex.items) ? phoneIndex.items : []).forEach(function(item) {
-      const probe = [item.role, item.callsign, item.fio].filter(Boolean).join(' | ');
+      const probe = [item.role, item.callsign, item.fml].filter(Boolean).join(' | ');
       const upperProbe = probe.toUpperCase();
       if (upperProbe.indexOf('КОМАНДИР') !== -1 || upperProbe.indexOf('КВ') !== -1 || upperProbe.indexOf('ГРАФ') !== -1 || upperProbe.indexOf(String(role || '').toUpperCase()) !== -1) {
         result += `  ${probe} → ${item.phone || '—'}
