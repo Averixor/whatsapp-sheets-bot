@@ -2,15 +2,13 @@
  * AccessPolicyChecks.gs
  *
  * Dry-run policy validation for access control and key-rotation contracts.
- *
  * Канонічний Stage 7 файл для безпечних перевірок політик доступу.
- * AccessE2ETests.gs використовується лише як thin compatibility wrapper.
- *
- * Це не E2E-тести в класичному сенсі.
  * Це набір безпечних перевірок політик доступу без побічних ефектів.
  */
 
-const POLICY_CHECKS_CONFIG_ = Object.freeze({
+// ==================== КОНФІГУРАЦІЯ ====================
+
+var POLICY_CHECKS_CONFIG_ = {
   EXPECTED_PROTECTED_SHEETS: [
     'ACCESS',
     'ALERTS_LOG',
@@ -30,32 +28,45 @@ const POLICY_CHECKS_CONFIG_ = Object.freeze({
     'PHONES'
   ],
 
-  /**
-   * Базова політика:
-   * false -> достатньо, що всі очікувані листи присутні
-   * true  -> потрібен точний збіг без зайвих листів
-   *
-   * Для стабільності baseline краще тримати false.
-   */
+  // false -> достатньо, що всі очікувані листи присутні
+  // true  -> потрібен точний збіг без зайвих листів
   STRICT_PROTECTED_SHEETS_MODE: false,
 
   REQUIRED_MAINTENANCE_ACTIONS: ['repair', 'protections', 'triggers'],
   ROLES_WITH_ACTIONS: ['viewer', 'operator', 'maintainer', 'admin', 'sysadmin', 'owner'],
-
   SCRIPT_PROPERTY_ALLOW_TESTS: 'WASB_ALLOW_POLICY_TESTS'
-});
+};
 
-// ==================== INTERNAL HELPERS ====================
+// Заморожуємо конфігурацію для захисту
+if (typeof Object.freeze === 'function') {
+  Object.freeze(POLICY_CHECKS_CONFIG_.EXPECTED_PROTECTED_SHEETS);
+  Object.freeze(POLICY_CHECKS_CONFIG_.REQUIRED_MAINTENANCE_ACTIONS);
+  Object.freeze(POLICY_CHECKS_CONFIG_.ROLES_WITH_ACTIONS);
+  Object.freeze(POLICY_CHECKS_CONFIG_);
+}
 
+
+// ==================== ВНУТРІШНІ ДОПОМІЖНІ ФУНКЦІЇ ====================
+
+/**
+ * Створює помилку пропуску перевірки (SKIP).
+ * @param {string} message
+ * @returns {Error}
+ */
 function _createSkipError_(message) {
-  const err = new Error(message || 'Check skipped');
+  var err = new Error(message || 'Check skipped');
   err.name = 'PolicyCheckSkipError';
   err.isPolicyCheckSkip = true;
   return err;
 }
 
+/**
+ * Створює помилку блокування перевірки (BLOCKED).
+ * @param {string} message
+ * @returns {Error}
+ */
 function _createBlockedError_(message) {
-  const err = new Error(message || 'Check blocked by safety policy');
+  var err = new Error(message || 'Check blocked by safety policy');
   err.name = 'PolicyCheckBlockedError';
   err.isPolicyCheckBlocked = true;
   return err;
@@ -69,10 +80,14 @@ function _isBlockedError_(error) {
   return !!(error && error.isPolicyCheckBlocked === true);
 }
 
+/**
+ * Отримує версію Stage з метаданих проєкту.
+ * @returns {string}
+ */
 function _getStageVersionForChecks_() {
   try {
     if (typeof getProjectBundleMetadata_ === 'function') {
-      const meta = getProjectBundleMetadata_();
+      var meta = getProjectBundleMetadata_();
       if (meta && meta.stageVersion) return meta.stageVersion;
       if (meta && meta.stage) return String(meta.stage);
     }
@@ -80,6 +95,10 @@ function _getStageVersionForChecks_() {
   return 'unknown';
 }
 
+/**
+ * Повертає поточний timestamp для логів.
+ * @returns {string}
+ */
 function _getCurrentTimestampForChecks_() {
   try {
     return Utilities.formatDate(
@@ -115,50 +134,59 @@ function _safeCloneForLog_(value) {
   }
 }
 
+/**
+ * Логує результат перевірки в AlertsRepository (якщо доступний).
+ */
 function _logPolicyCheckToRepository_(checkName, status, message, details) {
   try {
     if (typeof AlertsRepository_ === 'object' &&
         AlertsRepository_ &&
         typeof AlertsRepository_.appendAlert === 'function') {
+      var severity = 'info';
+      if (status === 'FAIL') severity = 'error';
+      else if (status === 'BLOCKED') severity = 'warning';
+
       AlertsRepository_.appendAlert({
         type: 'policy_check',
-        severity:
-          status === 'FAIL'
-            ? 'error'
-            : status === 'BLOCKED'
-              ? 'warning'
-              : 'info',
+        severity: severity,
         action: checkName,
         outcome: status,
         message: message,
         details: _safeCloneForLog_(details || {})
       });
     }
-  } catch (_) {
-    // best effort only
-  }
+  } catch (_) {}
 }
 
+/**
+ * Нормалізує опції для перевірок.
+ * @param {Object} options
+ * @returns {Object}
+ */
 function _normalizeOptionsForPolicyChecks_(options) {
-  const opts = options || {};
+  var opts = options || {};
   return {
     forceRun: opts.forceRun === true,
     safeTestEnvironment: opts.safeTestEnvironment === true,
-    strictProtectedSheetsMode:
-      typeof opts.strictProtectedSheetsMode === 'boolean'
-        ? opts.strictProtectedSheetsMode
-        : POLICY_CHECKS_CONFIG_.STRICT_PROTECTED_SHEETS_MODE
+    strictProtectedSheetsMode: typeof opts.strictProtectedSheetsMode === 'boolean'
+      ? opts.strictProtectedSheetsMode
+      : POLICY_CHECKS_CONFIG_.STRICT_PROTECTED_SHEETS_MODE
   };
 }
 
+/**
+ * Перевіряє, чи можна виконувати перевірки в поточному середовищі.
+ * @param {Object} options
+ * @returns {boolean}
+ */
 function _isSafeTestEnvironment_(options) {
-  const opts = _normalizeOptionsForPolicyChecks_(options);
+  var opts = _normalizeOptionsForPolicyChecks_(options);
 
   if (opts.forceRun === true) return true;
   if (opts.safeTestEnvironment === true) return true;
 
   try {
-    const props = PropertiesService.getScriptProperties();
+    var props = PropertiesService.getScriptProperties();
     if (props.getProperty(POLICY_CHECKS_CONFIG_.SCRIPT_PROPERTY_ALLOW_TESTS) === 'true') {
       return true;
     }
@@ -167,6 +195,11 @@ function _isSafeTestEnvironment_(options) {
   return false;
 }
 
+/**
+ * Перевіряє, чи дозволено запускати перевірки.
+ * @param {Object} options
+ * @returns {Object}
+ */
 function _canRunPolicyChecks_(options) {
   if (_isSafeTestEnvironment_(options)) {
     return { allowed: true, reason: null };
@@ -174,13 +207,14 @@ function _canRunPolicyChecks_(options) {
 
   return {
     allowed: false,
-    reason:
-      'Policy checks blocked outside safe environment. ' +
-      'Use { forceRun: true } or set script property ' +
-      POLICY_CHECKS_CONFIG_.SCRIPT_PROPERTY_ALLOW_TESTS +
-      '=true.'
+    reason: 'Policy checks blocked outside safe environment. ' +
+            'Use { forceRun: true } or set script property ' +
+            POLICY_CHECKS_CONFIG_.SCRIPT_PROPERTY_ALLOW_TESTS +
+            '=true.'
   };
 }
+
+// ==================== ВАЛІДАЦІЙНІ ХЕЛПЕРИ ====================
 
 function _requireObjectWithMethod_(obj, methodName, objectName) {
   if (typeof obj !== 'object' || !obj || typeof obj[methodName] !== 'function') {
@@ -200,12 +234,17 @@ function _requireArray_(value, label) {
   }
 }
 
+/**
+ * Перетворює масив дій на об'єкт-множину (для швидкого пошуку).
+ * @param {Array} actions
+ * @returns {Object}
+ */
 function _asCanonicalActionSet_(actions) {
   _requireArray_(actions, 'Allowed actions');
 
-  const map = {};
+  var map = {};
   for (var i = 0; i < actions.length; i++) {
-    const raw = _safeToString_(actions[i]).trim();
+    var raw = _safeToString_(actions[i]).trim();
     if (!raw) continue;
     map[raw] = true;
     map[raw.toLowerCase()] = true;
@@ -213,6 +252,12 @@ function _asCanonicalActionSet_(actions) {
   return map;
 }
 
+/**
+ * Перевіряє, чи містить множина дій хоча б одну з кандидатів.
+ * @param {Object} actionSet
+ * @param {Array} candidates
+ * @returns {boolean}
+ */
 function _actionSetHasAny_(actionSet, candidates) {
   for (var i = 0; i < candidates.length; i++) {
     var candidate = _safeToString_(candidates[i]).trim();
@@ -224,6 +269,11 @@ function _actionSetHasAny_(actionSet, candidates) {
   return false;
 }
 
+/**
+ * Отримує список дозволених дій для ролі (з AccessControl_).
+ * @param {string} role
+ * @returns {Array}
+ */
 function _getAllowedActionsForRoleOrSkip_(role) {
   if (typeof AccessControl_ !== 'object' ||
       !AccessControl_ ||
@@ -231,7 +281,7 @@ function _getAllowedActionsForRoleOrSkip_(role) {
     throw _createSkipError_('AccessControl_.listAllowedActionsForRole is not available');
   }
 
-  const actions = AccessControl_.listAllowedActionsForRole(role);
+  var actions = AccessControl_.listAllowedActionsForRole(role);
   if (!Array.isArray(actions)) {
     throw new Error('Allowed actions should be an array for role: ' + role);
   }
@@ -239,8 +289,10 @@ function _getAllowedActionsForRoleOrSkip_(role) {
   return actions.slice();
 }
 
+// ==================== ФОРМУВАННЯ ЗВІТУ ====================
+
 function _summarizeReportCounts_(report) {
-  const summary = {
+  var summary = {
     ok: 0,
     fail: 0,
     skip: 0,
@@ -248,9 +300,9 @@ function _summarizeReportCounts_(report) {
     total: 0
   };
 
-  const checks = Array.isArray(report && report.checks) ? report.checks : [];
+  var checks = Array.isArray(report && report.checks) ? report.checks : [];
   for (var i = 0; i < checks.length; i++) {
-    const status = checks[i] && checks[i].status;
+    var status = checks[i] && checks[i].status;
     if (status === 'OK') summary.ok++;
     else if (status === 'FAIL') summary.fail++;
     else if (status === 'SKIP') summary.skip++;
@@ -262,7 +314,7 @@ function _summarizeReportCounts_(report) {
 }
 
 function _pushPolicyCheck_(report, checkName, fn) {
-  const item = {
+  var item = {
     name: checkName,
     status: 'OK',
     details: null,
@@ -270,7 +322,7 @@ function _pushPolicyCheck_(report, checkName, fn) {
   };
 
   try {
-    const result = fn();
+    var result = fn();
     item.details = (result === undefined || result === null) ? 'OK' : result;
   } catch (error) {
     if (_isBlockedError_(error)) {
@@ -294,18 +346,21 @@ function _pushPolicyCheck_(report, checkName, fn) {
   report.checks.push(item);
 }
 
+// ==================== ПЕРЕХОПЛЕННЯ ПОБІЧНИХ ЕФЕКТІВ ====================
+
 function _patchSideEffectsForPolicyChecks_() {
-  const originals = {
+  var originals = {
     accessReportViolation: null,
     mailSendEmail: null
   };
 
+  // Перехоплюємо AccessEnforcement_.reportViolation
   try {
     if (typeof AccessEnforcement_ !== 'undefined' &&
         AccessEnforcement_ &&
         typeof AccessEnforcement_.reportViolation === 'function') {
       originals.accessReportViolation = AccessEnforcement_.reportViolation;
-      AccessEnforcement_.reportViolation = function () {
+      AccessEnforcement_.reportViolation = function() {
         return {
           success: true,
           emailSent: false,
@@ -316,14 +371,13 @@ function _patchSideEffectsForPolicyChecks_() {
     }
   } catch (_) {}
 
+  // Перехоплюємо MailApp.sendEmail
   try {
     if (typeof MailApp !== 'undefined' &&
         MailApp &&
         typeof MailApp.sendEmail === 'function') {
       originals.mailSendEmail = MailApp.sendEmail;
-      MailApp.sendEmail = function () {
-        return undefined;
-      };
+      MailApp.sendEmail = function() { return undefined; };
     }
   } catch (_) {}
 
@@ -331,7 +385,7 @@ function _patchSideEffectsForPolicyChecks_() {
 }
 
 function _restoreSideEffectsForPolicyChecks_(originals) {
-  const saved = originals || {};
+  var saved = originals || {};
 
   try {
     if (saved.accessReportViolation &&
@@ -371,26 +425,25 @@ function _buildBlockedReport_(message) {
   };
 }
 
-// ==================== MAIN ====================
 
+// ==================== ГОЛОВНА ФУНКЦІЯ ====================
+
+/**
+ * Запускає всі перевірки політик доступу.
+ * @param {Object} options
+ * @returns {Object}
+ */
 function runAccessPolicyChecks(options) {
-  const opts = _normalizeOptionsForPolicyChecks_(options);
-  const safety = _canRunPolicyChecks_(opts);
+  var opts = _normalizeOptionsForPolicyChecks_(options);
+  var safety = _canRunPolicyChecks_(opts);
 
   if (!safety.allowed) {
-    const blockedReport = _buildBlockedReport_(safety.reason);
-
-    _logPolicyCheckToRepository_(
-      'runAccessPolicyChecks',
-      'BLOCKED',
-      safety.reason,
-      blockedReport
-    );
-
+    var blockedReport = _buildBlockedReport_(safety.reason);
+    _logPolicyCheckToRepository_('runAccessPolicyChecks', 'BLOCKED', safety.reason, blockedReport);
     return blockedReport;
   }
 
-  const report = {
+  var report = {
     ok: true,
     blocked: false,
     status: 'OK',
@@ -403,36 +456,34 @@ function runAccessPolicyChecks(options) {
     checks: []
   };
 
-  const originals = _patchSideEffectsForPolicyChecks_();
+  var originals = _patchSideEffectsForPolicyChecks_();
 
   try {
-    _pushPolicyCheck_(report, 'AccessControl.describe available', function () {
+    // Перевірка 1: AccessControl.describe доступний
+    _pushPolicyCheck_(report, 'AccessControl.describe available', function() {
       _requireObjectWithMethod_(AccessControl_, 'describe', 'AccessControl_');
       return 'describe-ok';
     });
 
-    _pushPolicyCheck_(report, 'descriptor exposes rotation policy contract', function () {
+    // Перевірка 2: Дескриптор має контракт політики ротації
+    _pushPolicyCheck_(report, 'descriptor exposes rotation policy contract', function() {
       _requireObjectWithMethod_(AccessControl_, 'describe', 'AccessControl_');
 
-      const descriptor = AccessControl_.describe();
+      var descriptor = AccessControl_.describe();
       _requireObject_(descriptor, 'AccessControl_.describe() result');
 
       if (!('rotationPolicy' in descriptor)) {
         throw new Error('rotationPolicy missing');
       }
-
       if (!('migrationModeEnabled' in descriptor)) {
         throw new Error('migrationModeEnabled missing');
       }
-
       if (!('allowedActions' in descriptor)) {
         throw new Error('allowedActions missing');
       }
-
       if (typeof descriptor.migrationModeEnabled !== 'boolean') {
         throw new Error('migrationModeEnabled should be boolean');
       }
-
       if (!Array.isArray(descriptor.allowedActions)) {
         throw new Error('allowedActions should be array');
       }
@@ -444,13 +495,14 @@ function runAccessPolicyChecks(options) {
       };
     });
 
-    _pushPolicyCheck_(report, 'viewer may open only own card', function () {
+    // Перевірка 3: Viewer може відкривати тільки свою картку
+    _pushPolicyCheck_(report, 'viewer may open only own card', function() {
       _requireObject_(AccessEnforcement_, 'AccessEnforcement_');
       if (typeof AccessEnforcement_.canOpenPersonCard !== 'function') {
         throw new Error('AccessEnforcement_.canOpenPersonCard is not available');
       }
 
-      const viewer = {
+      var viewer = {
         role: 'viewer',
         enabled: true,
         registered: true,
@@ -460,7 +512,6 @@ function runAccessPolicyChecks(options) {
       if (!AccessEnforcement_.canOpenPersonCard(viewer, 'ALFA')) {
         throw new Error('Viewer own card should be allowed');
       }
-
       if (AccessEnforcement_.canOpenPersonCard(viewer, 'BRAVO')) {
         throw new Error('Viewer foreign card should be denied');
       }
@@ -468,22 +519,18 @@ function runAccessPolicyChecks(options) {
       return 'viewer-self-card-ok';
     });
 
-    _pushPolicyCheck_(report, 'viewer cannot use summaries or send panel', function () {
+    // Перевірка 4: Viewer не може використовувати зведення та send panel
+    _pushPolicyCheck_(report, 'viewer cannot use summaries or send panel', function() {
       _requireObject_(AccessEnforcement_, 'AccessEnforcement_');
 
-      const requiredMethods = [
-        'canUseDaySummary',
-        'canUseDetailedSummary',
-        'canUseSendPanel'
-      ];
-
-      for (var i = 0; i < requiredMethods.length; i++) {
-        if (typeof AccessEnforcement_[requiredMethods[i]] !== 'function') {
-          throw new Error('AccessEnforcement_.' + requiredMethods[i] + ' is not available');
+      var methods = ['canUseDaySummary', 'canUseDetailedSummary', 'canUseSendPanel'];
+      for (var i = 0; i < methods.length; i++) {
+        if (typeof AccessEnforcement_[methods[i]] !== 'function') {
+          throw new Error('AccessEnforcement_.' + methods[i] + ' is not available');
         }
       }
 
-      const viewer = {
+      var viewer = {
         role: 'viewer',
         enabled: true,
         registered: true,
@@ -493,11 +540,9 @@ function runAccessPolicyChecks(options) {
       if (AccessEnforcement_.canUseDaySummary(viewer)) {
         throw new Error('Viewer day summary should be denied');
       }
-
       if (AccessEnforcement_.canUseDetailedSummary(viewer)) {
         throw new Error('Viewer detailed summary should be denied');
       }
-
       if (AccessEnforcement_.canUseSendPanel(viewer)) {
         throw new Error('Viewer send panel should be denied');
       }
@@ -505,23 +550,18 @@ function runAccessPolicyChecks(options) {
       return 'viewer-restrictions-ok';
     });
 
-    _pushPolicyCheck_(report, 'operator gets summaries but not working actions', function () {
+    // Перевірка 5: Operator має зведення, але не робочі дії
+    _pushPolicyCheck_(report, 'operator gets summaries but not working actions', function() {
       _requireObject_(AccessEnforcement_, 'AccessEnforcement_');
 
-      const requiredMethods = [
-        'canUseDaySummary',
-        'canUseDetailedSummary',
-        'canUseWorkingActions',
-        'canUseSendPanel'
-      ];
-
-      for (var i = 0; i < requiredMethods.length; i++) {
-        if (typeof AccessEnforcement_[requiredMethods[i]] !== 'function') {
-          throw new Error('AccessEnforcement_.' + requiredMethods[i] + ' is not available');
+      var methods = ['canUseDaySummary', 'canUseDetailedSummary', 'canUseWorkingActions', 'canUseSendPanel'];
+      for (var i = 0; i < methods.length; i++) {
+        if (typeof AccessEnforcement_[methods[i]] !== 'function') {
+          throw new Error('AccessEnforcement_.' + methods[i] + ' is not available');
         }
       }
 
-      const operator = {
+      var operator = {
         role: 'operator',
         enabled: true,
         registered: true
@@ -530,15 +570,12 @@ function runAccessPolicyChecks(options) {
       if (!AccessEnforcement_.canUseDaySummary(operator)) {
         throw new Error('Operator day summary should be allowed');
       }
-
       if (!AccessEnforcement_.canUseDetailedSummary(operator)) {
         throw new Error('Operator detailed summary should be allowed');
       }
-
       if (AccessEnforcement_.canUseWorkingActions(operator)) {
         throw new Error('Operator working actions should be denied');
       }
-
       if (AccessEnforcement_.canUseSendPanel(operator)) {
         throw new Error('Operator send panel should be denied');
       }
@@ -546,18 +583,18 @@ function runAccessPolicyChecks(options) {
       return 'operator-summaries-only-ok';
     });
 
-    _pushPolicyCheck_(report, 'guest stays locked out of cards and send panel', function () {
+    // Перевірка 6: Guest не має доступу до карток та send panel
+    _pushPolicyCheck_(report, 'guest stays locked out of cards and send panel', function() {
       _requireObject_(AccessEnforcement_, 'AccessEnforcement_');
 
       if (typeof AccessEnforcement_.canOpenPersonCard !== 'function') {
         throw new Error('AccessEnforcement_.canOpenPersonCard is not available');
       }
-
       if (typeof AccessEnforcement_.canUseSendPanel !== 'function') {
         throw new Error('AccessEnforcement_.canUseSendPanel is not available');
       }
 
-      const guest = {
+      var guest = {
         role: 'guest',
         enabled: true,
         registered: false
@@ -566,7 +603,6 @@ function runAccessPolicyChecks(options) {
       if (AccessEnforcement_.canOpenPersonCard(guest, 'ALFA')) {
         throw new Error('Guest person card should be denied');
       }
-
       if (AccessEnforcement_.canUseSendPanel(guest)) {
         throw new Error('Guest send panel should be denied');
       }
@@ -574,37 +610,19 @@ function runAccessPolicyChecks(options) {
       return 'guest-restrictions-ok';
     });
 
-    _pushPolicyCheck_(report, 'viewer allowed actions stay minimal and non-admin', function () {
-      const actions = _getAllowedActionsForRoleOrSkip_('viewer');
-      const set = _asCanonicalActionSet_(actions);
+    // Перевірка 7: Дозволені дії viewer — мінімальні, без адмін-прав
+    _pushPolicyCheck_(report, 'viewer allowed actions stay minimal and non-admin', function() {
+      var actions = _getAllowedActionsForRoleOrSkip_('viewer');
+      var set = _asCanonicalActionSet_(actions);
 
-      const viewerPositiveCandidates = [
-        'власна картка',
-        'own-card',
-        'self-card',
-        'person-card:self'
-      ];
+      var positive = ['власна картка', 'own-card', 'self-card', 'person-card:self'];
+      var forbidden = ['коротке зведення', 'day-summary', 'summary:day', 'адмін-дії', 'admin-actions', 'send-panel', 'working-actions'];
 
-      const viewerForbiddenCandidates = [
-        'коротке зведення',
-        'day-summary',
-        'summary:day',
-        'адмін-дії',
-        'admin-actions',
-        'send-panel',
-        'working-actions'
-      ];
-
-      if (!_actionSetHasAny_(set, viewerPositiveCandidates)) {
-        throw new Error(
-          'Viewer expected own-card style permission is missing. Actions: ' + actions.join(', ')
-        );
+      if (!_actionSetHasAny_(set, positive)) {
+        throw new Error('Viewer expected own-card style permission is missing. Actions: ' + actions.join(', '));
       }
-
-      if (_actionSetHasAny_(set, viewerForbiddenCandidates)) {
-        throw new Error(
-          'Viewer received forbidden elevated action. Actions: ' + actions.join(', ')
-        );
+      if (_actionSetHasAny_(set, forbidden)) {
+        throw new Error('Viewer received forbidden elevated action. Actions: ' + actions.join(', '));
       }
 
       return {
@@ -613,67 +631,63 @@ function runAccessPolicyChecks(options) {
       };
     });
 
-    _pushPolicyCheck_(report, 'sysadmin has required maintenance actions', function () {
-      const actions = _getAllowedActionsForRoleOrSkip_('sysadmin');
-      const set = _asCanonicalActionSet_(actions);
+    // Перевірка 8: Sysadmin має всі необхідні дії обслуговування
+    _pushPolicyCheck_(report, 'sysadmin has required maintenance actions', function() {
+      var actions = _getAllowedActionsForRoleOrSkip_('sysadmin');
+      var set = _asCanonicalActionSet_(actions);
+      var required = POLICY_CHECKS_CONFIG_.REQUIRED_MAINTENANCE_ACTIONS;
 
-      for (var i = 0; i < POLICY_CHECKS_CONFIG_.REQUIRED_MAINTENANCE_ACTIONS.length; i++) {
-        const action = POLICY_CHECKS_CONFIG_.REQUIRED_MAINTENANCE_ACTIONS[i];
-        if (!_actionSetHasAny_(set, [action])) {
-          throw new Error('sysadmin missing action: ' + action);
+      for (var i = 0; i < required.length; i++) {
+        if (!_actionSetHasAny_(set, [required[i]])) {
+          throw new Error('sysadmin missing action: ' + required[i]);
         }
       }
 
       return {
-        requiredActions: POLICY_CHECKS_CONFIG_.REQUIRED_MAINTENANCE_ACTIONS.slice(),
+        requiredActions: required.slice(),
         actionsCount: actions.length
       };
     });
 
-    _pushPolicyCheck_(report, 'core roles expose allowed actions map', function () {
-      const out = {};
+    // Перевірка 9: Основні ролі мають непорожній список дій
+    _pushPolicyCheck_(report, 'core roles expose allowed actions map', function() {
+      var out = {};
+      var roles = POLICY_CHECKS_CONFIG_.ROLES_WITH_ACTIONS;
 
-      for (var i = 0; i < POLICY_CHECKS_CONFIG_.ROLES_WITH_ACTIONS.length; i++) {
-        const role = POLICY_CHECKS_CONFIG_.ROLES_WITH_ACTIONS[i];
-        const actions = _getAllowedActionsForRoleOrSkip_(role);
-
+      for (var i = 0; i < roles.length; i++) {
+        var role = roles[i];
+        var actions = _getAllowedActionsForRoleOrSkip_(role);
         if (!actions.length) {
           throw new Error('Allowed actions missing or empty for role: ' + role);
         }
-
         out[role] = actions.length;
       }
 
       return out;
     });
 
-    _pushPolicyCheck_(report, 'protected sheets contract matches configuration', function () {
+    // Перевірка 10: Контракт захищених листів відповідає конфігурації
+    _pushPolicyCheck_(report, 'protected sheets contract matches configuration', function() {
       _requireObject_(AccessEnforcement_, 'AccessEnforcement_');
       if (!Array.isArray(AccessEnforcement_.PROTECTED_SHEETS)) {
         throw new Error('AccessEnforcement_.PROTECTED_SHEETS is not available');
       }
 
-      const expected = POLICY_CHECKS_CONFIG_.EXPECTED_PROTECTED_SHEETS.slice();
-      const actual = AccessEnforcement_.PROTECTED_SHEETS.slice();
-      const missing = [];
-      const extra = [];
+      var expected = POLICY_CHECKS_CONFIG_.EXPECTED_PROTECTED_SHEETS.slice();
+      var actual = AccessEnforcement_.PROTECTED_SHEETS.slice();
+      var missing = [];
+      var extra = [];
 
       for (var i = 0; i < expected.length; i++) {
-        if (actual.indexOf(expected[i]) === -1) {
-          missing.push(expected[i]);
-        }
+        if (actual.indexOf(expected[i]) === -1) missing.push(expected[i]);
       }
-
       for (var j = 0; j < actual.length; j++) {
-        if (expected.indexOf(actual[j]) === -1) {
-          extra.push(actual[j]);
-        }
+        if (expected.indexOf(actual[j]) === -1) extra.push(actual[j]);
       }
 
       if (missing.length) {
         throw new Error('Missing protected sheets: ' + missing.join(', '));
       }
-
       if (opts.strictProtectedSheetsMode && extra.length) {
         throw new Error('Unexpected protected sheets in strict mode: ' + extra.join(', '));
       }
@@ -688,14 +702,15 @@ function runAccessPolicyChecks(options) {
       };
     });
 
-    _pushPolicyCheck_(report, 'maintenance actions contract covers elevated roles', function () {
-      const elevatedRoles = ['maintainer', 'admin', 'sysadmin', 'owner'];
-      const output = {};
+    // Перевірка 11: Підвищені ролі мають доступ до дій обслуговування
+    _pushPolicyCheck_(report, 'maintenance actions contract covers elevated roles', function() {
+      var elevated = ['maintainer', 'admin', 'sysadmin', 'owner'];
+      var output = {};
 
-      for (var i = 0; i < elevatedRoles.length; i++) {
-        const role = elevatedRoles[i];
-        const actions = _getAllowedActionsForRoleOrSkip_(role);
-        const set = _asCanonicalActionSet_(actions);
+      for (var i = 0; i < elevated.length; i++) {
+        var role = elevated[i];
+        var actions = _getAllowedActionsForRoleOrSkip_(role);
+        var set = _asCanonicalActionSet_(actions);
 
         output[role] = {
           count: actions.length,
@@ -707,10 +722,12 @@ function runAccessPolicyChecks(options) {
 
       return output;
     });
+
   } finally {
     _restoreSideEffectsForPolicyChecks_(originals);
   }
 
+  // Підсумок
   report.summary = _summarizeReportCounts_(report);
   if (report.summary.fail > 0) {
     report.status = 'FAIL';
@@ -734,7 +751,8 @@ function runAccessPolicyChecks(options) {
   return report;
 }
 
-// ==================== DIAGNOSTIC HELPERS ====================
+
+// ==================== ДІАГНОСТИЧНІ ХЕЛПЕРИ ====================
 
 function runAllPolicyChecks(options) {
   return runAccessPolicyChecks(options || {});

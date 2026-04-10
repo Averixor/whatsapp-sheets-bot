@@ -1,562 +1,816 @@
-  // ==================== MAIN DESCRIBE FUNCTION ====================
+// ==================== ГОЛОВНА ФУНКЦІЯ DESCRIBE ====================
 
-  function describe(emailOrOptions, maybeOptions) {
-    const opts = (emailOrOptions && typeof emailOrOptions === 'object' && !Array.isArray(emailOrOptions))
-      ? Object.assign({}, emailOrOptions)
-      : Object.assign({}, maybeOptions || {});
-    const email = (emailOrOptions && typeof emailOrOptions === 'object' && !Array.isArray(emailOrOptions))
-      ? ''
-      : emailOrOptions;
+/**
+ * Отримує дескриптор доступу для поточного користувача.
+ * @param {string|Object} emailOrOptions - Email або об'єкт опцій.
+ * @param {Object} maybeOptions - Опції, якщо перший параметр не є об'єктом.
+ * @returns {Object}
+ */
+function describe(emailOrOptions, maybeOptions) {
+  var opts;
+  var email;
 
-    const currentKeyHash = getCurrentUserKeyHash_();
-    const sessionEmail = normalizeEmail_(email) || safeGetUserEmail_();
-    const context = {
-      currentKeyHash: currentKeyHash,
-      sessionEmail: sessionEmail,
-      keyAvailable: !!currentKeyHash,
-      emailAvailable: !!sessionEmail
-    };
-
-    const policy = _getAccessPolicy_();
-    const descriptor = _resolveAccessSubjectReadOnly_(context);
-
-    return _buildPublicAccessResponse_(descriptor, context, policy, opts);
+  if (emailOrOptions && typeof emailOrOptions === 'object' && !Array.isArray(emailOrOptions)) {
+    opts = Object.assign({}, emailOrOptions);
+    email = '';
+  } else {
+    opts = Object.assign({}, maybeOptions || {});
+    email = emailOrOptions;
   }
 
-  function _resolveEntryForAccessFailure_(context) {
-    if (context.currentKeyHash) {
-      const byKey = _findByUserKey_(context.currentKeyHash, { includeLocked: true, includeDisabled: true });
-      if (byKey) return byKey;
-    }
-    if (context.sessionEmail) {
-      const byEmail = _findByEmailInSheet_(context.sessionEmail, { includeLocked: true, includeDisabled: true });
-      if (byEmail) return byEmail;
-    }
-    return null;
+  var currentKeyHash = getCurrentUserKeyHash_();
+  var sessionEmail = normalizeEmail_(email) || safeGetUserEmail_();
+
+  var context = {
+    currentKeyHash: currentKeyHash,
+    sessionEmail: sessionEmail,
+    keyAvailable: !!currentKeyHash,
+    emailAvailable: !!sessionEmail
+  };
+
+  var policy = _getAccessPolicy_();
+  var descriptor = _resolveAccessSubjectReadOnly_(context);
+
+  return _buildPublicAccessResponse_(descriptor, context, policy, opts);
+}
+
+/**
+ * Шукає запис користувача для повідомлення про помилку доступу.
+ * @param {Object} context
+ * @returns {Object|null}
+ */
+function _resolveEntryForAccessFailure_(context) {
+  if (context && context.currentKeyHash) {
+    var byKey = _findByUserKey_(context.currentKeyHash, {
+      includeLocked: true,
+      includeDisabled: true
+    });
+    if (byKey) return byKey;
   }
 
-  // ==================== ASSERT / ENFORCEMENT ====================
+  if (context && context.sessionEmail) {
+    var byEmail = _findByEmailInSheet_(context.sessionEmail, {
+      includeLocked: true,
+      includeDisabled: true
+    });
+    if (byEmail) return byEmail;
+  }
 
-  function assertRoleAtLeast(requiredRole, actionLabel) {
-    const descriptor = describe();
-    const need = normalizeRole_(requiredRole || 'viewer');
-    const currentRole = descriptor.role;
-    const currentRoleLevel = ROLE_ORDER[currentRole] || 0;
-    const requiredLevel = ROLE_ORDER[need] || 0;
+  return null;
+}
 
-    if (!descriptor.enabled || currentRoleLevel < requiredLevel) {
-      Logger.log(`[AccessControl] Role denied: required ${need}, current ${currentRole}, action: ${actionLabel || 'unspecified'}`);
 
-      if (typeof AccessEnforcement_ === 'object' && AccessEnforcement_.reportViolation) {
-        AccessEnforcement_.reportViolation('roleDenied', {
-          requiredRole: need,
-          actionLabel: String(actionLabel || 'ця дія'),
-          currentRole: currentRole,
-          currentRoleLabel: getRoleLabel_(currentRole),
-          locked: descriptor.lockout.locked,
-          disabledByAdmin: descriptor.lockout.disabledByAdmin
-        }, descriptor);
-      }
+// ==================== ПЕРЕВІРКА РОЛЕЙ ТА ДОСТУПУ ====================
 
-      if (descriptor.lockout.disabledByAdmin) {
-        throw new Error('Користувача вимкнено адміністратором.');
-      }
+/**
+ * Перевіряє, чи має поточний користувач роль не нижче заданої.
+ * @param {string} requiredRole
+ * @param {string} actionLabel
+ * @returns {Object}
+ * @throws {Error}
+ */
+function assertRoleAtLeast(requiredRole, actionLabel) {
+  var descriptor = describe();
+  var required = normalizeRole_(requiredRole || 'viewer');
+  var currentRole = descriptor.role;
+  var currentRoleLevel = ROLE_ORDER[currentRole] || 0;
+  var requiredLevel = ROLE_ORDER[required] || 0;
 
-      if (descriptor.lockout.locked) {
-        throw new Error(
-          'Доступ тимчасово заблоковано.' +
-          (descriptor.lockout.remainingMinutes ? ` Залишилось ${descriptor.lockout.remainingMinutes} хв.` : '')
-        );
-      }
-
-      throw new Error(
-        'Недостатньо прав для дії: ' + (actionLabel || 'ця дія') +
-        '. Поточна роль: ' + currentRole + '.'
-      );
-    }
-
+  if (descriptor.enabled && currentRoleLevel >= requiredLevel) {
     return descriptor;
   }
 
-  // ==================== EMAIL ROLE LISTS ====================
+  Logger.log(
+    '[AccessControl] Role denied: required ' +
+    required +
+    ', current ' +
+    currentRole +
+    ', action: ' +
+    String(actionLabel || 'unspecified')
+  );
 
-  function listEmailsByRole(role) {
-    const normalizedRole = normalizeRole_(role);
-    const entries = _readSheetEntries_();
-    return entries
-      .filter(e => e.enabled && e.role === normalizedRole)
-      .map(e => e.email);
+  if (
+    typeof AccessEnforcement_ === 'object' &&
+    AccessEnforcement_ &&
+    typeof AccessEnforcement_.reportViolation === 'function'
+  ) {
+    AccessEnforcement_.reportViolation('roleDenied', {
+      requiredRole: required,
+      actionLabel: String(actionLabel || 'ця дія'),
+      currentRole: currentRole,
+      currentRoleLabel: getRoleLabel_(currentRole),
+      locked: !!(descriptor.lockout && descriptor.lockout.locked),
+      disabledByAdmin: !!(descriptor.lockout && descriptor.lockout.disabledByAdmin)
+    }, descriptor);
   }
 
-  function listAdminEmails() {
-    const entries = _readSheetEntries_();
-    return entries
-      .filter(e => e.enabled && ['owner', 'sysadmin', 'admin'].includes(e.role))
-      .map(e => e.email);
+  if (descriptor.lockout && descriptor.lockout.disabledByAdmin) {
+    throw new Error('Користувача вимкнено адміністратором.');
   }
 
-  function listNotificationEmails() {
-    const entries = _readSheetEntries_();
-    return entries
-      .filter(e => e.enabled && ['owner', 'sysadmin', 'admin'].includes(e.role))
-      .map(e => e.email);
+  if (descriptor.lockout && descriptor.lockout.locked) {
+    var msg = 'Доступ тимчасово заблоковано.';
+    if (descriptor.lockout.remainingMinutes) {
+      msg += ' Залишилось ' + descriptor.lockout.remainingMinutes + ' хв.';
+    }
+    throw new Error(msg);
   }
 
-  function getAccessRowByEmail(email) {
-    const normalizedEmail = normalizeEmail_(email);
-    if (!normalizedEmail) return null;
-    return _findByEmailInSheet_(normalizedEmail, { includeLocked: true, includeDisabled: true });
-  }
+  throw new Error(
+    'Недостатньо прав для дії: ' +
+    String(actionLabel || 'ця дія') +
+    '. Поточна роль: ' +
+    currentRole +
+    '.'
+  );
+}
 
-  // ==================== ROLE HELPERS ====================
 
-  function getRoleMeta_(role) {
-    return ROLE_METADATA[normalizeRole_(role)] || ROLE_METADATA.guest;
-  }
+// ==================== EMAIL-СПИСКИ ЗА РОЛЯМИ ====================
 
-  function getRoleLabel_(role) {
-    return getRoleMeta_(role).label;
-  }
+function listEmailsByRole(role) {
+  var normalizedRole = normalizeRole_(role);
+  var entries = _readSheetEntries_();
+  var out = [];
+  var i;
+  var entry;
 
-  function getRoleNoteTemplate_(role) {
-    return getRoleMeta_(role).note;
-  }
-
-  function listAllowedActionsForRole_(role) {
-    switch (normalizeRole_(role)) {
-      case 'guest': return ['безпечний перегляд'];
-      case 'viewer': return ['власна картка'];
-      case 'operator': return ['усі картки', 'коротке зведення', 'детальне зведення'];
-      case 'maintainer': return ['усі дії operator', 'SEND_PANEL', 'робочі дії', 'діагностика'];
-      case 'admin': return ['усі дії maintainer', 'керування ACCESS', 'журнали порушень'];
-      case 'sysadmin': return ['усі дії admin', 'repair', 'protections', 'triggers'];
-      case 'owner': return ['повний доступ до всієї системи'];
-      default: return ['безпечний перегляд'];
+  for (i = 0; i < entries.length; i++) {
+    entry = entries[i];
+    if (entry.enabled && entry.role === normalizedRole && entry.email) {
+      out.push(entry.email);
     }
   }
 
-  // ==================== VALIDATION & DIAGNOSTICS ====================
+  return out;
+}
 
-  function validateAccessSheet() {
-    const entries = _readSheetEntries_();
-    const rawEntries = _readRawSheetEntries_();
-    const issues = [];
+function listAdminEmails() {
+  var entries = _readSheetEntries_();
+  var out = [];
+  var i;
+  var entry;
 
-    const emailRows = {};
-    const currentKeyRows = {};
-    const prevKeyRows = {};
-
-    entries.forEach(function (entry, index) {
-      const rowNum = index + 2;
-
-      if (entry.email) {
-        if (!emailRows[entry.email]) emailRows[entry.email] = [];
-        emailRows[entry.email].push(rowNum);
-      }
-      if (entry.userKeyCurrentHash) {
-        if (!currentKeyRows[entry.userKeyCurrentHash]) currentKeyRows[entry.userKeyCurrentHash] = [];
-        currentKeyRows[entry.userKeyCurrentHash].push(rowNum);
-      }
-      if (entry.userKeyPrevHash) {
-        if (!prevKeyRows[entry.userKeyPrevHash]) prevKeyRows[entry.userKeyPrevHash] = [];
-        prevKeyRows[entry.userKeyPrevHash].push(rowNum);
-      }
-    });
-
-    entries.forEach(function (entry, index) {
-      const rowNum = index + 2;
-
-      if (entry.email) {
-        if (!entry.email.includes('@')) {
-          issues.push('Рядок ' + rowNum + ': некоректний email "' + entry.email + '"');
-        }
-        if ((emailRows[entry.email] || []).length > 1) {
-          issues.push('Рядок ' + rowNum + ': дубль email "' + entry.email + '" (рядки ' + emailRows[entry.email].join(', ') + ')');
-        }
-      }
-
-      if (entry.userKeyCurrentHash && (currentKeyRows[entry.userKeyCurrentHash] || []).length > 1) {
-        issues.push('Рядок ' + rowNum + ': дубль current_key (рядки ' + currentKeyRows[entry.userKeyCurrentHash].join(', ') + ')');
-      }
-
-      if (entry.userKeyPrevHash && (prevKeyRows[entry.userKeyPrevHash] || []).length > 1) {
-        issues.push('Рядок ' + rowNum + ': дубль prev_key (рядки ' + prevKeyRows[entry.userKeyPrevHash].join(', ') + ')');
-      }
-
-      if (entry.userKeyCurrentHash && entry.userKeyPrevHash && entry.userKeyCurrentHash === entry.userKeyPrevHash) {
-        issues.push('Рядок ' + rowNum + ': current_key === prev_key');
-      }
-
-      if (entry.userKeyPrevHash && currentKeyRows[entry.userKeyPrevHash] && currentKeyRows[entry.userKeyPrevHash].length) {
-        issues.push('Рядок ' + rowNum + ': prev_key збігається з current_key рядків ' + currentKeyRows[entry.userKeyPrevHash].join(', '));
-      }
-
-      if (entry.userKeyCurrentHash && prevKeyRows[entry.userKeyCurrentHash] && prevKeyRows[entry.userKeyCurrentHash].length) {
-        issues.push('Рядок ' + rowNum + ': current_key збігається з prev_key рядків ' + prevKeyRows[entry.userKeyCurrentHash].join(', '));
-      }
-    });
-
-    for (const raw of rawEntries) {
-      const rowNum = raw.rowNumber;
-
-      const roleCol = raw.headerMap.role;
-      const rawRole = roleCol ? String(raw.rawRow[roleCol - 1] || '').trim().toLowerCase() : '';
-      if (rawRole && !ROLE_VALUES.includes(rawRole)) {
-        issues.push('Рядок ' + rowNum + ': некоректна роль "' + rawRole + '"');
-      }
-
-      const enabledCol = raw.headerMap.enabled;
-      const rawEnabled = enabledCol ? String(raw.rawRow[enabledCol - 1] || '').trim().toLowerCase() : 'true';
-      const isValidEnabled = ['true', 'false', '1', '0', 'yes', 'no', 'так', 'ні', ''].includes(rawEnabled);
-      if (!isValidEnabled) {
-        issues.push('Рядок ' + rowNum + ': некоректне значення enabled "' + rawEnabled + '"');
-      }
+  for (i = 0; i < entries.length; i++) {
+    entry = entries[i];
+    if (
+      entry.enabled &&
+      entry.email &&
+      (entry.role === 'owner' || entry.role === 'sysadmin' || entry.role === 'admin')
+    ) {
+      out.push(entry.email);
     }
-
-    return { valid: issues.length === 0, issues: issues };
   }
 
-  function runAccessDiagnostics() {
-    const policy = _getAccessPolicy_();
-    const entries = _readSheetEntries_();
-    const rawEntries = _readRawSheetEntries_();
-    const sh = _getSheet_(false);
-    const headerMap = sh ? _getHeaderMap_(sh) : {};
+  return out;
+}
 
-    const diagnostics = {
-      schema: {
-        exists: !!sh,
-        headersPresent: SHEET_HEADERS.every(h => headerMap[h] !== undefined),
-        missingHeaders: SHEET_HEADERS.filter(h => headerMap[h] === undefined),
-        headersCanonical: sh ? sh.getRange(1, 1, 1, SHEET_HEADERS.length).getValues()[0].every((v, i) => v === SHEET_HEADERS[i]) : false
-      },
-      dataIntegrity: {
-        duplicateEmails: [],
-        duplicateCurrentKeys: [],
-        duplicatePrevKeys: [],
-        currentEqualsPrev: [],
-        prevCollidesWithCurrent: [],
-        emptyIdentifierWithActiveRole: [],
-        invalidRoleValues: [],
-        invalidEnabledValues: [],
-        brokenLockedUntil: []
-      },
-      policy: {
-        strictUserKeyMode: policy.strictUserKeyMode,
-        migrationModeEnabled: policy.migrationModeEnabled,
-        bootstrapAllowed: policy.bootstrapAllowed,
-        adminConfigured: policy.adminConfigured,
-        accessSheetPresent: policy.accessSheetPresent
-      },
-      runtime: {
-        registeredKeysCount: entries.filter(e => e.userKeyCurrentHash || e.userKeyPrevHash).length,
-        lockedUsersCount: entries.filter(e => _isTimedLocked_(e)).length,
-        adminDisabledUsersCount: entries.filter(e => _isAdminDisabled_(e)).length,
-        usersWithoutCurrentKey: entries.filter(e => !e.userKeyCurrentHash).length,
-        usersWithOnlyIdentifierAccess: entries.filter(e => !e.userKeyCurrentHash && !e.userKeyPrevHash && (e.email || e.phone)).length,
-        selfBindableUsersCount: entries.filter(e => e.enabled && e.selfBindAllowed && !!normalizeCallsign_(e.personCallsign)).length
-      }
-    };
+function listNotificationEmails() {
+  return listAdminEmails();
+}
 
-    const emailMap = new Map();
-    const currentKeyMap = new Map();
-    const prevKeyMap = new Map();
-    entries.forEach((e, idx) => {
-      const row = idx + 2;
-      if (e.email) {
-        if (!emailMap.has(e.email)) emailMap.set(e.email, []);
-        emailMap.get(e.email).push(row);
-      }
-      if (e.userKeyCurrentHash) {
-        if (!currentKeyMap.has(e.userKeyCurrentHash)) currentKeyMap.set(e.userKeyCurrentHash, []);
-        currentKeyMap.get(e.userKeyCurrentHash).push(row);
-      }
-      if (e.userKeyPrevHash) {
-        if (!prevKeyMap.has(e.userKeyPrevHash)) prevKeyMap.set(e.userKeyPrevHash, []);
-        prevKeyMap.get(e.userKeyPrevHash).push(row);
-      }
-    });
+function getAccessRowByEmail(email) {
+  var normalizedEmail = normalizeEmail_(email);
+  if (!normalizedEmail) return null;
 
-    entries.forEach((e, idx) => {
-      const row = idx + 2;
+  return _findByEmailInSheet_(normalizedEmail, {
+    includeLocked: true,
+    includeDisabled: true
+  });
+}
 
-      if (e.email && emailMap.get(e.email).length > 1) diagnostics.dataIntegrity.duplicateEmails.push({ email: e.email, rows: emailMap.get(e.email) });
-      if (e.userKeyCurrentHash && currentKeyMap.get(e.userKeyCurrentHash).length > 1) diagnostics.dataIntegrity.duplicateCurrentKeys.push({ hash: e.userKeyCurrentHash, rows: currentKeyMap.get(e.userKeyCurrentHash) });
-      if (e.userKeyPrevHash && prevKeyMap.get(e.userKeyPrevHash).length > 1) diagnostics.dataIntegrity.duplicatePrevKeys.push({ hash: e.userKeyPrevHash, rows: prevKeyMap.get(e.userKeyPrevHash) });
-      if (e.userKeyCurrentHash && e.userKeyPrevHash && e.userKeyCurrentHash === e.userKeyPrevHash) diagnostics.dataIntegrity.currentEqualsPrev.push(row);
-      if (e.userKeyPrevHash && currentKeyMap.has(e.userKeyPrevHash)) diagnostics.dataIntegrity.prevCollidesWithCurrent.push({ row: row, prevHash: e.userKeyPrevHash, collidesWithRows: currentKeyMap.get(e.userKeyPrevHash) });
-      if (!e.email && !e.phone && e.role !== 'guest') diagnostics.dataIntegrity.emptyIdentifierWithActiveRole.push(row);
-      if (e.lockedUntilMs && e.lockedUntilMs < _nowMs_() && e.lockedUntilMs > 0) diagnostics.dataIntegrity.brokenLockedUntil.push({ row: row, lockedUntilMs: e.lockedUntilMs });
-    });
 
-    for (const raw of rawEntries) {
-      const rowNum = raw.rowNumber;
+// ==================== ДОПОМІЖНІ ФУНКЦІЇ ДЛЯ РОЛЕЙ ====================
 
-      const roleCol = raw.headerMap.role;
-      const rawRole = roleCol ? String(raw.rawRow[roleCol - 1] || '').trim().toLowerCase() : '';
-      if (rawRole && !ROLE_VALUES.includes(rawRole)) {
-        diagnostics.dataIntegrity.invalidRoleValues.push({ row: rowNum, role: rawRole });
-      }
+function getRoleMeta_(role) {
+  var normalized = normalizeRole_(role);
+  return ROLE_METADATA[normalized] || ROLE_METADATA.guest;
+}
 
-      const enabledCol = raw.headerMap.enabled;
-      const rawEnabled = enabledCol ? String(raw.rawRow[enabledCol - 1] || '').trim().toLowerCase() : 'true';
-      const isValidEnabled = ['true', 'false', '1', '0', 'yes', 'no', 'так', 'ні', ''].includes(rawEnabled);
-      if (!isValidEnabled) {
-        diagnostics.dataIntegrity.invalidEnabledValues.push({ row: rowNum, enabled: rawEnabled });
-      }
-    }
+function getRoleLabel_(role) {
+  return getRoleMeta_(role).label;
+}
 
-    return diagnostics;
+function getRoleNoteTemplate_(role) {
+  return getRoleMeta_(role).note;
+}
+
+function listAllowedActionsForRole_(role) {
+  switch (normalizeRole_(role)) {
+    case 'guest':
+      return ['безпечний перегляд'];
+    case 'viewer':
+      return ['власна картка'];
+    case 'operator':
+      return ['усі картки', 'коротке зведення', 'детальне зведення'];
+    case 'maintainer':
+      return ['усі дії operator', 'SEND_PANEL', 'робочі дії', 'діагностика'];
+    case 'admin':
+      return ['усі дії maintainer', 'керування ACCESS', 'журнали порушень'];
+    case 'sysadmin':
+      return ['усі дії admin', 'repair', 'protections', 'triggers'];
+    case 'owner':
+      return ['повний доступ до всієї системи'];
+    default:
+      return ['безпечний перегляд'];
+  }
+}
+
+
+// ==================== ВАЛІДАЦІЯ ТА ДІАГНОСТИКА ====================
+
+function _pushRowToBucket_(bucket, key, rowNum) {
+  if (!key) return;
+  if (!bucket[key]) bucket[key] = [];
+  bucket[key].push(rowNum);
+}
+
+function validateAccessSheet() {
+  var entries = _readSheetEntries_();
+  var rawEntries = _readRawSheetEntries_();
+  var issues = [];
+
+  var emailRows = {};
+  var currentKeyRows = {};
+  var prevKeyRows = {};
+
+  var i;
+  var rowNum;
+  var entry;
+  var raw;
+  var roleCol;
+  var rawRole;
+  var enabledCol;
+  var rawEnabled;
+  var validEnabled;
+
+  for (i = 0; i < entries.length; i++) {
+    entry = entries[i];
+    rowNum = i + 2;
+
+    _pushRowToBucket_(emailRows, entry.email, rowNum);
+    _pushRowToBucket_(currentKeyRows, entry.userKeyCurrentHash, rowNum);
+    _pushRowToBucket_(prevKeyRows, entry.userKeyPrevHash, rowNum);
   }
 
-  function getReadinessStatus() {
-    const diag = runAccessDiagnostics();
-    const policy = _getAccessPolicy_();
+  for (i = 0; i < entries.length; i++) {
+    entry = entries[i];
+    rowNum = i + 2;
 
-    const critical = [];
-    const warnings = [];
-
-    if (!diag.schema.exists) critical.push('ACCESS sheet missing');
-    if (!diag.schema.headersPresent) critical.push('Missing headers: ' + diag.schema.missingHeaders.join(', '));
-    if (diag.dataIntegrity.duplicateEmails.length) critical.push('Duplicate emails found');
-    if (diag.dataIntegrity.duplicateCurrentKeys.length) critical.push('Duplicate current keys found');
-    if (diag.dataIntegrity.invalidRoleValues.length) critical.push('Invalid role values found');
-    if (!policy.adminConfigured && diag.schema.exists && diag.runtime.registeredKeysCount > 0) {
-      warnings.push('No admin configured, but ACCESS has keys. Bootstrap will NOT activate.');
-    }
-    if (diag.runtime.usersWithoutCurrentKey > 0) {
-      warnings.push(diag.runtime.usersWithoutCurrentKey + ' users have no current key');
-    }
-
-    return {
-      ready: critical.length === 0,
-      criticalIssues: critical,
-      warnings: warnings,
-      summary: {
-        totalUsers: diag.runtime.registeredKeysCount,
-        locked: diag.runtime.lockedUsersCount,
-        adminDisabled: diag.runtime.adminDisabledUsersCount,
-        mode: policy.strictUserKeyMode ? 'strict' : 'migration',
-        bootstrapAvailable: policy.bootstrapAllowed
+    if (entry.email) {
+      if (entry.email.indexOf('@') === -1) {
+        issues.push('Рядок ' + rowNum + ': некоректний email "' + entry.email + '"');
       }
-    };
-  }
-
-  // ==================== SHEET UI ====================
-
-  function bootstrapSheet() {
-    const existed = !!_getSheet_(false);
-    const sh = _getSheet_(true);
-    _applyRoleValidation_(sh);
-    _applyEmailValidation_(sh);
-    _applyEnabledValidation_(sh);
-    _invalidateAccessCaches_();
-    return {
-      success: true,
-      sheet: ACCESS_SHEET,
-      created: !existed,
-      headers: SHEET_HEADERS.slice(),
-      roleValues: ROLE_VALUES.slice()
-    };
-  }
-
-  function refreshAccessSheetUi() {
-    const sh = _getSheet_(true);
-    _applyRoleValidation_(sh);
-    _applyEmailValidation_(sh);
-    _applyEnabledValidation_(sh);
-    _invalidateAccessCaches_();
-    return {
-      success: true,
-      sheet: ACCESS_SHEET,
-      message: 'ACCESS schema updated',
-      roleValues: ROLE_VALUES.slice()
-    };
-  }
-
-  function handleAccessSheetEdit(e) {
-    const range = e && e.range ? e.range : null;
-    if (!range) return;
-
-    const sh = range.getSheet();
-    if (!sh || sh.getName() !== ACCESS_SHEET) return;
-
-    const row = range.getRow();
-    const column = range.getColumn();
-    if (row < 2 || row > MAX_SHEET_ROWS) return;
-
-    const headerMap = _getHeaderMap_(sh);
-    const roleCol = headerMap.role;
-    const emailCol = headerMap.email;
-
-    if (roleCol && column === roleCol && range.getNumColumns() === 1 && range.getNumRows() === 1) {
-      const rawRole = String(range.getValue() || '').trim();
-      if (rawRole) range.setValue(normalizeRole_(rawRole));
-      _syncRoleNoteForRow_(sh, row);
-    }
-
-    if (emailCol && column === emailCol && range.getNumColumns() === 1 && range.getNumRows() === 1) {
-      const email = normalizeEmail_(range.getValue());
-      if (email && email.indexOf('@') === -1) {
-        range.setValue('');
-        SpreadsheetApp.getActive().toast('Некоректний email', 'Помилка', 3);
+      if ((emailRows[entry.email] || []).length > 1) {
+        issues.push(
+          'Рядок ' + rowNum + ': дубль email "' + entry.email + '" (рядки ' + emailRows[entry.email].join(', ') + ')'
+        );
       }
     }
 
-    _invalidateAccessCaches_();
+    if (entry.userKeyCurrentHash && (currentKeyRows[entry.userKeyCurrentHash] || []).length > 1) {
+      issues.push(
+        'Рядок ' + rowNum + ': дубль current_key (рядки ' + currentKeyRows[entry.userKeyCurrentHash].join(', ') + ')'
+      );
+    }
+
+    if (entry.userKeyPrevHash && (prevKeyRows[entry.userKeyPrevHash] || []).length > 1) {
+      issues.push(
+        'Рядок ' + rowNum + ': дубль prev_key (рядки ' + prevKeyRows[entry.userKeyPrevHash].join(', ') + ')'
+      );
+    }
+
+    if (
+      entry.userKeyCurrentHash &&
+      entry.userKeyPrevHash &&
+      entry.userKeyCurrentHash === entry.userKeyPrevHash
+    ) {
+      issues.push('Рядок ' + rowNum + ': current_key === prev_key');
+    }
+
+    if (entry.userKeyPrevHash && currentKeyRows[entry.userKeyPrevHash] && currentKeyRows[entry.userKeyPrevHash].length) {
+      issues.push(
+        'Рядок ' + rowNum + ': prev_key збігається з current_key рядків ' +
+        currentKeyRows[entry.userKeyPrevHash].join(', ')
+      );
+    }
+
+    if (entry.userKeyCurrentHash && prevKeyRows[entry.userKeyCurrentHash] && prevKeyRows[entry.userKeyCurrentHash].length) {
+      issues.push(
+        'Рядок ' + rowNum + ': current_key збігається з prev_key рядків ' +
+        prevKeyRows[entry.userKeyCurrentHash].join(', ')
+      );
+    }
   }
 
-  // ==================== TESTS ====================
+  for (i = 0; i < rawEntries.length; i++) {
+    raw = rawEntries[i];
+    rowNum = raw.rowNumber;
 
-  function _testAccessControl_() {
-    const results = {
-      passed: [],
-      failed: [],
-      summary: {}
-    };
+    roleCol = raw.headerMap.role;
+    rawRole = roleCol ? String(raw.rawRow[roleCol - 1] || '').trim().toLowerCase() : '';
+    if (rawRole && ROLE_VALUES.indexOf(rawRole) === -1) {
+      issues.push('Рядок ' + rowNum + ': некоректна роль "' + rawRole + '"');
+    }
 
-    function assert(condition, testName, details) {
-      if (condition) {
-        results.passed.push({ test: testName, details: details });
-      } else {
-        results.failed.push({ test: testName, details: details });
+    enabledCol = raw.headerMap.enabled;
+    rawEnabled = enabledCol ? String(raw.rawRow[enabledCol - 1] || '').trim().toLowerCase() : 'true';
+    validEnabled = (
+      rawEnabled === 'true' ||
+      rawEnabled === 'false' ||
+      rawEnabled === '1' ||
+      rawEnabled === '0' ||
+      rawEnabled === 'yes' ||
+      rawEnabled === 'no' ||
+      rawEnabled === 'так' ||
+      rawEnabled === 'ні' ||
+      rawEnabled === ''
+    );
+
+    if (!validEnabled) {
+      issues.push('Рядок ' + rowNum + ': некоректне значення enabled "' + rawEnabled + '"');
+    }
+  }
+
+  return {
+    valid: issues.length === 0,
+    issues: issues
+  };
+}
+
+function runAccessDiagnostics() {
+  var policy = _getAccessPolicy_();
+  var entries = _readSheetEntries_();
+  var rawEntries = _readRawSheetEntries_();
+  var sh = _getSheet_(false);
+  var headerMap = sh ? _getHeaderMap_(sh) : {};
+
+  var diagnostics = {
+    schema: {
+      exists: !!sh,
+      headersPresent: true,
+      missingHeaders: [],
+      headersCanonical: false
+    },
+    dataIntegrity: {
+      duplicateEmails: [],
+      duplicateCurrentKeys: [],
+      duplicatePrevKeys: [],
+      currentEqualsPrev: [],
+      prevCollidesWithCurrent: [],
+      emptyIdentifierWithActiveRole: [],
+      invalidRoleValues: [],
+      invalidEnabledValues: [],
+      brokenLockedUntil: []
+    },
+    policy: {
+      strictUserKeyMode: policy.strictUserKeyMode,
+      migrationModeEnabled: policy.migrationModeEnabled,
+      bootstrapAllowed: policy.bootstrapAllowed,
+      adminConfigured: policy.adminConfigured,
+      accessSheetPresent: policy.accessSheetPresent
+    },
+    runtime: {
+      registeredKeysCount: 0,
+      lockedUsersCount: 0,
+      adminDisabledUsersCount: 0,
+      usersWithoutCurrentKey: 0,
+      usersWithOnlyIdentifierAccess: 0,
+      selfBindableUsersCount: 0
+    }
+  };
+
+  var missing = [];
+  var i;
+  var j;
+  var rowNum;
+  var firstRow;
+  var canonical;
+  var entry;
+  var raw;
+  var roleCol;
+  var rawRole;
+  var enabledCol;
+  var rawEnabled;
+  var isValid;
+  var emailRows = {};
+  var currentKeyRows = {};
+  var prevKeyRows = {};
+
+  for (i = 0; i < SHEET_HEADERS.length; i++) {
+    if (headerMap[SHEET_HEADERS[i]] === undefined) {
+      missing.push(SHEET_HEADERS[i]);
+    }
+  }
+
+  diagnostics.schema.missingHeaders = missing;
+  diagnostics.schema.headersPresent = missing.length === 0;
+
+  if (sh) {
+    firstRow = sh.getRange(1, 1, 1, SHEET_HEADERS.length).getValues()[0];
+    canonical = true;
+
+    for (i = 0; i < SHEET_HEADERS.length; i++) {
+      if (firstRow[i] !== SHEET_HEADERS[i]) {
+        canonical = false;
+        break;
       }
     }
 
-    // 1. Policy tests
-    const policy = _getAccessPolicy_();
-    assert(typeof policy.strictUserKeyMode === 'boolean', 'Policy has strictUserKeyMode', policy.strictUserKeyMode);
-    assert(typeof policy.migrationModeEnabled === 'boolean', 'Policy has migrationModeEnabled', policy.migrationModeEnabled);
-    assert(typeof policy.bootstrapAllowed === 'boolean', 'Policy has bootstrapAllowed', policy.bootstrapAllowed);
-    assert(typeof policy.adminConfigured === 'boolean', 'Policy has adminConfigured', policy.adminConfigured);
+    diagnostics.schema.headersCanonical = canonical;
+  }
 
-    // 2. Role constants
-    assert(ROLE_VALUES.length === 7, 'ROLE_VALUES has 7 items', ROLE_VALUES);
-    assert(ROLE_ORDER.owner === 6, 'ROLE_ORDER.owner is 6', ROLE_ORDER.owner);
-    assert(ROLE_ORDER.guest === 0, 'ROLE_ORDER.guest is 0', ROLE_ORDER.guest);
+  for (i = 0; i < entries.length; i++) {
+    entry = entries[i];
+    rowNum = i + 2;
 
-    // 3. Header constants
-    assert(SHEET_HEADERS.includes('email'), 'SHEET_HEADERS includes email');
-    assert(SHEET_HEADERS.includes('phone'), 'SHEET_HEADERS includes phone');
-    assert(SHEET_HEADERS.includes('user_key_current_hash'), 'SHEET_HEADERS includes user_key_current_hash');
-    assert(SHEET_HEADERS.length === 14, 'SHEET_HEADERS has 14 columns');
+    _pushRowToBucket_(emailRows, entry.email, rowNum);
+    _pushRowToBucket_(currentKeyRows, entry.userKeyCurrentHash, rowNum);
+    _pushRowToBucket_(prevKeyRows, entry.userKeyPrevHash, rowNum);
+  }
 
-    // 4. Utility functions
-    const hashed = hashRawUserKey_('test-key');
-    assert(hashed && hashed.length === 64, 'hashRawUserKey returns 64-char hex', hashed);
+  for (i = 0; i < entries.length; i++) {
+    entry = entries[i];
+    rowNum = i + 2;
 
-    const masked = maskSensitiveValue_('1234567890abcdef');
-    assert(masked.includes('…'), 'maskSensitiveValue masks long strings', masked);
+    if (entry.email && (emailRows[entry.email] || []).length > 1) {
+      diagnostics.dataIntegrity.duplicateEmails.push({
+        email: entry.email,
+        rows: emailRows[entry.email]
+      });
+    }
 
-    const normalized = normalizeRole_('ADMIN');
-    assert(normalized === 'admin', 'normalizeRole converts to lowercase', normalized);
+    if (entry.userKeyCurrentHash && (currentKeyRows[entry.userKeyCurrentHash] || []).length > 1) {
+      diagnostics.dataIntegrity.duplicateCurrentKeys.push({
+        hash: entry.userKeyCurrentHash,
+        rows: currentKeyRows[entry.userKeyCurrentHash]
+      });
+    }
 
-    const emailNorm = normalizeEmail_(' USER@DOMAIN.COM ');
-    assert(emailNorm === 'user@domain.com', 'normalizeEmail trims and lowercases', emailNorm);
+    if (entry.userKeyPrevHash && (prevKeyRows[entry.userKeyPrevHash] || []).length > 1) {
+      diagnostics.dataIntegrity.duplicatePrevKeys.push({
+        hash: entry.userKeyPrevHash,
+        rows: prevKeyRows[entry.userKeyPrevHash]
+      });
+    }
 
-    // 5. Describe returns structured response
-    const desc = describe();
-    assert(desc.hasOwnProperty('identity'), 'describe returns identity block');
-    assert(desc.hasOwnProperty('access'), 'describe returns access block');
-    assert(desc.hasOwnProperty('lockout'), 'describe returns lockout block');
-    assert(desc.hasOwnProperty('policy'), 'describe returns policy block');
-    assert(desc.hasOwnProperty('audit'), 'describe returns audit block');
-    assert(desc.hasOwnProperty('reason'), 'describe returns reason block');
-    assert(desc.lockout.hasOwnProperty('locked'), 'lockout block has locked field');
-    assert(!desc.lockout.hasOwnProperty('propKey'), 'lockout block does NOT contain propKey');
-    assert(desc.reason.hasOwnProperty('code'), 'reason is an object with code');
-    assert(desc.hasOwnProperty('reasonString'), 'reasonString exists for compatibility');
+    if (
+      entry.userKeyCurrentHash &&
+      entry.userKeyPrevHash &&
+      entry.userKeyCurrentHash === entry.userKeyPrevHash
+    ) {
+      diagnostics.dataIntegrity.currentEqualsPrev.push(rowNum);
+    }
 
-    // 6. ValidateAccessSheet returns structure
-    const validation = validateAccessSheet();
-    assert(validation.hasOwnProperty('valid'), 'validateAccessSheet returns valid flag');
-    assert(validation.hasOwnProperty('issues'), 'validateAccessSheet returns issues array');
+    if (entry.userKeyPrevHash && currentKeyRows[entry.userKeyPrevHash]) {
+      diagnostics.dataIntegrity.prevCollidesWithCurrent.push({
+        row: rowNum,
+        prevHash: entry.userKeyPrevHash,
+        collidesWithRows: currentKeyRows[entry.userKeyPrevHash]
+      });
+    }
 
-    // 7. Diagnostics returns structure
-    const diag = runAccessDiagnostics();
-    assert(diag.hasOwnProperty('schema'), 'diagnostics has schema');
-    assert(diag.hasOwnProperty('dataIntegrity'), 'diagnostics has dataIntegrity');
-    assert(diag.hasOwnProperty('policy'), 'diagnostics has policy');
-    assert(diag.hasOwnProperty('runtime'), 'diagnostics has runtime');
+    if (!entry.email && !entry.phone && entry.role !== 'guest') {
+      diagnostics.dataIntegrity.emptyIdentifierWithActiveRole.push(rowNum);
+    }
 
-    // 8. getReadinessStatus returns structure
-    const readiness = getReadinessStatus();
-    assert(readiness.hasOwnProperty('ready'), 'getReadinessStatus returns ready flag');
-    assert(readiness.hasOwnProperty('criticalIssues'), 'getReadinessStatus returns criticalIssues');
-    assert(readiness.hasOwnProperty('summary'), 'getReadinessStatus returns summary');
+    if (entry.lockedUntilMs && entry.lockedUntilMs > 0 && entry.lockedUntilMs < _nowMs_()) {
+      diagnostics.dataIntegrity.brokenLockedUntil.push({
+        row: rowNum,
+        lockedUntilMs: entry.lockedUntilMs
+      });
+    }
 
-    results.summary = {
-      total: results.passed.length + results.failed.length,
-      passed: results.passed.length,
-      failed: results.failed.length
-    };
+    if (entry.userKeyCurrentHash || entry.userKeyPrevHash) diagnostics.runtime.registeredKeysCount++;
+    if (_isTimedLocked_(entry)) diagnostics.runtime.lockedUsersCount++;
+    if (_isAdminDisabled_(entry)) diagnostics.runtime.adminDisabledUsersCount++;
+    if (!entry.userKeyCurrentHash) diagnostics.runtime.usersWithoutCurrentKey++;
+    if (!entry.userKeyCurrentHash && !entry.userKeyPrevHash && (entry.email || entry.phone)) {
+      diagnostics.runtime.usersWithOnlyIdentifierAccess++;
+    }
+    if (entry.enabled && entry.selfBindAllowed && normalizeCallsign_(entry.personCallsign)) {
+      diagnostics.runtime.selfBindableUsersCount++;
+    }
+  }
 
-    Logger.log('=== ACCESS CONTROL TEST RESULTS ===');
-    Logger.log('Passed:', results.passed.length);
-    Logger.log('Failed:', results.failed.length);
-    if (results.failed.length) {
-      Logger.log('Failed tests:', results.failed);
+  for (j = 0; j < rawEntries.length; j++) {
+    raw = rawEntries[j];
+    rowNum = raw.rowNumber;
+
+    roleCol = raw.headerMap.role;
+    rawRole = roleCol ? String(raw.rawRow[roleCol - 1] || '').trim().toLowerCase() : '';
+    if (rawRole && ROLE_VALUES.indexOf(rawRole) === -1) {
+      diagnostics.dataIntegrity.invalidRoleValues.push({
+        row: rowNum,
+        role: rawRole
+      });
+    }
+
+    enabledCol = raw.headerMap.enabled;
+    rawEnabled = enabledCol ? String(raw.rawRow[enabledCol - 1] || '').trim().toLowerCase() : 'true';
+    isValid = (
+      rawEnabled === 'true' ||
+      rawEnabled === 'false' ||
+      rawEnabled === '1' ||
+      rawEnabled === '0' ||
+      rawEnabled === 'yes' ||
+      rawEnabled === 'no' ||
+      rawEnabled === 'так' ||
+      rawEnabled === 'ні' ||
+      rawEnabled === ''
+    );
+
+    if (!isValid) {
+      diagnostics.dataIntegrity.invalidEnabledValues.push({
+        row: rowNum,
+        enabled: rawEnabled
+      });
+    }
+  }
+
+  return diagnostics;
+}
+
+function getReadinessStatus() {
+  var diag = runAccessDiagnostics();
+  var policy = _getAccessPolicy_();
+
+  var critical = [];
+  var warnings = [];
+
+  if (!diag.schema.exists) {
+    critical.push('ACCESS sheet missing');
+  }
+  if (!diag.schema.headersPresent) {
+    critical.push('Missing headers: ' + diag.schema.missingHeaders.join(', '));
+  }
+  if (diag.dataIntegrity.duplicateEmails.length) {
+    critical.push('Duplicate emails found');
+  }
+  if (diag.dataIntegrity.duplicateCurrentKeys.length) {
+    critical.push('Duplicate current keys found');
+  }
+  if (diag.dataIntegrity.invalidRoleValues.length) {
+    critical.push('Invalid role values found');
+  }
+
+  if (!policy.adminConfigured && diag.schema.exists && diag.runtime.registeredKeysCount > 0) {
+    warnings.push('No admin configured, but ACCESS has keys. Bootstrap will NOT activate.');
+  }
+  if (diag.runtime.usersWithoutCurrentKey > 0) {
+    warnings.push(diag.runtime.usersWithoutCurrentKey + ' users have no current key');
+  }
+
+  return {
+    ready: critical.length === 0,
+    criticalIssues: critical,
+    warnings: warnings,
+    summary: {
+      totalUsers: diag.runtime.registeredKeysCount,
+      locked: diag.runtime.lockedUsersCount,
+      adminDisabled: diag.runtime.adminDisabledUsersCount,
+      mode: policy.strictUserKeyMode ? 'strict' : 'migration',
+      bootstrapAvailable: policy.bootstrapAllowed
+    }
+  };
+}
+
+
+// ==================== UI ТАБЛИЦІ ACCESS ====================
+
+function bootstrapSheet() {
+  var existed = !!_getSheet_(false);
+  var sh = _getSheet_(true);
+
+  _applyRoleValidation_(sh);
+  _applyEmailValidation_(sh);
+  _applyEnabledValidation_(sh);
+  _invalidateAccessCaches_();
+
+  return {
+    success: true,
+    sheet: ACCESS_SHEET,
+    created: !existed,
+    headers: SHEET_HEADERS.slice(),
+    roleValues: ROLE_VALUES.slice()
+  };
+}
+
+/**
+ * Оновлює UI таблиці ACCESS.
+ * @returns {Object}
+ */
+function refreshAccessSheetUi() {
+  var sh = _getSheet_(true);
+
+  _applyRoleValidation_(sh);
+  _applyEmailValidation_(sh);
+  _applyEnabledValidation_(sh);
+  _invalidateAccessCaches_();
+
+  return {
+    success: true,
+    sheet: ACCESS_SHEET,
+    message: 'ACCESS schema updated',
+    roleValues: ROLE_VALUES.slice()
+  };
+}
+
+function handleAccessSheetEdit(e) {
+  var range = e && e.range ? e.range : null;
+  if (!range) return;
+
+  var sh = range.getSheet();
+  if (!sh || sh.getName() !== ACCESS_SHEET) return;
+
+  var row = range.getRow();
+  var column = range.getColumn();
+  if (row < 2 || row > MAX_SHEET_ROWS) return;
+
+  var headerMap = _getHeaderMap_(sh);
+  var roleCol = headerMap.role;
+  var emailCol = headerMap.email;
+
+  if (roleCol && column === roleCol && range.getNumColumns() === 1 && range.getNumRows() === 1) {
+    var rawRole = String(range.getValue() || '').trim();
+    if (rawRole) {
+      range.setValue(normalizeRole_(rawRole));
+    }
+    _syncRoleNoteForRow_(sh, row);
+  }
+
+  if (emailCol && column === emailCol && range.getNumColumns() === 1 && range.getNumRows() === 1) {
+    var email = normalizeEmail_(range.getValue());
+    if (email && email.indexOf('@') === -1) {
+      range.setValue('');
+      SpreadsheetApp.getActive().toast('Некоректний email', 'Помилка', 3);
+    }
+  }
+
+  _invalidateAccessCaches_();
+}
+
+
+// ==================== ТЕСТИ ====================
+
+function _testAccessControl_() {
+  var results = {
+    passed: [],
+    failed: [],
+    summary: {}
+  };
+
+  function assert(condition, testName, details) {
+    if (condition) {
+      results.passed.push({ test: testName, details: details });
     } else {
-      Logger.log('✓ All tests passed!');
+      results.failed.push({ test: testName, details: details });
     }
-
-    return results;
   }
 
-  // ==================== EXPORTS ====================
+  var policy = _getAccessPolicy_();
 
-const AccessControl_ = Object.freeze({
-    // Constants
-    ROLE_ORDER: ROLE_ORDER,
-    ROLE_VALUES: ROLE_VALUES,
-    ROLE_METADATA: ROLE_METADATA,
-    SHEET_HEADERS: SHEET_HEADERS,
-    LOCKOUT_DURATION_MS: LOCKOUT_DURATION_MS,
-    LOCKOUT_ESCALATION_MS: LOCKOUT_ESCALATION_MS,
-    LOCKOUT_PROP_PREFIX: LOCKOUT_PROP_PREFIX,
-    MAX_FAILED_ATTEMPTS_SHEET: MAX_FAILED_ATTEMPTS_SHEET,
-    ROTATION_PERIOD_DAYS: ROTATION_PERIOD_DAYS,
+  assert(typeof policy.strictUserKeyMode === 'boolean', 'Policy has strictUserKeyMode', policy.strictUserKeyMode);
+  assert(typeof policy.migrationModeEnabled === 'boolean', 'Policy has migrationModeEnabled', policy.migrationModeEnabled);
+  assert(typeof policy.bootstrapAllowed === 'boolean', 'Policy has bootstrapAllowed', policy.bootstrapAllowed);
+  assert(typeof policy.adminConfigured === 'boolean', 'Policy has adminConfigured', policy.adminConfigured);
 
-    // Public API
-    describe: describe,
-    assertRoleAtLeast: assertRoleAtLeast,
-    listBindableCallsigns: listBindableCallsigns,
-    bindCurrentKeyToCallsign: bindCurrentKeyToCallsign,
-    loginByIdentifierAndCallsign: loginByIdentifierAndCallsign,
+  assert(ROLE_VALUES.length === 7, 'ROLE_VALUES has 7 items', ROLE_VALUES);
+  assert(ROLE_ORDER.owner === 6, 'ROLE_ORDER.owner is 6', ROLE_ORDER.owner);
+  assert(ROLE_ORDER.guest === 0, 'ROLE_ORDER.guest is 0', ROLE_ORDER.guest);
 
-    // Sheet management
-    bootstrapSheet: bootstrapSheet,
-    refreshAccessSheetUi: refreshAccessSheetUi,
-    handleAccessSheetEdit: handleAccessSheetEdit,
-    validateAccessSheet: validateAccessSheet,
-    runAccessDiagnostics: runAccessDiagnostics,
-    getReadinessStatus: getReadinessStatus,
+  assert(SHEET_HEADERS.indexOf('email') !== -1, 'SHEET_HEADERS includes email');
+  assert(SHEET_HEADERS.indexOf('phone') !== -1, 'SHEET_HEADERS includes phone');
+  assert(SHEET_HEADERS.indexOf('user_key_current_hash') !== -1, 'SHEET_HEADERS includes user_key_current_hash');
+  assert(SHEET_HEADERS.length === 14, 'SHEET_HEADERS has 14 columns');
 
-    // Role/email helpers
-    getAccessRowByEmail: getAccessRowByEmail,
-    listAdminEmails: listAdminEmails,
-    listNotificationEmails: listNotificationEmails,
-    listEmailsByRole: listEmailsByRole,
-    listAllowedActionsForRole: listAllowedActionsForRole_,
+  var hashed = hashRawUserKey_('test-key');
+  assert(hashed && hashed.length === 64, 'hashRawUserKey returns 64-char hex', hashed);
 
-    // Role metadata
-    getRoleLabel: getRoleLabel_,
-    getRoleNoteTemplate: getRoleNoteTemplate_,
-    normalizeRole: normalizeRole_,
-    normalizeEmail: normalizeEmail_,
-    normalizePhone: normalizePhone_,
-    isMigrationBridgeEnabled: function () { return _getAccessPolicy_().migrationModeEnabled; },
+  var masked = maskSensitiveValue_('1234567890abcdef');
+  assert(masked.indexOf('…') !== -1, 'maskSensitiveValue masks long strings', masked);
 
-    // Utilities
-    hashRawUserKey: hashRawUserKey_,
-    maskSensitiveValue: maskSensitiveValue_,
+  var normalized = normalizeRole_('ADMIN');
+  assert(normalized === 'admin', 'normalizeRole converts to lowercase', normalized);
 
-    // Internal (exposed for testing only)
-    _getAccessPolicy: _getAccessPolicy_,
-    _testAccessControl: _testAccessControl_
+  var emailNorm = normalizeEmail_(' USER@DOMAIN.COM ');
+  assert(emailNorm === 'user@domain.com', 'normalizeEmail trims and lowercases', emailNorm);
+
+  var desc = describe();
+  assert(desc.hasOwnProperty('identity'), 'describe returns identity block');
+  assert(desc.hasOwnProperty('access'), 'describe returns access block');
+  assert(desc.hasOwnProperty('lockout'), 'describe returns lockout block');
+  assert(desc.hasOwnProperty('policy'), 'describe returns policy block');
+  assert(desc.hasOwnProperty('audit'), 'describe returns audit block');
+  assert(desc.hasOwnProperty('reason'), 'describe returns reason block');
+  assert(desc.lockout.hasOwnProperty('locked'), 'lockout block has locked field');
+  assert(!desc.lockout.hasOwnProperty('propKey'), 'lockout block does NOT contain propKey');
+  assert(desc.reason.hasOwnProperty('code'), 'reason is an object with code');
+  assert(desc.hasOwnProperty('reasonString'), 'reasonString exists for compatibility');
+
+  var diag = runAccessDiagnostics();
+  var hasAdmin = policy.adminConfigured;
+  var accessEmpty = policy.accessSheetPresent && diag.runtime.registeredKeysCount === 0;
+  var bootstrapShouldBe = (!hasAdmin && (accessEmpty || !policy.accessSheetPresent));
+
+  assert(policy.bootstrapAllowed === bootstrapShouldBe, 'Bootstrap condition correct', {
+    hasAdmin: hasAdmin,
+    accessEmpty: accessEmpty,
+    bootstrapAllowed: policy.bootstrapAllowed,
+    expected: bootstrapShouldBe
+  });
+
+  var validation = validateAccessSheet();
+  assert(validation.hasOwnProperty('valid'), 'validateAccessSheet returns valid flag');
+  assert(validation.hasOwnProperty('issues'), 'validateAccessSheet returns issues array');
+
+  assert(diag.hasOwnProperty('schema'), 'diagnostics has schema');
+  assert(diag.hasOwnProperty('dataIntegrity'), 'diagnostics has dataIntegrity');
+  assert(diag.hasOwnProperty('policy'), 'diagnostics has policy');
+  assert(diag.hasOwnProperty('runtime'), 'diagnostics has runtime');
+
+  var readiness = getReadinessStatus();
+  assert(readiness.hasOwnProperty('ready'), 'getReadinessStatus returns ready flag');
+  assert(readiness.hasOwnProperty('criticalIssues'), 'getReadinessStatus returns criticalIssues');
+  assert(readiness.hasOwnProperty('summary'), 'getReadinessStatus returns summary');
+
+  results.summary = {
+    total: results.passed.length + results.failed.length,
+    passed: results.passed.length,
+    failed: results.failed.length
+  };
+
+  Logger.log('=== ACCESS CONTROL TEST RESULTS ===');
+  Logger.log('Passed: ' + results.passed.length);
+  Logger.log('Failed: ' + results.failed.length);
+
+  if (results.failed.length) {
+    Logger.log('Failed tests: ' + JSON.stringify(results.failed));
+  } else {
+    Logger.log('✓ All tests passed!');
+  }
+
+  return results;
+}
+
+
+// ==================== ЕКСПОРТ ОБ'ЄКТУ ====================
+
+var AccessControl_ = Object.freeze({
+  // Константи
+  ROLE_ORDER: ROLE_ORDER,
+  ROLE_VALUES: ROLE_VALUES,
+  ROLE_METADATA: ROLE_METADATA,
+  SHEET_HEADERS: SHEET_HEADERS,
+  LOCKOUT_DURATION_MS: LOCKOUT_DURATION_MS,
+  LOCKOUT_ESCALATION_MS: LOCKOUT_ESCALATION_MS,
+  LOCKOUT_PROP_PREFIX: LOCKOUT_PROP_PREFIX,
+  MAX_FAILED_ATTEMPTS_SHEET: MAX_FAILED_ATTEMPTS_SHEET,
+  ROTATION_PERIOD_DAYS: ROTATION_PERIOD_DAYS,
+
+  // Публічне API
+  describe: describe,
+  assertRoleAtLeast: assertRoleAtLeast,
+  listBindableCallsigns: listBindableCallsigns,
+  bindCurrentKeyToCallsign: bindCurrentKeyToCallsign,
+  loginByIdentifierAndCallsign: loginByIdentifierAndCallsign,
+
+  // Керування таблицею
+  bootstrapSheet: bootstrapSheet,
+  refreshAccessSheetUi: refreshAccessSheetUi,
+  handleAccessSheetEdit: handleAccessSheetEdit,
+  validateAccessSheet: validateAccessSheet,
+  runAccessDiagnostics: runAccessDiagnostics,
+  getReadinessStatus: getReadinessStatus,
+
+  // Допоміжні функції
+  getAccessRowByEmail: getAccessRowByEmail,
+  listAdminEmails: listAdminEmails,
+  listNotificationEmails: listNotificationEmails,
+  listEmailsByRole: listEmailsByRole,
+  listAllowedActionsForRole: listAllowedActionsForRole_,
+
+  // Метадані ролей
+  getRoleLabel: getRoleLabel_,
+  getRoleNoteTemplate: getRoleNoteTemplate_,
+  normalizeRole: normalizeRole_,
+  normalizeEmail: normalizeEmail_,
+  normalizePhone: normalizePhone_,
+  isMigrationBridgeEnabled: function () {
+    return _getAccessPolicy_().migrationModeEnabled;
+  },
+
+  // Утиліти
+  hashRawUserKey: hashRawUserKey_,
+  maskSensitiveValue: maskSensitiveValue_,
+
+  // Внутрішнє (для тестування)
+  _getAccessPolicy: _getAccessPolicy_,
+  _testAccessControl: _testAccessControl_
 });
 
-// ==================== GLOBAL WRAPPERS ====================
+
+// ==================== ГЛОБАЛЬНІ ОБГОРТКИ ====================
 
 function bootstrapWasbAccessSheet() {
   return AccessControl_.bootstrapSheet();
@@ -571,122 +825,36 @@ function getWasbAccessReadiness() {
 }
 
 function testWasbAccessControl() {
-  if (AccessControl_._testAccessControl) {
+  if (AccessControl_ && typeof AccessControl_._testAccessControl === 'function') {
     return AccessControl_._testAccessControl();
   }
   return { error: 'Test function not available' };
 }
 
 function testDiagnostics() {
-  const diag = AccessControl_.runAccessDiagnostics();
-  console.log(JSON.stringify(diag, null, 2));
+  var diag = AccessControl_.runAccessDiagnostics();
+  Logger.log(JSON.stringify(diag));
+  return diag;
 }
 
-// ==================== TEST HELPERS (for development only) ====================
+
+// ==================== ТЕСТОВІ ХЕЛПЕРИ (ДЛЯ РОЗРОБКИ) ====================
 
 function testAccessControl_() {
-  const results = {
-    passed: [],
-    failed: [],
-    summary: {}
-  };
-
-  // Helper to run test and collect results
-  function assert(condition, testName, details) {
-    if (condition) {
-      results.passed.push({ test: testName, details: details });
-    } else {
-      results.failed.push({ test: testName, details: details });
-    }
+  if (AccessControl_ && typeof AccessControl_._testAccessControl === 'function') {
+    return AccessControl_._testAccessControl();
   }
-
-  // 1. Policy tests
-  const policy = AccessControl_._getAccessPolicy_();
-  assert(typeof policy.strictUserKeyMode === 'boolean', 'Policy has strictUserKeyMode', policy.strictUserKeyMode);
-  assert(typeof policy.migrationModeEnabled === 'boolean', 'Policy has migrationModeEnabled', policy.migrationModeEnabled);
-  assert(typeof policy.bootstrapAllowed === 'boolean', 'Policy has bootstrapAllowed', policy.bootstrapAllowed);
-  assert(typeof policy.adminConfigured === 'boolean', 'Policy has adminConfigured', policy.adminConfigured);
-
-  // 2. Role constants
-  assert(AccessControl_.ROLE_VALUES.length === 7, 'ROLE_VALUES has 7 items', AccessControl_.ROLE_VALUES);
-  assert(AccessControl_.ROLE_ORDER.owner === 6, 'ROLE_ORDER.owner is 6', AccessControl_.ROLE_ORDER.owner);
-  assert(AccessControl_.ROLE_ORDER.guest === 0, 'ROLE_ORDER.guest is 0', AccessControl_.ROLE_ORDER.guest);
-
-  // 3. Header constants
-  assert(AccessControl_.SHEET_HEADERS.includes('email'), 'SHEET_HEADERS includes email');
-  assert(AccessControl_.SHEET_HEADERS.includes('phone'), 'SHEET_HEADERS includes phone');
-  assert(AccessControl_.SHEET_HEADERS.includes('user_key_current_hash'), 'SHEET_HEADERS includes user_key_current_hash');
-  assert(AccessControl_.SHEET_HEADERS.length === 14, 'SHEET_HEADERS has 14 columns');
-
-  // 4. Utility functions
-  const hashed = AccessControl_.hashRawUserKey('test-key');
-  assert(hashed && hashed.length === 64, 'hashRawUserKey returns 64-char hex', hashed);
-
-  const masked = AccessControl_.maskSensitiveValue('1234567890abcdef');
-  assert(masked.includes('…'), 'maskSensitiveValue masks long strings', masked);
-
-  const normalized = AccessControl_.normalizeRole('ADMIN');
-  assert(normalized === 'admin', 'normalizeRole converts to lowercase', normalized);
-
-  const emailNorm = AccessControl_.normalizeEmail(' USER@DOMAIN.COM ');
-  assert(emailNorm === 'user@domain.com', 'normalizeEmail trims and lowercases', emailNorm);
-
-  // 5. Describe returns structured response
-  const desc = AccessControl_.describe();
-  assert(desc.hasOwnProperty('identity'), 'describe returns identity block');
-  assert(desc.hasOwnProperty('access'), 'describe returns access block');
-  assert(desc.hasOwnProperty('lockout'), 'describe returns lockout block');
-  assert(desc.hasOwnProperty('policy'), 'describe returns policy block');
-  assert(desc.hasOwnProperty('audit'), 'describe returns audit block');
-  assert(desc.hasOwnProperty('reason'), 'describe returns reason block');
-  assert(desc.lockout.hasOwnProperty('locked'), 'lockout block has locked field');
-  assert(!desc.lockout.hasOwnProperty('propKey'), 'lockout block does NOT contain propKey');
-
-  // 6. Bootstrap condition
-  const hasAdmin = policy.adminConfigured;
-  const accessEmpty = policy.accessSheetPresent && AccessControl_.runAccessDiagnostics().runtime.registeredKeysCount === 0;
-  const bootstrapShouldBe = (!hasAdmin && (accessEmpty || !policy.accessSheetPresent));
-  assert(policy.bootstrapAllowed === bootstrapShouldBe, 'Bootstrap condition correct', {
-    hasAdmin, accessEmpty, bootstrapAllowed: policy.bootstrapAllowed, expected: bootstrapShouldBe
-  });
-
-  // 7. ValidateAccessSheet returns structure
-  const validation = AccessControl_.validateAccessSheet();
-  assert(validation.hasOwnProperty('valid'), 'validateAccessSheet returns valid flag');
-  assert(validation.hasOwnProperty('issues'), 'validateAccessSheet returns issues array');
-
-  // 8. Diagnostics returns structure
-  const diag = AccessControl_.runAccessDiagnostics();
-  assert(diag.hasOwnProperty('schema'), 'diagnostics has schema');
-  assert(diag.hasOwnProperty('dataIntegrity'), 'diagnostics has dataIntegrity');
-  assert(diag.hasOwnProperty('policy'), 'diagnostics has policy');
-  assert(diag.hasOwnProperty('runtime'), 'diagnostics has runtime');
-
-  results.summary = {
-    total: results.passed.length + results.failed.length,
-    passed: results.passed.length,
-    failed: results.failed.length
-  };
-
-  console.log('=== ACCESS CONTROL TEST RESULTS ===');
-  console.log('Passed:', results.passed.length);
-  console.log('Failed:', results.failed.length);
-  if (results.failed.length) {
-    console.log('Failed tests:', results.failed);
-  } else {
-    console.log('All tests passed!');
-  }
-
-  return results;
+  return { error: 'Internal test function not available' };
 }
 
-// Smoke test for critical path
 function smokeTestAccessControl_() {
-  const results = {
+  var results = {
     describe: null,
     bootstrapSheet: null,
     validate: null,
-    diagnostics: null
+    diagnostics: null,
+    allPassed: false,
+    error: null
   };
 
   try {
@@ -697,13 +865,14 @@ function smokeTestAccessControl_() {
     results.allPassed = true;
   } catch (e) {
     results.allPassed = false;
-    results.error = e.message;
+    results.error = e && e.message ? e.message : String(e);
   }
 
-  console.log('=== SMOKE TEST ===');
-  console.log('All functions executed:', results.allPassed);
+  Logger.log('=== SMOKE TEST ===');
+  Logger.log('All functions executed: ' + results.allPassed);
   if (!results.allPassed) {
-    console.error('Error:', results.error);
+    Logger.log('Error: ' + results.error);
   }
+
   return results;
 }
