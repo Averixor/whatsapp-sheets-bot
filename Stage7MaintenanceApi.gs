@@ -252,16 +252,19 @@ function apiStage7BuildBirthdayLink(phone, name) {
       phone: phone || '',
       name: name || ''
     },
+
     write: false,
     validate: function(input) {
       return { payload: input, warnings: [] };
     },
+
     execute: function(input) {
       const legacy = normalizeServerResponse_(
         buildBirthdayLink(input.phone || '', input.name || ''),
         'apiStage7BuildBirthdayLink',
         {}
       );
+
       const result = Object.assign({
         phone: input.phone || '',
         name: input.name || ''
@@ -304,6 +307,7 @@ function apiInstallStage7Jobs() {
           installed: result.installed,
           removed: result.removed
         }],
+
         affectedSheets: [],
         affectedEntities: [],
         appliedChangesCount: Number(result.installed || 0),
@@ -453,6 +457,7 @@ function apiStage7GetOperationDetails(operationId) {
       { affectedSheets: ['OPS_LOG', 'CHECKPOINTS'] }
     );
   }
+  
   const details = typeof OperationRepository_ === 'object' ? OperationRepository_.getOperationDetails(normalizedId) : null;
   return _stage7BuildMaintenanceResponse_(
     !!details,

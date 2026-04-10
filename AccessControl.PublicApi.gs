@@ -35,8 +35,6 @@
     return null;
   }
 
-
-
   // ==================== ASSERT / ENFORCEMENT ====================
 
   function assertRoleAtLeast(requiredRole, actionLabel) {
@@ -80,8 +78,6 @@
     return descriptor;
   }
 
-
-
   // ==================== EMAIL ROLE LISTS ====================
 
   function listEmailsByRole(role) {
@@ -112,8 +108,6 @@
     return _findByEmailInSheet_(normalizedEmail, { includeLocked: true, includeDisabled: true });
   }
 
-
-
   // ==================== ROLE HELPERS ====================
 
   function getRoleMeta_(role) {
@@ -140,8 +134,6 @@
       default: return ['безпечний перегляд'];
     }
   }
-
-
 
   // ==================== VALIDATION & DIAGNOSTICS ====================
 
@@ -350,8 +342,6 @@
     };
   }
 
-
-
   // ==================== SHEET UI ====================
 
   function bootstrapSheet() {
@@ -415,8 +405,6 @@
 
     _invalidateAccessCaches_();
   }
-
-
 
   // ==================== TESTS ====================
 
@@ -515,8 +503,6 @@
     return results;
   }
 
-
-
   // ==================== EXPORTS ====================
 
 const AccessControl_ = Object.freeze({
@@ -569,7 +555,6 @@ const AccessControl_ = Object.freeze({
     _getAccessPolicy: _getAccessPolicy_,
     _testAccessControl: _testAccessControl_
 });
-
 
 // ==================== GLOBAL WRAPPERS ====================
 

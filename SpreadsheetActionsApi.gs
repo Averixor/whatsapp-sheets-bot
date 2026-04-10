@@ -11,6 +11,7 @@ function apiPreviewSelectionMessage(options) {
     validate: function(input) {
       return { payload: input, warnings: [] };
     },
+
     execute: function() {
       const prepared = SelectionActionService_.prepareSingleSelection();
       return {
@@ -20,6 +21,7 @@ function apiPreviewSelectionMessage(options) {
           title: 'Повідомлення',
           logged: false
         }),
+
         changes: [],
         affectedSheets: [prepared.sheetName],
         affectedEntities: [prepared.payload.fio || '']
@@ -42,6 +44,7 @@ function apiPreviewMultipleMessages(options) {
           title: 'Кілька повідомлень',
           logged: false
         }),
+
         changes: [],
         affectedSheets: [prepared.sheetName],
         affectedEntities: (prepared.payloads || []).map(function(item) { return item.fio || ''; })
@@ -64,6 +67,7 @@ function apiPreviewGroupedMessages(options) {
           title: 'Згруповані за телефоном',
           logged: false
         }),
+
         changes: [],
         affectedSheets: [prepared.sheetName],
         affectedEntities: (prepared.payloads || []).map(function(item) { return item.fio || ''; })
@@ -86,6 +90,7 @@ function apiPrepareRangeMessages(options) {
           title: `Діапазон ${prepared.rangeA1 || ''}`.trim(),
           logged: false
         }),
+
         changes: [],
         affectedSheets: [prepared.sheetName],
         affectedEntities: (prepared.payloads || []).map(function(item) { return item.fio || ''; })
@@ -107,6 +112,7 @@ function apiBuildCommanderSummaryPreview(options) {
         result: PreviewLinkService_.buildSummaryPreview(prepared, {
           title: prepared.title || 'Зведення командиру'
         }),
+
         changes: [],
         affectedSheets: [prepared.sheet || getBotMonthSheetName_()],
         affectedEntities: [CONFIG.COMMANDER_ROLE]
@@ -128,6 +134,7 @@ function apiBuildCommanderSummaryLink(options) {
         result: PreviewLinkService_.buildSummaryPreview(prepared, {
           title: prepared.title || 'Зведення командиру'
         }),
+
         changes: [],
         affectedSheets: [prepared.sheet || getBotMonthSheetName_()],
         affectedEntities: [CONFIG.COMMANDER_ROLE],
@@ -152,6 +159,7 @@ function apiLogPreparedMessages(options) {
             title: 'LOG preview',
             logged: false
           }),
+
           changes: [],
           affectedSheets: [prepared.sheetName, CONFIG.LOG_SHEET]
         };
@@ -166,6 +174,7 @@ function apiLogPreparedMessages(options) {
             title: 'Записано в LOG',
             logged: true
           })
+
         : PreviewLinkService_.buildMultiplePreview(prepared.payloads, prepared.errors || [], {
             title: 'Записано в LOG',
             logged: true
@@ -181,6 +190,7 @@ function apiLogPreparedMessages(options) {
           type: 'writeLogsBatch',
           count: (prepared.payloads || []).length
         }],
+        
         affectedSheets: [prepared.sheetName, CONFIG.LOG_SHEET],
         affectedEntities: (prepared.payloads || []).map(function(item) { return item.fio || ''; }),
         appliedChangesCount: input.dryRun ? 0 : (prepared.payloads || []).length,

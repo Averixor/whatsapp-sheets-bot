@@ -274,4 +274,3 @@
     _writeEntryByHeaderMap_(sheetRow, mapped);
     return mapped;
   }
-

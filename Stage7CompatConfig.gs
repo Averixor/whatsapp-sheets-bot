@@ -26,6 +26,7 @@ function buildStage4Config_() {
       safeRepair: appGetFlag('safeRepair', true),
       dryRunByDefaultForRepair: appGetFlag('dryRunByDefaultForRepair', true)
     }),
+    
     JOBS: Object.freeze({
       DAILY_VACATIONS_AND_BIRTHDAYS: appGetJob('DAILY_VACATIONS_AND_BIRTHDAYS', 'dailyVacationsAndBirthdays'),
       SCHEDULED_RECONCILIATION: appGetJob('SCHEDULED_RECONCILIATION', 'scheduledReconciliation'),

@@ -14,8 +14,6 @@
     return _isAdminDisabled_(entry) || _isTimedLocked_(entry);
   }
 
-
-
   // ==================== LOCKOUT STATE ====================
 
   function _lockoutIdentity_(entry, fallbackEmail, fallbackKeyHash) {
@@ -99,4 +97,3 @@
       lastReason: meta.lastReason
     };
   }
-

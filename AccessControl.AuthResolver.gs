@@ -23,8 +23,6 @@
     return Object.assign({}, _policyCache);
   }
 
-
-
   // ==================== UNIFIED USER RESOLVER ====================
 
   function _resolveAccessSubject_(context, options = {}) {
@@ -572,6 +570,7 @@
         currentKeyHashFull: opts.includeSensitiveDebug ? (context.currentKeyHash || '') : '',
         currentKeyHashMasked: context.currentKeyHash ? maskSensitiveValue_(context.currentKeyHash) : ''
       },
+
       access: {
         role: role,
         enabled: enabled,
@@ -582,6 +581,7 @@
         isMaintainer: roleLevel >= ROLE_ORDER.maintainer && enabled,
         isOperator: roleLevel >= ROLE_ORDER.operator && enabled
       },
+
       lockout: descriptor.lockoutState,
       login: {
         keyAvailable: !!context.currentKeyHash,
@@ -591,6 +591,7 @@
         supportCallsign: getPrimarySupportCallsign_(),
         lockout: _getSelfBindLoginPublicState_(context.currentKeyHash)
       },
+
       policy: {
         mode: policy.mode,
         strictUserKeyMode: policy.strictUserKeyMode,
@@ -598,6 +599,7 @@
         rotationPeriodDays: ROTATION_PERIOD_DAYS,
         automaticPromotionOnPreviousKeyMatch: true
       },
+
       audit: {
         source: auditSource,
         matchedBy: descriptor.matchedBy,
@@ -605,10 +607,12 @@
         lastRotatedAt: entry && entry.lastRotatedAt ? String(entry.lastRotatedAt) : '',
         failedAttempts: entry && entry.failedAttempts ? entry.failedAttempts : 0
       },
+
       reason: {
         code: descriptor.reasonCode,
         message: descriptor.reasonMessage
       },
+
       reasonString: descriptor.reasonMessage,
       // Legacy compatibility fields (deprecated)
       email: context.sessionEmail || (entry && entry.email) || '',
@@ -645,4 +649,3 @@
       allowedActions: listAllowedActionsForRole_(role)
     };
   }
-

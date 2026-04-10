@@ -420,9 +420,11 @@ function runAccessPolicyChecks(options) {
       if (!('rotationPolicy' in descriptor)) {
         throw new Error('rotationPolicy missing');
       }
+
       if (!('migrationModeEnabled' in descriptor)) {
         throw new Error('migrationModeEnabled missing');
       }
+
       if (!('allowedActions' in descriptor)) {
         throw new Error('allowedActions missing');
       }
@@ -430,6 +432,7 @@ function runAccessPolicyChecks(options) {
       if (typeof descriptor.migrationModeEnabled !== 'boolean') {
         throw new Error('migrationModeEnabled should be boolean');
       }
+
       if (!Array.isArray(descriptor.allowedActions)) {
         throw new Error('allowedActions should be array');
       }
@@ -457,6 +460,7 @@ function runAccessPolicyChecks(options) {
       if (!AccessEnforcement_.canOpenPersonCard(viewer, 'ALFA')) {
         throw new Error('Viewer own card should be allowed');
       }
+
       if (AccessEnforcement_.canOpenPersonCard(viewer, 'BRAVO')) {
         throw new Error('Viewer foreign card should be denied');
       }
@@ -472,6 +476,7 @@ function runAccessPolicyChecks(options) {
         'canUseDetailedSummary',
         'canUseSendPanel'
       ];
+
       for (var i = 0; i < requiredMethods.length; i++) {
         if (typeof AccessEnforcement_[requiredMethods[i]] !== 'function') {
           throw new Error('AccessEnforcement_.' + requiredMethods[i] + ' is not available');
@@ -488,9 +493,11 @@ function runAccessPolicyChecks(options) {
       if (AccessEnforcement_.canUseDaySummary(viewer)) {
         throw new Error('Viewer day summary should be denied');
       }
+
       if (AccessEnforcement_.canUseDetailedSummary(viewer)) {
         throw new Error('Viewer detailed summary should be denied');
       }
+
       if (AccessEnforcement_.canUseSendPanel(viewer)) {
         throw new Error('Viewer send panel should be denied');
       }
@@ -507,6 +514,7 @@ function runAccessPolicyChecks(options) {
         'canUseWorkingActions',
         'canUseSendPanel'
       ];
+
       for (var i = 0; i < requiredMethods.length; i++) {
         if (typeof AccessEnforcement_[requiredMethods[i]] !== 'function') {
           throw new Error('AccessEnforcement_.' + requiredMethods[i] + ' is not available');
@@ -522,12 +530,15 @@ function runAccessPolicyChecks(options) {
       if (!AccessEnforcement_.canUseDaySummary(operator)) {
         throw new Error('Operator day summary should be allowed');
       }
+
       if (!AccessEnforcement_.canUseDetailedSummary(operator)) {
         throw new Error('Operator detailed summary should be allowed');
       }
+
       if (AccessEnforcement_.canUseWorkingActions(operator)) {
         throw new Error('Operator working actions should be denied');
       }
+
       if (AccessEnforcement_.canUseSendPanel(operator)) {
         throw new Error('Operator send panel should be denied');
       }
@@ -541,6 +552,7 @@ function runAccessPolicyChecks(options) {
       if (typeof AccessEnforcement_.canOpenPersonCard !== 'function') {
         throw new Error('AccessEnforcement_.canOpenPersonCard is not available');
       }
+
       if (typeof AccessEnforcement_.canUseSendPanel !== 'function') {
         throw new Error('AccessEnforcement_.canUseSendPanel is not available');
       }
@@ -554,6 +566,7 @@ function runAccessPolicyChecks(options) {
       if (AccessEnforcement_.canOpenPersonCard(guest, 'ALFA')) {
         throw new Error('Guest person card should be denied');
       }
+
       if (AccessEnforcement_.canUseSendPanel(guest)) {
         throw new Error('Guest send panel should be denied');
       }
