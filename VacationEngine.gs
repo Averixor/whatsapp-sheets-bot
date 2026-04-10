@@ -765,7 +765,7 @@ function runBirthdayEngine_(targetDate) {
 
       const callsign = String(item.role || '').trim() || String(item.fml).split(' ')[0];
       const name = callsign || item.fml;
-      const age = (birth.year && daysUntil === 0) ? (today.getFullYear() - birth.year) : null;
+      const age = birth.year ? (nextBirthday.getFullYear() - birth.year) : null;
 
       const baseData = {
         fml: item.fml,
@@ -785,6 +785,7 @@ function runBirthdayEngine_(targetDate) {
           fml: item.fml,
           callsign: callsign,
           birthday: item.birthday,
+          age: age,
           daysUntil: daysUntil,
           message: message,
           link: _veWaLink_(commanderPhone, message),
@@ -801,6 +802,7 @@ function runBirthdayEngine_(targetDate) {
           fml: item.fml,
           displayName: name,
           birthday: item.birthday,
+          age: age,
           daysUntil: 0,
           phone: phone,
           message: message,

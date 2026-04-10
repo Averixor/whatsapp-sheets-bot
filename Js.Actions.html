@@ -155,6 +155,27 @@
     contentEl.innerHTML = renderBirthdayResult(result);
   }
 
+
+  function formatYearsUa(age) {
+    const n = Math.abs(Number(age)) % 100;
+    const n1 = n % 10;
+
+    if (n > 10 && n < 20) return 'років';
+    if (n1 === 1) return 'рік';
+    if (n1 >= 2 && n1 <= 4) return 'роки';
+    return 'років';
+  }
+
+  function formatBirthdayWithAge(birthday, age) {
+    const b = String(birthday || '').trim();
+    const a = Number(age);
+
+    if (!b) return '—';
+    if (!Number.isFinite(a) || a <= 0) return b;
+
+    return `${b} (${a} ${formatYearsUa(a)})`;
+  }
+
   function renderBirthdayResult(rawData) {
     const data = normalizeBirthdayData(rawData);
     const esc = value => escapeHtml(String(value || ''));
@@ -177,7 +198,7 @@
             <div style="${itemStyle}">
               <div style="${fmlStyle}">🎂 ${esc(row.callsign || row.fml)}</div>
               <div style="font-size:12px;color:#374151;margin-top:4px;">
-                ${esc(row.fml)} • ${esc(row.birthday || '')}
+                ${esc(row.fml)} • ${esc(formatBirthdayWithAge(row.birthday, row.age))}
               </div>
               <div style="font-size:12px;color:#374151;margin-top:6px; white-space:pre-wrap;">
                 ${esc(row.message || '')}
@@ -205,7 +226,7 @@
             <div style="${itemStyle}">
               <div style="${fmlStyle}">🎂 ${esc(person.displayName || person.fml)}</div>
               <div style="font-size:12px;color:#374151;margin-top:4px;">
-                ${esc(person.fml)} • ${esc(person.birthday || '')}
+                ${esc(person.fml)} • ${esc(formatBirthdayWithAge(person.birthday, person.age))}
               </div>
               <div style="font-size:12px;color:#374151;margin-top:6px; white-space:pre-wrap;">
                 ${esc(person.message || '')}
@@ -240,7 +261,7 @@
             <div style="${itemStyle}">
               <div style="${fmlStyle}">🎉 ${esc(person.displayName || person.fml)}</div>
               <div style="font-size:12px;color:#374151;margin-top:4px;">
-                ${esc(person.fml)} • ${esc(person.birthday)}
+                ${esc(person.fml)} • ${esc(formatBirthdayWithAge(person.birthday, person.age))}
               </div>
               ${
                 person.phone
@@ -265,7 +286,7 @@
             <div style="${itemStyle}">
               <div style="${fmlStyle}">🎂 ${esc(person.displayName || person.fml)}</div>
               <div style="font-size:12px;color:#374151;margin-top:4px;">
-                ${esc(person.fml)} • ${esc(person.birthday)}
+                ${esc(person.fml)} • ${esc(formatBirthdayWithAge(person.birthday, person.age))}
               </div>
               ${
                 person.phone
