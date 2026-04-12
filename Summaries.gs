@@ -47,7 +47,6 @@ function buildDaySummaryForColumn_(sheet, col) {
     'Гусачі',
     'БЗВП',
     'Лікарн',
-    '*ВО',
     '*ВМЗ',
     '*РБпАК',
     '*1УРБпАК',
@@ -149,7 +148,7 @@ function formatDetailedSummaryLegacy_(date, people) {
     set.forEach(s => usedSurnames.add(s));
   };
 
-  add('БР'); add('Евак'); add('Roland'); add('Black'); add('РБпАК'); add('1УРБпАК'); add('2УРБпАК'); add('КП'); add('Резерв'); add('Відпус'); add('Лікарн'); add('*ВО'); add('*РБпАК'); add('*1УРБпАК'); add('*2УРБпАК'); add('*ВЗ'); add('*ВМЗ'); add('Гусачі'); add('Відряд'); add('БЗВП');
+  add('БР'); add('Евак'); add('Roland'); add('Black'); add('РБпАК'); add('1УРБпАК'); add('2УРБпАК'); add('КП'); add('Резерв'); add('Відпус'); add('Лікарн'); add('*РБпАК'); add('*1УРБпАК'); add('*2УРБпАК'); add('*ВЗ'); add('*ВМЗ'); add('Гусачі'); add('Відряд'); add('БЗВП');
 
   return txt;
 }
