@@ -165,7 +165,7 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
       scenario: 'security.accessViolation',
       level: 'SECURITY',
       status: 'BLOCKED',
-      initiator: record.displayName || record.email || record.currentKey || 'unknown',
+      initiator: record.displayName || record.email || record.currentKeyHashMasked || 'unknown',
       dryRun: false,
       partial: false,
       affectedSheets: [
@@ -173,7 +173,7 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
         typeof STAGE7_CONFIG !== 'undefined' ? STAGE7_CONFIG.AUDIT_SHEET : 'AUDIT',
         typeof CONFIG !== 'undefined' ? CONFIG.LOG_SHEET : 'LOG'
       ],
-      affectedEntities: [record.personCallsign || record.displayName || record.email || record.currentKey || 'unknown'],
+      affectedEntities: [record.personCallsign || record.displayName || record.email || record.currentKeyHashMasked || 'unknown'],
       appliedChangesCount: 1,
       skippedChangesCount: 0,
       payload: record,
@@ -202,7 +202,7 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
       scenario: record.action || 'accessViolation',
       message: message || '',
       affectedSheets: [typeof appGetCore === 'function' ? appGetCore('ALERTS_SHEET', 'ALERTS_LOG') : 'ALERTS_LOG'],
-      affectedEntities: [record.personCallsign || record.displayName || record.email || record.currentKey || 'unknown'],
+      affectedEntities: [record.personCallsign || record.displayName || record.email || record.currentKeyHashMasked || 'unknown'],
       context: { dateStr: typeof _todayStr_ === 'function' ? _todayStr_() : '' }
     });
   }
@@ -234,6 +234,8 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
    */
   function reportViolation(actionName, details, descriptorOpt) {
     var descriptor = descriptorOpt || _descriptor_();
+    var identity = descriptor && descriptor.identity ? descriptor.identity : {};
+    var audit = descriptor && descriptor.audit ? descriptor.audit : {};
     var action = String(actionName || 'unknownAction').trim();
     if (action === '') action = 'unknownAction';
 
@@ -251,13 +253,13 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
       outcome: 'blocked',
       role: role,
       roleLabel: _roleLabel_(role),
-      displayName: descriptor.displayName || '',
-      source: descriptor.source || '',
+      displayName: descriptor.displayName || identity.displayName || '',
+      source: descriptor.source || audit.source || '',
       registered: !!descriptor.registered,
       enabled: descriptor.enabled !== false,
-      email: descriptor.email || '',
-      currentKey: descriptor.currentKey || '',
-      personCallsign: descriptor.personCallsign || '',
+      email: descriptor.email || identity.email || '',
+      currentKeyHashMasked: descriptor.currentKeyHashMasked || identity.currentKeyHashMasked || '',
+      personCallsign: descriptor.personCallsign || identity.personCallsign || '',
       details: info
     };
 
@@ -270,7 +272,7 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
       outcome: record.outcome,
       role: role,
       displayName: record.displayName,
-      userKey: record.currentKey,
+      userKey: record.currentKeyHashMasked,
       email: record.email,
       source: record.source,
       message: message,
@@ -292,7 +294,7 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
       'Джерело доступу: ' + (record.source || 'не визначено'),
       'Зареєстровано: ' + (record.registered ? 'так' : 'ні'),
       'Email: ' + (record.email || 'не визначено'),
-      'User key: ' + (record.currentKey || 'не визначено'),
+      'User key: ' + (record.currentKeyHashMasked || 'не визначено'),
       'Прив\'язаний позивний: ' + (record.personCallsign || 'не задано'),
       '',
       'Деталі:'
@@ -322,7 +324,7 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
         outcome: 'mail_error',
         role: role,
         displayName: record.displayName,
-        userKey: record.currentKey,
+        userKey: record.currentKeyHashMasked,
         email: record.email,
         source: record.source,
         message: 'Не вдалося надіслати email-сповіщення про порушення доступу',
