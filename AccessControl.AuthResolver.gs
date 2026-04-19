@@ -742,6 +742,10 @@ function _buildPublicAccessResponse_(descriptor, context, policy, options) {
     allowedActions: listAllowedActionsForRole_(role),
 
     // Legacy compatibility fields (deprecated)
+    displayName: entry && entry.displayName ? String(entry.displayName) : '',
+    personCallsign: entry && entry.personCallsign ? String(entry.personCallsign) : '',
+    currentKeyHashFull: opts.includeSensitiveDebug ? (context.currentKeyHash || '') : '',
+    currentKeyHashMasked: context.currentKeyHash ? maskSensitiveValue_(context.currentKeyHash) : '',
     email: context.sessionEmail || (entry && entry.email) || '',
     role: role,
     enabled: enabled,
