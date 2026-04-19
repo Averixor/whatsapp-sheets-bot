@@ -334,9 +334,20 @@ function apiRunStage7Job(jobName, options) {
     source: String((options && options.source) || 'manual'),
     entryPoint: String((options && options.entryPoint) || 'apiRunStage7Job'),
     initiatorEmail: String((options && options.initiatorEmail) || descriptor.email || ''),
-    initiatorName: String((options && options.initiatorName) || descriptor.displayName || descriptor.email || ''),
+    initiatorName: String(
+      (options && options.initiatorName) ||
+      descriptor.displayName ||
+      (descriptor.identity && descriptor.identity.displayName) ||
+      descriptor.email ||
+      ''
+    ),
     initiatorRole: String((options && options.initiatorRole) || descriptor.role || ''),
-    initiatorCallsign: String((options && options.initiatorCallsign) || descriptor.personCallsign || ''),
+    initiatorCallsign: String(
+      (options && options.initiatorCallsign) ||
+      descriptor.personCallsign ||
+      (descriptor.identity && descriptor.identity.personCallsign) ||
+      ''
+    ),
     userDescriptor: descriptor
   });
   return Stage7Triggers_.runJob(jobName, opts);
