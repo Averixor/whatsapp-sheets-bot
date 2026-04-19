@@ -75,11 +75,18 @@
       .build();
   }
 
+
+  function _getManagedAccessRowCount_(sh) {
+    if (!sh) return Math.max(MAX_SHEET_ROWS - 1, 1);
+    const lastRow = Math.max(sh.getLastRow(), 2);
+    return Math.max(lastRow - 1, MAX_SHEET_ROWS - 1);
+  }
+
   function _applyRoleValidation_(sh) {
     const headerMap = _getHeaderMap_(sh);
     const roleCol = headerMap.role;
     if (!roleCol) return;
-    sh.getRange(2, roleCol, MAX_SHEET_ROWS - 1, 1).setDataValidation(_buildRoleValidationRule_());
+    sh.getRange(2, roleCol, _getManagedAccessRowCount_(sh), 1).setDataValidation(_buildRoleValidationRule_());
   }
 
   function _applyEmailValidation_(sh) {
@@ -91,7 +98,7 @@
       .setAllowInvalid(false)
       .setHelpText('Введіть коректну email адресу')
       .build();
-    sh.getRange(2, emailCol, MAX_SHEET_ROWS - 1, 1).setDataValidation(rule);
+    sh.getRange(2, emailCol, _getManagedAccessRowCount_(sh), 1).setDataValidation(rule);
   }
 
   function _applyEnabledValidation_(sh) {
@@ -103,7 +110,7 @@
       .setAllowInvalid(false)
       .setHelpText('TRUE - активний, FALSE - заблокований адміністратором')
       .build();
-    sh.getRange(2, enabledCol, MAX_SHEET_ROWS - 1, 1).setDataValidation(rule);
+    sh.getRange(2, enabledCol, _getManagedAccessRowCount_(sh), 1).setDataValidation(rule);
   }
 
   function _syncRoleNoteForRow_(sh, rowNumber) {
@@ -115,6 +122,35 @@
     const rawRole = String(sh.getRange(rowNumber, roleCol).getValue() || '').trim();
     if (!rawRole) return;
     sh.getRange(rowNumber, noteCol).setValue(getRoleNoteTemplate_(rawRole));
+  }
+
+
+  function _syncAllRoleNotes_(sh) {
+    if (!sh) return 0;
+
+    const headerMap = _getHeaderMap_(sh);
+    const roleCol = headerMap.role;
+    const noteCol = headerMap.note;
+    if (!roleCol || !noteCol) return 0;
+
+    const lastRow = Math.max(sh.getLastRow(), 1);
+    if (lastRow < 2) return 0;
+
+    const roleValues = sh.getRange(2, roleCol, lastRow - 1, 1).getValues();
+    const noteRange = sh.getRange(2, noteCol, lastRow - 1, 1);
+    const noteValues = noteRange.getValues();
+
+    let changed = 0;
+    const nextValues = roleValues.map(function(row, idx) {
+      const rawRole = String(row[0] || '').trim();
+      if (!rawRole) return [noteValues[idx][0]];
+      const nextNote = getRoleNoteTemplate_(rawRole);
+      if (String(noteValues[idx][0] || '') !== nextNote) changed++;
+      return [nextNote];
+    });
+
+    noteRange.setValues(nextValues);
+    return changed;
   }
 
   function _rowToEntry_(row, rowNumber, headerMap) {
