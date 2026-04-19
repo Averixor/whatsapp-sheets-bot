@@ -143,16 +143,17 @@
     async openPersonCard(callsign, dateStr = '') {
       const response = await Api.run('apiOpenPersonCard', callsign || '', dateStr || '');
       const result = unwrapStage4Result(response) || {};
-      return Object.assign({
+      return {
         success: !!response?.success,
         message: response?.message || '',
         error: response?.error || null,
         data: result,
+        card: result,
         warnings: Array.isArray(response?.warnings) ? response.warnings : [],
         context: response?.context || null,
         meta: unwrapStage4Meta(response),
         raw: response
-      }, result || {});
+      };
     },
 
     async checkVacationsAndBirthdays(dateStr = '') {
@@ -208,7 +209,8 @@
       };
     },
 
-    runReconciliation: (options = {}) => Api.run('apiRunReconciliation', options)
+    runReconciliation: async (options = {}) =>
+      adaptStage4UtilityResponse(await Api.run('apiRunReconciliation', options))
   };
 
   var MaintenanceApi = {
@@ -236,7 +238,9 @@
     bindCurrentKeyToCallsign: async (callsign) => adaptStage4UtilityResponse(await Api.run('apiStage7BindCurrentKeyToCallsign', callsign || '')),
     loginByIdentifierAndCallsign: async (payload = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7LoginByIdentifierAndCallsign', payload || {})),
     applyProtections: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7ApplyProtections', options)),
-    bootstrapAccessSheet: async () => adaptStage4UtilityResponse(await Api.run('apiStage7BootstrapAccessSheet'))
+    bootstrapAccessSheet: async () => adaptStage4UtilityResponse(await Api.run('apiStage7BootstrapAccessSheet')),
+    reportAccessViolation: async (actionName, details = {}) =>
+      adaptStage4UtilityResponse(await Api.run('apiStage7ReportAccessViolation', actionName || '', details || {}))
   };
 
   var SidebarApi = {
@@ -273,10 +277,11 @@
   var DiagnosticsApi = {
     healthCheck: async (options = {}) => {
       const opts = Object.assign({}, options || {});
-      const wantsQuick = String(opts.mode || '').toLowerCase() === 'quick' || (opts.shallow !== false && !opts.includeStage3Base && !opts.includeCompatibilityLayer && !opts.includeReconciliationPreview);
-      return wantsQuick
-        ? MaintenanceApi.quickHealthCheck(opts)
-        : MaintenanceApi.healthCheck(opts);
+      const mode = String(opts.mode || '').toLowerCase();
+
+      if (mode === 'full') return MaintenanceApi.healthCheck(opts);
+      if (mode === 'quick' || opts.shallow !== false) return MaintenanceApi.quickHealthCheck(opts);
+      return MaintenanceApi.healthCheck(opts);
     },
     runRegressionTests: MaintenanceApi.runRegressionTests
   };
