@@ -173,9 +173,19 @@ const Stage7Triggers_ = (function() {
       dryRun: !!opts.dryRun,
       operationId: opts.operationId || stage7UniqueId_(registryItem.jobName),
       initiatorEmail: String(opts.initiatorEmail || descriptor.email || ''),
-      initiatorName: String(opts.initiatorName || descriptor.displayName || (opts.trigger ? 'system-trigger' : '')),
+      initiatorName: String(
+        opts.initiatorName ||
+        descriptor.displayName ||
+        (descriptor.identity && descriptor.identity.displayName) ||
+        (opts.trigger ? 'system-trigger' : '')
+      ),
       initiatorRole: String(opts.initiatorRole || descriptor.role || (opts.trigger ? 'system' : '')),
-      initiatorCallsign: String(opts.initiatorCallsign || descriptor.personCallsign || ''),
+      initiatorCallsign: String(
+        opts.initiatorCallsign ||
+        descriptor.personCallsign ||
+        (descriptor.identity && descriptor.identity.personCallsign) ||
+        ''
+      ),
       entryPoint: String(opts.entryPoint || (opts.trigger ? registryItem.handler : 'Stage7Triggers_.runJob')),
       triggerId: String(opts.triggerId || ''),
       notes: String(opts.notes || (opts.trigger ? ('trigger:' + registryItem.handler) : 'manual job launch'))
