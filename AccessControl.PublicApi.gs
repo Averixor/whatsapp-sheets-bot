@@ -606,13 +606,15 @@ function refreshAccessSheetUi() {
   _applyRoleValidation_(sh);
   _applyEmailValidation_(sh);
   _applyEnabledValidation_(sh);
+  var syncedNotes = _syncAllRoleNotes_(sh);
   _invalidateAccessCaches_();
 
   return {
     success: true,
     sheet: ACCESS_SHEET,
     message: 'ACCESS schema updated',
-    roleValues: ROLE_VALUES.slice()
+    roleValues: ROLE_VALUES.slice(),
+    syncedNotes: syncedNotes
   };
 }
 
@@ -625,7 +627,7 @@ function handleAccessSheetEdit(e) {
 
   var row = range.getRow();
   var column = range.getColumn();
-  if (row < 2 || row > MAX_SHEET_ROWS) return;
+  if (row < 2) return;
 
   var headerMap = _getHeaderMap_(sh);
   var roleCol = headerMap.role;
