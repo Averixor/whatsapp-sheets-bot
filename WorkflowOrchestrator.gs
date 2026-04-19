@@ -122,7 +122,7 @@ const WorkflowOrchestrator_ = (function() {
       const email = _cleanText(d.email);
       const callsign = _cleanText(d.personCallsign);
       const role = _cleanText(d.role);
-      const key = _maskKey(d.currentKey);
+      const key = _cleanText(d.currentKeyHashMasked || '');
 
       if (displayName) parts.push(displayName);
       if (email && parts.indexOf(email) === -1) parts.push(email);
