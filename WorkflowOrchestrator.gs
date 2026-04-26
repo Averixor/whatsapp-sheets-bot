@@ -119,9 +119,11 @@ const WorkflowOrchestrator_ = (function() {
     if (cfg && cfg.publicApiMethod && (!route || cfg.publicApiMethod !== route.publicApiMethod)) {
       parts.push('api:' + cfg.publicApiMethod);
     }
+
     if (cfg && cfg.routeName && (!route || cfg.routeName !== route.routeName)) {
       parts.push('route:' + cfg.routeName);
     }
+    
     if (rawScenario) parts.push('scenario:' + rawScenario);
 
     return parts.length ? parts.join(' | ') : 'manual';

@@ -1,3 +1,0 @@
-function runFilesCheck() {
-  return checkFiles();
-}

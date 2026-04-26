@@ -57,6 +57,7 @@ function checkSheets() {
   DIAGNOSTICS.results.sheets = report;
   return report;
 }
+
 function checkFiles() {
   const report = _makeReport_('📁 ПЕРЕВІРКА ПРОЄКТУ');
 
@@ -117,6 +118,7 @@ function checkDuplicates() {
         status: 'WARN',
         message: '⚠ Лист PHONES не знайдено або порожній'
       });
+
       DIAGNOSTICS.results.duplicates = report;
       return report;
     }
@@ -125,6 +127,7 @@ function checkDuplicates() {
     const header = values[0].map(function (v) {
       return String(v || '').trim().toLowerCase();
     });
+
     const data = values.slice(1);
 
     function findCol(predicates) {
@@ -138,7 +141,7 @@ function checkDuplicates() {
     const fmlCol = findCol(['піб', 'фіо', 'фио']);
     const callsignCol = findCol(['позив', 'callsign', 'роль']);
     const phoneCol = findCol(['тел', 'phone']);
-
+    
     const counters = {
       fml: {},
       callsign: {},
@@ -206,6 +209,7 @@ function checkDuplicates() {
         status: 'OK',
         message: '✓ Явних дублікатів не знайдено'
       });
+
     } else {
       dups.forEach(function (message) {
         _pushCheck_(report, {
@@ -238,6 +242,7 @@ function testFunctions() {
         status: /^\d{2}\.\d{2}\.\d{4}$/.test(today) ? 'OK' : 'ERROR',
         message: '✓ _todayStr_() → ' + today
       });
+
     } catch (e) {
       _pushCheck_(report, {
         type: 'test_function',
@@ -257,6 +262,7 @@ function testFunctions() {
           ? '✓ _parseUaDate_() працює'
           : '✕ _parseUaDate_() не змогла розібрати дату'
       });
+
     } catch (e) {
       _pushCheck_(report, {
         type: 'test_function',
@@ -276,6 +282,7 @@ function testFunctions() {
           ? '✓ _formatPhoneDisplay_() → ' + f
           : '✕ _formatPhoneDisplay_() повернула порожнє значення'
       });
+
     } catch (e) {
       _pushCheck_(report, {
         type: 'test_function',
@@ -295,6 +302,7 @@ function testFunctions() {
           ? '✓ healthCheck() повернув звіт'
           : '✕ healthCheck() повернув невалідні дані'
       });
+
     } catch (e) {
       _pushCheck_(report, {
         type: 'test_function',

@@ -378,7 +378,6 @@ function debugPhones() {
       if (m) {
         return String(m[1]).padStart(2, '0') + '.' + String(m[2]).padStart(2, '0') + '.' + m[3];
       }
-
       return s;
     }
 

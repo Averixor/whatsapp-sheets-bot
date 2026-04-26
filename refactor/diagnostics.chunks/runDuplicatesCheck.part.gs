@@ -1,3 +1,0 @@
-function runDuplicatesCheck() {
-  return checkDuplicates();
-}

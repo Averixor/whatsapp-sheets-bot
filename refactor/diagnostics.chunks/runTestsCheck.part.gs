@@ -1,3 +1,0 @@
-function runTestsCheck() {
-  return testFunctions();
-}
