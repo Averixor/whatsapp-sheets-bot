@@ -1198,36 +1198,223 @@ var Stage7TestRunner = (function () {
   }
 
 
+
+  function buildHumanTaskMessageFromRaw_(raw, limit) {
+    limit = limit || 360;
+
+    function safeString_(value) {
+      if (value === null || typeof value === 'undefined') return '';
+      try {
+        return String(value);
+      } catch (error) {
+        return '';
+      }
+    }
+
+    function compact_(text) {
+      text = safeString_(text).replace(/\s+/g, ' ').trim();
+      if (!text) return '';
+      return text.length > limit ? text.slice(0, limit) + '…' : text;
+    }
+
+    function countByStatus_(items) {
+      var out = { total: 0, ok: 0, fail: 0, warn: 0, skip: 0, pseudo: 0 };
+
+      if (!Array.isArray(items)) return out;
+
+      out.total = items.length;
+
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i] || {};
+        var status = safeString_(item.status || item.result || '').toUpperCase();
+
+        if (item.pseudo === true || status === 'PSEUDO') {
+          out.pseudo++;
+        } else if (status === 'OK' || status === 'PASS' || item.ok === true || item.success === true) {
+          out.ok++;
+        } else if (status === 'FAIL' || status === 'FAILED' || status === 'ERROR' || item.ok === false || item.success === false) {
+          out.fail++;
+        } else if (status === 'WARN' || status === 'WARNING') {
+          out.warn++;
+        } else if (status === 'SKIP' || status === 'SKIPPED') {
+          out.skip++;
+        } else {
+          out.ok++;
+        }
+      }
+
+      return out;
+    }
+
+    function countArray_(value) {
+      return Array.isArray(value) ? value.length : 0;
+    }
+
+    if (raw === null || typeof raw === 'undefined') {
+      return 'Перевірку виконано успішно.';
+    }
+
+    if (typeof raw === 'string') {
+      if (/^https:\/\/wa\.me\//i.test(raw)) {
+        return 'WhatsApp-посилання сформовано коректно.';
+      }
+      return compact_(raw);
+    }
+
+    if (typeof raw === 'number' || typeof raw === 'boolean') {
+      return safeString_(raw);
+    }
+
+    if (Array.isArray(raw)) {
+      var arrCounts = countByStatus_(raw);
+      return compact_(
+        'Перевірки: усього=' + arrCounts.total +
+        ', OK=' + arrCounts.ok +
+        ', FAIL=' + arrCounts.fail +
+        ', WARN=' + arrCounts.warn +
+        ', SKIP=' + arrCounts.skip
+      );
+    }
+
+    if (typeof raw !== 'object') {
+      return compact_(raw);
+    }
+
+    if (raw.summary && typeof raw.summary === 'object') {
+      var summary = raw.summary;
+      var parts = [];
+
+      if (typeof summary.total !== 'undefined') parts.push('усього=' + summary.total);
+      if (typeof summary.ok !== 'undefined') parts.push('OK=' + summary.ok);
+      if (typeof summary.passed !== 'undefined') parts.push('PASS=' + summary.passed);
+      if (typeof summary.fail !== 'undefined') parts.push('FAIL=' + summary.fail);
+      if (typeof summary.failed !== 'undefined') parts.push('FAIL=' + summary.failed);
+      if (typeof summary.warnings !== 'undefined') parts.push('WARN=' + summary.warnings);
+      if (typeof summary.warning !== 'undefined') parts.push('WARN=' + summary.warning);
+      if (typeof summary.skip !== 'undefined') parts.push('SKIP=' + summary.skip);
+      if (typeof summary.skipped !== 'undefined') parts.push('SKIP=' + summary.skipped);
+      if (typeof summary.blocked !== 'undefined') parts.push('BLOCKED=' + summary.blocked);
+
+      if (parts.length) {
+        return compact_('Перевірки: ' + parts.join(', '));
+      }
+    }
+
+    if (Array.isArray(raw.checks)) {
+      var checkCounts = countByStatus_(raw.checks);
+      return compact_(
+        'Перевірки: усього=' + checkCounts.total +
+        ', OK=' + checkCounts.ok +
+        ', FAIL=' + checkCounts.fail +
+        ', WARN=' + checkCounts.warn +
+        ', SKIP=' + checkCounts.skip
+      );
+    }
+
+    if (Array.isArray(raw.results)) {
+      var resultCounts = countByStatus_(raw.results);
+      return compact_(
+        'Результати: усього=' + resultCounts.total +
+        ', OK=' + resultCounts.ok +
+        ', FAIL=' + resultCounts.fail +
+        ', WARN=' + resultCounts.warn +
+        ', SKIP=' + resultCounts.skip
+      );
+    }
+
+    if (Array.isArray(raw.passed) || Array.isArray(raw.failed)) {
+      return compact_(
+        'Тести: passed=' + countArray_(raw.passed) +
+        '; failed=' + countArray_(raw.failed)
+      );
+    }
+
+    if (raw.schema && raw.dataIntegrity && raw.policy && raw.runtime) {
+      var schema = raw.schema || {};
+      var data = raw.dataIntegrity || {};
+      var policy = raw.policy || {};
+      var runtime = raw.runtime || {};
+
+      return compact_(
+        'ACCESS diagnostics: schema=' + (schema.exists ? 'є' : 'немає') +
+        '; headers=' + (schema.headersPresent ? 'OK' : 'FAIL') +
+        '; duplicateEmails=' + countArray_(data.duplicateEmails) +
+        '; duplicateCurrentKeys=' + countArray_(data.duplicateCurrentKeys) +
+        '; duplicatePrevKeys=' + countArray_(data.duplicatePrevKeys) +
+        '; emptyIdentifierRows=' + (Array.isArray(data.emptyIdentifierWithActiveRole) && data.emptyIdentifierWithActiveRole.length ? data.emptyIdentifierWithActiveRole.join(', ') : 'немає') +
+        '; strictUserKeyMode=' + !!policy.strictUserKeyMode +
+        '; registeredKeys=' + (runtime.registeredKeysCount || 0)
+      );
+    }
+
+    if (
+      Object.prototype.hasOwnProperty.call(raw, 'describe') ||
+      Object.prototype.hasOwnProperty.call(raw, 'bootstrapSheet') ||
+      Object.prototype.hasOwnProperty.call(raw, 'validate') ||
+      Object.prototype.hasOwnProperty.call(raw, 'diagnostics') ||
+      Object.prototype.hasOwnProperty.call(raw, 'allPassed')
+    ) {
+      return compact_(
+        'ACCESS smoke: allPassed=' + !!raw.allPassed +
+        (raw.error ? '; error=' + safeString_(raw.error) : '')
+      );
+    }
+
+    if (
+      Object.prototype.hasOwnProperty.call(raw, 'raportReminders') ||
+      Object.prototype.hasOwnProperty.call(raw, 'soldierMessages') ||
+      Object.prototype.hasOwnProperty.call(raw, 'commanderMessages')
+    ) {
+      return compact_(
+        'Vacation engine: raportReminders=' + countArray_(raw.raportReminders) +
+        '; soldierMessages=' + countArray_(raw.soldierMessages) +
+        '; commanderMessages=' + countArray_(raw.commanderMessages)
+      );
+    }
+
+    if (raw.message && typeof raw.message !== 'object') {
+      return compact_(raw.message);
+    }
+
+    if (raw.details && typeof raw.details !== 'object') {
+      return compact_(raw.details);
+    }
+
+    if (raw.url || raw.link) {
+      return 'Посилання сформовано коректно.';
+    }
+
+    var keys = Object.keys(raw || {}).filter(function (key) {
+      return key !== 'raw' && key !== 'stack' && key !== 'errorStack';
+    });
+
+    if (keys.length) {
+      return compact_('Результат містить поля: ' + keys.slice(0, 10).join(', ') + '.');
+    }
+
+    return 'Перевірку виконано успішно.';
+  }
+
   function buildTaskMessage_(status, details, task) {
     var raw = details ? details.raw : null;
+    var text = buildHumanTaskMessageFromRaw_(raw, 360);
 
-    if (raw && typeof raw === 'object') {
-      if (raw.message) return humanizeReportValue_(raw.message, 900);
-      if (raw.summary) return humanizeReportValue_(raw.summary, 900);
-      if (raw.error) return humanizeReportValue_(raw.error, 900);
-      if (raw.details) return humanizeReportValue_(raw.details, 900);
-
-      if (raw.checks && Array.isArray(raw.checks)) {
-        return 'Перевірки: ' + summarizeReportArray_(raw.checks, 900);
-      }
-
-      if (raw.results && Array.isArray(raw.results)) {
-        return 'Результати: ' + summarizeReportArray_(raw.results, 900);
-      }
-
-      return summarizeReportObject_(raw, 900);
+    if (status === 'FAIL') {
+      if (text) return text;
+      return 'Перевірка завершилась помилкою: ' + (task && task.functionName ? task.functionName : 'невідома функція');
     }
 
-    if (typeof raw === 'string' && raw) {
-      return compactReportText_(raw, 900);
+    if (status === 'WARN') {
+      if (text) return text;
+      return 'Перевірка завершилась з попередженням.';
     }
 
-    if (status === 'PASS') return 'Виконано успішно.';
-    if (status === 'WARN') return 'Виконано з попередженнями.';
-    if (status === 'FAIL') return 'Перевірка завершилась помилкою.';
-    if (status === 'SKIPPED') return 'Перевірку пропущено.';
+    if (status === 'SKIPPED') {
+      if (text) return text;
+      return 'Перевірку пропущено.';
+    }
 
-    return 'Виконано.';
+    return text || 'Перевірку виконано успішно.';
   }
 
   function buildRecommendation_(status, details, task) {
