@@ -22,12 +22,40 @@ function _saGetGlobalScope_() {
   return {};
 }
 
-function _saRequireDependency_(name) {
-  const scope = _saGetGlobalScope_();
-  if (typeof scope[name] === 'undefined' || scope[name] === null) {
-    throw new Error('Missing global dependency: ' + name);
+function _saResolveDependencyByIdentifier_(name) {
+  const safeName = String(name || '').trim();
+
+  if (!/^[A-Za-z_$][0-9A-Za-z_$]*$/.test(safeName)) {
+    return null;
   }
-  return scope[name];
+
+  try {
+    return Function(
+      'return (typeof ' + safeName + ' !== "undefined" && ' + safeName + ' !== null) ? ' + safeName + ' : null;'
+    )();
+  } catch (_) {
+    try {
+      return eval(safeName);
+    } catch (__) {
+      return null;
+    }
+  }
+}
+
+function _saRequireDependency_(name) {
+  const directValue = _saResolveDependencyByIdentifier_(name);
+
+  if (typeof directValue !== 'undefined' && directValue !== null) {
+    return directValue;
+  }
+
+  const scope = _saGetGlobalScope_();
+
+  if (scope && typeof scope[name] !== 'undefined' && scope[name] !== null) {
+    return scope[name];
+  }
+
+  throw new Error('Missing global dependency: ' + name);
 }
 
 function _saRequireDependencies_() {
