@@ -284,6 +284,128 @@ const PROJECT_HARDENING_OVERLAY_ = Object.freeze({
   lineage: 'stage7a-to-stage7-lifecycle-overlay'
 });
 
+const PROJECT_CLIENT_ROUTING_POLICY_ = Object.freeze({
+  apiStage7GetMonthsList: Object.freeze({
+    client: "Stage7Api.getMonths",
+    server: "apiStage7GetMonthsList",
+    useCase: "Stage7UseCases_.listMonths",
+    status: "canonical",
+    uiAllowed: true
+  }),
+  apiStage7BootstrapSidebar: Object.freeze({
+    client: "Stage7Api.bootstrapSidebar",
+    server: "apiStage7BootstrapSidebar",
+    useCase: "Stage7UseCases_.bootstrapSidebar",
+    status: "canonical",
+    uiAllowed: true
+  }),
+  apiStage7GetSidebarData: Object.freeze({
+    client: "Stage7Api.getSidebarData",
+    server: "apiStage7GetSidebarData",
+    useCase: "Stage7UseCases_.loadCalendarDay",
+    status: "canonical",
+    uiAllowed: true
+  }),
+  apiStage7GetSendPanelData: Object.freeze({
+    client: "Stage7Api.getSendPanelData",
+    server: "apiStage7GetSendPanelData",
+    useCase: "Stage7UseCases_.getSendPanelData",
+    status: "canonical",
+    uiAllowed: true
+  }),
+  apiGenerateSendPanelForDate: Object.freeze({
+    client: "Stage7Api.generatePanelForDate",
+    server: "apiGenerateSendPanelForDate",
+    useCase: "Stage7UseCases_.generateSendPanelForDate",
+    status: "canonical",
+    uiAllowed: true
+  }),
+  apiGenerateSendPanelForRange: Object.freeze({
+    client: "Stage7Api.generatePanelForRange",
+    server: "apiGenerateSendPanelForRange",
+    useCase: "Stage7UseCases_.generateSendPanelForRange",
+    status: "canonical",
+    uiAllowed: true
+  }),
+  apiMarkPanelRowsAsSent: Object.freeze({
+    client: "Stage7Api.markAsSent",
+    server: "apiMarkPanelRowsAsSent",
+    useCase: "Stage7UseCases_.markPanelRowsAsSent",
+    status: "canonical",
+    uiAllowed: true
+  }),
+  apiMarkPanelRowsAsUnsent: Object.freeze({
+    client: "Stage7Api.markAsUnsent",
+    server: "apiMarkPanelRowsAsUnsent",
+    useCase: "Stage7UseCases_.markPanelRowsAsUnsent",
+    status: "canonical",
+    uiAllowed: true
+  }),
+  apiMarkPanelRowsAsPending: Object.freeze({
+    client: "Stage7Api.markAsPending",
+    server: "apiMarkPanelRowsAsPending",
+    useCase: "Stage7UseCases_.markPanelRowsAsPending",
+    status: "canonical",
+    uiAllowed: true
+  }),
+  apiSendPendingRows: Object.freeze({
+    client: "Stage7Api.sendPendingRows",
+    server: "apiSendPendingRows",
+    useCase: "Stage7UseCases_.sendPendingRows",
+    status: "canonical",
+    uiAllowed: true
+  }),
+  apiBuildDaySummary: Object.freeze({
+    client: "Stage7Api.buildDaySummary",
+    server: "apiBuildDaySummary",
+    useCase: "Stage7UseCases_.buildDaySummary",
+    status: "canonical",
+    uiAllowed: true
+  }),
+  apiBuildDetailedSummary: Object.freeze({
+    client: "Stage7Api.buildDetailedSummary",
+    server: "apiBuildDetailedSummary",
+    useCase: "Stage7UseCases_.buildDetailedSummary",
+    status: "canonical",
+    uiAllowed: true
+  }),
+  apiOpenPersonCard: Object.freeze({
+    client: "Stage7Api.openPersonCard",
+    server: "apiOpenPersonCard",
+    useCase: "Stage7UseCases_.openPersonCard",
+    status: "canonical",
+    uiAllowed: true
+  }),
+  apiCheckVacationsAndBirthdays: Object.freeze({
+    client: "Stage7Api.checkVacationsAndBirthdays",
+    server: "apiCheckVacationsAndBirthdays",
+    useCase: "Stage7UseCases_.checkVacationsAndBirthdays",
+    status: "canonical",
+    uiAllowed: true
+  }),
+  apiStage7SwitchBotToMonth: Object.freeze({
+    client: "Stage7Api.switchBotToMonth",
+    server: "apiStage7SwitchBotToMonth",
+    useCase: "Stage7UseCases_.switchBotToMonth",
+    status: "canonical",
+    uiAllowed: true
+  }),
+  apiStage7CreateNextMonth: Object.freeze({
+    client: "Stage7Api.createNextMonth",
+    server: "apiStage7CreateNextMonth",
+    useCase: "Stage7UseCases_.createNextMonth",
+    status: "canonical",
+    uiAllowed: true
+  }),
+  apiRunReconciliation: Object.freeze({
+    client: "Stage7Api.runReconciliation",
+    server: "apiRunReconciliation",
+    useCase: "Stage7UseCases_.runReconciliation",
+    status: "canonical",
+    uiAllowed: true
+  })
+});
+
 const PROJECT_CLIENT_RUNTIME_POLICY_ = Object.freeze({
   runtimeFile: 'JavaScript.html',
   bootstrapTemplate: 'Sidebar.html',
@@ -456,6 +578,7 @@ const PROJECT_BUNDLE_METADATA_ = Object.freeze({
   diagnosticsPolicy: Object.freeze({ wording: 'stage7-1-2-final-clean-baseline' }),
   maintenanceLayerPolicy: PROJECT_MAINTENANCE_POLICY_,
   clientRuntimePolicy: PROJECT_CLIENT_RUNTIME_POLICY_,
+  clientRoutingPolicy: PROJECT_CLIENT_ROUTING_POLICY_,
   routingPolicy: PROJECT_STAGE7_CLIENT_ROUTING_POLICY_,
   clientRoutingGroups: PROJECT_STAGE7_CLIENT_ROUTING_GROUPS_,
   hardeningOverlay: PROJECT_HARDENING_OVERLAY_,
