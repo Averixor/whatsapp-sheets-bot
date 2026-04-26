@@ -9,7 +9,7 @@ var Stage7TestRunner = (function () {
   var VERSION = 'stage7-project-test-runner-3.1.1-single-chunk-pseudo-safe';
   var DEFAULT_TIMEOUT_MS = 330000;
   var DEFAULT_RESULT_SHEET_NAME = 'TEST_RESULTS';
-  var DEFAULT_LOCK_WAIT_MS = 10000;
+  var DEFAULT_LOCK_WAIT_MS = 60000;
 
   function runAll(options) {
     return runSuite_('all', options);

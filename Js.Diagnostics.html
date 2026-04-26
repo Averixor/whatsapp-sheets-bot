@@ -181,6 +181,9 @@
     const chunkLimit = 1;
     const maxRuntimeMs = 120000;
     let offset = 0;
+    let lockRetryCount = 0;
+    const maxLockRetries = 3;
+    const lockRetryDelayMs = 45000;
     let chunkNo = 0;
     let totalTasks = null;
     const chunks = [];
@@ -234,10 +237,33 @@
         totalTasks = Number(chunk.totalTasks || totalTasks || 0);
 
         const nextOffset = Number(chunk.nextOffset || 0);
+        const chunkText = JSON.stringify(chunk || {});
+        const isLockBusy = /document lock|LOCK_BUSY|Не вдалося отримати document lock|Запуск заблоковано document lock/i.test(chunkText);
+
         if (nextOffset <= offset && chunk.done !== true) {
+          if (isLockBusy && lockRetryCount < maxLockRetries) {
+            lockRetryCount += 1;
+            const waitSec = Math.round(lockRetryDelayMs / 1000);
+
+            logToConsole(
+              `⏳ Document lock зайнятий. Спроба ${lockRetryCount}/${maxLockRetries}. Чекаю ${waitSec} с і повторюю offset=${offset}.`,
+              'warning'
+            );
+
+            renderProgress(
+              offset,
+              totalTasks,
+              `Document lock зайнятий. Повтор ${lockRetryCount}/${maxLockRetries} через ${waitSec} с...`
+            );
+
+            await new Promise((resolve) => setTimeout(resolve, lockRetryDelayMs));
+            continue;
+          }
+
           throw new Error('Пакет тестів не просунув offset. Зупинено, щоб не зациклитися.');
         }
 
+        lockRetryCount = 0;
         offset = nextOffset;
         const partial = mergeProjectTestChunks_(chunks, false);
         STATE.lastProjectTestReport = partial;
