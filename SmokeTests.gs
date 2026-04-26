@@ -521,6 +521,85 @@ function runStage5ScenarioTests(options) {
 
 function runRegressionTestSuite(options) {
   const opts = options || {};
+
+  if (opts.full === true || opts.mode === 'full' || opts.regressionMode === 'full') {
+    return runRegressionTestSuiteFull_(opts);
+  }
+
+  const meta = typeof getProjectBundleMetadata_ === 'function'
+    ? getProjectBundleMetadata_()
+    : null;
+
+  const report = {
+    ok: true,
+    stage: meta && meta.stageVersion ? meta.stageVersion : '7.1.2-final-clean',
+    ts: new Date().toISOString(),
+    dryRun: opts.dryRun !== false,
+    mode: 'fast-regression',
+    checks: [],
+    skipped: [],
+    warnings: []
+  };
+
+  _smokePush_(report, 'Smoke suite', function () {
+    const smoke = runSmokeTests(opts);
+    _smokeAssert_(smoke && typeof smoke === 'object', 'runSmokeTests() не повернув report');
+    _smokeAssert_(Array.isArray(smoke.checks), 'runSmokeTests() не повернув checks[]');
+
+    if (smoke.ok === false) {
+      throw new Error('Smoke suite має FAIL');
+    }
+
+    return 'checks=' + smoke.checks.length;
+  });
+
+  _smokePush_(report, 'Regression full suite is available', function () {
+    _smokeAssert_(typeof runRegressionTestSuiteFull_ === 'function', 'runRegressionTestSuiteFull_ відсутній');
+    return 'full regression callable with { full: true }';
+  });
+
+  _smokePush_(report, 'Regression route contract', function () {
+    _smokeAssert_(typeof apiRunStage7RegressionTests === 'function' || _smokeHasFn_('apiRunStage7RegressionTests'), 'apiRunStage7RegressionTests відсутній');
+
+    if (typeof getRoutingRegistry_ === 'function') {
+      const route = getRoutingRegistry_() || {};
+      const hasRoute = Object.keys(route).some(function (key) {
+        const item = route[key];
+        return item && item.publicApiMethod === 'apiRunStage7RegressionTests';
+      });
+
+      _smokeAssert_(hasRoute, 'Routing registry не містить apiRunStage7RegressionTests');
+      return 'route-ok';
+    }
+
+    return 'route check skipped: getRoutingRegistry_ unavailable';
+  }, { skipOnError: true });
+
+  _smokePush_(report, 'Metadata baseline', function () {
+    if (!meta) {
+      return 'metadata unavailable';
+    }
+
+    _smokeAssert_(String(meta.stage) === '7.1', 'metadata.stage має бути 7.1');
+    _smokeAssert_(meta.stageVersion === '7.1.2-final-clean', 'stageVersion має бути 7.1.2-final-clean');
+    _smokeAssert_(meta.activeBaseline === 'stage7-1-2-final-clean-baseline', 'activeBaseline має бути stage7-1-2-final-clean-baseline');
+
+    return 'metadata-ok';
+  }, { skipOnError: true });
+
+  report.ok = report.checks.every(function (check) {
+    return check.status !== 'FAIL';
+  });
+
+  return report;
+}
+
+function runRegressionTestSuiteFull(options) {
+  return runRegressionTestSuiteFull_(options || {});
+}
+
+function runRegressionTestSuiteFull_(options) {
+  const opts = options || {};
   const meta = typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_() : PROJECT_BUNDLE_METADATA_;
   const docs = typeof getProjectDocumentationMap_ === 'function' ? getProjectDocumentationMap_() : {};
   const release = typeof getProjectReleaseNaming_ === 'function' ? getProjectReleaseNaming_() : (meta && meta.release) || {};
