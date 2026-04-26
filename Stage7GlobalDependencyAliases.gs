@@ -1,34 +1,30 @@
 /**
  * Stage7GlobalDependencyAliases.gs
  *
- * Єдиний безпечний шар global aliases для Stage 7 diagnostics / historical checks.
- * Не використовує var / let / const для underscore-alias і не створює повторних оголошень.
+ * Safe global dependency aliases for Stage 7 diagnostics and historical checks.
+ * This file does not redeclare underscore globals with var / let / const.
  */
 
 (function (root) {
   'use strict';
 
-  function hasGlobal_(name) {
-    return Boolean(root && Object.prototype.hasOwnProperty.call(root, name) && root[name]);
-  }
-
-  function getGlobal_(name) {
-    return hasGlobal_(name) ? root[name] : null;
-  }
-
-  function makeMissingAlias_(aliasName, canonicalName) {
+  function makeMissing_(publicName, sourceName) {
     return Object.freeze({
       __compatibilityAlias: true,
-      __aliasName: aliasName,
-      __canonicalName: canonicalName,
+      __missingDependency: true,
+      __publicName: publicName,
+      __sourceName: sourceName,
+
+      ok: false,
+      status: 'MISSING',
 
       getStatus: function () {
         return {
           ok: false,
           status: 'MISSING',
-          alias: aliasName,
-          canonical: canonicalName,
-          message: 'Missing global dependency: ' + aliasName
+          publicName: publicName,
+          sourceName: sourceName,
+          message: 'Missing global dependency: ' + publicName + '.'
         };
       },
 
@@ -42,124 +38,85 @@
     });
   }
 
-  function makeProxyAlias_(aliasName, canonicalName) {
-    var canonical = getGlobal_(canonicalName);
-
-    if (!canonical) {
-      return makeMissingAlias_(aliasName, canonicalName);
-    }
-
-    if (typeof Proxy === 'undefined') {
-      return canonical;
-    }
-
-    return new Proxy({
-      __compatibilityAlias: true,
-      __aliasName: aliasName,
-      __canonicalName: canonicalName,
-
-      getCanonical: function () {
-        return getGlobal_(canonicalName);
-      },
-
-      getStatus: function () {
-        var current = getGlobal_(canonicalName);
-
-        return {
-          ok: Boolean(current),
-          status: current ? 'OK' : 'MISSING',
-          alias: aliasName,
-          canonical: canonicalName,
-          type: typeof current,
-          keys: current && typeof current === 'object' ? Object.keys(current).sort() : []
-        };
-      },
-
-      healthCheck: function () {
-        return this.getStatus();
-      },
-
-      isAvailable: function () {
-        return Boolean(getGlobal_(canonicalName));
+  function resolveWorkflowOrchestrator_() {
+    try {
+      if (typeof WorkflowOrchestrator_ !== 'undefined' && WorkflowOrchestrator_) {
+        return WorkflowOrchestrator_;
       }
-    }, {
-      get: function (target, prop) {
-        if (prop in target) {
-          return target[prop];
-        }
+    } catch (error) {}
 
-        var current = getGlobal_(canonicalName);
-
-        if (current && prop in current) {
-          var value = current[prop];
-
-          if (typeof value === 'function') {
-            return function () {
-              return value.apply(current, arguments);
-            };
-          }
-
-          return value;
-        }
-
-        return undefined;
-      },
-
-      has: function (target, prop) {
-        if (prop in target) {
-          return true;
-        }
-
-        var current = getGlobal_(canonicalName);
-
-        return Boolean(current && prop in current);
-      },
-
-      ownKeys: function (target) {
-        var keys = Object.keys(target);
-        var current = getGlobal_(canonicalName);
-
-        if (current && typeof current === 'object') {
-          Object.keys(current).forEach(function (key) {
-            if (keys.indexOf(key) === -1) {
-              keys.push(key);
-            }
-          });
-        }
-
-        return keys;
-      },
-
-      getOwnPropertyDescriptor: function (target, prop) {
-        if (prop in target) {
-          return {
-            enumerable: true,
-            configurable: true
-          };
-        }
-
-        var current = getGlobal_(canonicalName);
-
-        if (current && prop in current) {
-          return {
-            enumerable: true,
-            configurable: true
-          };
-        }
-
-        return undefined;
+    try {
+      if (
+        root &&
+        Object.prototype.hasOwnProperty.call(root, 'WorkflowOrchestrator_') &&
+        root.WorkflowOrchestrator_
+      ) {
+        return root.WorkflowOrchestrator_;
       }
-    });
+    } catch (error) {}
+
+    return null;
   }
 
-  function installAlias_(aliasName, canonicalName) {
-    if (hasGlobal_(aliasName)) {
-      return;
-    }
+  function resolveSelectionActionService_() {
+    try {
+      if (typeof SelectionActionService_ !== 'undefined' && SelectionActionService_) {
+        return SelectionActionService_;
+      }
+    } catch (error) {}
 
-    root[aliasName] = makeProxyAlias_(aliasName, canonicalName);
+    try {
+      if (
+        root &&
+        Object.prototype.hasOwnProperty.call(root, 'SelectionActionService_') &&
+        root.SelectionActionService_
+      ) {
+        return root.SelectionActionService_;
+      }
+    } catch (error) {}
+
+    return null;
   }
 
-  installAlias_('WorkflowOrchestrator_', 'WorkflowOrchestrator');
-  installAlias_('SelectionActionService_', 'SelectionActionService');
+  function defineLazyAlias_(publicName, sourceName, resolver) {
+    try {
+      var existingDescriptor = Object.getOwnPropertyDescriptor(root, publicName);
+
+      if (existingDescriptor && existingDescriptor.value) {
+        return;
+      }
+
+      Object.defineProperty(root, publicName, {
+        configurable: true,
+        enumerable: true,
+        get: function () {
+          return resolver() || makeMissing_(publicName, sourceName);
+        }
+      });
+    } catch (error) {
+      try {
+        root[publicName] = resolver() || makeMissing_(publicName, sourceName);
+      } catch (ignored) {}
+    }
+  }
+
+  function exposeUnderscoreValueIfAlreadyLoaded_(publicName, resolver) {
+    try {
+      var value = resolver();
+
+      if (value && root && !Object.prototype.hasOwnProperty.call(root, publicName)) {
+        Object.defineProperty(root, publicName, {
+          configurable: true,
+          enumerable: true,
+          value: value
+        });
+      }
+    } catch (error) {}
+  }
+
+  defineLazyAlias_('WorkflowOrchestrator', 'WorkflowOrchestrator_', resolveWorkflowOrchestrator_);
+  defineLazyAlias_('SelectionActionService', 'SelectionActionService_', resolveSelectionActionService_);
+
+  exposeUnderscoreValueIfAlreadyLoaded_('SelectionActionService_', resolveSelectionActionService_);
+  exposeUnderscoreValueIfAlreadyLoaded_('WorkflowOrchestrator_', resolveWorkflowOrchestrator_);
 })(typeof globalThis !== 'undefined' ? globalThis : this);

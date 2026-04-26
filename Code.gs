@@ -160,7 +160,20 @@ function include(filename) {
 }
 
 function includeTemplate(filename) {
+  filename = String(filename || '').trim();
+
+  if (!filename) {
+    throw new Error(
+      'includeTemplate(filename) — службова HTML-функція. ' +
+      'Її не потрібно запускати вручну. Для відкриття панелі запускай showSidebar().'
+    );
+  }
+
   return HtmlService.createTemplateFromFile(filename).evaluate().getContent();
+}
+
+function testIncludeTemplateSidebar() {
+  return includeTemplate('Sidebar');
 }
 
 function getClientRuntimeContract_() {
