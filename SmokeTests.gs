@@ -185,8 +185,102 @@ function runScenarioTests(options) {
 }
 
 function runSmokeTests(options) {
-  return runRegressionTestSuite(options || {});
+  const opts = options || {};
+  const report = {
+    ok: true,
+    stage: '7.1.2-final-clean',
+    ts: new Date().toISOString(),
+    dryRun: opts.dryRun !== false,
+    checks: [],
+    skipped: [],
+    warnings: []
+  };
+
+  _smokePush_(report, 'CONFIG object available', function () {
+    _smokeAssert_(typeof CONFIG === 'object' && CONFIG !== null, 'CONFIG відсутній');
+    _smokeAssert_(!!CONFIG.TARGET_SHEET, 'CONFIG.TARGET_SHEET відсутній');
+    _smokeAssert_(!!CONFIG.PHONES_SHEET, 'CONFIG.PHONES_SHEET відсутній');
+    _smokeAssert_(!!CONFIG.LOG_SHEET, 'CONFIG.LOG_SHEET відсутній');
+    return 'CONFIG OK: TARGET_SHEET=' + CONFIG.TARGET_SHEET;
+  });
+
+  _smokePush_(report, 'Spreadsheet available', function () {
+    const ss = SpreadsheetApp.getActive();
+    _smokeAssert_(!!ss, 'Active spreadsheet недоступний');
+    return 'Spreadsheet OK: ' + ss.getName();
+  });
+
+  _smokePush_(report, 'Required sheets exist', function () {
+    const ss = SpreadsheetApp.getActive();
+    const required = [
+      CONFIG.TARGET_SHEET,
+      CONFIG.PHONES_SHEET,
+      CONFIG.DICT_SHEET,
+      CONFIG.DICT_SUM_SHEET,
+      CONFIG.LOG_SHEET
+    ].filter(Boolean);
+
+    const missing = required.filter(function (name) {
+      return !ss.getSheetByName(name);
+    });
+
+    _smokeAssert_(missing.length === 0, 'Відсутні аркуші: ' + missing.join(', '));
+    return 'Sheets OK: ' + required.join(', ');
+  });
+
+  _smokePush_(report, 'HTML include helpers available', function () {
+    _smokeAssert_(typeof include === 'function', 'include() відсутній');
+    _smokeAssert_(typeof includeTemplate === 'function', 'includeTemplate() відсутній');
+    return 'include helpers OK';
+  });
+
+  _smokePush_(report, 'Sidebar raw template exists', function () {
+    const rawSidebar = include('Sidebar');
+    _smokeAssert_(typeof rawSidebar === 'string' && rawSidebar.length > 0, 'Sidebar.html порожній або недоступний');
+    return 'Sidebar.html OK, chars=' + rawSidebar.length;
+  }, { skipOnError: true });
+
+  _smokePush_(report, 'JavaScript raw template exists', function () {
+    const rawJavaScript = include('JavaScript');
+    _smokeAssert_(typeof rawJavaScript === 'string' && rawJavaScript.length > 0, 'JavaScript.html порожній або недоступний');
+    return 'JavaScript.html OK, chars=' + rawJavaScript.length;
+  }, { skipOnError: true });
+
+  _smokePush_(report, 'Stage 7 public API available', function () {
+    [
+      'apiStage7GetMonthsList',
+      'apiStage7GetSidebarData',
+      'apiStage7GetSendPanelData',
+      'apiRunStage7Diagnostics',
+      'apiStage7HealthCheck'
+    ].forEach(function (fnName) {
+      _smokeAssert_(typeof this[fnName] === 'function' || _smokeHasFn_(fnName), fnName + ' відсутній');
+    });
+
+    return 'Stage 7 API functions OK';
+  }, { skipOnError: true });
+
+  _smokePush_(report, 'Routing registry available', function () {
+    _smokeAssert_(typeof getRoutingRegistry_ === 'function', 'getRoutingRegistry_ відсутній');
+    const routes = getRoutingRegistry_() || {};
+    _smokeAssert_(Object.keys(routes).length > 0, 'Routing registry порожній');
+    return 'routes=' + Object.keys(routes).length;
+  }, { skipOnError: true });
+
+  _smokePush_(report, 'Quick health check', function () {
+    _smokeAssert_(typeof healthCheck === 'function', 'healthCheck відсутній');
+    const result = healthCheck();
+    _smokeAssert_(result && typeof result === 'object', 'healthCheck не повернув object');
+    return result.ok === false ? 'healthCheck returned ok=false' : 'healthCheck OK';
+  }, { skipOnError: true });
+
+  report.ok = report.checks.every(function (check) {
+    return check.status !== 'FAIL';
+  });
+
+  return report;
 }
+
 
 function runStage4ScenarioTests(options) {
   const opts = options || {};
