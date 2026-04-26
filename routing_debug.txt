@@ -1,7 +1,0 @@
-ProjectMetadata.gs:136:    'apiGetSidebarData',
-ProjectMetadata.gs:458:  clientRuntimePolicy: PROJECT_CLIENT_RUNTIME_POLICY_,
-RoutingRegistry.gs:38:      useCase: 'Stage7UseCases_.loadCalendarDay',
-DeprecatedRegistry.gs:162:    name: 'apiGetSidebarData',
-DeprecatedRegistry.gs:169:    verifySourceToken: 'loadCalendarDay'
-Diagnostics.Stage7.Historical.gs:156:    routing && typeof routing === 'object' ? `routes=${Object.keys(routing).length}` : 'routing map відсутній',
-Stage7ServerApi.gs:120:    'loadCalendarDay',

@@ -5,7 +5,7 @@ WASB is a spreadsheet-bound Google Apps Script bundle for personnel tracking, da
 This repository is packaged for the **GAS web editor first**:
 - runtime files stay in the repository root (`.gs`, `.html`, `appsscript.json`)
 - active operational documentation stays in the repository root
-- historical notes and one-off reports live under `_extras/history/`
+- this compact ZIP ships only runtime files and the five active root markdown documents
 
 ## Active release baseline
 - **Stage:** 7.1
@@ -32,8 +32,7 @@ These are the only active root markdown files:
 - `CHANGELOG.md` — concise release history for maintainers
 
 Additional documentation:
-- `_extras/README.md` — what is stored under `_extras/`
-- `_extras/history/README.md` — index and rules for archived reports, patch notes, and migration-era materials
+- Historical/audit materials are intentionally not shipped in this compact ZIP. Keep them in the repository history or a separate archive, not in the GAS import bundle.
 
 ## Repository layout
 ```text
@@ -44,17 +43,13 @@ Additional documentation:
 ├── RUNBOOK.md
 ├── SECURITY.md
 ├── CHANGELOG.md
-└── _extras/
-    ├── README.md                     # extras index
-    ├── history/                      # archived reports, patch notes, one-off notes
-    ├── tools/                        # local validation helpers
-    └── backups/                      # non-runtime backups
+└── no _extras/ in this compact release ZIP
 ```
 
 ## Quick import checklist
 1. Open the spreadsheet-bound Apps Script project.
 2. Upload all root `.gs`, `.html`, and `appsscript.json` files.
-3. Ignore `_extras/` during import. It is reference material only.
+3. Import only the root runtime files shipped in this ZIP; no `_extras/` files are required for GAS.
 4. Run `apiStage7BootstrapRuntimeAndAlertsSheets()` once.
 5. Run `apiStage7BootstrapAccessSheet()` once.
 6. Fill the `ACCESS` sheet.

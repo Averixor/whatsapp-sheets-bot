@@ -295,14 +295,14 @@ function setupVacationTrigger() {
 
     ScriptApp.newTrigger('autoVacationReminder')
       .timeBased()
-      .everyDays(2)
-      .atHour(6)
+      .everyDays(1)
+      .atHour(17)
       .create();
 
     ScriptApp.newTrigger('autoBirthdayReminder')
       .timeBased()
-      .everyDays(2)
-      .atHour(5)
+      .everyDays(1)
+      .atHour(18)
       .create();
 
     return {

@@ -6,7 +6,7 @@
 - introduced/used lightweight access descriptor and sidebar bootstrap endpoints for faster first load
 - documented the identifier + callsign self-bind flow as the normal unregistered-user path
 - clarified that `ACCESS` stores key hashes, not raw keys
-- cleaned the documentation set and archived root-level one-off notes under `_extras/history/`
+- cleaned the documentation set and excluded one-off historical notes from the compact GAS import ZIP
 
 ## 2026-03-29 — Stage 7.1.2 final-clean baseline
 - established the Stage 7.1.2 final-clean release identity
@@ -24,4 +24,4 @@
 - improved access diagnostics and role-aware sidebar reporting
 
 ## 2026-03-26 to 2026-03-29 — stabilization and canonicalization trail
-Intermediate reports, merge notes, canonicalization audits, and one-off delivery notes were archived under `_extras/history/`.
+Intermediate reports, merge notes, canonicalization audits, and one-off delivery notes are intentionally kept outside this compact GAS import ZIP.

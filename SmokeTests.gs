@@ -417,7 +417,8 @@ function runStage4ScenarioTests(options) {
     const meta = getProjectBundleMetadata_();
     _smokeAssert_(meta.manifestIncluded === true, 'manifestIncluded має бути true');
     _smokeAssert_(meta.maintenanceLayerStatus === 'stage7-canonical-maintenance-api', 'maintenanceLayerStatus має вказувати на Stage 7 canonical layer');
-    _smokeAssert_(Array.isArray(meta.documentation.historical) && meta.documentation.historical.indexOf('_extras/history/IMPLEMENTATION_REPORT_2026-03-22.md') !== -1, '_extras/history/IMPLEMENTATION_REPORT_2026-03-22.md має бути historical');
+    _smokeAssert_(Array.isArray(meta.documentation.historical), 'metadata.documentation.historical має бути масивом');
+    _smokeAssert_(meta.documentation.historical.length === 0, 'Compact release archive не повинен заявляти відсутні historical-файли');
     _smokeAssert_(_smokeBundleHas_('appsscript.json'), 'appsscript.json має фізично існувати у root bundle');
     _smokeAssert_(!_smokeBundleHas_('.clasp.json.example'), '.clasp.json.example не повинен існувати у web-editor-ready root bundle');
     return 'bundle-ok';
@@ -641,12 +642,16 @@ function runRegressionTestSuiteFull_(options) {
       'RUNBOOK.md',
       'SECURITY.md',
       'CHANGELOG.md',
-      '_extras/history/CANONICAL_APIS_STAGE7_FINAL_STABILIZED.md',
-      '_extras/history/SCHEMA.md',
+      'AccessControl.Core.gs',
+      'AccessControl.AuthResolver.gs',
+      'AccessControl.PublicApi.gs',
+      'AccessControl.SheetRepository.gs',
+      'Diagnostics.Core.gs',
+      'Diagnostics.Stage7.Core.gs',
+      'Diagnostics.Stage7.Historical.gs',
       'AccessE2ETests.gs',
       'AccessPolicyChecks.gs',
       'OperationRepository.gs',
-      'AccessControl.gs',
       'ServiceSheetsBootstrap.gs',
       'JavaScript.html',
       'Js.Core.html',
@@ -666,12 +671,8 @@ function runRegressionTestSuiteFull_(options) {
       _smokeAssert_(String(path).indexOf('_extras/') !== 0, `Active doc має лежати в root: ${path}`);
       _smokeAssert_(_smokeBundleHas_(path), `Active doc відсутній фізично: ${path}`);
     });
-    historicalDocs.forEach(function (path) {
-      _smokeAssert_(String(path).indexOf('_extras/history/') === 0, `Historical doc має лежати в _extras/history/: ${path}`);
-      _smokeAssert_(_smokeBundleHas_(path), `Historical doc відсутній фізично: ${path}`);
-    });
     _smokeAssert_(docs.active.changelog === 'CHANGELOG.md', 'CHANGELOG.md має бути active release report');
-    _smokeAssert_(historicalDocs.indexOf('_extras/history/IMPLEMENTATION_REPORT_2026-03-22.md') !== -1, 'IMPLEMENTATION_REPORT_2026-03-22 має бути historical');
+    _smokeAssert_(historicalDocs.length === 0, 'Compact release archive не повинен заявляти historical docs, яких немає в ZIP');
     return 'docs-ok';
   });
 
@@ -902,8 +903,8 @@ function runRegressionTestSuiteFull_(options) {
 
   _smokePush_(report, 'historical docs kept non-active', function () {
     _smokeAssert_(docs.active.changelog === 'CHANGELOG.md', 'CHANGELOG має бути активним');
-    _smokeAssert_(Array.isArray(docs.historical) && docs.historical.indexOf('_extras/history/IMPLEMENTATION_REPORT_2026-03-22.md') !== -1, 'Implementation report має бути historical');
-    _smokeAssert_(Array.isArray(docs.historical) && docs.historical.indexOf('_extras/history/STABILIZATION_NOTES_2026-03-22.md') !== -1, 'Stabilization notes мають бути historical');
+    _smokeAssert_(Array.isArray(docs.historical), 'historical має бути масивом');
+    _smokeAssert_(docs.historical.length === 0, 'Compact release archive не повинен заявляти відсутні historical docs');
     return 'historical-docs-ok';
   });
 

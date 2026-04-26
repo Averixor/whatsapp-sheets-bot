@@ -155,9 +155,6 @@ function normalizeCallsign_(value) {
   return String(value || '').trim().toUpperCase();
 }
 
-function normalizePhone_(value) {
-  return String(value || '').replace(/^'+/, '').replace(/\D+/g, '').trim();
-}
 
 function detectIdentifierType_(value) {
   const raw = String(value || '').trim();

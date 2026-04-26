@@ -164,4 +164,4 @@ If something breaks:
 - do active work in `dev`
 - tag release points
 - keep `CHANGELOG.md` concise and current
-- archive one-off reports under `_extras/history/`
+- keep one-off reports outside this compact GAS import ZIP

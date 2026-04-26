@@ -7,7 +7,7 @@ var STAGE7_CONFIG = (typeof STAGE7_CONFIG !== 'undefined' && STAGE7_CONFIG) ? ST
 
 function buildAppConfig_() {
   return Object.freeze({
-    CURRENT_VERSION: '7.1.2-canonical-selfcontained',
+    CURRENT_VERSION: '7.1.2-final-clean',
     CORE: Object.freeze({
       AUDIT_SHEET: 'AUDIT_LOG',
       AUDIT_HEADER_ROW: 1,
@@ -125,7 +125,7 @@ function appGetSafetyTtlSec() {
 function buildStage7Config_() {
   const app = getAppConfig_();
   return Object.freeze({
-    VERSION: '7.1.2-canonical-selfcontained',
+    VERSION: '7.1.2-final-clean',
     CURRENT_VERSION: app.CURRENT_VERSION,
     AUDIT_SHEET: app.CORE.AUDIT_SHEET,
     AUDIT_HEADER_ROW: app.CORE.AUDIT_HEADER_ROW,

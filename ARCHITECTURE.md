@@ -25,7 +25,7 @@ WASB is a spreadsheet-bound Google Apps Script application.
 ### Packaging policy
 - runtime files stay in the repository root for easy GAS web-editor import
 - active docs stay in the repository root
-- historical and transitional materials live under `_extras/history/`
+- historical and transitional materials are intentionally excluded from this compact GAS import ZIP
 
 ## 2. Canonical server layers
 ### Application API
@@ -176,6 +176,4 @@ Diagnostics are for verification, not as a replacement for server-side enforceme
 
 ## 10. Documentation and truth alignment
 Active documentation is intentionally limited to five root markdown files.
-Historical notes, one-off reports, and transition artifacts belong under `_extras/history/` only.
-
-That split keeps the runtime bundle readable while preserving the audit trail.
+Historical notes, one-off reports, and transition artifacts are not shipped in this compact GAS import ZIP. Keep them in a separate repository/archive so the runtime bundle stays readable and import-safe.
