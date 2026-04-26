@@ -254,9 +254,11 @@ var Stage7TestRunner = (function () {
     });
 
     if (options.includeDiscovery !== false) {
+      if (typeof options !== 'undefined' && options && options.discover === true) {
       discoverProjectTestTasks_(byFunction).forEach(function (task) {
         result.push(task);
       });
+      }
     }
 
     return result;
