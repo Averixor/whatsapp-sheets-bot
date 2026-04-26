@@ -1,6 +1,4 @@
-/**
- * WorkflowOrchestrator.gs — lifecycle orchestration for Stage 7 reliability hardening.
- */
+// ===== FILE: WorkflowOrchestrator.gs =====
 
 function normalizeWorkflowWarning_(item) {
   if (item === null || item === undefined || item === '') return '';
@@ -47,38 +45,6 @@ function mergeWorkflowWarnings_() {
     });
   });
   return Array.from(new Set(merged));
-}
-
-function buildServerResponse_(success, message, error, result, changes, meta, diagnostics, context, warnings) {
-  const safeMeta = meta || {};
-  const safeDiagnostics = diagnostics || null;
-  const normalizedWarnings = normalizeWorkflowWarnings_(warnings);
-
-  return {
-    success: !!success,
-    message: String(message || ''),
-    error: error ? String(error) : null,
-    data: {
-      result: result === undefined ? null : result,
-      changes: Array.isArray(changes) ? changes : [],
-      meta: safeMeta,
-      diagnostics: safeDiagnostics
-    },
-    context: context || null,
-    warnings: normalizedWarnings,
-    operationId: safeMeta.operationId || null,
-    scenario: safeMeta.scenario || (context && context.scenario) || null,
-    dryRun: !!safeMeta.dryRun,
-    affectedSheets: stage7AsArray_(safeMeta.affectedSheets),
-    affectedEntities: stage7AsArray_(safeMeta.affectedEntities),
-    appliedChangesCount: Number(safeMeta.appliedChangesCount || 0),
-    skippedChangesCount: Number(safeMeta.skippedChangesCount || 0),
-    partial: !!safeMeta.partial,
-    retrySafe: safeMeta.retrySafe !== false,
-    lockUsed: !!safeMeta.lockUsed,
-    lockRequired: !!safeMeta.lockRequired,
-    diagnostics: safeDiagnostics
-  };
 }
 
 const WorkflowOrchestrator_ = (function() {
@@ -226,7 +192,6 @@ const WorkflowOrchestrator_ = (function() {
         return 'workflow';
     }
   }
-
 
   function _buildDuplicateResponse_(scenario, operationId, dryRun, route, lock, lockRequired, startedAt, diagnostics, context, warnings, lifecycle) {
     const previous = lifecycle && lifecycle.previous || {};
