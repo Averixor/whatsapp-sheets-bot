@@ -22,7 +22,6 @@ var POLICY_CHECKS_CONFIG_ = {
     'TEMPLATES',
     'LOG',
     'VACATIONS',
-    'ИСТОРИЯ_ЗВЕДЕНЬ',
     'VACATION_SCHEDULE',
     'SEND_PANEL',
     'PHONES'

@@ -163,6 +163,7 @@ function _ssBuildMonthlySchema_() {
       brDays:   _ssFreeze_({ col: 6, type: 'number|string', required: false, allowBlank: true, label: 'Дні БР' }),
       fml:      _ssFreeze_({ col: 7, type: 'string', required: true,  allowBlank: false, label: 'ПІБ' })
     }),
+
     keyFields: ['callsign', 'fml'],
     requiredFields: ['callsign', 'fml'],
     nullableFields: ['phone', 'position', 'oshs', 'rank', 'brDays'],
@@ -187,12 +188,14 @@ function _ssBuildPhonesSchema_() {
       role:     _ssFreeze_({ col: 3, type: 'string', required: false, allowBlank: true,  label: 'Роль' }),
       birthday: _ssFreeze_({ col: 4, type: 'date|string', required: false, allowBlank: true, label: 'День народження' })
     }),
+
     headerAliases: _ssFreeze_({
       fml: ['ПІБ', 'ПІБ/ФІО', 'ФІО', 'FML'],
       phone: ['Телефон', 'Phone'],
       role: ['Роль', 'Role'],
       birthday: ['День народження', 'Birthday']
     }),
+
     keyFields: ['fml', 'role'],
     requiredFields: ['fml'],
     nullableFields: ['phone', 'role', 'birthday'],
@@ -216,12 +219,14 @@ function _ssBuildDictSchema_() {
       place:   _ssFreeze_({ col: 3, type: 'string', required: false, allowBlank: true,  label: 'Місце' }),
       tasks:   _ssFreeze_({ col: 4, type: 'string', required: false, allowBlank: true,  label: 'Завдання' })
     }),
+
     headerAliases: _ssFreeze_({
       code: ['Код', 'Code'],
       service: ['Служба', 'Service'],
       place: ['Місце', 'Place'],
       tasks: ['Завдання', 'Tasks']
     }),
+
     keyFields: ['code'],
     requiredFields: ['code'],
     nullableFields: ['service', 'place', 'tasks'],
@@ -245,12 +250,14 @@ function _ssBuildDictSumSchema_() {
       order:    _ssFreeze_({ col: 3, type: 'number|string', required: true, allowBlank: false, label: 'Порядок' }),
       showZero: _ssFreeze_({ col: 4, type: 'boolean|string', required: false, allowBlank: true, label: 'Показувати 0' })
     }),
+
     headerAliases: _ssFreeze_({
       code: ['Код', 'Code'],
       label: ['Назва', 'Label'],
       order: ['Порядок', 'Order'],
       showZero: ['Показувати 0', 'ShowZero', 'Show zero']
     }),
+
     keyFields: ['code'],
     requiredFields: ['code', 'order'],
     nullableFields: ['label', 'showZero'],
@@ -278,6 +285,7 @@ function _ssBuildSendPanelSchema_() {
       sent:   _ssFreeze_({ col: 6, type: 'string', required: false, allowBlank: true,  label: 'Sent' }),
       action: _ssFreeze_({ col: 7, type: 'string', required: false, allowBlank: true,  label: 'Action' })
     }),
+
     headerAliases: _ssFreeze_({
       fml: ['ПІБ', 'ФІО', 'FML'],
       phone: ['Телефон', 'Phone'],
@@ -287,6 +295,7 @@ function _ssBuildSendPanelSchema_() {
       sent: ['Відправлено', 'Sent'],
       action: ['Дія', 'Action']
     }),
+
     keyFields: ['fml', 'phone', 'code'],
     requiredFields: ['fml', 'code'],
     nullableFields: ['phone', 'tasks', 'status', 'sent', 'action'],
@@ -312,6 +321,7 @@ function _ssBuildVacationsSchema_() {
       active:     _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('ACTIVE_COL', 5), 5), type: 'boolean|string', required: false, allowBlank: true, label: 'Активна' }),
       notify:     _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('NOTIFY_COL', 6), 6), type: 'boolean|string', required: false, allowBlank: true, label: 'Notify' })
     }),
+
     keyFields: ['fml', 'startDate', 'endDate'],
     requiredFields: ['fml', 'startDate', 'endDate'],
     nullableFields: ['vacationNo', 'active', 'notify'],
@@ -343,6 +353,7 @@ function _ssBuildLogSchema_() {
       message:       _ssFreeze_({ col: 11, type: 'string', required: false, allowBlank: true, label: 'Повідомлення' }),
       link:          _ssFreeze_({ col: 12, type: 'string', required: false, allowBlank: true, label: 'Посилання' })
     }),
+    
     keyFields: ['timestamp', 'fml', 'code'],
     requiredFields: ['timestamp'],
     nullableFields: ['reportDateStr', 'sheet', 'cell', 'fml', 'phone', 'code', 'service', 'place', 'tasks', 'message', 'link'],

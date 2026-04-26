@@ -456,6 +456,8 @@ const PROJECT_BUNDLE_METADATA_ = Object.freeze({
   diagnosticsPolicy: Object.freeze({ wording: 'stage7-1-2-final-clean-baseline' }),
   maintenanceLayerPolicy: PROJECT_MAINTENANCE_POLICY_,
   clientRuntimePolicy: PROJECT_CLIENT_RUNTIME_POLICY_,
+  routingPolicy: PROJECT_STAGE7_CLIENT_ROUTING_POLICY_,
+  clientRoutingGroups: PROJECT_STAGE7_CLIENT_ROUTING_GROUPS_,
   hardeningOverlay: PROJECT_HARDENING_OVERLAY_,
   requiredDocs: Object.freeze([
     'README.md',
