@@ -1092,8 +1092,28 @@ var Stage7TestRunner = (function () {
   }
 
   function toIso_(value) {
-    if (!value) return '';
-    try { return value.toISOString(); } catch (error) { return String(value); }
+    if (!value) {
+      return '';
+    }
+
+    try {
+      var date = Object.prototype.toString.call(value) === '[object Date]' ? value : new Date(value);
+
+      var timezone = '';
+      try {
+        timezone = Session.getScriptTimeZone();
+      } catch (tzError) {
+        timezone = '';
+      }
+
+      if (!timezone) {
+        timezone = 'Europe/Kyiv';
+      }
+
+      return Utilities.formatDate(date, timezone, "yyyy-MM-dd HH:mm:ss");
+    } catch (error) {
+      return String(value);
+    }
   }
 
   function safeJson_(value, maxLen) {

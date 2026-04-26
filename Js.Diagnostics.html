@@ -210,7 +210,7 @@
     try {
       while (true) {
         chunkNo += 1;
-        renderProgress(offset, totalTasks, `Виконую пакет #${chunkNo}. Це нормально: повний запуск розбитий на кілька коротких GAS-виконань.`);
+        renderProgress(offset, totalTasks, `Виконую пакет #${chunkNo}.`);
 
         const chunkResponse = await ActionDispatcher.run(
           'stage7ProjectTestChunk',
