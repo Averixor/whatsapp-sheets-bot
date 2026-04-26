@@ -156,6 +156,15 @@ function highlightActiveMonthTab_(activeName) {
 
 /************ Include функції для HTML ************/
 function include(filename) {
+  filename = String(filename || '').trim();
+
+  if (!filename) {
+    return (
+      'include(filename) — службова HTML-функція. ' +
+      'Її не потрібно запускати вручну. Для відкриття панелі запускай showSidebar().'
+    );
+  }
+
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
@@ -163,13 +172,25 @@ function includeTemplate(filename) {
   filename = String(filename || '').trim();
 
   if (!filename) {
-    throw new Error(
+    return (
       'includeTemplate(filename) — службова HTML-функція. ' +
       'Її не потрібно запускати вручну. Для відкриття панелі запускай showSidebar().'
     );
   }
 
   return HtmlService.createTemplateFromFile(filename).evaluate().getContent();
+}
+
+function testIncludeSidebar() {
+  return include('Sidebar');
+}
+
+function testIncludeJavaScript() {
+  return include('JavaScript');
+}
+
+function testIncludeStyles() {
+  return include('Styles');
 }
 
 function testIncludeTemplateSidebar() {
