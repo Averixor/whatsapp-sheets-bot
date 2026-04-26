@@ -744,13 +744,16 @@ function runAccessPolicyChecks(options) {
     report.status = 'OK';
   }
 
-  _safeLogPolicyChecks_('[runAccessPolicyChecks] ' + JSON.stringify({
-    ok: report.ok,
-    status: report.status,
-    checks: report.summary.total,
-    summary: report.summary,
-    ts: report.ts
-  }));
+  _safeLogPolicyChecks_(
+    '[runAccessPolicyChecks] ' +
+    'Статус: ' + report.status +
+    '; перевірок: ' + report.summary.total +
+    '; OK: ' + report.summary.ok +
+    '; FAIL: ' + report.summary.fail +
+    '; SKIP: ' + report.summary.skip +
+    '; BLOCKED: ' + report.summary.blocked +
+    '; час: ' + report.ts
+  );
 
   return report;
 }

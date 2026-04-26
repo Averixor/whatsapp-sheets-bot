@@ -750,7 +750,9 @@ function _testAccessControl_() {
   Logger.log('Failed: ' + results.failed.length);
 
   if (results.failed.length) {
-    Logger.log('Failed tests: ' + JSON.stringify(results.failed));
+    Logger.log('Failed tests: ' + results.failed.map(function(item) {
+      return item.test + ': ' + String(item.details || '');
+    }).join('; '));
   } else {
     Logger.log('✓ All tests passed!');
   }
@@ -830,7 +832,35 @@ function testWasbAccessControl() {
 
 function testDiagnostics() {
   var diag = AccessControl_.runAccessDiagnostics();
-  Logger.log(JSON.stringify(diag));
+
+  Logger.log('=== ACCESS DIAGNOSTICS ===');
+  Logger.log(
+    'Schema: exists=' + !!(diag.schema && diag.schema.exists) +
+    '; headersPresent=' + !!(diag.schema && diag.schema.headersPresent) +
+    '; headersCanonical=' + !!(diag.schema && diag.schema.headersCanonical)
+  );
+
+  Logger.log(
+    'Data integrity: duplicateEmails=' + ((diag.dataIntegrity && diag.dataIntegrity.duplicateEmails || []).length) +
+    '; duplicateCurrentKeys=' + ((diag.dataIntegrity && diag.dataIntegrity.duplicateCurrentKeys || []).length) +
+    '; duplicatePrevKeys=' + ((diag.dataIntegrity && diag.dataIntegrity.duplicatePrevKeys || []).length) +
+    '; emptyIdentifierWithActiveRole=' + ((diag.dataIntegrity && diag.dataIntegrity.emptyIdentifierWithActiveRole || []).join(', ') || 'немає')
+  );
+
+  Logger.log(
+    'Policy: strictUserKeyMode=' + !!(diag.policy && diag.policy.strictUserKeyMode) +
+    '; migrationModeEnabled=' + !!(diag.policy && diag.policy.migrationModeEnabled) +
+    '; bootstrapAllowed=' + !!(diag.policy && diag.policy.bootstrapAllowed) +
+    '; adminConfigured=' + !!(diag.policy && diag.policy.adminConfigured)
+  );
+
+  Logger.log(
+    'Runtime: registeredKeys=' + ((diag.runtime && diag.runtime.registeredKeysCount) || 0) +
+    '; lockedUsers=' + ((diag.runtime && diag.runtime.lockedUsersCount) || 0) +
+    '; adminDisabled=' + ((diag.runtime && diag.runtime.adminDisabledUsersCount) || 0) +
+    '; usersWithoutCurrentKey=' + ((diag.runtime && diag.runtime.usersWithoutCurrentKey) || 0)
+  );
+
   return diag;
 }
 
