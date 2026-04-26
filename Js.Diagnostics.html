@@ -178,8 +178,8 @@
     showStandardResult('Всі тести проєкту');
 
     const runId = 'wasb_ui_project_tests_' + Date.now().toString(36);
-    const chunkLimit = 4;
-    const maxRuntimeMs = 240000;
+    const chunkLimit = 1;
+    const maxRuntimeMs = 120000;
     let offset = 0;
     let chunkNo = 0;
     let totalTasks = null;

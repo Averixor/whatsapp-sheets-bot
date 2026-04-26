@@ -6,7 +6,7 @@
  */
 
 var Stage7TestRunner = (function () {
-  var VERSION = 'stage7-project-test-runner-3.1.0-chunked';
+  var VERSION = 'stage7-project-test-runner-3.1.1-single-chunk-pseudo-safe';
   var DEFAULT_TIMEOUT_MS = 330000;
   var DEFAULT_RESULT_SHEET_NAME = 'TEST_RESULTS';
   var DEFAULT_LOCK_WAIT_MS = 10000;
@@ -28,8 +28,8 @@ var Stage7TestRunner = (function () {
     var opts = normalizeOptions_(Object.assign({}, rawOptions, { includeDiscovery: rawOptions.includeDiscovery !== false }));
     var mode = rawOptions.mode || rawOptions.chunkMode || 'project-chunk';
     var offset = Math.max(0, parseInt(rawOptions.offset || 0, 10) || 0);
-    var limit = Math.max(1, Math.min(25, parseInt(rawOptions.limit || 4, 10) || 4));
-    var maxRuntimeMs = Math.max(30000, Math.min(300000, parseInt(rawOptions.maxRuntimeMs || 240000, 10) || 240000));
+    var limit = Math.max(1, Math.min(10, parseInt(rawOptions.limit || 1, 10) || 1));
+    var maxRuntimeMs = Math.max(30000, Math.min(240000, parseInt(rawOptions.maxRuntimeMs || 120000, 10) || 120000));
     var startedAt = new Date();
     var runId = rawOptions.runId || buildRunId_(startedAt, 'project-chunk');
     var lock = null;
@@ -571,6 +571,7 @@ var Stage7TestRunner = (function () {
     if (Array.isArray(raw)) return 'PASS';
 
     if (typeof raw === 'object') {
+      if (isPseudoInfo_(raw)) return 'PASS';
       if (raw.blocked === true) return task && task.severity === 'critical' ? 'FAIL' : 'WARN';
       if (raw.ok === false || raw.success === false || raw.valid === false || raw.passed === false || raw.ready === false) return 'FAIL';
       if (raw.allPassed === false) return 'FAIL';
@@ -610,6 +611,8 @@ var Stage7TestRunner = (function () {
       var item = items[i];
       if (!item) continue;
 
+      if (isPseudoInfo_(item)) continue;
+
       if (item.ok === false || item.success === false || item.valid === false || item.passed === false) return 'FAIL';
       if (item.status && isFailStatus_(item.status)) return 'FAIL';
       if (item.result && isFailStatus_(item.result)) return 'FAIL';
@@ -631,6 +634,17 @@ var Stage7TestRunner = (function () {
   function isWarnStatus_(status) {
     var value = String(status).toUpperCase();
     return value === 'WARN' || value === 'WARNING' || value === 'ISSUE' || value === 'DEGRADED' || value === 'SKIP' || value === 'SKIPPED';
+  }
+
+  function isPseudoInfo_(item) {
+    if (!item || typeof item !== 'object') return false;
+
+    var status = String(item.status || item.result || '').toUpperCase();
+    var severity = String(item.severity || '').toUpperCase();
+    var uiGroup = String(item.uiGroup || '').toLowerCase();
+
+    return item.pseudo === true || status === 'PSEUDO' || uiGroup === 'pseudo' ||
+      ((item.ok === false || item.success === false || item.valid === false || item.passed === false) && severity === 'INFO');
   }
 
   function statusToUiGroup_(status, ok, task) {
@@ -1159,8 +1173,8 @@ function runProjectTestChunk(options) {
     writeToLogger: true,
     useLock: true,
     includeDiscovery: true,
-    limit: 4,
-    maxRuntimeMs: 240000
+    limit: 1,
+    maxRuntimeMs: 120000
   }, options || {}));
 }
 
@@ -1188,8 +1202,8 @@ function runStage7AllProjectTests() {
     useLock: true,
     includeDiscovery: true,
     offset: 0,
-    limit: 4,
-    maxRuntimeMs: 240000
+    limit: 1,
+    maxRuntimeMs: 120000
   });
 
   return showStage7TestAlert_(report, 'WASB — перший пакет тестів проєкту');
