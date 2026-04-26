@@ -107,7 +107,7 @@ var Stage7TestRunner = (function () {
         Logger.log(JSON.stringify(report, null, 2));
       }
 
-      normalizeTestResultsDetailsForRun_(report.runId);
+      if (report && report.done === true) normalizeTestResultsDetailsForRun_(report.runId);
       return report;
     } finally {
       if (lock && locked) {
@@ -234,7 +234,7 @@ var Stage7TestRunner = (function () {
         Logger.log(JSON.stringify(report, null, 2));
       }
 
-      normalizeTestResultsDetailsForRun_(report.runId);
+      if (report && report.done === true) normalizeTestResultsDetailsForRun_(report.runId);
       return report;
     } finally {
       if (lock && locked) {
@@ -1487,7 +1487,7 @@ var Stage7TestRunner = (function () {
       'WASB Test Runner'
     );
 
-    normalizeTestResultsDetailsForRun_(report.runId);
+    if (report && report.done === true) normalizeTestResultsDetailsForRun_(report.runId);
     return report;
   }
 
