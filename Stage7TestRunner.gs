@@ -556,6 +556,37 @@ var Stage7TestRunner = (function () {
     }
   }
 
+
+  function logTestReportSummary_(report) {
+    try {
+      if (!report) {
+        Logger.log('WASB TEST RUN: empty report');
+        return;
+      }
+
+      var counts = report.counts || {};
+      var parts = [
+        'WASB TEST RUN',
+        'runId=' + (report.runId || '-'),
+        'mode=' + (report.mode || '-'),
+        'ok=' + (report.ok === true),
+        'passed=' + (counts.passed || 0),
+        'failed=' + (counts.failed || 0),
+        'warnings=' + (counts.warnings || 0),
+        'skipped=' + (counts.skipped || 0),
+        'offset=' + (typeof report.offset === 'number' ? report.offset : '-'),
+        'nextOffset=' + (typeof report.nextOffset === 'number' ? report.nextOffset : '-'),
+        'totalTasks=' + (report.totalTasks || counts.total || 0),
+        'done=' + (report.done === true),
+        'durationMs=' + (report.durationMs || 0)
+      ];
+
+      Logger.log(parts.join('; '));
+    } catch (error) {
+      Logger.log('WASB TEST RUN: summary log failed: ' + (error && error.message ? error.message : error));
+    }
+  }
+
   function normalizeTaskReturn_(value) {
     if (value === null || typeof value === 'undefined') {
       return { type: 'empty', raw: null };
