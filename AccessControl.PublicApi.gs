@@ -334,6 +334,17 @@ function validateAccessSheet() {
   };
 }
 
+function _hasAccessIdentifierForDiagnostics_(entry) {
+  if (!entry) return false;
+  return !!(
+    entry.email ||
+    entry.phone ||
+    entry.userKeyCurrentHash ||
+    entry.userKeyPrevHash ||
+    entry.personCallsign
+  );
+}
+
 function runAccessDiagnostics() {
   var policy = _getAccessPolicy_();
   var entries = _readSheetEntries_();
@@ -469,7 +480,7 @@ function runAccessDiagnostics() {
       });
     }
 
-    if (!entry.email && !entry.phone && entry.role !== 'guest') {
+    if (!_hasAccessIdentifierForDiagnostics_(entry) && entry.role !== 'guest') {
       diagnostics.dataIntegrity.emptyIdentifierWithActiveRole.push(rowNum);
     }
 

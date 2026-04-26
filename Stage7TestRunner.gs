@@ -6,7 +6,7 @@
  */
 
 var Stage7TestRunner = (function () {
-  var VERSION = 'stage7-project-test-runner-3.1.2-compat-warning-safe';
+  var VERSION = 'stage7-project-test-runner-3.1.3-compat-section-safe';
   var DEFAULT_TIMEOUT_MS = 330000;
   var DEFAULT_RESULT_SHEET_NAME = 'TEST_RESULTS';
   var DEFAULT_LOCK_WAIT_MS = 60000;
@@ -534,6 +534,7 @@ var Stage7TestRunner = (function () {
       result.details = normalizeTaskReturn_(value);
       result.status = normalizeCompatibilityStatus_(inferStatus_(result.details, task), task);
       result.ok = result.status !== 'FAIL';
+      result.skipped = result.status === 'SKIPPED';
       result.uiGroup = statusToUiGroup_(result.status, result.ok, task);
       result.message = buildTaskMessage_(result.status, result.details, task);
       result.recommendation = buildRecommendation_(result.status, result.details, task);
@@ -544,11 +545,11 @@ var Stage7TestRunner = (function () {
     } catch (error) {
       result.status = normalizeCompatibilityStatus_('FAIL', task);
       result.ok = result.status !== 'FAIL';
-      result.skipped = false;
+      result.skipped = result.status === 'SKIPPED';
       result.uiGroup = statusToUiGroup_(result.status, result.ok, task);
       result.message = getErrorMessage_(error);
-      result.recommendation = result.status === 'WARN'
-        ? 'Compatibility/legacy runner впав під час виконання; залишено як технічний борг, не блокує Stage 7 deploy.'
+      result.recommendation = result.status === 'SKIPPED'
+        ? 'Compatibility/legacy runner впав під час виконання; перенесено у compatibility-секцію, не блокує Stage 7 deploy.'
         : 'Відкрити ErrorStack у TEST_RESULTS і виправити функцію: ' + task.functionName;
       result.errorStack = getErrorStack_(error);
       result.finishedAt = toIso_(new Date());
@@ -629,7 +630,7 @@ var Stage7TestRunner = (function () {
     if (status !== 'FAIL') return status;
     if (!isCompatibilityTask_(task)) return status;
     if (task && task.severity === 'critical') return status;
-    return 'WARN';
+    return 'SKIPPED';
   }
 
   function inferStatus_(details, task) {
@@ -726,7 +727,7 @@ var Stage7TestRunner = (function () {
   }
 
   function statusToUiGroup_(status, ok, task) {
-    if (status === 'SKIPPED') return 'pseudo';
+    if (status === 'SKIPPED') return isCompatibilityTask_(task) ? 'compatibility' : 'pseudo';
     if (status === 'FAIL') return 'critical';
     if (status === 'WARN') return 'warnings';
     return 'ok';
@@ -1436,6 +1437,11 @@ var Stage7TestRunner = (function () {
     }
 
     if (status === 'SKIPPED') {
+      if (isCompatibilityTask_(task)) {
+        return text
+          ? ('Compatibility-only: ' + text)
+          : 'Compatibility-only legacy/historical runner не блокує Stage 7.';
+      }
       if (text) return text;
       return 'Перевірку пропущено.';
     }
@@ -1454,7 +1460,8 @@ var Stage7TestRunner = (function () {
     }
 
     if (status === 'FAIL') return 'Дивись details/errorStack у TEST_RESULTS для функції ' + task.functionName + '.';
-    if (status === 'WARN') return 'Перевірити попередження; якщо це compatibility/legacy — можна залишити як технічний борг.';
+    if (status === 'WARN') return 'Перевірити попередження та виправити, якщо воно стосується активних Stage 7 / ACCESS / runtime перевірок.';
+    if (status === 'SKIPPED' && isCompatibilityTask_(task)) return 'Legacy/historical compatibility. Не блокує Stage 7 deploy; тримати як довідковий технічний борг або запускати окремо.';
     return '';
   }
 
