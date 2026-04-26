@@ -1,14 +1,17 @@
 /**
  * WorkflowOrchestrator.Alias.gs
  *
- * Compatibility layer for historical / diagnostics checks that expect
- * global object WorkflowOrchestrator_.
+ * Єдиний compatibility alias для historical / diagnostics checks,
+ * які очікують глобальний об'єкт WorkflowOrchestrator_.
  *
- * Canonical object remains WorkflowOrchestrator.
- * This file does not replace WorkflowOrchestrator.gs.
+ * Важливо:
+ * - не використовує var / let / const WorkflowOrchestrator_;
+ * - не створює повторне оголошення імені;
+ * - canonical object лишається WorkflowOrchestrator;
+ * - alias підключається через globalThis.WorkflowOrchestrator_.
  */
 
-var WorkflowOrchestrator_ = (function () {
+(function (root) {
   'use strict';
 
   var ALIAS_NAME = 'WorkflowOrchestrator_';
@@ -20,6 +23,20 @@ var WorkflowOrchestrator_ = (function () {
     }
 
     return null;
+  }
+
+  function listCanonicalKeys_() {
+    var canonical = getCanonical_();
+
+    if (!canonical || typeof canonical !== 'object') {
+      return [];
+    }
+
+    try {
+      return Object.keys(canonical).sort();
+    } catch (error) {
+      return [];
+    }
   }
 
   function getCanonicalStatus_() {
@@ -43,20 +60,6 @@ var WorkflowOrchestrator_ = (function () {
       type: typeof canonical,
       keys: listCanonicalKeys_()
     };
-  }
-
-  function listCanonicalKeys_() {
-    var canonical = getCanonical_();
-
-    if (!canonical || typeof canonical !== 'object') {
-      return [];
-    }
-
-    try {
-      return Object.keys(canonical).sort();
-    } catch (error) {
-      return [];
-    }
   }
 
   function hasCanonicalMethod_(methodName) {
@@ -99,17 +102,6 @@ var WorkflowOrchestrator_ = (function () {
     }
 
     throw new Error('WorkflowOrchestrator has none of required methods: ' + methodNames.join(', '));
-  }
-
-  function makeMissingMethodResult_(methodName) {
-    return {
-      ok: false,
-      status: 'MISSING_METHOD',
-      alias: ALIAS_NAME,
-      canonical: CANONICAL_NAME,
-      method: methodName,
-      message: 'WorkflowOrchestrator method is not available: ' + methodName
-    };
   }
 
   var alias = {
@@ -339,12 +331,19 @@ var WorkflowOrchestrator_ = (function () {
     },
 
     fallbackResult: function (methodName) {
-      return makeMissingMethodResult_(methodName || 'unknown');
+      return {
+        ok: false,
+        status: 'MISSING_METHOD',
+        alias: ALIAS_NAME,
+        canonical: CANONICAL_NAME,
+        method: methodName || 'unknown',
+        message: 'WorkflowOrchestrator method is not available: ' + String(methodName || 'unknown')
+      };
     }
   };
 
   if (typeof Proxy !== 'undefined') {
-    return new Proxy(alias, {
+    root[ALIAS_NAME] = new Proxy(alias, {
       get: function (target, prop) {
         if (prop in target) {
           return target[prop];
@@ -412,7 +411,9 @@ var WorkflowOrchestrator_ = (function () {
         return undefined;
       }
     });
+
+    return;
   }
 
-  return alias;
-})();
+  root[ALIAS_NAME] = alias;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
