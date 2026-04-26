@@ -107,6 +107,7 @@ var Stage7TestRunner = (function () {
         Logger.log(JSON.stringify(report, null, 2));
       }
 
+      normalizeTestResultsDetailsForRun_(report.runId);
       return report;
     } finally {
       if (lock && locked) {
@@ -233,6 +234,7 @@ var Stage7TestRunner = (function () {
         Logger.log(JSON.stringify(report, null, 2));
       }
 
+      normalizeTestResultsDetailsForRun_(report.runId);
       return report;
     } finally {
       if (lock && locked) {
@@ -842,6 +844,307 @@ var Stage7TestRunner = (function () {
     return 'Результат отримано як об’єкт; деталі доступні у TEST_RESULTS.';
   }
 
+
+  function normalizeTestResultsDetailsForRun_(runId) {
+    try {
+      if (!runId) return;
+
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      if (!ss) return;
+
+      var sheet = ss.getSheetByName('TEST_RESULTS');
+      if (!sheet) return;
+
+      var lastRow = sheet.getLastRow();
+      var lastCol = sheet.getLastColumn();
+
+      if (lastRow < 2 || lastCol < 1) return;
+
+      var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(value) {
+        return String(value || '').trim();
+      });
+
+      var runIdCol = headers.indexOf('RunId');
+      var messageCol = headers.indexOf('Message');
+      var detailsCol = headers.indexOf('DetailsJson');
+
+      if (runIdCol < 0 || detailsCol < 0) return;
+
+      var scanLimit = 700;
+      var startRow = Math.max(2, lastRow - scanLimit + 1);
+      var rowCount = lastRow - startRow + 1;
+
+      if (rowCount <= 0) return;
+
+      var range = sheet.getRange(startRow, 1, rowCount, lastCol);
+      var values = range.getValues();
+      var changed = false;
+
+      values.forEach(function(row) {
+        if (String(row[runIdCol] || '') !== String(runId)) return;
+
+        var detailsValue = row[detailsCol];
+        var detailsText = detailsJsonCellToHumanText_(detailsValue);
+
+        if (detailsText && detailsText !== String(detailsValue || '')) {
+          row[detailsCol] = detailsText;
+          changed = true;
+        }
+
+        if (messageCol >= 0) {
+          var messageValue = row[messageCol];
+          var messageText = compactReportText_(messageValue, 1200);
+
+          if (messageText && messageText !== String(messageValue || '')) {
+            row[messageCol] = messageText;
+            changed = true;
+          }
+        }
+      });
+
+      if (changed) {
+        range.setValues(values);
+      }
+    } catch (err) {
+      // Не валимо тестовий прогін через форматування службового листа.
+    }
+  }
+
+  function detailsJsonCellToHumanText_(value) {
+    if (value === null || typeof value === 'undefined') return '';
+
+    var text = String(value || '').trim();
+    if (!text) return '';
+
+    if (text === '[object Object]') {
+      return 'Результат отримано як об’єкт; технічні дані приховано.';
+    }
+
+    if (/^https:\/\/wa\.me\//i.test(text)) {
+      return 'WhatsApp-посилання сформовано коректно.';
+    }
+
+    if (/^https?:\/\//i.test(text) && text.length > 120) {
+      return 'Посилання сформовано коректно.';
+    }
+
+    if (!/^[\{\[]/.test(text)) {
+      return compactReportText_(text, 1800);
+    }
+
+    try {
+      var parsed = JSON.parse(text);
+      var raw = parsed && Object.prototype.hasOwnProperty.call(parsed, 'raw') ? parsed.raw : parsed;
+
+      return detailsObjectToHumanText_(raw, 1800);
+    } catch (err) {
+      return compactReportText_(text, 1800);
+    }
+  }
+
+  function detailsObjectToHumanText_(raw, limit) {
+    limit = limit || 1800;
+
+    if (raw === null || typeof raw === 'undefined') return '';
+
+    if (typeof raw === 'string') {
+      return compactReportText_(raw, limit);
+    }
+
+    if (typeof raw === 'number' || typeof raw === 'boolean') {
+      return String(raw);
+    }
+
+    if (Array.isArray(raw)) {
+      return detailsChecksToHumanText_(raw, limit);
+    }
+
+    if (typeof raw !== 'object') {
+      return compactReportText_(String(raw), limit);
+    }
+
+    var title = compactReportText_(raw.name || raw.title || '', 160);
+
+    if (raw.message && typeof raw.message !== 'object') {
+      return withDetailsTitle_(title, raw.message, limit);
+    }
+
+    if (raw.summary && typeof raw.summary !== 'object') {
+      return withDetailsTitle_(title, raw.summary, limit);
+    }
+
+    if (raw.error && typeof raw.error !== 'object') {
+      return withDetailsTitle_(title, raw.error, limit);
+    }
+
+    if (raw.details && typeof raw.details !== 'object') {
+      return withDetailsTitle_(title, raw.details, limit);
+    }
+
+    if (Array.isArray(raw.checks)) {
+      return withDetailsTitle_(title, detailsChecksToHumanText_(raw.checks, limit), limit);
+    }
+
+    if (Array.isArray(raw.results)) {
+      return withDetailsTitle_(title, detailsChecksToHumanText_(raw.results, limit), limit);
+    }
+
+    if (Array.isArray(raw.errors) && raw.errors.length) {
+      return withDetailsTitle_(title, 'Помилки: ' + detailsChecksToHumanText_(raw.errors, limit), limit);
+    }
+
+    if (Array.isArray(raw.warnings) && raw.warnings.length) {
+      return withDetailsTitle_(title, 'Попередження: ' + detailsChecksToHumanText_(raw.warnings, limit), limit);
+    }
+
+    if (raw.counts && typeof raw.counts === 'object') {
+      var countParts = [];
+
+      if (typeof raw.counts.total !== 'undefined') countParts.push('усього=' + raw.counts.total);
+      if (typeof raw.counts.ok !== 'undefined') countParts.push('OK=' + raw.counts.ok);
+      if (typeof raw.counts.passed !== 'undefined') countParts.push('PASS=' + raw.counts.passed);
+      if (typeof raw.counts.failed !== 'undefined') countParts.push('FAIL=' + raw.counts.failed);
+      if (typeof raw.counts.warnings !== 'undefined') countParts.push('WARN=' + raw.counts.warnings);
+      if (typeof raw.counts.skipped !== 'undefined') countParts.push('SKIP=' + raw.counts.skipped);
+      if (typeof raw.counts.pseudo !== 'undefined') countParts.push('PSEUDO=' + raw.counts.pseudo);
+
+      if (countParts.length) {
+        return withDetailsTitle_(title, 'Підсумок: ' + countParts.join(', '), limit);
+      }
+    }
+
+    if (typeof raw.ok === 'boolean') {
+      return withDetailsTitle_(title, raw.ok ? 'Перевірку виконано успішно.' : 'Перевірка повернула помилку.', limit);
+    }
+
+    if (typeof raw.success === 'boolean') {
+      return withDetailsTitle_(title, raw.success ? 'Операцію виконано успішно.' : 'Операція повернула помилку.', limit);
+    }
+
+    if (raw.url || raw.link) {
+      return withDetailsTitle_(title, 'Посилання сформовано коректно.', limit);
+    }
+
+    var keys = Object.keys(raw).filter(function(key) {
+      return key !== 'raw' && key !== 'stack' && key !== 'errorStack';
+    });
+
+    if (keys.length) {
+      return withDetailsTitle_(title, 'Поля результату: ' + keys.slice(0, 12).join(', ') + '.', limit);
+    }
+
+    return title || 'Результат отримано; технічні дані приховано.';
+  }
+
+  function detailsChecksToHumanText_(items, limit) {
+    limit = limit || 1800;
+
+    if (!items || !items.length) return 'Список порожній.';
+
+    var ok = 0;
+    var fail = 0;
+    var warn = 0;
+    var pseudo = 0;
+    var skip = 0;
+
+    var important = [];
+    var normal = [];
+
+    items.forEach(function(item) {
+      if (!item || typeof item !== 'object') return;
+
+      var status = String(item.status || item.result || '').toUpperCase();
+      var itemOk = item.ok === true || item.success === true || item.passed === true;
+
+      if (
+        status === 'FAIL' ||
+        status === 'FAILED' ||
+        status === 'ERROR' ||
+        item.ok === false ||
+        item.success === false ||
+        item.passed === false
+      ) {
+        fail += 1;
+        important.push(formatOneCheckLine_(item, 'FAIL'));
+        return;
+      }
+
+      if (status === 'WARN' || status === 'WARNING') {
+        warn += 1;
+        important.push(formatOneCheckLine_(item, 'WARN'));
+        return;
+      }
+
+      if (status === 'PSEUDO') {
+        pseudo += 1;
+        normal.push(formatOneCheckLine_(item, 'PSEUDO'));
+        return;
+      }
+
+      if (status === 'SKIP' || status === 'SKIPPED') {
+        skip += 1;
+        normal.push(formatOneCheckLine_(item, 'SKIP'));
+        return;
+      }
+
+      if (itemOk || status === 'OK' || status === 'PASS') {
+        ok += 1;
+        normal.push(formatOneCheckLine_(item, 'OK'));
+        return;
+      }
+
+      normal.push(formatOneCheckLine_(item, status || 'INFO'));
+    });
+
+    var parts = ['усього=' + items.length];
+
+    if (ok) parts.push('OK=' + ok);
+    if (fail) parts.push('FAIL=' + fail);
+    if (warn) parts.push('WARN=' + warn);
+    if (pseudo) parts.push('PSEUDO=' + pseudo);
+    if (skip) parts.push('SKIP=' + skip);
+
+    var selected = important.concat(normal).filter(Boolean).slice(0, 8);
+    var text = 'Перевірки: ' + parts.join(', ') + '.';
+
+    if (selected.length) {
+      text += ' Деталі: ' + selected.join('; ');
+    }
+
+    if (items.length > selected.length) {
+      text += '; ще ' + (items.length - selected.length) + ' перевірок приховано.';
+    }
+
+    return compactReportText_(text, limit);
+  }
+
+  function formatOneCheckLine_(item, fallbackStatus) {
+    var status = String(item.status || item.result || fallbackStatus || 'INFO').toUpperCase();
+    var name = item.title || item.name || item.id || 'перевірка';
+    var details = item.details || item.message || item.howTo || item.recommendation || '';
+
+    var icon = status === 'OK' || status === 'PASS'
+      ? 'OK'
+      : status === 'FAIL' || status === 'FAILED' || status === 'ERROR'
+        ? 'FAIL'
+        : status;
+
+    var line = icon + ': ' + name;
+
+    if (details && typeof details !== 'object') {
+      line += ' — ' + details;
+    }
+
+    return compactReportText_(line, 260);
+  }
+
+  function withDetailsTitle_(title, body, limit) {
+    body = compactReportText_(body, limit || 1800);
+    if (!title) return body;
+    return compactReportText_(title + ': ' + body, limit || 1800);
+  }
+
+
   function buildTaskMessage_(status, details, task) {
     var raw = details ? details.raw : null;
 
@@ -1184,6 +1487,7 @@ var Stage7TestRunner = (function () {
       'WASB Test Runner'
     );
 
+    normalizeTestResultsDetailsForRun_(report.runId);
     return report;
   }
 
