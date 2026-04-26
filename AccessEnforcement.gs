@@ -78,7 +78,6 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
       seen[value] = true;
       result.push(value);
     }
-
     return result;
   }
 
@@ -173,6 +172,7 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
         if (val instanceof Date) {
           return Utilities.formatDate(val, _scriptTimeZone_(), "yyyy-MM-dd'T'HH:mm:ss");
         }
+
         if (val instanceof Error) {
           return {
             name: val.name,
@@ -180,6 +180,7 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
             stack: val.stack
           };
         }
+        
         if (_isObject_(val)) {
           if (seen.indexOf(val) !== -1) {
             return '[Circular]';

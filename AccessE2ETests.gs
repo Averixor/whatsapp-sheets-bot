@@ -25,7 +25,6 @@ function runAccessSecurityE2ETests_(options) {
   if (!Array.isArray(report.checks)) {
     throw new Error('runAccessPolicyChecks() did not return checks[]');
   }
-
   return report;
 }
 
