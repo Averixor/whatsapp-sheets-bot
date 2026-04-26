@@ -1617,70 +1617,10 @@ var Stage7TestRunner = (function () {
   }
 
   function safeJson_(value, maxLen) {
-    maxLen = maxLen || 1800;
-
-    try {
-      var v = value;
-
-      if (
-        v &&
-        typeof v === 'object' &&
-        Object.prototype.hasOwnProperty.call(v, 'type') &&
-        Object.prototype.hasOwnProperty.call(v, 'raw')
-      ) {
-        v = v.raw;
-      }
-
-      var text = '';
-
-      if (typeof detailsObjectToHumanText_ === 'function') {
-        text = detailsObjectToHumanText_(v, maxLen);
-      } else if (typeof humanizeReportValue_ === 'function') {
-        text = humanizeReportValue_(v, maxLen);
-      } else if (v === null || typeof v === 'undefined') {
-        text = '';
-      } else if (typeof v === 'string') {
-        text = v;
-      } else if (typeof v === 'number' || typeof v === 'boolean') {
-        text = String(v);
-      } else if (Array.isArray(v)) {
-        text = 'Перевірки: усього=' + v.length;
-      } else if (typeof v === 'object') {
-        if (v.message && typeof v.message !== 'object') {
-          text = String(v.message);
-        } else if (v.summary && typeof v.summary !== 'object') {
-          text = String(v.summary);
-        } else if (v.details && typeof v.details !== 'object') {
-          text = String(v.details);
-        } else if (Array.isArray(v.checks)) {
-          text = 'Перевірки: усього=' + v.checks.length;
-        } else if (Array.isArray(v.results)) {
-          text = 'Результати: усього=' + v.results.length;
-        } else if (v.url || v.link) {
-          text = 'Посилання сформовано коректно.';
-        } else {
-          text = 'Результат отримано як об’єкт; технічні дані приховано.';
-        }
-      } else {
-        text = String(v);
-      }
-
-      text = String(text || '').replace(/\s+/g, ' ').trim();
-
-      if (!text) return '';
-
-      if (/^https:\/\/wa\.me\//i.test(text)) {
-        return 'WhatsApp-посилання сформовано коректно.';
-      }
-
-      if (/^https?:\/\//i.test(text) && text.length > 120) {
-        return 'Посилання сформовано коректно.';
-      }
-
-      return text.length > maxLen ? text.slice(0, maxLen) + '…' : text;
-    } catch (error) {
-      return 'Не вдалося перетворити технічні деталі у текст: ' + String(error && error.message ? error.message : error);
-    }
+    var text;
+    try { text = JSON.stringify(value); } catch (error) { text = String(value); }
+    maxLen = maxLen || 20000;
+    return text && text.length > maxLen ? text.slice(0, maxLen) + '…[truncated]' : text;
   }
 
   function getErrorMessage_(error) {
