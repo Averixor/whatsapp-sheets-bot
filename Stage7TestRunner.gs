@@ -6,7 +6,7 @@
  */
 
 var Stage7TestRunner = (function () {
-  var VERSION = 'stage7-project-test-runner-3.0.0';
+  var VERSION = 'stage7-project-test-runner-3.1.0-chunked';
   var DEFAULT_TIMEOUT_MS = 330000;
   var DEFAULT_RESULT_SHEET_NAME = 'TEST_RESULTS';
   var DEFAULT_LOCK_WAIT_MS = 10000;
@@ -17,6 +17,104 @@ var Stage7TestRunner = (function () {
 
   function runAllProjectTests(options) {
     return runSuite_('all', Object.assign({}, options || {}, { includeDiscovery: true }));
+  }
+
+  /**
+   * Runs a small slice of the whole project test registry.
+   * This is the safe path for sidebar/UI: several short GAS executions instead of one execution that hits the 6-minute limit.
+   */
+  function runProjectTestChunk(options) {
+    var rawOptions = options || {};
+    var opts = normalizeOptions_(Object.assign({}, rawOptions, { includeDiscovery: rawOptions.includeDiscovery !== false }));
+    var mode = rawOptions.mode || rawOptions.chunkMode || 'project-chunk';
+    var offset = Math.max(0, parseInt(rawOptions.offset || 0, 10) || 0);
+    var limit = Math.max(1, Math.min(25, parseInt(rawOptions.limit || 4, 10) || 4));
+    var maxRuntimeMs = Math.max(30000, Math.min(300000, parseInt(rawOptions.maxRuntimeMs || 240000, 10) || 240000));
+    var startedAt = new Date();
+    var runId = rawOptions.runId || buildRunId_(startedAt, 'project-chunk');
+    var lock = null;
+    var locked = false;
+
+    if (opts.useLock) {
+      try {
+        lock = LockService.getDocumentLock();
+        locked = lock.tryLock(opts.lockWaitMs);
+      } catch (lockError) {
+        lock = null;
+        locked = false;
+      }
+    }
+
+    if (opts.useLock && !locked) {
+      return buildLockFailedReport_(mode);
+    }
+
+    try {
+      var allTasks = filterTasksByMode_(buildTasks_(opts), 'all');
+      var report = {
+        ok: true,
+        version: VERSION,
+        mode: mode,
+        runId: runId,
+        ts: toIso_(startedAt),
+        startedAt: toIso_(startedAt),
+        finishedAt: null,
+        durationMs: 0,
+        environment: collectEnvironment_(),
+        offset: offset,
+        limit: limit,
+        nextOffset: offset,
+        totalTasks: allTasks.length,
+        done: false,
+        progressPct: 0,
+        counts: { total: 0, passed: 0, failed: 0, skipped: 0, warnings: 0, discovered: 0 },
+        checks: [],
+        results: [],
+        warnings: []
+      };
+
+      var index = offset;
+      while (index < allTasks.length && report.results.length < limit) {
+        if (isTimeoutReached_(startedAt, maxRuntimeMs)) {
+          report.warnings.push('Пакет зупинено до системного timeout. Наступний пакет продовжить з offset=' + index + '.');
+          break;
+        }
+
+        var task = allTasks[index];
+        report.results.push(runTask_(task, opts));
+        index++;
+
+        if (opts.failFast && report.results[report.results.length - 1].status === 'FAIL') {
+          report.warnings.push('Пакет зупинено через failFast.');
+          break;
+        }
+      }
+
+      report.nextOffset = index;
+      report.done = index >= allTasks.length;
+      report.progressPct = allTasks.length ? Math.round((index / allTasks.length) * 100) : 100;
+      finalizeReport_(report, startedAt);
+
+      if (opts.writeToSheet) {
+        try {
+          writeReportToSheet_(report, opts.sheetName);
+        } catch (sheetError) {
+          report.warnings.push('Не вдалося записати пакетний звіт у лист: ' + getErrorMessage_(sheetError));
+        }
+      }
+
+      if (opts.writeToLogger) {
+        Logger.log(JSON.stringify(report, null, 2));
+      }
+
+      return report;
+    } finally {
+      if (lock && locked) {
+        try {
+          lock.releaseLock();
+        } catch (releaseError) {}
+      }
+    }
   }
 
   function runFast(options) {
@@ -296,7 +394,9 @@ var Stage7TestRunner = (function () {
     var own = {
       runAllTests: true,
       runAllProjectTests: true,
+      runProjectTestChunk: true,
       runStage7AllProjectTests: true,
+      runStage7ProjectTestChunk: true,
       runStage7TestsAll: true,
       runStage7TestsFast: true,
       runStage7DiagnosticsOnly: true,
@@ -1038,6 +1138,7 @@ var Stage7TestRunner = (function () {
   return {
     runAll: runAll,
     runAllProjectTests: runAllProjectTests,
+    runProjectTestChunk: runProjectTestChunk,
     runFast: runFast,
     runDiagnosticsOnly: runDiagnosticsOnly,
     runSmokeOnly: runSmokeOnly,
@@ -1051,6 +1152,21 @@ var Stage7TestRunner = (function () {
     resetResultsSheet: resetResultsSheet
   };
 })();
+
+function runProjectTestChunk(options) {
+  return Stage7TestRunner.runProjectTestChunk(Object.assign({
+    writeToSheet: true,
+    writeToLogger: true,
+    useLock: true,
+    includeDiscovery: true,
+    limit: 4,
+    maxRuntimeMs: 240000
+  }, options || {}));
+}
+
+function runStage7ProjectTestChunk(options) {
+  return runProjectTestChunk(options || {});
+}
 
 function runAllProjectTests(options) {
   return Stage7TestRunner.runAllProjectTests(Object.assign({
@@ -1066,14 +1182,17 @@ function runAllTests(options) {
 }
 
 function runStage7AllProjectTests() {
-  var report = runAllProjectTests({
+  var report = runProjectTestChunk({
     writeToSheet: true,
     writeToLogger: true,
     useLock: true,
-    includeDiscovery: true
+    includeDiscovery: true,
+    offset: 0,
+    limit: 4,
+    maxRuntimeMs: 240000
   });
 
-  return showStage7TestAlert_(report, 'WASB — усі тести проєкту');
+  return showStage7TestAlert_(report, 'WASB — перший пакет тестів проєкту');
 }
 
 function runStage7TestsAll() {

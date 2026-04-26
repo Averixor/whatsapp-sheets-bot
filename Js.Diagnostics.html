@@ -177,37 +177,83 @@
     assertAdminAction_('runAllProjectTests');
     showStandardResult('Всі тести проєкту');
 
-    setHtml('resultContent', `
-      <div class="result-item">
-        <div class="result-label">Запуск тестів</div>
-        <div class="result-value">⏳ Виконую всі тести проєкту. Це важче за health-check і може тривати довше.</div>
-      </div>
-    `);
+    const runId = 'wasb_ui_project_tests_' + Date.now().toString(36);
+    const chunkLimit = 4;
+    const maxRuntimeMs = 240000;
+    let offset = 0;
+    let chunkNo = 0;
+    let totalTasks = null;
+    const chunks = [];
 
-    let slowModeShown = false;
-    const slowTimerId = setTimeout(() => {
-      slowModeShown = true;
+    function renderProgress(currentOffset, total, label) {
+      const knownTotal = Number(total || 0);
+      const pct = knownTotal > 0 ? Math.min(100, Math.round((Number(currentOffset || 0) / knownTotal) * 100)) : 0;
       setHtml('resultContent', `
         <div class="health-wrap">
           <div class="health-item warn sev-medium">
-            <div class="health-title">⏳ Тести ще виконуються</div>
-            <div class="health-details">Це нормально для повного запуску: diagnostics, smoke, regression, access, domain і знайдені test runners.</div>
+            <div class="health-title">⏳ Пакетний запуск тестів</div>
+            <div class="health-details">
+              ${escapeHtml(label || 'Виконую тести частинами, щоб не впертися у ліміт Google Apps Script.')}<br>
+              Прогрес: ${escapeHtml(String(currentOffset || 0))}${knownTotal ? ' / ' + escapeHtml(String(knownTotal)) : ''} · ${escapeHtml(String(pct))}%
+              <div style="height:7px; margin-top:8px; border-radius:999px; background:rgba(148,163,184,.25); overflow:hidden;">
+                <div style="height:7px; width:${pct}%; background:var(--google-blue);"></div>
+              </div>
+            </div>
           </div>
         </div>
       `);
-      logToConsole('⏳ Повний запуск тестів виконується довше звичайного...', 'warning');
-    }, 15000);
+    }
+
+    renderProgress(0, 0, 'Стартую перший пакет тестів...');
+    logToConsole('⏳ Запуск всіх тестів проєкту пакетами...', 'warning');
 
     try {
-      const reportResponse = await ActionDispatcher.run(
-        'stage7AllProjectTests',
-        () => DiagnosticsApi.runAllProjectTests({ includeDiscovery: true, dryRun: true }),
-        { successMessage: '' }
-      );
+      while (true) {
+        chunkNo += 1;
+        renderProgress(offset, totalTasks, `Виконую пакет #${chunkNo}. Це нормально: повний запуск розбитий на кілька коротких GAS-виконань.`);
 
-      clearTimeout(slowTimerId);
+        const chunkResponse = await ActionDispatcher.run(
+          'stage7ProjectTestChunk',
+          () => DiagnosticsApi.runProjectTestChunk({
+            runId,
+            offset,
+            limit: chunkLimit,
+            maxRuntimeMs,
+            includeDiscovery: true,
+            dryRun: true
+          }),
+          { successMessage: '', showLoader: chunkNo === 1 }
+        );
 
-      const report = reportResponse?.data || reportResponse;
+        const chunk = chunkResponse?.data || chunkResponse;
+        if (!chunk || !Array.isArray(chunk.checks)) {
+          throw new Error('Порожня відповідь пакета тестів');
+        }
+
+        chunks.push(chunk);
+        totalTasks = Number(chunk.totalTasks || totalTasks || 0);
+
+        const nextOffset = Number(chunk.nextOffset || 0);
+        if (nextOffset <= offset && chunk.done !== true) {
+          throw new Error('Пакет тестів не просунув offset. Зупинено, щоб не зациклитися.');
+        }
+
+        offset = nextOffset;
+        const partial = mergeProjectTestChunks_(chunks, false);
+        STATE.lastProjectTestReport = partial;
+        STATE.lastHealthReport = partial;
+
+        renderProgress(offset, totalTasks, `Пакет #${chunkNo} завершено. PASS=${partial.counts.passed}, FAIL=${partial.counts.failed}, WARN=${partial.counts.warnings}, SKIP=${partial.counts.skipped}.`);
+        logToConsole(`✓ Пакет тестів #${chunkNo}: offset=${offset}/${totalTasks || '?'}`, 'success');
+
+        if (chunk.done === true || offset >= totalTasks) {
+          break;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 350));
+      }
+
+      const report = mergeProjectTestChunks_(chunks, true);
       STATE.lastProjectTestReport = report || null;
       STATE.lastHealthReport = report || null;
 
@@ -219,12 +265,16 @@
 
       showToast(failed === 0 ? '✓ Тести завершено' : '✕ Є провалені тести');
       logToConsole(
-        (slowModeShown ? 'Повний запуск тестів завершено після тривалого очікування' : 'Повний запуск тестів завершено') +
-          `: failed=${failed}, warnings=${warnings}, skipped=${skipped}`,
+        `Повний пакетний запуск тестів завершено: failed=${failed}, warnings=${warnings}, skipped=${skipped}`,
         failed === 0 ? (warnings > 0 || skipped > 0 ? 'warning' : 'success') : 'error'
       );
     } catch (error) {
-      clearTimeout(slowTimerId);
+      const partial = chunks.length ? mergeProjectTestChunks_(chunks, false) : null;
+      if (partial) {
+        STATE.lastProjectTestReport = partial;
+        STATE.lastHealthReport = partial;
+      }
+
       setHtml('resultContent', `
         <div class="health-wrap">
           <div class="health-item bad sev-critical">
@@ -232,10 +282,58 @@
             <div class="health-details">${escapeHtml(normalizeError(error))}</div>
           </div>
         </div>
+        ${partial ? renderProjectTestReport(partial) : ''}
       `);
       showToast('✕ Помилка запуску тестів');
       logToConsole(`✕ All Project Tests: ${normalizeError(error)}`, 'error');
     }
+  }
+
+  function mergeProjectTestChunks_(chunks, done) {
+    const list = Array.isArray(chunks) ? chunks.filter(Boolean) : [];
+    const first = list[0] || {};
+    const last = list[list.length - 1] || {};
+    const checks = [];
+    const results = [];
+    const warnings = [];
+    let durationMs = 0;
+    let totalTasks = 0;
+
+    list.forEach(chunk => {
+      if (Array.isArray(chunk.checks)) checks.push(...chunk.checks);
+      if (Array.isArray(chunk.results)) results.push(...chunk.results);
+      if (Array.isArray(chunk.warnings)) warnings.push(...chunk.warnings);
+      durationMs += Number(chunk.durationMs || 0);
+      totalTasks = Math.max(totalTasks, Number(chunk.totalTasks || 0));
+    });
+
+    const counts = { total: checks.length, passed: 0, failed: 0, skipped: 0, warnings: 0, discovered: 0 };
+
+    checks.forEach(check => {
+      const status = String(check?.status || '').toUpperCase();
+      if (status === 'OK' || status === 'PASS') counts.passed += 1;
+      else if (status === 'FAIL' || status === 'ERROR' || status === 'CRITICAL' || status === 'BROKEN') counts.failed += 1;
+      else if (status === 'WARN' || status === 'WARNING') counts.warnings += 1;
+      else if (status === 'SKIPPED' || status === 'SKIP') counts.skipped += 1;
+      else counts.warnings += 1;
+      if (check?.discovered === true) counts.discovered += 1;
+    });
+
+    return {
+      ok: counts.failed === 0,
+      version: last.version || first.version || '',
+      mode: 'project-chunked-ui',
+      runId: first.runId || last.runId || '',
+      startedAt: first.startedAt || '',
+      finishedAt: last.finishedAt || '',
+      durationMs,
+      totalTasks,
+      done: done === true,
+      counts,
+      checks,
+      results,
+      warnings: Array.from(new Set(warnings.filter(Boolean)))
+    };
   }
 
   function renderProjectTestReport(report) {

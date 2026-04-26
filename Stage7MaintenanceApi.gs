@@ -436,15 +436,54 @@ function apiRunStage7AllProjectTests(options) {
     writeToLogger: true,
     useLock: true,
     includeDiscovery: true,
-    dryRun: true
+    dryRun: true,
+    timeoutMs: Math.min(Number((options || {}).timeoutMs || 240000), 240000)
   });
-  const report = runAllProjectTests(opts);
+
+  // Compatibility endpoint. The sidebar uses apiRunStage7ProjectTestChunk, because a single GAS call can hit runtime limits.
+  const report = runProjectTestChunk(Object.assign({}, opts, {
+    offset: Number(opts.offset || 0),
+    limit: Number(opts.limit || 4),
+    maxRuntimeMs: Number(opts.maxRuntimeMs || 240000)
+  }));
+
   return _stage7BuildMaintenanceResponse_(
-    report.ok,
-    report.ok ? 'Усі тести проєкту пройдено' : 'У тестах проєкту є збої',
+    true,
+    report.done ? 'Пакет тестів проєкту завершено' : 'Пакет тестів виконано, потрібен наступний пакет',
     report,
     'stage7AllProjectTests',
     report.warnings || []
+  );
+}
+
+function apiRunStage7ProjectTestChunk(options) {
+  _stage7AssertRole_('admin', 'run project test chunk');
+  const opts = Object.assign({}, options || {}, {
+    writeToSheet: true,
+    writeToLogger: true,
+    useLock: true,
+    includeDiscovery: true,
+    dryRun: true,
+    limit: Math.max(1, Math.min(25, Number((options || {}).limit || 4))),
+    maxRuntimeMs: Math.max(30000, Math.min(300000, Number((options || {}).maxRuntimeMs || 240000)))
+  });
+
+  const report = runProjectTestChunk(opts);
+
+  return _stage7BuildMaintenanceResponse_(
+    true,
+    report.done ? 'Усі пакети тестів проєкту виконано' : 'Пакет тестів виконано, продовжуйте наступний пакет',
+    report,
+    'stage7ProjectTestChunk',
+    report.warnings || [],
+    {
+      runId: report.runId,
+      offset: report.offset,
+      nextOffset: report.nextOffset,
+      totalTasks: report.totalTasks,
+      done: report.done === true,
+      progressPct: report.progressPct
+    }
   );
 }
 

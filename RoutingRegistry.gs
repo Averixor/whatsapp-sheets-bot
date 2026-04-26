@@ -568,6 +568,20 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ = (
       verifyAfterWrite: false
     }),
 
+    runProjectTestChunk: Object.freeze({
+      routeName: 'maintenance.runProjectTestChunk',
+      publicApiMethod: 'apiRunStage7ProjectTestChunk',
+      useCase: 'Stage7TestRunner.runProjectTestChunk',
+      category: 'maintenance',
+      compatibilityStatus: 'canonical',
+      mode: 'read',
+      lockRequired: true,
+      dryRunSupported: true,
+      uiAllowed: true,
+      clientActionAliases: ['runProjectTestChunk'],
+      verifyAfterWrite: false
+    }),
+
     listJobRuntime: Object.freeze({
       routeName: 'maintenance.listJobRuntime',
       publicApiMethod: 'apiListStage7JobRuntime',

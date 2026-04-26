@@ -228,6 +228,7 @@
     quickHealthCheck: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7QuickHealthCheck', options)),
     runRegressionTests: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiRunStage7RegressionTests', options)),
     runAllProjectTests: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiRunStage7AllProjectTests', options)),
+    runProjectTestChunk: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiRunStage7ProjectTestChunk', options)),
     listPendingRepairs: async (filters = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7ListPendingRepairs', filters)),
     getOperationDetails: async (operationId) => adaptStage4UtilityResponse(await Api.run('apiStage7GetOperationDetails', operationId || '')),
     runRepair: async (operationId, options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7RunRepair', operationId || '', options)),
@@ -282,6 +283,7 @@
         : MaintenanceApi.healthCheck(opts);
     },
     runRegressionTests: MaintenanceApi.runRegressionTests,
-    runAllProjectTests: MaintenanceApi.runAllProjectTests
+    runAllProjectTests: MaintenanceApi.runAllProjectTests,
+    runProjectTestChunk: MaintenanceApi.runProjectTestChunk
   };
 </script>
