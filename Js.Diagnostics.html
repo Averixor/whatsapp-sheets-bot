@@ -213,7 +213,7 @@
     try {
       while (true) {
         chunkNo += 1;
-        renderProgress(offset, totalTasks, `Виконую пакет #${chunkNo}.`);
+        renderProgress(offset, totalTasks, `Виконую пакет №${chunkNo}.`);
 
         const chunkResponse = await ActionDispatcher.run(
           'stage7ProjectTestChunk',

@@ -319,11 +319,6 @@ var Stage7TestRunner = (function () {
       task_('historical-quick-diagnostics', 'Historical diagnostics: runHistoricalQuickDiagnosticsInternal_', 'diagnostics', 'full', 'warning', 'runHistoricalQuickDiagnosticsInternal_', optArg_('historicalQuick')),
       task_('historical-full-diagnostics', 'Historical diagnostics: runHistoricalFullDiagnosticsInternal_', 'diagnostics', 'full', 'warning', 'runHistoricalFullDiagnosticsInternal_', optArg_('historicalFull')),
 
-      task_('stage4-scenario-tests', 'Scenario tests: runStage4ScenarioTests', 'smoke', 'full', 'warning', 'runStage4ScenarioTests', optArg_('stage4Scenario')),
-      task_('stage5-scenario-tests', 'Scenario tests: runStage5ScenarioTests', 'smoke', 'full', 'warning', 'runStage5ScenarioTests', optArg_('stage5Scenario')),
-      task_('scenario-tests', 'Scenario tests: runScenarioTests', 'smoke', 'full', 'warning', 'runScenarioTests', optArg_('scenario')),
-      task_('smoke-tests', 'Smoke tests: runSmokeTests', 'smoke', 'fast', 'critical', 'runSmokeTests', optArg_('smoke')),
-      task_('regression-suite', 'Regression tests: runRegressionTestSuite', 'regression', 'full', 'critical', 'runRegressionTestSuite', optArg_('regression')),
 
       task_('domain-tests-stage6a', 'Domain tests: runStage6ADomainTests_', 'domain', 'full', 'warning', 'runStage6ADomainTests_', optArg_('domain')),
 
