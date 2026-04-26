@@ -104,7 +104,18 @@ var Stage7TestRunner = (function () {
       }
 
       if (opts.writeToLogger) {
-        Logger.log(JSON.stringify(report, null, 2));
+        Logger.log(
+          'WASB TEST RUN: runId=' + report.runId +
+          '; mode=' + report.mode +
+          '; status=' + (report.ok ? 'OK' : 'FAIL') +
+          '; passed=' + (report.counts && report.counts.passed || 0) +
+          '; failed=' + (report.counts && report.counts.failed || 0) +
+          '; warnings=' + (report.counts && report.counts.warnings || 0) +
+          '; offset=' + (typeof report.offset === 'number' ? report.offset : '-') +
+          '; nextOffset=' + (typeof report.nextOffset === 'number' ? report.nextOffset : '-') +
+          '; totalTasks=' + (report.totalTasks || report.counts && report.counts.total || 0) +
+          '; done=' + (report.done === true)
+        );
       }
 
       if (report && report.done === true) normalizeTestResultsDetailsForRun_(report.runId);
@@ -231,7 +242,18 @@ var Stage7TestRunner = (function () {
       }
 
       if (opts.writeToLogger) {
-        Logger.log(JSON.stringify(report, null, 2));
+        Logger.log(
+          'WASB TEST RUN: runId=' + report.runId +
+          '; mode=' + report.mode +
+          '; status=' + (report.ok ? 'OK' : 'FAIL') +
+          '; passed=' + (report.counts && report.counts.passed || 0) +
+          '; failed=' + (report.counts && report.counts.failed || 0) +
+          '; warnings=' + (report.counts && report.counts.warnings || 0) +
+          '; offset=' + (typeof report.offset === 'number' ? report.offset : '-') +
+          '; nextOffset=' + (typeof report.nextOffset === 'number' ? report.nextOffset : '-') +
+          '; totalTasks=' + (report.totalTasks || report.counts && report.counts.total || 0) +
+          '; done=' + (report.done === true)
+        );
       }
 
       if (report && report.done === true) normalizeTestResultsDetailsForRun_(report.runId);
