@@ -415,6 +415,62 @@
     `;
   }
 
+
+  function humanizeUiReportValue(value, limit) {
+    limit = limit || 900;
+
+    if (value === null || typeof value === 'undefined') return '';
+
+    if (typeof value === 'string') {
+      return compactUiReportText(value, limit);
+    }
+
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+
+    if (Array.isArray(value)) {
+      return 'Список: усього=' + value.length;
+    }
+
+    if (typeof value === 'object') {
+      if (value.message && typeof value.message !== 'object') return compactUiReportText(value.message, limit);
+      if (value.summary && typeof value.summary !== 'object') return compactUiReportText(value.summary, limit);
+      if (value.error && typeof value.error !== 'object') return compactUiReportText(value.error, limit);
+      if (Array.isArray(value.checks)) return 'Перевірки: усього=' + value.checks.length;
+      if (Array.isArray(value.results)) return 'Результати: усього=' + value.results.length;
+      if (value.url || value.link) return 'Посилання сформовано коректно.';
+
+      const keys = Object.keys(value).filter((key) => key !== 'raw' && key !== 'stack' && key !== 'errorStack');
+      return keys.length
+        ? 'Об’єкт результату: ' + keys.slice(0, 8).join(', ') + '. Деталі доступні у TEST_RESULTS.'
+        : 'Результат отримано як об’єкт; деталі доступні у TEST_RESULTS.';
+    }
+
+    return compactUiReportText(String(value), limit);
+  }
+
+  function compactUiReportText(text, limit) {
+    text = String(text || '').replace(/\s+/g, ' ').trim();
+
+    if (!text) return '';
+
+    if (text === '[object Object]') {
+      return 'Результат отримано як об’єкт; деталі доступні у TEST_RESULTS.';
+    }
+
+    if (/^https:\/\/wa\.me\//i.test(text)) {
+      return 'WhatsApp-посилання сформовано коректно.';
+    }
+
+    if (/^https?:\/\//i.test(text) && text.length > 120) {
+      return 'Посилання сформовано коректно.';
+    }
+
+    return text.length > limit ? text.slice(0, limit) + '…' : text;
+  }
+
+
   function copyProjectTestReport() {
     const report = STATE.lastProjectTestReport || STATE.lastHealthReport;
 
@@ -441,12 +497,12 @@
         const ok = typeof check?.ok === 'boolean' ? check.ok : status === 'OK';
         const icon = ok ? '✓' : (status === 'WARN' ? '⚠' : (status === 'SKIPPED' ? 'SKIP' : '✕'));
         const name = check?.title || check?.name || 'Перевірка';
-        const details = check?.details || check?.message || '';
-        const recommendation = check?.howTo || check?.recommendation || '';
+        const details = humanizeUiReportValue(check?.details || check?.message || '', 900);
+        const recommendation = humanizeUiReportValue(check?.howTo || check?.recommendation || '', 700);
 
         text += icon + ' [' + (status || '?') + '] ' + name + '\n';
-        if (details) text += '   Деталі: ' + String(details).replace(/\n/g, ' ') + '\n';
-        if (recommendation) text += '   Як виправити: ' + String(recommendation).replace(/\n/g, ' ') + '\n';
+        if (details) text += '   Деталі: ' + humanizeUiReportValue(details, 900).replace(/\n/g, ' ') + '\n';
+        if (recommendation) text += '   Як виправити: ' + humanizeUiReportValue(recommendation, 700).replace(/\n/g, ' ') + '\n';
         text += '\n';
       });
 
@@ -561,8 +617,8 @@
     const isPseudo = status === 'PSEUDO';
     const icon = isPseudo ? '🧩' : (ok ? '✓' : (status === 'WARN' ? '⚠' : '✕'));
     const title = check?.title || check?.name || 'Перевірка';
-    const details = check?.details || check?.message || '';
-    const recommendation = check?.howTo || check?.recommendation || '';
+    const details = humanizeUiReportValue(check?.details || check?.message || '', 900);
+    const recommendation = humanizeUiReportValue(check?.howTo || check?.recommendation || '', 700);
     const cssClass = isPseudo ? 'pseudo' : (ok ? 'ok' : (status === 'FAIL' ? 'bad' : 'warn'));
     const noteLabel = isPseudo ? 'Примітка' : 'Як виправити';
 
@@ -671,8 +727,8 @@
         const isPseudo = status === 'PSEUDO';
         const icon = isPseudo ? '🧩' : (ok ? '✓' : (status === 'WARN' ? '⚠' : '✕'));
         const name = check?.title || check?.name || 'Перевірка';
-        const details = check?.details || check?.message || '';
-        const recommendation = check?.howTo || check?.recommendation || '';
+        const details = humanizeUiReportValue(check?.details || check?.message || '', 900);
+        const recommendation = humanizeUiReportValue(check?.howTo || check?.recommendation || '', 700);
 
         text += `${icon} [${status || '?'}] ${name}\n`;
         if (details) text += `   Деталі: ${details}\n`;

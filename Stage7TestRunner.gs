@@ -651,27 +651,226 @@ var Stage7TestRunner = (function () {
     return 'ok';
   }
 
+  function humanizeReportValue_(value, limit) {
+    limit = limit || 900;
+
+    if (value === null || typeof value === 'undefined') return '';
+
+    if (typeof value === 'string') {
+      return compactReportText_(value, limit);
+    }
+
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+
+    if (Object.prototype.toString.call(value) === '[object Date]') {
+      return toIso_(value);
+    }
+
+    if (Array.isArray(value)) {
+      return summarizeReportArray_(value, limit);
+    }
+
+    if (typeof value === 'object') {
+      return summarizeReportObject_(value, limit);
+    }
+
+    return compactReportText_(String(value), limit);
+  }
+
+  function compactReportText_(text, limit) {
+    text = String(text || '').replace(/\s+/g, ' ').trim();
+
+    if (!text) return '';
+
+    if (text === '[object Object]') {
+      return 'Результат отримано як об’єкт; деталі доступні у TEST_RESULTS.';
+    }
+
+    if (/^https:\/\/wa\.me\//i.test(text)) {
+      return 'WhatsApp-посилання сформовано коректно.';
+    }
+
+    if (/^https?:\/\//i.test(text) && text.length > 120) {
+      return 'Посилання сформовано коректно.';
+    }
+
+    return text.length > limit ? text.slice(0, limit) + '…' : text;
+  }
+
+  function summarizeReportArray_(items, limit) {
+    if (!items.length) return 'Список порожній.';
+
+    var fail = 0;
+    var warn = 0;
+    var ok = 0;
+    var pseudo = 0;
+    var skipped = 0;
+    var failedNames = [];
+
+    items.forEach(function(item) {
+      if (!item || typeof item !== 'object') return;
+
+      var status = String(item.status || item.result || '').toUpperCase();
+      var itemOk = item.ok === true || item.success === true || item.passed === true;
+
+      if (
+        status === 'FAIL' ||
+        status === 'FAILED' ||
+        status === 'ERROR' ||
+        item.ok === false ||
+        item.success === false ||
+        item.passed === false
+      ) {
+        fail += 1;
+        if (failedNames.length < 3) {
+          failedNames.push(String(item.title || item.name || item.id || 'перевірка'));
+        }
+        return;
+      }
+
+      if (status === 'WARN' || status === 'WARNING') {
+        warn += 1;
+        return;
+      }
+
+      if (status === 'PSEUDO') {
+        pseudo += 1;
+        return;
+      }
+
+      if (status === 'SKIP' || status === 'SKIPPED') {
+        skipped += 1;
+        return;
+      }
+
+      if (itemOk || status === 'OK' || status === 'PASS') {
+        ok += 1;
+      }
+    });
+
+    var parts = ['усього=' + items.length];
+
+    if (ok) parts.push('OK=' + ok);
+    if (fail) parts.push('FAIL=' + fail);
+    if (warn) parts.push('WARN=' + warn);
+    if (pseudo) parts.push('PSEUDO=' + pseudo);
+    if (skipped) parts.push('SKIP=' + skipped);
+
+    var text = parts.join(', ');
+
+    if (failedNames.length) {
+      text += '. Проблемні: ' + failedNames.join('; ');
+    }
+
+    return compactReportText_(text, limit);
+  }
+
+  function summarizeReportObject_(obj, limit) {
+    if (!obj) return '';
+
+    if (obj.message && typeof obj.message !== 'object') {
+      return compactReportText_(obj.message, limit);
+    }
+
+    if (obj.summary && typeof obj.summary !== 'object') {
+      return compactReportText_(obj.summary, limit);
+    }
+
+    if (obj.error && typeof obj.error !== 'object') {
+      return compactReportText_(obj.error, limit);
+    }
+
+    if (obj.details && typeof obj.details !== 'object') {
+      return compactReportText_(obj.details, limit);
+    }
+
+    if (Array.isArray(obj.checks)) {
+      return 'Перевірки: ' + summarizeReportArray_(obj.checks, limit);
+    }
+
+    if (Array.isArray(obj.results)) {
+      return 'Результати: ' + summarizeReportArray_(obj.results, limit);
+    }
+
+    if (Array.isArray(obj.errors) && obj.errors.length) {
+      return 'Помилки: ' + summarizeReportArray_(obj.errors, limit);
+    }
+
+    if (Array.isArray(obj.warnings) && obj.warnings.length) {
+      return 'Попередження: ' + summarizeReportArray_(obj.warnings, limit);
+    }
+
+    if (obj.counts && typeof obj.counts === 'object') {
+      var counts = obj.counts;
+      var countParts = [];
+
+      if (typeof counts.total !== 'undefined') countParts.push('усього=' + counts.total);
+      if (typeof counts.passed !== 'undefined') countParts.push('passed=' + counts.passed);
+      if (typeof counts.failed !== 'undefined') countParts.push('failed=' + counts.failed);
+      if (typeof counts.warnings !== 'undefined') countParts.push('warnings=' + counts.warnings);
+      if (typeof counts.skipped !== 'undefined') countParts.push('skipped=' + counts.skipped);
+
+      if (countParts.length) return countParts.join(', ');
+    }
+
+    if (typeof obj.passed === 'number' || typeof obj.failed === 'number') {
+      return 'passed=' + String(obj.passed || 0) + '; failed=' + String(obj.failed || 0);
+    }
+
+    if (typeof obj.ok === 'boolean') {
+      return obj.ok ? 'Перевірку виконано успішно.' : 'Перевірка повернула помилку.';
+    }
+
+    if (typeof obj.success === 'boolean') {
+      return obj.success ? 'Операцію виконано успішно.' : 'Операція повернула помилку.';
+    }
+
+    if (obj.url || obj.link) {
+      return 'Посилання сформовано коректно.';
+    }
+
+    var keys = Object.keys(obj).filter(function(key) {
+      return key !== 'raw' && key !== 'stack' && key !== 'errorStack';
+    });
+
+    if (keys.length) {
+      return 'Об’єкт результату: ' + keys.slice(0, 8).join(', ') + '. Деталі доступні у TEST_RESULTS.';
+    }
+
+    return 'Результат отримано як об’єкт; деталі доступні у TEST_RESULTS.';
+  }
+
   function buildTaskMessage_(status, details, task) {
     var raw = details ? details.raw : null;
 
     if (raw && typeof raw === 'object') {
-      if (raw.message) return String(raw.message);
-      if (raw.summary) return String(raw.summary);
-      if (raw.error) return String(raw.error);
+      if (raw.message) return humanizeReportValue_(raw.message, 900);
+      if (raw.summary) return humanizeReportValue_(raw.summary, 900);
+      if (raw.error) return humanizeReportValue_(raw.error, 900);
+      if (raw.details) return humanizeReportValue_(raw.details, 900);
 
-      if (raw.checks && Array.isArray(raw.checks)) return 'checks=' + raw.checks.length;
-      if (raw.results && Array.isArray(raw.results)) return 'results=' + raw.results.length;
-      if (raw.summary && typeof raw.summary === 'object') return safeJson_(raw.summary, 1000);
-      if (typeof raw.passed === 'number' || typeof raw.failed === 'number') {
-        return 'passed=' + String(raw.passed || 0) + '; failed=' + String(raw.failed || 0);
+      if (raw.checks && Array.isArray(raw.checks)) {
+        return 'Перевірки: ' + summarizeReportArray_(raw.checks, 900);
       }
+
+      if (raw.results && Array.isArray(raw.results)) {
+        return 'Результати: ' + summarizeReportArray_(raw.results, 900);
+      }
+
+      return summarizeReportObject_(raw, 900);
     }
 
-    if (typeof raw === 'string' && raw) return raw.length > 500 ? raw.slice(0, 500) + '…' : raw;
+    if (typeof raw === 'string' && raw) {
+      return compactReportText_(raw, 900);
+    }
+
     if (status === 'PASS') return 'Виконано успішно.';
     if (status === 'WARN') return 'Виконано з попередженнями.';
     if (status === 'FAIL') return 'Перевірка завершилась помилкою.';
     if (status === 'SKIPPED') return 'Перевірку пропущено.';
+
     return 'Виконано.';
   }
 
@@ -679,9 +878,9 @@ var Stage7TestRunner = (function () {
     var raw = details ? details.raw : null;
 
     if (raw && typeof raw === 'object') {
-      if (raw.recommendation) return String(raw.recommendation);
-      if (raw.howTo) return String(raw.howTo);
-      if (raw.reason) return String(raw.reason);
+      if (raw.recommendation) return humanizeReportValue_(raw.recommendation, 700);
+      if (raw.howTo) return humanizeReportValue_(raw.howTo, 700);
+      if (raw.reason) return humanizeReportValue_(raw.reason, 700);
       if (raw.blocked === true) return 'Запустити у safe test mode або перевірити права доступу/роль користувача.';
     }
 
