@@ -24,6 +24,7 @@ const PROJECT_DOCUMENTATION_MAP_ = Object.freeze({
     security: 'SECURITY.md',
     changelog: 'CHANGELOG.md'
   }),
+  
   historical: Object.freeze([
     '_extras/history/README.md',
     '_extras/history/ACCESS_VIEWER_RESTRICTIONS_2026-03-29.md',
@@ -89,6 +90,7 @@ const PROJECT_STAGE7_CANONICAL_API_MAP_ = Object.freeze({
     'apiStage7CreateNextMonth',
     'apiRunReconciliation'
   ]),
+
   maintenance: Object.freeze([
     'apiStage7ClearCache',
     'apiStage7ClearLog',
@@ -105,6 +107,7 @@ const PROJECT_STAGE7_CANONICAL_API_MAP_ = Object.freeze({
     'apiStage7HealthCheck',
     'apiRunStage7Diagnostics',
     'apiRunStage7RegressionTests',
+    'apiRunStage7AllProjectTests',
     'apiListStage7JobRuntime',
     'apiStage7ListPendingRepairs',
     'apiStage7GetOperationDetails',
@@ -115,6 +118,7 @@ const PROJECT_STAGE7_CANONICAL_API_MAP_ = Object.freeze({
     'apiStage7BootstrapRuntimeAndAlertsSheets',
     'apiStage7BootstrapAccessSheet'
   ]),
+
   compatibility: Object.freeze([
     'getMonthsList',
     'getSidebarData',
@@ -222,6 +226,7 @@ const PROJECT_STAGE7_CLIENT_ROUTING_GROUPS_ = Object.freeze({
     sendUnsent: 'apiSendPendingRows',
     runReconciliation: 'apiRunReconciliation'
   }),
+
   spreadsheet: Object.freeze({
     previewSelectionMessage: 'apiPreviewSelectionMessage',
     previewMultipleMessages: 'apiPreviewMultipleMessages',
@@ -232,6 +237,7 @@ const PROJECT_STAGE7_CLIENT_ROUTING_GROUPS_ = Object.freeze({
     logPreparedMessages: 'apiLogPreparedMessages',
     runSelectionDiagnostics: 'apiRunSelectionDiagnostics'
   }),
+
   maintenance: Object.freeze({
     clearCache: 'apiStage7ClearCache',
     clearLog: 'apiStage7ClearLog',
@@ -248,6 +254,7 @@ const PROJECT_STAGE7_CLIENT_ROUTING_GROUPS_ = Object.freeze({
     healthCheck: 'apiStage7HealthCheck',
     runDiagnostics: 'apiRunStage7Diagnostics',
     runRegressionTests: 'apiRunStage7RegressionTests',
+    runAllProjectTests: 'apiRunStage7AllProjectTests',
     listJobRuntime: 'apiListStage7JobRuntime',
     pendingRepairs: 'apiStage7ListPendingRepairs',
     operationDetails: 'apiStage7GetOperationDetails',
@@ -438,6 +445,7 @@ const PROJECT_BUNDLE_METADATA_ = Object.freeze({
     localWorkflowOptional: true,
     notes: ['The release zip must not include .git or node_modules.', 'Non-runtime documentation and import helpers live under _extras/.', 'No .clasp files are required or shipped for the web-editor workflow.']
   }),
+
   maintenanceLayerStatus: 'stage7-canonical-maintenance-api',
   compatibilityPolicyMarker: 'stage7-compatible',
   sunsetPolicyMarker: 'stage7-sunset-governed',
@@ -454,6 +462,7 @@ const PROJECT_BUNDLE_METADATA_ = Object.freeze({
     'SECURITY.md',
     'CHANGELOG.md'
   ]),
+
   notes: Object.freeze([
     'Metadata is aligned to the active Stage 7.1.2 final clean release identity.',
     'Root documentation is reduced to five active markdown files.',

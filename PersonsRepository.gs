@@ -222,9 +222,7 @@ var PersonsRepository_ = PersonsRepository_ || (function() {
           seen[normalized] = true;
           dates.push(normalized);
         }
-      } catch (_) {
-        // Пропускаємо порожні/сміттєві значення у рядку дат замість падіння всього smoke-suite.
-      }
+      } catch (_) {}
     });
 
     return dates;

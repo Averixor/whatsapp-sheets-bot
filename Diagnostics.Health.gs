@@ -11,7 +11,7 @@ function _ensureSendPanelTechnicalSheet_() {
   if (sh.getLastRow() < 1) {
     sh.getRange(1, 1, 1, 7)
       .merge()
-      .setValue(`🤖 Активний місяць: ${getBotMonthSheetName_()}`)
+      .setValue(`Активний місяць: ${getBotMonthSheetName_()}`)
       .setFontWeight('bold')
       .setHorizontalAlignment('center')
       .setBackground('#fff3cd');

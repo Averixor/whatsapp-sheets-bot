@@ -5,7 +5,7 @@
  *
  * Історично smoke/regression suite очікує файл AccessE2ETests.gs і функцію
  * runAccessSecurityE2ETests_(). Зберігаємо сумісність без дублювання логіки.
- */
+*/
 
 function runAccessSecurityE2ETests_(options) {
   if (typeof runAccessPolicyChecks !== 'function') {

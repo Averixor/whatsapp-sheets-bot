@@ -23,28 +23,38 @@ var POLICY_CHECKS_CONFIG_ = {
     'LOG',
     'VACATIONS',
     'ИСТОРИЯ_ЗВЕДЕНЬ',
-    'Графік_відпусток',
+    'VACATION_SCHEDULE',
     'SEND_PANEL',
     'PHONES'
   ],
 
-  // false -> достатньо, що всі очікувані листи присутні
-  // true  -> потрібен точний збіг без зайвих листів
+
   STRICT_PROTECTED_SHEETS_MODE: false,
 
-  REQUIRED_MAINTENANCE_ACTIONS: ['repair', 'protections', 'triggers'],
-  ROLES_WITH_ACTIONS: ['viewer', 'operator', 'maintainer', 'admin', 'sysadmin', 'owner'],
+  REQUIRED_MAINTENANCE_ACTIONS: [
+    'repair', 
+    'protections', 
+    'triggers'
+  ],
+
+  ROLES_WITH_ACTIONS: [
+    'viewer', 
+    'operator', 
+    'maintainer', 
+    'admin', 
+    'sysadmin', 
+    'owner'
+  ],
+
   SCRIPT_PROPERTY_ALLOW_TESTS: 'WASB_ALLOW_POLICY_TESTS'
 };
 
-// Заморожуємо конфігурацію для захисту
 if (typeof Object.freeze === 'function') {
   Object.freeze(POLICY_CHECKS_CONFIG_.EXPECTED_PROTECTED_SHEETS);
   Object.freeze(POLICY_CHECKS_CONFIG_.REQUIRED_MAINTENANCE_ACTIONS);
   Object.freeze(POLICY_CHECKS_CONFIG_.ROLES_WITH_ACTIONS);
   Object.freeze(POLICY_CHECKS_CONFIG_);
 }
-
 
 // ==================== ВНУТРІШНІ ДОПОМІЖНІ ФУНКЦІЇ ====================
 
@@ -354,7 +364,6 @@ function _patchSideEffectsForPolicyChecks_() {
     mailSendEmail: null
   };
 
-  // Перехоплюємо AccessEnforcement_.reportViolation
   try {
     if (typeof AccessEnforcement_ !== 'undefined' &&
         AccessEnforcement_ &&
@@ -371,7 +380,6 @@ function _patchSideEffectsForPolicyChecks_() {
     }
   } catch (_) {}
 
-  // Перехоплюємо MailApp.sendEmail
   try {
     if (typeof MailApp !== 'undefined' &&
         MailApp &&
@@ -425,7 +433,6 @@ function _buildBlockedReport_(message) {
   };
 }
 
-
 // ==================== ГОЛОВНА ФУНКЦІЯ ====================
 
 /**
@@ -459,13 +466,11 @@ function runAccessPolicyChecks(options) {
   var originals = _patchSideEffectsForPolicyChecks_();
 
   try {
-    // Перевірка 1: AccessControl.describe доступний
     _pushPolicyCheck_(report, 'AccessControl.describe available', function() {
       _requireObjectWithMethod_(AccessControl_, 'describe', 'AccessControl_');
       return 'describe-ok';
     });
 
-    // Перевірка 2: Дескриптор має контракт політики ротації
     _pushPolicyCheck_(report, 'descriptor exposes rotation policy contract', function() {
       _requireObjectWithMethod_(AccessControl_, 'describe', 'AccessControl_');
 
@@ -475,15 +480,19 @@ function runAccessPolicyChecks(options) {
       if (!('rotationPolicy' in descriptor)) {
         throw new Error('rotationPolicy missing');
       }
+
       if (!('migrationModeEnabled' in descriptor)) {
         throw new Error('migrationModeEnabled missing');
       }
+
       if (!('allowedActions' in descriptor)) {
         throw new Error('allowedActions missing');
       }
+
       if (typeof descriptor.migrationModeEnabled !== 'boolean') {
         throw new Error('migrationModeEnabled should be boolean');
       }
+
       if (!Array.isArray(descriptor.allowedActions)) {
         throw new Error('allowedActions should be array');
       }
@@ -495,7 +504,6 @@ function runAccessPolicyChecks(options) {
       };
     });
 
-    // Перевірка 3: Viewer може відкривати тільки свою картку
     _pushPolicyCheck_(report, 'viewer may open only own card', function() {
       _requireObject_(AccessEnforcement_, 'AccessEnforcement_');
       if (typeof AccessEnforcement_.canOpenPersonCard !== 'function') {
@@ -512,6 +520,7 @@ function runAccessPolicyChecks(options) {
       if (!AccessEnforcement_.canOpenPersonCard(viewer, 'ALFA')) {
         throw new Error('Viewer own card should be allowed');
       }
+
       if (AccessEnforcement_.canOpenPersonCard(viewer, 'BRAVO')) {
         throw new Error('Viewer foreign card should be denied');
       }
@@ -519,7 +528,6 @@ function runAccessPolicyChecks(options) {
       return 'viewer-self-card-ok';
     });
 
-    // Перевірка 4: Viewer не може використовувати зведення та send panel
     _pushPolicyCheck_(report, 'viewer cannot use summaries or send panel', function() {
       _requireObject_(AccessEnforcement_, 'AccessEnforcement_');
 
@@ -540,9 +548,11 @@ function runAccessPolicyChecks(options) {
       if (AccessEnforcement_.canUseDaySummary(viewer)) {
         throw new Error('Viewer day summary should be denied');
       }
+
       if (AccessEnforcement_.canUseDetailedSummary(viewer)) {
         throw new Error('Viewer detailed summary should be denied');
       }
+
       if (AccessEnforcement_.canUseSendPanel(viewer)) {
         throw new Error('Viewer send panel should be denied');
       }
@@ -550,7 +560,6 @@ function runAccessPolicyChecks(options) {
       return 'viewer-restrictions-ok';
     });
 
-    // Перевірка 5: Operator має зведення, але не робочі дії
     _pushPolicyCheck_(report, 'operator gets summaries but not working actions', function() {
       _requireObject_(AccessEnforcement_, 'AccessEnforcement_');
 
@@ -570,12 +579,15 @@ function runAccessPolicyChecks(options) {
       if (!AccessEnforcement_.canUseDaySummary(operator)) {
         throw new Error('Operator day summary should be allowed');
       }
+
       if (!AccessEnforcement_.canUseDetailedSummary(operator)) {
         throw new Error('Operator detailed summary should be allowed');
       }
+
       if (AccessEnforcement_.canUseWorkingActions(operator)) {
         throw new Error('Operator working actions should be denied');
       }
+
       if (AccessEnforcement_.canUseSendPanel(operator)) {
         throw new Error('Operator send panel should be denied');
       }
@@ -583,7 +595,6 @@ function runAccessPolicyChecks(options) {
       return 'operator-summaries-only-ok';
     });
 
-    // Перевірка 6: Guest не має доступу до карток та send panel
     _pushPolicyCheck_(report, 'guest stays locked out of cards and send panel', function() {
       _requireObject_(AccessEnforcement_, 'AccessEnforcement_');
 
@@ -610,7 +621,6 @@ function runAccessPolicyChecks(options) {
       return 'guest-restrictions-ok';
     });
 
-    // Перевірка 7: Дозволені дії viewer — мінімальні, без адмін-прав
     _pushPolicyCheck_(report, 'viewer allowed actions stay minimal and non-admin', function() {
       var actions = _getAllowedActionsForRoleOrSkip_('viewer');
       var set = _asCanonicalActionSet_(actions);
@@ -631,7 +641,6 @@ function runAccessPolicyChecks(options) {
       };
     });
 
-    // Перевірка 8: Sysadmin має всі необхідні дії обслуговування
     _pushPolicyCheck_(report, 'sysadmin has required maintenance actions', function() {
       var actions = _getAllowedActionsForRoleOrSkip_('sysadmin');
       var set = _asCanonicalActionSet_(actions);
@@ -649,7 +658,6 @@ function runAccessPolicyChecks(options) {
       };
     });
 
-    // Перевірка 9: Основні ролі мають непорожній список дій
     _pushPolicyCheck_(report, 'core roles expose allowed actions map', function() {
       var out = {};
       var roles = POLICY_CHECKS_CONFIG_.ROLES_WITH_ACTIONS;
@@ -666,7 +674,6 @@ function runAccessPolicyChecks(options) {
       return out;
     });
 
-    // Перевірка 10: Контракт захищених листів відповідає конфігурації
     _pushPolicyCheck_(report, 'protected sheets contract matches configuration', function() {
       _requireObject_(AccessEnforcement_, 'AccessEnforcement_');
       if (!Array.isArray(AccessEnforcement_.PROTECTED_SHEETS)) {
@@ -702,7 +709,6 @@ function runAccessPolicyChecks(options) {
       };
     });
 
-    // Перевірка 11: Підвищені ролі мають доступ до дій обслуговування
     _pushPolicyCheck_(report, 'maintenance actions contract covers elevated roles', function() {
       var elevated = ['maintainer', 'admin', 'sysadmin', 'owner'];
       var output = {};
@@ -727,7 +733,6 @@ function runAccessPolicyChecks(options) {
     _restoreSideEffectsForPolicyChecks_(originals);
   }
 
-  // Підсумок
   report.summary = _summarizeReportCounts_(report);
   if (report.summary.fail > 0) {
     report.status = 'FAIL';
@@ -750,7 +755,6 @@ function runAccessPolicyChecks(options) {
 
   return report;
 }
-
 
 // ==================== ДІАГНОСТИЧНІ ХЕЛПЕРИ ====================
 

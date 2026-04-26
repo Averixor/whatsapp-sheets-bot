@@ -153,12 +153,6 @@ function formatDetailedSummaryLegacy_(date, people) {
   return txt;
 }
 
-function saveDetailedSummaryToHistory_(date, people, text) {
-  const sh = ensureSheet_(CONFIG.SUMMARY_HISTORY_SHEET);
-  if (sh.getLastRow() === 0) sh.appendRow(['Дата', 'Час', 'Осіб', 'Текст', 'JSON(people)']);
-  sh.appendRow([date, new Date(), new Set(people.map(p => p.surname)).size, text, JSON.stringify(people)]);
-}
-
 function createDetailedSheet_(date, people) {
   const sh = ensureSheet_(CONFIG.DETAIL_SHEET);
   sh.clear();
@@ -191,7 +185,6 @@ function createDetailedDaySummary() {
     const people = collectPeopleDetailed_(sheet, col);
     const text = formatDetailedSummary_(date, people);
 
-    saveDetailedSummaryToHistory_(date, people, text);
     createDetailedSheet_(date, people);
     showDetailedSummaryDialog_(date, text);
   } catch (e) { SpreadsheetApp.getUi().alert('✕ ' + e.message); }

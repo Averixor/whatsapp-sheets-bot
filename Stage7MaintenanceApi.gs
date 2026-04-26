@@ -429,6 +429,25 @@ function apiRunStage7RegressionTests(options) {
   );
 }
 
+function apiRunStage7AllProjectTests(options) {
+  _stage7AssertRole_('admin', 'run all project tests');
+  const opts = Object.assign({}, options || {}, {
+    writeToSheet: true,
+    writeToLogger: true,
+    useLock: true,
+    includeDiscovery: true,
+    dryRun: true
+  });
+  const report = runAllProjectTests(opts);
+  return _stage7BuildMaintenanceResponse_(
+    report.ok,
+    report.ok ? 'Усі тести проєкту пройдено' : 'У тестах проєкту є збої',
+    report,
+    'stage7AllProjectTests',
+    report.warnings || []
+  );
+}
+
 function apiListStage7JobRuntime() {
   _stage7AssertRole_('admin', 'list job runtime');
   const report = JobRuntime_.buildRuntimeReport();

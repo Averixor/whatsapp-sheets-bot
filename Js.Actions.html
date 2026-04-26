@@ -448,33 +448,51 @@
           <div class="person-card__rank">${escapeHtml(data.rank || '—')}</div>
         </div>
 
-        <div class="person-card__grid">
-          <div class="person-card__label">Дата</div>
-          <div class="person-card__value">${escapeHtml(data.dateStr || '—')}</div>
+        <div class="person-card__meta">
+          <div class="person-card__field">
+            <div class="person-card__label">Дата</div>
+            <div class="person-card__value">${escapeHtml(data.dateStr || '—')}</div>
+          </div>
 
-          <div class="person-card__label">ПІБ</div>
-          <div class="person-card__value">${escapeHtml(data.fml || '—')}</div>
+          <div class="person-card__field">
+            <div class="person-card__label">ПІБ</div>
+            <div class="person-card__value">${escapeHtml(data.fml || '—')}</div>
+          </div>
 
-          <div class="person-card__label">Посада</div>
-          <div class="person-card__value">${escapeHtml(data.position || '—')}</div>
+          <div class="person-card__field">
+            <div class="person-card__label">Посада</div>
+            <div class="person-card__value">${escapeHtml(data.position || '—')}</div>
+          </div>
 
-          <div class="person-card__label">ОШС</div>
-          <div class="person-card__value">${escapeHtml(data.oshs || '—')}</div>
+          <div class="person-card__field">
+            <div class="person-card__label">ОШС</div>
+            <div class="person-card__value">${escapeHtml(data.oshs || '—')}</div>
+          </div>
 
-          <div class="person-card__label">Телефон</div>
-          <div class="person-card__value">${escapeHtml(data.phoneDisplay || '—')}</div>
+          <div class="person-card__field">
+            <div class="person-card__label">Телефон</div>
+            <div class="person-card__value">${escapeHtml(data.phoneDisplay || '—')}</div>
+          </div>
 
-          <div class="person-card__label">ДН</div>
-          <div class="person-card__value">${escapeHtml(data.birthday || '—')}</div>
+          <div class="person-card__field">
+            <div class="person-card__label">ДН</div>
+            <div class="person-card__value">${escapeHtml(data.birthday || '—')}</div>
+          </div>
 
-          <div class="person-card__label">Група</div>
-          <div class="person-card__value">${escapeHtml(data.todayGroup || '—')}</div>
+          <div class="person-card__field">
+            <div class="person-card__label">Група</div>
+            <div class="person-card__value">${escapeHtml(data.todayGroup || '—')}</div>
+          </div>
 
-          <div class="person-card__label">БР цей місяць</div>
-          <div class="person-card__value">${escapeHtml(data.brDaysThisMonth || '0')}</div>
+          <div class="person-card__field">
+            <div class="person-card__label">БР цей місяць</div>
+            <div class="person-card__value">${escapeHtml(data.brDaysThisMonth || '0')}</div>
+          </div>
 
-          <div class="person-card__label">БР минулий місяць</div>
-          <div class="person-card__value">${escapeHtml(data.brDaysPrevMonth || '0')}</div>
+          <div class="person-card__field">
+            <div class="person-card__label">БР минулий місяць</div>
+            <div class="person-card__value">${escapeHtml(data.brDaysPrevMonth || '0')}</div>
+          </div>
         </div>
 
         ${currentVacHtml}
@@ -730,6 +748,7 @@
     switchToSelectedMonth,
 
     runHealthCheck,
+    runAllProjectTests,
     showHealthCheckPanel,
     cleanupTriggers,
     debugPhones,
@@ -740,6 +759,7 @@
     showOperationDetails,
     runRepair,
     copyHealthReport,
+    copyProjectTestReport,
     setHealthCheckMode,
     debugAccess: function() { return handleMenuAction('debugAccess'); },
 

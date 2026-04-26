@@ -245,6 +245,7 @@ const Reconciliation_ = (function () {
       expectedRow.code || '',
       expectedRow.tasks || ''
     ]]);
+
     panel.getRange(nextRow, 6, 1, 2).setValues([[
       expectedRow.sent === true ? getSendPanelSentMark_() : getSendPanelUnsentMark_(),
       resolveSendPanelActionCellValue_(expectedRow.link || '', status, expectedRow.sent === true)
@@ -409,6 +410,7 @@ const Reconciliation_ = (function () {
           count: (sidebar.personnel || []).length
         }
       });
+
     } catch (e) {
       checks.push({
         name: 'monthly ↔ sidebar-view data',
@@ -428,6 +430,7 @@ const Reconciliation_ = (function () {
           detailedSummaryLength: String(detailed.summary || '').length
         }
       });
+      
     } catch (e) {
       checks.push({
         name: 'monthly ↔ summaries',

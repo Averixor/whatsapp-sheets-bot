@@ -122,22 +122,33 @@
     white-space: nowrap;
   }
 
-  .person-card__grid {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 8px 12px;
+  .person-card__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     margin-bottom: 14px;
   }
 
+  .person-card__field {
+    display: block;
+    min-width: 0;
+  }
+
   .person-card__label {
+    display: block;
     color: var(--text-muted);
     font-size: 0.9rem;
+    line-height: 1.25;
+    margin: 0 0 4px 0;
   }
 
   .person-card__value {
+    display: block;
     color: var(--text-primary);
     font-size: 0.9rem;
+    line-height: 1.4;
     word-break: break-word;
+    margin: 0;
   }
 
   .person-card__section {

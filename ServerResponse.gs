@@ -1,35 +1,187 @@
-/**
- * ServerResponse.gs — канонічний контракт server-side API для stage 7.
- */
+// ===== FILE: ServerResponse.gs =====
 
-const SERVER_RESPONSE_VERSION_ = '3.0.0';
+const SERVER_RESPONSE_VERSION_ = '4.0.0';
 
-function buildServerResponse_(success, data, message, error, context, warnings) {
+function serverResponseAsArray_(value) {
+  if (typeof stage7AsArray_ === 'function') {
+    return stage7AsArray_(value);
+  }
+
+  if (value === null || value === undefined || value === '') return [];
+  if (Array.isArray(value)) return value.slice();
+  return [value];
+}
+
+function normalizeServerWarningItem_(item) {
+  if (item === null || item === undefined || item === '') return '';
+
+  if (typeof item === 'string') return item;
+
+  if (typeof item === 'object') {
+    if (item.message && item.code) return '[' + item.code + '] ' + item.message;
+    if (item.message) return String(item.message);
+    if (item.text) return String(item.text);
+    if (item.code) return String(item.code);
+
+    try {
+      return JSON.stringify(item);
+    } catch (e) {
+      return String(item);
+    }
+  }
+
+  return String(item);
+}
+
+function normalizeServerWarnings_(warnings) {
+  if (typeof normalizeWorkflowWarnings_ === 'function') {
+    return normalizeWorkflowWarnings_(warnings);
+  }
+
+  if (!Array.isArray(warnings)) return [];
+
+  var out = [];
+  warnings.forEach(function(item) {
+    var normalized = normalizeServerWarningItem_(item);
+    if (!normalized) return;
+    out.push(normalized);
+  });
+
+  return Array.from(new Set(out));
+}
+
+function buildServerResponseData_(result, changes, meta, diagnostics) {
+  return {
+    result: result === undefined ? null : result,
+    changes: Array.isArray(changes) ? changes : serverResponseAsArray_(changes),
+    meta: meta && typeof meta === 'object' ? Object.assign({}, meta) : {},
+    diagnostics: diagnostics || null
+  };
+}
+
+function mergeServerResponseTopLevelMeta_(source, targetMeta) {
+  const meta = targetMeta && typeof targetMeta === 'object' ? Object.assign({}, targetMeta) : {};
+  const keys = [
+    'stage',
+    'hardeningStage',
+    'scenario',
+    'rawScenario',
+    'operationId',
+    'parentOperationId',
+    'route',
+    'fingerprint',
+    'affectedSheets',
+    'affectedEntities',
+    'appliedChangesCount',
+    'skippedChangesCount',
+    'dryRun',
+    'partial',
+    'retrySafe',
+    'lockUsed',
+    'lockRequired',
+    'durationMs',
+    'sync',
+    'verification',
+    'repairNeeded',
+    'diagnosticsSummary'
+  ];
+
+  keys.forEach(function(key) {
+    if (!source || source[key] === undefined) return;
+    if (meta[key] !== undefined) return;
+    meta[key] = source[key];
+  });
+
+  return meta;
+}
+
+function toServerResponseCount_(value, fallback) {
+  if (value === undefined || value === null || value === '') {
+    return Number(fallback || 0);
+  }
+
+  const num = Number(value);
+  return isNaN(num) ? Number(fallback || 0) : num;
+}
+
+function buildServerResponseEnvelope_(success, message, error, result, changes, meta, diagnostics, context, warnings) {
+  const safeContext = context || null;
+  const safeMeta = meta && typeof meta === 'object' ? Object.assign({}, meta) : {};
+  const safeDiagnostics = diagnostics || null;
+  const data = buildServerResponseData_(result, changes, safeMeta, safeDiagnostics);
+
   return {
     success: !!success,
     message: String(message || ''),
     error: error ? String(error) : null,
-    data: data === undefined ? null : data,
-    context: context || null,
-    warnings: Array.isArray(warnings) ? warnings.filter(Boolean).map(String) : []
+    data: data,
+    context: safeContext,
+    warnings: normalizeServerWarnings_(warnings),
+    operationId: safeMeta.operationId || (safeContext && safeContext.operationId) || null,
+    scenario: safeMeta.scenario || (safeContext && safeContext.scenario) || null,
+    dryRun: !!(safeMeta.dryRun || (safeContext && safeContext.dryRun)),
+    affectedSheets: serverResponseAsArray_(safeMeta.affectedSheets),
+    affectedEntities: serverResponseAsArray_(safeMeta.affectedEntities),
+    appliedChangesCount: toServerResponseCount_(safeMeta.appliedChangesCount, data.changes.length),
+    skippedChangesCount: toServerResponseCount_(safeMeta.skippedChangesCount, 0),
+    partial: !!safeMeta.partial,
+    retrySafe: safeMeta.retrySafe !== false,
+    lockUsed: !!safeMeta.lockUsed,
+    lockRequired: !!safeMeta.lockRequired,
+    diagnostics: safeDiagnostics
   };
 }
 
+function buildSimpleServerResponse_(success, data, message, error, context, warnings) {
+  let result = data;
+  let changes = [];
+  let meta = {};
+  let diagnostics = null;
+
+  if (data && typeof data === 'object' && (
+    Object.prototype.hasOwnProperty.call(data, 'result') ||
+    Object.prototype.hasOwnProperty.call(data, 'changes') ||
+    Object.prototype.hasOwnProperty.call(data, 'meta') ||
+    Object.prototype.hasOwnProperty.call(data, 'diagnostics')
+  )) {
+    result = data.result === undefined ? null : data.result;
+    changes = Array.isArray(data.changes) ? data.changes : serverResponseAsArray_(data.changes);
+    meta = data.meta && typeof data.meta === 'object' ? Object.assign({}, data.meta) : {};
+    diagnostics = data.diagnostics || null;
+  }
+
+  return buildServerResponseEnvelope_(
+    success,
+    message,
+    error,
+    result,
+    changes,
+    meta,
+    diagnostics,
+    context,
+    warnings
+  );
+}
+
+function buildServerResponse_(success, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {
+  if (arguments.length <= 6) {
+    return buildSimpleServerResponse_(success, arg2, arg3, arg4, arg5, arg6);
+  }
+
+  return buildServerResponseEnvelope_(success, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+}
+
 function okResponse_(data, message, context, warnings) {
-  return buildServerResponse_(true, data, message || '', null, context || null, warnings || []);
+  return buildSimpleServerResponse_(true, data, message || '', null, context || null, warnings || []);
 }
 
 function warnResponse_(data, message, context, warnings) {
-  return buildServerResponse_(true, data, message || '', null, context || null, warnings || []);
+  return buildSimpleServerResponse_(true, data, message || '', null, context || null, warnings || []);
 }
 
 function errorResponse_(error, arg2, arg3, arg4, arg5) {
   const message = error && error.message ? String(error.message) : String(error || 'Невідома помилка');
 
-  // Підтримка старих сигнатур:
-  // errorResponse_(error, context)
-  // errorResponse_(error, context, data)
-  // errorResponse_(error, message, context, data, warnings)
   let uiMessage = '';
   let context = null;
   let data = null;
@@ -46,21 +198,48 @@ function errorResponse_(error, arg2, arg3, arg4, arg5) {
     warnings = Array.isArray(arg4) ? arg4 : [];
   }
 
-  return buildServerResponse_(false, data, uiMessage, message, context, warnings);
+  return buildSimpleServerResponse_(false, data, uiMessage, message, context, warnings);
 }
 
 function normalizeServerResponse_(value, functionName, context) {
   const baseContext = Object.assign({ function: functionName || '' }, context || {});
 
   if (value && typeof value === 'object' && 'success' in value && 'data' in value && 'context' in value) {
-    return {
-      success: !!value.success,
-      message: String(value.message || ''),
-      error: value.error ? String(value.error) : null,
-      data: value.data === undefined ? null : value.data,
-      context: value.context || baseContext,
-      warnings: Array.isArray(value.warnings) ? value.warnings.filter(Boolean).map(String) : []
-    };
+    const rawData = value.data;
+    let result = null;
+    let changes = [];
+    let meta = {};
+    let diagnostics = value.diagnostics || null;
+
+    if (rawData && typeof rawData === 'object' && (
+      Object.prototype.hasOwnProperty.call(rawData, 'result') ||
+      Object.prototype.hasOwnProperty.call(rawData, 'changes') ||
+      Object.prototype.hasOwnProperty.call(rawData, 'meta') ||
+      Object.prototype.hasOwnProperty.call(rawData, 'diagnostics')
+    )) {
+      result = rawData.result === undefined ? null : rawData.result;
+      changes = Array.isArray(rawData.changes) ? rawData.changes : serverResponseAsArray_(rawData.changes);
+      meta = rawData.meta && typeof rawData.meta === 'object' ? Object.assign({}, rawData.meta) : {};
+      diagnostics = rawData.diagnostics || diagnostics;
+    } else {
+      result = rawData === undefined ? null : rawData;
+      changes = [];
+      meta = {};
+    }
+
+    meta = mergeServerResponseTopLevelMeta_(value, meta);
+
+    return buildServerResponseEnvelope_(
+      value.success,
+      value.message || '',
+      value.error || null,
+      result,
+      changes,
+      meta,
+      diagnostics,
+      Object.assign({}, baseContext, value.context || {}),
+      normalizeServerWarnings_(value.warnings)
+    );
   }
 
   if (value && typeof value === 'object' && 'ok' in value && !('success' in value)) {
@@ -74,7 +253,7 @@ function normalizeServerResponse_(value, functionName, context) {
   }
 
   if (typeof value === 'boolean') {
-    return buildServerResponse_(value, { value: value }, '', value ? null : 'Операція повернула false', baseContext, []);
+    return buildSimpleServerResponse_(value, { value: value }, '', value ? null : 'Операція повернула false', baseContext, []);
   }
 
   if (typeof value === 'string' || typeof value === 'number') {
@@ -104,12 +283,11 @@ function withResponseContext_(response, extraContext) {
 
 function appendWarnings_(response, warnings) {
   const normalized = normalizeServerResponse_(response, '', {});
-  const merged = []
-    .concat(normalized.warnings || [])
-    .concat(Array.isArray(warnings) ? warnings : [warnings])
-    .filter(Boolean)
-    .map(String);
-  normalized.warnings = merged;
+  normalized.warnings = normalizeServerWarnings_(
+    []
+      .concat(normalized.warnings || [])
+      .concat(Array.isArray(warnings) ? warnings : [warnings])
+  );
   return normalized;
 }
 
@@ -142,13 +320,15 @@ function buildContextError_(functionName, context, errorOrMessage) {
     ? String(errorOrMessage.message)
     : String(errorOrMessage || 'Невідома помилка');
 
-  const parts = [`[${functionName}]`];
+  const parts = ['[' + functionName + ']'];
   const ctx = context || {};
+
   Object.keys(ctx).forEach(function(key) {
     const value = ctx[key];
     if (value === '' || value === null || value === undefined) return;
-    parts.push(`${key}=${value}`);
+    parts.push(key + '=' + value);
   });
+
   parts.push(base);
   return new Error(parts.join(' '));
 }

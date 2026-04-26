@@ -1,6 +1,7 @@
 /**
  * LockHelpers.gs — marker locks, script lock, and stuck-key cleanup helpers.
  */
+
 var LOCK_KEY_PREFIX = (typeof LOCK_KEY_PREFIX !== 'undefined' && LOCK_KEY_PREFIX) ? LOCK_KEY_PREFIX : 'app_lock_';
 
 function getFullLockKey_(lockKey) {

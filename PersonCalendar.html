@@ -1,6 +1,5 @@
 <!doctype html>
 <html>
-
 <head>
   <base target="_top">
   <meta charset="utf-8" />
@@ -29,6 +28,11 @@
       box-sizing: border-box;
     }
 
+    html,
+    body {
+      min-height: 100%;
+    }
+
     body {
       background: var(--bg-primary);
       color: var(--text-primary);
@@ -36,6 +40,10 @@
       min-height: 100vh;
       padding: 12px;
       display: block;
+    }
+
+    body.loading-active {
+      overflow: hidden;
     }
 
     .container {
@@ -54,7 +62,6 @@
         transform: translateY(20px);
         opacity: 0;
       }
-
       to {
         transform: translateY(0);
         opacity: 1;
@@ -70,13 +77,15 @@
       padding: 12px 16px;
       border-radius: var(--radius);
       border: 1px solid var(--border-color);
+      position: relative; 
+      min-height: 40px;
     }
 
     .header-left {
       display: flex;
       align-items: center;
-      gap: 8px;
-      min-width: 0;
+      flex: 1; 
+      z-index: 1;
     }
 
     .back-button {
@@ -106,13 +115,14 @@
     }
 
     .title {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
       font-size: 1rem;
       font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 8px;
       color: var(--text-primary);
-      min-width: 0;
+      white-space: nowrap;
+      pointer-events: none; 
     }
 
     .callsign-badge {
@@ -123,10 +133,13 @@
       font-size: 0.8rem;
       font-family: var(--font-mono);
       color: var(--accent-blue);
-      max-width: 45%;
+      max-width: 30%; 
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      flex-shrink: 0;
+      text-align: right;
+      z-index: 1;
     }
 
     .year-section {
@@ -389,6 +402,85 @@
       }
     }
 
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 10, 10, 0.92);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.2s ease, visibility 0.2s ease;
+      padding: 16px;
+    }
+
+    .loading-overlay.visible {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: all;
+    }
+
+    .loading-card {
+      width: 100%;
+      max-width: 320px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      animation: loadingCardIn 0.22s ease;
+    }
+
+    @keyframes loadingCardIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .loading-spinner {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 3px solid rgba(45, 114, 210, 0.18);
+      border-top-color: var(--accent-blue-light);
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .loading-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      text-align: center;
+    }
+
+    .loading-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      text-align: center;
+      line-height: 1.45;
+    }
+
     @media (max-width: 480px) {
       .container {
         padding: 12px;
@@ -416,6 +508,10 @@
       .callsign-badge {
         max-width: 40%;
       }
+
+      .loading-card {
+        max-width: 100%;
+      }
     }
   </style>
 </head>
@@ -426,7 +522,6 @@
       <div class="header-left">
         <button class="back-button" onclick="goBack()" title="Повернутися до картки" id="backButton">←</button>
         <div class="title">
-          <span>📅</span>
           <span>Обрати дату</span>
         </div>
       </div>
@@ -466,16 +561,21 @@
 
     <div class="actions">
       <button class="btn btn-primary" onclick="selectDate()" id="selectButton">
-        <span>✓</span>
         <span>Обрати</span>
       </button>
       <button class="btn btn-secondary" onclick="goBack()" id="backActionButton">
-        <span>↩️</span>
         <span>Назад</span>
       </button>
     </div>
 
     <div id="errorMessage" class="error-message"></div>
+  </div>
+
+  <div class="loading-overlay" id="loadingOverlay" aria-hidden="true">
+    <div class="loading-card" role="status" aria-live="polite">
+      <div class="loading-spinner"></div>
+      <div class="loading-subtitle" id="loadingSubtitle">Зачекайте, відкриваю наступний екран…</div>
+    </div>
   </div>
 
   <script>
@@ -525,6 +625,44 @@
       return `${formattedDay}.${formattedMonth}.${year}`;
     }
 
+    function getLoadingElements() {
+      return {
+        overlay: document.getElementById('loadingOverlay'),
+        title: document.getElementById('loadingTitle'),
+        subtitle: document.getElementById('loadingSubtitle')
+      };
+    }
+
+    function showLoading(title, subtitle) {
+      const els = getLoadingElements();
+
+      if (els.title) {
+        els.title.textContent = String(title || 'Завантаження');
+      }
+
+      if (els.subtitle) {
+        els.subtitle.textContent = String(subtitle || 'Зачекайте, відкриваю наступний екран…');
+      }
+
+      if (els.overlay) {
+        els.overlay.classList.add('visible');
+        els.overlay.setAttribute('aria-hidden', 'false');
+      }
+
+      document.body.classList.add('loading-active');
+    }
+
+    function hideLoading() {
+      const els = getLoadingElements();
+
+      if (els.overlay) {
+        els.overlay.classList.remove('visible');
+        els.overlay.setAttribute('aria-hidden', 'true');
+      }
+
+      document.body.classList.remove('loading-active');
+    }
+
     const parsedSourceDate = parseDateString(SOURCE_DATE);
     const fallbackNow = new Date();
 
@@ -572,6 +710,16 @@
         calendar.style.pointerEvents = isSubmitting ? 'none' : '';
         calendar.style.opacity = isSubmitting ? '0.85' : '';
       }
+    }
+
+    function beginScreenTransition(title, subtitle) {
+      setBusy(true);
+      showLoading(title, subtitle);
+    }
+
+    function endScreenTransition() {
+      hideLoading();
+      setBusy(false);
     }
 
     function clearError() {
@@ -732,7 +880,7 @@
       if (isSubmitting) return;
 
       if (!selectedDay && selectedDay !== 0) {
-        showError('✕ Оберіть дату в календарі');
+        showError('Оберіть дату в календарі');
         return;
       }
 
@@ -740,14 +888,17 @@
 
       try {
         clearError();
-        setBusy(true);
+        beginScreenTransition('Відкриваю дату', 'Зачекайте, відкриваю картку на обрану дату…');
         await gsRun('openPersonCardByCallsignAndDate', CALLSIGN, dateStr);
       } catch (error) {
+        endScreenTransition();
         showError('✕ ' + normalizeError(error));
-      } finally {
-        setBusy(false);
         renderCalendar();
+        return;
       }
+
+      endScreenTransition();
+      renderCalendar();
     }
 
     function goBack() {
@@ -756,25 +907,25 @@
       const backDate = parsedSourceDate ? parsedSourceDate.raw : initialDate.raw;
 
       clearError();
-      setBusy(true);
+      beginScreenTransition('Повернення', 'Зачекайте, повертаюся до попереднього екрана…');
 
       gsRun('openPersonCardByCallsignAndDate', CALLSIGN, backDate)
         .catch(function(error) {
           showError('✕ ' + normalizeError(error));
         })
         .finally(function() {
-          setBusy(false);
+          endScreenTransition();
           renderCalendar();
         });
     }
 
     renderCalendar();
     updateHeader();
+    hideLoading();
 
     if (!parsedSourceDate) {
-      showError('✕ Некоректна початкова дата. Використано поточну дату.');
+      showError('Некоректна початкова дата. Використано поточну дату.');
     }
   </script>
 </body>
-
 </html>

@@ -172,6 +172,182 @@
       logToConsole(`✕ Health Check: ${normalizeError(error)}`, 'error');
     }
   }
+
+  async function runAllProjectTests() {
+    assertAdminAction_('runAllProjectTests');
+    showStandardResult('Всі тести проєкту');
+
+    setHtml('resultContent', `
+      <div class="result-item">
+        <div class="result-label">Запуск тестів</div>
+        <div class="result-value">⏳ Виконую всі тести проєкту. Це важче за health-check і може тривати довше.</div>
+      </div>
+    `);
+
+    let slowModeShown = false;
+    const slowTimerId = setTimeout(() => {
+      slowModeShown = true;
+      setHtml('resultContent', `
+        <div class="health-wrap">
+          <div class="health-item warn sev-medium">
+            <div class="health-title">⏳ Тести ще виконуються</div>
+            <div class="health-details">Це нормально для повного запуску: diagnostics, smoke, regression, access, domain і знайдені test runners.</div>
+          </div>
+        </div>
+      `);
+      logToConsole('⏳ Повний запуск тестів виконується довше звичайного...', 'warning');
+    }, 15000);
+
+    try {
+      const reportResponse = await ActionDispatcher.run(
+        'stage7AllProjectTests',
+        () => DiagnosticsApi.runAllProjectTests({ includeDiscovery: true, dryRun: true }),
+        { successMessage: '' }
+      );
+
+      clearTimeout(slowTimerId);
+
+      const report = reportResponse?.data || reportResponse;
+      STATE.lastProjectTestReport = report || null;
+      STATE.lastHealthReport = report || null;
+
+      setHtml('resultContent', renderProjectTestReport(report));
+
+      const failed = Number(report?.counts?.failed || 0);
+      const warnings = Number(report?.counts?.warnings || 0);
+      const skipped = Number(report?.counts?.skipped || 0);
+
+      showToast(failed === 0 ? '✓ Тести завершено' : '✕ Є провалені тести');
+      logToConsole(
+        (slowModeShown ? 'Повний запуск тестів завершено після тривалого очікування' : 'Повний запуск тестів завершено') +
+          `: failed=${failed}, warnings=${warnings}, skipped=${skipped}`,
+        failed === 0 ? (warnings > 0 || skipped > 0 ? 'warning' : 'success') : 'error'
+      );
+    } catch (error) {
+      clearTimeout(slowTimerId);
+      setHtml('resultContent', `
+        <div class="health-wrap">
+          <div class="health-item bad sev-critical">
+            <div class="health-title">✕ Помилка запуску тестів</div>
+            <div class="health-details">${escapeHtml(normalizeError(error))}</div>
+          </div>
+        </div>
+      `);
+      showToast('✕ Помилка запуску тестів');
+      logToConsole(`✕ All Project Tests: ${normalizeError(error)}`, 'error');
+    }
+  }
+
+  function renderProjectTestReport(report) {
+    if (!report || !Array.isArray(report.checks)) {
+      return '<div class="health-item warn">✕ Порожній звіт тестів</div>';
+    }
+
+    const checks = report.checks || [];
+    const groups = splitHealthChecksByGroup(checks);
+    const counts = report.counts || {};
+    const failed = Number(counts.failed || groups.critical.length || 0);
+    const warnings = Number(counts.warnings || groups.warnings.length || 0);
+    const skipped = Number(counts.skipped || groups.pseudo.length || 0);
+    const passed = Number(counts.passed || groups.ok.length || 0);
+    const discovered = Number(counts.discovered || 0);
+    const total = Number(counts.total || checks.length || 0);
+    const hasProblems = failed > 0 || warnings > 0;
+
+    return `
+      <div class="compact-health-report">
+        <div style="font-weight:600; margin-bottom:6px; padding:6px 8px; background:${hasProblems ? 'var(--warning-color)' : 'var(--success-color)'}20; border-radius:6px;">
+          <span style="color:${hasProblems ? 'var(--warning-color)' : 'var(--success-color)'};">${hasProblems ? '⚠' : '✓'}</span>
+          ${hasProblems ? 'Є проблеми у тестах' : 'Усі критичні тести пройдено'}
+          <span style="float:right; font-size:0.65rem;">${total} запусків</span>
+        </div>
+
+        <div style="font-size:0.65rem; color:var(--text-secondary); margin-bottom:8px;">
+          ${report.startedAt ? escapeHtml(new Date(report.startedAt).toLocaleString('uk-UA')) : ''}
+          ${report.durationMs ? ` · ${escapeHtml(String(report.durationMs))} ms` : ''}
+          ${report.runId ? ` · ${escapeHtml(report.runId)}` : ''}
+        </div>
+
+        <div style="font-size:0.68rem; margin-bottom:8px; display:flex; gap:8px; flex-wrap:wrap;">
+          <span style="padding:2px 8px; border-radius:999px; background:rgba(34,197,94,.12); color:var(--success-color);">✓ PASS: ${passed}</span>
+          <span style="padding:2px 8px; border-radius:999px; background:rgba(239,68,68,.12); color:var(--error-color);">✕ FAIL: ${failed}</span>
+          <span style="padding:2px 8px; border-radius:999px; background:rgba(245,158,11,.12); color:var(--warning-color);">⚠ WARN: ${warnings}</span>
+          <span style="padding:2px 8px; border-radius:999px; background:rgba(59,130,246,.12); color:var(--google-blue);">SKIP: ${skipped}</span>
+          <span style="padding:2px 8px; border-radius:999px; background:rgba(59,130,246,.12); color:var(--google-blue);">DISC: ${discovered}</span>
+        </div>
+
+        <div class="result-item" style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="SidebarApp.runAllProjectTests()">⟲ Запустити всі тести ще раз</button>
+          <button class="btn" onclick="SidebarApp.copyProjectTestReport()">📋 Копіювати звіт</button>
+        </div>
+
+        <div class="health-scroll-container" style="max-height:360px;">
+          ${renderHealthGroup('Провалені тести', '✕', groups.critical, 'Провалених тестів немає')}
+          ${renderHealthGroup('Попередження', '⚠', groups.warnings, 'Попереджень немає')}
+          ${renderHealthGroup('Пропущені / compatibility', 'SKIP', groups.pseudo, 'Пропущених перевірок немає')}
+          ${renderHealthGroup('Успішні тести', '✓', groups.ok, 'Успішних тестів немає')}
+        </div>
+      </div>
+    `;
+  }
+
+  function copyProjectTestReport() {
+    const report = STATE.lastProjectTestReport || STATE.lastHealthReport;
+
+    if (!report || !Array.isArray(report.checks)) {
+      showToast('⚠ Спочатку запустіть всі тести проєкту');
+      return;
+    }
+
+    const checks = report.checks || [];
+    const groups = splitHealthChecksByGroup(checks);
+    const counts = report.counts || {};
+
+    function appendGroup(text, title, items) {
+      text += String(title || '') + '\n';
+      text += '-'.repeat(String(title || '').length) + '\n';
+
+      if (!items.length) {
+        text += 'Немає\n\n';
+        return text;
+      }
+
+      items.forEach(function(check) {
+        const status = String(check?.status || '').toUpperCase();
+        const ok = typeof check?.ok === 'boolean' ? check.ok : status === 'OK';
+        const icon = ok ? '✓' : (status === 'WARN' ? '⚠' : (status === 'SKIPPED' ? 'SKIP' : '✕'));
+        const name = check?.title || check?.name || 'Перевірка';
+        const details = check?.details || check?.message || '';
+        const recommendation = check?.howTo || check?.recommendation || '';
+
+        text += icon + ' [' + (status || '?') + '] ' + name + '\n';
+        if (details) text += '   Деталі: ' + String(details).replace(/\n/g, ' ') + '\n';
+        if (recommendation) text += '   Як виправити: ' + String(recommendation).replace(/\n/g, ' ') + '\n';
+        text += '\n';
+      });
+
+      return text;
+    }
+
+    let text = 'WASB PROJECT TESTS ЗВІТ\n========================\n';
+    text += 'Час: ' + (report.startedAt ? new Date(report.startedAt).toLocaleString('uk-UA') : new Date().toLocaleString('uk-UA')) + '\n';
+    text += 'RunId: ' + (report.runId || '') + '\n';
+    text += 'Статус: ' + (report.ok ? '✓ PASS' : '✕ FAIL') + '\n';
+    text += 'Total: ' + (counts.total || checks.length) +
+      ' | Passed: ' + (counts.passed || 0) +
+      ' | Failed: ' + (counts.failed || 0) +
+      ' | Warnings: ' + (counts.warnings || 0) +
+      ' | Skipped: ' + (counts.skipped || 0) +
+      ' | Discovered: ' + (counts.discovered || 0) + '\n\n';
+
+    text = appendGroup(text, 'ПРОВАЛЕНІ ТЕСТИ', groups.critical);
+    text = appendGroup(text, 'ПОПЕРЕДЖЕННЯ', groups.warnings);
+    text = appendGroup(text, 'ПРОПУЩЕНІ / COMPATIBILITY', groups.pseudo);
+    text = appendGroup(text, 'УСПІШНІ ТЕСТИ', groups.ok);
+
+    copyResultText(text);
+  }
+
   function splitHealthChecksByGroup(checks) {
     const groups = {
       critical: [],

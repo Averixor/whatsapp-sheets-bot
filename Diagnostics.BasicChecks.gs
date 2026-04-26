@@ -102,6 +102,7 @@ function checkFiles() {
   DIAGNOSTICS.results.files = report;
   return report;
 }
+
 function checkDuplicates() {
   const report = _makeReport_('🧬 ПЕРЕВІРКА ДУБЛІКАТІВ');
 
@@ -224,6 +225,7 @@ function checkDuplicates() {
   DIAGNOSTICS.results.duplicates = report;
   return report;
 }
+
 function testFunctions() {
   const report = _makeReport_('🧪 ТЕСТ ФУНКЦІЙ');
 
@@ -310,6 +312,7 @@ function testFunctions() {
   DIAGNOSTICS.results.functions = report;
   return report;
 }
+
 function runDiagnostics() {
   const startedAt = new Date().toISOString();
 
@@ -336,25 +339,27 @@ function runDiagnostics() {
   DIAGNOSTICS.results.summary = summary;
   return summary;
 }
+
 function runAllDiagnostics() {
   return runDiagnostics();
 }
+
 function runSheetsCheck() {
   return checkSheets();
 }
+
 function runFilesCheck() {
   return checkFiles();
 }
+
 function runDuplicatesCheck() {
   return checkDuplicates();
 }
+
 function runTestsCheck() {
   return testFunctions();
 }
+
 function runFullDiagnostics() {
   return runDiagnostics();
 }
-
-/**
- * Stage 7 diagnostics — перевірка схем, repository і data-contract.
- */

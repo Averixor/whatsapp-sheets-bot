@@ -8,8 +8,8 @@ function _getAccessPolicy_() {
   if (_policyCache) return Object.assign({}, _policyCache);
 
   const entries = _readSheetEntries_();
-  const hasAdminConfigured = entries.some(function(e) { 
-    return e.enabled && ['admin', 'sysadmin', 'owner'].includes(e.role); 
+  const hasAdminConfigured = entries.some(function (e) {
+    return e.enabled && ['admin', 'sysadmin', 'owner'].includes(e.role);
   });
   const migrationModeEnabled = parseBoolean_(_getProperties_().getProperty(MIGRATION_EMAIL_BRIDGE_PROP), false);
   const accessSheetPresent = !!_getSheet_(false);
@@ -23,14 +23,13 @@ function _getAccessPolicy_() {
     bootstrapAllowed: !hasAdminConfigured && (accessSheetPresent ? entries.length === 0 : true),
     adminConfigured: hasAdminConfigured,
     accessSheetPresent: accessSheetPresent,
-    registeredKeysCount: entries.filter(function(e) { 
-      return e.userKeyCurrentHash || e.userKeyPrevHash; 
+    registeredKeysCount: entries.filter(function (e) {
+      return e.userKeyCurrentHash || e.userKeyPrevHash;
     }).length
   };
 
   return Object.assign({}, _policyCache);
 }
-
 
 // ==================== ОСНОВНИЙ РЕЗОЛЬВЕР КОРИСТУВАЧА (логіка з першого варіанту) ====================
 
@@ -50,7 +49,6 @@ function _resolveAccessSubject_(context, options = {}) {
   let matchedBy = null;
   let matchSource = null;
 
-  // 1. Strict priority: ACCESS by current key
   if (currentKeyHash) {
     match = _findByUserKey_(currentKeyHash, { includeLocked: true, includeDisabled: true });
     if (match) {
@@ -65,7 +63,6 @@ function _resolveAccessSubject_(context, options = {}) {
     }
   }
 
-  // 2. ACCESS by previous key - using unified operation
   if (currentKeyHash) {
     match = _findByUserKey_(currentKeyHash, { includeLocked: true, includeDisabled: true, matchPrev: true });
     if (match) {
@@ -80,7 +77,6 @@ function _resolveAccessSubject_(context, options = {}) {
     }
   }
 
-  // 3. Email bridge (only if policy allows)
   if (policy.allowEmailBridge && sessionEmail) {
     match = _findByEmailInSheet_(sessionEmail, { includeLocked: true, includeDisabled: true });
     if (match) {
@@ -97,12 +93,10 @@ function _resolveAccessSubject_(context, options = {}) {
     }
   }
 
-  // 4. Bootstrap mode
   if (policy.bootstrapAllowed && (currentKeyHash || sessionEmail)) {
     return _buildBootstrapDescriptor_(context, policy);
   }
 
-  // 5. No match found
   return _buildUnknownDescriptor_(context, policy);
 }
 
@@ -143,7 +137,6 @@ function _resolveAccessSubjectReadOnly_(context) {
 
   return _buildUnknownDescriptor_(context, policy);
 }
-
 
 // ==================== ДЕСКРИПТОР (логіка з першого варіанту) ====================
 
@@ -219,7 +212,7 @@ function _buildBootstrapDescriptor_(context, policy) {
 function _buildUnknownDescriptor_(context, policy) {
   const currentKeyHash = context.currentKeyHash;
   const sessionEmail = context.sessionEmail;
-  
+
   let reasonCode = REASON_CODES.DENIED_UNKNOWN_USER;
   let reasonMessage = 'Користувача не знайдено в системі.';
 
@@ -261,7 +254,6 @@ function _buildUnknownDescriptor_(context, policy) {
     }
   };
 }
-
 
 // ==================== ПОШУК У ТАБЛИЦІ ====================
 
@@ -326,13 +318,13 @@ function _findEntriesByIdentifier_(identifierType, identifierValue, options = {}
   const includeLocked = options.includeLocked || false;
   const includeDisabled = options.includeDisabled || false;
 
-  return _readSheetEntries_().filter(function(entry) {
+  return _readSheetEntries_().filter(function (entry) {
     if (!includeDisabled && _isAdminDisabled_(entry)) return false;
     if (!includeLocked && _isTimedLocked_(entry)) return false;
     if (type === 'email') return normalizeEmail_(entry.email) === normalizedValue;
     if (type === 'phone') return normalizePhone_(entry.phone) === normalizedValue;
     return false;
-  }).map(function(entry) {
+  }).map(function (entry) {
     return _enrichEntry(entry, ACCESS_SHEET, type);
   });
 }
@@ -377,18 +369,17 @@ function _enrichEntry(entry, source, matchedBy) {
 function listBindableCallsigns() {
   const entries = _readSheetEntries_();
   return entries
-    .filter(function(entry) {
+    .filter(function (entry) {
       return entry.enabled && entry.selfBindAllowed && !!normalizeCallsign_(entry.personCallsign);
     })
-    .map(function(entry) {
+    .map(function (entry) {
       return normalizeCallsign_(entry.personCallsign);
     })
-    .filter(function(value, index, arr) {
+    .filter(function (value, index, arr) {
       return arr.indexOf(value) === index;
     })
     .sort();
 }
-
 
 // ==================== HELPER-ФУНКЦІЇ (з другого варіанту, без втрати логіки) ====================
 
@@ -402,17 +393,17 @@ function _getReasonForEntry(entry, timedLocked, adminDisabled) {
       reasonMessage: 'Користувача вимкнено адміністратором.'
     };
   }
-  
+
   if (timedLocked) {
-    const remainingMinutes = entry.lockedUntilMs 
-      ? Math.ceil((entry.lockedUntilMs - _nowMs_()) / 60000) 
+    const remainingMinutes = entry.lockedUntilMs
+      ? Math.ceil((entry.lockedUntilMs - _nowMs_()) / 60000)
       : 0;
     return {
       reasonCode: REASON_CODES.DENIED_TIMED_LOCKOUT,
       reasonMessage: `Доступ тимчасово заблоковано через повторні помилки. Залишилось ${remainingMinutes} хв.`
     };
   }
-  
+
   return {
     reasonCode: REASON_CODES.OK,
     reasonMessage: ''
@@ -446,7 +437,6 @@ function _successResponse(message, supportCallsign, loginMeta, descriptor) {
     loginMeta: loginMeta
   };
 }
-
 
 // ==================== САМОСТІЙНИЙ ВХІД (SELF-BIND) ====================
 
@@ -510,7 +500,7 @@ function loginByIdentifierAndCallsign(identifierOrPayload, callsignMaybe, loginM
   try {
     const alreadyBound = _findByUserKey_(currentKeyHash, { includeLocked: true, includeDisabled: true, matchPrev: true });
     const matchedEntries = _findEntriesByIdentifier_(identifierType, normalizedIdentifier, { includeLocked: true, includeDisabled: true });
-    const matchedEntry = matchedEntries.find(function(entry) {
+    const matchedEntry = matchedEntries.find(function (entry) {
       return normalizeCallsign_(entry.personCallsign) === normalizedCallsign;
     }) || null;
 
@@ -540,6 +530,7 @@ function loginByIdentifierAndCallsign(identifierOrPayload, callsignMaybe, loginM
         reasonMessage: 'Не знайдено жодного доступного запису для вказаного ідентифікатора.',
         loginMeta: loginMeta
       });
+
       const finalCode = failure.blocked ? REASON_CODES.SELF_BIND_LOGIN_BLOCKED : REASON_CODES.SELF_BIND_IDENTIFIER_NOT_FOUND;
       return _errorResponse(
         finalCode,
@@ -559,6 +550,7 @@ function loginByIdentifierAndCallsign(identifierOrPayload, callsignMaybe, loginM
         reasonMessage: 'Позивний не збігається з указаним email або телефоном.',
         loginMeta: loginMeta
       });
+
       const finalCode = failure.blocked ? REASON_CODES.SELF_BIND_LOGIN_BLOCKED : REASON_CODES.SELF_BIND_IDENTIFIER_MISMATCH;
       return _errorResponse(
         finalCode,
@@ -606,6 +598,7 @@ function loginByIdentifierAndCallsign(identifierOrPayload, callsignMaybe, loginM
         reasonMessage: 'Позивний уже зайнятий іншим ключем.',
         loginMeta: loginMeta
       });
+
       const finalCode = failure.blocked ? REASON_CODES.SELF_BIND_LOGIN_BLOCKED : REASON_CODES.SELF_BIND_CALLSIGN_OCCUPIED;
       return _errorResponse(
         finalCode,
@@ -645,7 +638,6 @@ function loginByIdentifierAndCallsign(identifierOrPayload, callsignMaybe, loginM
 function bindCurrentKeyToCallsign(callsign) {
   return loginByIdentifierAndCallsign('', callsign || '');
 }
-
 
 // ==================== ПУБЛІЧНА ВІДПОВІДЬ (RESPONSE BUILDER) ====================
 
@@ -698,7 +690,7 @@ function _buildPublicAccessResponse_(descriptor, context, policy, options) {
     },
 
     lockout: descriptor.lockoutState,
-    
+
     login: {
       keyAvailable: !!context.currentKeyHash,
       selfBindRequired: !!context.currentKeyHash && !registered,
@@ -728,6 +720,7 @@ function _buildPublicAccessResponse_(descriptor, context, policy, options) {
       code: descriptor.reasonCode,
       message: descriptor.reasonMessage
     },
+
     reasonString: descriptor.reasonMessage,
 
     rotationState: _rotationState_(auditSource, !!context.currentKeyHash, registered),
@@ -740,8 +733,6 @@ function _buildPublicAccessResponse_(descriptor, context, policy, options) {
     },
 
     allowedActions: listAllowedActionsForRole_(role),
-
-    // Legacy compatibility fields (deprecated)
     displayName: entry && entry.displayName ? String(entry.displayName) : '',
     personCallsign: entry && entry.personCallsign ? String(entry.personCallsign) : '',
     currentKeyHashFull: opts.includeSensitiveDebug ? (context.currentKeyHash || '') : '',

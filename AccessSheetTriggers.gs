@@ -94,9 +94,7 @@ function _logError_(context, error, extraDetails) {
           extra: extraDetails || {}
         }
       });
-    } catch (_) {
-      // best effort only
-    }
+    } catch (_) {}
   }
 }
 
@@ -114,12 +112,10 @@ function onEdit(e) {
   const isAccessSheet = (sheetName === accessSheetName);
   const isProtectedSheet = _isProtectedSheet_(sheetName);
 
-  // Быстрый выход: лист нам вообще не интересен
   if (!isAccessSheet && !isProtectedSheet) {
     return;
   }
 
-  // 1. ACCESS helper
   if (isAccessSheet) {
     try {
       if (typeof AccessControl_ === 'object' &&
@@ -135,7 +131,6 @@ function onEdit(e) {
     }
   }
 
-  // 2. Security audit
   if (isProtectedSheet) {
     try {
       if (typeof stage7SecurityAuditOnEdit === 'function') {
@@ -180,6 +175,7 @@ function validateTriggers() {
     if (handler === 'onEdit' && eventType === ScriptApp.EventType.ON_EDIT) {
       onEditCount++;
     }
+
     if (handler === 'onChange' && eventType === ScriptApp.EventType.ON_CHANGE) {
       onChangeCount++;
     }
@@ -189,6 +185,7 @@ function validateTriggers() {
   if (onEditCount > 1) {
     issues.push('Знайдено ' + onEditCount + ' onEdit тригерів (рекомендується 1)');
   }
+
   if (onChangeCount > 1) {
     issues.push('Знайдено ' + onChangeCount + ' onChange тригерів (рекомендується 1)');
   }
@@ -224,6 +221,7 @@ function getProtectedSheetsInfo() {
         break;
       }
     }
+    
     if (!found) {
       missingSheets.push(protectedSheets[i]);
     }

@@ -143,17 +143,16 @@
     async openPersonCard(callsign, dateStr = '') {
       const response = await Api.run('apiOpenPersonCard', callsign || '', dateStr || '');
       const result = unwrapStage4Result(response) || {};
-      return {
+      return Object.assign({
         success: !!response?.success,
         message: response?.message || '',
         error: response?.error || null,
         data: result,
-        card: result,
         warnings: Array.isArray(response?.warnings) ? response.warnings : [],
         context: response?.context || null,
         meta: unwrapStage4Meta(response),
         raw: response
-      };
+      }, result || {});
     },
 
     async checkVacationsAndBirthdays(dateStr = '') {
@@ -209,8 +208,7 @@
       };
     },
 
-    runReconciliation: async (options = {}) =>
-      adaptStage4UtilityResponse(await Api.run('apiRunReconciliation', options))
+    runReconciliation: (options = {}) => Api.run('apiRunReconciliation', options)
   };
 
   var MaintenanceApi = {
@@ -229,6 +227,7 @@
     healthCheck: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7HealthCheck', options)),
     quickHealthCheck: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7QuickHealthCheck', options)),
     runRegressionTests: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiRunStage7RegressionTests', options)),
+    runAllProjectTests: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiRunStage7AllProjectTests', options)),
     listPendingRepairs: async (filters = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7ListPendingRepairs', filters)),
     getOperationDetails: async (operationId) => adaptStage4UtilityResponse(await Api.run('apiStage7GetOperationDetails', operationId || '')),
     runRepair: async (operationId, options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7RunRepair', operationId || '', options)),
@@ -277,12 +276,12 @@
   var DiagnosticsApi = {
     healthCheck: async (options = {}) => {
       const opts = Object.assign({}, options || {});
-      const mode = String(opts.mode || '').toLowerCase();
-
-      if (mode === 'full') return MaintenanceApi.healthCheck(opts);
-      if (mode === 'quick' || opts.shallow !== false) return MaintenanceApi.quickHealthCheck(opts);
-      return MaintenanceApi.healthCheck(opts);
+      const wantsQuick = String(opts.mode || '').toLowerCase() === 'quick' || (opts.shallow !== false && !opts.includeStage3Base && !opts.includeCompatibilityLayer && !opts.includeReconciliationPreview);
+      return wantsQuick
+        ? MaintenanceApi.quickHealthCheck(opts)
+        : MaintenanceApi.healthCheck(opts);
     },
-    runRegressionTests: MaintenanceApi.runRegressionTests
+    runRegressionTests: MaintenanceApi.runRegressionTests,
+    runAllProjectTests: MaintenanceApi.runAllProjectTests
   };
 </script>

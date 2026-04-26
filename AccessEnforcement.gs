@@ -1,11 +1,16 @@
 /**
- * AccessEnforcement.gs — обмеження доступу для viewer, перевірка прав на картки,
+ * AccessEnforcement.gs
+ * Обмеження доступу для viewer, перевірка прав на картки,
  * зведення, send-panel та сповіщення про порушення.
  */
 
-var AccessEnforcement_ = AccessEnforcement_ || (function() {
+
   // ==================== КОНСТАНТИ ====================
+
+var AccessEnforcement_ = AccessEnforcement_ || (function() {
+
   var ROLE_ORDER = {
+    unknown: -1,
     guest: 0,
     viewer: 1,
     operator: 2,
@@ -16,6 +21,7 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
   };
 
   var ROLE_LABELS = {
+    unknown: 'Не визначено',
     guest: 'Гість',
     viewer: 'Спостерігач',
     operator: 'Оператор',
@@ -25,223 +31,410 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
     owner: 'Власник'
   };
 
-  var PROTECTED_SHEETS = [
-    'ACCESS',
-    'ALERTS_LOG',
-    'JOB_RUNTIME_LOG',
-    'AUDIT_LOG',
-    'OPS_LOG',
-    'ACTIVE_OPERATIONS',
-    'CHECKPOINTS',
-    'DICT',
-    'DICT_SUM',
-    'TEMPLATES',
-    'LOG',
-    'VACATIONS',
-    'ИСТОРИЯ_ЗВЕДЕНЬ',
-    'Графік_відпусток',
-    'SEND_PANEL',
-    'PHONES'
-  ];
-
   var HIGH_PRIVILEGE_ROLES = ['sysadmin', 'owner'];
-
 
   // ==================== ДОПОМІЖНІ ФУНКЦІЇ ====================
 
-  /**
-   * Повертає поточний час у форматі 'yyyy-MM-dd HH:mm:ss'.
-   * @returns {string}
-   */
-  function _nowText_() {
-    return Utilities.formatDate(
-      new Date(),
-      Session.getScriptTimeZone() || 'Etc/GMT',
-      'yyyy-MM-dd HH:mm:ss'
-    );
+  function _global_() {
+    try {
+      if (typeof globalThis !== 'undefined') return globalThis;
+    } catch (_) {}
+    try {
+      return this;
+    } catch (_) {}
+    return {};
   }
 
-  /**
-   * Нормалізує позивний (верхній регістр, обрізка).
-   * @param {*} value
-   * @returns {string}
-   */
-  function _normCallsign_(value) {
-    return String(value || '').trim().toUpperCase();
+  function _isFunction_(value) {
+    return typeof value === 'function';
   }
 
-  /**
-   * Отримує дескриптор доступу через AccessControl_.
-   * @returns {Object}
-   */
-  function _descriptor_() {
-    if (typeof AccessControl_ === 'object' && AccessControl_.describe) {
-      return AccessControl_.describe();
+  function _isObject_(value) {
+    return !!value && typeof value === 'object';
+  }
+
+  function _safeString_(value, fallback) {
+    if (value === null || typeof value === 'undefined') return fallback || '';
+    return String(value);
+  }
+
+  function _trimmedString_(value, fallback) {
+    return _safeString_(value, fallback).trim();
+  }
+
+  function _lowerEmail_(value) {
+    return _trimmedString_(value, '').toLowerCase();
+  }
+
+  function _arrayUniqueStrings_(items) {
+    var input = Array.isArray(items) ? items : [];
+    var seen = {};
+    var result = [];
+
+    for (var i = 0; i < input.length; i++) {
+      var value = _trimmedString_(input[i], '');
+      if (!value) continue;
+      if (seen[value]) continue;
+      seen[value] = true;
+      result.push(value);
     }
-    // Fallback для ситуацій, коли AccessControl_ недоступний
+
+    return result;
+  }
+
+  function _roleLevel_(role) {
+    var key = _trimmedString_(role, 'guest').toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(ROLE_ORDER, key)) {
+      return ROLE_ORDER[key];
+    }
+    return ROLE_ORDER.guest;
+  }
+
+  function _configValue_(key, fallback) {
+    try {
+      if (_isFunction_(appGetCore)) {
+        var viaCore = appGetCore(key, fallback);
+        if (typeof viaCore !== 'undefined' && viaCore !== null && viaCore !== '') {
+          return viaCore;
+        }
+      }
+    } catch (_) {}
+
+    try {
+      if (typeof CONFIG !== 'undefined' && _isObject_(CONFIG) && typeof CONFIG[key] !== 'undefined' && CONFIG[key] !== null && CONFIG[key] !== '') {
+        return CONFIG[key];
+      }
+    } catch (_) {}
+
+    return fallback;
+  }
+
+  function _stage7ConfigValue_(key, fallback) {
+    try {
+      if (typeof STAGE7_CONFIG !== 'undefined' && _isObject_(STAGE7_CONFIG) && typeof STAGE7_CONFIG[key] !== 'undefined' && STAGE7_CONFIG[key] !== null && STAGE7_CONFIG[key] !== '') {
+        return STAGE7_CONFIG[key];
+      }
+    } catch (_) {}
+    return fallback;
+  }
+
+  function _vacationConfigValue_(key, fallback) {
+    try {
+      if (typeof VACATION_ENGINE_CONFIG !== 'undefined' && _isObject_(VACATION_ENGINE_CONFIG) && typeof VACATION_ENGINE_CONFIG[key] !== 'undefined' && VACATION_ENGINE_CONFIG[key] !== null && VACATION_ENGINE_CONFIG[key] !== '') {
+        return VACATION_ENGINE_CONFIG[key];
+      }
+    } catch (_) {}
+    return fallback;
+  }
+
+  function _scriptTimeZone_() {
+    try {
+      var tz = Session.getScriptTimeZone();
+      if (tz) return tz;
+    } catch (_) {}
+    return 'Etc/GMT';
+  }
+
+  function _todayStrLocal_() {
+    return Utilities.formatDate(new Date(), _scriptTimeZone_(), 'yyyy-MM-dd');
+  }
+
+  function _nowText_() {
+    return Utilities.formatDate(new Date(), _scriptTimeZone_(), 'yyyy-MM-dd HH:mm:ss');
+  }
+
+  function _safeUniqueId_(prefix) {
+    var p = _trimmedString_(prefix, 'id');
+    try {
+      if (_isFunction_(stage7UniqueId_)) {
+        return stage7UniqueId_(p);
+      }
+    } catch (_) {}
+    return p + '-' + String(new Date().getTime()) + '-' + String(Math.floor(Math.random() * 1000000));
+  }
+
+  function _safeStringify_(value, limit) {
+    var maxLen = Number(limit) || 9000;
+
+    try {
+      if (_isFunction_(stage7SafeStringify_)) {
+        var viaStage7 = stage7SafeStringify_(value, maxLen);
+        if (typeof viaStage7 === 'string') {
+          return viaStage7.length > maxLen ? viaStage7.slice(0, maxLen) : viaStage7;
+        }
+      }
+    } catch (_) {}
+
+    var seen = [];
+    var text = '';
+
+    try {
+      text = JSON.stringify(value, function(key, val) {
+        if (val instanceof Date) {
+          return Utilities.formatDate(val, _scriptTimeZone_(), "yyyy-MM-dd'T'HH:mm:ss");
+        }
+        if (val instanceof Error) {
+          return {
+            name: val.name,
+            message: val.message,
+            stack: val.stack
+          };
+        }
+        if (_isObject_(val)) {
+          if (seen.indexOf(val) !== -1) {
+            return '[Circular]';
+          }
+          seen.push(val);
+        }
+        return val;
+      });
+    } catch (error) {
+      text = 'Не вдалося серіалізувати деталі: ' + (error && error.message ? error.message : String(error));
+    }
+
+    if (typeof text !== 'string') text = String(text);
+    return text.length > maxLen ? text.slice(0, maxLen) : text;
+  }
+
+  function _normCallsign_(value) {
+    return _safeString_(value, '').trim().toUpperCase();
+  }
+
+  function _descriptor_() {
+    try {
+      if (typeof AccessControl_ === 'object' && AccessControl_ && _isFunction_(AccessControl_.describe)) {
+        var descriptor = AccessControl_.describe();
+        if (_isObject_(descriptor)) return descriptor;
+      }
+    } catch (_) {}
+
     return {
       role: 'guest',
       isAdmin: false,
       isOperator: false,
       enabled: true,
       registered: false,
+      knownUser: false,
       source: 'fallback',
-      personCallsign: ''
+      personCallsign: '',
+      displayName: '',
+      email: '',
+      currentKeyHashMasked: ''
     };
   }
 
-  /**
-   * Повертає мітку ролі українською.
-   * @param {string} role
-   * @returns {string}
-   */
   function _roleLabel_(role) {
-    var normalized = String(role || 'guest').trim().toLowerCase();
-    return ROLE_LABELS[normalized] || 'Гість';
+    var normalized = _trimmedString_(role, 'guest').toLowerCase();
+    return ROLE_LABELS[normalized] || ROLE_LABELS.guest;
   }
 
-  /**
-   * Перевіряє, чи роль має рівень не нижче заданого.
-   * @param {string} role
-   * @param {string} requiredRole
-   * @returns {boolean}
-   */
   function _roleAtLeast_(role, requiredRole) {
-    var roleLevel = ROLE_ORDER[String(role || 'guest').trim().toLowerCase()] || 0;
-    var requiredLevel = ROLE_ORDER[String(requiredRole || 'guest').trim().toLowerCase()] || 0;
-    return roleLevel >= requiredLevel;
+    return _roleLevel_(role) >= _roleLevel_(requiredRole);
   }
 
-  /**
-   * Повертає список email для сповіщень.
-   * @returns {Array}
-   */
   function _notificationEmails_() {
-    if (typeof AccessControl_ !== 'object' || !AccessControl_.listNotificationEmails) {
-      return [];
-    }
-    return AccessControl_.listNotificationEmails();
+    try {
+      if (typeof AccessControl_ === 'object' && AccessControl_ && _isFunction_(AccessControl_.listNotificationEmails)) {
+        return _arrayUniqueStrings_((AccessControl_.listNotificationEmails() || []).map(function(email) {
+          return _lowerEmail_(email);
+        }));
+      }
+    } catch (_) {}
+
+    try {
+      if (typeof AccessControl_ === 'object' && AccessControl_ && _isFunction_(AccessControl_.listAdminEmails)) {
+        return _arrayUniqueStrings_((AccessControl_.listAdminEmails() || []).map(function(email) {
+          return _lowerEmail_(email);
+        }));
+      }
+    } catch (_) {}
+
+    return [];
   }
 
-  /**
-   * Перевіряє, чи роль має високі привілеї (sysadmin або owner).
-   * @param {string} role
-   * @returns {boolean}
-   */
   function _isHighPrivilegeRole_(role) {
-    var r = String(role || '').toLowerCase();
+    var r = _trimmedString_(role, '').toLowerCase();
     return HIGH_PRIVILEGE_ROLES.indexOf(r) !== -1;
   }
 
+  function _registeredLabel_(value) {
+    if (value === true) return 'так';
+    if (value === false) return 'ні';
+    return 'невідомо';
+  }
+
+  function _identityStatusLabel_(value) {
+    var normalized = _trimmedString_(value, '').toLowerCase();
+    if (normalized === 'resolved') return 'встановлено';
+    if (normalized === 'unregistered') return 'не зареєстровано';
+    if (normalized === 'unavailable') return 'недоступно';
+    return 'невідомо';
+  }
+
+  function _protectedSheets_() {
+    return _arrayUniqueStrings_([
+      _configValue_('ACCESS_SHEET', 'ACCESS'),
+      _configValue_('ALERTS_SHEET', 'ALERTS_LOG'),
+      _stage7ConfigValue_('JOB_RUNTIME_SHEET', 'JOB_RUNTIME_LOG'),
+      _stage7ConfigValue_('AUDIT_SHEET', 'AUDIT_LOG'),
+      _configValue_('OPS_LOG_SHEET', 'OPS_LOG'),
+      _configValue_('ACTIVE_OPERATIONS_SHEET', 'ACTIVE_OPERATIONS'),
+      _configValue_('CHECKPOINTS_SHEET', 'CHECKPOINTS'),
+      _configValue_('DICT_SHEET', 'DICT'),
+      _configValue_('DICT_SUM_SHEET', 'DICT_SUM'),
+      _configValue_('TEMPLATES_SHEET', 'TEMPLATES'),
+      _configValue_('LOG_SHEET', 'LOG'),
+      _vacationConfigValue_('VACATIONS_SHEET', 'VACATIONS'),
+      'VACATION_SCHEDULE',
+      _configValue_('SEND_PANEL_SHEET', 'SEND_PANEL'),
+      _configValue_('PHONES_SHEET', 'PHONES')
+    ]);
+  }
+
+  function _structuralChangeTypes_() {
+    return [
+      'INSERT_ROW',
+      'INSERT_COLUMN',
+      'REMOVE_ROW',
+      'REMOVE_COLUMN',
+      'INSERT_GRID',
+      'REMOVE_GRID'
+    ];
+  }
+
+  function _isStructuralChangeType_(changeType) {
+    var normalized = _trimmedString_(changeType, 'OTHER').toUpperCase();
+    return _structuralChangeTypes_().indexOf(normalized) !== -1;
+  }
 
   // ==================== ЛОГУВАННЯ ТА АУДИТ ====================
 
-  /**
-   * Додає запис до AlertsRepository (якщо доступний).
-   * @param {Object} record
-   */
   function _appendAlert_(record) {
-    if (typeof AlertsRepository_ === 'object' && AlertsRepository_.appendAlert) {
-      AlertsRepository_.appendAlert(record || {});
-    }
+    try {
+      if (typeof AlertsRepository_ === 'object' && AlertsRepository_ && _isFunction_(AlertsRepository_.appendAlert)) {
+        AlertsRepository_.appendAlert(record || {});
+        return;
+      }
+    } catch (_) {}
+
+    try {
+      Logger.log('[ALERT] ' + _safeStringify_(record || {}, 9000));
+    } catch (_) {}
   }
 
-  /**
-   * Додає запис до основного аудиту (Stage7AuditTrail_).
-   * @param {string} message
-   * @param {Object} record
-   */
   function _appendAudit_(message, record) {
-    if (typeof Stage7AuditTrail_ !== 'object' || typeof Stage7AuditTrail_.record !== 'function') {
-      return;
-    }
-    var operationId = 'security-' + (typeof stage7UniqueId_ === 'function'
-      ? stage7UniqueId_('access')
-      : String(Date.now()));
+    try {
+      if (typeof Stage7AuditTrail_ !== 'object' || !Stage7AuditTrail_ || !_isFunction_(Stage7AuditTrail_.record)) {
+        return;
+      }
 
-    Stage7AuditTrail_.record({
-      timestamp: new Date(),
-      operationId: operationId,
-      scenario: 'security.accessViolation',
-      level: 'SECURITY',
-      status: 'BLOCKED',
-      initiator: record.displayName || record.email || record.currentKeyHashMasked || 'unknown',
-      dryRun: false,
-      partial: false,
-      affectedSheets: [
-        typeof appGetCore === 'function' ? appGetCore('ALERTS_SHEET', 'ALERTS_LOG') : 'ALERTS_LOG',
-        typeof STAGE7_CONFIG !== 'undefined' ? STAGE7_CONFIG.AUDIT_SHEET : 'AUDIT',
-        typeof CONFIG !== 'undefined' ? CONFIG.LOG_SHEET : 'LOG'
-      ],
-      affectedEntities: [record.personCallsign || record.displayName || record.email || record.currentKeyHashMasked || 'unknown'],
-      appliedChangesCount: 1,
-      skippedChangesCount: 0,
-      payload: record,
-      diagnostics: {
-        type: 'access-violation',
-        source: record.source || '',
-        action: record.action || ''
-      },
-      message: message || '',
-      error: ''
-    });
+      Stage7AuditTrail_.record({
+        timestamp: new Date(),
+        operationId: 'security-' + _safeUniqueId_('access'),
+        scenario: 'security.accessViolation',
+        level: 'SECURITY',
+        status: 'BLOCKED',
+        initiator: record.displayName || record.email || record.currentKeyHashMasked || 'unknown',
+        dryRun: false,
+        partial: false,
+        affectedSheets: [
+          _configValue_('ALERTS_SHEET', 'ALERTS_LOG'),
+          _stage7ConfigValue_('AUDIT_SHEET', 'AUDIT_LOG'),
+          _configValue_('LOG_SHEET', 'LOG')
+        ],
+        affectedEntities: [record.personCallsign || record.displayName || record.email || record.currentKeyHashMasked || 'unknown'],
+        appliedChangesCount: 1,
+        skippedChangesCount: 0,
+        payload: record,
+        diagnostics: {
+          type: 'access-violation',
+          source: record.source || '',
+          action: record.action || ''
+        },
+        message: message || '',
+        error: ''
+      });
+    } catch (_) {}
   }
 
-  /**
-   * Додає запис до legacy-логу (Stage7AuditTrail_.writeCompactLegacyLog).
-   * @param {string} message
-   * @param {Object} record
-   */
   function _appendLegacyLog_(message, record) {
-    if (typeof Stage7AuditTrail_ !== 'object' || typeof Stage7AuditTrail_.writeCompactLegacyLog !== 'function') {
-      return;
-    }
-    Stage7AuditTrail_.writeCompactLegacyLog({
-      timestamp: new Date(),
-      level: 'SECURITY',
-      scenario: record.action || 'accessViolation',
-      message: message || '',
-      affectedSheets: [typeof appGetCore === 'function' ? appGetCore('ALERTS_SHEET', 'ALERTS_LOG') : 'ALERTS_LOG'],
-      affectedEntities: [record.personCallsign || record.displayName || record.email || record.currentKeyHashMasked || 'unknown'],
-      context: { dateStr: typeof _todayStr_ === 'function' ? _todayStr_() : '' }
-    });
+    try {
+      if (typeof Stage7AuditTrail_ !== 'object' || !Stage7AuditTrail_ || !_isFunction_(Stage7AuditTrail_.writeCompactLegacyLog)) {
+        return;
+      }
+
+      var dateStr = '';
+      try {
+        if (_isFunction_(_todayStr_)) {
+          dateStr = _todayStr_();
+        } else {
+          dateStr = _todayStrLocal_();
+        }
+      } catch (_) {
+        dateStr = _todayStrLocal_();
+      }
+
+      Stage7AuditTrail_.writeCompactLegacyLog({
+        timestamp: new Date(),
+        level: 'SECURITY',
+        scenario: record.action || 'accessViolation',
+        message: message || '',
+        affectedSheets: [_configValue_('ALERTS_SHEET', 'ALERTS_LOG')],
+        affectedEntities: [record.personCallsign || record.displayName || record.email || record.currentKeyHashMasked || 'unknown'],
+        context: { dateStr: dateStr }
+      });
+    } catch (_) {}
   }
 
-  /**
-   * Надсилає email сповіщення адміністраторам.
-   * @param {string} subject
-   * @param {string} body
-   * @returns {Object}
-   */
   function _sendMail_(subject, body) {
     var recipients = _notificationEmails_();
     if (!recipients.length) {
       return { sent: false, recipients: [] };
     }
-    MailApp.sendEmail(recipients.join(','), subject, body);
-    return { sent: true, recipients: recipients };
-  }
 
+    try {
+      MailApp.sendEmail(recipients.join(','), _safeString_(subject, 'WASB SECURITY ALERT'), _safeString_(body, ''));
+      return { sent: true, recipients: recipients };
+    } catch (error) {
+      return {
+        sent: false,
+        recipients: recipients,
+        error: error && error.message ? error.message : String(error)
+      };
+    }
+  }
 
   // ==================== ОСНОВНА ФУНКЦІЯ ПОВІДОМЛЕННЯ ====================
 
-  /**
-   * Реєструє порушення доступу: логує, надсилає сповіщення, створює аудит.
-   * @param {string} actionName
-   * @param {Object} details
-   * @param {Object} descriptorOpt
-   * @returns {Object}
-   */
   function reportViolation(actionName, details, descriptorOpt) {
     var descriptor = descriptorOpt || _descriptor_();
     var identity = descriptor && descriptor.identity ? descriptor.identity : {};
     var audit = descriptor && descriptor.audit ? descriptor.audit : {};
-    var action = String(actionName || 'unknownAction').trim();
-    if (action === '') action = 'unknownAction';
+    var action = _trimmedString_(actionName, 'unknownAction');
+    var info = _isObject_(details) ? Object.assign({}, details) : {};
+    var role = _trimmedString_(descriptor.role, 'guest').toLowerCase();
 
-    var info = Object.assign({}, details || {});
-    var role = String(descriptor.role || 'guest').trim().toLowerCase();
-    if (role === '') role = 'guest';
+    if (!role) role = 'guest';
+    if (!Object.prototype.hasOwnProperty.call(ROLE_LABELS, role)) {
+      role = 'guest';
+    }
+
+    var knownUser = typeof descriptor.knownUser === 'boolean'
+      ? descriptor.knownUser
+      : !!(descriptor.email || identity.email || descriptor.currentKeyHashMasked || identity.currentKeyHashMasked);
+
+    var registered = typeof descriptor.registered === 'boolean' ? descriptor.registered : null;
+    var identityStatus = _trimmedString_(descriptor.identityStatus, '');
+
+    if (!identityStatus) {
+      if (!knownUser) {
+        identityStatus = 'unavailable';
+      } else if (registered === true) {
+        identityStatus = 'resolved';
+      } else {
+        identityStatus = 'unregistered';
+      }
+    }
 
     var message = 'Спроба доступу без прав: ' + action + ' (' + _roleLabel_(role) + ')';
 
@@ -255,7 +448,9 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
       roleLabel: _roleLabel_(role),
       displayName: descriptor.displayName || identity.displayName || '',
       source: descriptor.source || audit.source || '',
-      registered: !!descriptor.registered,
+      knownUser: knownUser,
+      registered: registered,
+      identityStatus: identityStatus,
       enabled: descriptor.enabled !== false,
       email: descriptor.email || identity.email || '',
       currentKeyHashMasked: descriptor.currentKeyHashMasked || identity.currentKeyHashMasked || '',
@@ -263,7 +458,6 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
       details: info
     };
 
-    // Логування в різні системи
     _appendAlert_({
       timestamp: new Date(),
       type: 'access_violation',
@@ -282,7 +476,6 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
     _appendAudit_(message, record);
     _appendLegacyLog_(message, record);
 
-    // Підготовка email-сповіщення
     var emailBodyParts = [
       'WASB SECURITY ALERT',
       '===================',
@@ -292,7 +485,8 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
       'Роль: ' + record.roleLabel,
       'Display name: ' + (record.displayName || 'не визначено'),
       'Джерело доступу: ' + (record.source || 'не визначено'),
-      'Зареєстровано: ' + (record.registered ? 'так' : 'ні'),
+      'Ідентифікація: ' + _identityStatusLabel_(record.identityStatus),
+      'Зареєстровано: ' + _registeredLabel_(record.registered),
       'Email: ' + (record.email || 'не визначено'),
       'User key: ' + (record.currentKeyHashMasked || 'не визначено'),
       'Прив\'язаний позивний: ' + (record.personCallsign || 'не задано'),
@@ -300,22 +494,12 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
       'Деталі:'
     ];
 
-    var detailsStr = '';
-    try {
-      detailsStr = typeof stage7SafeStringify_ === 'function'
-        ? stage7SafeStringify_(info || {}, 9000)
-        : JSON.stringify(info || {});
-    } catch (e) {
-      detailsStr = 'Не вдалося серіалізувати деталі';
-    }
-    emailBodyParts.push(detailsStr);
+    emailBodyParts.push(_safeStringify_(info || {}, 9000));
 
     var emailBody = emailBodyParts.join('\n');
-    var mailResult = { sent: false, recipients: [] };
+    var mailResult = _sendMail_('WASB SECURITY ALERT: ' + action, emailBody);
 
-    try {
-      mailResult = _sendMail_('WASB SECURITY ALERT: ' + action, emailBody);
-    } catch (error) {
+    if (mailResult && mailResult.error) {
       _appendAlert_({
         timestamp: new Date(),
         type: 'access_violation_mail_error',
@@ -329,7 +513,7 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
         source: record.source,
         message: 'Не вдалося надіслати email-сповіщення про порушення доступу',
         details: {
-          error: error && error.message ? error.message : String(error),
+          error: mailResult.error,
           original: record
         }
       });
@@ -339,28 +523,23 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
       success: true,
       message: message,
       alertLogged: true,
-      emailSent: !!mailResult.sent,
-      recipients: mailResult.recipients || [],
+      emailSent: !!(mailResult && mailResult.sent),
+      recipients: mailResult && mailResult.recipients ? mailResult.recipients : [],
       data: record
     };
   }
 
-
   // ==================== ПЕРЕВІРКИ ДОСТУПУ ====================
 
-  /**
-   * Чи може користувач відкрити картку за позивним?
-   * @param {Object} descriptor
-   * @param {string} callsign
-   * @returns {boolean}
-   */
   function canOpenPersonCard(descriptor, callsign) {
     var access = descriptor || _descriptor_();
     var target = _normCallsign_(callsign);
+
     if (!target) return false;
     if (access.enabled === false) return false;
     if (_roleAtLeast_(access.role, 'operator')) return true;
-    if (String(access.role || 'guest').toLowerCase() !== 'viewer') return false;
+    if (_trimmedString_(access.role, 'guest').toLowerCase() !== 'viewer') return false;
+
     var own = _normCallsign_(access.personCallsign || '');
     return !!own && own === target;
   }
@@ -368,11 +547,13 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
   function assertCanOpenPersonCard(callsign, dateStr, descriptorOpt) {
     var descriptor = descriptorOpt || _descriptor_();
     if (canOpenPersonCard(descriptor, callsign)) return descriptor;
+
     reportViolation('openPersonCardDenied', {
-      requestedCallsign: String(callsign || ''),
-      requestedDate: String(dateStr || ''),
+      requestedCallsign: _safeString_(callsign, ''),
+      requestedDate: _safeString_(dateStr, ''),
       violation: 'viewer-card-access'
     }, descriptor);
+
     throw new Error('Недостатньо прав для відкриття цієї картки.');
   }
 
@@ -384,10 +565,12 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
   function assertCanUseDaySummary(dateStr, descriptorOpt) {
     var descriptor = descriptorOpt || _descriptor_();
     if (canUseDaySummary(descriptor)) return descriptor;
+
     reportViolation('daySummaryDenied', {
-      requestedDate: String(dateStr || ''),
+      requestedDate: _safeString_(dateStr, ''),
       violation: 'day-summary-access'
     }, descriptor);
+
     throw new Error('Недостатньо прав для короткого зведення.');
   }
 
@@ -399,10 +582,12 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
   function assertCanUseDetailedSummary(dateStr, descriptorOpt) {
     var descriptor = descriptorOpt || _descriptor_();
     if (canUseDetailedSummary(descriptor)) return descriptor;
+
     reportViolation('detailedSummaryDenied', {
-      requestedDate: String(dateStr || ''),
+      requestedDate: _safeString_(dateStr, ''),
       violation: 'viewer-detailed-summary-access'
     }, descriptor);
+
     throw new Error('Недостатньо прав для детального зведення.');
   }
 
@@ -414,9 +599,13 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
   function assertCanUseWorkingActions(actionName, details, descriptorOpt) {
     var descriptor = descriptorOpt || _descriptor_();
     if (canUseWorkingActions(descriptor)) return descriptor;
-    reportViolation(String(actionName || 'workingActionDenied'),
-      Object.assign({ violation: 'working-action-access' }, details || {}),
-      descriptor);
+
+    reportViolation(
+      _safeString_(actionName, 'workingActionDenied'),
+      Object.assign({ violation: 'working-action-access' }, _isObject_(details) ? details : {}),
+      descriptor
+    );
+
     throw new Error('Недостатньо прав для робочої дії.');
   }
 
@@ -428,64 +617,96 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
   function assertCanUseSendPanel(actionName, details, descriptorOpt) {
     var descriptor = descriptorOpt || _descriptor_();
     if (canUseSendPanel(descriptor)) return descriptor;
-    reportViolation(String(actionName || 'sendPanelDenied'),
-      Object.assign({ violation: 'send-panel-access' }, details || {}),
-      descriptor);
+
+    reportViolation(
+      _safeString_(actionName, 'sendPanelDenied'),
+      Object.assign({ violation: 'send-panel-access' }, _isObject_(details) ? details : {}),
+      descriptor
+    );
+
     throw new Error('Недостатньо прав для SEND_PANEL.');
   }
 
-  /**
-   * Повертає дескриптор користувача за email (для аудиту редагувань).
-   * @param {string} email
-   * @returns {Object}
-   */
   function describeEditActorByEmail(email) {
     var normalized = '';
-    if (typeof AccessControl_ === 'object' && AccessControl_.normalizeEmail) {
-      normalized = AccessControl_.normalizeEmail(email);
-    } else {
-      normalized = String(email || '').trim().toLowerCase();
+
+    try {
+      if (typeof AccessControl_ === 'object' && AccessControl_ && _isFunction_(AccessControl_.normalizeEmail)) {
+        normalized = AccessControl_.normalizeEmail(email);
+      } else {
+        normalized = _lowerEmail_(email);
+      }
+    } catch (_) {
+      normalized = _lowerEmail_(email);
     }
 
     var row = null;
-    if (typeof AccessControl_ === 'object' && AccessControl_.getAccessRowByEmail) {
-      row = AccessControl_.getAccessRowByEmail(normalized);
+
+    try {
+      if (typeof AccessControl_ === 'object' && AccessControl_ && _isFunction_(AccessControl_.getAccessRowByEmail)) {
+        row = AccessControl_.getAccessRowByEmail(normalized);
+      }
+    } catch (_) {
+      row = null;
     }
 
     if (!row) {
+      if (!normalized) {
+        return {
+          email: '',
+          role: 'unknown',
+          enabled: true,
+          knownUser: false,
+          registered: null,
+          isAdmin: false,
+          isOperator: false,
+          isMaintainer: false,
+          source: 'edit-user-unavailable',
+          personCallsign: '',
+          displayName: '',
+          currentKeyHashMasked: '',
+          identityStatus: 'unavailable'
+        };
+      }
+
       return {
         email: normalized,
         role: 'guest',
         enabled: true,
-        knownUser: !!normalized,
+        knownUser: true,
         registered: false,
         isAdmin: false,
         isOperator: false,
         isMaintainer: false,
-        source: normalized ? 'ACCESS-email-unregistered' : 'edit-user-unavailable',
+        source: 'ACCESS-email-unregistered',
         personCallsign: '',
-        displayName: ''
+        displayName: '',
+        currentKeyHashMasked: '',
+        identityStatus: 'unregistered'
       };
     }
 
-    var role = String(row.role || 'guest').toLowerCase();
+    var role = _trimmedString_(row.role, 'guest').toLowerCase();
+
     return {
       email: normalized || row.email || '',
       role: role,
       enabled: row.enabled !== false,
-      knownUser: !!normalized,
+      knownUser: !!(normalized || row.email),
       registered: true,
       isAdmin: _roleAtLeast_(role, 'admin') && row.enabled !== false,
       isOperator: _roleAtLeast_(role, 'operator') && row.enabled !== false,
       isMaintainer: _roleAtLeast_(role, 'maintainer') && row.enabled !== false,
       source: row.source || 'ACCESS',
       personCallsign: row.personCallsign || '',
-      displayName: row.displayName || ''
+      displayName: row.displayName || '',
+      currentKeyHashMasked: row.currentKeyHashMasked || row.userKeyCurrentHashMasked || '',
+      identityStatus: 'resolved'
     };
   }
 
-
   // ==================== ПУБЛІЧНЕ API ====================
+
   return {
     reportViolation: reportViolation,
     canOpenPersonCard: canOpenPersonCard,
@@ -499,10 +720,11 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
     canUseSendPanel: canUseSendPanel,
     assertCanUseSendPanel: assertCanUseSendPanel,
     describeEditActorByEmail: describeEditActorByEmail,
-    PROTECTED_SHEETS: PROTECTED_SHEETS
+    PROTECTED_SHEETS: _protectedSheets_(),
+    getProtectedSheets: _protectedSheets_,
+    isStructuralChangeType: _isStructuralChangeType_
   };
 })();
-
 
 // ==================== ГЛОБАЛЬНІ ФУНКЦІЇ ДЛЯ ТРИГЕРІВ ====================
 
@@ -512,53 +734,44 @@ function stage7ReportAccessViolation(actionName, details) {
 
 function stage7SecurityAuditOnEdit(e) {
   try {
-    // Перевірка вхідних даних
     if (!e || !e.range) return;
+
     var sheet = e.range.getSheet();
     if (!sheet) return;
 
-    var sheetName = sheet.getName();
+    var sheetName = _safeStringForTrigger_(sheet.getName(), '');
     if (!sheetName) return;
 
-    var userEmail = '';
-    try {
-      if (e.user && e.user.getEmail) {
-        userEmail = String(e.user.getEmail() || '');
-      }
-    } catch (err) {
-      // Ігноруємо помилки отримання email
-    }
-
-    var actor = AccessEnforcement_.describeEditActorByEmail(userEmail);
-    var protectedSheets = AccessEnforcement_.PROTECTED_SHEETS;
+    var protectedSheets = _getProtectedSheetsForTrigger_();
     var isProtectedSheet = protectedSheets.indexOf(sheetName) !== -1;
     if (!isProtectedSheet) return;
 
+    var userEmail = _extractEventUserEmail_(e);
+    var actor = AccessEnforcement_.describeEditActorByEmail(userEmail);
+
     var hasAccess = false;
-    if (sheetName === 'ACCESS') {
-      hasAccess = !!actor.isAdmin;
+    var role = _safeStringForTrigger_(actor.role, '').toLowerCase();
+
+    if (sheetName === _configValueForTrigger_('ACCESS_SHEET', 'ACCESS')) {
+      hasAccess = !!actor.isAdmin && actor.enabled !== false;
     } else {
-      var role = String(actor.role || '').toLowerCase();
-      var isHighPrivilege = (role === 'sysadmin' || role === 'owner');
-      hasAccess = isHighPrivilege && actor.enabled !== false;
+      hasAccess = (role === 'sysadmin' || role === 'owner') && actor.enabled !== false;
     }
 
-    // Якщо доступ дозволено і користувач зареєстрований — виходимо
-    if (hasAccess && actor.registered) return;
+    if (hasAccess && actor.registered === true) return;
 
-    // Логування порушення
     AccessEnforcement_.reportViolation('sheetEditDeniedOrSuspicious', {
       sheet: sheetName,
-      a1Notation: e.range.getA1Notation ? e.range.getA1Notation() : '',
+      a1Notation: _extractA1ForTrigger_(e),
       oldValue: typeof e.oldValue !== 'undefined' ? e.oldValue : '',
       newValue: typeof e.value !== 'undefined' ? e.value : '',
       isProtectedSheet: isProtectedSheet,
       editorEmailFromEvent: userEmail || ''
     }, actor);
-
   } catch (error) {
-    // Тихе завершення — не порушуємо роботу таблиці
-    console.error('stage7SecurityAuditOnEdit error:', error);
+    try {
+      Logger.log('stage7SecurityAuditOnEdit error: ' + (error && error.message ? error.message : error));
+    } catch (_) {}
   }
 }
 
@@ -567,33 +780,114 @@ function stage7SecurityAuditOnChange(e) {
     var source = (e && e.source) ? e.source : SpreadsheetApp.getActive();
     if (!source) return;
 
-    var userEmail = '';
-    try {
-      if (e && e.user && e.user.getEmail) {
-        userEmail = String(e.user.getEmail() || '');
-      }
-    } catch (err) {
-      // Ігноруємо
+    var changeType = (e && e.changeType) ? _safeStringForTrigger_(e.changeType, 'OTHER').toUpperCase() : 'OTHER';
+
+    if (!AccessEnforcement_.isStructuralChangeType(changeType)) {
+      return;
     }
 
+    var userEmail = _extractEventUserEmail_(e);
     var actor = AccessEnforcement_.describeEditActorByEmail(userEmail);
-    var changeType = (e && e.changeType) ? String(e.changeType) : 'OTHER';
+    var role = _safeStringForTrigger_(actor.role, '').toLowerCase();
+    var isHighPrivilege = (role === 'sysadmin' || role === 'owner') && actor.enabled !== false && actor.registered === true;
 
-    var role = String(actor.role || '').toLowerCase();
-    var isHighPrivilege = (role === 'sysadmin' || role === 'owner');
-    var shouldAlert = !isHighPrivilege || !actor.knownUser || !actor.registered;
-    if (!shouldAlert) return;
+    if (isHighPrivilege) return;
 
-    // Логування порушення
     AccessEnforcement_.reportViolation('sheetStructureChangeDeniedOrSuspicious', {
-      spreadsheetId: source.getId ? source.getId() : '',
-      spreadsheetName: source.getName ? source.getName() : '',
+      spreadsheetId: _isFunctionForTrigger_(source.getId) ? source.getId() : '',
+      spreadsheetName: _isFunctionForTrigger_(source.getName) ? source.getName() : '',
       changeType: changeType,
       editorEmailFromEvent: userEmail || ''
     }, actor);
-
   } catch (error) {
-    // Тихе завершення — не порушуємо роботу таблиці
-    console.error('stage7SecurityAuditOnChange error:', error);
+    try {
+      Logger.log('stage7SecurityAuditOnChange error: ' + (error && error.message ? error.message : error));
+    } catch (_) {}
   }
+}
+
+// ==================== ДОПОМІЖНІ ГЛОБАЛЬНІ ФУНКЦІЇ ДЛЯ ТРИГЕРІВ ====================
+
+function _isFunctionForTrigger_(value) {
+  return typeof value === 'function';
+}
+
+function _safeStringForTrigger_(value, fallback) {
+  if (value === null || typeof value === 'undefined') return fallback || '';
+  return String(value);
+}
+
+function _extractEventUserEmail_(e) {
+  var userEmail = '';
+
+  try {
+    if (e && e.user && _isFunctionForTrigger_(e.user.getEmail)) {
+      userEmail = _safeStringForTrigger_(e.user.getEmail(), '').trim().toLowerCase();
+    }
+  } catch (_) {
+    userEmail = '';
+  }
+
+  return userEmail;
+}
+
+function _extractA1ForTrigger_(e) {
+  try {
+    if (e && e.range && _isFunctionForTrigger_(e.range.getA1Notation)) {
+      return e.range.getA1Notation();
+    }
+  } catch (_) {}
+  return '';
+}
+
+function _configValueForTrigger_(key, fallback) {
+  try {
+    if (typeof appGetCore === 'function') {
+      var viaCore = appGetCore(key, fallback);
+      if (typeof viaCore !== 'undefined' && viaCore !== null && viaCore !== '') {
+        return viaCore;
+      }
+    }
+  } catch (_) {}
+
+  try {
+    if (typeof CONFIG !== 'undefined' && CONFIG && typeof CONFIG[key] !== 'undefined' && CONFIG[key] !== null && CONFIG[key] !== '') {
+      return CONFIG[key];
+    }
+  } catch (_) {}
+
+  return fallback;
+}
+
+function _getProtectedSheetsForTrigger_() {
+  try {
+    if (typeof AccessEnforcement_ === 'object' && AccessEnforcement_) {
+      if (_isFunctionForTrigger_(AccessEnforcement_.getProtectedSheets)) {
+        return AccessEnforcement_.getProtectedSheets();
+      }
+      if (Array.isArray(AccessEnforcement_.PROTECTED_SHEETS)) {
+        return AccessEnforcement_.PROTECTED_SHEETS.slice();
+      }
+    }
+  } catch (_) {}
+
+  return [
+    _configValueForTrigger_('ACCESS_SHEET', 'ACCESS'),
+    _configValueForTrigger_('ALERTS_SHEET', 'ALERTS_LOG'),
+    _configValueForTrigger_('OPS_LOG_SHEET', 'OPS_LOG'),
+    _configValueForTrigger_('DICT_SHEET', 'DICT'),
+    _configValueForTrigger_('DICT_SUM_SHEET', 'DICT_SUM'),
+    _configValueForTrigger_('LOG_SHEET', 'LOG'),
+    _configValueForTrigger_('SEND_PANEL_SHEET', 'SEND_PANEL'),
+    _configValueForTrigger_('PHONES_SHEET', 'PHONES'),
+    'AUDIT_LOG',
+    'JOB_RUNTIME_LOG',
+    'ACTIVE_OPERATIONS',
+    'CHECKPOINTS',
+    'TEMPLATES',
+    'VACATIONS',
+    'VACATION_SCHEDULE'
+  ].filter(function(value, index, arr) {
+    return value && arr.indexOf(value) === index;
+  });
 }

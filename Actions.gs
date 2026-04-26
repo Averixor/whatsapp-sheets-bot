@@ -77,7 +77,6 @@ function _unwrapActionResult_(result, actionName) {
     throw new Error(errorMsg);
   }
   
-  // Перевіряємо наявність даних
   const data = (result.data && result.data.result) || result.data;
   if (data === null || data === undefined) {
     throw new Error('Сценарій виконано, але не повернуто даних для відображення');

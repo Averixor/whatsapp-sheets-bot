@@ -2,21 +2,26 @@ const DIAGNOSTICS = {
   testMode: true,
   results: {}
 };
+
 function setTestMode(enabled) {
   DIAGNOSTICS.testMode = !!enabled;
   return { success: true, testMode: DIAGNOSTICS.testMode };
 }
+
 function isTestMode() {
   return !!(DIAGNOSTICS && DIAGNOSTICS.testMode);
 }
+
 function _getSS_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) throw new Error('Не вдалося отримати активну таблицю');
   return ss;
 }
+
 function _global_() {
   return Function('return this')();
 }
+
 function _errMsg_(e) {
   try {
     return String(e && e.message ? e.message : e);
@@ -24,6 +29,7 @@ function _errMsg_(e) {
     return String(e);
   }
 }
+
 function _safeErr_(e) {
   try {
     return String(e && e.message ? e.message : e);
@@ -47,6 +53,7 @@ function _pushCheck_(report, check) {
     report.status = 'WARN';
   }
 }
+
 function _makeReport_(name) {
   return {
     name: name,

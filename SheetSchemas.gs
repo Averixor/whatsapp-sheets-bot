@@ -1,47 +1,145 @@
 /**
- * SheetSchemas.gs — hybrid canonical contract для stage 7.
- *
- * База: сильний stage 7 API/data-access каркас.
- * Підсилення: richer schema metadata, header aliases, helper getters,
- * але без зламу сумісності зі старим SheetSchemas_.get(...).
+ * SheetSchemas.gs
+ * Повна безпечна версія для Google Apps Script / WASB.
  */
 
-function _columnLetterToNumber_(letters) {
-  const text = String(letters || '').trim().toUpperCase();
-  let out = 0;
-  for (let i = 0; i < text.length; i++) {
-    out = out * 26 + (text.charCodeAt(i) - 64);
+function _ssHasObject_(value) {
+  return !!value && typeof value === 'object';
+}
+
+function _ssHasFunction_(value) {
+  return typeof value === 'function';
+}
+
+function _ssSafeString_(value, fallback) {
+  if (value === null || typeof value === 'undefined') return fallback || '';
+  return String(value);
+}
+
+function _ssTrimmedString_(value, fallback) {
+  return _ssSafeString_(value, fallback).trim();
+}
+
+function _ssConfigObject_() {
+  try {
+    if (typeof CONFIG !== 'undefined' && _ssHasObject_(CONFIG)) return CONFIG;
+  } catch (e) {}
+  return {};
+}
+
+function _ssVacationConfigObject_() {
+  try {
+    if (typeof VACATION_ENGINE_CONFIG !== 'undefined' && _ssHasObject_(VACATION_ENGINE_CONFIG)) {
+      return VACATION_ENGINE_CONFIG;
+    }
+  } catch (e) {}
+  return {};
+}
+
+function _ssConfigValue_(key, fallback) {
+  var cfg = _ssConfigObject_();
+  if (Object.prototype.hasOwnProperty.call(cfg, key) && cfg[key] !== null && typeof cfg[key] !== 'undefined' && cfg[key] !== '') {
+    return cfg[key];
   }
+  return fallback;
+}
+
+function _ssVacationConfigValue_(key, fallback) {
+  var cfg = _ssVacationConfigObject_();
+  if (Object.prototype.hasOwnProperty.call(cfg, key) && cfg[key] !== null && typeof cfg[key] !== 'undefined' && cfg[key] !== '') {
+    return cfg[key];
+  }
+  return fallback;
+}
+
+function _ssBotMonthSheetName_() {
+  try {
+    if (typeof getBotMonthSheetName_ === 'function') {
+      return _ssTrimmedString_(getBotMonthSheetName_(), '') || _ssCurrentMonth_();
+    }
+  } catch (e) {}
+  return _ssCurrentMonth_();
+}
+
+function _ssCurrentMonth_() {
+  var month = new Date().getMonth() + 1;
+  return String(month).padStart(2, '0');
+}
+
+function _ssParseNumber_(value, fallback) {
+  var num = Number(value);
+  return isFinite(num) && !isNaN(num) ? num : fallback;
+}
+
+function _ssFreeze_(value) {
+  try {
+    return Object.freeze(value);
+  } catch (e) {
+    return value;
+  }
+}
+
+function _columnLetterToNumber_(letters) {
+  var text = _ssTrimmedString_(letters, '').toUpperCase();
+  if (!text) {
+    throw new Error('Порожній рядок літер стовпця');
+  }
+
+  var out = 0;
+  for (var i = 0; i < text.length; i++) {
+    var code = text.charCodeAt(i);
+    if (code < 65 || code > 90) {
+      throw new Error('Некоректні літери стовпця: ' + text);
+    }
+    out = out * 26 + (code - 64);
+  }
+
   return out;
 }
 
 function _parseA1RangeRef_(a1) {
-  const text = String(a1 || '').trim();
-  const match = text.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/i);
+  var text = _ssTrimmedString_(a1, '');
+  var match = text.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/i);
+
   if (!match) {
-    throw new Error(`Непідтримуваний A1-діапазон: ${text}`);
+    throw new Error('Непідтримуваний A1-діапазон: ' + text);
+  }
+
+  var startCol = _columnLetterToNumber_(match[1]);
+  var startRow = Number(match[2]);
+  var endCol = _columnLetterToNumber_(match[3]);
+  var endRow = Number(match[4]);
+
+  if (startCol < 1 || startRow < 1 || endCol < 1 || endRow < 1) {
+    throw new Error('Некоректні координати діапазону: ' + text);
+  }
+
+  if (endCol < startCol || endRow < startRow) {
+    throw new Error('Кінцева координата менша за початкову: ' + text);
   }
 
   return {
-    startCol: _columnLetterToNumber_(match[1]),
-    startRow: Number(match[2]),
-    endCol: _columnLetterToNumber_(match[3]),
-    endRow: Number(match[4])
+    startCol: startCol,
+    startRow: startRow,
+    endCol: endCol,
+    endRow: endRow
   };
 }
 
 function _monthlyMatrix_() {
-  return _parseA1RangeRef_(CONFIG.CODE_RANGE_A1);
+  return _parseA1RangeRef_(_ssConfigValue_('CODE_RANGE_A1', 'H2:AL40'));
 }
 
 function _vacationSheetName_() {
-  return (typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.VACATIONS_SHEET)
-    ? VACATION_ENGINE_CONFIG.VACATIONS_SHEET
-    : 'VACATIONS';
+  return _ssTrimmedString_(_ssVacationConfigValue_('VACATIONS_SHEET', 'VACATIONS'), 'VACATIONS');
 }
 
-const SHEET_SCHEMAS = Object.freeze({
-  monthly: Object.freeze({
+function _ssBuildMonthlySchema_() {
+  var codeRangeA1 = _ssTrimmedString_(_ssConfigValue_('CODE_RANGE_A1', 'H2:AL40'), 'H2:AL40');
+  var matrix = _parseA1RangeRef_(codeRangeA1);
+  var dateRow = _ssParseNumber_(_ssConfigValue_('DATE_ROW', 1), 1);
+
+  return _ssFreeze_({
     key: 'monthly',
     legacyKey: 'MONTHLY',
     type: 'monthly',
@@ -49,55 +147,47 @@ const SHEET_SCHEMAS = Object.freeze({
     dynamicName: true,
     required: true,
     sheetNamePattern: /^\d{2}$/,
-    headerRow: Number(CONFIG.DATE_ROW) || 1,
-    dateRow: Number(CONFIG.DATE_ROW) || 1,
-    codeRangeA1: CONFIG.CODE_RANGE_A1,
-    osFmlRangeA1: CONFIG.OS_FML_RANGE,
-    dataStartRow: _monthlyMatrix_().startRow,
-    dataEndRow: _monthlyMatrix_().endRow,
-    matrix: _monthlyMatrix_(),
-    columns: Object.freeze({
-      phone: 1,
-      callsign: 2,
-      position: 3,
-      oshs: 4,
-      rank: 5,
-      brDays: 6,
-      fml: 7
-    }),
-    fields: Object.freeze({
-      phone:    { col: 1, type: 'string', required: false, allowBlank: true, label: 'Телефон' },
-      callsign: { col: 2, type: 'string', required: true,  allowBlank: false, label: 'Позивний' },
-      position: { col: 3, type: 'string', required: false, allowBlank: true, label: 'Посада' },
-      oshs:     { col: 4, type: 'string', required: false, allowBlank: true, label: 'ОШС' },
-      rank:     { col: 5, type: 'string', required: false, allowBlank: true, label: 'Звання' },
-      brDays:   { col: 6, type: 'number|string', required: false, allowBlank: true, label: 'Дні БР' },
-      fml:      { col: 7, type: 'string', required: true,  allowBlank: false, label: 'ПІБ' }
+    headerRow: dateRow,
+    dateRow: dateRow,
+    codeRangeA1: codeRangeA1,
+    osFmlRangeA1: _ssTrimmedString_(_ssConfigValue_('OS_FML_RANGE', 'G2:G40'), 'G2:G40'),
+    dataStartRow: matrix.startRow,
+    dataEndRow: matrix.endRow,
+    matrix: matrix,
+    fields: _ssFreeze_({
+      phone:    _ssFreeze_({ col: 1, type: 'string', required: false, allowBlank: true,  label: 'Телефон' }),
+      callsign: _ssFreeze_({ col: 2, type: 'string', required: true,  allowBlank: false, label: 'Позивний' }),
+      position: _ssFreeze_({ col: 3, type: 'string', required: false, allowBlank: true,  label: 'Посада' }),
+      oshs:     _ssFreeze_({ col: 4, type: 'string', required: false, allowBlank: true,  label: 'ОШС' }),
+      rank:     _ssFreeze_({ col: 5, type: 'string', required: false, allowBlank: true,  label: 'Звання' }),
+      brDays:   _ssFreeze_({ col: 6, type: 'number|string', required: false, allowBlank: true, label: 'Дні БР' }),
+      fml:      _ssFreeze_({ col: 7, type: 'string', required: true,  allowBlank: false, label: 'ПІБ' })
     }),
     keyFields: ['callsign', 'fml'],
     requiredFields: ['callsign', 'fml'],
     nullableFields: ['phone', 'position', 'oshs', 'rank', 'brDays'],
     searchableFields: ['callsign', 'fml'],
     notes: 'Канонічне джерело щоденних кодів і статусів для sidebar/SEND_PANEL/зведень.'
-  }),
+  });
+}
 
-  phones: Object.freeze({
+function _ssBuildPhonesSchema_() {
+  return _ssFreeze_({
     key: 'phones',
     legacyKey: 'PHONES',
     type: 'table',
     title: 'PHONES',
-    name: CONFIG.PHONES_SHEET,
+    name: _ssTrimmedString_(_ssConfigValue_('PHONES_SHEET', 'PHONES'), 'PHONES'),
     headerRow: 1,
     dataStartRow: 2,
     required: true,
-    columns: Object.freeze({ fml: 1, phone: 2, role: 3, birthday: 4 }),
-    fields: Object.freeze({
-      fml:      { col: 1, type: 'string', required: true,  allowBlank: false, label: 'ПІБ' },
-      phone:    { col: 2, type: 'string', required: false, allowBlank: true,  label: 'Телефон' },
-      role:     { col: 3, type: 'string', required: false, allowBlank: true,  label: 'Роль' },
-      birthday: { col: 4, type: 'date|string', required: false, allowBlank: true, label: 'День народження' }
+    fields: _ssFreeze_({
+      fml:      _ssFreeze_({ col: 1, type: 'string', required: true,  allowBlank: false, label: 'ПІБ' }),
+      phone:    _ssFreeze_({ col: 2, type: 'string', required: false, allowBlank: true,  label: 'Телефон' }),
+      role:     _ssFreeze_({ col: 3, type: 'string', required: false, allowBlank: true,  label: 'Роль' }),
+      birthday: _ssFreeze_({ col: 4, type: 'date|string', required: false, allowBlank: true, label: 'День народження' })
     }),
-    headerAliases: Object.freeze({
+    headerAliases: _ssFreeze_({
       fml: ['ПІБ', 'ПІБ/ФІО', 'ФІО', 'FML'],
       phone: ['Телефон', 'Phone'],
       role: ['Роль', 'Role'],
@@ -107,25 +197,26 @@ const SHEET_SCHEMAS = Object.freeze({
     requiredFields: ['fml'],
     nullableFields: ['phone', 'role', 'birthday'],
     searchableFields: ['fml', 'role', 'phone']
-  }),
+  });
+}
 
-  dict: Object.freeze({
+function _ssBuildDictSchema_() {
+  return _ssFreeze_({
     key: 'dict',
     legacyKey: 'DICT',
     type: 'table',
     title: 'DICT',
-    name: CONFIG.DICT_SHEET,
+    name: _ssTrimmedString_(_ssConfigValue_('DICT_SHEET', 'DICT'), 'DICT'),
     headerRow: 1,
     dataStartRow: 2,
     required: true,
-    columns: Object.freeze({ code: 1, service: 2, place: 3, tasks: 4 }),
-    fields: Object.freeze({
-      code:    { col: 1, type: 'string', required: true,  allowBlank: false, label: 'Код' },
-      service: { col: 2, type: 'string', required: false, allowBlank: true,  label: 'Служба' },
-      place:   { col: 3, type: 'string', required: false, allowBlank: true,  label: 'Місце' },
-      tasks:   { col: 4, type: 'string', required: false, allowBlank: true,  label: 'Завдання' }
+    fields: _ssFreeze_({
+      code:    _ssFreeze_({ col: 1, type: 'string', required: true,  allowBlank: false, label: 'Код' }),
+      service: _ssFreeze_({ col: 2, type: 'string', required: false, allowBlank: true,  label: 'Служба' }),
+      place:   _ssFreeze_({ col: 3, type: 'string', required: false, allowBlank: true,  label: 'Місце' }),
+      tasks:   _ssFreeze_({ col: 4, type: 'string', required: false, allowBlank: true,  label: 'Завдання' })
     }),
-    headerAliases: Object.freeze({
+    headerAliases: _ssFreeze_({
       code: ['Код', 'Code'],
       service: ['Служба', 'Service'],
       place: ['Місце', 'Place'],
@@ -135,25 +226,26 @@ const SHEET_SCHEMAS = Object.freeze({
     requiredFields: ['code'],
     nullableFields: ['service', 'place', 'tasks'],
     searchableFields: ['code', 'service', 'place', 'tasks']
-  }),
+  });
+}
 
-  dictSum: Object.freeze({
+function _ssBuildDictSumSchema_() {
+  return _ssFreeze_({
     key: 'dictSum',
     legacyKey: 'DICT_SUM',
     type: 'table',
     title: 'DICT_SUM',
-    name: CONFIG.DICT_SUM_SHEET,
+    name: _ssTrimmedString_(_ssConfigValue_('DICT_SUM_SHEET', 'DICT_SUM'), 'DICT_SUM'),
     headerRow: 1,
     dataStartRow: 2,
     required: true,
-    columns: Object.freeze({ code: 1, label: 2, order: 3, showZero: 4 }),
-    fields: Object.freeze({
-      code:     { col: 1, type: 'string', required: true,  allowBlank: false, label: 'Код' },
-      label:    { col: 2, type: 'string', required: false, allowBlank: true,  label: 'Назва' },
-      order:    { col: 3, type: 'number|string', required: true, allowBlank: false, label: 'Порядок' },
-      showZero: { col: 4, type: 'boolean|string', required: false, allowBlank: true, label: 'Показувати 0' }
+    fields: _ssFreeze_({
+      code:     _ssFreeze_({ col: 1, type: 'string', required: true,  allowBlank: false, label: 'Код' }),
+      label:    _ssFreeze_({ col: 2, type: 'string', required: false, allowBlank: true,  label: 'Назва' }),
+      order:    _ssFreeze_({ col: 3, type: 'number|string', required: true, allowBlank: false, label: 'Порядок' }),
+      showZero: _ssFreeze_({ col: 4, type: 'boolean|string', required: false, allowBlank: true, label: 'Показувати 0' })
     }),
-    headerAliases: Object.freeze({
+    headerAliases: _ssFreeze_({
       code: ['Код', 'Code'],
       label: ['Назва', 'Label'],
       order: ['Порядок', 'Order'],
@@ -163,29 +255,30 @@ const SHEET_SCHEMAS = Object.freeze({
     requiredFields: ['code', 'order'],
     nullableFields: ['label', 'showZero'],
     searchableFields: ['code', 'label']
-  }),
+  });
+}
 
-  sendPanel: Object.freeze({
+function _ssBuildSendPanelSchema_() {
+  return _ssFreeze_({
     key: 'sendPanel',
     legacyKey: 'SEND_PANEL',
     type: 'table',
     title: 'SEND_PANEL',
-    name: CONFIG.SEND_PANEL_SHEET,
-    titleRows: Number(CONFIG.SEND_PANEL_TITLE_ROWS) || 1,
-    headerRow: Number(CONFIG.SEND_PANEL_HEADER_ROW) || 2,
-    dataStartRow: Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3,
+    name: _ssTrimmedString_(_ssConfigValue_('SEND_PANEL_SHEET', 'SEND_PANEL'), 'SEND_PANEL'),
+    titleRows: _ssParseNumber_(_ssConfigValue_('SEND_PANEL_TITLE_ROWS', 1), 1),
+    headerRow: _ssParseNumber_(_ssConfigValue_('SEND_PANEL_HEADER_ROW', 2), 2),
+    dataStartRow: _ssParseNumber_(_ssConfigValue_('SEND_PANEL_DATA_START_ROW', 3), 3),
     required: false,
-    columns: Object.freeze({ fml: 1, phone: 2, code: 3, tasks: 4, status: 5, sent: 6, action: 7 }),
-    fields: Object.freeze({
-      fml:    { col: 1, type: 'string', required: true,  allowBlank: false, label: 'FML' },
-      phone:  { col: 2, type: 'string', required: false, allowBlank: true,  label: 'Phone' },
-      code:   { col: 3, type: 'string', required: true,  allowBlank: false, label: 'Code' },
-      tasks:  { col: 4, type: 'string', required: false, allowBlank: true,  label: 'Tasks' },
-      status: { col: 5, type: 'string', required: false, allowBlank: true,  label: 'Status' },
-      sent:   { col: 6, type: 'string', required: false, allowBlank: true,  label: 'Sent' },
-      action: { col: 7, type: 'string', required: false, allowBlank: true,  label: 'Action' }
+    fields: _ssFreeze_({
+      fml:    _ssFreeze_({ col: 1, type: 'string', required: true,  allowBlank: false, label: 'FML' }),
+      phone:  _ssFreeze_({ col: 2, type: 'string', required: false, allowBlank: true,  label: 'Phone' }),
+      code:   _ssFreeze_({ col: 3, type: 'string', required: true,  allowBlank: false, label: 'Code' }),
+      tasks:  _ssFreeze_({ col: 4, type: 'string', required: false, allowBlank: true,  label: 'Tasks' }),
+      status: _ssFreeze_({ col: 5, type: 'string', required: false, allowBlank: true,  label: 'Status' }),
+      sent:   _ssFreeze_({ col: 6, type: 'string', required: false, allowBlank: true,  label: 'Sent' }),
+      action: _ssFreeze_({ col: 7, type: 'string', required: false, allowBlank: true,  label: 'Action' })
     }),
-    headerAliases: Object.freeze({
+    headerAliases: _ssFreeze_({
       fml: ['ПІБ', 'ФІО', 'FML'],
       phone: ['Телефон', 'Phone'],
       code: ['Код', 'Code'],
@@ -198,9 +291,11 @@ const SHEET_SCHEMAS = Object.freeze({
     requiredFields: ['fml', 'code'],
     nullableFields: ['phone', 'tasks', 'status', 'sent', 'action'],
     searchableFields: ['fml', 'phone', 'code', 'status']
-  }),
+  });
+}
 
-  vacations: Object.freeze({
+function _ssBuildVacationsSchema_() {
+  return _ssFreeze_({
     key: 'vacations',
     legacyKey: 'VACATIONS',
     type: 'table',
@@ -209,71 +304,65 @@ const SHEET_SCHEMAS = Object.freeze({
     headerRow: 1,
     dataStartRow: 2,
     required: false,
-    columns: Object.freeze({
-      fml: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.NAME_COL) || 1),
-      startDate: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.START_COL) || 2),
-      endDate: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.END_COL) || 3),
-      vacationNo: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.NUM_COL) || 4),
-      active: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.ACTIVE_COL) || 5),
-      notify: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.NOTIFY_COL) || 6)
-    }),
-    fields: Object.freeze({
-      fml:        { col: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.NAME_COL) || 1), type: 'string', required: true,  allowBlank: false, label: 'ПІБ' },
-      startDate:  { col: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.START_COL) || 2), type: 'date|string', required: true, allowBlank: false, label: 'Початок' },
-      endDate:    { col: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.END_COL) || 3), type: 'date|string', required: true, allowBlank: false, label: 'Кінець' },
-      vacationNo: { col: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.NUM_COL) || 4), type: 'string', required: false, allowBlank: true, label: 'Номер' },
-      active:     { col: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.ACTIVE_COL) || 5), type: 'boolean|string', required: false, allowBlank: true, label: 'Активна' },
-      notify:     { col: ((typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG && VACATION_ENGINE_CONFIG.NOTIFY_COL) || 6), type: 'boolean|string', required: false, allowBlank: true, label: 'Notify' }
+    fields: _ssFreeze_({
+      fml:        _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('NAME_COL', 1), 1), type: 'string', required: true,  allowBlank: false, label: 'ПІБ' }),
+      startDate:  _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('START_COL', 2), 2), type: 'date|string', required: true, allowBlank: false, label: 'Початок' }),
+      endDate:    _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('END_COL', 3), 3), type: 'date|string', required: true, allowBlank: false, label: 'Кінець' }),
+      vacationNo: _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('NUM_COL', 4), 4), type: 'string', required: false, allowBlank: true, label: 'Номер' }),
+      active:     _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('ACTIVE_COL', 5), 5), type: 'boolean|string', required: false, allowBlank: true, label: 'Активна' }),
+      notify:     _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('NOTIFY_COL', 6), 6), type: 'boolean|string', required: false, allowBlank: true, label: 'Notify' })
     }),
     keyFields: ['fml', 'startDate', 'endDate'],
     requiredFields: ['fml', 'startDate', 'endDate'],
     nullableFields: ['vacationNo', 'active', 'notify'],
     searchableFields: ['fml', 'vacationNo', 'active']
-  }),
+  });
+}
 
-  log: Object.freeze({
+function _ssBuildLogSchema_() {
+  return _ssFreeze_({
     key: 'log',
     legacyKey: 'LOG',
     type: 'table',
     title: 'LOG',
-    name: CONFIG.LOG_SHEET,
+    name: _ssTrimmedString_(_ssConfigValue_('LOG_SHEET', 'LOG'), 'LOG'),
     headerRow: 1,
     dataStartRow: 2,
     required: false,
-    columns: Object.freeze({
-      timestamp: 1,
-      reportDateStr: 2,
-      sheet: 3,
-      cell: 4,
-      fml: 5,
-      phone: 6,
-      code: 7,
-      service: 8,
-      place: 9,
-      tasks: 10,
-      message: 11,
-      link: 12
-    }),
-    fields: Object.freeze({
-      timestamp:     { col: 1, type: 'date|string', required: true,  allowBlank: false, label: 'Timestamp' },
-      reportDateStr: { col: 2, type: 'string', required: false, allowBlank: true, label: 'ReportDate' },
-      sheet:         { col: 3, type: 'string', required: false, allowBlank: true, label: 'Sheet' },
-      cell:          { col: 4, type: 'string', required: false, allowBlank: true, label: 'Cell' },
-      fml:           { col: 5, type: 'string', required: false, allowBlank: true, label: 'FML' },
-      phone:         { col: 6, type: 'string', required: false, allowBlank: true, label: 'Phone' },
-      code:          { col: 7, type: 'string', required: false, allowBlank: true, label: 'Code' },
-      service:       { col: 8, type: 'string', required: false, allowBlank: true, label: 'Service' },
-      place:         { col: 9, type: 'string', required: false, allowBlank: true, label: 'Place' },
-      tasks:         { col: 10, type: 'string', required: false, allowBlank: true, label: 'Tasks' },
-      message:       { col: 11, type: 'string', required: false, allowBlank: true, label: 'Message' },
-      link:          { col: 12, type: 'string', required: false, allowBlank: true, label: 'Link' }
+    fields: _ssFreeze_({
+      timestamp:     _ssFreeze_({ col: 1, type: 'date|string', required: true,  allowBlank: false, label: 'Мітка часу' }),
+      reportDateStr: _ssFreeze_({ col: 2, type: 'string', required: false, allowBlank: true, label: 'Дата звіту' }),
+      sheet:         _ssFreeze_({ col: 3, type: 'string', required: false, allowBlank: true, label: 'Аркуш' }),
+      cell:          _ssFreeze_({ col: 4, type: 'string', required: false, allowBlank: true, label: 'Клітинка' }),
+      fml:           _ssFreeze_({ col: 5, type: 'string', required: false, allowBlank: true, label: 'ПІБ' }),
+      phone:         _ssFreeze_({ col: 6, type: 'string', required: false, allowBlank: true, label: 'Телефон' }),
+      code:          _ssFreeze_({ col: 7, type: 'string', required: false, allowBlank: true, label: 'Код' }),
+      service:       _ssFreeze_({ col: 8, type: 'string', required: false, allowBlank: true, label: 'Служба' }),
+      place:         _ssFreeze_({ col: 9, type: 'string', required: false, allowBlank: true, label: 'Місце' }),
+      tasks:         _ssFreeze_({ col: 10, type: 'string', required: false, allowBlank: true, label: 'Завдання' }),
+      message:       _ssFreeze_({ col: 11, type: 'string', required: false, allowBlank: true, label: 'Повідомлення' }),
+      link:          _ssFreeze_({ col: 12, type: 'string', required: false, allowBlank: true, label: 'Посилання' })
     }),
     keyFields: ['timestamp', 'fml', 'code'],
     requiredFields: ['timestamp'],
     nullableFields: ['reportDateStr', 'sheet', 'cell', 'fml', 'phone', 'code', 'service', 'place', 'tasks', 'message', 'link'],
     searchableFields: ['fml', 'phone', 'code', 'sheet']
-  })
-});
+  });
+}
+
+function _ssBuildSchemas_() {
+  return _ssFreeze_({
+    monthly: _ssBuildMonthlySchema_(),
+    phones: _ssBuildPhonesSchema_(),
+    dict: _ssBuildDictSchema_(),
+    dictSum: _ssBuildDictSumSchema_(),
+    sendPanel: _ssBuildSendPanelSchema_(),
+    vacations: _ssBuildVacationsSchema_(),
+    log: _ssBuildLogSchema_()
+  });
+}
+
+var SHEET_SCHEMAS = _ssBuildSchemas_();
 
 function _canonicalSchemaMap_() {
   return {
@@ -301,36 +390,65 @@ function getRequiredSchemaKeys_() {
 }
 
 function _toLegacySchema_(canonical, explicitSheetName) {
-  const name = explicitSheetName ? String(explicitSheetName).trim() : (canonical.name || null);
-  const out = Object.assign({}, canonical, {
+  if (!canonical || typeof canonical !== 'object') {
+    throw new Error('Не передано канонічну схему');
+  }
+
+  var name = explicitSheetName ? _ssTrimmedString_(explicitSheetName, '') : (canonical.name || null);
+
+  var out = Object.assign({}, canonical, {
     key: canonical.legacyKey || canonical.key,
     name: name,
     dynamicName: !!canonical.dynamicName,
     fields: canonical.fields,
-    columns: canonical.columns,
     legacyKey: canonical.legacyKey || canonical.key
   });
+
+  if (!out.columns && out.fields) {
+    var cols = {};
+    for (var f in out.fields) {
+      if (Object.prototype.hasOwnProperty.call(out.fields, f)) {
+        cols[f] = out.fields[f].col;
+      }
+    }
+    out.columns = cols;
+  }
+
   return out;
 }
 
 function getMonthlySheetSchema_(sheetName) {
-  return _toLegacySchema_(SHEET_SCHEMAS.monthly, String(sheetName || '').trim() || getBotMonthSheetName_());
+  return _toLegacySchema_(SHEET_SCHEMAS.monthly, _ssTrimmedString_(sheetName, '') || _ssBotMonthSheetName_());
 }
 
-const SheetSchemas_ = (function() {
+var SheetSchemas_ = (function() {
   function get(schemaKeyOrSheetName) {
-    const key = String(schemaKeyOrSheetName || '').trim();
-    if (!key) throw new Error('Не передано ключ схеми листа');
-    if (/^\d{2}$/.test(key)) return getMonthlySheetSchema_(key);
-    const schema = _canonicalSchemaMap_()[key] || _canonicalSchemaMap_()[key.toUpperCase()];
-    if (!schema) throw new Error(`Схема "${schemaKeyOrSheetName}" не знайдена`);
-    if (schema === SHEET_SCHEMAS.monthly) return getMonthlySheetSchema_(getBotMonthSheetName_());
+    var key = _ssTrimmedString_(schemaKeyOrSheetName, '');
+    if (!key) {
+      throw new Error('Не передано ключ схеми листа');
+    }
+
+    if (/^\d{2}$/.test(key)) {
+      return getMonthlySheetSchema_(key);
+    }
+
+    var map = _canonicalSchemaMap_();
+    var schema = map[key] || map[key.toUpperCase()] || map[key.toLowerCase()];
+
+    if (!schema) {
+      throw new Error('Схема "' + schemaKeyOrSheetName + '" не знайдена');
+    }
+
+    if (schema === SHEET_SCHEMAS.monthly) {
+      return getMonthlySheetSchema_(_ssBotMonthSheetName_());
+    }
+
     return _toLegacySchema_(schema);
   }
 
   function getAll() {
     return {
-      MONTHLY: getMonthlySheetSchema_(getBotMonthSheetName_()),
+      MONTHLY: getMonthlySheetSchema_(_ssBotMonthSheetName_()),
       PHONES: _toLegacySchema_(SHEET_SCHEMAS.phones),
       DICT: _toLegacySchema_(SHEET_SCHEMAS.dict),
       DICT_SUM: _toLegacySchema_(SHEET_SCHEMAS.dictSum),
@@ -341,9 +459,9 @@ const SheetSchemas_ = (function() {
   }
 
   function resolveSheetName(schemaKey, explicitName) {
-    if (explicitName) return String(explicitName).trim();
-    const schema = get(schemaKey);
-    return schema.name || '';
+    if (explicitName) return _ssTrimmedString_(explicitName, '');
+    var schema = get(schemaKey);
+    return _ssTrimmedString_(schema.name, '');
   }
 
   return {
@@ -358,40 +476,51 @@ function getSheetSchema_(schemaKeyOrSheetName) {
 }
 
 function getSchemaFieldNames_(schemaOrKey) {
-  const schema = typeof schemaOrKey === 'string' ? getSheetSchema_(schemaOrKey) : schemaOrKey;
-  return Object.keys((schema && schema.fields) || (schema && schema.columns) || {});
+  var schema = typeof schemaOrKey === 'string' ? getSheetSchema_(schemaOrKey) : schemaOrKey;
+  return Object.keys((schema && schema.fields) || {});
 }
 
 function getSchemaFieldColumn_(schemaOrKey, fieldName) {
-  const schema = typeof schemaOrKey === 'string' ? getSheetSchema_(schemaOrKey) : schemaOrKey;
+  var schema = typeof schemaOrKey === 'string' ? getSheetSchema_(schemaOrKey) : schemaOrKey;
+  var field = _ssTrimmedString_(fieldName, '');
+
   if (!schema) throw new Error('Schema not found');
-  if (schema.fields && schema.fields[fieldName]) return Number(schema.fields[fieldName].col);
-  if (schema.columns && fieldName in schema.columns) return Number(schema.columns[fieldName]);
-  throw new Error(`Поле "${fieldName}" не описане у схемі ${schema.key || ''}`);
+  if (!field) throw new Error('Field name is required');
+  if (schema.fields && schema.fields[field]) return Number(schema.fields[field].col);
+
+  throw new Error('Поле "' + fieldName + '" не описане у схемі ' + (schema.key || ''));
 }
 
 function getSchemaLastColumn_(schemaOrKey) {
-  const schema = typeof schemaOrKey === 'string' ? getSheetSchema_(schemaOrKey) : schemaOrKey;
-  return Math.max.apply(null, getSchemaFieldNames_(schema).map(function(name) {
+  var schema = typeof schemaOrKey === 'string' ? getSheetSchema_(schemaOrKey) : schemaOrKey;
+  var fieldNames = getSchemaFieldNames_(schema);
+
+  if (!fieldNames.length) return 1;
+
+  var maxCol = Math.max.apply(null, fieldNames.map(function(name) {
     return getSchemaFieldColumn_(schema, name);
-  }).concat([1]));
+  }));
+
+  return isFinite(maxCol) ? maxCol : 1;
 }
 
 function getSchemaSheetName_(schemaOrKey, options) {
-  const schema = typeof schemaOrKey === 'string' ? getSheetSchema_(schemaOrKey) : schemaOrKey;
+  var schema = typeof schemaOrKey === 'string' ? getSheetSchema_(schemaOrKey) : schemaOrKey;
+
   if (schema.type === 'monthly' || schema.dynamicName) {
-    if (options && options.sheetName) return String(options.sheetName).trim();
-    return String(schema.name || getBotMonthSheetName_()).trim();
+    if (options && options.sheetName) return _ssTrimmedString_(options.sheetName, '');
+    return _ssTrimmedString_(schema.name, '') || _ssBotMonthSheetName_();
   }
-  return String(schema.name || '').trim();
+
+  return _ssTrimmedString_(schema.name, '');
 }
 
 function validateSheetHeadersBySchema_(sheet, schemaOrKey) {
-  const schema = typeof schemaOrKey === 'string' ? getSheetSchema_(schemaOrKey) : schemaOrKey;
-  const report = {
+  var schema = typeof schemaOrKey === 'string' ? getSheetSchema_(schemaOrKey) : schemaOrKey;
+  var report = {
     ok: true,
-    schema: schema.key,
-    sheet: sheet ? sheet.getName() : '',
+    schema: schema ? schema.key : '',
+    sheet: sheet && _ssHasFunction_(sheet.getName) ? sheet.getName() : '',
     missing: [],
     mismatches: [],
     warnings: []
@@ -405,37 +534,54 @@ function validateSheetHeadersBySchema_(sheet, schemaOrKey) {
 
   if (schema.type === 'monthly' || schema.dynamicName) {
     try {
-      const codeRange = sheet.getRange(schema.codeRangeA1 || CONFIG.CODE_RANGE_A1);
+      var monthlyRangeA1 = _ssTrimmedString_(schema.codeRangeA1, '') || _ssTrimmedString_(_ssConfigValue_('CODE_RANGE_A1', 'H2:AL40'), 'H2:AL40');
+      var codeRange = sheet.getRange(monthlyRangeA1);
+
       if (codeRange.getNumRows() <= 0 || codeRange.getNumColumns() <= 0) {
         report.ok = false;
-        report.mismatches.push(`Некоректний codeRange ${schema.codeRangeA1 || CONFIG.CODE_RANGE_A1}`);
+        report.mismatches.push('Некоректний codeRange ' + monthlyRangeA1);
       }
     } catch (e) {
       report.ok = false;
       report.mismatches.push(e && e.message ? e.message : String(e));
     }
+
     return report;
   }
 
-  const headerRow = Number(schema.headerRow) || 1;
-  const lastCol = Math.max(sheet.getLastColumn(), getSchemaLastColumn_(schema));
-  const headers = lastCol > 0 ? sheet.getRange(headerRow, 1, 1, lastCol).getDisplayValues()[0] : [];
+  var headerRow = _ssParseNumber_(schema.headerRow, 1);
+  var lastCol = Math.max(Number(sheet.getLastColumn()) || 0, getSchemaLastColumn_(schema));
+  var headers = lastCol > 0 ? sheet.getRange(headerRow, 1, 1, lastCol).getDisplayValues()[0] : [];
 
   getSchemaFieldNames_(schema).forEach(function(fieldName) {
-    const field = (schema.fields && schema.fields[fieldName]) || { col: getSchemaFieldColumn_(schema, fieldName), label: fieldName };
-    const actual = String(headers[field.col - 1] || '').trim();
-    const aliases = (schema.headerAliases && schema.headerAliases[fieldName]) || [field.label || fieldName];
+    var field = schema.fields[fieldName];
+    var col = Number(field.col) || 0;
+
+    if (!col || col > headers.length) {
+      if (field.required) {
+        report.ok = false;
+        report.missing.push(fieldName);
+      }
+      return;
+    }
+
+    var actual = _ssTrimmedString_(headers[col - 1], '');
+    var aliases = (schema.headerAliases && Array.isArray(schema.headerAliases[fieldName]) && schema.headerAliases[fieldName].length)
+      ? schema.headerAliases[fieldName]
+      : [field.label || fieldName];
+
     if (!actual) {
       if (field.required) {
         report.ok = false;
         report.missing.push(fieldName);
       } else {
-        report.warnings.push(`Порожній header для ${fieldName}`);
+        report.warnings.push('Порожній header для ' + fieldName);
       }
       return;
     }
-    if (aliases.length && aliases.indexOf(actual) === -1) {
-      report.mismatches.push(`${fieldName}: actual="${actual}", expected one of [${aliases.join(', ')}]`);
+
+    if (aliases.indexOf(actual) === -1) {
+      report.mismatches.push(fieldName + ': actual="' + actual + '", expected one of [' + aliases.join(', ') + ']');
     }
   });
 

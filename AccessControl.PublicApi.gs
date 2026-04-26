@@ -59,7 +59,6 @@ function _resolveEntryForAccessFailure_(context) {
   return null;
 }
 
-
 // ==================== ПЕРЕВІРКА РОЛЕЙ ТА ДОСТУПУ ====================
 
 /**
@@ -125,7 +124,6 @@ function assertRoleAtLeast(requiredRole, actionLabel) {
   );
 }
 
-
 // ==================== EMAIL-СПИСКИ ЗА РОЛЯМИ ====================
 
 function listEmailsByRole(role) {
@@ -179,7 +177,6 @@ function getAccessRowByEmail(email) {
   });
 }
 
-
 // ==================== ДОПОМІЖНІ ФУНКЦІЇ ДЛЯ РОЛЕЙ ====================
 
 function getRoleMeta_(role) {
@@ -215,7 +212,6 @@ function listAllowedActionsForRole_(role) {
       return ['безпечний перегляд'];
   }
 }
-
 
 // ==================== ВАЛІДАЦІЯ ТА ДІАГНОСТИКА ====================
 
@@ -352,6 +348,7 @@ function runAccessDiagnostics() {
       missingHeaders: [],
       headersCanonical: false
     },
+
     dataIntegrity: {
       duplicateEmails: [],
       duplicateCurrentKeys: [],
@@ -363,6 +360,7 @@ function runAccessDiagnostics() {
       invalidEnabledValues: [],
       brokenLockedUntil: []
     },
+
     policy: {
       strictUserKeyMode: policy.strictUserKeyMode,
       migrationModeEnabled: policy.migrationModeEnabled,
@@ -370,6 +368,7 @@ function runAccessDiagnostics() {
       adminConfigured: policy.adminConfigured,
       accessSheetPresent: policy.accessSheetPresent
     },
+
     runtime: {
       registeredKeysCount: 0,
       lockedUsersCount: 0,
@@ -541,15 +540,19 @@ function getReadinessStatus() {
   if (!diag.schema.exists) {
     critical.push('ACCESS sheet missing');
   }
+
   if (!diag.schema.headersPresent) {
     critical.push('Missing headers: ' + diag.schema.missingHeaders.join(', '));
   }
+
   if (diag.dataIntegrity.duplicateEmails.length) {
     critical.push('Duplicate emails found');
   }
+
   if (diag.dataIntegrity.duplicateCurrentKeys.length) {
     critical.push('Duplicate current keys found');
   }
+
   if (diag.dataIntegrity.invalidRoleValues.length) {
     critical.push('Invalid role values found');
   }
@@ -557,6 +560,7 @@ function getReadinessStatus() {
   if (!policy.adminConfigured && diag.schema.exists && diag.runtime.registeredKeysCount > 0) {
     warnings.push('No admin configured, but ACCESS has keys. Bootstrap will NOT activate.');
   }
+
   if (diag.runtime.usersWithoutCurrentKey > 0) {
     warnings.push(diag.runtime.usersWithoutCurrentKey + ' users have no current key');
   }
@@ -574,7 +578,6 @@ function getReadinessStatus() {
     }
   };
 }
-
 
 // ==================== UI ТАБЛИЦІ ACCESS ====================
 
@@ -755,7 +758,6 @@ function _testAccessControl_() {
   return results;
 }
 
-
 // ==================== ЕКСПОРТ ОБ'ЄКТУ ====================
 
 var AccessControl_ = Object.freeze({
@@ -770,14 +772,12 @@ var AccessControl_ = Object.freeze({
   MAX_FAILED_ATTEMPTS_SHEET: MAX_FAILED_ATTEMPTS_SHEET,
   ROTATION_PERIOD_DAYS: ROTATION_PERIOD_DAYS,
 
-  // Публічне API
   describe: describe,
   assertRoleAtLeast: assertRoleAtLeast,
   listBindableCallsigns: listBindableCallsigns,
   bindCurrentKeyToCallsign: bindCurrentKeyToCallsign,
   loginByIdentifierAndCallsign: loginByIdentifierAndCallsign,
 
-  // Керування таблицею
   bootstrapSheet: bootstrapSheet,
   refreshAccessSheetUi: refreshAccessSheetUi,
   handleAccessSheetEdit: handleAccessSheetEdit,
@@ -785,14 +785,12 @@ var AccessControl_ = Object.freeze({
   runAccessDiagnostics: runAccessDiagnostics,
   getReadinessStatus: getReadinessStatus,
 
-  // Допоміжні функції
   getAccessRowByEmail: getAccessRowByEmail,
   listAdminEmails: listAdminEmails,
   listNotificationEmails: listNotificationEmails,
   listEmailsByRole: listEmailsByRole,
   listAllowedActionsForRole: listAllowedActionsForRole_,
 
-  // Метадані ролей
   getRoleLabel: getRoleLabel_,
   getRoleNoteTemplate: getRoleNoteTemplate_,
   normalizeRole: normalizeRole_,
@@ -802,15 +800,12 @@ var AccessControl_ = Object.freeze({
     return _getAccessPolicy_().migrationModeEnabled;
   },
 
-  // Утиліти
   hashRawUserKey: hashRawUserKey_,
   maskSensitiveValue: maskSensitiveValue_,
 
-  // Внутрішнє (для тестування)
   _getAccessPolicy: _getAccessPolicy_,
   _testAccessControl: _testAccessControl_
 });
-
 
 // ==================== ГЛОБАЛЬНІ ОБГОРТКИ ====================
 
@@ -838,7 +833,6 @@ function testDiagnostics() {
   Logger.log(JSON.stringify(diag));
   return diag;
 }
-
 
 // ==================== ТЕСТОВІ ХЕЛПЕРИ (ДЛЯ РОЗРОБКИ) ====================
 

@@ -123,7 +123,6 @@ function readSendPanelStateMap_(arg) {
     } catch (e) { }
   }
 
-  // fallback для старого коду: якщо передали panel/sheet
   if (arg && typeof arg.getLastRow === 'function') {
     const mapFromSheet = readSendPanelSentMap_(arg) || {};
     writeSendPanelStateMap_(dateStr, mapFromSheet);
@@ -407,6 +406,7 @@ function rebuildSendPanelCore_() {
         sentToday ? getSendPanelSentMark_() : getSendPanelUnsentMark_(),
         resolveSendPanelActionCellValue_(payload.link, deriveSendPanelStatusFromInputs_(payload.fml, formattedPhone, payload.code, payload.tasks), sentToday)
       ]);
+
     } catch (e) {
       rows.push([
         fml,
@@ -596,10 +596,12 @@ function showSendPanelDialog_(items) {
       background:#f7f7f7;
       color:#222;
     }
+
     h3{
       margin:0 0 14px;
       color:#075e54;
     }
+
     .card{
       background:#fff;
       border:1px solid #ddd;
@@ -608,6 +610,7 @@ function showSendPanelDialog_(items) {
       margin-bottom:14px;
       box-shadow:0 1px 4px rgba(0,0,0,.06);
     }
+
     .meta{
       display:grid;
       grid-template-columns:110px 1fr;
@@ -615,9 +618,11 @@ function showSendPanelDialog_(items) {
       font-size:13px;
       line-height:1.35;
     }
+
     .meta b{
       color:#555;
     }
+
     .stats{
       background:#eef7f1;
       border:1px solid #cfe8d7;
@@ -626,12 +631,14 @@ function showSendPanelDialog_(items) {
       margin-bottom:14px;
       font-size:13px;
     }
+
     .buttons{
       display:flex;
       flex-wrap:wrap;
       gap:10px;
       margin:14px 0;
     }
+
     button{
       padding:11px 16px;
       border:none;
@@ -640,14 +647,17 @@ function showSendPanelDialog_(items) {
       cursor:pointer;
       transition:.15s;
     }
+
     button:hover{
       transform:translateY(-1px);
     }
+
     button:disabled{
       opacity:.6;
       cursor:not-allowed;
       transform:none;
     }
+
     .btn-wa{background:#25D366;color:#fff;}
     .btn-open{background:#0d6efd;color:#fff;}
     .btn-ok{background:#198754;color:#fff;}
@@ -659,6 +669,7 @@ function showSendPanelDialog_(items) {
       color:#666;
       margin-top:6px;
     }
+
     #log{
       background:#111;
       color:#d6f5d6;
@@ -671,6 +682,7 @@ function showSendPanelDialog_(items) {
       white-space:pre-wrap;
       line-height:1.45;
     }
+    
     .done{
       color:#198754;
       font-weight:bold;

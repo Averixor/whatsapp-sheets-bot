@@ -45,7 +45,13 @@ const ROTATION_PERIOD_DAYS = 30;
 // ==================== РОЛІ ТА ПРАВА ====================
 
 const ROLE_VALUES = Object.freeze([
-  'guest', 'viewer', 'operator', 'maintainer', 'admin', 'sysadmin', 'owner'
+  'guest', 
+  'viewer', 
+  'operator', 
+  'maintainer', 
+  'admin', 
+  'sysadmin', 
+  'owner'
 ]);
 
 const ROLE_ORDER = Object.freeze({
@@ -69,10 +75,20 @@ const ROLE_METADATA = Object.freeze({
 });
 
 const SHEET_HEADERS = Object.freeze([
-  'email', 'phone', 'role', 'enabled', 'note',
-  'display_name', 'person_callsign', 'self_bind_allowed',
-  'user_key_current_hash', 'user_key_prev_hash',
-  'last_seen_at', 'last_rotated_at', 'failed_attempts', 'locked_until_ms'
+  'email', 
+  'phone', 
+  'role', 
+  'enabled', 
+  'note',
+  'display_name', 
+  'person_callsign', 
+  'self_bind_allowed',
+  'user_key_current_hash', 
+  'user_key_prev_hash',
+  'last_seen_at', 
+  'last_rotated_at', 
+  'failed_attempts', 
+  'locked_until_ms'
 ]);
 
 // ==================== КОДИ ПРИЧИН ====================
@@ -223,10 +239,10 @@ function _getProperties_() {
 function hashRawUserKey_(rawKey) {
   const raw = String(rawKey || '').trim();
   if (!raw) return '';
-  
+
   try {
     const hash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw);
-    return hash.map(function(byte) {
+    return hash.map(function (byte) {
       return ('0' + (byte & 0xFF).toString(16)).slice(-2);
     }).join('');
   } catch (e) {
@@ -283,13 +299,13 @@ function _readSelfBindLoginState_(currentKeyHash) {
     lastCallsign: '',
     lastReason: ''
   };
-  
+
   const propKey = _selfBindLoginPropKey_(currentKeyHash);
   if (!propKey) return base;
-  
+
   const raw = _getProperties_().getProperty(propKey);
   if (!raw) return base;
-  
+
   try {
     const parsed = JSON.parse(raw);
     return {
@@ -308,7 +324,7 @@ function _readSelfBindLoginState_(currentKeyHash) {
 function _writeSelfBindLoginState_(currentKeyHash, state) {
   const propKey = _selfBindLoginPropKey_(currentKeyHash);
   if (!propKey) return;
-  
+
   _getProperties_().setProperty(propKey, JSON.stringify({
     attempts: parseInt(state?.attempts || '0', 10) || 0,
     lockedUntilMs: parseInt(state?.lockedUntilMs || '0', 10) || 0,
@@ -331,10 +347,10 @@ function _isSelfBindLoginLocked_(currentKeyHash) {
 
 function _getSelfBindLoginPublicState_(currentKeyHash) {
   const state = _readSelfBindLoginState_(currentKeyHash);
-  const remainingMs = state.lockedUntilMs > _nowMs_() 
-    ? Math.max(state.lockedUntilMs - _nowMs_(), 0) 
+  const remainingMs = state.lockedUntilMs > _nowMs_()
+    ? Math.max(state.lockedUntilMs - _nowMs_(), 0)
     : 0;
-  
+
   return {
     locked: remainingMs > 0,
     remainingMs: remainingMs,
@@ -373,17 +389,17 @@ function _normalizeLoginMeta_(meta) {
 
 function _reportSelfBindViolation_(actionName, details, descriptorOpt) {
   try {
-    if (typeof AccessEnforcement_ === 'object' && 
-        typeof AccessEnforcement_.reportViolation === 'function') {
+    if (typeof AccessEnforcement_ === 'object' &&
+      typeof AccessEnforcement_.reportViolation === 'function') {
       AccessEnforcement_.reportViolation(
-        actionName, 
-        details || {}, 
+        actionName,
+        details || {},
         descriptorOpt || describe({ includeSensitiveDebug: false })
       );
     }
   } catch (error) {
-    Logger.log('[AccessControl] self-bind violation report failed: ' + 
-               (error?.message || String(error)));
+    Logger.log('[AccessControl] self-bind violation report failed: ' +
+      (error?.message || String(error)));
   }
 }
 
@@ -391,7 +407,7 @@ function _registerSelfBindFailure_(currentKeyHash, context) {
   const existing = _readSelfBindLoginState_(currentKeyHash);
   const nextAttempts = Math.max(0, Number(existing.attempts || 0)) + 1;
   const locked = nextAttempts >= MAX_SELF_BIND_LOGIN_ATTEMPTS;
-  
+
   const nextState = {
     attempts: locked ? 0 : nextAttempts,
     lockedUntilMs: locked ? (_nowMs_() + SELF_BIND_LOCK_DURATION_MS) : 0,
@@ -400,7 +416,7 @@ function _registerSelfBindFailure_(currentKeyHash, context) {
     lastCallsign: String(context?.callsign || ''),
     lastReason: String(context?.reasonCode || '')
   };
-  
+
   _writeSelfBindLoginState_(currentKeyHash, nextState);
 
   const publicState = _getSelfBindLoginPublicState_(currentKeyHash);
@@ -437,20 +453,20 @@ function _registerSelfBindFailure_(currentKeyHash, context) {
 function _failureMessageForSelfBind_(reasonCode, callsign, failureState) {
   const normalizedCallsign = normalizeCallsign_(callsign);
   const blocked = !!(failureState?.blocked);
-  
+
   if (blocked) {
-    return 'Ваш вхід тимчасово заблоковано на ' + 
-           (failureState.remainingMinutes || _minutesText_(SELF_BIND_LOCK_DURATION_MS)) + 
-           ' хв. ' + getSelfBindHelpText_() + '.';
+    return 'Ваш вхід тимчасово заблоковано на ' +
+      (failureState.remainingMinutes || _minutesText_(SELF_BIND_LOCK_DURATION_MS)) +
+      ' хв. ' + getSelfBindHelpText_() + '.';
   }
 
   if (reasonCode === REASON_CODES.SELF_BIND_CALLSIGN_OCCUPIED) {
-    return 'Цей позивний уже зайнятий. Якщо це ваш позивний — ' + 
-           getSelfBindHelpText_().toLowerCase() + 
-           '. Залишилось спроб: ' + Math.max(Number(failureState?.remainingAttempts || 0), 0) + '.';
+    return 'Цей позивний уже зайнятий. Якщо це ваш позивний — ' +
+      getSelfBindHelpText_().toLowerCase() +
+      '. Залишилось спроб: ' + Math.max(Number(failureState?.remainingAttempts || 0), 0) + '.';
   }
 
-  return 'Дані не збігаються. Перевірте email або телефон і позивний. Залишилось спроб: ' + 
-         Math.max(Number(failureState?.remainingAttempts || 0), 0) + 
-         '. Якщо це ваш позивний — ' + getSelfBindHelpText_().toLowerCase() + '.';
+  return 'Дані не збігаються. Перевірте email або телефон і позивний. Залишилось спроб: ' +
+    Math.max(Number(failureState?.remainingAttempts || 0), 0) +
+    '. Якщо це ваш позивний — ' + getSelfBindHelpText_().toLowerCase() + '.';
 }
