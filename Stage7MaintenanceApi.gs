@@ -329,6 +329,36 @@ function apiListStage7Jobs() {
 
 function apiRunStage7Job(jobName, options) {
   const descriptor = _stage7AssertRole_('sysadmin', 'run job') || {};
+  const normalizedJobName = String(jobName || '').trim();
+
+  if (!normalizedJobName) {
+    const jobs = (typeof Stage7Triggers_ === 'object' && Stage7Triggers_.listJobs)
+      ? Stage7Triggers_.listJobs()
+      : [];
+
+    return _stage7BuildMaintenanceResponse_(
+      false,
+      'Не передано jobName. Не запускай apiRunStage7Job вручну з GAS-редактора. Запускай одну з manual-функцій: apiRunStage7JobScheduledHealthCheckManual, apiRunStage7JobCleanupCachesManual, apiRunStage7JobDailyVacationsAndBirthdaysManual.',
+      {
+        success: false,
+        reason: 'missing-jobName',
+        availableJobs: jobs.map(function(job) {
+          return {
+            jobName: job.jobName || '',
+            handler: job.handler || '',
+            description: job.description || ''
+          };
+        })
+      },
+      'stage7RunJob',
+      ['jobName не передано'],
+      {
+        requestedJobName: '',
+        availableJobsCount: jobs.length
+      }
+    );
+  }
+
   const opts = Object.assign({}, options || {}, {
     trigger: false,
     source: String((options && options.source) || 'manual'),
@@ -350,7 +380,50 @@ function apiRunStage7Job(jobName, options) {
     ),
     userDescriptor: descriptor
   });
-  return Stage7Triggers_.runJob(jobName, opts);
+
+  return Stage7Triggers_.runJob(normalizedJobName, opts);
+}
+
+function apiRunStage7JobDailyVacationsAndBirthdaysManual() {
+  return apiRunStage7Job(STAGE7_CONFIG.JOBS.DAILY_VACATIONS_AND_BIRTHDAYS, {
+    source: 'manual-editor',
+    entryPoint: 'apiRunStage7JobDailyVacationsAndBirthdaysManual'
+  });
+}
+
+function apiRunStage7JobScheduledReconciliationManual() {
+  return apiRunStage7Job(STAGE7_CONFIG.JOBS.SCHEDULED_RECONCILIATION, {
+    source: 'manual-editor',
+    entryPoint: 'apiRunStage7JobScheduledReconciliationManual'
+  });
+}
+
+function apiRunStage7JobScheduledHealthCheckManual() {
+  return apiRunStage7Job(STAGE7_CONFIG.JOBS.SCHEDULED_HEALTHCHECK, {
+    source: 'manual-editor',
+    entryPoint: 'apiRunStage7JobScheduledHealthCheckManual'
+  });
+}
+
+function apiRunStage7JobCleanupCachesManual() {
+  return apiRunStage7Job(STAGE7_CONFIG.JOBS.CLEANUP_CACHES, {
+    source: 'manual-editor',
+    entryPoint: 'apiRunStage7JobCleanupCachesManual'
+  });
+}
+
+function apiRunStage7JobDetectStaleOperationsManual() {
+  return apiRunStage7Job(STAGE7_CONFIG.JOBS.STALE_OPERATION_DETECTOR, {
+    source: 'manual-editor',
+    entryPoint: 'apiRunStage7JobDetectStaleOperationsManual'
+  });
+}
+
+function apiRunStage7JobLifecycleRetentionCleanupManual() {
+  return apiRunStage7Job(STAGE7_CONFIG.JOBS.LIFECYCLE_RETENTION_CLEANUP, {
+    source: 'manual-editor',
+    entryPoint: 'apiRunStage7JobLifecycleRetentionCleanupManual'
+  });
 }
 
 function runDiagnosticsByMode_(options) {
@@ -581,4 +654,52 @@ function apiStage7RunRepair(operationId, options) {
 function apiStage7RunLifecycleRetentionCleanup() {
   _stage7AssertRole_('sysadmin', 'cleanup lifecycle retention');
   return Stage7UseCases_.runMaintenanceScenario({ type: 'cleanupLifecycleRetention' });
+}
+
+/**
+ * Manual GAS-editor wrappers for Stage 7 jobs.
+ * These functions are safe to run from Apps Script editor dropdown,
+ * because GAS does not pass arguments to selected functions.
+ */
+
+function apiRunStage7JobDailyVacationsAndBirthdaysManual() {
+  return apiRunStage7Job(STAGE7_CONFIG.JOBS.DAILY_VACATIONS_AND_BIRTHDAYS, {
+    source: 'manual-editor',
+    entryPoint: 'apiRunStage7JobDailyVacationsAndBirthdaysManual'
+  });
+}
+
+function apiRunStage7JobScheduledReconciliationManual() {
+  return apiRunStage7Job(STAGE7_CONFIG.JOBS.SCHEDULED_RECONCILIATION, {
+    source: 'manual-editor',
+    entryPoint: 'apiRunStage7JobScheduledReconciliationManual'
+  });
+}
+
+function apiRunStage7JobScheduledHealthCheckManual() {
+  return apiRunStage7Job(STAGE7_CONFIG.JOBS.SCHEDULED_HEALTHCHECK, {
+    source: 'manual-editor',
+    entryPoint: 'apiRunStage7JobScheduledHealthCheckManual'
+  });
+}
+
+function apiRunStage7JobCleanupCachesManual() {
+  return apiRunStage7Job(STAGE7_CONFIG.JOBS.CLEANUP_CACHES, {
+    source: 'manual-editor',
+    entryPoint: 'apiRunStage7JobCleanupCachesManual'
+  });
+}
+
+function apiRunStage7JobDetectStaleOperationsManual() {
+  return apiRunStage7Job(STAGE7_CONFIG.JOBS.STALE_OPERATION_DETECTOR, {
+    source: 'manual-editor',
+    entryPoint: 'apiRunStage7JobDetectStaleOperationsManual'
+  });
+}
+
+function apiRunStage7JobLifecycleRetentionCleanupManual() {
+  return apiRunStage7Job(STAGE7_CONFIG.JOBS.LIFECYCLE_RETENTION_CLEANUP, {
+    source: 'manual-editor',
+    entryPoint: 'apiRunStage7JobLifecycleRetentionCleanupManual'
+  });
 }
