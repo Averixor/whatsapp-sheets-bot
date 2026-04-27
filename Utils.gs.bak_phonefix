@@ -77,55 +77,23 @@ function _normFmlVac_(str) {
     .replace(/\s+/g, ' ');
 }
 
-function normalizePhone_(value) {
-  if (value === null || value === undefined) return '';
-
-  if (value instanceof Date && !isNaN(value.getTime())) {
-    return '';
-  }
-
-  var raw = String(value).trim();
-  if (!raw) return '';
-
-  // Не даём датам превращаться в телефоны: 02.04.2000, 2/4/00 і т.п.
-  if (/^\d{1,2}[./-]\d{1,2}([./-]\d{2,4})?$/.test(raw)) {
-    return '';
-  }
-
-  // Не даём Date.toString() / GMT превращаться в телефоны.
-  if (raw.indexOf('GMT') !== -1 || raw.indexOf('г.') !== -1) {
-    return '';
-  }
-
-  var digits = raw.replace(/\D/g, '');
-  if (!digits) return '';
-
-  if (digits.length === 9) {
-    digits = '380' + digits;
-  } else if (digits.length === 10 && digits.charAt(0) === '0') {
-    digits = '38' + digits;
-  } else if (digits.length === 12 && digits.indexOf('380') === 0) {
-    // already normalized
-  } else {
-    return '';
-  }
-
-  if (!/^380\d{9}$/.test(digits)) {
-    return '';
-  }
-
-  return '+' + digits;
+function normalizePhone_(v) {
+  let s = String(v == null ? '' : v).replace(/\D/g, '');
+  if (!s) return '';
+  if (s.length === 10 && s[0] === '0') s = '38' + s;
+  if (s.length === 12 && s.startsWith('380')) return '+' + s;
+  return s ? ('+' + s.replace(/^\+/, '')) : '';
 }
 
 function loadPhonesProfiles_() {
-  const empty = { byCallsign: {}, byFml: {}, byNorm: {}, byRole: {}, items: [], versionMarker: 'stage7-phones-profiles-v5' };
+  const empty = { byCallsign: {}, byFml: {}, byNorm: {}, byRole: {}, items: [], versionMarker: 'stage7-phones-profiles-v3' };
   if (typeof loadPhonesIndex_ !== 'function') {
     return empty;
   }
 
   const cache = CacheService.getScriptCache();
   const primaryKey = cacheKeyPhonesProfiles_();
-  const legacyKeys = [primaryKey, 'PHONES_PROFILES_v5'].filter(Boolean);
+  const legacyKeys = [primaryKey, 'PHONES_PROFILES_v4'].filter(Boolean);
 
   for (let i = 0; i < legacyKeys.length; i++) {
     const key = legacyKeys[i];
@@ -146,7 +114,7 @@ function loadPhonesProfiles_() {
     byNorm: {},
     byRole: {},
     items: Array.isArray(index.items) ? index.items.slice() : [],
-    versionMarker: 'stage7-phones-profiles-v5'
+    versionMarker: 'stage7-phones-profiles-v3'
   };
 
   (index.items || []).forEach(function(item) {
@@ -244,8 +212,8 @@ function ensureLogHeader_(sheet) {
   sheet.getRange(1, 1, 1, 12).setFontWeight('bold').setBackground('#f0f0f0');
 }
 
-function cacheKeyPhones_() { return `PHONES_FLAT_V5_${SpreadsheetApp.getActive().getId()}`; }
-function cacheKeyPhonesIndex_() { return `PHONES_INDEX_V5_${SpreadsheetApp.getActive().getId()}`; }
+function cacheKeyPhones_() { return `PHONES_FLAT_V2_${SpreadsheetApp.getActive().getId()}`; }
+function cacheKeyPhonesIndex_() { return `PHONES_INDEX_V2_${SpreadsheetApp.getActive().getId()}`; }
 function cacheKeyPhonesProfiles_() { return `PHONES_PROFILES_V2_${SpreadsheetApp.getActive().getId()}`; }
 function cacheKeyDict_() { return `DICT_${SpreadsheetApp.getActive().getId()}`; }
 function cacheKeyDictSum_() { return `DICT_SUM_${SpreadsheetApp.getActive().getId()}`; }
@@ -282,7 +250,7 @@ function _getCallsignByFml_(fml) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const phonesSheet = ss.getSheetByName(CONFIG.PHONES_SHEET);
     if (!phonesSheet || phonesSheet.getLastRow() < 2) return '';
-    const data = phonesSheet.getRange(2, 1, phonesSheet.getLastRow() - 1, 3).getDisplayValues();
+    const data = phonesSheet.getRange(2, 1, phonesSheet.getLastRow() - 1, 3).getValues();
     const normFml = normalizeFML_(fml);
     for (const row of data) {
       const rowFml = normalizeFML_(row[0] || '');
@@ -303,7 +271,7 @@ function clearCacheCore_() {
     cacheKeyDict_(),
     cacheKeyDictSum_(),
     cacheKeyTemplates_(),
-    'PHONES_PROFILES_v5',
+    'PHONES_PROFILES_v4',
     'TPL_MAP_V1'
   ]);
 }
@@ -381,7 +349,7 @@ function clearPhoneCache() {
       cacheKeyPhones_(),
       cacheKeyPhonesIndex_(),
       cacheKeyPhonesProfiles_(),
-      'PHONES_PROFILES_v5',
+      'PHONES_PROFILES_v4',
       'TPL_MAP_V1'
     ]);
     return { success: true, message: 'Кеш телефонів очищено' };
@@ -408,4 +376,3 @@ function clearLogSidebar() {
     return { success: false, error: e.toString() };
   }
 }
-
