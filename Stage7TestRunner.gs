@@ -2049,17 +2049,99 @@ function runAllTests(options) {
 }
 
 function runStage7AllProjectTests() {
-  var report = runProjectTestChunk({
-    writeToSheet: true,
-    writeToLogger: true,
-    useLock: true,
-    includeDiscovery: true,
-    offset: 0,
-    limit: 1,
-    maxRuntimeMs: 120000
-  });
+  var startedAt = new Date();
+  var tz = (typeof Session !== 'undefined' && Session.getScriptTimeZone) ? Session.getScriptTimeZone() : 'Etc/GMT';
+  var runId = 'wasb_ui_project_tests_' + Utilities.formatDate(startedAt, tz, 'yyyyMMdd_HHmmss') + '_' + Math.random().toString(36).slice(2, 8);
+  var offset = 0;
+  var totalTasks = null;
+  var done = false;
+  var chunks = 0;
+  var lastReport = null;
+  var hardStopMs = 315000;
+  var allResults = [];
+  var allWarnings = [];
 
-  return showStage7TestAlert_(report, 'WASB — перший пакет тестів проєкту');
+  while (!done) {
+    if (new Date().getTime() - startedAt.getTime() > hardStopMs) {
+      allWarnings.push('Пакетний запуск зупинено перед системним timeout. Продовжити можна через runStage7ProjectTestChunk з offset=' + offset + ' і runId=' + runId + '.');
+      break;
+    }
+
+    lastReport = runProjectTestChunk({
+      writeToSheet: true,
+      writeToLogger: true,
+      useLock: true,
+      includeDiscovery: true,
+      runId: runId,
+      offset: offset,
+      limit: 1,
+      maxRuntimeMs: 120000
+    });
+
+    chunks++;
+
+    if (!lastReport) {
+      allWarnings.push('Пакетний запуск зупинено: пакет не повернув звіт.');
+      break;
+    }
+
+    if (lastReport.ok === false && lastReport.mode === 'lock-failed') {
+      allWarnings.push('Пакетний запуск зупинено: не вдалося отримати lock.');
+      break;
+    }
+
+    if (lastReport.results && lastReport.results.length) {
+      allResults = allResults.concat(lastReport.results);
+    }
+    if (lastReport.warnings && lastReport.warnings.length) {
+      allWarnings = allWarnings.concat(lastReport.warnings);
+    }
+
+    totalTasks = lastReport.totalTasks || totalTasks || 0;
+    offset = typeof lastReport.nextOffset === 'number' ? lastReport.nextOffset : offset + 1;
+    done = lastReport.done === true || (totalTasks && offset >= totalTasks);
+
+    if (!lastReport.results || !lastReport.results.length) {
+      allWarnings.push('Пакетний запуск зупинено: пакет не повернув результатів, offset=' + offset + '.');
+      break;
+    }
+  }
+
+  var finalReport = {
+    ok: true,
+    version: lastReport && lastReport.version || 'stage7-project-test-runner',
+    mode: 'project-chunk-all',
+    runId: runId,
+    ts: lastReport && lastReport.ts || new Date().toISOString(),
+    startedAt: startedAt.toISOString(),
+    finishedAt: new Date().toISOString(),
+    durationMs: new Date().getTime() - startedAt.getTime(),
+    environment: lastReport && lastReport.environment || {},
+    offset: 0,
+    limit: chunks,
+    nextOffset: offset,
+    totalTasks: totalTasks || allResults.length,
+    done: done,
+    progressPct: totalTasks ? Math.round((offset / totalTasks) * 100) : 100,
+    counts: { total: 0, passed: 0, failed: 0, skipped: 0, warnings: 0, discovered: 0 },
+    checks: [],
+    results: allResults,
+    warnings: allWarnings
+  };
+
+  for (var i = 0; i < allResults.length; i++) {
+    finalReport.counts.total++;
+    var status = String(allResults[i].status || '').toUpperCase();
+    if (status === 'PASS') finalReport.counts.passed++;
+    else if (status === 'FAIL') finalReport.counts.failed++;
+    else if (status === 'WARN') finalReport.counts.warnings++;
+    else if (status === 'SKIPPED') finalReport.counts.skipped++;
+    else if (status === 'DISCOVERED') finalReport.counts.discovered++;
+  }
+
+  finalReport.ok = finalReport.counts.failed === 0;
+
+  return showStage7TestAlert_(finalReport, done ? 'WASB — повний пакетний запуск тестів завершено' : 'WASB — пакетний запуск тестів зупинено');
 }
 
 function runStage7TestsAll() {
