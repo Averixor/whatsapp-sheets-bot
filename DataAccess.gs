@@ -507,11 +507,11 @@ function dataAccessBuildMessage_(params) {
 /************ CACHE KEYS ************/
 
 function dataAccessCacheKeyPhonesIndex_() {
-  return 'wasb_dataaccess_phones_index_v3';
+  return 'wasb_dataaccess_phones_index_v4';
 }
 
 function dataAccessCacheKeyPhones_() {
-  return 'wasb_dataaccess_phones_map_v3';
+  return 'wasb_dataaccess_phones_map_v4';
 }
 
 function dataAccessCacheKeyDict_() {
@@ -634,7 +634,7 @@ function loadPhonesIndex_() {
     meta: {
       sheetName: cfg.PHONES_SHEET,
       rowCount: 0,
-      versionMarker: 'wasb-dataaccess-phone-index-v3'
+      versionMarker: 'wasb-dataaccess-phone-index-v4'
     }
   };
 
@@ -644,7 +644,7 @@ function loadPhonesIndex_() {
       return out;
     }
 
-    var values = sheet.getDataRange().getValues();
+    var values = sheet.getDataRange().getDisplayValues();
     var headers = values[0] || [];
 
     var fallbackPhoneIdx = Math.max(0, Number(cfg.PHONE_COL || 1) - 1);
@@ -972,7 +972,7 @@ function loadDictMap_() {
       return map;
     }
 
-    var values = sheet.getDataRange().getValues();
+    var values = sheet.getDataRange().getDisplayValues();
     var headers = values[0] || [];
     var width = values[0] ? values[0].length : 4;
 
@@ -1498,3 +1498,4 @@ function refreshDataAccessCaches_() {
     dict: refreshDictCache()
   };
 }
+
