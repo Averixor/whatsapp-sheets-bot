@@ -450,7 +450,6 @@ const PROJECT_BUNDLE_FILE_INDEX_ = Object.freeze([
   "Log.gs",
   "LogsRepository.gs",
   "MonthSheets.gs",
-  "OrderReport.gs",
   "OperationRepository.gs",
   "OperationSafety.gs",
   "PersonCalendar.html",

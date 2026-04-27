@@ -274,10 +274,6 @@ function onOpen() {
       .createMenu('WASB')
       .addItem('📱 ПАНЕЛЬ', 'showSidebar');
 
-    if (typeof addWasbOrderReportMenuItems_ === 'function') {
-      addWasbOrderReportMenuItems_(wasbMenu);
-    }
-
     wasbMenu.addToUi();
   } catch (err) {
     console.error('onOpen error:', err);
