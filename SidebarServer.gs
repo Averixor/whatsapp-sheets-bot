@@ -186,7 +186,7 @@ function testCommanderPhone() {
     (phoneIndex && Array.isArray(phoneIndex.items) ? phoneIndex.items : []).forEach(function(item) {
       const probe = [item.role, item.callsign, item.fml].filter(Boolean).join(' | ');
       const upperProbe = probe.toUpperCase();
-      if (upperProbe.indexOf('КОМАНДИР') !== -1 || upperProbe.indexOf('КВ') !== -1 || upperProbe.indexOf('ГРАФ') !== -1 || upperProbe.indexOf(String(role || '').toUpperCase()) !== -1) {
+      if (upperProbe.indexOf('КОМАНДИР') !== -1 || upperProbe.indexOf('ГРАФ') !== -1 || upperProbe.indexOf(String(role || '').toUpperCase()) !== -1) {
         result += `  ${probe} → ${item.phone || '—'}
 `;
         found++;

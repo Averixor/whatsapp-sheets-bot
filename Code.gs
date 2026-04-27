@@ -272,7 +272,7 @@ function onOpen() {
     }
     SpreadsheetApp.getUi()
       .createMenu('WASB')
-      .addItem('📱 ПАНЕЛЬ', 'showSidebar')
+      .addItem('Запуск', 'showSidebar')
       .addSeparator()
       .addItem('Звіт: налаштувати лист', 'wasbSetupOrderReportSheet')
       .addItem('Звіт: надіслати Email', 'wasbSendOrderReportFromUi')
@@ -396,10 +396,10 @@ function debugPhones() {
       return idx >= 0 ? idx : fallbackIndex;
     }
 
-    const fmlCol = findCol(['піб', 'фіо', 'fml'], 0);
+    const fmlCol = findCol(['піб', 'fml'], 0);
     const phoneCol = findCol(['тел', 'телефон', 'phones', 'phone'], 1);
-    const roleCol = findCol(['роль', 'позив', 'callsign', 'role'], 2);
-    const birthdayCol = findCol(['дн', 'д.н', 'дата народ', 'день народ', 'birthday'], 3);
+    const roleCol = findCol(['роль', 'позивний', 'callsign', 'role'], 2);
+    const birthdayCol = findCol(['дн', 'д.н', 'д.н.', 'день народження', 'birthday'], 3);
     function cleanBirthday(value) {
       const s = String(value || '').trim();
       if (!s) return '';

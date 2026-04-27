@@ -190,7 +190,7 @@ function _ssBuildPhonesSchema_() {
     }),
 
     headerAliases: _ssFreeze_({
-      fml: ['ПІБ', 'ПІБ/ФІО', 'ФІО', 'FML'],
+      fml: ['ПІБ', 'FML'],
       phone: ['Телефон', 'Phone'],
       role: ['Роль', 'Role'],
       birthday: ['День народження', 'Birthday']
@@ -287,7 +287,7 @@ function _ssBuildSendPanelSchema_() {
     }),
 
     headerAliases: _ssFreeze_({
-      fml: ['ПІБ', 'ФІО', 'FML'],
+      fml: ['ПІБ', 'FML'],
       phone: ['Телефон', 'Phone'],
       code: ['Код', 'Code'],
       tasks: ['Завдання', 'Tasks'],

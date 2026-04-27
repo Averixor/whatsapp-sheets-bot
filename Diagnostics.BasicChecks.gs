@@ -138,7 +138,7 @@ function checkDuplicates() {
       });
     }
 
-    const fmlCol = findCol(['піб', 'фіо', 'фио']);
+    const fmlCol = findCol(['піб', 'fml']);
     const callsignCol = findCol(['позив', 'callsign', 'роль']);
     const phoneCol = findCol(['тел', 'phone']);
     
