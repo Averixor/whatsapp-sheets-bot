@@ -273,6 +273,11 @@ function onOpen() {
     SpreadsheetApp.getUi()
       .createMenu('WASB')
       .addItem('📱 ПАНЕЛЬ', 'showSidebar')
+      .addSeparator()
+      .addItem('Звіт: налаштувати лист', 'wasbSetupOrderReportSheet')
+      .addItem('Звіт: надіслати Email', 'wasbSendOrderReportFromUi')
+      .addItem('Звіт: тригер 09:00', 'wasbCreateOrderReportTimeTrigger')
+      .addItem('Звіт: про модуль', 'wasbShowOrderReportAbout')
       .addToUi();
   } catch (err) {
     console.error('onOpen error:', err);
