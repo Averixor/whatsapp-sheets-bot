@@ -594,12 +594,19 @@ function dataAccessAddPhoneAlias_(out, alias, phone, bucketName) {
   var normFml = dataAccessNormalizeFML_(raw);
   var normCallsign = dataAccessNormCallsignKey_(raw);
 
+  var upper = raw.toUpperCase();
+  var lower = raw.toLowerCase();
+
   out.byAlias[raw] = phone;
+  if (upper) out.byAlias[upper] = phone;
+  if (lower) out.byAlias[lower] = phone;
   if (normFml) out.byNorm[normFml] = phone;
   if (normCallsign) out.byAlias[normCallsign] = phone;
 
   if (bucketName && out[bucketName]) {
     out[bucketName][raw] = phone;
+    if (upper) out[bucketName][upper] = phone;
+    if (lower) out[bucketName][lower] = phone;
     if (normCallsign) out[bucketName][normCallsign] = phone;
     if (normFml) out.byNorm[normFml] = phone;
   }
@@ -832,9 +839,15 @@ function findPhone_(criteria, options) {
   req.fmlNorm = req.fmlNorm || dataAccessNormalizeFML_(req.fml);
   req.role = String(req.role || '').trim();
   req.roleNorm = req.roleNorm || dataAccessNormCallsignKey_(req.role);
+  req.roleUpper = String(req.role || req.roleNorm || '').toUpperCase();
+  req.roleLower = String(req.role || req.roleNorm || '').toLowerCase();
   req.callsign = String(req.callsign || '').trim();
   req.callsignNorm = req.callsignNorm || dataAccessNormCallsignKey_(req.callsign);
+  req.callsignUpper = String(req.callsign || req.callsignNorm || '').toUpperCase();
+  req.callsignLower = String(req.callsign || req.callsignNorm || '').toLowerCase();
   req.alias = String(req.alias || '').trim();
+  req.aliasUpper = String(req.alias || '').toUpperCase();
+  req.aliasLower = String(req.alias || '').toLowerCase();
 
   if (source.legacyMap) {
     var legacyPhone = _legacyPhoneLookup_(source.legacyMap, req);
@@ -844,11 +857,17 @@ function findPhone_(criteria, options) {
   var direct = [
     source.byCallsign && source.byCallsign[req.callsign],
     source.byCallsign && source.byCallsign[req.callsignNorm],
+    source.byCallsign && source.byCallsign[req.callsignUpper],
+    source.byCallsign && source.byCallsign[req.callsignLower],
     source.byFml && source.byFml[req.fml],
     source.byNorm && source.byNorm[req.fmlNorm],
     source.byRole && source.byRole[req.role],
     source.byRole && source.byRole[req.roleNorm],
+    source.byRole && source.byRole[req.roleUpper],
+    source.byRole && source.byRole[req.roleLower],
     source.byAlias && source.byAlias[req.alias],
+    source.byAlias && source.byAlias[req.aliasUpper],
+    source.byAlias && source.byAlias[req.aliasLower],
     source.byAlias && source.byAlias[dataAccessNormCallsignKey_(req.alias)],
     source.byAlias && source.byAlias[dataAccessNormalizeFML_(req.alias)]
   ];
@@ -858,7 +877,16 @@ function findPhone_(criteria, options) {
     if (phone) return phone;
   }
 
-  var targets = [req.callsignNorm, req.roleNorm, req.fmlNorm, dataAccessNormCallsignKey_(req.fml)].filter(Boolean);
+  var targets = [
+    req.callsignNorm,
+    req.callsignUpper,
+    req.callsignLower,
+    req.roleNorm,
+    req.roleUpper,
+    req.roleLower,
+    req.fmlNorm,
+    dataAccessNormCallsignKey_(req.fml)
+  ].filter(Boolean);
   var items = source.items || [];
 
   for (var t = 0; t < targets.length; t++) {
