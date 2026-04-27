@@ -416,6 +416,44 @@
   }
 
 
+  function verticalizeUiReportText_(text) {
+    let s = String(text || '').replace(/\s+/g, ' ').trim();
+
+    if (!s) return '';
+
+    s = s
+      .replace(/Перевірки:\s*усього=/g, 'Перевірки:\n усього=')
+      .replace(/,\s*OK=/g, ',\nOK=')
+      .replace(/,\s*FAIL=/g, ',\nFAIL=')
+      .replace(/,\s*WARN=/g, ',\nWARN=')
+      .replace(/,\s*SKIP=/g, ',\nSKIP=')
+      .replace(/,\s*PASS=/g, ',\nPASS=')
+      .replace(/\.\s*Деталі:\s*/g, '.\nДеталі: ')
+      .replace(/;\s*(?=(PSEUDO|OK|PASS|FAIL|WARN|SKIP|ERROR|CRITICAL|BROKEN):)/g, ';\n')
+      .replace(/;\s*(?=ще\s+\d+\s+перевірок?\s+приховано)/gi, ';\n')
+      .replace(/,\s*(?=(stageVersion=|label=|activeBaseline=|path=|present=|manifestIncluded=|compatibilityPolicyMarker=))/g, ',\n ');
+
+    return s;
+  }
+
+  function formatUiReportDetailsVertical_(value, limit) {
+    return verticalizeUiReportText_(humanizeUiReportValue(value, limit || 900));
+  }
+
+  function renderMultilineUiReportText_(text) {
+    return escapeHtml(text || '').replace(/\n/g, '<br>');
+  }
+
+  function indentUiReportText_(text, indent) {
+    indent = indent || '     ';
+    return String(text || '')
+      .split('\n')
+      .map(function(line) {
+        return line ? indent + line : '';
+      })
+      .join('\n');
+  }
+
   function humanizeUiReportValue(value, limit) {
     limit = limit || 900;
 
@@ -497,12 +535,12 @@
         const ok = typeof check?.ok === 'boolean' ? check.ok : status === 'OK';
         const icon = ok ? '✓' : (status === 'WARN' ? '⚠' : (status === 'SKIPPED' ? 'SKIP' : '✕'));
         const name = check?.title || check?.name || 'Перевірка';
-        const details = humanizeUiReportValue(check?.details || check?.message || '', 900);
-        const recommendation = humanizeUiReportValue(check?.howTo || check?.recommendation || '', 700);
+        const details = formatUiReportDetailsVertical_(check?.details || check?.message || '', 900);
+        const recommendation = formatUiReportDetailsVertical_(check?.howTo || check?.recommendation || '', 700);
 
         text += icon + ' [' + (status || '?') + '] ' + name + '\n';
-        if (details) text += '   Деталі: ' + humanizeUiReportValue(details, 900).replace(/\n/g, ' ') + '\n';
-        if (recommendation) text += '   Як виправити: ' + humanizeUiReportValue(recommendation, 700).replace(/\n/g, ' ') + '\n';
+        if (details) text += '   Деталі:\n' + indentUiReportText_(details, '     ') + '\n';
+        if (recommendation) text += '   Як виправити:\n' + indentUiReportText_(recommendation, '     ') + '\n';
         text += '\n';
       });
 
@@ -617,8 +655,8 @@
     const isPseudo = status === 'PSEUDO';
     const icon = isPseudo ? '🧩' : (ok ? '✓' : (status === 'WARN' ? '⚠' : '✕'));
     const title = check?.title || check?.name || 'Перевірка';
-    const details = humanizeUiReportValue(check?.details || check?.message || '', 900);
-    const recommendation = humanizeUiReportValue(check?.howTo || check?.recommendation || '', 700);
+    const details = formatUiReportDetailsVertical_(check?.details || check?.message || '', 900);
+    const recommendation = formatUiReportDetailsVertical_(check?.howTo || check?.recommendation || '', 700);
     const cssClass = isPseudo ? 'pseudo' : (ok ? 'ok' : (status === 'FAIL' ? 'bad' : 'warn'));
     const noteLabel = isPseudo ? 'Примітка' : 'Як виправити';
 
@@ -628,8 +666,8 @@
           ${icon} ${escapeHtml(title)}
           <span class="health-badges">[${escapeHtml(status || '?')}]</span>
         </div>
-        ${details ? `<div class="health-details">${escapeHtml(details)}</div>` : ''}
-        ${recommendation ? `<div class="how-to-box" style="${isPseudo ? 'border-left-color: var(--google-blue);' : ''}"><strong>${noteLabel}:</strong> ${escapeHtml(recommendation)}</div>` : ''}
+        ${details ? `<div class="health-details">${renderMultilineUiReportText_(details)}</div>` : ''}
+        ${recommendation ? `<div class="how-to-box" style="${isPseudo ? 'border-left-color: var(--google-blue);' : ''}"><strong>${noteLabel}:</strong> ${renderMultilineUiReportText_(recommendation)}</div>` : ''}
       </div>
     `;
   }
@@ -727,8 +765,8 @@
         const isPseudo = status === 'PSEUDO';
         const icon = isPseudo ? '🧩' : (ok ? '✓' : (status === 'WARN' ? '⚠' : '✕'));
         const name = check?.title || check?.name || 'Перевірка';
-        const details = humanizeUiReportValue(check?.details || check?.message || '', 900);
-        const recommendation = humanizeUiReportValue(check?.howTo || check?.recommendation || '', 700);
+        const details = formatUiReportDetailsVertical_(check?.details || check?.message || '', 900);
+        const recommendation = formatUiReportDetailsVertical_(check?.howTo || check?.recommendation || '', 700);
 
         text += `${icon} [${status || '?'}] ${name}\n`;
         if (details) text += `   Деталі: ${details}\n`;
