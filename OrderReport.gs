@@ -1,149 +1,141 @@
 /**
- * OrderReport.gs — safe spreadsheet report module for WASB.
+ * OrderReportModule.gs — safe optional report/email demo module for WASB.
  *
- * This module is intentionally isolated from the main WASB roster sheets:
- * - it never clears the active sheet;
- * - it works only with the dedicated REPORT_ORDERS sheet;
- * - UI entrypoints and trigger entrypoints are separated;
- * - all table values are escaped before being injected into HTML email.
+ * This adapts the simple "orders report" GAS example without touching active sheets,
+ * without declaring a second onOpen(), and without using UI alerts from triggers.
  */
 
 const WASB_ORDER_REPORT_CONFIG_ = Object.freeze({
-  sheetName: 'REPORT_ORDERS',
-  triggerHandler: 'wasbSendOrderReportFromTrigger',
-  dailyTriggerHour: 9,
-  headers: Object.freeze(['Дата', 'Клієнт', 'Сума', 'Статус', 'Email для звіту'])
+  SHEET_NAME: 'ORDER_REPORT',
+  TRIGGER_HANDLER: 'wasbSendOrderReportDailyTrigger_',
+  DEFAULT_TRIGGER_HOUR: 9,
+  DATE_FORMAT: 'dd.MM.yyyy',
+  CURRENCY_FORMAT: '#,##0.00',
+  HEADER: Object.freeze(['Дата', 'Клієнт', 'Сума', 'Статус', 'Email для звіту'])
 });
 
-function wasbSetupOrderReportSheet() {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = wasbGetOrCreateOrderReportSheet_(ss);
-    const userEmail = wasbGetReportUserEmail_();
-    const now = new Date();
-
-    sheet.clear({ contentsOnly: true });
-    sheet.clearFormats();
-
-    const exampleData = [
-      [now, 'Іван Іванов', 1500, 'Завершено', userEmail],
-      [now, 'Марія Петренко', 2300, 'В процесі', userEmail]
-    ];
-
-    sheet.getRange(1, 1, 1, WASB_ORDER_REPORT_CONFIG_.headers.length)
-      .setValues([WASB_ORDER_REPORT_CONFIG_.headers])
-      .setFontWeight('bold')
-      .setBackground('#f3f3f3');
-
-    sheet.getRange(2, 1, exampleData.length, WASB_ORDER_REPORT_CONFIG_.headers.length)
-      .setValues(exampleData);
-
-    sheet.setFrozenRows(1);
-    sheet.setColumnWidths(1, WASB_ORDER_REPORT_CONFIG_.headers.length, 150);
-    sheet.getRange('A:A').setNumberFormat('dd.MM.yyyy');
-    sheet.getRange('C:C').setNumberFormat('#,##0.00');
-
-    SpreadsheetApp.getUi().alert(
-      'Лист звіту налаштовано',
-      'Створено/оновлено лист "' + WASB_ORDER_REPORT_CONFIG_.sheetName + '". Інші листи не очищались.',
-      SpreadsheetApp.getUi().ButtonSet.OK
-    );
-
-    return { success: true, sheetName: WASB_ORDER_REPORT_CONFIG_.sheetName };
-  } catch (e) {
-    wasbShowOrderReportError_('Помилка налаштування листа звіту', e);
-    return { success: false, error: wasbErrorToString_(e) };
-  }
+function addWasbOrderReportMenuItems_(menu) {
+  if (!menu) return menu;
+  return menu
+    .addSeparator()
+    .addItem('Звіт: налаштувати лист', 'wasbSetupOrderReportSheet')
+    .addItem('Звіт: надіслати собі', 'wasbSendOrderReportToCurrentUser')
+    .addItem('Звіт: встановити тригер 09:00', 'wasbInstallOrderReportDailyTrigger')
+    .addItem('Звіт: про модуль', 'wasbShowOrderReportAbout');
 }
 
-function wasbSendOrderReportFromUi() {
-  const result = wasbSendOrderReport_({ showUi: true, source: 'ui' });
-  if (result && result.success) {
-    SpreadsheetApp.getUi().alert(
-      'Звіт надіслано',
-      'Звіт надіслано на адресу: ' + result.to,
-      SpreadsheetApp.getUi().ButtonSet.OK
-    );
-  }
+function wasbSetupOrderReportSheet() {
+  const result = setupOrderReportSheet_();
+  showOrderReportUiAlert_(result.message);
   return result;
 }
 
-function wasbSendOrderReportFromTrigger() {
-  return wasbSendOrderReport_({ showUi: false, source: 'trigger' });
+function wasbSendOrderReportToCurrentUser() {
+  const result = sendOrderReport_({ source: 'ui', showUi: true });
+  showOrderReportUiAlert_(result.message);
+  return result;
 }
 
-function wasbCreateOrderReportTimeTrigger() {
-  try {
-    const triggers = ScriptApp.getProjectTriggers();
-    let removed = 0;
+function wasbSendOrderReportDailyTrigger_() {
+  return sendOrderReport_({ source: 'trigger', showUi: false });
+}
 
-    triggers.forEach(function(trigger) {
-      if (trigger.getHandlerFunction() === WASB_ORDER_REPORT_CONFIG_.triggerHandler) {
-        ScriptApp.deleteTrigger(trigger);
-        removed++;
-      }
-    });
-
-    ScriptApp.newTrigger(WASB_ORDER_REPORT_CONFIG_.triggerHandler)
-      .timeBased()
-      .everyDays(1)
-      .atHour(WASB_ORDER_REPORT_CONFIG_.dailyTriggerHour)
-      .create();
-
-    SpreadsheetApp.getUi().alert(
-      'Тригер створено',
-      'Щоденний тригер звіту створено на ' + WASB_ORDER_REPORT_CONFIG_.dailyTriggerHour + ':00. Видалено старих тригерів: ' + removed,
-      SpreadsheetApp.getUi().ButtonSet.OK
-    );
-
-    return { success: true, removed: removed, hour: WASB_ORDER_REPORT_CONFIG_.dailyTriggerHour };
-  } catch (e) {
-    wasbShowOrderReportError_('Помилка створення тригера звіту', e);
-    return { success: false, error: wasbErrorToString_(e) };
-  }
+function wasbInstallOrderReportDailyTrigger() {
+  const result = installOrderReportDailyTrigger_();
+  showOrderReportUiAlert_(result.message);
+  return result;
 }
 
 function wasbShowOrderReportAbout() {
-  const userEmail = wasbGetReportUserEmail_();
-  SpreadsheetApp.getUi().alert(
-    'Звітний модуль WASB',
-    'Модуль формує HTML-звіт із листа "' + WASB_ORDER_REPORT_CONFIG_.sheetName + '" і надсилає його на email поточного користувача.\n\n' +
-      'Користувач: ' + (userEmail || 'email не визначено') + '\n' +
-      'Тригер: ' + WASB_ORDER_REPORT_CONFIG_.triggerHandler + ', щодня о ' + WASB_ORDER_REPORT_CONFIG_.dailyTriggerHour + ':00\n\n' +
-      'Модуль не очищає активний лист і не змінює бойові листи WASB.',
-    SpreadsheetApp.getUi().ButtonSet.OK
-  );
-}
-
-function wasbSendOrderReport_(options) {
-  const opts = options || {};
-  const showUi = opts.showUi === true;
+  const email = getReportCurrentUserEmail_() || 'email недоступний';
+  const sheetName = WASB_ORDER_REPORT_CONFIG_.SHEET_NAME;
+  const message = [
+    'WASB Order Report module',
+    '',
+    'Лист звіту: ' + sheetName,
+    'Поточний користувач: ' + email,
+    '',
+    'Модуль не очищає активний лист і не замінює основне меню WASB.'
+  ].join('\n');
 
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(WASB_ORDER_REPORT_CONFIG_.sheetName);
+    SpreadsheetApp.getUi().alert('Інфо', message, SpreadsheetApp.getUi().ButtonSet.OK);
+  } catch (error) {
+    Logger.log(message);
+  }
 
-    if (!sheet) {
-      throw new Error('Лист "' + WASB_ORDER_REPORT_CONFIG_.sheetName + '" не знайдено. Спочатку запустіть "Звіт: налаштувати лист".');
-    }
+  return { success: true, message: message };
+}
 
-    const data = sheet.getDataRange().getValues();
-    if (!data || data.length < 2) {
-      throw new Error('Лист звіту порожній. Додайте дані або запустіть налаштування листа.');
-    }
+function setupOrderReportSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = getOrCreateOrderReportSheet_();
+  const email = getReportCurrentUserEmail_();
+  const now = new Date();
+  const header = WASB_ORDER_REPORT_CONFIG_.HEADER;
+  const rows = [
+    [now, 'Іван Іванов', 1500, 'Завершено', email],
+    [now, 'Марія Петренко', 2300, 'В процесі', email]
+  ];
 
-    const recipient = wasbGetReportUserEmail_();
-    if (!recipient) {
-      throw new Error('Не вдалося визначити email користувача для надсилання звіту.');
-    }
+  sheet.clear({ contentsOnly: true });
+  sheet.clearFormats();
+  sheet.getRange(1, 1, 1, header.length)
+    .setValues([header])
+    .setFontWeight('bold')
+    .setBackground('#f3f3f3');
+  sheet.getRange(2, 1, rows.length, header.length).setValues(rows);
+  sheet.getRange(2, 1, rows.length, 1).setNumberFormat(WASB_ORDER_REPORT_CONFIG_.DATE_FORMAT);
+  sheet.getRange(2, 3, rows.length, 1).setNumberFormat(WASB_ORDER_REPORT_CONFIG_.CURRENCY_FORMAT);
+  sheet.setFrozenRows(1);
+  sheet.autoResizeColumns(1, header.length);
 
-    const reportTitle = 'Звіт по замовленнях: ' + ss.getName();
-    const htmlBody = wasbBuildOrderReportHtml_(data, {
-      spreadsheetName: ss.getName(),
-      source: opts.source || 'manual',
-      userEmail: recipient
-    });
+  return {
+    success: true,
+    sheetName: sheet.getName(),
+    spreadsheetName: ss.getName(),
+    rows: rows.length,
+    message: 'Лист ' + sheet.getName() + ' налаштовано без очищення активних робочих листів.'
+  };
+}
 
+function sendOrderReport_(options) {
+  const opts = options || {};
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(WASB_ORDER_REPORT_CONFIG_.SHEET_NAME);
+
+  if (!sheet) {
+    return {
+      success: false,
+      message: 'Лист ' + WASB_ORDER_REPORT_CONFIG_.SHEET_NAME + ' не знайдено. Спочатку запусти “Звіт: налаштувати лист”.'
+    };
+  }
+
+  const data = sheet.getDataRange().getValues();
+  if (!data || data.length < 2) {
+    return {
+      success: false,
+      message: 'Лист ' + sheet.getName() + ' порожній. Спочатку налаштуй або заповни дані.'
+    };
+  }
+
+  const recipient = getReportRecipientEmail_(data) || getReportCurrentUserEmail_();
+  if (!recipient) {
+    return {
+      success: false,
+      message: 'Не вдалося визначити email отримувача звіту.'
+    };
+  }
+
+  const reportTitle = 'Звіт по замовленнях: ' + ss.getName();
+  const htmlBody = buildOrderReportHtml_(data, {
+    spreadsheetName: ss.getName(),
+    sheetName: sheet.getName(),
+    executedBy: getReportCurrentUserEmail_() || 'trigger/system',
+    source: opts.source || 'manual'
+  });
+
+  try {
     MailApp.sendEmail({
       to: recipient,
       subject: reportTitle,
@@ -152,101 +144,145 @@ function wasbSendOrderReport_(options) {
 
     return {
       success: true,
-      to: recipient,
-      rows: Math.max(0, data.length - 1),
-      source: opts.source || 'manual'
+      recipient: recipient,
+      rows: data.length - 1,
+      message: 'Звіт надіслано на адресу: ' + recipient
     };
-  } catch (e) {
-    if (showUi) wasbShowOrderReportError_('Помилка надсилання звіту', e);
-    console.error('wasbSendOrderReport_ error:', e);
-    return { success: false, error: wasbErrorToString_(e), source: opts.source || 'manual' };
+  } catch (error) {
+    return {
+      success: false,
+      recipient: recipient,
+      message: 'Помилка при надсиланні: ' + getReportErrorMessage_(error),
+      error: getReportErrorMessage_(error)
+    };
   }
 }
 
-function wasbBuildOrderReportHtml_(data, meta) {
-  const timezone = Session.getScriptTimeZone() || 'Europe/Kyiv';
-  const safeMeta = meta || {};
-  const generatedAt = Utilities.formatDate(new Date(), timezone, 'dd.MM.yyyy HH:mm:ss');
-  let html = '';
+function installOrderReportDailyTrigger_() {
+  const handler = WASB_ORDER_REPORT_CONFIG_.TRIGGER_HANDLER;
+  let removed = 0;
 
-  html += '<div style="font-family:Arial,sans-serif;font-size:13px;color:#111;">';
-  html += '<h3 style="margin:0 0 10px 0;">Звіт сформовано автоматично</h3>';
-  html += '<p style="margin:0 0 12px 0;">';
-  html += 'Таблиця: <b>' + wasbEscapeReportHtml_(safeMeta.spreadsheetName || '') + '</b><br>';
-  html += 'Час: ' + wasbEscapeReportHtml_(generatedAt) + '<br>';
-  html += 'Джерело: ' + wasbEscapeReportHtml_(safeMeta.source || 'manual') + '<br>';
-  html += 'Користувач: ' + wasbEscapeReportHtml_(safeMeta.userEmail || '') + '</p>';
-
-  html += '<table border="1" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #999;">';
-
-  for (let i = 0; i < data.length; i++) {
-    html += '<tr>';
-    for (let j = 0; j < data[i].length; j++) {
-      const tag = i === 0 ? 'th' : 'td';
-      const style = i === 0
-        ? 'padding:6px;background:#f3f3f3;text-align:left;font-weight:bold;border:1px solid #999;'
-        : 'padding:6px;border:1px solid #999;';
-      html += '<' + tag + ' style="' + style + '">' + wasbFormatReportCell_(data[i][j], timezone) + '</' + tag + '>';
+  ScriptApp.getProjectTriggers().forEach(function(trigger) {
+    if (trigger.getHandlerFunction() === handler) {
+      ScriptApp.deleteTrigger(trigger);
+      removed++;
     }
-    html += '</tr>';
-  }
+  });
 
-  html += '</table>';
-  html += '</div>';
-  return html;
+  ScriptApp.newTrigger(handler)
+    .timeBased()
+    .everyDays(1)
+    .atHour(WASB_ORDER_REPORT_CONFIG_.DEFAULT_TRIGGER_HOUR)
+    .create();
+
+  return {
+    success: true,
+    removed: removed,
+    handler: handler,
+    hour: WASB_ORDER_REPORT_CONFIG_.DEFAULT_TRIGGER_HOUR,
+    message: 'Створено щоденний тригер ' + handler + ' на ' + WASB_ORDER_REPORT_CONFIG_.DEFAULT_TRIGGER_HOUR + ':00.'
+  };
 }
 
-function wasbFormatReportCell_(value, timezone) {
-  if (value instanceof Date) {
-    return wasbEscapeReportHtml_(Utilities.formatDate(value, timezone, 'dd.MM.yyyy'));
-  }
-  if (value === null || typeof value === 'undefined') return '';
-  return wasbEscapeReportHtml_(String(value));
-}
-
-function wasbGetOrCreateOrderReportSheet_(ss) {
-  const name = WASB_ORDER_REPORT_CONFIG_.sheetName;
+function getOrCreateOrderReportSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const name = WASB_ORDER_REPORT_CONFIG_.SHEET_NAME;
   return ss.getSheetByName(name) || ss.insertSheet(name);
 }
 
-function wasbGetReportUserEmail_() {
-  try {
-    const effective = Session.getEffectiveUser && Session.getEffectiveUser().getEmail
-      ? Session.getEffectiveUser().getEmail()
-      : '';
-    if (effective) return String(effective).trim();
-  } catch (_) {}
+function getReportRecipientEmail_(data) {
+  if (!data || data.length < 2) return '';
+  const header = data[0].map(function(value) { return String(value || '').trim().toLowerCase(); });
+  let emailCol = header.indexOf('email для звіту');
+  if (emailCol === -1) emailCol = header.indexOf('email');
+  if (emailCol === -1) return '';
 
-  try {
-    const active = Session.getActiveUser && Session.getActiveUser().getEmail
-      ? Session.getActiveUser().getEmail()
-      : '';
-    if (active) return String(active).trim();
-  } catch (_) {}
+  for (let i = 1; i < data.length; i++) {
+    const email = String(data[i][emailCol] || '').trim();
+    if (isValidReportEmail_(email)) return email;
+  }
 
   return '';
 }
 
-function wasbEscapeReportHtml_(value) {
-  if (typeof escapeHtml_ === 'function') return escapeHtml_(value);
-  return String(value == null ? '' : value)
+function getReportCurrentUserEmail_() {
+  try {
+    const activeEmail = Session.getActiveUser().getEmail();
+    if (activeEmail) return String(activeEmail).trim();
+  } catch (error) {}
+
+  try {
+    const effectiveEmail = Session.getEffectiveUser().getEmail();
+    if (effectiveEmail) return String(effectiveEmail).trim();
+  } catch (error) {}
+
+  return '';
+}
+
+function buildOrderReportHtml_(data, context) {
+  const ctx = context || {};
+  const timezone = getReportTimeZone_();
+  let html = '';
+
+  html += '<h3>Звіт сформовано автоматично</h3>';
+  html += '<p><b>Таблиця:</b> ' + escapeReportHtml_(ctx.spreadsheetName || '') + '</p>';
+  html += '<p><b>Лист:</b> ' + escapeReportHtml_(ctx.sheetName || '') + '</p>';
+  html += '<table border="1" cellpadding="5" cellspacing="0" style="border-collapse:collapse;">';
+
+  data.forEach(function(row, rowIndex) {
+    html += '<tr>';
+    row.forEach(function(value) {
+      const tag = rowIndex === 0 ? 'th' : 'td';
+      const style = rowIndex === 0 ? ' style="background:#f3f3f3;font-weight:bold;"' : '';
+      html += '<' + tag + style + '>' + escapeReportHtml_(formatReportCell_(value, timezone)) + '</' + tag + '>';
+    });
+    html += '</tr>';
+  });
+
+  html += '</table>';
+  html += '<p>Скрипт виконав: ' + escapeReportHtml_(ctx.executedBy || '') + '</p>';
+  html += '<p>Джерело запуску: ' + escapeReportHtml_(ctx.source || '') + '</p>';
+
+  return html;
+}
+
+function formatReportCell_(value, timezone) {
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return Utilities.formatDate(value, timezone, WASB_ORDER_REPORT_CONFIG_.DATE_FORMAT);
+  }
+  if (value === null || value === undefined) return '';
+  return String(value);
+}
+
+function getReportTimeZone_() {
+  try {
+    return Session.getScriptTimeZone() || 'Europe/Kyiv';
+  } catch (error) {
+    return 'Europe/Kyiv';
+  }
+}
+
+function escapeReportHtml_(value) {
+  return String(value === null || value === undefined ? '' : value)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    .replace(/'/g, '&#039;');
 }
 
-function wasbShowOrderReportError_(title, error) {
-  SpreadsheetApp.getUi().alert(
-    title,
-    wasbErrorToString_(error),
-    SpreadsheetApp.getUi().ButtonSet.OK
-  );
+function isValidReportEmail_(value) {
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(value || '').trim());
 }
 
-function wasbErrorToString_(error) {
-  if (!error) return 'Невідома помилка';
-  if (error.message) return String(error.message);
-  return String(error);
+function showOrderReportUiAlert_(message) {
+  try {
+    SpreadsheetApp.getUi().alert(String(message || 'Готово'));
+  } catch (error) {
+    Logger.log(String(message || 'Готово'));
+  }
+}
+
+function getReportErrorMessage_(error) {
+  return error && error.message ? error.message : String(error || 'Unknown error');
 }
