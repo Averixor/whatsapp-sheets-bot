@@ -316,6 +316,9 @@ var Stage7TestRunner = (function () {
     return [
       task_('health-check', 'Health: healthCheck', 'health', 'fast', 'critical', 'healthCheck', optArg_('health')),
 
+      task_('smoke-tests', 'Smoke tests: runSmokeTests', 'smoke', 'fast', 'critical', 'runSmokeTests', optArg_('smoke')),
+      task_('regression-tests', 'Regression tests: runRegressionTestSuite', 'regression', 'full', 'warning', 'runRegressionTestSuite', optArg_('regression')),
+
       task_('basic-check-sheets', 'Basic diagnostics: checkSheets', 'diagnostics', 'fast', 'critical', 'checkSheets'),
       task_('basic-check-files', 'Basic diagnostics: checkFiles', 'diagnostics', 'fast', 'warning', 'checkFiles'),
       task_('basic-check-duplicates', 'Basic diagnostics: checkDuplicates', 'diagnostics', 'full', 'warning', 'checkDuplicates'),
@@ -2256,3 +2259,4 @@ function showStage7TestAlert_(report, title) {
 
   return report;
 }
+
