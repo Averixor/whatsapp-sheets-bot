@@ -339,14 +339,9 @@ var Stage7TestRunner = (function () {
       task_('stage7-full-diagnostics', 'Stage7 diagnostics: runFullDiagnostics_', 'diagnostics', 'full', 'critical', 'runFullDiagnostics_', optArg_('full')),
       task_('stage7-full-verbose-diagnostics', 'Stage7 diagnostics: runFullVerboseDiagnostics_', 'diagnostics', 'full', 'warning', 'runFullVerboseDiagnostics_', optArg_('full-verbose')),
 
-      task_('stage3-health-check', 'Legacy diagnostics: runStage3HealthCheck_', 'diagnostics', 'full', 'warning', 'runStage3HealthCheck_', optArg_('stage3Health')),
-      task_('stage4-health-check', 'Legacy diagnostics: runStage4HealthCheck_', 'diagnostics', 'full', 'warning', 'runStage4HealthCheck_', optArg_('stage4Health')),
       task_('stage5-metadata-consistency-check', 'Legacy diagnostics: runStage5MetadataConsistencyCheck_', 'diagnostics', 'full', 'warning', 'runStage5MetadataConsistencyCheck_'),
       task_('stage41-project-consistency-check', 'Legacy diagnostics: runStage41ProjectConsistencyCheck_', 'diagnostics', 'full', 'warning', 'runStage41ProjectConsistencyCheck_'),
-      task_('historical-structural-diagnostics', 'Historical diagnostics: runHistoricalStructuralDiagnosticsInternal_', 'diagnostics', 'full', 'warning', 'runHistoricalStructuralDiagnosticsInternal_', optArg_('historicalStructural')),
-      task_('historical-compatibility-diagnostics', 'Historical diagnostics: runHistoricalCompatibilityDiagnosticsInternal_', 'diagnostics', 'full', 'warning', 'runHistoricalCompatibilityDiagnosticsInternal_', optArg_('historicalCompatibility')),
       task_('historical-quick-diagnostics', 'Historical diagnostics: runHistoricalQuickDiagnosticsInternal_', 'diagnostics', 'full', 'warning', 'runHistoricalQuickDiagnosticsInternal_', optArg_('historicalQuick')),
-      task_('historical-full-diagnostics', 'Historical diagnostics: runHistoricalFullDiagnosticsInternal_', 'diagnostics', 'full', 'warning', 'runHistoricalFullDiagnosticsInternal_', optArg_('historicalFull')),
 
 
       task_('domain-tests-stage6a', 'Domain tests: runStage6ADomainTests_', 'domain', 'full', 'warning', 'runStage6ADomainTests_', optArg_('domain')),
