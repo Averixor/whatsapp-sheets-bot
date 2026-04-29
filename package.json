@@ -1,0 +1,15 @@
+{
+  "name": "whatsapp-sheets-bot",
+  "version": "7.1.2",
+  "private": true,
+  "description": "WhatsApp-Sheets-Bot Google Apps Script project",
+  "scripts": {
+    "gas:status": "clasp status",
+    "gas:pull": "clasp pull",
+    "gas:push": "clasp push",
+    "gas:open": "clasp open"
+  },
+  "devDependencies": {
+    "@google/clasp": "^3.3.0"
+  }
+}
