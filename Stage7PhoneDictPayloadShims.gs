@@ -133,50 +133,191 @@ function loadPhonesMap_() {
   return map;
 }
 
-function findPhone_(query) {
+function findPhone_(query, options) {
   if (query === null || query === undefined) return '';
 
-  if (typeof query === 'string') {
-    query = { fml: query, callsign: query, role: query };
+  if (typeof query === 'string' || typeof query === 'number') {
+    query = {
+      fml: String(query),
+      fio: String(query),
+      fullName: String(query),
+      name: String(query),
+      callsign: String(query),
+      role: String(query)
+    };
   }
 
   query = query || {};
+  options = options || {};
 
-  var index = loadPhonesIndex_();
+  var index = options.index || loadPhonesIndex_();
 
-  var fml = String(query.fml || query.name || '').trim();
-  var callsign = String(query.callsign || '').trim();
-  var role = String(query.role || '').trim();
-  var phone = String(query.phone || '').trim();
+  function clean_(value) {
+    return String(value || '').trim();
+  }
 
-  var normalizedPhone = typeof normalizePhone_ === 'function' ? normalizePhone_(phone) : phone;
-  if (normalizedPhone) return normalizedPhone;
+  function normLower_(value) {
+    return clean_(value)
+      .toLowerCase()
+      .replace(/[’']/g, '')
+      .replace(/\s+/g, ' ');
+  }
 
-  var fmlKey = typeof _normFmlForProfiles_ === 'function'
-    ? _normFmlForProfiles_(fml)
-    : String(fml || '').trim().toUpperCase();
+  function normUpper_(value) {
+    return clean_(value)
+      .toUpperCase()
+      .replace(/[’']/g, '')
+      .replace(/\s+/g, ' ');
+  }
 
-  var normKey = typeof normalizeFML_ === 'function'
-    ? normalizeFML_(fml)
-    : String(fml || '').trim().toLowerCase();
+  function addCandidate_(list, value) {
+    value = clean_(value);
+    if (!value) return;
 
-  var callsignKey = typeof _normCallsignKey_ === 'function'
-    ? _normCallsignKey_(callsign)
-    : String(callsign || '').trim().toUpperCase();
+    list.push(value);
+    list.push(value.toLowerCase());
+    list.push(value.toUpperCase());
+    list.push(normLower_(value));
+    list.push(normUpper_(value));
 
-  var roleKey = typeof _normCallsignKey_ === 'function'
-    ? _normCallsignKey_(role)
-    : String(role || '').trim().toUpperCase();
+    if (typeof normalizeFML_ === 'function') {
+      try { list.push(normalizeFML_(value)); } catch (_) {}
+    }
 
-  var item =
-    (fmlKey && index.byFml && index.byFml[fmlKey]) ||
-    (normKey && index.byNorm && index.byNorm[normKey]) ||
-    (callsignKey && index.byCallsign && index.byCallsign[callsignKey]) ||
-    (roleKey && index.byRole && index.byRole[roleKey]) ||
-    null;
+    if (typeof _normFmlForProfiles_ === 'function') {
+      try { list.push(_normFmlForProfiles_(value)); } catch (_) {}
+    }
 
-  return item && item.phone ? item.phone : '';
+    if (typeof _normCallsignKey_ === 'function') {
+      try { list.push(_normCallsignKey_(value)); } catch (_) {}
+    }
+  }
+
+  function unique_(list) {
+    var seen = {};
+    var out = [];
+
+    for (var i = 0; i < list.length; i++) {
+      var item = clean_(list[i]);
+      if (!item || seen[item]) continue;
+      seen[item] = true;
+      out.push(item);
+    }
+
+    return out;
+  }
+
+  function phoneFromRecord_(record) {
+    if (record === null || record === undefined) return '';
+
+    // DomainTests передаёт телефон простой строкой:
+    // byFml: { 'Петренко Іван Іванович': '+380661111111' }
+    if (typeof record === 'string' || typeof record === 'number') {
+      return clean_(record);
+    }
+
+    return clean_(
+      record.phone ||
+      record.phoneRaw ||
+      record.phoneDisplay ||
+      record.phoneNumber ||
+      record.tel ||
+      record.number ||
+      record.value ||
+      record.mobile ||
+      record.mobilePhone ||
+      record.Phone ||
+      record.PHONE ||
+      ''
+    );
+  }
+
+  function tryMap_(map, keys) {
+    if (!map) return '';
+
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      if (!key) continue;
+
+      if (Object.prototype.hasOwnProperty.call(map, key)) {
+        var phone = phoneFromRecord_(map[key]);
+        if (phone) return phone;
+      }
+    }
+
+    return '';
+  }
+
+  var fml = query.fml || query.fio || query.fullName || query.name || '';
+  var callsign = query.callsign || query.callSign || query.nick || '';
+  var role = query.role || '';
+  var directPhone = query.phone || query.phoneRaw || query.number || '';
+
+  if (directPhone) {
+    if (typeof normalizePhone_ === 'function') {
+      try { return normalizePhone_(directPhone); } catch (_) {}
+    }
+    return clean_(directPhone);
+  }
+
+  var keys = [];
+  addCandidate_(keys, fml);
+  addCandidate_(keys, callsign);
+  addCandidate_(keys, role);
+  addCandidate_(keys, query.key);
+  addCandidate_(keys, query.id);
+  keys = unique_(keys);
+
+  var maps = [
+    index.byFml,
+    index.byNorm,
+    index.byRole,
+    index.byCallsign,
+    index.byCallSign,
+    index.byFio,
+    index.byName,
+    index.byFullName,
+    index.byPhone,
+    index.fml,
+    index.fio,
+    index.names,
+    index.roles,
+    index.callsigns,
+    index.phones,
+    index
+  ].filter(Boolean);
+
+  for (var m = 0; m < maps.length; m++) {
+    var found = tryMap_(maps[m], keys);
+    if (found) return found;
+  }
+
+  var rows = [];
+  if (Array.isArray(index.items)) rows = rows.concat(index.items);
+  if (Array.isArray(index.rows)) rows = rows.concat(index.rows);
+
+  for (var r = 0; r < rows.length; r++) {
+    var row = rows[r] || {};
+    var rowKeys = [];
+
+    addCandidate_(rowKeys, row.fml || row.fio || row.fullName || row.name || '');
+    addCandidate_(rowKeys, row.callsign || row.callSign || row.nick || '');
+    addCandidate_(rowKeys, row.role || '');
+    rowKeys = unique_(rowKeys);
+
+    for (var a = 0; a < keys.length; a++) {
+      for (var b = 0; b < rowKeys.length; b++) {
+        if (keys[a] && rowKeys[b] && keys[a] === rowKeys[b]) {
+          var rowPhone = phoneFromRecord_(row);
+          if (rowPhone) return rowPhone;
+        }
+      }
+    }
+  }
+
+  return '';
 }
+
 
 function loadDictMap_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -275,3 +416,4 @@ function buildPayloadForCell_(options) {
     message: message
   };
 }
+
