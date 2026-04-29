@@ -354,26 +354,205 @@ function loadDictMap_() {
   return map;
 }
 
-function buildPayloadForCell_(options) {
-  var input = options || {};
-  var code = String(input.code || input.status || '').trim();
-  var dict = loadDictMap_();
-  var dictItem = code && dict[code] ? dict[code] : {};
+function buildPayloadForCell_(options, rowArg, colArg, phonesMapArg, dictMapArg) {
+  var isSheetCall = options && typeof options.getRange === 'function';
+  var input = {};
+  var sheet = null;
+  var row = 0;
+  var col = 0;
 
-  var fml = String(input.fml || input.name || '').trim();
-  var phone = input.phone ? normalizePhone_(input.phone) : findPhone_({
-    fml: fml,
-    callsign: input.callsign || '',
-    role: input.role || ''
-  });
-
-  var date = String(input.date || input.dateStr || '').trim();
-  if (!date && typeof _todayStr_ === 'function') {
-    date = _todayStr_();
+  function cfg_(key, fallback) {
+    try {
+      if (typeof CONFIG !== 'undefined' && CONFIG && CONFIG[key] !== undefined && CONFIG[key] !== null && CONFIG[key] !== '') {
+        return CONFIG[key];
+      }
+    } catch (_) {}
+    return fallback;
   }
 
-  var message = '';
+  function clean_(value) {
+    return String(value || '').trim();
+  }
 
+  function normalizePhoneCompat_(value) {
+    if (value === null || value === undefined) return '';
+    if (typeof normalizePhone_ === 'function') {
+      try {
+        return normalizePhone_(value);
+      } catch (_) {}
+    }
+
+    var digits = String(value || '').replace(/\D/g, '');
+    if (!digits) return '';
+
+    if (digits.length === 9) digits = '380' + digits;
+    if (digits.length === 10 && digits.charAt(0) === '0') digits = '38' + digits;
+    if (digits.length === 11 && digits.charAt(0) === '8') digits = '3' + digits;
+
+    return digits ? '+' + digits : '';
+  }
+
+  function a1FromRowColCompat_(r, c) {
+    if (typeof a1FromRowCol_ === 'function') {
+      try {
+        return a1FromRowCol_(r, c);
+      } catch (_) {}
+    }
+
+    r = Number(r);
+    c = Number(c);
+
+    var letters = '';
+    while (c > 0) {
+      var mod = (c - 1) % 26;
+      letters = String.fromCharCode(65 + mod) + letters;
+      c = Math.floor((c - mod) / 26);
+    }
+
+    return letters + String(r);
+  }
+
+  function normalizeDateCompat_(cell) {
+    if (!cell) return '';
+
+    var value = '';
+    var display = '';
+
+    try { value = cell.getValue(); } catch (_) {}
+    try { display = clean_(cell.getDisplayValue()); } catch (_) {}
+
+    if (typeof DateUtils_ !== 'undefined' && DateUtils_ && typeof DateUtils_.normalizeDate === 'function') {
+      try {
+        return DateUtils_.normalizeDate(value, display);
+      } catch (_) {}
+    }
+
+    if (display) return display;
+
+    if (value instanceof Date && !isNaN(value.getTime())) {
+      try {
+        return Utilities.formatDate(value, getTimeZone_(), 'dd.MM.yyyy');
+      } catch (_) {
+        return Utilities.formatDate(value, Session.getScriptTimeZone(), 'dd.MM.yyyy');
+      }
+    }
+
+    return clean_(value);
+  }
+
+  function getDictItem_(dict, code) {
+    dict = dict || {};
+    code = clean_(code);
+    if (!code) return {};
+
+    return dict[code] ||
+      dict[code.toLowerCase()] ||
+      dict[code.replace(/\s+/g, '')] ||
+      dict[code.toLowerCase().replace(/\s+/g, '')] ||
+      {};
+  }
+
+  if (isSheetCall) {
+    sheet = options;
+    row = Number(rowArg);
+    col = Number(colArg);
+
+    var fmlCol = Number(cfg_('FML_COL', cfg_('FIO_COL', 7))) || 7;
+    var callsignCol = Number(cfg_('CALLSIGN_COL', 2)) || 2;
+    var brCol = Number(cfg_('BR_COL', 6)) || 6;
+    var dateRow = Number(cfg_('DATE_ROW', 1)) || 1;
+
+    var fmlFromSheet = clean_(sheet.getRange(row, fmlCol).getDisplayValue());
+    var callsignFromSheet = '';
+    var codeFromSheet = clean_(sheet.getRange(row, col).getDisplayValue());
+    var brRaw = '';
+    var brDays = 0;
+
+    try {
+      callsignFromSheet = clean_(sheet.getRange(row, callsignCol).getDisplayValue());
+    } catch (_) {}
+
+    try {
+      brRaw = clean_(sheet.getRange(row, brCol).getDisplayValue());
+      brDays = brRaw ? (Number(String(brRaw).replace(',', '.')) || 0) : 0;
+    } catch (_) {}
+
+    var dateStr = normalizeDateCompat_(sheet.getRange(dateRow, col));
+
+    input = {
+      sheet: sheet,
+      sheetName: sheet.getName(),
+      row: row,
+      col: col,
+      cell: a1FromRowColCompat_(row, col),
+      fml: fmlFromSheet,
+      name: fmlFromSheet,
+      callsign: callsignFromSheet,
+      code: codeFromSheet,
+      status: codeFromSheet,
+      date: dateStr,
+      dateStr: dateStr,
+      brDays: brDays,
+      phonesMap: phonesMapArg || null,
+      dictMap: dictMapArg || null
+    };
+  } else {
+    input = options || {};
+    sheet = input.sheet || null;
+    row = Number(input.row || 0);
+    col = Number(input.col || 0);
+  }
+
+  var code = clean_(input.code || input.status || '');
+  var dict = input.dictMap || dictMapArg || loadDictMap_();
+  var dictItem = getDictItem_(dict, code);
+
+  var fml = clean_(input.fml || input.fio || input.fullName || input.name || '');
+  var callsign = clean_(input.callsign || input.callSign || input.nick || '');
+  var role = clean_(input.role || '');
+
+  var phone = '';
+  if (input.phone) {
+    phone = normalizePhoneCompat_(input.phone);
+  } else {
+    var findOptions = {};
+    var phonesSource = input.phonesMap || phonesMapArg || null;
+    if (phonesSource) findOptions.index = phonesSource;
+
+    phone = findPhone_({
+      fml: fml,
+      fio: fml,
+      fullName: fml,
+      name: fml,
+      callsign: callsign,
+      role: role
+    }, findOptions);
+
+    phone = normalizePhoneCompat_(phone);
+  }
+
+  var date = clean_(input.date || input.dateStr || '');
+  if (!date && typeof _todayStr_ === 'function') {
+    try { date = _todayStr_(); } catch (_) {}
+  }
+
+  var service = clean_(input.service || dictItem.service || dictItem.label || code);
+  var label = clean_(input.label || dictItem.label || service || code);
+  var place = clean_(input.place || dictItem.place || '');
+  var tasks = clean_(
+    input.tasks ||
+    input.task ||
+    dictItem.tasks ||
+    dictItem.task ||
+    dictItem.message ||
+    service ||
+    label ||
+    code
+  );
+
+  var brDaysOut = input.brDays === undefined || input.brDays === null ? 0 : input.brDays;
+
+  var message = '';
   if (typeof buildMessage_ === 'function') {
     try {
       message = buildMessage_({
@@ -382,13 +561,14 @@ function buildPayloadForCell_(options) {
         fml: fml,
         phone: phone,
         code: code,
-        service: dictItem.label || code,
-        label: dictItem.label || code,
-        place: input.place || dictItem.place || '',
-        tasks: input.tasks || input.task || dictItem.task || dictItem.message || '',
+        service: service,
+        label: label,
+        place: place,
+        tasks: tasks,
+        brDays: brDaysOut,
         status: code
       });
-    } catch (e) {
+    } catch (_) {
       message = '';
     }
   }
@@ -398,22 +578,44 @@ function buildPayloadForCell_(options) {
       date ? 'Дата: ' + date : '',
       fml ? 'ПІБ: ' + fml : '',
       code ? 'Код: ' + code : '',
-      dictItem.label ? 'Статус: ' + dictItem.label : '',
-      dictItem.place ? 'Місце: ' + dictItem.place : '',
-      (dictItem.task || dictItem.message) ? 'Завдання: ' + (dictItem.task || dictItem.message) : ''
+      service ? 'Статус: ' + service : '',
+      place ? 'Місце: ' + place : '',
+      tasks ? 'Завдання: ' + tasks : ''
     ].filter(Boolean).join('\n');
   }
 
+  var safeMessage = message;
+  if (typeof trimToEncoded_ === 'function') {
+    try {
+      safeMessage = trimToEncoded_(message, cfg_('MAX_WA_TEXT', 3800));
+    } catch (_) {}
+  }
+
+  var link = '';
+  if (phone) {
+    link = 'https://wa.me/' + String(phone).replace(/[^\d]/g, '') + '?text=' + encodeURIComponent(safeMessage);
+  }
+
   return {
+    timestamp: new Date(),
+    sheet: input.sheetName || (sheet && typeof sheet.getName === 'function' ? sheet.getName() : ''),
+    cell: input.cell || (row && col ? a1FromRowColCompat_(row, col) : ''),
+    row: row || input.row || '',
+    col: col || input.col || '',
     fml: fml,
+    callsign: callsign,
     phone: phone,
     code: code,
+    service: service,
+    label: label,
+    place: place,
+    tasks: tasks,
+    brDays: brDaysOut,
+    message: message,
     date: date,
-    service: dictItem.label || code,
-    label: dictItem.label || code,
-    place: input.place || dictItem.place || '',
-    tasks: input.tasks || input.task || dictItem.task || dictItem.message || '',
-    message: message
+    reportDateStr: date,
+    link: link
   };
 }
+
 
