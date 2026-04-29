@@ -1,36 +1,10 @@
 # ==============================================================================
 # .claspignore for WASB
-# Upload ONLY root Apps Script files
+# Ignore everything, allow only root Apps Script files
 # ==============================================================================
 
-# Ignore everything by default
-**
+**/**
 
-# Allow only root Apps Script project files
-!/*.gs
-!/*.html
-!/appsscript.json
-
-# Force-ignore local/dev folders
-/node_modules/**
-/.git/**
-/.vscode/**
-
-# Force-ignore local/dev files
-/.clasp.json
-/.claspignore
-/package.json
-/package-lock.json
-
-/README.md
-/ARCHITECTURE.md
-/RUNBOOK.md
-/SECURITY.md
-/CHANGELOG.md
-
-/_debug_person_card_lookup.txt
-/_person_card_compact_report.txt
-
-/*.log
-/*.tmp
-/*.bak
+!appsscript.json
+!*.gs
+!*.html
