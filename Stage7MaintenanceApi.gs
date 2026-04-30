@@ -663,10 +663,18 @@ function apiStage7SubmitAccessKeyRequest(payload) {
     ? AccessControl_.submitAccessKeyRequest(payload || {})
     : { success: false, message: 'AccessControl_ недоступний', code: 'access.registration.unavailable' };
 
-  return stage7Envelope_(
+  const success = result && result.success !== false;
+  const message = result && result.message
+    ? result.message
+    : (success ? 'Заявку на отримання ключа доступу надіслано' : 'Не вдалося надіслати заявку на отримання ключа доступу');
+
+  return _stage7BuildMaintenanceResponse_(
+    success,
+    message,
+    result || {},
     'stage7SubmitAccessKeyRequest',
-    result,
-    result && result.success === false ? result.message : ''
+    success ? [] : [_stage7NormalizeWarningText_(message) || 'Не вдалося надіслати заявку на отримання ключа доступу'],
+    { affectedSheets: [appGetCore('ALERTS_SHEET', 'ALERTS_LOG')] }
   );
 }
 
