@@ -834,7 +834,6 @@ function submitAccessKeyRequest(payload) {
   const callsign = normalizeCallsign_(payload.callsign || payload.personCallsign || payload.person_callsign || '');
   const surname = normalizeHumanName_(payload.surname || '');
   const firstName = normalizeHumanName_(payload.firstName || payload.first_name || '');
-  const patronymic = normalizeHumanName_(payload.patronymic || payload.middleName || payload.middle_name || '');
   const preferredContact = String(payload.preferredContact || payload.preferred_contact || 'email').trim().toLowerCase() || 'email';
   const telegramUsername = String(payload.telegramUsername || payload.telegram_username || payload.telegram || '').trim();
 
@@ -941,7 +940,6 @@ function submitAccessKeyRequest(payload) {
       preferred_contact: preferredContact,
       surname: surname,
       first_name: firstName,
-      patronymic: patronymic,
       position_title: '',
 
       request_created_at: nowText,
@@ -982,7 +980,6 @@ function submitAccessKeyRequest(payload) {
       enteredCallsign: callsign,
       surname: surname,
       firstName: firstName,
-      patronymic: patronymic,
       preferredContact: preferredContact,
       telegramUsername: telegramUsername,
       contactValue: preferredContact === 'telegram'
@@ -1015,3 +1012,183 @@ function submitAccessKeyRequest(payload) {
   }
 }
 
+
+
+function registerAccessWithTemporaryPassword(payload) {
+  payload = payload || {};
+
+  const currentKeyHash = getCurrentUserKeyHash_();
+  const temporaryPassword = String(payload.temporaryPassword || payload.accessKey || payload.key || '').trim();
+  const login = String(payload.login || '').trim();
+  const password = String(payload.password || '').trim();
+  const passwordRepeat = String(payload.passwordRepeat || payload.password_repeat || '').trim();
+
+  if (!currentKeyHash) {
+    return {
+      success: false,
+      code: REASON_CODES.SELF_BIND_KEY_UNAVAILABLE,
+      message: 'Не вдалося визначити ключ користувача. Оновіть панель і спробуйте ще раз.'
+    };
+  }
+
+  if (!temporaryPassword) {
+    return {
+      success: false,
+      code: 'access.registration.temp_password_required',
+      message: 'Введіть тимчасовий код доступу.'
+    };
+  }
+
+  if (!login) {
+    return {
+      success: false,
+      code: 'access.registration.login_required',
+      message: 'Введіть логін.'
+    };
+  }
+
+  if (!password || password.length < 8) {
+    return {
+      success: false,
+      code: 'access.registration.password_too_short',
+      message: 'Пароль має містити мінімум 8 символів.'
+    };
+  }
+
+  if (password !== passwordRepeat) {
+    return {
+      success: false,
+      code: 'access.registration.password_mismatch',
+      message: 'Паролі не збігаються.'
+    };
+  }
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+
+  try {
+    const entries = _readSheetEntries_();
+    let entry = null;
+
+    for (let i = 0; i < entries.length; i++) {
+      const item = entries[i];
+
+      if (item.requestUserKeyHash && item.requestUserKeyHash === currentKeyHash) {
+        entry = item;
+        break;
+      }
+
+      if (item.userKeyCurrentHash && item.userKeyCurrentHash === currentKeyHash) {
+        entry = item;
+        break;
+      }
+    }
+
+    if (!entry) {
+      return {
+        success: false,
+        code: 'access.registration.request_not_found',
+        message: 'Заявку для цього пристрою не знайдено. Спочатку подайте заявку на доступ.'
+      };
+    }
+
+    const status = String(entry.registrationStatus || '').trim().toLowerCase();
+
+    if (status === 'active') {
+      return {
+        success: false,
+        code: 'access.registration.already_active',
+        message: 'Доступ уже активовано.'
+      };
+    }
+
+    if (status !== 'approved' && status !== 'key_sent') {
+      return {
+        success: false,
+        code: 'access.registration.not_approved',
+        message: 'Заявку ще не підтверджено адміністратором. Очікуйте підтвердження.'
+      };
+    }
+
+    if (entry.enabled !== true) {
+      return {
+        success: false,
+        code: 'access.registration.disabled',
+        message: 'Доступ ще не увімкнено адміністратором.'
+      };
+    }
+
+    if (!entry.temporaryPasswordHash || !entry.temporaryPasswordSalt) {
+      return {
+        success: false,
+        code: 'access.registration.temp_password_missing',
+        message: 'Тимчасовий код для цієї заявки не знайдено. Зверніться до адміністратора.'
+      };
+    }
+
+    if (entry.temporaryPasswordUsedAt) {
+      return {
+        success: false,
+        code: 'access.registration.temp_password_used',
+        message: 'Тимчасовий код уже використано.'
+      };
+    }
+
+    if (entry.temporaryPasswordExpiresAt) {
+      const expiresRaw = String(entry.temporaryPasswordExpiresAt || '').trim();
+      const expiresDate = new Date(expiresRaw.replace(' ', 'T'));
+      if (!isNaN(expiresDate.getTime()) && Date.now() > expiresDate.getTime()) {
+        return {
+          success: false,
+          code: 'access.registration.temp_password_expired',
+          message: 'Термін дії тимчасового коду минув. Попросіть адміністратора видати новий код.'
+        };
+      }
+    }
+
+    const enteredHash = hashAccessPasswordWithSalt_(temporaryPassword, entry.temporaryPasswordSalt);
+
+    if (enteredHash !== entry.temporaryPasswordHash) {
+      const nextAttempts = Number(entry.failedAttempts || 0) + 1;
+      _updateEntryFields_(entry.sheetRow, {
+        failed_attempts: nextAttempts
+      });
+
+      return {
+        success: false,
+        code: 'access.registration.temp_password_invalid',
+        message: 'Невірний тимчасовий код доступу.'
+      };
+    }
+
+    const passwordSalt = generateAccessSalt_();
+    const passwordHash = hashAccessPasswordWithSalt_(password, passwordSalt);
+    const nowText = _nowText_('long');
+
+    const savedEntry = _updateEntryFields_(entry.sheetRow, {
+      user_key_current_hash: currentKeyHash,
+      request_user_key_hash: currentKeyHash,
+      login: login,
+      password_hash: passwordHash,
+      password_salt: passwordSalt,
+      registration_status: 'active',
+      last_seen_at: nowText,
+      last_rotated_at: nowText,
+      activated_at: nowText,
+      temporary_password_plain: '',
+      temporary_password_used_at: nowText,
+      failed_attempts: 0,
+      locked_until_ms: 0
+    });
+
+    return {
+      success: true,
+      code: 'access.registration.active',
+      message: 'Доступ активовано. Оновіть панель.',
+      descriptor: describe({ includeSensitiveDebug: false }),
+      accessSheetRow: savedEntry && savedEntry.sheetRow ? savedEntry.sheetRow : entry.sheetRow
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}

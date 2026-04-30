@@ -678,3 +678,26 @@ function apiStage7SubmitAccessKeyRequest(payload) {
   );
 }
 
+
+
+
+function apiStage7RegisterAccessWithTemporaryPassword(payload) {
+  const result = (typeof AccessControl_ === 'object' && AccessControl_.registerAccessWithTemporaryPassword)
+    ? AccessControl_.registerAccessWithTemporaryPassword(payload || {})
+    : { success: false, message: 'AccessControl_ недоступний', code: 'access.registration.unavailable' };
+
+  const success = result && result.success !== false;
+  const message = result && result.message
+    ? result.message
+    : (success ? 'Доступ активовано' : 'Не вдалося активувати доступ');
+
+  return _stage7BuildMaintenanceResponse_(
+    success,
+    message,
+    result || {},
+    'stage7RegisterAccessWithTemporaryPassword',
+    success ? [] : [_stage7NormalizeWarningText_(message) || 'Не вдалося активувати доступ'],
+    { affectedSheets: [appGetCore('ACCESS_SHEET', 'ACCESS')] }
+  );
+}
+

@@ -709,6 +709,7 @@ const backdrop = document.getElementById('accessLoginModalBackdrop');
 
     if (backdrop) backdrop.addEventListener('click', closeAccessLoginModal);
     if (closeBtn) closeBtn.addEventListener('click', closeAccessLoginModal);
+    removeAccessPatronymicField_();
     const haveKeyModeBtn = document.getElementById('accessLoginModeHaveKeyBtn');
     const requestSubmitBtn = document.getElementById('accessKeyRequestSubmitBtn');
     const haveKeySubmitBtn = document.getElementById('accessHaveKeySubmitBtn');
@@ -1209,6 +1210,29 @@ const backdrop = document.getElementById('accessLoginModalBackdrop');
     const haveKeyForm = document.getElementById('accessHaveKeyForm');
     if (requestForm) requestForm.style.display = mode === 'haveKey' ? 'none' : 'block';
     if (haveKeyForm) haveKeyForm.style.display = mode === 'haveKey' ? 'block' : 'none';
+  }
+
+  function removeAccessPatronymicField_() {
+    const modal = document.getElementById('accessLoginModal') || document;
+    const candidates = Array.from(modal.querySelectorAll('input, textarea'));
+
+    candidates.forEach(function(input) {
+      const id = String(input.id || '').toLowerCase();
+      const name = String(input.name || '').toLowerCase();
+      const placeholder = String(input.placeholder || '').toLowerCase();
+
+      const looksLikePatronymic =
+        id.indexOf('patronymic') !== -1 ||
+        name.indexOf('patronymic') !== -1 ||
+        placeholder.indexOf('по батькові') !== -1 ||
+        placeholder.indexOf('отчество') !== -1;
+
+      if (!looksLikePatronymic) return;
+
+      const field = input.closest('.access-login-modal__field') || input.parentElement;
+      if (field) field.remove();
+      else input.remove();
+    });
   }
 
   let accessKeyRequestLastSentAt_ = Number(localStorage.getItem('wasb_access_key_request_last_sent_at') || '0');

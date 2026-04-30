@@ -213,8 +213,8 @@
     submitAccessKeyRequest: async (payload = {}) =>
       adaptStage4UtilityResponse(await Api.run('apiStage7SubmitAccessKeyRequest', payload || {})),
 
-    loginByIdentifierAndCallsign: async (payload = {}) =>
-      adaptStage4UtilityResponse(await Api.run('apiStage7LoginByIdentifierAndCallsign', payload || {})),
+    loginByIdentifierAndCallsign: async (payload = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7LoginByIdentifierAndCallsign', payload || {})),
+    registerAccessWithTemporaryPassword: async (payload = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7RegisterAccessWithTemporaryPassword', payload || {})),
 
     bindCurrentKeyToCallsign: async (callsign) =>
       adaptStage4UtilityResponse(await Api.run('apiStage7BindCurrentKeyToCallsign', callsign || ''))
@@ -247,6 +247,7 @@
     bindCurrentKeyToCallsign: async (callsign) => adaptStage4UtilityResponse(await Api.run('apiStage7BindCurrentKeyToCallsign', callsign || '')),
     submitAccessKeyRequest: async (payload) => adaptStage4UtilityResponse(await Api.run('apiStage7SubmitAccessKeyRequest', payload || {})),
     loginByIdentifierAndCallsign: async (payload = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7LoginByIdentifierAndCallsign', payload || {})),
+    registerAccessWithTemporaryPassword: async (payload = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7RegisterAccessWithTemporaryPassword', payload || {})),
     applyProtections: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7ApplyProtections', options)),
     bootstrapAccessSheet: async () => adaptStage4UtilityResponse(await Api.run('apiStage7BootstrapAccessSheet')),
     reportAccessViolation: async (actionName, details = {}) =>

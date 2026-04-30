@@ -123,7 +123,6 @@ function _getAccessHeaderNotes_() {
     preferred_contact: 'бажаний спосіб зв\'язку: WhatsApp / Telegram / Signal / Email',
     surname: 'прізвище',
     first_name: 'ім\'я',
-    patronymic: 'по батькові',
     position_title: 'посада / должность користувача',
     request_user_key_hash: 'хеш ключа із заявки',
     request_created_at: 'час створення заявки',
@@ -179,7 +178,6 @@ function _getAccessHeaderDisplayLabels_() {
     preferred_contact: 'бажаний спосіб зв\'язку',
     surname: 'прізвище',
     first_name: 'ім\'я',
-    patronymic: 'по батькові',
     position_title: 'посада',
     request_user_key_hash: 'хеш ключа із запиту',
     request_created_at: 'час створення запиту',
@@ -248,6 +246,37 @@ function _applyAccessHeaderDisplayLabels_(sh) {
   }
 }
 
+// ==================== ACCESS OBSOLETE COLUMNS CLEANUP ====================
+
+function _removeAccessObsoleteColumns_(sh) {
+  if (!sh) return 0;
+
+  var obsolete = {
+    patronymic: true,
+    'по батькові': true,
+    'отчество': true,
+    'по баткові': true
+  };
+
+  var lastColumn = Number(sh.getLastColumn()) || 0;
+  if (lastColumn < 1) return 0;
+
+  var headers = sh.getRange(1, 1, 1, lastColumn).getValues()[0];
+  var removed = 0;
+
+  for (var i = headers.length - 1; i >= 0; i--) {
+    var header = String(headers[i] || '').trim().toLowerCase();
+    if (!header) continue;
+
+    if (obsolete[header]) {
+      sh.deleteColumn(i + 1);
+      removed++;
+    }
+  }
+
+  return removed;
+}
+
 // ==================== SHEET OPERATIONS (HEADER-BASED SAFE READS/WRITES) ====================
 
 function _getSheet_(createIfMissing) {
@@ -302,6 +331,8 @@ function _getHeaderMap_(sh) {
 
 function _ensureSheetSchema_(sh) {
   if (!sh) return;
+
+  _removeAccessObsoleteColumns_(sh);
 
   var expectedHeaders = _getExpectedHeaders_();
   if (!expectedHeaders.length) return;
@@ -361,7 +392,28 @@ function _ensureSheetSchema_(sh) {
   _applyRoleValidation_(sh);
   _applyEmailValidation_(sh);
   _applyEnabledValidation_(sh);
+  _applySelfBindAllowedValidation_(sh);
+  _applyRegistrationStatusValidation_(sh);
+  _applyPositionTitleValidation_(sh);
   _applyAccessHeaderNotes_(sh);
+}
+
+// ==================== ACCESS VALIDATION RANGE HELPERS ====================
+
+function _clearColumnValidationBelowRow2_(sh, col) {
+  if (!sh || !col) return;
+
+  var maxRows = Number(sh.getMaxRows()) || 0;
+  if (maxRows <= 2) return;
+
+  sh.getRange(3, col, maxRows - 2, 1).clearDataValidations();
+}
+
+function _setSingleRowValidation_(sh, col, rule) {
+  if (!sh || !col || !rule) return;
+
+  _clearColumnValidationBelowRow2_(sh, col);
+  sh.getRange(2, col, 1, 1).setDataValidation(rule);
 }
 
 // ==================== VALIDATIONS ====================
@@ -384,19 +436,11 @@ function _applyRoleValidation_(sh) {
   var roleCol = headerMap.role;
   if (!roleCol) return;
 
-  var maxRows = _getSafeMaxSheetRows_(sh);
-  if (maxRows < 2) return;
-
-  // Снимаем принудительные выпадающие списки ниже 2-й строки.
-  if (maxRows > 2) {
-    sh.getRange(3, roleCol, maxRows - 2, 1).clearDataValidations();
-  }
-
   var rule = _buildRoleValidationRule_();
   if (!rule) return;
 
-  // Обязательная проверка роли только в строке 2.
-  sh.getRange(2, roleCol, 1, 1).setDataValidation(rule);
+  // Только строка 2. Ниже админ растягивает вручную при необходимости.
+  _setSingleRowValidation_(sh, roleCol, rule);
 }
 
 function _applyEmailValidation_(sh) {
@@ -425,23 +469,275 @@ function _applyEnabledValidation_(sh) {
   var enabledCol = headerMap.enabled;
   if (!enabledCol) return;
 
-  var maxRows = _getSafeMaxSheetRows_(sh);
-  if (maxRows < 2) return;
-
-  // Снимаем принудительные выпадающие списки ниже 2-й строки.
-  if (maxRows > 2) {
-    sh.getRange(3, enabledCol, maxRows - 2, 1).clearDataValidations();
-  }
-
   var rule = SpreadsheetApp.newDataValidation()
     .requireValueInList(['TRUE', 'FALSE'], true)
     .setAllowInvalid(false)
     .setHelpText('TRUE - активний, FALSE - заблокований адміністратором')
     .build();
 
-  // Обязательная проверка активности только в строке 2.
-  sh.getRange(2, enabledCol, 1, 1).setDataValidation(rule);
+  // Только строка 2. Ниже админ растягивает вручную при необходимости.
+  _setSingleRowValidation_(sh, enabledCol, rule);
 }
+
+// ==================== ACCESS REGISTRATION VALIDATIONS ====================
+
+function _getAccessRegistrationStatusValues_() {
+  return [
+    'pending_review',
+    'approved',
+    'key_sent',
+    'active',
+    'rejected',
+    'blocked',
+    'expired'
+  ];
+}
+
+function _getAccessPositionTitleValues_() {
+  return [
+    'Командир взводу',
+    'Головний сержант взводу',
+    'Командир відділення',
+    'Старший стрілець',
+    'Стрілець',
+    'Стрілець-санітар',
+    'Оператор',
+    'Водій',
+    'Водій-електрик',
+    'Діловод',
+    'Інше'
+  ];
+}
+
+function _applySelfBindAllowedValidation_(sh) {
+  if (!sh) return;
+
+  var headerMap = _getHeaderMap_(sh);
+  var col = headerMap.self_bind_allowed;
+  if (!col) return;
+
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['TRUE', 'FALSE'], true)
+    .setAllowInvalid(false)
+    .setHelpText('TRUE — користувач може сам завершити реєстрацію')
+    .build();
+
+  // Только строка 2. Ниже админ растягивает вручную при необходимости.
+  _setSingleRowValidation_(sh, col, rule);
+}
+
+function _applyRegistrationStatusValidation_(sh) {
+  if (!sh) return;
+
+  var headerMap = _getHeaderMap_(sh);
+  var col = headerMap.registration_status;
+  if (!col) return;
+
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(_getAccessRegistrationStatusValues_(), true)
+    .setAllowInvalid(false)
+    .setHelpText('Зазвичай статус змінює система: pending_review → key_sent → active')
+    .build();
+
+  // Только строка 2. Ниже админ растягивает вручную при необходимости.
+  _setSingleRowValidation_(sh, col, rule);
+}
+
+function _applyPositionTitleValidation_(sh) {
+  if (!sh) return;
+
+  var headerMap = _getHeaderMap_(sh);
+  var col = headerMap.position_title;
+  if (!col) return;
+
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(_getAccessPositionTitleValues_(), true)
+    .setAllowInvalid(true)
+    .setHelpText('Оберіть посаду зі списку або введіть свою вручну')
+    .build();
+
+  // Только строка 2. Ниже админ растягивает вручную при необходимости.
+  _setSingleRowValidation_(sh, col, rule);
+}
+
+function _syncAccessApprovalForRow_(sh, rowNumber) {
+  if (!sh || rowNumber < 2) return false;
+
+  var headerMap = _getHeaderMap_(sh);
+  var statusCol = headerMap.registration_status;
+  var approvedByCol = headerMap.approved_by;
+  var approvedAtCol = headerMap.approved_at;
+
+  if (!statusCol || !approvedByCol || !approvedAtCol) return false;
+
+  var status = String(sh.getRange(rowNumber, statusCol).getValue() || '').trim().toLowerCase();
+  if (status !== 'approved' && status !== 'key_sent') return false;
+
+  var approvedByCell = sh.getRange(rowNumber, approvedByCol);
+  var approvedAtCell = sh.getRange(rowNumber, approvedAtCol);
+
+  var approvedBy = String(approvedByCell.getValue() || '').trim();
+  var approvedAt = String(approvedAtCell.getValue() || '').trim();
+
+  if (!approvedBy) {
+    var actor = '';
+    try {
+      actor = safeGetUserEmail_();
+    } catch (_) {}
+    approvedByCell.setValue(actor || 'admin');
+  }
+
+  if (!approvedAt) {
+    approvedAtCell.setValue(_nowText_('long'));
+  }
+
+  return true;
+}
+
+// ==================== ACCESS ADMIN FLOW VALIDATIONS ====================
+
+function _getAccessValidationRowCount_(sh) {
+  if (!sh) return 0;
+  var lastRow = Math.max(Number(sh.getLastRow()) || 1, 2);
+  return Math.max(lastRow - 1, 1);
+}
+
+function _getAccessRegistrationStatusValues_() {
+  return [
+    'pending_review',
+    'approved',
+    'key_sent',
+    'active',
+    'rejected',
+    'blocked',
+    'expired'
+  ];
+}
+
+function _isAccessRegistrationFinalStatus_(status) {
+  var value = String(status || '').trim().toLowerCase();
+  return value === 'active' || value === 'rejected' || value === 'blocked' || value === 'expired';
+}
+
+function _isAccessEnabledStrict_(value) {
+  var raw = String(value === undefined || value === null ? '' : value).trim().toLowerCase();
+  return raw === 'true' || raw === '1' || raw === 'yes' || raw === 'так' || raw === 'on';
+}
+
+function _setCellValueIfDifferent_(range, value) {
+  if (!range) return false;
+  var current = String(range.getValue() || '').trim();
+  var next = String(value || '').trim();
+  if (current === next) return false;
+  range.setValue(value);
+  return true;
+}
+
+function _applySelfBindAllowedValidation_(sh) {
+  if (!sh) return;
+
+  var headerMap = _getHeaderMap_(sh);
+  var col = headerMap.self_bind_allowed;
+  if (!col) return;
+
+  var maxRows = _getSafeMaxSheetRows_(sh);
+  if (maxRows > 1) {
+    sh.getRange(2, col, maxRows - 1, 1).clearDataValidations();
+  }
+
+  var rowCount = _getAccessValidationRowCount_(sh);
+  if (rowCount < 1) return;
+
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['TRUE', 'FALSE'], true)
+    .setAllowInvalid(false)
+    .setHelpText('TRUE — користувач може сам завершити реєстрацію')
+    .build();
+
+  sh.getRange(2, col, rowCount, 1).setDataValidation(rule);
+}
+
+function _applyRegistrationStatusValidation_(sh) {
+  if (!sh) return;
+
+  var headerMap = _getHeaderMap_(sh);
+  var col = headerMap.registration_status;
+  if (!col) return;
+
+  var maxRows = _getSafeMaxSheetRows_(sh);
+  if (maxRows > 1) {
+    sh.getRange(2, col, maxRows - 1, 1).clearDataValidations();
+  }
+
+  var rowCount = _getAccessValidationRowCount_(sh);
+  if (rowCount < 1) return;
+
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(_getAccessRegistrationStatusValues_(), true)
+    .setAllowInvalid(false)
+    .setHelpText('Зазвичай статус змінює система: pending_review → key_sent → active')
+    .build();
+
+  sh.getRange(2, col, rowCount, 1).setDataValidation(rule);
+}
+
+function _syncRegistrationStatusForRow_(sh, rowNumber) {
+  if (!sh || rowNumber < 2) return false;
+
+  var headerMap = _getHeaderMap_(sh);
+  var roleCol = headerMap.role;
+  var enabledCol = headerMap.enabled;
+  var statusCol = headerMap.registration_status;
+  var approvedByCol = headerMap.approved_by;
+  var approvedAtCol = headerMap.approved_at;
+
+  if (!roleCol || !enabledCol || !statusCol) return false;
+
+  var role = normalizeRole_(sh.getRange(rowNumber, roleCol).getValue());
+  var enabled = _isAccessEnabledStrict_(sh.getRange(rowNumber, enabledCol).getValue());
+  var statusCell = sh.getRange(rowNumber, statusCol);
+  var currentStatus = String(statusCell.getValue() || '').trim().toLowerCase();
+
+  if (_isAccessRegistrationFinalStatus_(currentStatus)) {
+    return false;
+  }
+
+  var nextStatus = currentStatus || 'pending_review';
+
+  // Главное правило:
+  // выбрали реальную роль + включили enabled TRUE = заявка подтверждена, код можно отправлять.
+  if (role && role !== 'guest' && enabled) {
+    nextStatus = 'key_sent';
+  } else if (!currentStatus) {
+    nextStatus = 'pending_review';
+  }
+
+  if (_getAccessRegistrationStatusValues_().indexOf(nextStatus) === -1) {
+    nextStatus = 'pending_review';
+  }
+
+  var changed = _setCellValueIfDifferent_(statusCell, nextStatus);
+
+  if ((nextStatus === 'approved' || nextStatus === 'key_sent') && approvedByCol && approvedAtCol) {
+    var approvedByCell = sh.getRange(rowNumber, approvedByCol);
+    var approvedAtCell = sh.getRange(rowNumber, approvedAtCol);
+
+    if (!String(approvedByCell.getValue() || '').trim()) {
+      var actor = '';
+      try { actor = safeGetUserEmail_(); } catch (_) {}
+      approvedByCell.setValue(actor || 'admin');
+      changed = true;
+    }
+
+    if (!String(approvedAtCell.getValue() || '').trim()) {
+      approvedAtCell.setValue(_nowText_('long'));
+      changed = true;
+    }
+  }
+
+  return changed;
+}
+
 
 // ==================== ROW MAPPING ====================
 
@@ -518,7 +814,6 @@ function _rowToEntry_(row, rowNumber, headerMap) {
     preferredContact: String(read('preferred_contact') || '').trim(),
     surname: normalizeHumanName_(read('surname')),
     firstName: normalizeHumanName_(read('first_name')),
-    patronymic: normalizeHumanName_(read('patronymic')),
     positionTitle: String(read('position_title') || '').trim(),
     requestUserKeyHash: normalizeStoredHash_(read('request_user_key_hash')),
     requestCreatedAt: String(read('request_created_at') || ''),
@@ -609,6 +904,7 @@ function _readRawSheetEntries_() {
 
 function _appendEntryByHeaderMap_(entry) {
   var sh = _getSheet_(true);
+  var removedObsoleteColumns = _removeAccessObsoleteColumns_(sh);
   if (!sh) return null;
 
   _ensureSheetSchema_(sh);
@@ -641,7 +937,6 @@ function _appendEntryByHeaderMap_(entry) {
       case 'preferred_contact': return normalized.preferredContact || normalized.preferred_contact || '';
       case 'surname': return normalizeHumanName_(normalized.surname || '');
       case 'first_name': return normalizeHumanName_(normalized.firstName || normalized.first_name || '');
-      case 'patronymic': return normalizeHumanName_(normalized.patronymic || '');
       case 'position_title': return normalized.positionTitle || normalized.position_title || '';
       case 'request_user_key_hash': return normalizeStoredHash_(normalized.requestUserKeyHash || normalized.request_user_key_hash || '');
       case 'request_created_at': return normalized.requestCreatedAt || normalized.request_created_at || '';
@@ -716,8 +1011,10 @@ function _writeEntryByHeaderMap_(sheetRow, entry) {
   if (entry.failedAttempts !== undefined) updates.failed_attempts = entry.failedAttempts;
   if (entry.lockedUntilMs !== undefined) updates.locked_until_ms = entry.lockedUntilMs;
   if (entry.surname !== undefined) updates.surname = normalizeHumanName_(entry.surname);
+  if (entry.login !== undefined) updates.login = entry.login;
+  if (entry.passwordHash !== undefined) updates.password_hash = entry.passwordHash;
+  if (entry.passwordSalt !== undefined) updates.password_salt = entry.passwordSalt;
   if (entry.firstName !== undefined) updates.first_name = normalizeHumanName_(entry.firstName);
-  if (entry.patronymic !== undefined) updates.patronymic = normalizeHumanName_(entry.patronymic);
   if (entry.positionTitle !== undefined) updates.position_title = entry.positionTitle;
   if (entry.requestUserKeyHash !== undefined) updates.request_user_key_hash = normalizeStoredHash_(entry.requestUserKeyHash);
   if (entry.requestCreatedAt !== undefined) updates.request_created_at = entry.requestCreatedAt;
@@ -838,6 +1135,34 @@ function _updateEntryFields_(sheetRow, updates) {
     mapped.lockedUntilMs = parseInt(updates.lockedUntilMs || '0', 10) || 0;
   }
 
+  if (Object.prototype.hasOwnProperty.call(updates, 'login')) {
+    mapped.login = String(updates.login || '').trim();
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'password_hash')) {
+    mapped.passwordHash = String(updates.password_hash || '').trim();
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'password_salt')) {
+    mapped.passwordSalt = String(updates.password_salt || '').trim();
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'registration_status')) {
+    mapped.registrationStatus = String(updates.registration_status || '').trim().toLowerCase();
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'activated_at')) {
+    mapped.activatedAt = String(updates.activated_at || '');
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'temporary_password_plain')) {
+    mapped.temporaryPasswordPlain = String(updates.temporary_password_plain || '').trim();
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'temporary_password_used_at')) {
+    mapped.temporaryPasswordUsedAt = String(updates.temporary_password_used_at || '');
+  }
+
   if (Object.prototype.hasOwnProperty.call(updates, 'surname')) {
     mapped.surname = normalizeHumanName_(updates.surname);
   }
@@ -848,10 +1173,6 @@ function _updateEntryFields_(sheetRow, updates) {
 
   if (Object.prototype.hasOwnProperty.call(updates, 'firstName')) {
     mapped.firstName = normalizeHumanName_(updates.firstName);
-  }
-
-  if (Object.prototype.hasOwnProperty.call(updates, 'patronymic')) {
-    mapped.patronymic = normalizeHumanName_(updates.patronymic);
   }
 
   if (Object.prototype.hasOwnProperty.call(updates, 'position_title')) {
@@ -912,4 +1233,118 @@ function _updateEntryFields_(sheetRow, updates) {
 
   _writeEntryByHeaderMap_(sheetRow, mapped);
   return mapped;
+}
+
+
+function handleAccessSheetEdit(e) {
+  var range = e && e.range ? e.range : null;
+  if (!range) return;
+
+  var sh = range.getSheet();
+  if (!sh || sh.getName() !== ACCESS_SHEET) return;
+
+  var row = range.getRow();
+  var column = range.getColumn();
+  var numRows = Number(range.getNumRows()) || 1;
+  var numColumns = Number(range.getNumColumns()) || 1;
+  if (row < 2) return;
+
+  var headerMap = _getHeaderMap_(sh);
+  var roleCol = headerMap.role;
+  var enabledCol = headerMap.enabled;
+  var statusCol = headerMap.registration_status;
+  var emailCol = headerMap.email;
+
+  var humanNameColumns = {};
+  if (headerMap.display_name) humanNameColumns[headerMap.display_name] = true;
+  if (headerMap.surname) humanNameColumns[headerMap.surname] = true;
+  if (headerMap.first_name) humanNameColumns[headerMap.first_name] = true;
+
+  if (numRows >= 1 && numColumns >= 1) {
+    var values = range.getValues();
+    var changed = false;
+
+    for (var r = 0; r < values.length; r++) {
+      for (var c = 0; c < values[r].length; c++) {
+        var absoluteColumn = column + c;
+        if (!humanNameColumns[absoluteColumn]) continue;
+
+        var normalizedName = normalizeHumanName_(values[r][c]);
+        if (String(values[r][c] || '') !== normalizedName) {
+          values[r][c] = normalizedName;
+          changed = true;
+        }
+      }
+    }
+
+    if (changed) {
+      range.setValues(values);
+    }
+  }
+
+  var includesRoleColumn = !!roleCol && column <= roleCol && roleCol < (column + numColumns);
+  var includesEnabledColumn = !!enabledCol && column <= enabledCol && enabledCol < (column + numColumns);
+  var includesStatusColumn = !!statusCol && column <= statusCol && statusCol < (column + numColumns);
+
+  if (includesRoleColumn) {
+    var roleRange = sh.getRange(row, roleCol, numRows, 1);
+    var roleValues = roleRange.getValues();
+    var roleChanged = false;
+
+    for (var rr = 0; rr < roleValues.length; rr++) {
+      var rawRole = String(roleValues[rr][0] || '').trim();
+      var normalizedRole = rawRole ? normalizeRole_(rawRole) : '';
+      if (String(roleValues[rr][0] || '') !== normalizedRole) {
+        roleValues[rr][0] = normalizedRole;
+        roleChanged = true;
+      }
+    }
+
+    if (roleChanged) {
+      roleRange.setValues(roleValues);
+    }
+
+    for (var syncOffset = 0; syncOffset < numRows; syncOffset++) {
+      _syncRoleNoteForRow_(sh, row + syncOffset);
+    }
+  }
+
+  if (includesStatusColumn) {
+    var statusRange = sh.getRange(row, statusCol, numRows, 1);
+    var statusValues = statusRange.getValues();
+    var statusChanged = false;
+    var allowedStatuses = _getAccessRegistrationStatusValues_();
+
+    for (var sr = 0; sr < statusValues.length; sr++) {
+      var rawStatus = String(statusValues[sr][0] || '').trim().toLowerCase();
+      if (rawStatus && allowedStatuses.indexOf(rawStatus) === -1) {
+        rawStatus = 'pending_review';
+      }
+
+      if (String(statusValues[sr][0] || '') !== rawStatus) {
+        statusValues[sr][0] = rawStatus;
+        statusChanged = true;
+      }
+    }
+
+    if (statusChanged) {
+      statusRange.setValues(statusValues);
+    }
+  }
+
+  if (includesRoleColumn || includesEnabledColumn || includesStatusColumn) {
+    for (var statusOffset = 0; statusOffset < numRows; statusOffset++) {
+      _syncRegistrationStatusForRow_(sh, row + statusOffset);
+    }
+  }
+
+  if (emailCol && column === emailCol && numColumns === 1 && numRows === 1) {
+    var email = normalizeEmail_(range.getValue());
+    if (email && email.indexOf('@') === -1) {
+      range.setValue('');
+      SpreadsheetApp.getActive().toast('Некоректний email', 'Помилка', 3);
+    }
+  }
+
+  _invalidateAccessCaches_();
 }

@@ -96,7 +96,6 @@ const SHEET_HEADERS = Object.freeze([
   'preferred_contact',
   'surname',
   'first_name',
-  'patronymic',
   'position_title',
   'request_user_key_hash',
   'request_created_at',

@@ -868,6 +868,7 @@ var AccessControl_ = Object.freeze({
   bindCurrentKeyToCallsign: bindCurrentKeyToCallsign,
   submitAccessKeyRequest: submitAccessKeyRequest,
   loginByIdentifierAndCallsign: loginByIdentifierAndCallsign,
+  registerAccessWithTemporaryPassword: registerAccessWithTemporaryPassword,
 
   bootstrapSheet: bootstrapSheet,
   refreshAccessSheetUi: refreshAccessSheetUi,
