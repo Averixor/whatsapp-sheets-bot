@@ -1227,7 +1227,8 @@ const backdrop = document.getElementById('accessLoginModalBackdrop');
       callsign: safeString_(document.getElementById('accessRequestCallsignInput') && document.getElementById('accessRequestCallsignInput').value).toUpperCase(),
       surname: normalizeHumanNameInput_(document.getElementById('accessRequestSurnameInput') && document.getElementById('accessRequestSurnameInput').value),
       firstName: normalizeHumanNameInput_(document.getElementById('accessRequestFirstNameInput') && document.getElementById('accessRequestFirstNameInput').value),
-      preferredContact: safeString_(document.getElementById('accessRequestPreferredContactInput') && document.getElementById('accessRequestPreferredContactInput').value)
+      preferredContact: safeString_(document.getElementById('accessRequestPreferredContactInput') && document.getElementById('accessRequestPreferredContactInput').value),
+      telegramUsername: safeString_(document.getElementById('accessRequestTelegramUsername') && document.getElementById('accessRequestTelegramUsername').value)
     };
 
     const surnameInput = document.getElementById('accessRequestSurnameInput');
@@ -1237,6 +1238,11 @@ const backdrop = document.getElementById('accessLoginModalBackdrop');
 
     if ((!payload.phone && !payload.email) || !payload.callsign || !payload.surname || !payload.firstName) {
       setAccessLoginModalMessage_('Заповніть телефон або email, позивний, прізвище та імʼя.', true);
+      return;
+    }
+
+    if (String(payload.preferredContact || '').toLowerCase() === 'telegram' && !payload.telegramUsername) {
+      setAccessLoginModalMessage_('Для Telegram вкажіть Telegram username.', true);
       return;
     }
 

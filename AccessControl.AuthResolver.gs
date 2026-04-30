@@ -834,6 +834,7 @@ function submitAccessKeyRequest(payload) {
   const surname = normalizeHumanName_(payload.surname || '');
   const firstName = normalizeHumanName_(payload.firstName || payload.first_name || '');
   const preferredContact = String(payload.preferredContact || payload.preferred_contact || '').trim().toLowerCase();
+  const telegramUsername = String(payload.telegramUsername || payload.telegram_username || payload.telegram || '').trim();
 
   if (!currentKeyHash) {
     return {
@@ -868,6 +869,8 @@ function submitAccessKeyRequest(payload) {
     surname: surname,
     firstName: firstName,
     preferredContact: preferredContact || 'email',
+    telegramUsername: telegramUsername,
+    contactValue: preferredContact === 'telegram' ? telegramUsername : (preferredContact === 'email' ? email : phone),
     registrationStatus: 'pending_key'
   };
 

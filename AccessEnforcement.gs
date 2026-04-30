@@ -391,6 +391,7 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
 
   function _securityActionLabel_(action) {
     var map = {
+      accessKeyRequested: 'Заявка на отримання ключа доступу',
       selfBindLoginDenied: 'Відмовлено в самостійній привʼязці при вході',
       openPersonCardDenied: 'Відмовлено у відкритті картки особи',
       daySummaryDenied: 'Відмовлено у формуванні короткого зведення',
@@ -405,6 +406,7 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
 
   function _securityReasonLabel_(code) {
     var map = {
+      'access.registration.requested': 'Користувач подав заявку на отримання ключа доступу',
       'access.self_bind.identifier_mismatch': 'Невідповідність ідентифікатора при спробі самостійної привʼязки доступу',
       'access.self_bind.identifier_not_found': 'Ідентифікатор не знайдено в ACCESS',
       'access.self_bind.call_sign_occupied': 'Позивний уже привʼязаний до іншого ключа',
@@ -419,8 +421,55 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
   function _sourceLabel_(source) {
     var value = _safeString_(source || '', '').trim();
     if (!value || value === 'unknown') return 'невідомий';
+    if (value === 'access-key-request') return 'заявка на ключ доступу';
     return value;
   }
+
+  function _preferredContactLabel_(value) {
+    var normalized = _safeString_(value || '', '').trim().toLowerCase();
+    var map = {
+      whatsapp: 'WhatsApp',
+      'whats app': 'WhatsApp',
+      wa: 'WhatsApp',
+      telegram: 'Telegram',
+      tg: 'Telegram',
+      signal: 'Signal',
+      email: 'Email',
+      mail: 'Email',
+      phone: 'Телефон',
+      call: 'Телефонний дзвінок',
+      sms: 'SMS'
+    };
+    return map[normalized] || _safeString_(value || '', '');
+  }
+
+  function _requestDisplayName_(info) {
+    if (!info || typeof info !== 'object') return '';
+    var surname = _safeString_(info.surname || info.lastName || info.familyName || '', '');
+    var firstName = _safeString_(info.firstName || info.first_name || info.name || '', '');
+    var displayName = _safeString_(info.displayName || info.display_name || '', '');
+    var fullName = [surname, firstName].filter(function(part) { return !!part; }).join(' ').trim();
+    return fullName || displayName;
+  }
+
+  function _outcomeLabelForAction_(action, outcome) {
+    if (action === 'accessKeyRequested') return 'заявку отримано, очікує підтвердження';
+    var normalized = _safeString_(outcome || '', '').trim().toLowerCase();
+    if (normalized === 'blocked') return 'відхилено';
+    if (normalized === 'pending') return 'очікує підтвердження';
+    if (normalized === 'accepted') return 'прийнято';
+    return normalized || 'відхилено';
+  }
+
+  function _subjectForSecurityMail_(action, record) {
+    if (action === 'accessKeyRequested') {
+      var callsign = _safeString_((record && record.details && record.details.enteredCallsign) || record.personCallsign || '', '');
+      var name = _requestDisplayName_((record && record.details) || {});
+      return 'WASB ACCESS REQUEST' + (callsign ? (': ' + callsign) : '') + (name ? (' — ' + name) : '');
+    }
+    return 'WASB SECURITY ALERT: ' + action;
+  }
+
   function _formatSecurityDetails_(info) {
     if (!info || typeof info !== 'object') {
       return _safeString_(info || '', '');
@@ -433,8 +482,25 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
       lines.push(label + ': ' + value);
     }
 
+    var displayName = _requestDisplayName_(info);
+    var preferredContactLabel = _preferredContactLabel_(info.preferredContact || info.preferred_contact || '');
+
     add('Код причини', _securityReasonLabel_(info.reasonCode));
     add('Причина', info.reasonMessage);
+
+    // Дані заявки на ключ доступу. Вони мають бути видимі адміністратору в листі,
+    // а не губитися всередині JSON/ALERTS_LOG.
+    add('ПІБ', displayName);
+    add('Прізвище', info.surname || info.lastName || info.familyName);
+    add('Імʼя', info.firstName || info.first_name || info.name);
+    add('Телефон', info.phone);
+    add('Email', info.email);
+    add('Позивний', info.enteredCallsign || info.callsign || info.personCallsign);
+    add('Бажаний канал звʼязку', preferredContactLabel);
+    add('Telegram username', info.telegramUsername || info.telegram || info.tgUsername);
+    add('Signal', info.signal || info.signalPhone);
+    add('Статус заявки', info.registrationStatus || info.registration_status);
+
     add('Тип ідентифікатора', info.identifierType === 'phone' ? 'телефон' : info.identifierType);
     add('Ідентифікатор', info.identifierValue);
     add('Введений позивний', info.enteredCallsign);
@@ -443,11 +509,11 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
     add('Заблоковано', info.blocked === true ? 'так' : info.blocked === false ? 'ні' : '');
     add('Блокування, хв', info.blockDurationMinutes);
     add('Час входу', info.enteredAtText);
-        add('Точка входу', String(info.loginPointText || '').replace(/^Точка входу:\s*/i, ''));
-
+    add('Точка входу', String(info.loginPointText || '').replace(/^Точка входу:\s*/i, ''));
 
     return lines.length ? lines.join('\n') : _safeStringify_(info || {}, 9000);
   }
+
   function _sendMail_(subject, body) {
     var recipients = _notificationEmails_();
     if (!recipients.length) {
@@ -498,7 +564,15 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
       }
     }
 
-    var message = 'Спроба доступу без прав: ' + action + ' (' + _roleLabel_(role) + ')';
+    var requestDisplayName = _requestDisplayName_(info);
+    var requestEmail = _safeString_(info.email || '', '').trim();
+    var requestPhone = _safeString_(info.phone || '', '').trim();
+    var requestCallsign = _safeString_(info.enteredCallsign || info.callsign || info.personCallsign || '', '').trim();
+    var requestPreferredContact = _preferredContactLabel_(info.preferredContact || info.preferred_contact || '');
+
+    var message = action === 'accessKeyRequested'
+      ? 'Заявка на отримання ключа доступу'
+      : ('Спроба доступу без прав: ' + action + ' (' + _roleLabel_(role) + ')');
 
     var record = {
       timestamp: _nowText_(),
@@ -508,15 +582,17 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
       outcome: 'blocked',
       role: role,
       roleLabel: _roleLabel_(role),
-      displayName: descriptor.displayName || identity.displayName || '',
-      source: descriptor.source || audit.source || '',
+      displayName: descriptor.displayName || identity.displayName || requestDisplayName || '',
+      source: descriptor.source || audit.source || (action === 'accessKeyRequested' ? 'access-key-request' : ''),
       knownUser: knownUser,
       registered: registered,
       identityStatus: identityStatus,
       enabled: descriptor.enabled !== false,
-      email: descriptor.email || identity.email || '',
+      email: descriptor.email || identity.email || requestEmail || '',
+      phone: requestPhone || '',
+      preferredContact: requestPreferredContact || '',
       currentKeyHashMasked: descriptor.currentKeyHashMasked || identity.currentKeyHashMasked || '',
-      personCallsign: descriptor.personCallsign || identity.personCallsign || '',
+      personCallsign: descriptor.personCallsign || identity.personCallsign || requestCallsign || '',
       details: info
     };
 
@@ -530,6 +606,8 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
       displayName: record.displayName,
       userKey: record.currentKeyHashMasked,
       email: record.email,
+      phone: record.phone,
+      preferredContact: record.preferredContact,
       source: record.source,
       message: message,
       details: record
@@ -543,13 +621,15 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
       '=============================',
       'Час: ' + record.timestamp,
       'Подія: ' + _securityActionLabel_(action),
-      'Підсумок: відхилено',
+      'Підсумок: ' + _outcomeLabelForAction_(action, record.outcome),
       'Роль: ' + record.roleLabel,
       "Ім'я: " + (record.displayName || "не визначено"),
       'Джерело доступу: ' + _sourceLabel_(record.source),
       'Ідентифікація: ' + _identityStatusLabel_(record.identityStatus),
       'Зареєстровано: ' + _registeredLabel_(record.registered),
       'Email: ' + (record.email || 'не визначено'),
+      'Телефон: ' + (record.phone || 'не визначено'),
+      'Бажаний канал звʼязку: ' + (record.preferredContact || 'не визначено'),
       'User key: ' + (record.currentKeyHashMasked || 'не визначено'),
       'Прив\'язаний позивний: ' + (record.personCallsign || 'не задано'),
       '',
@@ -579,7 +659,7 @@ recipients.forEach(function(email) {
   var bodyToSend = isOwner ? fullEmailBody : emailBody;
 
   try {
-    MailApp.sendEmail(email, 'WASB SECURITY ALERT: ' + action, bodyToSend);
+    MailApp.sendEmail(email, _subjectForSecurityMail_(action, record), bodyToSend);
     mailResult.sent = true;
     mailResult.recipients.push(email);
   } catch (e) {
