@@ -445,9 +445,6 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
     add('Час входу', info.enteredAtText);
         add('Точка входу', String(info.loginPointText || '').replace(/^Точка входу:\s*/i, ''));
 
-    if (info.geo && typeof info.geo === 'object') {
-      add('GPS', info.geo.text || info.geo.reason);
-    }
 
     return lines.length ? lines.join('\n') : _safeStringify_(info || {}, 9000);
   }
@@ -982,6 +979,8 @@ function _getProtectedSheetsForTrigger_() {
     return value && arr.indexOf(value) === index;
   });
 }
+
+
 
 
 
