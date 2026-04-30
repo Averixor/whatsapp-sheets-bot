@@ -595,19 +595,15 @@ function getReadinessStatus() {
 function bootstrapSheet() {
   var existed = !!_getSheet_(false);
   var sh = _getSheet_(true);
-
   _applyRoleValidation_(sh);
   _applyEmailValidation_(sh);
   _applyEnabledValidation_(sh);
+  _applySelfBindAllowedValidation_(sh);
+  _applyRegistrationStatusValidation_(sh);
+  _syncAllRoleNotes_(sh);
+  _syncAllRegistrationStatuses_(sh);
   _invalidateAccessCaches_();
-
-  return {
-    success: true,
-    sheet: ACCESS_SHEET,
-    created: !existed,
-    headers: SHEET_HEADERS.slice(),
-    roleValues: ROLE_VALUES.slice()
-  };
+  return { success: true, sheet: ACCESS_SHEET, created: !existed, headers: SHEET_HEADERS.slice(), roleValues: ROLE_VALUES.slice(), registrationStatusValues: _getAccessRegistrationStatusValues_() };
 }
 
 /**
@@ -616,97 +612,78 @@ function bootstrapSheet() {
  */
 function refreshAccessSheetUi() {
   var sh = _getSheet_(true);
-
+  if (typeof _removeAccessObsoleteColumns_ === 'function') _removeAccessObsoleteColumns_(sh);
   _applyRoleValidation_(sh);
   _applyEmailValidation_(sh);
   _applyEnabledValidation_(sh);
+  _applySelfBindAllowedValidation_(sh);
+  _applyRegistrationStatusValidation_(sh);
   var syncedNotes = _syncAllRoleNotes_(sh);
+  var syncedStatuses = _syncAllRegistrationStatuses_(sh);
   _invalidateAccessCaches_();
-
-  return {
-    success: true,
-    sheet: ACCESS_SHEET,
-    message: 'ACCESS schema updated',
-    roleValues: ROLE_VALUES.slice(),
-    syncedNotes: syncedNotes
-  };
+  return { success: true, sheet: ACCESS_SHEET, message: 'ACCESS schema updated', roleValues: ROLE_VALUES.slice(), registrationStatusValues: _getAccessRegistrationStatusValues_(), syncedNotes: syncedNotes, syncedStatuses: syncedStatuses };
 }
 
 function handleAccessSheetEdit(e) {
   var range = e && e.range ? e.range : null;
   if (!range) return;
-
   var sh = range.getSheet();
   if (!sh || sh.getName() !== ACCESS_SHEET) return;
-
   var row = range.getRow();
   var column = range.getColumn();
   var numRows = Number(range.getNumRows()) || 1;
   var numColumns = Number(range.getNumColumns()) || 1;
   if (row < 2) return;
-
   var headerMap = _getHeaderMap_(sh);
   var roleCol = headerMap.role;
+  var enabledCol = headerMap.enabled;
+  var statusCol = headerMap.registration_status;
   var emailCol = headerMap.email;
   var humanNameColumns = {};
   if (headerMap.display_name) humanNameColumns[headerMap.display_name] = true;
   if (headerMap.surname) humanNameColumns[headerMap.surname] = true;
   if (headerMap.first_name) humanNameColumns[headerMap.first_name] = true;
-
   if (numRows >= 1 && numColumns >= 1) {
     var values = range.getValues();
-    var changed = false;
+    var changedNames = false;
     for (var r = 0; r < values.length; r++) {
       for (var c = 0; c < values[r].length; c++) {
         var absoluteColumn = column + c;
         if (!humanNameColumns[absoluteColumn]) continue;
         var normalizedName = normalizeHumanName_(values[r][c]);
-        if (String(values[r][c] || '') !== normalizedName) {
-          values[r][c] = normalizedName;
-          changed = true;
-        }
+        if (String(values[r][c] || '') !== normalizedName) { values[r][c] = normalizedName; changedNames = true; }
       }
     }
-    if (changed) {
-      range.setValues(values);
-    }
+    if (changedNames) range.setValues(values);
   }
-
   var includesRoleColumn = !!roleCol && column <= roleCol && roleCol < (column + numColumns);
+  var includesEnabledColumn = !!enabledCol && column <= enabledCol && enabledCol < (column + numColumns);
+  var includesStatusColumn = !!statusCol && column <= statusCol && statusCol < (column + numColumns);
   if (includesRoleColumn) {
     var roleRange = sh.getRange(row, roleCol, numRows, 1);
     var roleValues = roleRange.getValues();
     var roleChanged = false;
-
-    for (var rr = 0; rr < roleValues.length; rr++) {
-      var rawRole = String(roleValues[rr][0] || '').trim();
-      var normalizedRole = rawRole ? normalizeRole_(rawRole) : '';
-      if (String(roleValues[rr][0] || '') !== normalizedRole) {
-        roleValues[rr][0] = normalizedRole;
-        roleChanged = true;
-      }
-    }
-
-    if (roleChanged) {
-      roleRange.setValues(roleValues);
-    }
-
-    for (var syncOffset = 0; syncOffset < numRows; syncOffset++) {
-      _syncRoleNoteForRow_(sh, row + syncOffset);
-    }
+    for (var rr = 0; rr < roleValues.length; rr++) { var rawRole = String(roleValues[rr][0] || '').trim(); var normalizedRole = rawRole ? normalizeRole_(rawRole) : ''; if (String(roleValues[rr][0] || '') !== normalizedRole) { roleValues[rr][0] = normalizedRole; roleChanged = true; } }
+    if (roleChanged) roleRange.setValues(roleValues);
+    for (var noteOffset = 0; noteOffset < numRows; noteOffset++) _syncRoleNoteForRow_(sh, row + noteOffset);
   }
-
+  if (includesStatusColumn) {
+    var statusRange = sh.getRange(row, statusCol, numRows, 1);
+    var statusValues = statusRange.getValues();
+    var statusChanged = false;
+    var allowedStatuses = _getAccessRegistrationStatusValues_();
+    for (var sr = 0; sr < statusValues.length; sr++) { var rawStatus = String(statusValues[sr][0] || '').trim().toLowerCase(); if (rawStatus && allowedStatuses.indexOf(rawStatus) === -1) rawStatus = 'pending_review'; if (String(statusValues[sr][0] || '') !== rawStatus) { statusValues[sr][0] = rawStatus; statusChanged = true; } }
+    if (statusChanged) statusRange.setValues(statusValues);
+  }
+  if (includesRoleColumn || includesEnabledColumn || includesStatusColumn) {
+    for (var statusOffset = 0; statusOffset < numRows; statusOffset++) _syncRegistrationStatusForRow_(sh, row + statusOffset);
+  }
   if (emailCol && column === emailCol && numColumns === 1 && numRows === 1) {
     var email = normalizeEmail_(range.getValue());
-    if (email && email.indexOf('@') === -1) {
-      range.setValue('');
-      SpreadsheetApp.getActive().toast('Некоректний email', 'Помилка', 3);
-    }
+    if (email && email.indexOf('@') === -1) { range.setValue(''); SpreadsheetApp.getActive().toast('Некоректний email', 'Помилка', 3); }
   }
-
   _invalidateAccessCaches_();
 }
-
 
 
 // ==================== ТЕСТИ ====================
@@ -740,7 +717,6 @@ function _testAccessControl_() {
   assert(SHEET_HEADERS.indexOf('email') !== -1, 'SHEET_HEADERS includes email');
   assert(SHEET_HEADERS.indexOf('phone') !== -1, 'SHEET_HEADERS includes phone');
   assert(SHEET_HEADERS.indexOf('user_key_current_hash') !== -1, 'SHEET_HEADERS includes user_key_current_hash');
-
   var requiredAccessHeaders = [
     'email',
     'phone',
@@ -762,14 +738,27 @@ function _testAccessControl_() {
     'registration_status',
     'preferred_contact',
     'surname',
-    'first_name'
+    'first_name',
+    'request_user_key_hash',
+    'request_created_at',
+    'temporary_password_plain',
+    'temporary_password_hash',
+    'temporary_password_salt',
+    'temporary_password_expires_at',
+    'temporary_password_used_at',
+    'approved_by',
+    'approved_at',
+    'activated_at',
+    'telegram_username'
   ];
+
   var missingAccessHeaders = requiredAccessHeaders.filter(function(header) {
     return SHEET_HEADERS.indexOf(header) === -1;
   });
+
   assert(
-    missingAccessHeaders.length === 0 && SHEET_HEADERS.length >= requiredAccessHeaders.length,
-    'SHEET_HEADERS supports extended ACCESS schema',
+    missingAccessHeaders.length === 0,
+    'SHEET_HEADERS supports current ACCESS registration schema',
     {
       count: SHEET_HEADERS.length,
       required: requiredAccessHeaders.length,
@@ -903,10 +892,6 @@ var AccessControl_ = Object.freeze({
 
 function bootstrapWasbAccessSheet() {
   return AccessControl_.bootstrapSheet();
-}
-
-function refreshWasbAccessSheetUi() {
-  return AccessControl_.refreshAccessSheetUi();
 }
 
 function validateWasbAccessSheet() {
