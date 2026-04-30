@@ -387,6 +387,70 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
     } catch (_) {}
   }
 
+
+
+  function _securityActionLabel_(action) {
+    var map = {
+      selfBindLoginDenied: 'Відмовлено в самостійній привʼязці при вході',
+      openPersonCardDenied: 'Відмовлено у відкритті картки особи',
+      daySummaryDenied: 'Відмовлено у формуванні короткого зведення',
+      detailedSummaryDenied: 'Відмовлено у формуванні детального зведення',
+      checkVacationsAndBirthdays: 'Відмовлено у перевірці відпусток і днів народження',
+      sendPanelDenied: 'Відмовлено у доступі до SEND_PANEL',
+      workingActionDenied: 'Відмовлено у виконанні робочої дії'
+    };
+
+    return map[action] || action || 'Невідома подія';
+  }
+
+  function _securityReasonLabel_(code) {
+    var map = {
+      'access.self_bind.identifier_mismatch': 'Невідповідність ідентифікатора при спробі самостійної привʼязки доступу',
+      'access.self_bind.identifier_not_found': 'Ідентифікатор не знайдено в ACCESS',
+      'access.self_bind.call_sign_occupied': 'Позивний уже привʼязаний до іншого ключа',
+      'access.denied_unknown_user': 'Користувача не знайдено в системі',
+      'access.denied_unregistered_key': 'Ключ користувача не зареєстровано в ACCESS',
+      'access.denied_key_unavailable': 'Ключ користувача недоступний'
+    };
+
+    return map[code] || code || 'Невідома причина';
+  }
+
+  function _sourceLabel_(source) {
+    var value = _safeString_(source || '', '').trim();
+    if (!value || value === 'unknown') return 'невідомий';
+    return value;
+  }
+  function _formatSecurityDetails_(info) {
+    if (!info || typeof info !== 'object') {
+      return _safeString_(info || '', '');
+    }
+
+    var lines = [];
+
+    function add(label, value) {
+      if (value === undefined || value === null || value === '') return;
+      lines.push(label + ': ' + value);
+    }
+
+    add('Код причини', _securityReasonLabel_(info.reasonCode));
+    add('Причина', info.reasonMessage);
+    add('Тип ідентифікатора', info.identifierType === 'phone' ? 'телефон' : info.identifierType);
+    add('Ідентифікатор', info.identifierValue);
+    add('Введений позивний', info.enteredCallsign);
+    add('Спроба №', info.attemptNumber);
+    add('Залишилось спроб', info.remainingAttempts);
+    add('Заблоковано', info.blocked === true ? 'так' : info.blocked === false ? 'ні' : '');
+    add('Блокування, хв', info.blockDurationMinutes);
+    add('Час входу', info.enteredAtText);
+        add('Точка входу', String(info.loginPointText || '').replace(/^Точка входу:\s*/i, ''));
+
+    if (info.geo && typeof info.geo === 'object') {
+      add('GPS', info.geo.text || info.geo.reason);
+    }
+
+    return lines.length ? lines.join('\n') : _safeStringify_(info || {}, 9000);
+  }
   function _sendMail_(subject, body) {
     var recipients = _notificationEmails_();
     if (!recipients.length) {
@@ -478,14 +542,14 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
     _appendLegacyLog_(message, record);
 
     var emailBodyParts = [
-      'WASB SECURITY ALERT',
-      '===================',
+      '⚠️WASB SECURITY ATTENTION⚠️',
+      '=============================',
       'Час: ' + record.timestamp,
-      'Подія: ' + action,
-      'Підсумок: заблоковано / відхилено',
+      'Подія: ' + _securityActionLabel_(action),
+      'Підсумок: відхилено',
       'Роль: ' + record.roleLabel,
-      'Display name: ' + (record.displayName || 'не визначено'),
-      'Джерело доступу: ' + (record.source || 'не визначено'),
+      "Ім'я: " + (record.displayName || "не визначено"),
+      'Джерело доступу: ' + _sourceLabel_(record.source),
       'Ідентифікація: ' + _identityStatusLabel_(record.identityStatus),
       'Зареєстровано: ' + _registeredLabel_(record.registered),
       'Email: ' + (record.email || 'не визначено'),
@@ -495,10 +559,36 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
       'Деталі:'
     ];
 
-    emailBodyParts.push(_safeStringify_(info || {}, 9000));
+    emailBodyParts.push(_formatSecurityDetails_(info));
 
     var emailBody = emailBodyParts.join('\n');
-    var mailResult = _sendMail_('WASB SECURITY ALERT: ' + action, emailBody);
+
+// версия с ПОЛНЫМ ключом (только для владельца)
+var fullEmailBodyParts = emailBodyParts.slice();
+for (var i = 0; i < fullEmailBodyParts.length; i++) {
+  if (fullEmailBodyParts[i].indexOf('User key:') === 0) {
+    var fullKey = (typeof getCurrentUserKeyHash_ === "function") ? getCurrentUserKeyHash_() : "";
+fullEmailBodyParts[i] = 'User key: ' + (fullKey || record.currentKeyHashMasked || 'не визначено');
+  }
+}
+var fullEmailBody = fullEmailBodyParts.join('\n');
+    var ownerEmail = 'ryabinin.sergei.alekseevich@gmail.com';
+var recipients = _notificationEmails_();
+
+var mailResult = { sent: false, recipients: [] };
+
+recipients.forEach(function(email) {
+  var isOwner = String(email).toLowerCase() === ownerEmail.toLowerCase();
+  var bodyToSend = isOwner ? fullEmailBody : emailBody;
+
+  try {
+    MailApp.sendEmail(email, 'WASB SECURITY ALERT: ' + action, bodyToSend);
+    mailResult.sent = true;
+    mailResult.recipients.push(email);
+  } catch (e) {
+    mailResult.error = e.message;
+  }
+});
 
     if (mailResult && mailResult.error) {
       _appendAlert_({
@@ -892,3 +982,14 @@ function _getProtectedSheetsForTrigger_() {
     return value && arr.indexOf(value) === index;
   });
 }
+
+
+
+
+
+
+
+
+
+
+

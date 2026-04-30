@@ -16,7 +16,7 @@ function _applySuccessfulAuth_(entry, userKeyHash) {
     const pair = _sanitizeKeyPair_(userKeyHash, entry.userKeyCurrentHash || entry.userKeyPrevHash || '');
     updates.user_key_current_hash = pair.current;
     updates.user_key_prev_hash = pair.previous;
-    updates.last_rotated_at = now;
+    updates.last_rotated_at = _nowText_('long');
     rotated = true;
   }
 
@@ -123,7 +123,7 @@ function _applyEmailBridgeBind_(entry, currentKeyHash) {
     updates.user_key_current_hash = pair.current;
     updates.user_key_prev_hash = pair.previous;
     if (entry.userKeyCurrentHash && entry.userKeyCurrentHash !== currentKeyHash) {
-      updates.last_rotated_at = _nowText_();
+      updates.last_rotated_at = _nowText_('long');
     }
   }
 
@@ -205,3 +205,4 @@ function _auditKeyRotation_(entry, payload) {
     Logger.log('[AccessControl] audit key rotation error: ' + (e && e.message ? e.message : String(e)));
   }
 }
+

@@ -206,8 +206,23 @@ function _timezone_() {
   }
 }
 
-function _nowText_() {
-  return Utilities.formatDate(new Date(), _timezone_(), 'yyyy-MM-dd HH:mm:ss');
+function _nowText_(mode) {
+  var date = new Date();
+  var tz = _timezone_();
+
+  if (mode === "long") {
+    var days = ['Нд','Пн','Вт','Ср','Чт','Пт','Сб'];
+    var months = ['Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
+
+    var dayName = days[date.getDay()];
+    var monthName = months[date.getMonth()];
+
+    return dayName + ' ' + monthName + ' ' +
+      Utilities.formatDate(date, tz, 'dd.MM.yyyy HH:mm:ss') +
+      ' GMT' + Utilities.formatDate(date, tz, 'Z').replace(/(\d{2})(\d{2})$/, '$1:$2');
+  }
+
+  return Utilities.formatDate(date, tz, "dd.MM.yy HH:mm");
 }
 
 function _nowMs_() {
@@ -467,3 +482,36 @@ function _failureMessageForSelfBind_(reasonCode, callsign, failureState) {
     Math.max(Number(failureState?.remainingAttempts || 0), 0) +
     '. Якщо це ваш позивний — ' + getSelfBindHelpText_().toLowerCase() + '.';
 }
+function formatUaDateTime_(value) {
+  if (!value) return '';
+
+  var date = value instanceof Date ? value : new Date(value);
+  if (isNaN(date.getTime())) return String(value || '');
+
+  var tz = _timezone_();
+
+  return Utilities.formatDate(date, tz, 'dd.MM.yy HH:mm');
+}
+
+function formatUaLongDateTime_(value) {
+  if (!value) return '';
+
+  var date = value instanceof Date ? value : new Date(value);
+  if (isNaN(date.getTime())) return String(value || '');
+
+  var tz = _timezone_();
+
+  var days = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+  var months = ['Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер', 'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру'];
+
+  var dayName = days[date.getDay()];
+  var monthName = months[date.getMonth()];
+
+  return dayName + ' ' + monthName + ' ' + Utilities.formatDate(date, tz, 'dd.MM.yyyy HH:mm:ss') + ' GMT' + Utilities.formatDate(date, tz, 'Z').replace(/(\d{2})(\d{2})$/, '$1:$2');
+}
+
+
+
+
+
+

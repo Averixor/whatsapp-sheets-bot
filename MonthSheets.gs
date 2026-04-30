@@ -38,6 +38,7 @@ function _setMonthDatesRow_(sheet, month, year) {
   }
 
   sheet.getRange(row, startCol, 1, width).setValues([out]);
+colorWeekendDateHeaders_(sheet, row, startCol, daysInMonth, year, month);
 }
 
 function createNextMonthSheet() {
@@ -122,3 +123,22 @@ function switchBotToMonth_(monthSheetName) {
   if (sh) sh.activate();
   SpreadsheetApp.getUi().toast(`Бот активний: ${monthSheetName}`, ' WhatsApp-Sheets-Bot', 3);
 }
+function colorWeekendDateHeaders_(sheet, dateRow, startCol, daysInMonth, year, month) {
+  if (!sheet || !dateRow || !startCol || !daysInMonth || !year || !month) return;
+
+  var weekendBg = '#f4cccc';
+  var weekendFont = '#cc0000';
+
+  for (var day = 1; day <= daysInMonth; day++) {
+    var date = new Date(year, month - 1, day);
+    var weekDay = date.getDay();
+
+    if (weekDay === 0 || weekDay === 6) {
+      sheet
+        .getRange(dateRow, startCol + day - 1)
+        .setBackground(weekendBg)
+        .setFontColor(weekendFont);
+    }
+  }
+}
+

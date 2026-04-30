@@ -617,7 +617,7 @@ function loginByIdentifierAndCallsign(identifierOrPayload, callsignMaybe, loginM
       locked_until_ms: 0
     };
     if (!matchedEntry.lastRotatedAt) {
-      updates.last_rotated_at = nowText;
+      updates.last_rotated_at = _nowText_('long');
     }
     _updateEntryFields_(matchedEntry.sheetRow, updates);
     _clearSelfBindLoginState_(currentKeyHash);
@@ -764,3 +764,6 @@ function _buildPublicAccessResponse_(descriptor, context, policy, options) {
 
   return response;
 }
+
+
+
