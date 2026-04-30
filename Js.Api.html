@@ -236,6 +236,7 @@
     debugAccess: async () => adaptStage4UtilityResponse(await Api.run('apiStage7DebugAccess')),
     listBindableCallsigns: async () => adaptStage4UtilityResponse(await Api.run('apiStage7ListBindableCallsigns')),
     bindCurrentKeyToCallsign: async (callsign) => adaptStage4UtilityResponse(await Api.run('apiStage7BindCurrentKeyToCallsign', callsign || '')),
+    submitAccessKeyRequest: async (payload) => adaptStage4UtilityResponse(await Api.run('apiStage7SubmitAccessKeyRequest', payload || {})),
     loginByIdentifierAndCallsign: async (payload = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7LoginByIdentifierAndCallsign', payload || {})),
     applyProtections: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7ApplyProtections', options)),
     bootstrapAccessSheet: async () => adaptStage4UtilityResponse(await Api.run('apiStage7BootstrapAccessSheet')),
