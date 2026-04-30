@@ -740,7 +740,42 @@ function _testAccessControl_() {
   assert(SHEET_HEADERS.indexOf('email') !== -1, 'SHEET_HEADERS includes email');
   assert(SHEET_HEADERS.indexOf('phone') !== -1, 'SHEET_HEADERS includes phone');
   assert(SHEET_HEADERS.indexOf('user_key_current_hash') !== -1, 'SHEET_HEADERS includes user_key_current_hash');
-  assert(SHEET_HEADERS.length === 14, 'SHEET_HEADERS has 14 columns');
+
+  var requiredAccessHeaders = [
+    'email',
+    'phone',
+    'role',
+    'enabled',
+    'note',
+    'display_name',
+    'person_callsign',
+    'self_bind_allowed',
+    'user_key_current_hash',
+    'user_key_prev_hash',
+    'last_seen_at',
+    'last_rotated_at',
+    'failed_attempts',
+    'locked_until_ms',
+    'login',
+    'password_hash',
+    'password_salt',
+    'registration_status',
+    'preferred_contact',
+    'surname',
+    'first_name'
+  ];
+  var missingAccessHeaders = requiredAccessHeaders.filter(function(header) {
+    return SHEET_HEADERS.indexOf(header) === -1;
+  });
+  assert(
+    missingAccessHeaders.length === 0 && SHEET_HEADERS.length >= requiredAccessHeaders.length,
+    'SHEET_HEADERS supports extended ACCESS schema',
+    {
+      count: SHEET_HEADERS.length,
+      required: requiredAccessHeaders.length,
+      missing: missingAccessHeaders
+    }
+  );
 
   var hashed = hashRawUserKey_('test-key');
   assert(hashed && hashed.length === 64, 'hashRawUserKey returns 64-char hex', hashed);
