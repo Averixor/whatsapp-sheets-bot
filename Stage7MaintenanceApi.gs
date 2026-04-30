@@ -110,7 +110,7 @@ function apiStage7GetAccessDescriptor() {
 
 function apiStage7DebugAccess() {
   const descriptor = (typeof AccessControl_ === 'object')
-    ? AccessControl_.describe({ includeSensitiveDebug: true })
+    ? AccessControl_.describe({ includeSensitiveDebug: false })
     : { role: 'guest', knownUser: false, reason: 'AccessControl_ недоступний' };
 
   return _stage7BuildMaintenanceResponse_(
@@ -655,3 +655,4 @@ function apiStage7RunLifecycleRetentionCleanup() {
   _stage7AssertRole_('sysadmin', 'cleanup lifecycle retention');
   return Stage7UseCases_.runMaintenanceScenario({ type: 'cleanupLifecycleRetention' });
 }
+
