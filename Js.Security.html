@@ -618,34 +618,32 @@
     modal.className = 'access-login-modal';
     modal.innerHTML = [
       '<div id="accessLoginModalBackdrop" class="access-login-modal__backdrop"></div>',
-      '<div class="access-login-modal__dialog">',
+      '<div class="access-login-modal__dialog" style="max-height:82vh; overflow-y:auto;">',
       '  <div class="access-login-modal__header">',
       '    <div>',
-      '      <div class="access-login-modal__title">Увійти</div>',
-      '      <div class="access-login-modal__subtext">Введіть email або телефон і свій позивний</div>',
+      '      <div class="access-login-modal__title">Доступ до системи</div>',
+      '      <div class="access-login-modal__subtext">Отримайте ключ доступу або зареєструйте вже отриманий ключ</div>',
       '    </div>',
       '    <button type="button" id="btnCloseAccessLoginModal" class="access-login-modal__close">Вихід</button>',
       '  </div>',
-      '  <div class="access-login-modal__content">',
+      '  <div class="access-login-modal__content" style="max-height:70vh; overflow-y:auto; padding-right:4px;">',
       '    <div id="accessLoginModalMessage" class="access-login-modal__message"></div>',
       '    <div id="accessLoginModalLoading" class="access-login-modal__loading" style="display:none;">',
       '      <div class="access-login-modal__spinner" aria-hidden="true"></div>',
       '      <div id="accessLoginModalLoadingText" class="access-login-modal__loading-text">Підтверджую вхід...</div>',
       '      <div class="access-login-modal__loading-subtext">Зачекайте, будь ласка. Іде перевірка даних, часу та точки входу.</div>',
       '    </div>',
-      '    <div id="accessLoginModalBody" class="access-login-modal__body is-form">',
-      '      <div class="access-login-modal__actions" style="grid-template-columns:1fr 1fr; gap:8px;">',
-      '        <button type="button" id="accessLoginModeRequestBtn" class="access-login-modal__submit">Отримати ключ доступу</button>',
-      '        <button type="button" id="accessLoginModeHaveKeyBtn" class="access-login-modal__submit">Я вже маю ключ</button>',
-      '      </div>',
-      '      <div id="accessKeyRequestForm">',
+      '    <div id="accessLoginModalBody" class="access-login-modal__body is-form">',      '      <div id="accessKeyRequestForm">',
       '        <label class="access-login-modal__field"><span class="access-login-modal__label">Телефон</span><input id="accessRequestPhoneInput" class="access-login-modal__input" type="text" autocomplete="tel" placeholder="+380..."></label>',
       '        <label class="access-login-modal__field"><span class="access-login-modal__label">Email</span><input id="accessRequestEmailInput" class="access-login-modal__input" type="email" autocomplete="email" placeholder="name@example.com"></label>',
       '        <label class="access-login-modal__field"><span class="access-login-modal__label">Позивний</span><input id="accessRequestCallsignInput" class="access-login-modal__input access-login-modal__input--callsign" type="text" autocomplete="off" placeholder="Ваш позивний"></label>',
       '        <label class="access-login-modal__field"><span class="access-login-modal__label">Прізвище</span><input id="accessRequestSurnameInput" class="access-login-modal__input" type="text" autocomplete="family-name" placeholder="Прізвище"></label>',
       '        <label class="access-login-modal__field"><span class="access-login-modal__label">Імʼя</span><input id="accessRequestFirstNameInput" class="access-login-modal__input" type="text" autocomplete="given-name" placeholder="Імʼя"></label>',
       '        <label class="access-login-modal__field"><span class="access-login-modal__label">Куди зручно отримати ключ</span><select id="accessRequestPreferredContactInput" class="access-login-modal__input"><option value="email">Email</option><option value="whatsapp">WhatsApp</option><option value="signal">Signal</option><option value="telegram">Telegram</option></select></label>',
-      '        <div class="access-login-modal__actions"><button type="button" id="accessKeyRequestSubmitBtn" class="access-login-modal__submit">Надіслати заявку</button></div>',
+            '        <div class="access-login-modal__actions" style="display:grid; gap:8px;">',
+      '          <button type="button" id="accessKeyRequestSubmitBtn" class="access-login-modal__submit">Отримати ключ доступу</button>',
+      '          <button type="button" id="accessLoginModeHaveKeyBtn" class="access-login-modal__submit" style="display:none;">Я вже маю ключ</button>',
+      '        </div>',
       '      </div>',
       '      <div id="accessHaveKeyForm" style="display:none;">',
       '        <label class="access-login-modal__field"><span class="access-login-modal__label">Ключ доступу</span><input id="accessHaveKeyInput" class="access-login-modal__input" type="text" autocomplete="off" placeholder="Вставте отриманий ключ"></label>',
@@ -663,22 +661,16 @@
     const backdrop = document.getElementById('accessLoginModalBackdrop');
     const closeBtn = document.getElementById('btnCloseAccessLoginModal');
     const submitBtn = document.getElementById('accessLoginSubmitBtn');
-    const identifierInput = document.getElementById('accessLoginIdentifierInput');
-    const callsignInput = document.getElementById('accessLoginCallsignInput');
 
     if (backdrop) backdrop.addEventListener('click', closeAccessLoginModal);
     if (closeBtn) closeBtn.addEventListener('click', closeAccessLoginModal);
+    const haveKeyModeBtn = document.getElementById('accessLoginModeHaveKeyBtn');
+    const requestSubmitBtn = document.getElementById('accessKeyRequestSubmitBtn');
+    const haveKeySubmitBtn = document.getElementById('accessHaveKeySubmitBtn');
+    if (haveKeyModeBtn) haveKeyModeBtn.addEventListener('click', function() { setAccessLoginMode_('haveKey'); });
+    if (requestSubmitBtn) requestSubmitBtn.addEventListener('click', submitAccessKeyRequestForm_);
+    if (haveKeySubmitBtn) haveKeySubmitBtn.addEventListener('click', submitHaveKeyRegistrationForm_);
     if (submitBtn) submitBtn.addEventListener('click', submitAccessLoginForm_);
-
-    [identifierInput, callsignInput].forEach(function (input) {
-      if (!input) return;
-      input.addEventListener('keydown', function (event) {
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          submitAccessLoginForm_();
-        }
-      });
-    });
 
     window.addEventListener('keydown', function (event) {
       if (event.key === 'Escape') {
@@ -702,8 +694,6 @@
   function setAccessLoginLoading_(isLoading, loadingText) {
     const state = ensureAccessLoginState_();
     state.loading = !!isLoading;
-    const identifierInput = document.getElementById('accessLoginIdentifierInput');
-    const callsignInput = document.getElementById('accessLoginCallsignInput');
     const submitBtn = document.getElementById('accessLoginSubmitBtn');
     const closeBtn = document.getElementById('btnCloseAccessLoginModal');
     const body = document.getElementById('accessLoginModalBody');
@@ -760,25 +750,17 @@
     state.modalOpen = true;
     setAccessLoginLoading_(false, 'Підтверджую вхід...');
     setAccessLoginModalMessage_('Заповніть заявку на отримання ключа доступу або введіть уже отриманий ключ.', false);
-
-    const identifierInput = document.getElementById('accessLoginIdentifierInput');
-    const callsignInput = document.getElementById('accessLoginCallsignInput');
     setAccessLoginMode_(mode === 'haveKey' ? 'haveKey' : 'request');
-    if (identifierInput) identifierInput.focus();
   }
 
   async function submitAccessLoginForm_() {
     const state = ensureAccessLoginState_();
     if (state.loading) return;
-
-    const identifierInput = document.getElementById('accessLoginIdentifierInput');
-    const callsignInput = document.getElementById('accessLoginCallsignInput');
     const identifier = safeString_(identifierInput && identifierInput.value);
     const callsign = safeString_(callsignInput && callsignInput.value).toUpperCase();
 
     if (!identifier) {
       setAccessLoginModalMessage_('Введіть email або телефон.', true);
-      if (identifierInput) identifierInput.focus();
       return;
     }
 
@@ -959,10 +941,10 @@
               <div style="font-size:0.78rem; color:var(--text-secondary);">Як працює вхід тепер</div>
               <div style="margin-top:6px; line-height:1.55;">
                 <div>1. Система сама визначає поточний ключ користувача.</div>
-                <div>2. Якщо ключ ще не прив’язано, користувач натискає <b>Увійти</b> і вибирає свій позивний.</div>
+                <div>2. Якщо ключ ще не прив’язано, користувач натискає <b>Отримати ключ доступу</b> і заповнює анкету.</div>
                 <div>3. Роль на клієнті не вибирається і не показується — її бере сервер із ACCESS.</div>
-                <div>4. Якщо позивний уже зайнятий іншим ключем, вхід блокується і показується контакт для допомоги.</div>
-                <div>5. Для ручного debug повний hash лишається тільки у технічному режимі для адміністратора.</div>
+                <div>4. Після перевірки адміністратор підтверджує заявку і користувач отримує ключ.</div>
+                <div>5. Після отримання ключа користувач вводить ключ, логін і пароль для завершення реєстрації.</div>
               </div>
             </div>
 
@@ -1162,7 +1144,19 @@
     if (haveKeyForm) haveKeyForm.style.display = mode === 'haveKey' ? 'block' : 'none';
   }
 
+  let accessKeyRequestLastSentAt_ = Number(localStorage.getItem('wasb_access_key_request_last_sent_at') || '0');
+
   async function submitAccessKeyRequestForm_() {
+    const nowMs = Date.now();
+    const cooldownMs = 5 * 60 * 1000;
+    const remainingMs = cooldownMs - (nowMs - accessKeyRequestLastSentAt_);
+
+    if (remainingMs > 0) {
+      const minutes = Math.ceil(remainingMs / 60000);
+      setAccessLoginModalMessage_('Повторну заявку можна надіслати через ' + minutes + ' хв.', true);
+      return;
+    }
+
     const payload = {
       phone: safeString_(document.getElementById('accessRequestPhoneInput') && document.getElementById('accessRequestPhoneInput').value),
       email: safeString_(document.getElementById('accessRequestEmailInput') && document.getElementById('accessRequestEmailInput').value),
@@ -1186,6 +1180,18 @@
         return;
       }
       setAccessLoginModalMessage_((result && result.message) || 'Заявку надіслано. Очікуйте ключ доступу.', false);
+      accessKeyRequestLastSentAt_ = Date.now();
+      localStorage.setItem('wasb_access_key_request_last_sent_at', String(accessKeyRequestLastSentAt_));
+
+      const haveKeyBtn = document.getElementById('accessLoginModeHaveKeyBtn');
+      if (haveKeyBtn) haveKeyBtn.style.display = 'block';
+
+      const requestBtn = document.getElementById('accessKeyRequestSubmitBtn');
+      if (requestBtn) {
+        requestBtn.disabled = true;
+        requestBtn.textContent = 'Заявку вже надіслано';
+      }
+
       showToast('Заявку на отримання ключа надіслано');
     } catch (error) {
       setAccessLoginModalMessage_(error && error.message ? error.message : String(error), true);
@@ -1206,6 +1212,21 @@
   window.assertAdminAction_ = assertAdminAction_;
 })();
 </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
