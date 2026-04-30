@@ -713,7 +713,10 @@ const backdrop = document.getElementById('accessLoginModalBackdrop');
     const requestSubmitBtn = document.getElementById('accessKeyRequestSubmitBtn');
     const haveKeySubmitBtn = document.getElementById('accessHaveKeySubmitBtn');
     if (haveKeyModeBtn) haveKeyModeBtn.addEventListener('click', function() { setAccessLoginMode_('haveKey'); });
-    if (requestSubmitBtn) requestSubmitBtn.addEventListener('click', submitAccessKeyRequestForm_);
+    if (requestSubmitBtn) {
+      requestSubmitBtn.addEventListener('click', submitAccessKeyRequestForm_);
+      startAccessKeyRequestCooldownTicker_();
+    }
     if (haveKeySubmitBtn) haveKeySubmitBtn.addEventListener('click', submitHaveKeyRegistrationForm_);
     if (submitBtn) submitBtn.addEventListener('click', submitAccessLoginForm_);
 
@@ -1209,14 +1212,119 @@ const backdrop = document.getElementById('accessLoginModalBackdrop');
   }
 
   let accessKeyRequestLastSentAt_ = Number(localStorage.getItem('wasb_access_key_request_last_sent_at') || '0');
+  const ACCESS_KEY_REQUEST_COOLDOWN_MS_ = 5 * 60 * 1000;
+  const ACCESS_KEY_REQUEST_LAST_SENT_KEY_ = 'wasb_access_key_request_last_sent_at';
+  let accessKeyRequestCooldownTimer_ = null;
+
+  function readAccessKeyRequestLastSentAt_() {
+    let value = 0;
+
+    try {
+      value = Number(localStorage.getItem(ACCESS_KEY_REQUEST_LAST_SENT_KEY_) || '0') || 0;
+    } catch (_) {
+      value = Number(accessKeyRequestLastSentAt_ || 0) || 0;
+    }
+
+    const now = Date.now();
+
+    // Якщо значення з майбутнього або вже протухло — чистимо.
+    if (!Number.isFinite(value) || value < 0 || value > now + 60000 || now - value >= ACCESS_KEY_REQUEST_COOLDOWN_MS_) {
+      accessKeyRequestLastSentAt_ = 0;
+      try {
+        localStorage.removeItem(ACCESS_KEY_REQUEST_LAST_SENT_KEY_);
+      } catch (_) {}
+      return 0;
+    }
+
+    accessKeyRequestLastSentAt_ = value;
+    return value;
+  }
+
+  function getAccessKeyRequestRemainingMs_() {
+    const lastSentAt = readAccessKeyRequestLastSentAt_();
+    if (!lastSentAt) return 0;
+
+    const remaining = ACCESS_KEY_REQUEST_COOLDOWN_MS_ - (Date.now() - lastSentAt);
+    if (remaining <= 0) {
+      resetAccessKeyRequestCooldown_();
+      return 0;
+    }
+
+    return remaining;
+  }
+
+  function resetAccessKeyRequestCooldown_() {
+    accessKeyRequestLastSentAt_ = 0;
+    try {
+      localStorage.removeItem(ACCESS_KEY_REQUEST_LAST_SENT_KEY_);
+    } catch (_) {}
+    updateAccessKeyRequestCooldownUi_();
+  }
+
+  function markAccessKeyRequestSent_() {
+    accessKeyRequestLastSentAt_ = Date.now();
+    try {
+      localStorage.setItem(ACCESS_KEY_REQUEST_LAST_SENT_KEY_, String(accessKeyRequestLastSentAt_));
+    } catch (_) {}
+    updateAccessKeyRequestCooldownUi_();
+    startAccessKeyRequestCooldownTicker_();
+  }
+
+  function updateAccessKeyRequestCooldownUi_() {
+    const submitBtn = document.getElementById('accessKeyRequestSubmitBtn');
+    if (!submitBtn) return;
+
+    const state = ensureAccessLoginState_();
+    if (state && state.loading) {
+      submitBtn.disabled = true;
+      return;
+    }
+
+    const remainingMs = getAccessKeyRequestRemainingMs_();
+
+    if (remainingMs > 0) {
+      const seconds = Math.ceil(remainingMs / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const restSeconds = seconds % 60;
+      submitBtn.disabled = true;
+      submitBtn.textContent = minutes > 0
+        ? ('Повторно через ' + minutes + ' хв ' + restSeconds + ' с')
+        : ('Повторно через ' + restSeconds + ' с');
+      return;
+    }
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Надіслати заявку';
+  }
+
+  function startAccessKeyRequestCooldownTicker_() {
+    if (accessKeyRequestCooldownTimer_) {
+      clearInterval(accessKeyRequestCooldownTimer_);
+      accessKeyRequestCooldownTimer_ = null;
+    }
+
+    updateAccessKeyRequestCooldownUi_();
+
+    accessKeyRequestCooldownTimer_ = setInterval(function() {
+      updateAccessKeyRequestCooldownUi_();
+
+      if (getAccessKeyRequestRemainingMs_() <= 0) {
+        clearInterval(accessKeyRequestCooldownTimer_);
+        accessKeyRequestCooldownTimer_ = null;
+        updateAccessKeyRequestCooldownUi_();
+      }
+    }, 1000);
+  }
+
+  window.resetAccessKeyRequestCooldown = resetAccessKeyRequestCooldown_;
+
 
   async function submitAccessKeyRequestForm_() {
-    const nowMs = Date.now();
-    const cooldownMs = 5 * 60 * 1000;
-    const remainingMs = cooldownMs - (nowMs - accessKeyRequestLastSentAt_);
+    const remainingMs = getAccessKeyRequestRemainingMs_();
 
     if (remainingMs > 0) {
       const minutes = Math.ceil(remainingMs / 60000);
+      updateAccessKeyRequestCooldownUi_();
       setAccessLoginModalMessage_('Повторну заявку можна надіслати через ' + minutes + ' хв.', true);
       return;
     }
@@ -1255,8 +1363,7 @@ const backdrop = document.getElementById('accessLoginModalBackdrop');
         return;
       }
       setAccessLoginModalMessage_((result && result.message) || 'Заявку надіслано. Очікуйте ключ доступу.', false);
-      accessKeyRequestLastSentAt_ = Date.now();
-      localStorage.setItem('wasb_access_key_request_last_sent_at', String(accessKeyRequestLastSentAt_));
+      markAccessKeyRequestSent_();
 
       const haveKeyBtn = document.getElementById('accessLoginModeHaveKeyBtn');
       if (haveKeyBtn) haveKeyBtn.style.display = 'block';

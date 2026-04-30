@@ -100,17 +100,31 @@ function normalizePhone_(value) {
   var digits = raw.replace(/\D/g, '');
   if (!digits) return '';
 
-  if (digits.length === 9) {
-    digits = '380' + digits;
-  } else if (digits.length === 10 && digits.charAt(0) === '0') {
+  // 00 380 XX... -> 380 XX...
+  if (digits.indexOf('00') === 0) {
+    digits = digits.slice(2);
+  }
+
+  // +3800XX... — частая ошибка: человек оставил локальный ноль после кода страны.
+  // Если цифр хватает, исправляем. Если номер короткий — отбрасываем.
+  if (/^3800\d{9}$/.test(digits)) {
+    digits = '380' + digits.slice(4);
+  }
+
+  if (/^0\d{9}$/.test(digits)) {
+    // 0664276894 -> 380664276894
     digits = '38' + digits;
-  } else if (digits.length === 12 && digits.indexOf('380') === 0) {
-    // already normalized
+  } else if (/^\d{9}$/.test(digits)) {
+    // 664276894 -> 380664276894
+    digits = '380' + digits;
+  } else if (/^380\d{9}$/.test(digits)) {
+    // already normalized, but checked below
   } else {
     return '';
   }
 
-  if (!/^380\d{9}$/.test(digits)) {
+  // После 380 не может идти 0. Правильно: +38066..., неправильно: +380066...
+  if (!/^380[1-9]\d{8}$/.test(digits)) {
     return '';
   }
 

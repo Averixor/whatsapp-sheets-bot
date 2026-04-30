@@ -828,14 +828,15 @@ function submitAccessKeyRequest(payload) {
   payload = payload || {};
 
   const currentKeyHash = getCurrentUserKeyHash_();
+
   const email = normalizeEmail_(payload.email || '');
   const phone = normalizePhone_(payload.phone || '');
-  const callsign = normalizeCallsign_(payload.callsign || '');
+  const callsign = normalizeCallsign_(payload.callsign || payload.personCallsign || payload.person_callsign || '');
   const surname = normalizeHumanName_(payload.surname || '');
   const firstName = normalizeHumanName_(payload.firstName || payload.first_name || '');
   const patronymic = normalizeHumanName_(payload.patronymic || payload.middleName || payload.middle_name || '');
-  const preferredContact = String(payload.preferredContact || payload.preferred_contact || 'email').trim() || 'email';
-  const telegramUsername = String(payload.telegramUsername || payload.telegram_username || '').trim();
+  const preferredContact = String(payload.preferredContact || payload.preferred_contact || 'email').trim().toLowerCase() || 'email';
+  const telegramUsername = String(payload.telegramUsername || payload.telegram_username || payload.telegram || '').trim();
 
   if (!currentKeyHash) {
     return {
@@ -869,6 +870,14 @@ function submitAccessKeyRequest(payload) {
     };
   }
 
+  if (preferredContact === 'telegram' && !telegramUsername) {
+    return {
+      success: false,
+      code: 'access.registration.telegram_required',
+      message: 'Для Telegram вкажіть username.'
+    };
+  }
+
   const lock = LockService.getScriptLock();
   lock.waitLock(5000);
 
@@ -880,6 +889,11 @@ function submitAccessKeyRequest(payload) {
       const entry = entries[i];
 
       if (entry.requestUserKeyHash && entry.requestUserKeyHash === currentKeyHash) {
+        existing = entry;
+        break;
+      }
+
+      if (entry.userKeyCurrentHash && entry.userKeyCurrentHash === currentKeyHash) {
         existing = entry;
         break;
       }
@@ -909,28 +923,39 @@ function submitAccessKeyRequest(payload) {
     const temporaryPasswordExpiresAt = getAccessTemporaryPasswordExpiresAt_(ACCESS_TEMP_PASSWORD_TTL_HOURS);
 
     const displayName = [surname, firstName].filter(Boolean).join(' ');
+
     const baseUpdates = {
       email: email,
       phone: phone,
-      role: existing && existing.role && existing.role !== 'guest' ? existing.role : 'guest',
-      enabled: existing ? existing.enabled : false,
-      note: getRoleNoteTemplate_(existing && existing.role ? existing.role : 'guest'),
+      role: 'guest',
+      enabled: false,
+      note: getRoleNoteTemplate_('guest'),
       displayName: displayName,
       personCallsign: callsign,
       selfBindAllowed: true,
+
+      user_key_current_hash: currentKeyHash,
+      request_user_key_hash: currentKeyHash,
+
       registration_status: 'pending_review',
       preferred_contact: preferredContact,
       surname: surname,
       first_name: firstName,
       patronymic: patronymic,
-      request_user_key_hash: currentKeyHash,
+      position_title: '',
+
       request_created_at: nowText,
       temporary_password_plain: temporaryPasswordPlain,
       temporary_password_hash: temporaryPasswordHash,
       temporary_password_salt: temporaryPasswordSalt,
       temporary_password_expires_at: temporaryPasswordExpiresAt,
       temporary_password_used_at: '',
+
+      approved_by: '',
+      approved_at: '',
+      activated_at: '',
       telegram_username: telegramUsername,
+
       failed_attempts: 0,
       locked_until_ms: 0
     };
@@ -960,7 +985,11 @@ function submitAccessKeyRequest(payload) {
       patronymic: patronymic,
       preferredContact: preferredContact,
       telegramUsername: telegramUsername,
+      contactValue: preferredContact === 'telegram'
+        ? telegramUsername
+        : (preferredContact === 'email' ? email : phone),
       currentKeyHashMasked: maskSensitiveValue_(currentKeyHash),
+      userKeyCurrentHashMasked: maskSensitiveValue_(currentKeyHash),
       registrationStatus: 'pending_review',
       requestCreatedAt: nowText,
       temporaryPasswordGenerated: true,
@@ -975,7 +1004,7 @@ function submitAccessKeyRequest(payload) {
     return {
       success: true,
       code: 'access.registration.requested',
-      message: 'Заявку на отримання доступу створено. Очікуйте підтвердження.',
+      message: 'Заявку створено. Дані автоматично внесено в ACCESS. Очікуйте підтвердження адміністратора.',
       currentKeyHashMasked: maskSensitiveValue_(currentKeyHash),
       registrationStatus: 'pending_review',
       accessSheetRow: savedEntry && savedEntry.sheetRow ? savedEntry.sheetRow : '',

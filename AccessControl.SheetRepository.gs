@@ -98,6 +98,156 @@ function _invalidateAccessRepoCachesSafe_(options) {
   }
 }
 
+// ==================== ACCESS HEADER NOTES ====================
+
+function _getAccessHeaderNotes_() {
+  return {
+    email: 'електронна пошта',
+    phone: 'телефон',
+    role: 'роль доступу в системі',
+    enabled: 'активний користувач: TRUE/FALSE',
+    note: 'примітка до ролі або доступу',
+    display_name: 'ім\'я, що відображається',
+    person_callsign: 'позивний користувача',
+    self_bind_allowed: 'дозволена самостійна прив\'язка',
+    user_key_current_hash: 'хеш поточного ключа користувача',
+    user_key_prev_hash: 'хеш попереднього ключа користувача',
+    last_seen_at: 'час останнього візиту',
+    last_rotated_at: 'час останнього оновлення ключа',
+    failed_attempts: 'кількість невдалих спроб входу',
+    locked_until_ms: 'заблоковано до, unix-час у мілісекундах',
+    login: 'логін користувача',
+    password_hash: 'хеш постійного пароля',
+    password_salt: 'сіль постійного пароля',
+    registration_status: 'статус реєстрації: pending_review / approved / key_sent / active / rejected / blocked',
+    preferred_contact: 'бажаний спосіб зв\'язку: WhatsApp / Telegram / Signal / Email',
+    surname: 'прізвище',
+    first_name: 'ім\'я',
+    patronymic: 'по батькові',
+    position_title: 'посада / должность користувача',
+    request_user_key_hash: 'хеш ключа із заявки',
+    request_created_at: 'час створення заявки',
+    temporary_password_plain: 'тимчасовий пароль / код доступу у відкритому вигляді для надсилання користувачу',
+    temporary_password_hash: 'хеш тимчасового пароля',
+    temporary_password_salt: 'сіль тимчасового пароля',
+    temporary_password_expires_at: 'термін дії тимчасового пароля',
+    temporary_password_used_at: 'час використання тимчасового пароля',
+    approved_by: 'ким схвалено заявку',
+    approved_at: 'час схвалення заявки',
+    activated_at: 'час активації доступу',
+    telegram_username: 'ім\'я користувача Telegram'
+  };
+}
+
+function _applyAccessHeaderNotes_(sh) {
+  if (!sh) return;
+
+  var headerMap = _getHeaderMap_(sh);
+  var notes = _getAccessHeaderNotes_();
+
+  Object.keys(notes).forEach(function(header) {
+    var col = headerMap[header];
+    if (!col) return;
+    try {
+      sh.getRange(1, col).setNote(notes[header]);
+    } catch (e) {}
+  });
+}
+
+// ==================== ACCESS HUMAN-READABLE HEADERS ====================
+
+function _getAccessHeaderDisplayLabels_() {
+  return {
+    email: 'електронна пошта',
+    phone: 'телефон',
+    role: 'роль',
+    enabled: 'активний',
+    note: 'примітка',
+    display_name: 'ім\'я, що відображається',
+    person_callsign: 'позивний користувача',
+    self_bind_allowed: 'дозволена самостійна прив\'язка',
+    user_key_current_hash: 'хеш поточного ключа',
+    user_key_prev_hash: 'хеш попереднього ключа',
+    last_seen_at: 'час останнього візиту',
+    last_rotated_at: 'час останнього оновлення',
+    failed_attempts: 'невдалих спроб',
+    locked_until_ms: 'заблоковано до (мс)',
+    login: 'логін',
+    password_hash: 'хеш пароля',
+    password_salt: 'сіль пароля',
+    registration_status: 'статус реєстрації',
+    preferred_contact: 'бажаний спосіб зв\'язку',
+    surname: 'прізвище',
+    first_name: 'ім\'я',
+    patronymic: 'по батькові',
+    position_title: 'посада',
+    request_user_key_hash: 'хеш ключа із запиту',
+    request_created_at: 'час створення запиту',
+    temporary_password_plain: 'тимчасовий пароль (текст)',
+    temporary_password_hash: 'хеш тимчасового пароля',
+    temporary_password_salt: 'сіль тимчасового пароля',
+    temporary_password_expires_at: 'термін дії тимчасового пароля',
+    temporary_password_used_at: 'час використання тимчасового пароля',
+    approved_by: 'ким схвалено',
+    approved_at: 'час схвалення',
+    activated_at: 'час активації',
+    telegram_username: 'ім\'я користувача Telegram'
+  };
+}
+
+function _getAccessHeaderAliasMap_() {
+  var labels = _getAccessHeaderDisplayLabels_();
+  var aliases = {};
+
+  Object.keys(labels).forEach(function(key) {
+    aliases[String(labels[key] || '').trim().toLowerCase()] = key;
+  });
+
+  // Додаткові варіанти, щоб не впасти від дрібних змін у назвах.
+  aliases['пошта'] = 'email';
+  aliases['email'] = 'email';
+  aliases['номер телефону'] = 'phone';
+  aliases['телефон'] = 'phone';
+  aliases['роль доступу'] = 'role';
+  aliases['активний користувач'] = 'enabled';
+  aliases['позивний'] = 'person_callsign';
+  aliases['посада / должность'] = 'position_title';
+  aliases['должность'] = 'position_title';
+
+  return aliases;
+}
+
+function _resolveAccessHeaderKey_(value) {
+  var raw = String(value || '').trim().toLowerCase();
+  if (!raw) return '';
+
+  var expected = _getExpectedHeaders_();
+  if (expected.indexOf(raw) !== -1) return raw;
+
+  var aliases = _getAccessHeaderAliasMap_();
+  return aliases[raw] || raw;
+}
+
+function _applyAccessHeaderDisplayLabels_(sh) {
+  if (!sh) return;
+
+  var expectedHeaders = _getExpectedHeaders_();
+  if (!expectedHeaders.length) return;
+
+  var labels = _getAccessHeaderDisplayLabels_();
+  var values = expectedHeaders.map(function(header) {
+    return labels[header] || header;
+  });
+
+  sh.getRange(1, 1, 1, expectedHeaders.length).setValues([values]);
+
+  for (var i = 0; i < expectedHeaders.length; i++) {
+    try {
+      sh.getRange(1, i + 1).setNote(expectedHeaders[i]);
+    } catch (e) {}
+  }
+}
+
 // ==================== SHEET OPERATIONS (HEADER-BASED SAFE READS/WRITES) ====================
 
 function _getSheet_(createIfMissing) {
@@ -140,9 +290,13 @@ function _getHeaderMap_(sh) {
 
   var map = {};
   for (var i = 0; i < headers.length; i++) {
-    var key = String(headers[i] || '').trim().toLowerCase();
-    if (key) map[key] = i + 1;
+    var rawKey = String(headers[i] || '').trim().toLowerCase();
+    var canonicalKey = _resolveAccessHeaderKey_(rawKey);
+
+    if (rawKey) map[rawKey] = i + 1;
+    if (canonicalKey) map[canonicalKey] = i + 1;
   }
+
   return map;
 }
 
@@ -203,9 +357,11 @@ function _ensureSheetSchema_(sh) {
       .setBackground('#e8eaed');
   }
 
+  _applyAccessHeaderDisplayLabels_(sh);
   _applyRoleValidation_(sh);
   _applyEmailValidation_(sh);
   _applyEnabledValidation_(sh);
+  _applyAccessHeaderNotes_(sh);
 }
 
 // ==================== VALIDATIONS ====================
@@ -231,10 +387,16 @@ function _applyRoleValidation_(sh) {
   var maxRows = _getSafeMaxSheetRows_(sh);
   if (maxRows < 2) return;
 
+  // Снимаем принудительные выпадающие списки ниже 2-й строки.
+  if (maxRows > 2) {
+    sh.getRange(3, roleCol, maxRows - 2, 1).clearDataValidations();
+  }
+
   var rule = _buildRoleValidationRule_();
   if (!rule) return;
 
-  sh.getRange(2, roleCol, maxRows - 1, 1).setDataValidation(rule);
+  // Обязательная проверка роли только в строке 2.
+  sh.getRange(2, roleCol, 1, 1).setDataValidation(rule);
 }
 
 function _applyEmailValidation_(sh) {
@@ -266,13 +428,19 @@ function _applyEnabledValidation_(sh) {
   var maxRows = _getSafeMaxSheetRows_(sh);
   if (maxRows < 2) return;
 
+  // Снимаем принудительные выпадающие списки ниже 2-й строки.
+  if (maxRows > 2) {
+    sh.getRange(3, enabledCol, maxRows - 2, 1).clearDataValidations();
+  }
+
   var rule = SpreadsheetApp.newDataValidation()
     .requireValueInList(['TRUE', 'FALSE'], true)
     .setAllowInvalid(false)
     .setHelpText('TRUE - активний, FALSE - заблокований адміністратором')
     .build();
 
-  sh.getRange(2, enabledCol, maxRows - 1, 1).setDataValidation(rule);
+  // Обязательная проверка активности только в строке 2.
+  sh.getRange(2, enabledCol, 1, 1).setDataValidation(rule);
 }
 
 // ==================== ROW MAPPING ====================
@@ -351,6 +519,7 @@ function _rowToEntry_(row, rowNumber, headerMap) {
     surname: normalizeHumanName_(read('surname')),
     firstName: normalizeHumanName_(read('first_name')),
     patronymic: normalizeHumanName_(read('patronymic')),
+    positionTitle: String(read('position_title') || '').trim(),
     requestUserKeyHash: normalizeStoredHash_(read('request_user_key_hash')),
     requestCreatedAt: String(read('request_created_at') || ''),
     temporaryPasswordPlain: String(read('temporary_password_plain') || '').trim(),
@@ -473,6 +642,7 @@ function _appendEntryByHeaderMap_(entry) {
       case 'surname': return normalizeHumanName_(normalized.surname || '');
       case 'first_name': return normalizeHumanName_(normalized.firstName || normalized.first_name || '');
       case 'patronymic': return normalizeHumanName_(normalized.patronymic || '');
+      case 'position_title': return normalized.positionTitle || normalized.position_title || '';
       case 'request_user_key_hash': return normalizeStoredHash_(normalized.requestUserKeyHash || normalized.request_user_key_hash || '');
       case 'request_created_at': return normalized.requestCreatedAt || normalized.request_created_at || '';
       case 'temporary_password_plain': return normalized.temporaryPasswordPlain || normalized.temporary_password_plain || '';
@@ -548,6 +718,7 @@ function _writeEntryByHeaderMap_(sheetRow, entry) {
   if (entry.surname !== undefined) updates.surname = normalizeHumanName_(entry.surname);
   if (entry.firstName !== undefined) updates.first_name = normalizeHumanName_(entry.firstName);
   if (entry.patronymic !== undefined) updates.patronymic = normalizeHumanName_(entry.patronymic);
+  if (entry.positionTitle !== undefined) updates.position_title = entry.positionTitle;
   if (entry.requestUserKeyHash !== undefined) updates.request_user_key_hash = normalizeStoredHash_(entry.requestUserKeyHash);
   if (entry.requestCreatedAt !== undefined) updates.request_created_at = entry.requestCreatedAt;
   if (entry.temporaryPasswordPlain !== undefined) updates.temporary_password_plain = entry.temporaryPasswordPlain;
@@ -681,6 +852,14 @@ function _updateEntryFields_(sheetRow, updates) {
 
   if (Object.prototype.hasOwnProperty.call(updates, 'patronymic')) {
     mapped.patronymic = normalizeHumanName_(updates.patronymic);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'position_title')) {
+    mapped.positionTitle = String(updates.position_title || '').trim();
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'positionTitle')) {
+    mapped.positionTitle = String(updates.positionTitle || '').trim();
   }
 
   if (Object.prototype.hasOwnProperty.call(updates, 'request_user_key_hash')) {
