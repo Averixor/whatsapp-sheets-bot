@@ -75,19 +75,19 @@ const ROLE_METADATA = Object.freeze({
 });
 
 const SHEET_HEADERS = Object.freeze([
-  'email', 
-  'phone', 
-  'role', 
-  'enabled', 
+  'email',
+  'phone',
+  'role',
+  'enabled',
   'note',
-  'display_name', 
-  'person_callsign', 
+  'display_name',
+  'person_callsign',
   'self_bind_allowed',
-  'user_key_current_hash', 
+  'user_key_current_hash',
   'user_key_prev_hash',
-  'last_seen_at', 
-  'last_rotated_at', 
-  'failed_attempts', 
+  'last_seen_at',
+  'last_rotated_at',
+  'failed_attempts',
   'locked_until_ms',
   'login',
   'password_hash',
@@ -95,7 +95,19 @@ const SHEET_HEADERS = Object.freeze([
   'registration_status',
   'preferred_contact',
   'surname',
-  'first_name'
+  'first_name',
+  'patronymic',
+  'request_user_key_hash',
+  'request_created_at',
+  'temporary_password_plain',
+  'temporary_password_hash',
+  'temporary_password_salt',
+  'temporary_password_expires_at',
+  'temporary_password_used_at',
+  'approved_by',
+  'approved_at',
+  'activated_at',
+  'telegram_username'
 ]);
 
 // ==================== КОДИ ПРИЧИН ====================
@@ -326,6 +338,75 @@ function safeGetUserEmail_() {
   }
   return '';
 }
+
+// ==================== ACCESS REGISTRATION FLOW HELPERS ====================
+
+const ACCESS_TEMP_PASSWORD_TTL_HOURS = 24;
+const ACCESS_TEMP_PASSWORD_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+function hashTextSha256_(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  const digest = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    raw,
+    Utilities.Charset.UTF_8
+  );
+
+  return digest.map(function(byte) {
+    return ('0' + (byte & 0xFF).toString(16)).slice(-2);
+  }).join('');
+}
+
+function generateAccessSalt_() {
+  return hashTextSha256_([
+    Utilities.getUuid(),
+    String(Date.now()),
+    String(Math.random()),
+    Utilities.getUuid()
+  ].join('|'));
+}
+
+function generateAccessTemporaryPassword_(seed) {
+  const alphabet = ACCESS_TEMP_PASSWORD_ALPHABET;
+  const sourceHash = hashTextSha256_([
+    'WASB_ACCESS_TEMP_PASSWORD',
+    String(seed || ''),
+    Utilities.getUuid(),
+    String(Date.now()),
+    String(Math.random())
+  ].join('|'));
+
+  let chars = '';
+  for (let i = 0; i < sourceHash.length; i += 2) {
+    const part = sourceHash.slice(i, i + 2);
+    const n = parseInt(part, 16);
+    if (isNaN(n)) continue;
+    chars += alphabet.charAt(n % alphabet.length);
+    if (chars.length >= 12) break;
+  }
+
+  while (chars.length < 12) {
+    chars += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+  }
+
+  return 'WASB-' + chars.slice(0, 4) + '-' + chars.slice(4, 8) + '-' + chars.slice(8, 12);
+}
+
+function hashAccessPasswordWithSalt_(password, salt) {
+  const normalizedPassword = String(password || '').trim();
+  const normalizedSalt = String(salt || '').trim();
+  if (!normalizedPassword || !normalizedSalt) return '';
+  return hashTextSha256_(['WASB_ACCESS_PASSWORD_V1', normalizedSalt, normalizedPassword].join('|'));
+}
+
+function getAccessTemporaryPasswordExpiresAt_(hours) {
+  const ttlHours = Number(hours || ACCESS_TEMP_PASSWORD_TTL_HOURS) || ACCESS_TEMP_PASSWORD_TTL_HOURS;
+  const date = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
+  return Utilities.formatDate(date, _timezone_(), 'yyyy-MM-dd HH:mm:ss');
+}
+
 
 // ==================== SELF-BIND LOGIN STATE ====================
 

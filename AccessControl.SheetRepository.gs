@@ -350,6 +350,18 @@ function _rowToEntry_(row, rowNumber, headerMap) {
     preferredContact: String(read('preferred_contact') || '').trim(),
     surname: normalizeHumanName_(read('surname')),
     firstName: normalizeHumanName_(read('first_name')),
+    patronymic: normalizeHumanName_(read('patronymic')),
+    requestUserKeyHash: normalizeStoredHash_(read('request_user_key_hash')),
+    requestCreatedAt: String(read('request_created_at') || ''),
+    temporaryPasswordPlain: String(read('temporary_password_plain') || '').trim(),
+    temporaryPasswordHash: String(read('temporary_password_hash') || '').trim(),
+    temporaryPasswordSalt: String(read('temporary_password_salt') || '').trim(),
+    temporaryPasswordExpiresAt: String(read('temporary_password_expires_at') || ''),
+    temporaryPasswordUsedAt: String(read('temporary_password_used_at') || ''),
+    approvedBy: String(read('approved_by') || '').trim(),
+    approvedAt: String(read('approved_at') || ''),
+    activatedAt: String(read('activated_at') || ''),
+    telegramUsername: String(read('telegram_username') || '').trim(),
     failedAttempts: parseInt(read('failed_attempts') || '0', 10) || 0,
     lockedUntilMs: parseInt(read('locked_until_ms') || '0', 10) || 0,
     source: ACCESS_SHEET,
@@ -426,6 +438,61 @@ function _readRawSheetEntries_() {
 
 // ==================== WRITE OPERATIONS ====================
 
+function _appendEntryByHeaderMap_(entry) {
+  var sh = _getSheet_(true);
+  if (!sh) return null;
+
+  _ensureSheetSchema_(sh);
+
+  var headerMap = _getHeaderMap_(sh);
+  var headers = _getExpectedHeaders_();
+  var nextRow = Math.max(Number(sh.getLastRow()) || 1, 1) + 1;
+  var normalized = Object.assign({}, entry || {});
+
+  var rowValues = headers.map(function(header) {
+    switch (header) {
+      case 'email': return normalizeEmail_(normalized.email);
+      case 'phone': return normalizePhone_(normalized.phone);
+      case 'role': return normalizeRole_(normalized.role || 'guest');
+      case 'enabled': return normalized.enabled ? 'TRUE' : 'FALSE';
+      case 'note': return normalized.note !== undefined ? normalized.note : getRoleNoteTemplate_(normalized.role || 'guest');
+      case 'display_name': return normalizeHumanName_(normalized.displayName || normalized.display_name || '');
+      case 'person_callsign': return normalizeCallsign_(normalized.personCallsign || normalized.person_callsign || '');
+      case 'self_bind_allowed': return normalized.selfBindAllowed === false || normalized.self_bind_allowed === false ? 'FALSE' : 'TRUE';
+      case 'user_key_current_hash': return normalizeStoredHash_(normalized.userKeyCurrentHash || normalized.user_key_current_hash || '');
+      case 'user_key_prev_hash': return normalizeStoredHash_(normalized.userKeyPrevHash || normalized.user_key_prev_hash || '');
+      case 'last_seen_at': return normalized.lastSeenAt || normalized.last_seen_at || '';
+      case 'last_rotated_at': return normalized.lastRotatedAt || normalized.last_rotated_at || '';
+      case 'failed_attempts': return normalized.failedAttempts || normalized.failed_attempts || 0;
+      case 'locked_until_ms': return normalized.lockedUntilMs || normalized.locked_until_ms || 0;
+      case 'login': return normalized.login || '';
+      case 'password_hash': return normalized.passwordHash || normalized.password_hash || '';
+      case 'password_salt': return normalized.passwordSalt || normalized.password_salt || '';
+      case 'registration_status': return normalized.registrationStatus || normalized.registration_status || '';
+      case 'preferred_contact': return normalized.preferredContact || normalized.preferred_contact || '';
+      case 'surname': return normalizeHumanName_(normalized.surname || '');
+      case 'first_name': return normalizeHumanName_(normalized.firstName || normalized.first_name || '');
+      case 'patronymic': return normalizeHumanName_(normalized.patronymic || '');
+      case 'request_user_key_hash': return normalizeStoredHash_(normalized.requestUserKeyHash || normalized.request_user_key_hash || '');
+      case 'request_created_at': return normalized.requestCreatedAt || normalized.request_created_at || '';
+      case 'temporary_password_plain': return normalized.temporaryPasswordPlain || normalized.temporary_password_plain || '';
+      case 'temporary_password_hash': return normalized.temporaryPasswordHash || normalized.temporary_password_hash || '';
+      case 'temporary_password_salt': return normalized.temporaryPasswordSalt || normalized.temporary_password_salt || '';
+      case 'temporary_password_expires_at': return normalized.temporaryPasswordExpiresAt || normalized.temporary_password_expires_at || '';
+      case 'temporary_password_used_at': return normalized.temporaryPasswordUsedAt || normalized.temporary_password_used_at || '';
+      case 'approved_by': return normalized.approvedBy || normalized.approved_by || '';
+      case 'approved_at': return normalized.approvedAt || normalized.approved_at || '';
+      case 'activated_at': return normalized.activatedAt || normalized.activated_at || '';
+      case 'telegram_username': return normalized.telegramUsername || normalized.telegram_username || '';
+      default: return '';
+    }
+  });
+
+  sh.getRange(nextRow, 1, 1, headers.length).setValues([rowValues]);
+  _invalidateAccessRepoCachesSafe_();
+  return _getEntryBySheetRow_(nextRow);
+}
+
 function _setEntryField_(sheetRow, header, value) {
   var sh = _getSheet_(false);
   if (!sh || !sheetRow || sheetRow < 2) return false;
@@ -480,6 +547,18 @@ function _writeEntryByHeaderMap_(sheetRow, entry) {
   if (entry.lockedUntilMs !== undefined) updates.locked_until_ms = entry.lockedUntilMs;
   if (entry.surname !== undefined) updates.surname = normalizeHumanName_(entry.surname);
   if (entry.firstName !== undefined) updates.first_name = normalizeHumanName_(entry.firstName);
+  if (entry.patronymic !== undefined) updates.patronymic = normalizeHumanName_(entry.patronymic);
+  if (entry.requestUserKeyHash !== undefined) updates.request_user_key_hash = normalizeStoredHash_(entry.requestUserKeyHash);
+  if (entry.requestCreatedAt !== undefined) updates.request_created_at = entry.requestCreatedAt;
+  if (entry.temporaryPasswordPlain !== undefined) updates.temporary_password_plain = entry.temporaryPasswordPlain;
+  if (entry.temporaryPasswordHash !== undefined) updates.temporary_password_hash = entry.temporaryPasswordHash;
+  if (entry.temporaryPasswordSalt !== undefined) updates.temporary_password_salt = entry.temporaryPasswordSalt;
+  if (entry.temporaryPasswordExpiresAt !== undefined) updates.temporary_password_expires_at = entry.temporaryPasswordExpiresAt;
+  if (entry.temporaryPasswordUsedAt !== undefined) updates.temporary_password_used_at = entry.temporaryPasswordUsedAt;
+  if (entry.approvedBy !== undefined) updates.approved_by = entry.approvedBy;
+  if (entry.approvedAt !== undefined) updates.approved_at = entry.approvedAt;
+  if (entry.activatedAt !== undefined) updates.activated_at = entry.activatedAt;
+  if (entry.telegramUsername !== undefined) updates.telegram_username = entry.telegramUsername;
 
   return _setEntryFields_(sheetRow, updates);
 }
@@ -598,6 +677,58 @@ function _updateEntryFields_(sheetRow, updates) {
 
   if (Object.prototype.hasOwnProperty.call(updates, 'firstName')) {
     mapped.firstName = normalizeHumanName_(updates.firstName);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'patronymic')) {
+    mapped.patronymic = normalizeHumanName_(updates.patronymic);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'request_user_key_hash')) {
+    mapped.requestUserKeyHash = normalizeStoredHash_(updates.request_user_key_hash);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'requestUserKeyHash')) {
+    mapped.requestUserKeyHash = normalizeStoredHash_(updates.requestUserKeyHash);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'request_created_at')) {
+    mapped.requestCreatedAt = String(updates.request_created_at || '');
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'temporary_password_plain')) {
+    mapped.temporaryPasswordPlain = String(updates.temporary_password_plain || '').trim();
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'temporary_password_hash')) {
+    mapped.temporaryPasswordHash = String(updates.temporary_password_hash || '').trim();
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'temporary_password_salt')) {
+    mapped.temporaryPasswordSalt = String(updates.temporary_password_salt || '').trim();
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'temporary_password_expires_at')) {
+    mapped.temporaryPasswordExpiresAt = String(updates.temporary_password_expires_at || '');
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'temporary_password_used_at')) {
+    mapped.temporaryPasswordUsedAt = String(updates.temporary_password_used_at || '');
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'approved_by')) {
+    mapped.approvedBy = String(updates.approved_by || '').trim();
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'approved_at')) {
+    mapped.approvedAt = String(updates.approved_at || '');
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'activated_at')) {
+    mapped.activatedAt = String(updates.activated_at || '');
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'telegram_username')) {
+    mapped.telegramUsername = String(updates.telegram_username || '').trim();
   }
 
   _writeEntryByHeaderMap_(sheetRow, mapped);
