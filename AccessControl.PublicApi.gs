@@ -789,6 +789,7 @@ var AccessControl_ = Object.freeze({
   assertRoleAtLeast: assertRoleAtLeast,
   listBindableCallsigns: listBindableCallsigns,
   bindCurrentKeyToCallsign: bindCurrentKeyToCallsign,
+  submitAccessKeyRequest: submitAccessKeyRequest,
   loginByIdentifierAndCallsign: loginByIdentifierAndCallsign,
 
   bootstrapSheet: bootstrapSheet,

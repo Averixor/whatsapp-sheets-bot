@@ -59,6 +59,9 @@ function _resolveAccessSubject_(context, options = {}) {
         match = _applySuccessfulAuth_(match, currentKeyHash);
         matchSource = match.source;
       }
+      if (!_isAccessEntryActivationComplete_(match)) {
+        return _buildIncompleteRegistrationDescriptor_(match, sourceType, matchedBy, matchSource, policy, context);
+      }
       return _buildDescriptorFromMatch_(match, sourceType, matchedBy, matchSource, policy, context);
     }
   }
@@ -73,11 +76,14 @@ function _resolveAccessSubject_(context, options = {}) {
         match = _applyPrevKeyMatch_(match, currentKeyHash);
         matchSource = match.source;
       }
+      if (!_isAccessEntryActivationComplete_(match)) {
+        return _buildIncompleteRegistrationDescriptor_(match, sourceType, matchedBy, matchSource, policy, context);
+      }
       return _buildDescriptorFromMatch_(match, sourceType, matchedBy, matchSource, policy, context);
     }
   }
 
-  if (policy.allowEmailBridge && sessionEmail) {
+  if (!policy.strictUserKeyMode && policy.allowEmailBridge && sessionEmail) {
     match = _findByEmailInSheet_(sessionEmail, { includeLocked: true, includeDisabled: true });
     if (match) {
       sourceType = 'access';
@@ -88,6 +94,9 @@ function _resolveAccessSubject_(context, options = {}) {
         matchSource = match.source;
       } else if (!_isEntryLocked_(match)) {
         match = _updateEntryFields_(match.sheetRow, { last_seen_at: _nowText_() }) || match;
+      }
+      if (!_isAccessEntryActivationComplete_(match)) {
+        return _buildIncompleteRegistrationDescriptor_(match, sourceType, matchedBy, matchSource, policy, context);
       }
       return _buildDescriptorFromMatch_(match, sourceType, matchedBy, matchSource, policy, context);
     }
@@ -113,6 +122,9 @@ function _resolveAccessSubjectReadOnly_(context) {
   if (currentKeyHash) {
     match = _findByUserKey_(currentKeyHash, { includeLocked: true, includeDisabled: true });
     if (match) {
+      if (!_isAccessEntryActivationComplete_(match)) {
+        return _buildIncompleteRegistrationDescriptor_(match, 'access', 'user_key_current_hash', match.source, policy, context);
+      }
       return _buildDescriptorFromMatch_(match, 'access', 'user_key_current_hash', match.source, policy, context);
     }
   }
@@ -120,13 +132,19 @@ function _resolveAccessSubjectReadOnly_(context) {
   if (currentKeyHash) {
     match = _findByUserKey_(currentKeyHash, { includeLocked: true, includeDisabled: true, matchPrev: true });
     if (match) {
+      if (!_isAccessEntryActivationComplete_(match)) {
+        return _buildIncompleteRegistrationDescriptor_(match, 'access', 'user_key_prev_hash', match.source, policy, context);
+      }
       return _buildDescriptorFromMatch_(match, 'access', 'user_key_prev_hash', match.source, policy, context);
     }
   }
 
-  if (policy.allowEmailBridge && sessionEmail) {
+  if (!policy.strictUserKeyMode && policy.allowEmailBridge && sessionEmail) {
     match = _findByEmailInSheet_(sessionEmail, { includeLocked: true, includeDisabled: true });
     if (match) {
+      if (!_isAccessEntryActivationComplete_(match)) {
+        return _buildIncompleteRegistrationDescriptor_(match, 'access', 'email-bridge', match.source, policy, context);
+      }
       return _buildDescriptorFromMatch_(match, 'access', 'email-bridge', match.source, policy, context);
     }
   }
@@ -138,6 +156,39 @@ function _resolveAccessSubjectReadOnly_(context) {
   return _buildUnknownDescriptor_(context, policy);
 }
 
+
+function _isAccessEntryActivationComplete_(entry) {
+  if (!entry) return false;
+  if (entry.enabled !== true) return false;
+  if (String(entry.registrationStatus || '').toLowerCase() !== 'active') return false;
+  if (!String(entry.userKeyCurrentHash || '').trim()) return false;
+  if (!String(entry.passwordHash || '').trim()) return false;
+  return true;
+}
+
+function _buildIncompleteRegistrationDescriptor_(entry, sourceType, matchedBy, matchSource, policy, context) {
+  return {
+    matchFound: true,
+    sourceType: sourceType || 'access',
+    matchSource: matchSource || 'ACCESS-incomplete-registration',
+    matchedBy: matchedBy || '',
+    entry: entry,
+    role: 'guest',
+    roleLevel: 0,
+    enabled: false,
+    knownUser: true,
+    registered: false,
+    readOnly: true,
+    isAdmin: false,
+    isOperator: false,
+    isMaintainer: false,
+    adminDisabled: false,
+    timedLocked: false,
+    reasonCode: 'access.registration.incomplete',
+    reasonMessage: 'Реєстрацію не завершено. Потрібні активний статус, ключ доступу та пароль.',
+    lockoutState: _getPublicLockoutState_(entry, context.sessionEmail, context.currentKeyHash)
+  };
+}
 // ==================== ДЕСКРИПТОР (логіка з першого варіанту) ====================
 
 /**
@@ -767,4 +818,68 @@ function _buildPublicAccessResponse_(descriptor, context, policy, options) {
 
 
 
+
+
+
+
+
+
+function submitAccessKeyRequest(payload) {
+  payload = payload || {};
+
+  const currentKeyHash = getCurrentUserKeyHash_();
+  const email = String(payload.email || '').trim().toLowerCase();
+  const phone = String(payload.phone || '').trim();
+  const callsign = normalizeCallsign_(payload.callsign || '');
+  const surname = String(payload.surname || '').trim();
+  const firstName = String(payload.firstName || payload.first_name || '').trim();
+  const preferredContact = String(payload.preferredContact || payload.preferred_contact || '').trim().toLowerCase();
+
+  if (!currentKeyHash) {
+    return {
+      success: false,
+      code: 'access.registration.key_unavailable',
+      message: 'Не вдалося визначити ключ користувача. Оновіть сторінку і спробуйте ще раз.'
+    };
+  }
+
+  if (!email && !phone) {
+    return {
+      success: false,
+      code: 'access.registration.contact_required',
+      message: 'Потрібно вказати email або телефон.'
+    };
+  }
+
+  if (!callsign || !surname || !firstName) {
+    return {
+      success: false,
+      code: 'access.registration.profile_required',
+      message: 'Потрібно вказати позивний, прізвище та імʼя.'
+    };
+  }
+
+  const details = {
+    reasonCode: 'access.registration.requested',
+    reasonMessage: 'Користувач подав заявку на отримання ключа доступу.',
+    email: email,
+    phone: phone,
+    enteredCallsign: callsign,
+    surname: surname,
+    firstName: firstName,
+    preferredContact: preferredContact || 'email',
+    registrationStatus: 'pending_key'
+  };
+
+  if (typeof stage7ReportAccessViolation === 'function') {
+    stage7ReportAccessViolation('accessKeyRequested', details);
+  }
+
+  return {
+    success: true,
+    code: 'access.registration.requested',
+    message: 'Заявку на отримання ключа доступу надіслано. Очікуйте підтвердження.',
+    currentKeyHashMasked: maskSensitiveValue_(currentKeyHash)
+  };
+}
 

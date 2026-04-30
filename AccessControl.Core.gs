@@ -88,7 +88,14 @@ const SHEET_HEADERS = Object.freeze([
   'last_seen_at', 
   'last_rotated_at', 
   'failed_attempts', 
-  'locked_until_ms'
+  'locked_until_ms',
+  'login',
+  'password_hash',
+  'password_salt',
+  'registration_status',
+  'preferred_contact',
+  'surname',
+  'first_name'
 ]);
 
 // ==================== КОДИ ПРИЧИН ====================
@@ -509,6 +516,7 @@ function formatUaLongDateTime_(value) {
 
   return dayName + ' ' + monthName + ' ' + Utilities.formatDate(date, tz, 'dd.MM.yyyy HH:mm:ss') + ' GMT' + Utilities.formatDate(date, tz, 'Z').replace(/(\d{2})(\d{2})$/, '$1:$2');
 }
+
 
 
 

@@ -656,3 +656,17 @@ function apiStage7RunLifecycleRetentionCleanup() {
   return Stage7UseCases_.runMaintenanceScenario({ type: 'cleanupLifecycleRetention' });
 }
 
+
+
+function apiStage7SubmitAccessKeyRequest(payload) {
+  const result = (typeof AccessControl_ === 'object' && AccessControl_.submitAccessKeyRequest)
+    ? AccessControl_.submitAccessKeyRequest(payload || {})
+    : { success: false, message: 'AccessControl_ недоступний', code: 'access.registration.unavailable' };
+
+  return stage7Envelope_(
+    'stage7SubmitAccessKeyRequest',
+    result,
+    result && result.success === false ? result.message : ''
+  );
+}
+
