@@ -609,7 +609,50 @@
     return STATE.accessLogin;
   }
 
-  function ensureAccessLoginModal_() {
+  
+  function ensureTelegramUsernameField_() {
+    const modal = document.getElementById('accessLoginModal');
+    if (!modal) return;
+
+    if (document.getElementById('accessRequestTelegramUsername')) return;
+
+    const selects = Array.from(modal.querySelectorAll('select'));
+    const channelSelect = selects.find(function(select) {
+      const text = Array.from(select.options || []).map(function(opt) {
+        return String(opt.textContent || opt.value || '').toLowerCase();
+      }).join(' ');
+      return text.indexOf('telegram') !== -1 || text.indexOf('телеграм') !== -1;
+    });
+
+    if (!channelSelect) return;
+
+    const channelField = channelSelect.closest('.access-login-modal__field') || channelSelect.parentElement;
+    if (!channelField) return;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'access-login-modal__field access-login-modal__telegram-field is-hidden';
+    wrap.innerHTML = [
+      '<label class="access-login-modal__label" for="accessRequestTelegramUsername">Telegram username</label>',
+      '<input id="accessRequestTelegramUsername" class="access-login-modal__input" type="text" autocomplete="username" placeholder="@username">'
+    ].join('');
+
+    channelField.insertAdjacentElement('afterend', wrap);
+
+    function updateTelegramField() {
+      const selected = String(channelSelect.value || channelSelect.options[channelSelect.selectedIndex]?.textContent || '').toLowerCase();
+      const isTelegram = selected.indexOf('telegram') !== -1 || selected.indexOf('телеграм') !== -1;
+      wrap.classList.toggle('is-hidden', !isTelegram);
+      if (!isTelegram) {
+        const input = document.getElementById('accessRequestTelegramUsername');
+        if (input) input.value = '';
+      }
+    }
+
+    channelSelect.addEventListener('change', updateTelegramField);
+    updateTelegramField();
+  }
+
+function ensureAccessLoginModal_() {
     let modal = document.getElementById('accessLoginModal');
     if (modal) return modal;
 
@@ -658,7 +701,9 @@
 
     document.body.appendChild(modal);
 
-    const backdrop = document.getElementById('accessLoginModalBackdrop');
+    
+    ensureTelegramUsernameField_();
+const backdrop = document.getElementById('accessLoginModalBackdrop');
     const closeBtn = document.getElementById('btnCloseAccessLoginModal');
     const submitBtn = document.getElementById('accessLoginSubmitBtn');
 
@@ -1212,6 +1257,8 @@
   window.assertAdminAction_ = assertAdminAction_;
 })();
 </script>
+
+
 
 
 
