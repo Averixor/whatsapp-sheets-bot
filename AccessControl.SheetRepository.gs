@@ -305,7 +305,7 @@ function _rowToEntry_(row, rowNumber, headerMap) {
     role: normalizeRole_(read('role')),
     enabled: isEnabledValue_(read('enabled')),
     note: String(read('note') || ''),
-    displayName: String(read('display_name') || ''),
+    displayName: normalizeHumanName_(read('display_name')),
     personCallsign: normalizeCallsign_(read('person_callsign')),
     selfBindAllowed: isSelfBindAllowedValue_(read('self_bind_allowed'), read('role')),
     userKeyCurrentHash: normalizeStoredHash_(read('user_key_current_hash')),
@@ -317,8 +317,8 @@ function _rowToEntry_(row, rowNumber, headerMap) {
     passwordSalt: String(read('password_salt') || '').trim(),
     registrationStatus: String(read('registration_status') || '').trim().toLowerCase(),
     preferredContact: String(read('preferred_contact') || '').trim(),
-    surname: String(read('surname') || '').trim(),
-    firstName: String(read('first_name') || '').trim(),
+    surname: normalizeHumanName_(read('surname')),
+    firstName: normalizeHumanName_(read('first_name')),
     failedAttempts: parseInt(read('failed_attempts') || '0', 10) || 0,
     lockedUntilMs: parseInt(read('locked_until_ms') || '0', 10) || 0,
     source: ACCESS_SHEET,
@@ -438,7 +438,7 @@ function _writeEntryByHeaderMap_(sheetRow, entry) {
   if (entry.role !== undefined) updates.role = normalizeRole_(entry.role);
   if (entry.enabled !== undefined) updates.enabled = entry.enabled ? 'TRUE' : 'FALSE';
   if (entry.note !== undefined) updates.note = entry.note;
-  if (entry.displayName !== undefined) updates.display_name = entry.displayName;
+  if (entry.displayName !== undefined) updates.display_name = normalizeHumanName_(entry.displayName);
   if (entry.personCallsign !== undefined) updates.person_callsign = normalizeCallsign_(entry.personCallsign);
   if (entry.selfBindAllowed !== undefined) updates.self_bind_allowed = entry.selfBindAllowed ? 'TRUE' : 'FALSE';
   if (entry.userKeyCurrentHash !== undefined) updates.user_key_current_hash = entry.userKeyCurrentHash;
@@ -447,6 +447,8 @@ function _writeEntryByHeaderMap_(sheetRow, entry) {
   if (entry.lastRotatedAt !== undefined) updates.last_rotated_at = entry.lastRotatedAt;
   if (entry.failedAttempts !== undefined) updates.failed_attempts = entry.failedAttempts;
   if (entry.lockedUntilMs !== undefined) updates.locked_until_ms = entry.lockedUntilMs;
+  if (entry.surname !== undefined) updates.surname = normalizeHumanName_(entry.surname);
+  if (entry.firstName !== undefined) updates.first_name = normalizeHumanName_(entry.firstName);
 
   return _setEntryFields_(sheetRow, updates);
 }
@@ -484,11 +486,11 @@ function _updateEntryFields_(sheetRow, updates) {
   }
 
   if (Object.prototype.hasOwnProperty.call(updates, 'display_name')) {
-    mapped.displayName = String(updates.display_name || '');
+    mapped.displayName = normalizeHumanName_(updates.display_name);
   }
 
   if (Object.prototype.hasOwnProperty.call(updates, 'displayName')) {
-    mapped.displayName = String(updates.displayName || '');
+    mapped.displayName = normalizeHumanName_(updates.displayName);
   }
 
   if (Object.prototype.hasOwnProperty.call(updates, 'person_callsign')) {
@@ -553,6 +555,18 @@ function _updateEntryFields_(sheetRow, updates) {
   
   if (Object.prototype.hasOwnProperty.call(updates, 'lockedUntilMs')) {
     mapped.lockedUntilMs = parseInt(updates.lockedUntilMs || '0', 10) || 0;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'surname')) {
+    mapped.surname = normalizeHumanName_(updates.surname);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'first_name')) {
+    mapped.firstName = normalizeHumanName_(updates.first_name);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'firstName')) {
+    mapped.firstName = normalizeHumanName_(updates.firstName);
   }
 
   _writeEntryByHeaderMap_(sheetRow, mapped);

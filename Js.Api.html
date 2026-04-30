@@ -208,7 +208,16 @@
       };
     },
 
-    runReconciliation: (options = {}) => Api.run('apiRunReconciliation', options)
+    runReconciliation: (options = {}) => Api.run('apiRunReconciliation', options),
+
+    submitAccessKeyRequest: async (payload = {}) =>
+      adaptStage4UtilityResponse(await Api.run('apiStage7SubmitAccessKeyRequest', payload || {})),
+
+    loginByIdentifierAndCallsign: async (payload = {}) =>
+      adaptStage4UtilityResponse(await Api.run('apiStage7LoginByIdentifierAndCallsign', payload || {})),
+
+    bindCurrentKeyToCallsign: async (callsign) =>
+      adaptStage4UtilityResponse(await Api.run('apiStage7BindCurrentKeyToCallsign', callsign || ''))
   };
 
   var MaintenanceApi = {

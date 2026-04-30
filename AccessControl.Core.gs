@@ -147,6 +147,31 @@ function normalizeStoredHash_(value) {
   return String(value || '').trim();
 }
 
+/**
+ * Нормалізує імʼя/прізвище людини:
+ * - прибирає зайві пробіли;
+ * - робить першу літеру кожної частини великою;
+ * - решту літер приводить до нижнього регістру;
+ * - підтримує подвійні імена/прізвища через пробіл, дефіс або апостроф.
+ *
+ * Приклади:
+ *   "сергій" -> "Сергій"
+ *   "РЯБІНІН" -> "Рябінін"
+ *   "іван-петро" -> "Іван-Петро"
+ */
+function normalizeHumanName_(value) {
+  var text = String(value || '')
+    .trim()
+    .replace(/\s+/g, ' ');
+
+  if (!text) return '';
+
+  var lowered = text.toLocaleLowerCase('uk-UA');
+  return lowered.replace(/(^|[\s\-ʼ'’`])([^\s\-ʼ'’`])/g, function(match, prefix, letter) {
+    return prefix + String(letter || '').toLocaleUpperCase('uk-UA');
+  });
+}
+
 function isEnabledValue_(value) {
   const raw = String(value === '' || value === null ? 'TRUE' : value).trim().toLowerCase();
   return !(raw === 'false' || raw === '0' || raw === 'no' || raw === 'ні');

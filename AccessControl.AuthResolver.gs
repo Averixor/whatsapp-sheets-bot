@@ -831,8 +831,8 @@ function submitAccessKeyRequest(payload) {
   const email = String(payload.email || '').trim().toLowerCase();
   const phone = String(payload.phone || '').trim();
   const callsign = normalizeCallsign_(payload.callsign || '');
-  const surname = String(payload.surname || '').trim();
-  const firstName = String(payload.firstName || payload.first_name || '').trim();
+  const surname = normalizeHumanName_(payload.surname || '');
+  const firstName = normalizeHumanName_(payload.firstName || payload.first_name || '');
   const preferredContact = String(payload.preferredContact || payload.preferred_contact || '').trim().toLowerCase();
 
   if (!currentKeyHash) {

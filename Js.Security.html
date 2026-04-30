@@ -1182,6 +1182,17 @@ const backdrop = document.getElementById('accessLoginModalBackdrop');
   window.copyAccessDebugTechDetails = copyAccessDebugTechDetails;
   window.copyAccessDebugFullReport = copyAccessDebugFullReport;
 
+  function normalizeHumanNameInput_(value) {
+    const text = safeString_(value).trim().replace(/\s+/g, ' ');
+    if (!text) return '';
+
+    return text
+      .toLocaleLowerCase('uk-UA')
+      .replace(/(^|[\s\-ʼ'’`])([^\s\-ʼ'’`])/g, function(match, prefix, letter) {
+        return prefix + String(letter || '').toLocaleUpperCase('uk-UA');
+      });
+  }
+
   function setAccessLoginMode_(mode) {
     const requestForm = document.getElementById('accessKeyRequestForm');
     const haveKeyForm = document.getElementById('accessHaveKeyForm');
@@ -1206,10 +1217,15 @@ const backdrop = document.getElementById('accessLoginModalBackdrop');
       phone: safeString_(document.getElementById('accessRequestPhoneInput') && document.getElementById('accessRequestPhoneInput').value),
       email: safeString_(document.getElementById('accessRequestEmailInput') && document.getElementById('accessRequestEmailInput').value),
       callsign: safeString_(document.getElementById('accessRequestCallsignInput') && document.getElementById('accessRequestCallsignInput').value).toUpperCase(),
-      surname: safeString_(document.getElementById('accessRequestSurnameInput') && document.getElementById('accessRequestSurnameInput').value),
-      firstName: safeString_(document.getElementById('accessRequestFirstNameInput') && document.getElementById('accessRequestFirstNameInput').value),
+      surname: normalizeHumanNameInput_(document.getElementById('accessRequestSurnameInput') && document.getElementById('accessRequestSurnameInput').value),
+      firstName: normalizeHumanNameInput_(document.getElementById('accessRequestFirstNameInput') && document.getElementById('accessRequestFirstNameInput').value),
       preferredContact: safeString_(document.getElementById('accessRequestPreferredContactInput') && document.getElementById('accessRequestPreferredContactInput').value)
     };
+
+    const surnameInput = document.getElementById('accessRequestSurnameInput');
+    const firstNameInput = document.getElementById('accessRequestFirstNameInput');
+    if (surnameInput) surnameInput.value = payload.surname;
+    if (firstNameInput) firstNameInput.value = payload.firstName;
 
     if ((!payload.phone && !payload.email) || !payload.callsign || !payload.surname || !payload.firstName) {
       setAccessLoginModalMessage_('Заповніть телефон або email, позивний, прізвище та імʼя.', true);

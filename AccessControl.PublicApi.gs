@@ -646,6 +646,29 @@ function handleAccessSheetEdit(e) {
   var headerMap = _getHeaderMap_(sh);
   var roleCol = headerMap.role;
   var emailCol = headerMap.email;
+  var humanNameColumns = {};
+  if (headerMap.display_name) humanNameColumns[headerMap.display_name] = true;
+  if (headerMap.surname) humanNameColumns[headerMap.surname] = true;
+  if (headerMap.first_name) humanNameColumns[headerMap.first_name] = true;
+
+  if (range.getNumRows() >= 1 && range.getNumColumns() >= 1) {
+    var values = range.getValues();
+    var changed = false;
+    for (var r = 0; r < values.length; r++) {
+      for (var c = 0; c < values[r].length; c++) {
+        var absoluteColumn = column + c;
+        if (!humanNameColumns[absoluteColumn]) continue;
+        var normalizedName = normalizeHumanName_(values[r][c]);
+        if (String(values[r][c] || '') !== normalizedName) {
+          values[r][c] = normalizedName;
+          changed = true;
+        }
+      }
+    }
+    if (changed) {
+      range.setValues(values);
+    }
+  }
 
   if (roleCol && column === roleCol && range.getNumColumns() === 1 && range.getNumRows() === 1) {
     var rawRole = String(range.getValue() || '').trim();
