@@ -740,6 +740,10 @@ const backdrop = document.getElementById('accessLoginModalBackdrop');
     const state = ensureAccessLoginState_();
     state.loading = !!isLoading;
     const submitBtn = document.getElementById('accessLoginSubmitBtn');
+    const requestSubmitBtn = document.getElementById('accessKeyRequestSubmitBtn');
+    const haveKeySubmitBtn = document.getElementById('accessHaveKeySubmitBtn');
+    const identifierInput = document.getElementById('accessLoginIdentifierInput');
+    const callsignInput = document.getElementById('accessLoginCallsignInput');
     const closeBtn = document.getElementById('btnCloseAccessLoginModal');
     const body = document.getElementById('accessLoginModalBody');
     const loadingBox = document.getElementById('accessLoginModalLoading');
@@ -747,6 +751,8 @@ const backdrop = document.getElementById('accessLoginModalBackdrop');
 
     if (identifierInput) identifierInput.disabled = !!isLoading;
     if (callsignInput) callsignInput.disabled = !!isLoading;
+    if (requestSubmitBtn) requestSubmitBtn.disabled = !!isLoading;
+    if (haveKeySubmitBtn) haveKeySubmitBtn.disabled = !!isLoading;
     if (submitBtn) {
       submitBtn.disabled = !!isLoading;
       submitBtn.textContent = isLoading ? 'Підтверджую...' : 'Увійти';
@@ -801,8 +807,10 @@ const backdrop = document.getElementById('accessLoginModalBackdrop');
   async function submitAccessLoginForm_() {
     const state = ensureAccessLoginState_();
     if (state.loading) return;
-    const identifier = safeString_(identifierInput && identifierInput.value);
-    const callsign = safeString_(callsignInput && callsignInput.value).toUpperCase();
+    const identifierInput = document.getElementById('accessLoginIdentifierInput');
+    const callsignInput = document.getElementById('accessLoginCallsignInput');
+    const identifier = safeString_(identifierInput ? identifierInput.value : '');
+    const callsign = safeString_(callsignInput ? callsignInput.value : '').toUpperCase();
 
     if (!identifier) {
       setAccessLoginModalMessage_('Введіть email або телефон.', true);
