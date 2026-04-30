@@ -641,6 +641,8 @@ function handleAccessSheetEdit(e) {
 
   var row = range.getRow();
   var column = range.getColumn();
+  var numRows = Number(range.getNumRows()) || 1;
+  var numColumns = Number(range.getNumColumns()) || 1;
   if (row < 2) return;
 
   var headerMap = _getHeaderMap_(sh);
@@ -651,7 +653,7 @@ function handleAccessSheetEdit(e) {
   if (headerMap.surname) humanNameColumns[headerMap.surname] = true;
   if (headerMap.first_name) humanNameColumns[headerMap.first_name] = true;
 
-  if (range.getNumRows() >= 1 && range.getNumColumns() >= 1) {
+  if (numRows >= 1 && numColumns >= 1) {
     var values = range.getValues();
     var changed = false;
     for (var r = 0; r < values.length; r++) {
@@ -670,15 +672,31 @@ function handleAccessSheetEdit(e) {
     }
   }
 
-  if (roleCol && column === roleCol && range.getNumColumns() === 1 && range.getNumRows() === 1) {
-    var rawRole = String(range.getValue() || '').trim();
-    if (rawRole) {
-      range.setValue(normalizeRole_(rawRole));
+  var includesRoleColumn = !!roleCol && column <= roleCol && roleCol < (column + numColumns);
+  if (includesRoleColumn) {
+    var roleRange = sh.getRange(row, roleCol, numRows, 1);
+    var roleValues = roleRange.getValues();
+    var roleChanged = false;
+
+    for (var rr = 0; rr < roleValues.length; rr++) {
+      var rawRole = String(roleValues[rr][0] || '').trim();
+      var normalizedRole = rawRole ? normalizeRole_(rawRole) : '';
+      if (String(roleValues[rr][0] || '') !== normalizedRole) {
+        roleValues[rr][0] = normalizedRole;
+        roleChanged = true;
+      }
     }
-    _syncRoleNoteForRow_(sh, row);
+
+    if (roleChanged) {
+      roleRange.setValues(roleValues);
+    }
+
+    for (var syncOffset = 0; syncOffset < numRows; syncOffset++) {
+      _syncRoleNoteForRow_(sh, row + syncOffset);
+    }
   }
 
-  if (emailCol && column === emailCol && range.getNumColumns() === 1 && range.getNumRows() === 1) {
+  if (emailCol && column === emailCol && numColumns === 1 && numRows === 1) {
     var email = normalizeEmail_(range.getValue());
     if (email && email.indexOf('@') === -1) {
       range.setValue('');
@@ -688,6 +706,7 @@ function handleAccessSheetEdit(e) {
 
   _invalidateAccessCaches_();
 }
+
 
 
 // ==================== ТЕСТИ ====================
@@ -848,6 +867,10 @@ var AccessControl_ = Object.freeze({
 
 function bootstrapWasbAccessSheet() {
   return AccessControl_.bootstrapSheet();
+}
+
+function refreshWasbAccessSheetUi() {
+  return AccessControl_.refreshAccessSheetUi();
 }
 
 function validateWasbAccessSheet() {

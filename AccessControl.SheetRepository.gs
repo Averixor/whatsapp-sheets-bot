@@ -278,18 +278,49 @@ function _applyEnabledValidation_(sh) {
 // ==================== ROW MAPPING ====================
 
 function _syncRoleNoteForRow_(sh, rowNumber) {
-  if (!sh || rowNumber < 2) return;
-  if (typeof getRoleNoteTemplate_ !== 'function') return;
+  if (!sh || rowNumber < 2) return false;
+  if (typeof getRoleNoteTemplate_ !== 'function') return false;
 
   var headerMap = _getHeaderMap_(sh);
   var roleCol = headerMap.role;
   var noteCol = headerMap.note;
-  if (!roleCol || !noteCol) return;
+  if (!roleCol || !noteCol) return false;
 
   var rawRole = String(sh.getRange(rowNumber, roleCol).getValue() || '').trim();
-  if (!rawRole) return;
+  var role = rawRole && typeof normalizeRole_ === 'function' ? normalizeRole_(rawRole) : rawRole.toLowerCase();
+  var note = role ? String(getRoleNoteTemplate_(role) || '') : '';
 
-  sh.getRange(rowNumber, noteCol).setValue(getRoleNoteTemplate_(rawRole));
+  sh.getRange(rowNumber, noteCol).setValue(note);
+  return true;
+}
+
+function _syncAllRoleNotes_(sh) {
+  if (!sh) return 0;
+  if (typeof getRoleNoteTemplate_ !== 'function') return 0;
+
+  var headerMap = _getHeaderMap_(sh);
+  var roleCol = headerMap.role;
+  var noteCol = headerMap.note;
+  if (!roleCol || !noteCol) return 0;
+
+  var lastRow = Number(sh.getLastRow()) || 0;
+  if (lastRow < 2) return 0;
+
+  var rowCount = lastRow - 1;
+  var roleValues = sh.getRange(2, roleCol, rowCount, 1).getValues();
+  var noteValues = [];
+  var changedCount = 0;
+
+  for (var i = 0; i < roleValues.length; i++) {
+    var rawRole = String(roleValues[i][0] || '').trim();
+    var role = rawRole && typeof normalizeRole_ === 'function' ? normalizeRole_(rawRole) : rawRole.toLowerCase();
+    var note = role ? String(getRoleNoteTemplate_(role) || '') : '';
+    noteValues.push([note]);
+    if (note) changedCount++;
+  }
+
+  sh.getRange(2, noteCol, rowCount, 1).setValues(noteValues);
+  return changedCount;
 }
 
 function _rowToEntry_(row, rowNumber, headerMap) {

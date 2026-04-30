@@ -830,6 +830,21 @@ function stage7SecurityAuditOnEdit(e) {
     var sheetName = _safeStringForTrigger_(sheet.getName(), '');
     if (!sheetName) return;
 
+    var accessSheetName = _configValueForTrigger_('ACCESS_SHEET', 'ACCESS');
+    if (sheetName === accessSheetName) {
+      try {
+        if (typeof AccessControl_ === 'object' &&
+            AccessControl_ &&
+            typeof AccessControl_.handleAccessSheetEdit === 'function') {
+          AccessControl_.handleAccessSheetEdit(e);
+        }
+      } catch (accessEditError) {
+        try {
+          Logger.log('stage7SecurityAuditOnEdit ACCESS helper error: ' + (accessEditError && accessEditError.message ? accessEditError.message : accessEditError));
+        } catch (_) {}
+      }
+    }
+
     var protectedSheets = _getProtectedSheetsForTrigger_();
     var isProtectedSheet = protectedSheets.indexOf(sheetName) !== -1;
     if (!isProtectedSheet) return;
