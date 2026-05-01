@@ -96,7 +96,6 @@ const SHEET_HEADERS = Object.freeze([
   'preferred_contact',
   'surname',
   'first_name',
-  'position_title',
   'request_user_key_hash',
   'request_created_at',
   'temporary_password_plain',
@@ -157,31 +156,6 @@ function normalizeRole_(value) {
 
 function normalizeStoredHash_(value) {
   return String(value || '').trim();
-}
-
-/**
- * Нормалізує імʼя/прізвище людини:
- * - прибирає зайві пробіли;
- * - робить першу літеру кожної частини великою;
- * - решту літер приводить до нижнього регістру;
- * - підтримує подвійні імена/прізвища через пробіл, дефіс або апостроф.
- *
- * Приклади:
- *   "сергій" -> "Сергій"
- *   "РЯБІНІН" -> "Рябінін"
- *   "іван-петро" -> "Іван-Петро"
- */
-function normalizeHumanName_(value) {
-  var text = String(value || '')
-    .trim()
-    .replace(/\s+/g, ' ');
-
-  if (!text) return '';
-
-  var lowered = text.toLocaleLowerCase('uk-UA');
-  return lowered.replace(/(^|[\s\-ʼ'’`])([^\s\-ʼ'’`])/g, function(match, prefix, letter) {
-    return prefix + String(letter || '').toLocaleUpperCase('uk-UA');
-  });
 }
 
 function isEnabledValue_(value) {
@@ -251,22 +225,7 @@ function _timezone_() {
 }
 
 function _nowText_(mode) {
-  var date = new Date();
-  var tz = _timezone_();
-
-  if (mode === "long") {
-    var days = ['Нд','Пн','Вт','Ср','Чт','Пт','Сб'];
-    var months = ['Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
-
-    var dayName = days[date.getDay()];
-    var monthName = months[date.getMonth()];
-
-    return dayName + ' ' + monthName + ' ' +
-      Utilities.formatDate(date, tz, 'dd.MM.yyyy HH:mm:ss') +
-      ' GMT' + Utilities.formatDate(date, tz, 'Z').replace(/(\d{2})(\d{2})$/, '$1:$2');
-  }
-
-  return Utilities.formatDate(date, tz, "dd.MM.yy HH:mm");
+  return formatAccessDateTime_(new Date());
 }
 
 function _nowMs_() {
@@ -339,74 +298,49 @@ function safeGetUserEmail_() {
   return '';
 }
 
-// ==================== ACCESS REGISTRATION FLOW HELPERS ====================
+
+// ==================== ACCESS REGISTRATION PASSWORD HELPERS ====================
 
 const ACCESS_TEMP_PASSWORD_TTL_HOURS = 24;
 const ACCESS_TEMP_PASSWORD_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 function hashTextSha256_(value) {
-  const raw = String(value || '').trim();
+  var raw = String(value || '').trim();
   if (!raw) return '';
-
-  const digest = Utilities.computeDigest(
-    Utilities.DigestAlgorithm.SHA_256,
-    raw,
-    Utilities.Charset.UTF_8
-  );
-
-  return digest.map(function(byte) {
-    return ('0' + (byte & 0xFF).toString(16)).slice(-2);
-  }).join('');
+  var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw, Utilities.Charset.UTF_8);
+  return digest.map(function(byte) { return ('0' + (byte & 0xFF).toString(16)).slice(-2); }).join('');
 }
 
 function generateAccessSalt_() {
-  return hashTextSha256_([
-    Utilities.getUuid(),
-    String(Date.now()),
-    String(Math.random()),
-    Utilities.getUuid()
-  ].join('|'));
+  return hashTextSha256_([Utilities.getUuid(), String(Date.now()), String(Math.random()), Utilities.getUuid()].join('|'));
 }
 
 function generateAccessTemporaryPassword_(seed) {
-  const alphabet = ACCESS_TEMP_PASSWORD_ALPHABET;
-  const sourceHash = hashTextSha256_([
-    'WASB_ACCESS_TEMP_PASSWORD',
-    String(seed || ''),
-    Utilities.getUuid(),
-    String(Date.now()),
-    String(Math.random())
-  ].join('|'));
-
-  let chars = '';
-  for (let i = 0; i < sourceHash.length; i += 2) {
-    const part = sourceHash.slice(i, i + 2);
-    const n = parseInt(part, 16);
+  var alphabet = ACCESS_TEMP_PASSWORD_ALPHABET;
+  var sourceHash = hashTextSha256_(['WASB_ACCESS_TEMP_PASSWORD_V1', String(seed || ''), Utilities.getUuid(), String(Date.now()), String(Math.random())].join('|'));
+  var chars = '';
+  for (var i = 0; i < sourceHash.length; i += 2) {
+    var n = parseInt(sourceHash.slice(i, i + 2), 16);
     if (isNaN(n)) continue;
     chars += alphabet.charAt(n % alphabet.length);
     if (chars.length >= 12) break;
   }
-
-  while (chars.length < 12) {
-    chars += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
-  }
-
+  while (chars.length < 12) chars += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
   return 'WASB-' + chars.slice(0, 4) + '-' + chars.slice(4, 8) + '-' + chars.slice(8, 12);
 }
 
 function hashAccessPasswordWithSalt_(password, salt) {
-  const normalizedPassword = String(password || '').trim();
-  const normalizedSalt = String(salt || '').trim();
+  var normalizedPassword = String(password || '').trim();
+  var normalizedSalt = String(salt || '').trim();
   if (!normalizedPassword || !normalizedSalt) return '';
   return hashTextSha256_(['WASB_ACCESS_PASSWORD_V1', normalizedSalt, normalizedPassword].join('|'));
 }
 
 function getAccessTemporaryPasswordExpiresAt_(hours) {
-  const ttlHours = Number(hours || ACCESS_TEMP_PASSWORD_TTL_HOURS) || ACCESS_TEMP_PASSWORD_TTL_HOURS;
-  const date = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
-  return Utilities.formatDate(date, _timezone_(), 'yyyy-MM-dd HH:mm:ss');
+  var ttlHours = Number(hours || ACCESS_TEMP_PASSWORD_TTL_HOURS) || ACCESS_TEMP_PASSWORD_TTL_HOURS;
+  var date = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
+  return formatAccessDateTime_(date);
 }
-
 
 // ==================== SELF-BIND LOGIN STATE ====================
 
@@ -629,3 +563,79 @@ function formatUaLongDateTime_(value) {
 
 
 
+
+
+function normalizeHumanName_(value) {
+  if (value === null || value === undefined) return '';
+
+  var raw = String(value).trim();
+  if (!raw) return '';
+
+  raw = raw
+    .replace(/[\t\r\n]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/[’ʼ`´]/g, "'")
+    .trim();
+
+  if (!raw) return '';
+
+  function capitalizePiece(piece) {
+    piece = String(piece || '').trim();
+    if (!piece) return '';
+
+    if (piece.length === 1) {
+      return piece.toUpperCase();
+    }
+
+    return piece.charAt(0).toUpperCase() + piece.slice(1).toLowerCase();
+  }
+
+  function capitalizeToken(token) {
+    return String(token || '')
+      .split('-')
+      .map(function(hyphenPart) {
+        return hyphenPart
+          .split("'")
+          .map(capitalizePiece)
+          .join("'");
+      })
+      .join('-');
+  }
+
+  return raw
+    .split(' ')
+    .map(capitalizeToken)
+    .filter(Boolean)
+    .join(' ');
+}
+
+
+function formatAccessDateTime_(value) {
+  if (value === null || value === undefined || value === '') return '';
+
+  var tz = _timezone_();
+
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return Utilities.formatDate(value, tz, 'dd.MM.yyyy HH:mm:ss');
+  }
+
+  var raw = String(value || '').trim();
+  if (!raw) return '';
+
+  var directMatch = raw.match(/(\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}:\d{2})/);
+  if (directMatch) {
+    return directMatch[1];
+  }
+
+  var isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}:\d{2}:\d{2})/);
+  if (isoMatch) {
+    return isoMatch[3] + '.' + isoMatch[2] + '.' + isoMatch[1] + ' ' + isoMatch[4];
+  }
+
+  var parsed = new Date(raw);
+  if (!isNaN(parsed.getTime())) {
+    return Utilities.formatDate(parsed, tz, 'dd.MM.yyyy HH:mm:ss');
+  }
+
+  return raw;
+}

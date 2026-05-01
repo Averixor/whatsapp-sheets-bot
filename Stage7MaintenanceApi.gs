@@ -659,45 +659,15 @@ function apiStage7RunLifecycleRetentionCleanup() {
 
 
 function apiStage7SubmitAccessKeyRequest(payload) {
-  const result = (typeof AccessControl_ === 'object' && AccessControl_.submitAccessKeyRequest)
-    ? AccessControl_.submitAccessKeyRequest(payload || {})
-    : { success: false, message: 'AccessControl_ недоступний', code: 'access.registration.unavailable' };
-
+  const result = (typeof AccessControl_ === 'object' && AccessControl_.submitAccessKeyRequest) ? AccessControl_.submitAccessKeyRequest(payload || {}) : { success: false, message: 'AccessControl_ недоступний', code: 'access.registration.unavailable' };
   const success = result && result.success !== false;
-  const message = result && result.message
-    ? result.message
-    : (success ? 'Заявку на отримання ключа доступу надіслано' : 'Не вдалося надіслати заявку на отримання ключа доступу');
-
-  return _stage7BuildMaintenanceResponse_(
-    success,
-    message,
-    result || {},
-    'stage7SubmitAccessKeyRequest',
-    success ? [] : [_stage7NormalizeWarningText_(message) || 'Не вдалося надіслати заявку на отримання ключа доступу'],
-    { affectedSheets: [appGetCore('ALERTS_SHEET', 'ALERTS_LOG')] }
-  );
+  const message = result && result.message ? result.message : (success ? 'Заявку надіслано' : 'Не вдалося надіслати заявку');
+  return _stage7BuildMaintenanceResponse_(success, message, result || {}, 'stage7SubmitAccessKeyRequest', success ? [] : [message], { affectedSheets: [appGetCore('ACCESS_SHEET', 'ACCESS')] });
 }
-
-
-
 
 function apiStage7RegisterAccessWithTemporaryPassword(payload) {
-  const result = (typeof AccessControl_ === 'object' && AccessControl_.registerAccessWithTemporaryPassword)
-    ? AccessControl_.registerAccessWithTemporaryPassword(payload || {})
-    : { success: false, message: 'AccessControl_ недоступний', code: 'access.registration.unavailable' };
-
+  const result = (typeof AccessControl_ === 'object' && AccessControl_.registerAccessWithTemporaryPassword) ? AccessControl_.registerAccessWithTemporaryPassword(payload || {}) : { success: false, message: 'AccessControl_ недоступний', code: 'access.registration.unavailable' };
   const success = result && result.success !== false;
-  const message = result && result.message
-    ? result.message
-    : (success ? 'Доступ активовано' : 'Не вдалося активувати доступ');
-
-  return _stage7BuildMaintenanceResponse_(
-    success,
-    message,
-    result || {},
-    'stage7RegisterAccessWithTemporaryPassword',
-    success ? [] : [_stage7NormalizeWarningText_(message) || 'Не вдалося активувати доступ'],
-    { affectedSheets: [appGetCore('ACCESS_SHEET', 'ACCESS')] }
-  );
+  const message = result && result.message ? result.message : (success ? 'Доступ активовано' : 'Не вдалося активувати доступ');
+  return _stage7BuildMaintenanceResponse_(success, message, result || {}, 'stage7RegisterAccessWithTemporaryPassword', success ? [] : [message], { affectedSheets: [appGetCore('ACCESS_SHEET', 'ACCESS')] });
 }
-

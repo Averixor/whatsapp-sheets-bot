@@ -210,14 +210,13 @@
 
     runReconciliation: (options = {}) => Api.run('apiRunReconciliation', options),
 
-    submitAccessKeyRequest: async (payload = {}) =>
-      adaptStage4UtilityResponse(await Api.run('apiStage7SubmitAccessKeyRequest', payload || {})),
+    async submitAccessKeyRequest(payload = {}) {
+      return adaptStage4UtilityResponse(await Api.run('apiStage7SubmitAccessKeyRequest', payload || {}));
+    },
 
-    loginByIdentifierAndCallsign: async (payload = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7LoginByIdentifierAndCallsign', payload || {})),
-    registerAccessWithTemporaryPassword: async (payload = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7RegisterAccessWithTemporaryPassword', payload || {})),
-
-    bindCurrentKeyToCallsign: async (callsign) =>
-      adaptStage4UtilityResponse(await Api.run('apiStage7BindCurrentKeyToCallsign', callsign || ''))
+    async registerAccessWithTemporaryPassword(payload = {}) {
+      return adaptStage4UtilityResponse(await Api.run('apiStage7RegisterAccessWithTemporaryPassword', payload || {}));
+    }
   };
 
   var MaintenanceApi = {
@@ -246,8 +245,8 @@
     listBindableCallsigns: async () => adaptStage4UtilityResponse(await Api.run('apiStage7ListBindableCallsigns')),
     bindCurrentKeyToCallsign: async (callsign) => adaptStage4UtilityResponse(await Api.run('apiStage7BindCurrentKeyToCallsign', callsign || '')),
     submitAccessKeyRequest: async (payload) => adaptStage4UtilityResponse(await Api.run('apiStage7SubmitAccessKeyRequest', payload || {})),
-    loginByIdentifierAndCallsign: async (payload = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7LoginByIdentifierAndCallsign', payload || {})),
     registerAccessWithTemporaryPassword: async (payload = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7RegisterAccessWithTemporaryPassword', payload || {})),
+    loginByIdentifierAndCallsign: async (payload = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7LoginByIdentifierAndCallsign', payload || {})),
     applyProtections: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7ApplyProtections', options)),
     bootstrapAccessSheet: async () => adaptStage4UtilityResponse(await Api.run('apiStage7BootstrapAccessSheet')),
     reportAccessViolation: async (actionName, details = {}) =>

@@ -12,3 +12,4 @@ _person_card_compact_report.txt
 
 # VS Code local settings
 .vscode/
+.aider*

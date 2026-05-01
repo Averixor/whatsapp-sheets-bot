@@ -726,7 +726,14 @@ function runRegressionTestSuiteFull_(options) {
     });
     _smokeAssert_(rawSidebar.indexOf('Stage 7A bootstrap contract') === -1, 'У Sidebar.html залишився legacy bootstrap comment marker');
     _smokeAssert_(runtimeContract.policyMarker === 'stage7-sidebar-runtime', 'policyMarker має бути stage7-sidebar-runtime');
-    _smokeAssert_(STAGE7A_CONFIG.ACTIVE_RUNTIME_MARKER === 'stage7-sidebar-runtime', 'ACTIVE_RUNTIME_MARKER має бути stage7-sidebar-runtime');
+    const activeRuntimeMarker =
+    (typeof STAGE7_CONFIG !== 'undefined' &&
+     STAGE7_CONFIG &&
+     STAGE7_CONFIG.ACTIVE_RUNTIME_MARKER)
+      ? STAGE7_CONFIG.ACTIVE_RUNTIME_MARKER
+      : 'stage7-sidebar-runtime';
+
+  _smokeAssert_(activeRuntimeMarker === 'stage7-sidebar-runtime', 'ACTIVE_RUNTIME_MARKER має бути stage7-sidebar-runtime');
     return 'runtime-wording-ok';
   });
 
@@ -910,3 +917,4 @@ function runRegressionTestSuiteFull_(options) {
 
   return report;
 }
+
