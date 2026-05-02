@@ -557,59 +557,6 @@ function formatUaLongDateTime_(value) {
   return dayName + ' ' + monthName + ' ' + Utilities.formatDate(date, tz, 'dd.MM.yyyy HH:mm:ss') + ' GMT' + Utilities.formatDate(date, tz, 'Z').replace(/(\d{2})(\d{2})$/, '$1:$2');
 }
 
-
-
-
-
-
-
-
-
-function normalizeHumanName_(value) {
-  if (value === null || value === undefined) return '';
-
-  var raw = String(value).trim();
-  if (!raw) return '';
-
-  raw = raw
-    .replace(/[\t\r\n]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .replace(/[’ʼ`´]/g, "'")
-    .trim();
-
-  if (!raw) return '';
-
-  function capitalizePiece(piece) {
-    piece = String(piece || '').trim();
-    if (!piece) return '';
-
-    if (piece.length === 1) {
-      return piece.toUpperCase();
-    }
-
-    return piece.charAt(0).toUpperCase() + piece.slice(1).toLowerCase();
-  }
-
-  function capitalizeToken(token) {
-    return String(token || '')
-      .split('-')
-      .map(function(hyphenPart) {
-        return hyphenPart
-          .split("'")
-          .map(capitalizePiece)
-          .join("'");
-      })
-      .join('-');
-  }
-
-  return raw
-    .split(' ')
-    .map(capitalizeToken)
-    .filter(Boolean)
-    .join(' ');
-}
-
-
 function formatAccessDateTime_(value) {
   if (value === null || value === undefined || value === '') return '';
 
@@ -639,3 +586,4 @@ function formatAccessDateTime_(value) {
 
   return raw;
 }
+

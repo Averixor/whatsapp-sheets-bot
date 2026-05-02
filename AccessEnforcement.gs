@@ -138,11 +138,7 @@ var AccessEnforcement_ = AccessEnforcement_ || (function() {
     return Utilities.formatDate(new Date(), _scriptTimeZone_(), 'yyyy-MM-dd');
   }
 
-  function _nowText_() {
-    return Utilities.formatDate(new Date(), _scriptTimeZone_(), 'yyyy-MM-dd HH:mm:ss');
-  }
-
-  function _safeUniqueId_(prefix) {
+function _safeUniqueId_(prefix) {
     var p = _trimmedString_(prefix, 'id');
     try {
       if (_isFunction_(stage7UniqueId_)) {
@@ -1074,6 +1070,7 @@ function _getProtectedSheetsForTrigger_() {
     return value && arr.indexOf(value) === index;
   });
 }
+
 
 
 
