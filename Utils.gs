@@ -80,55 +80,38 @@ function _normFmlVac_(str) {
 function normalizePhone_(value) {
   if (value === null || value === undefined) return '';
 
-  if (value instanceof Date && !isNaN(value.getTime())) {
-    return '';
-  }
-
   var raw = String(value).trim();
   if (!raw) return '';
 
-  // Не даём датам превращаться в телефоны: 02.04.2000, 2/4/00 і т.п.
-  if (/^\d{1,2}[./-]\d{1,2}([./-]\d{2,4})?$/.test(raw)) {
-    return '';
-  }
-
-  // Не даём Date.toString() / GMT превращаться в телефоны.
-  if (raw.indexOf('GMT') !== -1 || raw.indexOf('г.') !== -1) {
-    return '';
-  }
-
-  var digits = raw.replace(/\D/g, '');
+  var digits = raw.replace(/[^\d]/g, '');
   if (!digits) return '';
 
-  // 00 380 XX... -> 380 XX...
+  // 00380664276894 -> 380664276894
   if (digits.indexOf('00') === 0) {
-    digits = digits.slice(2);
+    digits = digits.substring(2);
   }
 
-  // +3800XX... — частая ошибка: человек оставил локальный ноль после кода страны.
-  // Если цифр хватает, исправляем. Если номер короткий — отбрасываем.
-  if (/^3800\d{9}$/.test(digits)) {
-    digits = '380' + digits.slice(4);
+  // 80664276894 -> 0664276894
+  if (/^80\d{9}$/.test(digits)) {
+    digits = digits.substring(1);
   }
 
+  // 0664276894 -> 380664276894
   if (/^0\d{9}$/.test(digits)) {
-    // 0664276894 -> 380664276894
     digits = '38' + digits;
-  } else if (/^\d{9}$/.test(digits)) {
-    // 664276894 -> 380664276894
+  }
+
+  // 664276894 -> 380664276894
+  if (/^\d{9}$/.test(digits)) {
     digits = '380' + digits;
-  } else if (/^380\d{9}$/.test(digits)) {
-    // already normalized, but checked below
-  } else {
-    return '';
   }
 
-  // После 380 не может идти 0. Правильно: +38066..., неправильно: +380066...
-  if (!/^380[1-9]\d{8}$/.test(digits)) {
-    return '';
+  // 380664276894 -> +380664276894
+  if (/^380\d{9}$/.test(digits)) {
+    return '+' + digits;
   }
 
-  return '+' + digits;
+  return '';
 }
 
 function loadPhonesProfiles_() {

@@ -640,26 +640,19 @@ function loginByIdentifierAndCallsign(identifierOrPayload, callsignMaybe, loginM
     }
 
     const occupantHash = normalizeStoredHash_(matchedEntry.userKeyCurrentHash);
-    if (occupantHash && occupantHash !== currentKeyHash) {
-      const failure = _registerSelfBindFailure_(currentKeyHash, {
-        identifierType: identifierType,
-        identifierValue: normalizedIdentifier,
-        callsign: normalizedCallsign,
-        reasonCode: REASON_CODES.SELF_BIND_CALLSIGN_OCCUPIED,
-        reasonMessage: 'Позивний уже зайнятий іншим ключем.',
-        loginMeta: loginMeta
-      });
+    const shouldRotateCurrentKey = occupantHash && occupantHash !== currentKeyHash;
 
-      const finalCode = failure.blocked ? REASON_CODES.SELF_BIND_LOGIN_BLOCKED : REASON_CODES.SELF_BIND_CALLSIGN_OCCUPIED;
-      return _errorResponse(
-        finalCode,
-        _failureMessageForSelfBind_(REASON_CODES.SELF_BIND_CALLSIGN_OCCUPIED, normalizedCallsign, failure),
-        supportCallsign,
-        loginMeta,
-        { loginLockout: failure }
-      );
-    }
-
+    /*
+     * user_key_current_hash не є постійною особою користувача.
+     * Браузер, профіль або сесія можуть змінити ключ.
+     *
+     * Якщо matchedEntry вже знайдено за стабільною звʼязкою:
+     *   email/phone + person_callsign
+     * то новий currentKeyHash приймаємо, а старий current переносимо у prev.
+     *
+     * Раніше тут був SELF_BIND_CALLSIGN_OCCUPIED, через що власника могло
+     * викинути з системи після зміни браузерного ключа.
+     */
     const nowText = _nowText_();
     const updates = {
       user_key_current_hash: currentKeyHash,
@@ -667,7 +660,11 @@ function loginByIdentifierAndCallsign(identifierOrPayload, callsignMaybe, loginM
       failed_attempts: 0,
       locked_until_ms: 0
     };
-    if (!matchedEntry.lastRotatedAt) {
+
+    if (shouldRotateCurrentKey) {
+      updates.user_key_prev_hash = occupantHash;
+      updates.last_rotated_at = _nowText_('long');
+    } else if (!matchedEntry.lastRotatedAt) {
       updates.last_rotated_at = _nowText_('long');
     }
     _updateEntryFields_(matchedEntry.sheetRow, updates);
@@ -826,46 +823,228 @@ function _buildPublicAccessResponse_(descriptor, context, policy, options) {
 
 function submitAccessKeyRequest(payload) {
   payload = payload || {};
+
   const currentKeyHash = getCurrentUserKeyHash_();
+
   const email = normalizeEmail_(payload.email || '');
   const phone = normalizePhone_(payload.phone || '');
   const callsign = normalizeCallsign_(payload.callsign || payload.personCallsign || payload.person_callsign || '');
+
   const surname = normalizeHumanName_(payload.surname || '');
   const firstName = normalizeHumanName_(payload.firstName || payload.first_name || '');
-  const preferredContact = String(payload.preferredContact || payload.preferred_contact || 'email').trim().toLowerCase() || 'email';
+  const patronymic = normalizeHumanName_(payload.patronymic || payload.middleName || payload.middle_name || '');
+
   const telegramUsername = String(payload.telegramUsername || payload.telegram_username || payload.telegram || '').trim();
-  if (!currentKeyHash) return { success: false, code: REASON_CODES.SELF_BIND_KEY_UNAVAILABLE, message: 'Не вдалося визначити ключ користувача. Оновіть панель і спробуйте ще раз.' };
-  if (!email && !phone) return { success: false, code: REASON_CODES.SELF_BIND_IDENTIFIER_REQUIRED, message: 'Вкажіть email або телефон.' };
-  if (!callsign) return { success: false, code: REASON_CODES.SELF_BIND_CALLSIGN_NOT_FOUND, message: 'Вкажіть позивний.' };
-  if (!surname || !firstName) return { success: false, code: 'access.registration.name_required', message: 'Вкажіть прізвище та імʼя.' };
-  if (preferredContact === 'telegram' && !telegramUsername) return { success: false, code: 'access.registration.telegram_required', message: 'Для Telegram вкажіть username.' };
+
+  let preferredContact = String(
+    payload.preferredContact ||
+    payload.preferred_contact ||
+    (phone ? 'whatsapp' : 'email')
+  ).trim().toLowerCase();
+
+  if (!preferredContact) {
+    preferredContact = phone ? 'whatsapp' : 'email';
+  }
+
+  if (preferredContact === 'whatsapp' && !phone && email) {
+    preferredContact = 'email';
+  }
+
+  if (preferredContact === 'email' && !email && phone) {
+    preferredContact = 'whatsapp';
+  }
+
+  const login = String(payload.login || email || phone || '').trim();
+
+  const hasContactIdentity = !!(email || phone);
+  const hasNameIdentity = !!(surname && firstName);
+  const hasCallsignIdentity = !!callsign;
+  const hasPersonIdentity = hasCallsignIdentity || hasNameIdentity;
+
+  if (!currentKeyHash) {
+    return {
+      success: false,
+      code: REASON_CODES.SELF_BIND_KEY_UNAVAILABLE,
+      message: 'Не вдалося визначити ключ користувача. Оновіть панель і спробуйте ще раз.'
+    };
+  }
+
+  if (!hasContactIdentity) {
+    return {
+      success: false,
+      code: REASON_CODES.SELF_BIND_IDENTIFIER_REQUIRED,
+      message: 'Вкажіть телефон або email.'
+    };
+  }
+
+  if (!hasPersonIdentity) {
+    return {
+      success: false,
+      code: 'access.registration.person_identity_required',
+      message: 'Вкажіть позивний або прізвище та імʼя.'
+    };
+  }
+
+  if (preferredContact === 'telegram' && !telegramUsername) {
+    return {
+      success: false,
+      code: 'access.registration.telegram_required',
+      message: 'Для Telegram вкажіть username.'
+    };
+  }
+
   const lock = LockService.getScriptLock();
   lock.waitLock(5000);
+
   try {
     const entries = _readSheetEntries_();
     let existing = null;
+
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i];
-      if (entry.requestUserKeyHash && entry.requestUserKeyHash === currentKeyHash) { existing = entry; break; }
-      if (entry.userKeyCurrentHash && entry.userKeyCurrentHash === currentKeyHash) { existing = entry; break; }
-      const sameCallsign = normalizeCallsign_(entry.personCallsign) === callsign;
+
+      if (entry.requestUserKeyHash && entry.requestUserKeyHash === currentKeyHash) {
+        existing = entry;
+        break;
+      }
+
+      if (entry.userKeyCurrentHash && entry.userKeyCurrentHash === currentKeyHash) {
+        existing = entry;
+        break;
+      }
+
       const sameEmail = email && normalizeEmail_(entry.email) === email;
       const samePhone = phone && normalizePhone_(entry.phone) === phone;
-      if (sameCallsign && (sameEmail || samePhone)) { existing = entry; break; }
+      const sameContact = !!(sameEmail || samePhone);
+
+      const sameCallsign = callsign && normalizeCallsign_(entry.personCallsign) === callsign;
+
+      const entrySurname = normalizeHumanName_(entry.surname || '');
+      const entryFirstName = normalizeHumanName_(entry.firstName || entry.first_name || '');
+      const sameName = surname && firstName && entrySurname === surname && entryFirstName === firstName;
+
+      if (sameContact && (sameCallsign || sameName)) {
+        existing = entry;
+        break;
+      }
     }
-    if (existing && String(existing.registrationStatus || '').toLowerCase() === 'active') return { success: false, code: 'access.registration.already_active', message: 'Цей користувач уже активований у системі.' };
+
+    if (existing && String(existing.registrationStatus || '').toLowerCase() === 'active') {
+      return {
+        success: false,
+        code: 'access.registration.already_active',
+        message: 'Цей користувач уже активований у системі.'
+      };
+    }
+
     const nowText = _nowText_('long');
-    const temporaryPasswordPlain = generateAccessTemporaryPassword_(currentKeyHash + '|' + email + '|' + phone + '|' + callsign);
+    const temporaryPasswordPlain = generateAccessTemporaryPassword_(
+      currentKeyHash + '|' + email + '|' + phone + '|' + callsign + '|' + surname + '|' + firstName
+    );
     const temporaryPasswordSalt = generateAccessSalt_();
     const temporaryPasswordHash = hashAccessPasswordWithSalt_(temporaryPasswordPlain, temporaryPasswordSalt);
     const temporaryPasswordExpiresAt = getAccessTemporaryPasswordExpiresAt_(ACCESS_TEMP_PASSWORD_TTL_HOURS);
-    const displayName = [surname, firstName].filter(Boolean).join(' ');
-    const baseUpdates = { email: email, phone: phone, role: 'guest', enabled: false, note: getRoleNoteTemplate_('guest'), displayName: displayName, personCallsign: callsign, selfBindAllowed: true, user_key_current_hash: currentKeyHash, request_user_key_hash: currentKeyHash, registration_status: 'pending_review', preferred_contact: preferredContact, surname: surname, first_name: firstName, request_created_at: nowText, temporary_password_plain: temporaryPasswordPlain, temporary_password_hash: temporaryPasswordHash, temporary_password_salt: temporaryPasswordSalt, temporary_password_expires_at: temporaryPasswordExpiresAt, temporary_password_used_at: '', approved_by: '', approved_at: '', activated_at: '', telegram_username: telegramUsername, failed_attempts: 0, locked_until_ms: 0 };
-    let savedEntry = existing && existing.sheetRow ? _updateEntryFields_(existing.sheetRow, baseUpdates) : _appendEntryByHeaderMap_(baseUpdates);
-    const details = { reasonCode: 'access.registration.requested', reasonMessage: 'Користувач подав заявку на отримання ключа доступу.', email: email, phone: phone, enteredCallsign: callsign, surname: surname, firstName: firstName, preferredContact: preferredContact, telegramUsername: telegramUsername, contactValue: preferredContact === 'telegram' ? telegramUsername : (preferredContact === 'email' ? email : phone), currentKeyHashMasked: maskSensitiveValue_(currentKeyHash), registrationStatus: 'pending_review', requestCreatedAt: nowText, temporaryPasswordGenerated: true, temporaryPasswordExpiresAt: temporaryPasswordExpiresAt, accessSheetRow: savedEntry && savedEntry.sheetRow ? savedEntry.sheetRow : '' };
-    if (typeof stage7ReportAccessViolation === 'function') stage7ReportAccessViolation('accessKeyRequested', details);
-    return { success: true, code: 'access.registration.requested', message: 'Заявку надіслано. Очікуйте підтвердження адміністратора.', currentKeyHashMasked: maskSensitiveValue_(currentKeyHash), registrationStatus: 'pending_review', accessSheetRow: savedEntry && savedEntry.sheetRow ? savedEntry.sheetRow : '', temporaryPasswordExpiresAt: temporaryPasswordExpiresAt };
-  } finally { lock.releaseLock(); }
+
+    const displayName = [surname, firstName, patronymic].filter(Boolean).join(' ') || callsign || login;
+
+    /*
+     * ВАЖЛИВО:
+     * Заявка автоматично заповнює дані користувача.
+     * Адміністратор руками ставить тільки:
+     * - role
+     * - enabled
+     *
+     * Тому при повторній заявці не затираємо вже проставлені role/enabled/note/selfBindAllowed.
+     */
+    const keepRole = existing && existing.role ? existing.role : '';
+    const keepEnabled = existing && existing.enabled === true;
+    const keepNote = existing && existing.note ? existing.note : '';
+    const keepSelfBindAllowed = existing && existing.selfBindAllowed === true;
+
+    const baseUpdates = {
+      email: email,
+      phone: phone,
+      login: login,
+
+      role: keepRole,
+      enabled: keepEnabled,
+      note: keepNote,
+
+      displayName: displayName,
+      personCallsign: callsign,
+
+      selfBindAllowed: keepSelfBindAllowed,
+
+      user_key_current_hash: currentKeyHash,
+      request_user_key_hash: currentKeyHash,
+
+      registration_status: 'pending_review',
+      preferred_contact: preferredContact,
+
+      surname: surname,
+      first_name: firstName,
+      patronymic: patronymic,
+
+      request_created_at: nowText,
+
+      temporary_password_plain: temporaryPasswordPlain,
+      temporary_password_hash: temporaryPasswordHash,
+      temporary_password_salt: temporaryPasswordSalt,
+      temporary_password_expires_at: temporaryPasswordExpiresAt,
+      temporary_password_used_at: '',
+
+      approved_by: '',
+      approved_at: '',
+      activated_at: '',
+
+      telegram_username: telegramUsername,
+
+      failed_attempts: 0,
+      locked_until_ms: 0
+    };
+
+    let savedEntry = existing && existing.sheetRow
+      ? _updateEntryFields_(existing.sheetRow, baseUpdates)
+      : _appendEntryByHeaderMap_(baseUpdates);
+
+    const details = {
+      reasonCode: 'access.registration.requested',
+      reasonMessage: 'Користувач подав заявку на отримання ключа доступу.',
+      email: email,
+      phone: phone,
+      login: login,
+      enteredCallsign: callsign,
+      surname: surname,
+      firstName: firstName,
+      patronymic: patronymic,
+      displayName: displayName,
+      preferredContact: preferredContact,
+      telegramUsername: telegramUsername,
+      contactValue: preferredContact === 'telegram' ? telegramUsername : (preferredContact === 'email' ? email : phone),
+      currentKeyHashMasked: maskSensitiveValue_(currentKeyHash),
+      registrationStatus: 'pending_review',
+      requestCreatedAt: nowText,
+      temporaryPasswordGenerated: true,
+      temporaryPasswordExpiresAt: temporaryPasswordExpiresAt,
+      accessSheetRow: savedEntry && savedEntry.sheetRow ? savedEntry.sheetRow : ''
+    };
+
+    if (typeof stage7ReportAccessViolation === 'function') {
+      stage7ReportAccessViolation('accessKeyRequested', details);
+    }
+
+    return {
+      success: true,
+      code: 'access.registration.requested',
+      message: 'Заявку надіслано. Очікуйте підтвердження адміністратора.',
+      currentKeyHashMasked: maskSensitiveValue_(currentKeyHash),
+      registrationStatus: 'pending_review',
+      accessSheetRow: savedEntry && savedEntry.sheetRow ? savedEntry.sheetRow : '',
+      temporaryPasswordExpiresAt: temporaryPasswordExpiresAt
+    };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function registerAccessWithTemporaryPassword(payload) {
@@ -903,3 +1082,4 @@ function registerAccessWithTemporaryPassword(payload) {
     return { success: true, code: 'access.registration.active', message: 'Доступ активовано. Оновіть панель.', descriptor: describe({ includeSensitiveDebug: false }), accessSheetRow: savedEntry && savedEntry.sheetRow ? savedEntry.sheetRow : entry.sheetRow };
   } finally { lock.releaseLock(); }
 }
+

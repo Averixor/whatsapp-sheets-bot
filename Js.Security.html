@@ -1249,14 +1249,16 @@ const backdrop = document.getElementById('accessLoginModalBackdrop');
       preferredContact: safeString_(document.getElementById('accessRequestPreferredContactInput') && document.getElementById('accessRequestPreferredContactInput').value)
     };
 
-    if ((!payload.phone && !payload.email) || !payload.callsign || !payload.surname || !payload.firstName) {
-      setAccessLoginModalMessage_('Заповніть телефон або email, позивний, прізвище та імʼя.', true);
+    const hasContactIdentity = !!(payload.phone || payload.email);
+    const hasNameIdentity = !!(payload.surname && payload.firstName);
+    const hasCallsignIdentity = !!payload.callsign;
+    const hasPersonIdentity = hasCallsignIdentity || hasNameIdentity;
+
+    if (!hasContactIdentity || !hasPersonIdentity) {
+      setAccessLoginModalMessage_('Заповніть телефон або email, а також позивний або прізвище та імʼя.', true);
       return;
     }
 
-    setAccessLoginModalMessage_('Надсилаю заявку...', false);
-
-    try {
       const result = await Stage7Api.submitAccessKeyRequest(payload);
       if (result && result.success === false) {
         setAccessLoginModalMessage_(result.message || 'Не вдалося надіслати заявку.', true);
@@ -1314,6 +1316,8 @@ const backdrop = document.getElementById('accessLoginModalBackdrop');
   window.assertAdminAction_ = assertAdminAction_;
 })();
 </script>
+
+
 
 
 
