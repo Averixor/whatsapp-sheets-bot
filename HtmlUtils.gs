@@ -3,20 +3,6 @@
  *
  * Канонічне імʼя в цьому проєкті: HtmlUtils_
  *
- * Призначення:
- * - HTML: текст, атрибути, коментарі
- * - JavaScript: рядки
- * - URL: параметри
- * - CSS: значення
- * - RegExp: безпечне створення регулярних виразів із введення користувача
- * - Text cleanup: видалення HTML-тегів
- * - XML: CDATA-обгортка
- * - Utility: нормалізація пробілів, генерація HTML id/name, безпечна збірка атрибутів
- *
- * ВАЖЛИВО:
- * - Не перейменовувати HtmlUtils_ на HtmlUtils.
- * - Diagnostics, SmokeTests, MonthSheets, Summaries та інші модулі вже очікують HtmlUtils_.
- * - Глобальні wrappers escapeHtml_ та _escapeHtml_ залишені для сумісності.
  */
 
 (function(root) {
