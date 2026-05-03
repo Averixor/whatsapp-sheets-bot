@@ -2,5 +2,27 @@
   "css.validate": false,
   "less.validate": false,
   "scss.validate": false,
-  "html.validate.styles": false
+  "html.validate.styles": false,
+  "cSpell.enabled": false,
+  "cSpell.words": [
+    "Shahtar",
+    "ГРАФ",
+    "Петренко",
+    "Іван",
+    "Іванович",
+    "РОЛАНД",
+    "роланд",
+    "callsign",
+    "fmls",
+    "WASB"
+  ],
+  "python.testing.unittestArgs": [
+    "-v",
+    "-s",
+    ".",
+    "-p",
+    "test_*.py"
+  ],
+  "python.testing.pytestEnabled": false,
+  "python.testing.unittestEnabled": true
 }

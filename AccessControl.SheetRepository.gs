@@ -154,18 +154,20 @@ function _resolveAccessHeaderKey_(value) {
 
 function _applyAccessHeaderDisplayLabels_(sh) {
   if (!sh) return;
+
   var expectedHeaders = _getExpectedHeaders_();
   if (!expectedHeaders.length) return;
+
   var labels = _getAccessHeaderDisplayLabels_();
+
   var values = expectedHeaders.map(function(header) {
     return labels[header] || header;
   });
-  sh.getRange(1, 1, 1, expectedHeaders.length).setValues([values]);
-  for (var i = 0; i < expectedHeaders.length; i++) {
-    try {
-      sh.getRange(1, i + 1).setNote(expectedHeaders[i]);
-    } catch (e) {}
-  }
+
+  var headerRange = sh.getRange(1, 1, 1, expectedHeaders.length);
+
+  headerRange.setValues([values]);
+  headerRange.clearNote();
 }
 
 function _removeAccessObsoleteColumns_(sh) {

@@ -2,7 +2,6 @@
  * DeprecatedRegistry.gs — compatibility / historical / sunset registry for the final baseline.
  */
 
-
 const DeprecatedRegistry_ = Object.freeze({
   add: function(name, replacement, sunset) {
     return Object.freeze({

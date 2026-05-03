@@ -217,3 +217,50 @@ function debugSendPanelBuildRawForDateManual() {
   return out;
 }
 
+function debugManualSheetAccess_() {
+  var spreadsheetId = '1v8ixM67nG_Bfy5NzcDZbmSjwVOYbkN02ibfP6YqI384';
+
+  var result = {
+    activeSpreadsheetOk: false,
+    activeSpreadsheetId: '',
+    activeSpreadsheetName: '',
+    openByIdOk: false,
+    openByIdName: '',
+    accessSheetOk: false,
+    accessSheetLastRow: 0,
+    accessSheetLastColumn: 0,
+    error: ''
+  };
+
+  try {
+    var active = SpreadsheetApp.getActiveSpreadsheet();
+
+    if (active) {
+      result.activeSpreadsheetOk = true;
+      result.activeSpreadsheetId = active.getId();
+      result.activeSpreadsheetName = active.getName();
+    }
+  } catch (e1) {
+    result.activeSpreadsheetError = e1 && e1.message ? e1.message : String(e1);
+  }
+
+  try {
+    var ss = SpreadsheetApp.openById(spreadsheetId);
+
+    result.openByIdOk = true;
+    result.openByIdName = ss.getName();
+
+    var accessSheet = ss.getSheetByName('ACCESS');
+    result.accessSheetOk = !!accessSheet;
+
+    if (accessSheet) {
+      result.accessSheetLastRow = accessSheet.getLastRow();
+      result.accessSheetLastColumn = accessSheet.getLastColumn();
+    }
+  } catch (e2) {
+    result.error = e2 && e2.message ? e2.message : String(e2);
+  }
+
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
+}
