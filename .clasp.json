@@ -1,6 +1,15 @@
 {
-  "scriptId": "1AB7o3GPo41RchW5k_LAWrgwsIujcfNBQpvqHP5faLldTs0hFglbWI85_", 
+  "scriptId": "1AB7o3GPo41RchW5k_LAWrgwsIujcfNBQpvqHP5faLldTs0hFglbWI85_",
   "rootDir": ".",
-  "scriptExtensions": [".gs", ".js"],
-  "htmlExtensions": [".html"]
+  "scriptExtensions": [
+    ".gs",
+    ".js",
+    ".json"
+  ],
+  "htmlExtensions": [
+    ".html"
+  ],
+  "parentId": [
+    "1v8ixM67nG_Bfy5NzcDZbmSjwVOYbkN02ibfP6YqI384"
+  ]
 }
