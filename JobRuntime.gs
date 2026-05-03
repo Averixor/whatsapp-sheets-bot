@@ -1,5 +1,5 @@
 /**
- * JobRuntime.gs — stage 7 runtime observability layer.
+ * JobRuntime.gs - stage 7 runtime observability layer.
  * Extended to populate enriched JOB_RUNTIME_LOG fields.
  */
 

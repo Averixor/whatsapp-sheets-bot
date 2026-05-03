@@ -1258,7 +1258,7 @@ const backdrop = document.getElementById('accessLoginModalBackdrop');
       setAccessLoginModalMessage_('Заповніть телефон або email, а також позивний або прізвище та імʼя.', true);
       return;
     }
-
+    try {
       const result = await Stage7Api.submitAccessKeyRequest(payload);
       if (result && result.success === false) {
         setAccessLoginModalMessage_(result.message || 'Не вдалося надіслати заявку.', true);
@@ -1316,6 +1316,7 @@ const backdrop = document.getElementById('accessLoginModalBackdrop');
   window.assertAdminAction_ = assertAdminAction_;
 })();
 </script>
+
 
 
 
