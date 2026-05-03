@@ -1,10 +1,26 @@
 # ==============================================================================
 # .claspignore for WASB
-# Ignore everything, allow only root Apps Script files
+# Ignore local/dev files, allow Apps Script source files
 # ==============================================================================
 
-**/**
+.git/**
+.vscode/**
+node_modules/**
+
+*.md
+*.log
+*.bak*
+_backup*/**
+_authresolver_*.txt
+_spreadsheet_access_points.txt
+_patch_*.js
+
+package.json
+package-lock.json
 
 !appsscript.json
 !*.gs
 !*.html
+
+# Generated/debug client bundle - do not push
+_combined_client_debug.*
