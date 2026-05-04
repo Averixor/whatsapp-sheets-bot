@@ -1,4 +1,5 @@
 // ========== VACATION + BIRTHDAY ENGINE ==========
+
 const VACATION_ENGINE_CONFIG = {
   VACATIONS_SHEET: 'VACATIONS',
   NAME_COL: 1,
@@ -15,14 +16,16 @@ const VACATION_ENGINE_CONFIG = {
   COMMANDER_SOON3_TEMPLATE: 'COMMANDER_VACATION_SOON_3',
   COMMANDER_TODAY_TEMPLATE: 'COMMANDER_VACATION_TODAY',
   SOLDIER_TEMPLATES: {
-    3: ['SOLDIER_3_1',
+    3: [
+      'SOLDIER_3_1',
       'SOLDIER_3_2',
       'SOLDIER_3_3',
       'SOLDIER_3_4',
       'SOLDIER_3_5',
       'SOLDIER_3_6'
     ],
-    1: ['SOLDIER_1_1',
+    1: [
+      'SOLDIER_1_1',
       'SOLDIER_1_2',
       'SOLDIER_1_3',
       'SOLDIER_1_4',
@@ -33,7 +36,7 @@ const VACATION_ENGINE_CONFIG = {
 };
 
 const BIRTHDAY_ENGINE_CONFIG = {
-  COMMANDER_DAYS: [3, 2, 1],
+  COMMANDER_DAYS: [3, 2, 1, 0],
   PERSON_DAYS: [0],
   COMMANDER_TEMPLATE_3: 'BIRTHDAY_COMMANDER_3',
   COMMANDER_TEMPLATE_2: 'BIRTHDAY_COMMANDER_2',
@@ -42,16 +45,15 @@ const BIRTHDAY_ENGINE_CONFIG = {
 };
 
 // ==================== COMMON HELPERS ====================
+
 function _veCommanderRole_() {
   try {
     return (
-      typeof
-      CONFIG !==
-      'undefined' &&
+      typeof CONFIG !== 'undefined' &&
       CONFIG &&
-      CONFIG.COMMANDER_ROLE)
-      ? String(CONFIG.COMMANDER_ROLE)
-        .trim()
+      CONFIG.COMMANDER_ROLE
+    )
+      ? String(CONFIG.COMMANDER_ROLE).trim()
       : 'ГРАФ';
   } catch (_) {
     return 'ГРАФ';
@@ -60,43 +62,55 @@ function _veCommanderRole_() {
 
 function _veTimeZone_() {
   try {
-    if (typeof DateUtils_ !== 'undefined' && DateUtils_ && typeof DateUtils_.getTimeZone === 'function') {
+    if (
+      typeof DateUtils_ !== 'undefined' &&
+      DateUtils_ &&
+      typeof DateUtils_.getTimeZone === 'function'
+    ) {
       const tz = DateUtils_.getTimeZone();
       if (tz) return tz;
     }
+
     if (typeof getTimeZone_ === 'function') {
       const tz = getTimeZone_();
       if (tz) return tz;
     }
   } catch (_) {}
+
   return 'Europe/Kyiv';
 }
 
-function _veBool_(
-  value, defaultValue) {
-  if (value === true
-    || value === false)
-    return value;
-  const s = String(
-    value == null ? '' : value)
+function _veBool_(value, defaultValue) {
+  if (value === true || value === false) return value;
+
+  const s = String(value == null ? '' : value)
     .trim()
     .toUpperCase();
-  if (s === 'TRUE'
-    || s === '1'
-    || s === 'YES'
-    || s === 'Y'
-    || s === 'ON'
-    || s === 'ДА'
-  )
+
+  if (
+    s === 'TRUE' ||
+    s === '1' ||
+    s === 'YES' ||
+    s === 'Y' ||
+    s === 'ON' ||
+    s === 'ДА' ||
+    s === 'ТАК'
+  ) {
     return true;
-  if (s === 'FALSE'
-    || s === '0'
-    || s === 'NO'
-    || s === 'N'
-    || s === 'OFF'
-    || s === 'НІ'
-  )
+  }
+
+  if (
+    s === 'FALSE' ||
+    s === '0' ||
+    s === 'NO' ||
+    s === 'N' ||
+    s === 'OFF' ||
+    s === 'НІ' ||
+    s === 'НЕТ'
+  ) {
     return false;
+  }
+
   return !!defaultValue;
 }
 
@@ -105,14 +119,18 @@ function _veRaportEnabled_() {
     if (typeof getRaportRemindersEnabled === 'function') {
       return !!getRaportRemindersEnabled();
     }
-  } catch (_) { }
+  } catch (_) {}
+
   return true;
 }
 
 function _veNormId_(fml) {
   try {
-    if (typeof _normFmlVac_ === 'function') return _normFmlVac_(fml);
-  } catch (_) { }
+    if (typeof _normFmlVac_ === 'function') {
+      return _normFmlVac_(fml);
+    }
+  } catch (_) {}
+
   return String(fml || '')
     .toLowerCase()
     .replace(/[ʼ'`’"]/g, '')
@@ -122,31 +140,32 @@ function _veNormId_(fml) {
 
 function _veParseDate_(value) {
   if (!value) return null;
+
   if (value instanceof Date && !isNaN(value.getTime())) {
     const d = new Date(value);
     d.setHours(12, 0, 0, 0);
     return d;
   }
 
-  if (typeof value === 'number'
-    && value > 25569
-    && value < 60000) {
-    const d = new Date((
-      value - 25569) * 86400 * 1000);
+  if (typeof value === 'number' && value > 25569 && value < 60000) {
+    const d = new Date((value - 25569) * 86400 * 1000);
     d.setHours(12, 0, 0, 0);
-    return isNaN(d.getTime()) ?
-      null : d;
+    return isNaN(d.getTime()) ? null : d;
   }
 
-  const s = String(value)
-    .trim();
+  const s = String(value).trim();
   if (!s) return null;
+
   let m = s.match(/^(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{2,4})$/);
   if (m) {
-    let day = parseInt(m[1], 10);
-    let month = parseInt(m[2], 10);
+    const day = parseInt(m[1], 10);
+    const month = parseInt(m[2], 10);
     let year = parseInt(m[3], 10);
-    if (year < 100) year += 2000;
+
+    if (year < 100) {
+      year += year >= 50 ? 1900 : 2000;
+    }
+
     const d = new Date(year, month - 1, day, 12, 0, 0);
     return isNaN(d.getTime()) ? null : d;
   }
@@ -157,22 +176,31 @@ function _veParseDate_(value) {
     const month = parseInt(m[2], 10);
     const day = parseInt(m[3], 10);
 
-    const d = new
-      Date(year, month - 1, day, 12, 0, 0);
-    return isNaN(d.getTime()) ?
-      null : d;
+    const d = new Date(year, month - 1, day, 12, 0, 0);
+    return isNaN(d.getTime()) ? null : d;
   }
 
   try {
-    if (typeof DateUtils_ !== 'undefined' && DateUtils_ && typeof DateUtils_.parseUaDate === 'function') {
+    if (
+      typeof DateUtils_ !== 'undefined' &&
+      DateUtils_ &&
+      typeof DateUtils_.parseUaDate === 'function'
+    ) {
       const d = DateUtils_.parseUaDate(s);
-      if (d instanceof Date
-        && !isNaN(d.getTime())) {
+
+      if (d instanceof Date && !isNaN(d.getTime())) {
         d.setHours(12, 0, 0, 0);
         return d;
       }
     }
-  } catch (_) { }
+  } catch (_) {}
+
+  const parsed = new Date(s);
+  if (!isNaN(parsed.getTime())) {
+    parsed.setHours(12, 0, 0, 0);
+    return parsed;
+  }
+
   return null;
 }
 
@@ -185,17 +213,19 @@ function _veVacationWordToNumber_(word) {
     'четверта': 4,
     "п'ята": 5,
     'пята': 5,
+    'пʼята': 5,
     'шоста': 6,
     'сьома': 7,
     'восьма': 8,
     "дев'ята": 9,
     'девята': 9,
+    'девʼята': 9,
     'десята': 10
   };
 
   const lower = String(word || '').trim().toLowerCase();
-  return (words[lower] !== undefined) ?
-    words[lower] : lower;
+
+  return words[lower] !== undefined ? words[lower] : lower;
 }
 
 function _veNumberToVacationWord_(num) {
@@ -213,45 +243,46 @@ function _veNumberToVacationWord_(num) {
     'десята'
   ];
 
-  if (typeof num ===
-    'number' && num >= 0 && num <= 10)
+  if (typeof num === 'number' && num >= 0 && num <= 10) {
     return words[num];
+  }
+
   return String(num || '');
 }
 
 function _vePrepareData_(data) {
-  return {
-    ...data,
-    days: data.days != null ?
-      data.days : (
-        data.daysUntil != null ?
-          data.daysUntil : ''),
-    daysUntil: data.daysUntil != null ?
-      data.daysUntil : (
-        data.days != null ?
-          data.days : ''),
-    name: data.name ||
-      data.callsign || '',
-    callsign: data.callsign ||
-      data.name || '',
-    fml: data.fml || '',
-    surname: data.surname || '',
-    startDate: data.startDate ||
-      data.date_start || '',
-    endDate: data.endDate ||
-      data.date_end || '',
-    date_start: data.date_start ||
-      data.startDate || '',
-    date_end: data.date_end ||
-      data.endDate || '',
-    vacationWord: data.vacationWord ||
-      data.vac_no || '',
-    vac_no: data.vac_no ||
-      data.vacationWord || '',
-    rank: data.rank || '',
-    birthday: data.birthday || '',
-    age: data.age || ''
-  };
+  const source = data || {};
+
+  return Object.assign({}, source, {
+    days: source.days != null
+      ? source.days
+      : source.daysUntil != null
+        ? source.daysUntil
+        : '',
+
+    daysUntil: source.daysUntil != null
+      ? source.daysUntil
+      : source.days != null
+        ? source.days
+        : '',
+
+    name: source.name || source.callsign || '',
+    callsign: source.callsign || source.name || '',
+    fml: source.fml || '',
+    surname: source.surname || '',
+
+    startDate: source.startDate || source.date_start || '',
+    endDate: source.endDate || source.date_end || '',
+    date_start: source.date_start || source.startDate || '',
+    date_end: source.date_end || source.endDate || '',
+
+    vacationWord: source.vacationWord || source.vac_no || '',
+    vac_no: source.vac_no || source.vacationWord || '',
+
+    rank: source.rank || '',
+    birthday: source.birthday || '',
+    age: source.age || ''
+  });
 }
 
 function _veTemplateText_(key) {
@@ -262,29 +293,40 @@ function _veTemplateText_(key) {
   } catch (e) {
     console.warn('Template read error:', key, e);
   }
+
   return '';
 }
 
 function _veRenderTemplateOrFallback_(key, data, fallbackText) {
   try {
     const tpl = _veTemplateText_(key);
+
     if (tpl && typeof renderTemplate_ === 'function') {
       return renderTemplate_(tpl, _vePrepareData_(data));
     }
   } catch (e) {
     console.warn('Template render error:', key, e);
   }
+
   return String(fallbackText || '');
 }
 
 function _veRandomTemplateOrFallback_(keys, data, fallbackText) {
   try {
-    if (!Array.isArray(keys) || !keys.length) return String(fallbackText || '');
-    const enabled = keys.filter(function (key) {
+    if (!Array.isArray(keys) || !keys.length) {
+      return String(fallbackText || '');
+    }
+
+    const enabled = keys.filter(function(key) {
       return !!_veTemplateText_(key);
     });
-    if (!enabled.length) return String(fallbackText || '');
+
+    if (!enabled.length) {
+      return String(fallbackText || '');
+    }
+
     const picked = enabled[Math.floor(Math.random() * enabled.length)];
+
     return _veRenderTemplateOrFallback_(picked, data, fallbackText);
   } catch (e) {
     console.warn('Random template error:', e);
@@ -294,25 +336,36 @@ function _veRandomTemplateOrFallback_(keys, data, fallbackText) {
 
 function _veWaLink_(phone, message) {
   const cleanedPhone = String(phone || '').replace(/\D/g, '');
+
   if (!cleanedPhone) return '';
-  const maxLen = (typeof CONFIG !== 'undefined' && CONFIG && CONFIG.MAX_WA_TEXT)
+
+  const maxLen = (
+    typeof CONFIG !== 'undefined' &&
+    CONFIG &&
+    CONFIG.MAX_WA_TEXT
+  )
     ? CONFIG.MAX_WA_TEXT
     : 3800;
-  const safeMessage = (typeof trimToEncoded_ === 'function')
+
+  const safeMessage = typeof trimToEncoded_ === 'function'
     ? trimToEncoded_(String(message || ''), maxLen)
     : String(message || '');
-  return `https://wa.me/${cleanedPhone}?text=${encodeURIComponent(safeMessage)}`;
+
+  return 'https://wa.me/' + cleanedPhone + '?text=' + encodeURIComponent(safeMessage);
 }
 
 function _veCommanderPhone_() {
   try {
     const role = _veCommanderRole_();
+
     if (typeof findPhone_ === 'function') {
       return findPhone_({ role: role, callsign: role }) || '';
     }
+
     if (typeof findPhoneByRole_ === 'function') {
       return findPhoneByRole_(role) || '';
     }
+
     return '';
   } catch (e) {
     console.error('_veCommanderPhone_ error:', e);
@@ -322,20 +375,26 @@ function _veCommanderPhone_() {
 
 function _veProfilesList_() {
   try {
-    if (
-      typeof loadPhonesProfiles_ !== 'function')
+    if (typeof loadPhonesProfiles_ !== 'function') {
       return [];
+    }
+
     const profiles = loadPhonesProfiles_();
-    if (!profiles)
-      return [];
-    if (profiles.byFml &&
-      typeof profiles.byFml === 'object') {
+
+    if (!profiles) return [];
+
+    if (profiles.byFml && typeof profiles.byFml === 'object') {
       return Object.values(profiles.byFml);
     }
-    if (Array.isArray(profiles))
+
+    if (Array.isArray(profiles)) {
       return profiles;
-    if (Array.isArray(profiles.items))
+    }
+
+    if (Array.isArray(profiles.items)) {
       return profiles.items;
+    }
+
     return [];
   } catch (e) {
     console.error('_veProfilesList_ error:', e);
@@ -343,9 +402,22 @@ function _veProfilesList_() {
   }
 }
 
+function _veYearsWord_(n) {
+  const v = Math.abs(Number(n)) % 100;
+  const v1 = v % 10;
+
+  if (v > 10 && v < 20) return 'років';
+  if (v1 === 1) return 'рік';
+  if (v1 >= 2 && v1 <= 4) return 'роки';
+
+  return 'років';
+}
+
 // ==================== VACATION MESSAGE BUILDERS ====================
+
 function _veBuildVacationSoldierRaportMessage_(data) {
   const d = _vePrepareData_(data);
+
   return _veRenderTemplateOrFallback_(
     VACATION_ENGINE_CONFIG.SOLDIER_RAPORT_TEMPLATE,
     d,
@@ -355,9 +427,11 @@ function _veBuildVacationSoldierRaportMessage_(data) {
 
 function _veBuildVacationSoldierMessage_(kind, data) {
   const d = _vePrepareData_(data);
+
   switch (kind) {
     case 'report':
       return _veBuildVacationSoldierRaportMessage_(d);
+
     case 'soon_3':
       return _veRandomTemplateOrFallback_(
         VACATION_ENGINE_CONFIG.SOLDIER_TEMPLATES[3],
@@ -371,6 +445,7 @@ function _veBuildVacationSoldierMessage_(kind, data) {
         d,
         `${d.name}, вітаю — завтра ти йдеш у відпустку ${d.vacationWord} з ${d.startDate} по ${d.endDate}.`
       );
+
     default:
       return `${d.name}, нагадування щодо відпустки з ${d.startDate} по ${d.endDate}.`;
   }
@@ -378,6 +453,7 @@ function _veBuildVacationSoldierMessage_(kind, data) {
 
 function _veBuildVacationCommanderMessage_(kind, data) {
   const d = _vePrepareData_(data);
+
   switch (kind) {
     case 'report':
       return _veRenderTemplateOrFallback_(
@@ -385,24 +461,28 @@ function _veBuildVacationCommanderMessage_(kind, data) {
         d,
         `Боєць ${d.callsign} (${d.fml}) планує йти у відпустку через ${d.days} днів.\nУ період: ${d.startDate} - ${d.endDate}\n\nНеобхідно нагадати ШАХТАРЮ щоб він написав рапорт.`
       );
+
     case 'soon_3':
       return _veRenderTemplateOrFallback_(
         VACATION_ENGINE_CONFIG.COMMANDER_SOON3_TEMPLATE,
         d,
         `Боєць ${d.callsign} (${d.fml}) через 3 дні йде у відпустку.\nПеріод: ${d.startDate} - ${d.endDate}`
       );
+
     case 'tomorrow':
       return _veRenderTemplateOrFallback_(
         VACATION_ENGINE_CONFIG.COMMANDER_TODAY_TEMPLATE,
         d,
-        `Боєць ${d.callsign} (${d.fml}) Завтра йде у відпустку!\nПеріод: ${d.startDate} - ${d.endDate}\n\nНе турбувати!`
+        `Боєць ${d.callsign} (${d.fml}) завтра йде у відпустку.\nПеріод: ${d.startDate} - ${d.endDate}\n\nНе турбувати!`
       );
+
     default:
       return `Нагадування по відпустці: ${d.callsign} (${d.fml}).`;
   }
 }
 
 // ==================== VACATION ENGINE ====================
+
 function runVacationEngine_(targetDate) {
   const result = {
     raportReminders: [],
@@ -419,23 +499,42 @@ function runVacationEngine_(targetDate) {
 
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    if (!ss) {
+      result.debug.error = 'Активну таблицю не знайдено';
+      return result;
+    }
+
     const sh = ss.getSheetByName(VACATION_ENGINE_CONFIG.VACATIONS_SHEET);
+
     if (!sh) {
       result.debug.error = `Лист "${VACATION_ENGINE_CONFIG.VACATIONS_SHEET}" не знайдено`;
       return result;
     }
+
     const lastRow = sh.getLastRow();
-    if (lastRow < 2) return result;
-    const rows = sh.getRange(2, 1, lastRow - 1, 6)
-      .getValues();
+
+    if (lastRow < 2) {
+      return result;
+    }
+
+    const rows = sh.getRange(2, 1, lastRow - 1, 6).getValues();
+
     result.debug.totalRows = rows.length;
-    const today = (targetDate instanceof Date) ?
-      new Date(targetDate) : new Date();
+
+    const parsedTarget = targetDate instanceof Date
+      ? new Date(targetDate)
+      : _veParseDate_(targetDate);
+
+    const today = parsedTarget || new Date();
     today.setHours(12, 0, 0, 0);
+
     const tz = _veTimeZone_();
-    const raportEnabled = _veRaportEnabled_();
-    const commanderPhone = VACATION_ENGINE_CONFIG.NOTIFY_COMMANDER ?
-      _veCommanderPhone_() : '';
+    const raportEnabled = _veRaportEnabled();
+    const commanderPhone = VACATION_ENGINE_CONFIG.NOTIFY_COMMANDER
+      ? _veCommanderPhone_()
+      : '';
+
     for (const row of rows) {
       const fml = String(row[VACATION_ENGINE_CONFIG.NAME_COL - 1] || '').trim();
       const startValue = row[VACATION_ENGINE_CONFIG.START_COL - 1];
@@ -443,25 +542,37 @@ function runVacationEngine_(targetDate) {
       const vacationWordRaw = String(row[VACATION_ENGINE_CONFIG.NUM_COL - 1] || '').trim();
       const isActive = _veBool_(row[VACATION_ENGINE_CONFIG.ACTIVE_COL - 1], false);
       const notifyPerson = _veBool_(row[VACATION_ENGINE_CONFIG.NOTIFY_COL - 1], true);
+
       if (!fml || !isActive) continue;
+
       result.debug.activeRows++;
+
       const startDate = _veParseDate_(startValue);
       const endDate = _veParseDate_(endValue);
+
       if (!startDate || !endDate) continue;
+
       result.debug.validDateRows++;
+
       const daysUntil = Math.round((startDate.getTime() - today.getTime()) / 86400000);
+
       if (daysUntil < 0) continue;
+
       result.debug.futureRows++;
+
       const surname = fml.split(' ')[0] || fml;
-      const callsign =
-        (typeof _getCallsignByFml_ ===
-          'function' ? _getCallsignByFml_(fml) : '') ||
-        surname;
+      const callsign = (
+        typeof _getCallsignByFml_ === 'function'
+          ? _getCallsignByFml_(fml)
+          : ''
+      ) || surname;
+
       const name = String(callsign || surname || fml).trim();
       const vacationNum = _veVacationWordToNumber_(vacationWordRaw);
       const vacationWord = _veNumberToVacationWord_(vacationNum);
       const startStr = Utilities.formatDate(startDate, tz, 'dd.MM.yyyy');
       const endStr = Utilities.formatDate(endDate, tz, 'dd.MM.yyyy');
+
       const baseData = {
         fml: fml,
         surname: surname,
@@ -478,10 +589,9 @@ function runVacationEngine_(targetDate) {
         rank: ''
       };
 
-      const soldierPhone =
-        notifyPerson && typeof _getPhoneByFml_ === 'function'
-          ? _getPhoneByFml_(fml)
-          : '';
+      const soldierPhone = notifyPerson && typeof _getPhoneByFml_ === 'function'
+        ? _getPhoneByFml_(fml)
+        : '';
 
       if (raportEnabled && VACATION_ENGINE_CONFIG.RAPORT_DAYS.includes(daysUntil)) {
         result.raportReminders.push({
@@ -496,8 +606,8 @@ function runVacationEngine_(targetDate) {
         });
 
         if (commanderPhone) {
-          const commanderMessage = _veBuildVacationCommanderMessage_(
-            'report', baseData);
+          const commanderMessage = _veBuildVacationCommanderMessage_('report', baseData);
+
           result.commanderMessages.push({
             type: 'commander_report',
             fml: fml,
@@ -513,8 +623,8 @@ function runVacationEngine_(targetDate) {
         }
 
         if (soldierPhone) {
-          const soldierMessage = _veBuildVacationSoldierMessage_(
-            'report', baseData);
+          const soldierMessage = _veBuildVacationSoldierMessage_('report', baseData);
+
           result.soldierMessages.push({
             type: 'soldier_report',
             fml: fml,
@@ -531,10 +641,9 @@ function runVacationEngine_(targetDate) {
             id: `soldier_report_${_veNormId_(fml)}_${startStr}_${daysUntil}`
           });
         }
-        result.debug.processed.push(
-          `РАПОРТ: ${fml} (
-            ${daysUntil})
-          `);
+
+        result.debug.processed.push(`РАПОРТ: ${fml} (${daysUntil})`);
+
         continue;
       }
 
@@ -575,7 +684,9 @@ function runVacationEngine_(targetDate) {
             id: `soldier_soon3_${_veNormId_(fml)}_${startStr}`
           });
         }
+
         result.debug.processed.push(`ЗА 3 ДНІ: ${fml}`);
+
         continue;
       }
 
@@ -621,10 +732,17 @@ function runVacationEngine_(targetDate) {
       }
     }
 
-    result.raportReminders.sort(function (a, b) { return a.daysUntil - b.daysUntil; });
-    result.soldierMessages.sort(function (a, b) { return a.daysUntil - b.daysUntil; });
-    result.commanderMessages.sort(function (a, b) { return a.daysUntil - b.daysUntil; });
+    result.raportReminders.sort(function(a, b) {
+      return a.daysUntil - b.daysUntil;
+    });
 
+    result.soldierMessages.sort(function(a, b) {
+      return a.daysUntil - b.daysUntil;
+    });
+
+    result.commanderMessages.sort(function(a, b) {
+      return a.daysUntil - b.daysUntil;
+    });
   } catch (e) {
     console.error('runVacationEngine_ error:', e);
     result.debug.error = e && e.message ? e.message : String(e);
@@ -635,10 +753,12 @@ function runVacationEngine_(targetDate) {
 
 function testVacationEngine() {
   const res = runVacationEngine_(new Date());
+
   console.log('RAPORT:', res.raportReminders.length);
   console.log('SOLDIER:', res.soldierMessages.length);
   console.log('COMMANDER:', res.commanderMessages.length);
   console.log(res.debug);
+
   return res;
 }
 
@@ -649,10 +769,15 @@ function checkVacationsAndNotify() {
 function autoVacationReminder() {
   try {
     const result = runVacationEngine_(new Date());
-    console.log(`🏖️ Автоперевірка відпусток: командиру ${result.commanderMessages.length}, бійцям ${result.soldierMessages.length}`);
+
+    console.log(
+      `🏖️ Автоперевірка відпусток: командиру ${result.commanderMessages.length}, бійцям ${result.soldierMessages.length}`
+    );
+
     return result;
   } catch (e) {
     console.error('autoVacationReminder error:', e);
+
     return {
       raportReminders: [],
       soldierMessages: [],
@@ -663,53 +788,127 @@ function autoVacationReminder() {
 }
 
 // ==================== BIRTHDAY HELPERS ====================
+
 function _veParseBirthdayParts_(birthday) {
+  if (!birthday) return null;
+
+  if (birthday instanceof Date && !isNaN(birthday.getTime())) {
+    return {
+      day: birthday.getDate(),
+      month: birthday.getMonth() + 1,
+      year: birthday.getFullYear()
+    };
+  }
+
+  if (typeof birthday === 'number' && birthday > 25569 && birthday < 60000) {
+    const d = new Date((birthday - 25569) * 86400 * 1000);
+
+    if (!isNaN(d.getTime())) {
+      return {
+        day: d.getDate(),
+        month: d.getMonth() + 1,
+        year: d.getFullYear()
+      };
+    }
+  }
+
   const s = String(birthday || '').trim();
+
   if (!s) return null;
 
-  const parts = s.split('.');
-  if (parts.length < 2) return null;
+  let match = s.match(/^(\d{1,2})[.\-/](\d{1,2})(?:[.\-/](\d{2,4}))?$/);
 
-  const day = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10);
-  const year = (parts[2] && /^\d{4}$/.test(parts[2])) ? parseInt(parts[2], 10) : null;
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10);
+    let year = match[3] ? parseInt(match[3], 10) : null;
 
-  if (!day || !month) return null;
-  return { day: day, month: month, year: year };
+    if (year && year < 100) {
+      year += year >= 50 ? 1900 : 2000;
+    }
+
+    if (!day || !month || day < 1 || day > 31 || month < 1 || month > 12) {
+      return null;
+    }
+
+    return {
+      day: day,
+      month: month,
+      year: year
+    };
+  }
+
+  match = s.match(/^(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})$/);
+
+  if (match) {
+    const year = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10);
+    const day = parseInt(match[3], 10);
+
+    if (!day || !month || day < 1 || day > 31 || month < 1 || month > 12) {
+      return null;
+    }
+
+    return {
+      day: day,
+      month: month,
+      year: year
+    };
+  }
+
+  const parsed = new Date(s);
+
+  if (!isNaN(parsed.getTime())) {
+    return {
+      day: parsed.getDate(),
+      month: parsed.getMonth() + 1,
+      year: parsed.getFullYear()
+    };
+  }
+
+  return null;
 }
 
 function _veBuildBirthdayCommanderMessage_(data) {
   const d = _vePrepareData_(data);
-  const name = String(d.fml || d.name || d.callsign || '').trim();
+  const name = String(d.fml || d.name || d.callsign || '').trim() || 'боєць';
   const age = Number(d.age);
 
-  function yearsWord_(n) {
-    const v = Math.abs(Number(n)) % 100;
-    const v1 = v % 10;
-    if (v > 10 && v < 20) return 'років';
-    if (v1 === 1) return 'рік';
-    if (v1 >= 2 && v1 <= 4) return 'роки';
-    return 'років';
-  }
-
   let datePart = '';
+
   if (d.birthday && Number.isFinite(age) && age > 0) {
-    datePart = `${d.birthday} (${age} ${yearsWord_(age)})`;
+    datePart = `${d.birthday} (${age} ${_veYearsWord_(age)})`;
   } else if (d.birthday) {
     datePart = d.birthday;
   } else if (Number.isFinite(age) && age > 0) {
-    datePart = `${age} ${yearsWord_(age)}`;
+    datePart = `${age} ${_veYearsWord_(age)}`;
   }
 
-  if (d.daysUntil === 3) {
-    return `Через 3 дні День народження: ${name}${datePart ? ` — ${datePart}` : ''}.`; 
+  const daysUntil = Number(
+    d.daysUntil !== undefined &&
+    d.daysUntil !== null &&
+    d.daysUntil !== ''
+      ? d.daysUntil
+      : d.days
+  );
+
+  if (daysUntil === 3) {
+    return `Через 3 дні День народження: ${name}${datePart ? ` — ${datePart}` : ''}.`;
   }
 
-  if (d.daysUntil === 2) {
-    return `Через 2 дні День народження: ${name}${datePart ? ` — ${datePart}` : ''}.`; 
+  if (daysUntil === 2) {
+    return `Через 2 дні День народження: ${name}${datePart ? ` — ${datePart}` : ''}.`;
   }
 
-  return `Завтра День народження: ${name}${datePart ? ` — ${datePart}` : ''}.`; 
+  if (daysUntil === 1) {
+    return `Завтра День народження: ${name}${datePart ? ` — ${datePart}` : ''}.`;
+  }
+
+  if (daysUntil === 0) {
+    return `Сьогодні День народження: ${name}${datePart ? ` — ${datePart}` : ''}.`;
+  }
+
+  return `День народження: ${name}${datePart ? ` — ${datePart}` : ''}.`;
 }
 
 function _veBuildBirthdayGreetingMessage_(data) {
@@ -725,7 +924,10 @@ function _veBuildBirthdayGreetingMessage_(data) {
     });
   }
 
-  const ageLine = d.age ? ` З ${d.age}-річчям!` : ' З Днем Народження!';
+  const ageLine = d.age
+    ? ` З ${d.age}-річчям!`
+    : ' З Днем Народження!';
+
   return [
     `Вітаю, ${d.name}!`,
     '',
@@ -740,6 +942,7 @@ function _veBirthdayCommanderPhone_() {
 }
 
 // ==================== BIRTHDAY ENGINE ====================
+
 function runBirthdayEngine_(targetDate) {
   const result = {
     commanderMessages: [],
@@ -750,30 +953,49 @@ function runBirthdayEngine_(targetDate) {
   try {
     const items = _veProfilesList_();
     const commanderPhone = _veBirthdayCommanderPhone_();
-    const today = (targetDate instanceof Date) ? new Date(targetDate) : new Date();
 
+    const parsedTarget = targetDate instanceof Date
+      ? new Date(targetDate)
+      : _veParseDate_(targetDate);
+
+    const today = parsedTarget || new Date();
     today.setHours(12, 0, 0, 0);
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      if (!item || !item.fml || !item.birthday) continue;
+
+      if (!item || !item.fml || !item.birthday) {
+        continue;
+      }
 
       const birth = _veParseBirthdayParts_(item.birthday);
-      if (!birth) continue;
+
+      if (!birth) {
+        result.debug.push(`${item.fml || 'UNKNOWN'}: birthday_parse_failed`);
+        continue;
+      }
 
       let nextBirthday = new Date(today.getFullYear(), birth.month - 1, birth.day, 12, 0, 0);
-      if (isNaN(nextBirthday.getTime())) continue;
+
+      if (isNaN(nextBirthday.getTime())) {
+        result.debug.push(`${item.fml}: invalid_next_birthday`);
+        continue;
+      }
 
       if (nextBirthday.getTime() < today.getTime()) {
         nextBirthday = new Date(today.getFullYear() + 1, birth.month - 1, birth.day, 12, 0, 0);
       }
 
       const daysUntil = Math.round((nextBirthday.getTime() - today.getTime()) / 86400000);
-      if ([3, 2, 1, 0].indexOf(daysUntil) === -1) continue;
+
+      if ([3, 2, 1, 0].indexOf(daysUntil) === -1) {
+        result.debug.push(`${item.fml}: ${daysUntil}`);
+        continue;
+      }
 
       const callsign = String(item.role || '').trim() || String(item.fml).split(' ')[0];
       const name = callsign || item.fml;
-      const age = birth.year ? (nextBirthday.getFullYear() - birth.year) : null;
+      const age = birth.year ? nextBirthday.getFullYear() - birth.year : null;
 
       const baseData = {
         fml: item.fml,
@@ -781,11 +1003,15 @@ function runBirthdayEngine_(targetDate) {
         name: name,
         phone: item.phone || '',
         birthday: item.birthday,
+        days: daysUntil,
         daysUntil: daysUntil,
         age: age
       };
 
-      if (BIRTHDAY_ENGINE_CONFIG.COMMANDER_DAYS.indexOf(daysUntil) !== -1 && commanderPhone) {
+      if (
+        BIRTHDAY_ENGINE_CONFIG.COMMANDER_DAYS.indexOf(daysUntil) !== -1 &&
+        commanderPhone
+      ) {
         const message = _veBuildBirthdayCommanderMessage_(baseData);
 
         result.commanderMessages.push({
@@ -822,9 +1048,13 @@ function runBirthdayEngine_(targetDate) {
       result.debug.push(`${item.fml}: ${daysUntil}`);
     }
 
-    result.commanderMessages.sort(function (a, b) { return b.daysUntil - a.daysUntil; });
-    result.birthdayMessages.sort(function (a, b) { return a.daysUntil - b.daysUntil; });
+    result.commanderMessages.sort(function(a, b) {
+      return b.daysUntil - a.daysUntil;
+    });
 
+    result.birthdayMessages.sort(function(a, b) {
+      return a.daysUntil - b.daysUntil;
+    });
   } catch (e) {
     console.error('runBirthdayEngine_ error:', e);
     result.error = e && e.message ? e.message : String(e);
@@ -840,10 +1070,15 @@ function checkBirthdayReminders() {
 function autoBirthdayReminder() {
   try {
     const result = runBirthdayEngine_(new Date());
-    console.log(`🎂 Автоперевірка ДН: командиру ${result.commanderMessages.length}, іменинникам ${result.birthdayMessages.length}`);
+
+    console.log(
+      `🎂 Автоперевірка ДН: командиру ${result.commanderMessages.length}, іменинникам ${result.birthdayMessages.length}`
+    );
+
     return result;
   } catch (e) {
     console.error('autoBirthdayReminder error:', e);
+
     return {
       commanderMessages: [],
       birthdayMessages: [],
@@ -873,11 +1108,16 @@ function getBirthdaysSidebar() {
 }
 
 // ==================== BUILD WHATSAPP LINK FOR SIDEBAR ====================
+
 function buildBirthdayLink(phone, name) {
   try {
     const cleanedPhone = String(phone || '').replace(/\D/g, '');
+
     if (!cleanedPhone) {
-      return { success: false, error: 'Немає телефону' };
+      return {
+        success: false,
+        error: 'Немає телефону'
+      };
     }
 
     const msg = _veBuildBirthdayGreetingMessage_({

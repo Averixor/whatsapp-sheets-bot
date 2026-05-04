@@ -303,9 +303,33 @@ function _buildRoleValidationRule_() {
 }
 
 function _applyRoleValidation_(sh) {
-  var col = _getHeaderMap_(sh).role;
+  if (!sh) return;
+
+  var headerMap = _getHeaderMap_(sh);
+
+  var col = 0;
+  if (typeof _getAccessColumnByAny_ === 'function') {
+    col = _getAccessColumnByAny_(sh, headerMap, ['role', 'роль']);
+  } else {
+    col = headerMap.role || headerMap['роль'] || 0;
+  }
+
   if (!col) return;
-  _setSingleRowValidation_(sh, col, _buildRoleValidationRule_());
+
+  var rule = _buildRoleValidationRule_();
+  if (!rule) return;
+
+  var maxRows = 0;
+
+  if (typeof _getSafeMaxSheetRows_ === 'function') {
+    maxRows = _getSafeMaxSheetRows_(sh);
+  } else {
+    maxRows = Number(sh.getMaxRows()) || 0;
+  }
+
+  if (maxRows < 2) return;
+
+  sh.getRange(2, col, maxRows - 1, 1).setDataValidation(rule);
 }
 
 function _applyEmailValidation_(sh) {
@@ -952,3 +976,4 @@ function apiStage7NormalizeAccessSheetFormatting() {
     dateFormat: 'dd.MM.yyyy HH:mm:ss'
   };
 }
+
