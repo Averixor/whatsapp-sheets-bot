@@ -215,9 +215,11 @@ function _ssbExtractSheetNameFromEnsureResult_(result, fallbackName) {
         return _ssbTrimmedString_(result.sheet.getName(), fallbackName);
       } catch (e) {}
     }
+    
     if (result.sheet && typeof result.sheet === 'string') {
       return _ssbTrimmedString_(result.sheet, fallbackName);
     }
+
     if (result.name) {
       return _ssbTrimmedString_(result.name, fallbackName);
     }
@@ -227,7 +229,7 @@ function _ssbExtractSheetNameFromEnsureResult_(result, fallbackName) {
 }
 
 function _ssbEnsureJobRuntimeSheetFallback_() {
-  var sheetName = _ssbStage7ConfigValue_('JOB_RUNTIME_LOG_SHEET', 'JOB_RUNTIME_LOG');
+  var sheetName = _ssbStage7ConfigValue_('JOB_RUNTIME_SHEET', 'JOB_RUNTIME_LOG');
   var sheet = _ssbGetOrCreateSheetByName_(sheetName);
 
   _ssbEnsureBasicSheetHeader_(sheet, [
@@ -243,7 +245,7 @@ function _ssbEnsureJobRuntimeSheetFallback_() {
 }
 
 function _ssbEnsureAlertsSheetFallback_() {
-  var sheetName = _ssbConfigValue_('ALERTS_LOG_SHEET', 'ALERTS_LOG');
+  var sheetName = _ssbConfigValue_('ALERTS_SHEET', 'ALERTS_LOG');
   var sheet = _ssbGetOrCreateSheetByName_(sheetName);
 
   _ssbEnsureBasicSheetHeader_(sheet, [
@@ -264,7 +266,7 @@ function _ssbEnsureAlertsSheetFallback_() {
 }
 
 function _ssbEnsureAuditSheetFallback_() {
-  var sheetName = _ssbStage7ConfigValue_('AUDIT_LOG_SHEET', 'AUDIT_LOG');
+  var sheetName = _ssbStage7ConfigValue_('AUDIT_SHEET', 'AUDIT_LOG');
   var sheet = _ssbGetOrCreateSheetByName_(sheetName);
 
   _ssbEnsureBasicSheetHeader_(sheet, [
@@ -332,9 +334,9 @@ function _ssbAssertAdminAccess_() {
 
 function bootstrapWasbRuntimeAndAlertsSheets() {
   var globalScope = _ssbGlobal_();
-  var runtimeSheetName = _ssbStage7ConfigValue_('JOB_RUNTIME_LOG_SHEET', 'JOB_RUNTIME_LOG');
-  var alertsSheetName = _ssbConfigValue_('ALERTS_LOG_SHEET', 'ALERTS_LOG');
-  var auditSheetName = _ssbStage7ConfigValue_('AUDIT_LOG_SHEET', 'AUDIT_LOG');
+  var runtimeSheetName = _ssbStage7ConfigValue_('JOB_RUNTIME_SHEET', 'JOB_RUNTIME_LOG');
+  var alertsSheetName = _ssbConfigValue_('ALERTS_SHEET', 'ALERTS_LOG');
+  var auditSheetName = _ssbStage7ConfigValue_('AUDIT_SHEET', 'AUDIT_LOG');
 
   var result = {
     success: true,
@@ -397,9 +399,11 @@ function apiStage7BootstrapRuntimeAndAlertsSheets() {
   if (result.runtime && result.runtime.success === false) {
     warnings.push('Не вдалося підготувати лист runtime' + (result.runtime.error ? ': ' + result.runtime.error : ''));
   }
+
   if (result.alerts && result.alerts.success === false) {
     warnings.push('Не вдалося підготувати лист alerts' + (result.alerts.error ? ': ' + result.alerts.error : ''));
   }
+
   if (result.audit && result.audit.success === false) {
     warnings.push('Не вдалося підготувати лист audit' + (result.audit.error ? ': ' + result.audit.error : ''));
   }

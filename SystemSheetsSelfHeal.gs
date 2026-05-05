@@ -99,6 +99,7 @@ function _sshGetSpreadsheet_() {
   } catch (e) {
     _sshLog_('Не вдалося отримати активну таблицю', e);
   }
+
   if (!ss) {
     throw new Error('Активну таблицю не знайдено');
   }
@@ -173,6 +174,7 @@ function _sshBuildRegistry_() {
       ],
       minRows: 2
     },
+
     {
       name: _sshConfigValue_('LOG_SHEET', 'LOG'),
       schemaKey: 'log',
@@ -192,6 +194,7 @@ function _sshBuildRegistry_() {
       ],
       minRows: 2
     },
+
     {
       name: _sshConfigValue_('TEMPLATES_SHEET', 'TEMPLATES'),
       schemaKey: null,
@@ -204,6 +207,7 @@ function _sshBuildRegistry_() {
       ],
       minRows: 2
     },
+
     {
       name: _sshConfigValue_('AUDIT_LOG_SHEET', 'AUDIT_LOG'),
       schemaKey: null,
@@ -217,7 +221,7 @@ function _sshBuildRegistry_() {
         'Тестовий запуск',
         'Частково',
         'Зачеплені аркуші',
-        'Зачеплені об\'єкти',
+        'Зачеплені об’єкти',
         'Застосовані зміни',
         'Пропущені зміни',
         'Попередження',
@@ -231,6 +235,7 @@ function _sshBuildRegistry_() {
       ],
       minRows: 2
     },
+
     {
       name: _sshConfigValue_('ACTIVE_OPERATIONS_SHEET', 'ACTIVE_OPERATIONS'),
       schemaKey: null,
@@ -251,6 +256,7 @@ function _sshBuildRegistry_() {
       ],
       minRows: 2
     },
+
     {
       name: _sshConfigValue_('ALERTS_LOG_SHEET', 'ALERTS_LOG'),
       schemaKey: null,
@@ -261,7 +267,7 @@ function _sshBuildRegistry_() {
         'Дія',
         'Результат',
         'Роль',
-        'Ім\'я',
+        'Ім’я',
         'Ключ користувача',
         'Ел. пошта',
         'Джерело',
@@ -270,6 +276,7 @@ function _sshBuildRegistry_() {
       ],
       minRows: 2
     },
+
     {
       name: _sshConfigValue_('OPS_LOG_SHEET', 'OPS_LOG'),
       schemaKey: null,
@@ -285,7 +292,7 @@ function _sshBuildRegistry_() {
         'Статус',
         'Відбиток',
         'Зачеплені рядки',
-        'Зачеплені об\'єкти',
+        'Зачеплені об’єкти',
         'Результат перевірки',
         'Потрібен ремонт',
         'Помилка',
@@ -302,6 +309,7 @@ function _sshBuildRegistry_() {
       ],
       minRows: 2
     },
+
     {
       name: _sshConfigValue_('CHECKPOINTS_SHEET', 'CHECKPOINTS'),
       schemaKey: null,
@@ -309,7 +317,7 @@ function _sshBuildRegistry_() {
         'ID Операції',
         'Індекс точки',
         'Оброблено до',
-        'Останній об\'єкт',
+        'Останній об’єкт',
         'Останній рядок',
         'Мітка часу точки',
         'Дані точки',
@@ -317,6 +325,7 @@ function _sshBuildRegistry_() {
       ],
       minRows: 2
     },
+
     {
       name: _sshConfigValue_('JOB_RUNTIME_LOG_SHEET', 'JOB_RUNTIME_LOG'),
       schemaKey: null,
@@ -332,7 +341,7 @@ function _sshBuildRegistry_() {
         'Повідомлення',
         'Помилка',
         'Email ініціатора',
-        'Ім\'я ініціатора',
+        'Ім’я ініціатора',
         'Роль ініціатора',
         'Позивний ініціатора',
         'Точка входу',
@@ -341,6 +350,7 @@ function _sshBuildRegistry_() {
       ],
       minRows: 2
     },
+
     {
       name: _sshConfigValue_('PHONES_SHEET', 'PHONES'),
       schemaKey: 'phones',
@@ -353,6 +363,7 @@ function _sshBuildRegistry_() {
       ],
       minRows: 2
     },
+
     {
       name: _sshVacationConfigValue_('VACATIONS_SHEET', 'VACATIONS'),
       schemaKey: 'vacations',
@@ -367,6 +378,7 @@ function _sshBuildRegistry_() {
       ],
       minRows: 2
     },
+
     {
       name: _sshConfigValue_('DICT_SUM_SHEET', 'DICT_SUM'),
       schemaKey: 'dictSum',
@@ -378,6 +390,7 @@ function _sshBuildRegistry_() {
       ],
       minRows: 2
     },
+
     {
       name: _sshConfigValue_('DICT_SHEET', 'DICT'),
       schemaKey: 'dict',
@@ -467,6 +480,7 @@ function _ensureSheetSize_(sheet, minRows, minCols) {
   if (curRows < rows) {
     sheet.insertRowsAfter(curRows, rows - curRows);
   }
+  
   if (curCols < cols) {
     sheet.insertColumnsAfter(curCols, cols - curCols);
   }

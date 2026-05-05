@@ -333,6 +333,7 @@ const Stage7AuditTrail_ = (function () {
         lastRow: sh.getLastRow(),
         headers: HEADERS.slice()
       };
+
     } catch (e) {
       const errMsg = e && e.message ? e.message : String(e);
       Logger.log('[Stage7AuditTrail] ensureSheet error: ' + errMsg);
@@ -437,6 +438,7 @@ const Stage7AuditTrail_ = (function () {
 /**
  * Глобальна compatibility-обгортка
  */
+ 
 function ensureAuditTrailSheet_() {
   const result = Stage7AuditTrail_.ensureSheet();
   if (!result.success) {

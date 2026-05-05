@@ -11,8 +11,9 @@
  * - защита от ручной сортировки при clearAlerts().
  */
 
-const AlertsRepository_ = (function () {
   // ==================== CONSTANTS ====================
+
+const AlertsRepository_ = (function () {
 
   const HEADERS = [
     'Timestamp',

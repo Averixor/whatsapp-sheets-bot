@@ -285,12 +285,15 @@ const JobRuntimeRepository_ = (function() {
     const historyKeys = Object.keys(props).filter(function(key) {
       return key.indexOf(HISTORY_PREFIX) === 0;
     }).length;
+
     const lastKeys = Object.keys(props).filter(function(key) {
       return key.indexOf(LAST_PREFIX) === 0;
     }).length;
+
     const activeKeys = Object.keys(props).filter(function(key) {
       return key.indexOf(ACTIVE_PREFIX) === 0;
     }).length;
+    
     const backoffKeys = Object.keys(props).filter(function(key) {
       return key.indexOf(BACKOFF_PREFIX) === 0;
     }).length;

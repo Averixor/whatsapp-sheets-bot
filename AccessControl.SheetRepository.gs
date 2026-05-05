@@ -855,6 +855,7 @@ function _ensureTemporaryAccessPasswordForRow_(sh, rowNumber) {
   var existingHash  = String(sh.getRange(rowNumber, tempHashCol).getValue() || '').trim();
   var existingSalt  = String(sh.getRange(rowNumber, tempSaltCol).getValue() || '').trim();
 
+   // If plain, hash and salt already exist, the password was already issued.
   if (existingPlain && existingHash && existingSalt) {
     return false;
   }

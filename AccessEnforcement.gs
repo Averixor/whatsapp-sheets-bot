@@ -4,7 +4,6 @@
  * зведення, send-panel та сповіщення про порушення.
  */
 
-
   // ==================== КОНСТАНТИ ====================
 
 var AccessEnforcement_ = AccessEnforcement_ || (function() {
@@ -339,6 +338,7 @@ function _safeUniqueId_(prefix) {
           _stage7ConfigValue_('AUDIT_LOG_SHEET', 'AUDIT_LOG'),
           _configValue_('LOG_SHEET', 'LOG')
         ],
+
         affectedEntities: [record.personCallsign || record.displayName || record.email || record.currentKeyHashMasked || 'unknown'],
         appliedChangesCount: 1,
         skippedChangesCount: 0,
@@ -348,6 +348,7 @@ function _safeUniqueId_(prefix) {
           source: record.source || '',
           action: record.action || ''
         },
+
         message: message || '',
         error: ''
       });
@@ -367,6 +368,7 @@ function _safeUniqueId_(prefix) {
         } else {
           dateStr = _todayStrLocal_();
         }
+
       } catch (_) {
         dateStr = _todayStrLocal_();
       }

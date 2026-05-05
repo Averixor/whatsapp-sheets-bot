@@ -11,16 +11,19 @@ function _todayStr_() {
 }
 
 /** @deprecated Використовуйте DateUtils_.parseUaDate() */
+
 function _parseUaDate_(dateStr) {
   return DateUtils_.parseUaDate(dateStr);
 }
 
 /** @deprecated Використовуйте DateUtils_.normalizeDate() */
+
 function normalizeDate_(value, displayValue) {
   return DateUtils_.normalizeDate(value, displayValue);
 }
 
 /** @deprecated Використовуйте DateUtils_.parseDateAny() */
+
 function _parseDate_(value) {
   if (typeof _veParseDate_ === 'function') {
     return _veParseDate_(value);
@@ -86,27 +89,22 @@ function normalizePhone_(value) {
   var digits = raw.replace(/[^\d]/g, '');
   if (!digits) return '';
 
-  // 00380664276894 -> 380664276894
   if (digits.indexOf('00') === 0) {
     digits = digits.substring(2);
   }
 
-  // 80664276894 -> 0664276894
   if (/^80\d{9}$/.test(digits)) {
     digits = digits.substring(1);
   }
 
-  // 0664276894 -> 380664276894
   if (/^0\d{9}$/.test(digits)) {
     digits = '38' + digits;
   }
 
-  // 664276894 -> 380664276894
   if (/^\d{9}$/.test(digits)) {
     digits = '380' + digits;
   }
 
-  // 380664276894 -> +380664276894
   if (/^380\d{9}$/.test(digits)) {
     return '+' + digits;
   }
@@ -178,6 +176,8 @@ function getDisplayName_(personOrName) {
       const parts = fml.split(/\s+/).filter(Boolean);
       return parts[1] || parts[0] || '';
     }
+
+
     const person = personOrName;
     if (person.callsign && String(person.callsign).trim()) return String(person.callsign).trim();
     if (person.role && String(person.role).trim()) return String(person.role).trim();
@@ -190,8 +190,6 @@ function getDisplayName_(personOrName) {
     return '';
   }
 }
-
-
 
 function trimToEncoded_(text, maxLen) {
   const source = String(text || '');
@@ -322,6 +320,7 @@ function _clearSheetDataPreserveHeaders_(sheetName, headerRows, ensureFn) {
   if (rowsCleared > 0) {
     sh.getRange(keepRows + 1, 1, rowsCleared, lastCol).clearContent();
   }
+
   if (typeof ensureFn === 'function') {
     try { ensureFn(sh); } catch (_) {}
   }
@@ -381,6 +380,7 @@ function clearPhoneCache() {
       'PHONES_PROFILES_v5',
       'TPL_MAP_V1'
     ]);
+
     return { success: true, message: 'Кеш телефонів очищено' };
   } catch (e) {
     return { success: false, error: e && e.message ? e.message : String(e) };
@@ -405,4 +405,3 @@ function clearLogSidebar() {
     return { success: false, error: e.toString() };
   }
 }
-
