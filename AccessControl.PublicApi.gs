@@ -610,6 +610,7 @@ function bootstrapSheet() {
  * Оновлює UI таблиці ACCESS.
  * @returns {Object}
  */
+
 function refreshAccessSheetUi() {
   var sh = _getSheet_(true);
   if (typeof _removeAccessObsoleteColumns_ === 'function') _removeAccessObsoleteColumns_(sh);
@@ -656,6 +657,7 @@ function handleAccessSheetEdit(e) {
     }
     if (changedNames) range.setValues(values);
   }
+
   var includesRoleColumn = !!roleCol && column <= roleCol && roleCol < (column + numColumns);
   var includesEnabledColumn = !!enabledCol && column <= enabledCol && enabledCol < (column + numColumns);
   var includesStatusColumn = !!statusCol && column <= statusCol && statusCol < (column + numColumns);
@@ -667,6 +669,7 @@ function handleAccessSheetEdit(e) {
     if (roleChanged) roleRange.setValues(roleValues);
     for (var noteOffset = 0; noteOffset < numRows; noteOffset++) _syncRoleNoteForRow_(sh, row + noteOffset);
   }
+
   if (includesStatusColumn) {
     var statusRange = sh.getRange(row, statusCol, numRows, 1);
     var statusValues = statusRange.getValues();
@@ -675,13 +678,16 @@ function handleAccessSheetEdit(e) {
     for (var sr = 0; sr < statusValues.length; sr++) { var rawStatus = String(statusValues[sr][0] || '').trim().toLowerCase(); if (rawStatus && allowedStatuses.indexOf(rawStatus) === -1) rawStatus = 'pending_review'; if (String(statusValues[sr][0] || '') !== rawStatus) { statusValues[sr][0] = rawStatus; statusChanged = true; } }
     if (statusChanged) statusRange.setValues(statusValues);
   }
+
   if (includesRoleColumn || includesEnabledColumn || includesStatusColumn) {
     for (var statusOffset = 0; statusOffset < numRows; statusOffset++) _syncRegistrationStatusForRow_(sh, row + statusOffset);
   }
+
   if (emailCol && column === emailCol && numColumns === 1 && numRows === 1) {
     var email = normalizeEmail_(range.getValue());
     if (email && email.indexOf('@') === -1) { range.setValue(''); SpreadsheetApp.getActive().toast('Некоректний email', 'Помилка', 3); }
   }
+
   _invalidateAccessCaches_();
 }
 

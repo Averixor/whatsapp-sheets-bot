@@ -123,6 +123,7 @@ function wasbAccessEnsureOutboxHotfix_() {
  * Основная функция ремонта.
  * Запускать вручную после добавления новых строк в ACCESS.
  */
+
 function wasbRepairAccessSheetRowsHotfix() {
   var sheet = wasbAccessGetSheetHotfix_();
   var headers = wasbAccessGetHeadersHotfix_(sheet);
@@ -266,7 +267,7 @@ function wasbRepairAccessSheetRowsHotfix() {
         displayName,
         callsign,
         plainKey,
-        'Новий ключ створено hotfix-функцією. Передайте користувачу і після використання очистіть цей рядок.'
+        'Новий ключ створено. Передайте користувачу і після використання очистіть рядок.'
       ]);
 
       generatedKeys++;
@@ -290,6 +291,7 @@ function wasbRepairAccessSheetRowsHotfix() {
  * Установить автообработчик редактирования ACCESS.
  * Запустить один раз вручную из Apps Script.
  */
+
 function wasbInstallAccessSheetAutofillTriggerHotfix() {
   var triggers = ScriptApp.getProjectTriggers();
 
@@ -314,6 +316,7 @@ function wasbInstallAccessSheetAutofillTriggerHotfix() {
 /**
  * Автозаполнение строки ACCESS при ручном редактировании.
  */
+
 function wasbAccessSheetOnEditAutofillHotfix_(e) {
   if (!e || !e.range) {
     return;

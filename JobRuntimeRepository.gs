@@ -48,7 +48,7 @@ const JobRuntimeRepository_ = (function() {
   }
 
   function _sheetName() {
-    return String(STAGE7_CONFIG.JOB_RUNTIME_SHEET || 'JOB_RUNTIME_LOG');
+    return String(STAGE7_CONFIG.JOB_RUNTIME_LOG_SHEET || 'JOB_RUNTIME_LOG');
   }
 
   function _ensureSheetColumns(sh, requiredCount) {

@@ -271,9 +271,9 @@ function _safeUniqueId_(prefix) {
   function _protectedSheets_() {
     return _arrayUniqueStrings_([
       _configValue_('ACCESS_SHEET', 'ACCESS'),
-      _configValue_('ALERTS_SHEET', 'ALERTS_LOG'),
-      _stage7ConfigValue_('JOB_RUNTIME_SHEET', 'JOB_RUNTIME_LOG'),
-      _stage7ConfigValue_('AUDIT_SHEET', 'AUDIT_LOG'),
+      _configValue_('ALERTS_LOG_SHEET', 'ALERTS_LOG'),
+      _stage7ConfigValue_('JOB_RUNTIME_LOG_SHEET', 'JOB_RUNTIME_LOG'),
+      _stage7ConfigValue_('AUDIT_LOG_SHEET', 'AUDIT_LOG'),
       _configValue_('OPS_LOG_SHEET', 'OPS_LOG'),
       _configValue_('ACTIVE_OPERATIONS_SHEET', 'ACTIVE_OPERATIONS'),
       _configValue_('CHECKPOINTS_SHEET', 'CHECKPOINTS'),
@@ -335,8 +335,8 @@ function _safeUniqueId_(prefix) {
         dryRun: false,
         partial: false,
         affectedSheets: [
-          _configValue_('ALERTS_SHEET', 'ALERTS_LOG'),
-          _stage7ConfigValue_('AUDIT_SHEET', 'AUDIT_LOG'),
+          _configValue_('ALERTS_LOG_SHEET', 'ALERTS_LOG'),
+          _stage7ConfigValue_('AUDIT_LOG_SHEET', 'AUDIT_LOG'),
           _configValue_('LOG_SHEET', 'LOG')
         ],
         affectedEntities: [record.personCallsign || record.displayName || record.email || record.currentKeyHashMasked || 'unknown'],
@@ -376,7 +376,7 @@ function _safeUniqueId_(prefix) {
         level: 'SECURITY',
         scenario: record.action || 'accessViolation',
         message: message || '',
-        affectedSheets: [_configValue_('ALERTS_SHEET', 'ALERTS_LOG')],
+        affectedSheets: [_configValue_('ALERTS_LOG_SHEET', 'ALERTS_LOG')],
         affectedEntities: [record.personCallsign || record.displayName || record.email || record.currentKeyHashMasked || 'unknown'],
         context: { dateStr: dateStr }
       });
@@ -1052,7 +1052,7 @@ function _getProtectedSheetsForTrigger_() {
 
   return [
     _configValueForTrigger_('ACCESS_SHEET', 'ACCESS'),
-    _configValueForTrigger_('ALERTS_SHEET', 'ALERTS_LOG'),
+    _configValueForTrigger_('ALERTS_LOG_SHEET', 'ALERTS_LOG'),
     _configValueForTrigger_('OPS_LOG_SHEET', 'OPS_LOG'),
     _configValueForTrigger_('DICT_SHEET', 'DICT'),
     _configValueForTrigger_('DICT_SUM_SHEET', 'DICT_SUM'),

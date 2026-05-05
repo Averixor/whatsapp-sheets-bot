@@ -132,7 +132,7 @@ function apiStage7ReportAccessViolation(actionName, details) {
     result.data || result,
     'stage7ReportAccessViolation',
     [],
-    { affectedSheets: [appGetCore('ALERTS_SHEET', 'ALERTS_LOG')] }
+    { affectedSheets: [appGetCore('ALERTS_LOG_SHEET', 'ALERTS_LOG')] }
   );
 }
 
@@ -569,7 +569,7 @@ function apiListStage7JobRuntime() {
     report,
     'listStage7JobRuntime',
     [],
-    { affectedSheets: [STAGE7_CONFIG.JOB_RUNTIME_SHEET] }
+    { affectedSheets: [STAGE7_CONFIG.JOB_RUNTIME_LOG_SHEET] }
   );
 }
 

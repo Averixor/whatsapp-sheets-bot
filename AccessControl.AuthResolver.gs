@@ -1061,6 +1061,7 @@ function registerAccessWithTemporaryPassword(payload) {
   if (password !== passwordRepeat) return { success: false, code: 'access.registration.password_mismatch', message: 'Паролі не збігаються.' };
   const lock = LockService.getScriptLock();
   lock.waitLock(5000);
+  
   try {
     const entries = _readSheetEntries_();
     let entry = null;

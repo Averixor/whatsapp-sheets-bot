@@ -46,7 +46,7 @@ const AlertsRepository_ = (function () {
 
   function _getSheetName_() {
     if (typeof appGetCore === 'function') {
-      return appGetCore('ALERTS_SHEET', 'ALERTS_LOG');
+      return appGetCore('ALERTS_LOG_SHEET', 'ALERTS_LOG');
     }
     return 'ALERTS_LOG';
   }

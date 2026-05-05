@@ -15,7 +15,7 @@
  */
 
 const Stage7AuditTrail_ = (function () {
-  const DEFAULT_AUDIT_SHEET = 'AUDIT_LOG';
+  const DEFAULT_AUDIT_LOG_SHEET = 'AUDIT_LOG';
   const DEFAULT_HEADER_ROW = 1;
   const DEFAULT_LEVEL = 'AUDIT';
   const MAX_JSON_LENGTH = 12000;
@@ -49,18 +49,18 @@ const Stage7AuditTrail_ = (function () {
       return STAGE7_CONFIG;
     }
     return {
-      AUDIT_SHEET: DEFAULT_AUDIT_SHEET,
+      AUDIT_LOG_SHEET: DEFAULT_AUDIT_LOG_SHEET,
       AUDIT_HEADER_ROW: DEFAULT_HEADER_ROW
     };
   }
 
   function _normalizeSheetName_(value) {
     const raw = String(value == null ? '' : value).trim();
-    if (!raw) return DEFAULT_AUDIT_SHEET;
+    if (!raw) return DEFAULT_AUDIT_LOG_SHEET;
 
     // У Sheets заборонені деякі символи, а ще не треба диких довжин.
     const cleaned = raw.replace(/[\[\]\*\?:\/\\]/g, '_').substring(0, 99).trim();
-    return cleaned || DEFAULT_AUDIT_SHEET;
+    return cleaned || DEFAULT_AUDIT_LOG_SHEET;
   }
 
   function _normalizeHeaderRow_(value) {
@@ -73,7 +73,7 @@ const Stage7AuditTrail_ = (function () {
   function _getSheetConfig_() {
     const cfg = _getConfig_();
     return {
-      sheetName: _normalizeSheetName_(cfg.AUDIT_SHEET),
+      sheetName: _normalizeSheetName_(cfg.AUDIT_LOG_SHEET),
       headerRow: _normalizeHeaderRow_(cfg.AUDIT_HEADER_ROW)
     };
   }

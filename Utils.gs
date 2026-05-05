@@ -331,9 +331,9 @@ function _clearSheetDataPreserveHeaders_(sheetName, headerRows, ensureFn) {
 function clearLogCore_() {
   const targets = [
     { name: CONFIG.LOG_SHEET || 'LOG', headerRows: 1, ensure: function(sh) { try { ensureLogHeader_(sh); } catch (_) {} } },
-    { name: (typeof STAGE7_CONFIG !== 'undefined' ? (STAGE7_CONFIG.AUDIT_SHEET || 'AUDIT_LOG') : 'AUDIT_LOG'), headerRows: (typeof STAGE7_CONFIG !== 'undefined' ? (STAGE7_CONFIG.AUDIT_HEADER_ROW || 1) : 1), ensure: function() { try { ensureAuditTrailSheet_(); } catch (_) {} } },
-    { name: (typeof appGetCore === 'function' ? appGetCore('ALERTS_SHEET', 'ALERTS_LOG') : 'ALERTS_LOG'), headerRows: 1, ensure: function() { try { AlertsRepository_.ensureSheet(); } catch (_) {} } },
-    { name: (typeof STAGE7_CONFIG !== 'undefined' ? (STAGE7_CONFIG.JOB_RUNTIME_SHEET || 'JOB_RUNTIME_LOG') : 'JOB_RUNTIME_LOG'), headerRows: 1, ensure: function() { try { JobRuntimeRepository_.ensureSheet(); } catch (_) {} } },
+    { name: (typeof STAGE7_CONFIG !== 'undefined' ? (STAGE7_CONFIG.AUDIT_LOG_SHEET || 'AUDIT_LOG') : 'AUDIT_LOG'), headerRows: (typeof STAGE7_CONFIG !== 'undefined' ? (STAGE7_CONFIG.AUDIT_HEADER_ROW || 1) : 1), ensure: function() { try { ensureAuditTrailSheet_(); } catch (_) {} } },
+    { name: (typeof appGetCore === 'function' ? appGetCore('ALERTS_LOG_SHEET', 'ALERTS_LOG') : 'ALERTS_LOG'), headerRows: 1, ensure: function() { try { AlertsRepository_.ensureSheet(); } catch (_) {} } },
+    { name: (typeof STAGE7_CONFIG !== 'undefined' ? (STAGE7_CONFIG.JOB_RUNTIME_LOG_SHEET || 'JOB_RUNTIME_LOG') : 'JOB_RUNTIME_LOG'), headerRows: 1, ensure: function() { try { JobRuntimeRepository_.ensureSheet(); } catch (_) {} } },
   ];
 
   const clearedSheets = [];

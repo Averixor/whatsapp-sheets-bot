@@ -129,6 +129,7 @@ function _getAccessHeaderAliasMap_() {
   Object.keys(labels).forEach(function(key) {
     aliases[String(labels[key] || '').trim().toLowerCase()] = key;
   });
+
   aliases.email = 'email';
   aliases['пошта'] = 'email';
   aliases['телефон'] = 'phone';
@@ -181,6 +182,7 @@ function _removeAccessObsoleteColumns_(sh) {
     'посада': true,
     'должность': true
   };
+
   var lastColumn = Number(sh.getLastColumn()) || 0;
   if (lastColumn < 1) return 0;
   var headers = sh.getRange(1, 1, 1, lastColumn).getValues()[0];
@@ -253,12 +255,15 @@ function _ensureSheetSchema_(sh) {
       sh.insertColumnsAfter(currentLastColumn, missingCols);
     }
   }
+
   var currentHeaders = currentLastRow >= 1
     ? sh.getRange(1, 1, 1, Math.max(expectedHeaders.length, 1)).getValues()[0]
     : [];
+
   var hasAnyHeaders = currentHeaders.some(function(v) {
     return String(v || '').trim() !== '';
   });
+
   if (!hasAnyHeaders) {
     sh.getRange(1, 1, 1, expectedHeaders.length).setValues([expectedHeaders]);
   } else {
@@ -269,6 +274,7 @@ function _ensureSheetSchema_(sh) {
       }
     }
   }
+
   sh.setFrozenRows(1);
   sh.getRange(1, 1, 1, Math.max(expectedHeaders.length, sh.getLastColumn(), 1))
     .setFontWeight('bold')
@@ -636,38 +642,38 @@ function _entryToHeaderUpdates_(entry) {
   var e = entry || {};
   var updates = {};
 
-  if (e.email !== undefined)                updates.email = normalizeEmail_(e.email);
-  if (e.phone !== undefined)                updates.phone = normalizePhone_(e.phone);
-  if (e.role !== undefined)                 updates.role = normalizeRole_(e.role);
-  if (e.enabled !== undefined)              updates.enabled = e.enabled ? 'TRUE' : 'FALSE';
-  if (e.note !== undefined)                 updates.note = String(e.note || '');
-  if (e.displayName !== undefined)          updates.display_name = normalizeHumanName_(e.displayName);
-  if (e.personCallsign !== undefined)       updates.person_callsign = normalizeCallsign_(e.personCallsign);
-  if (e.selfBindAllowed !== undefined)      updates.self_bind_allowed = e.selfBindAllowed ? 'TRUE' : 'FALSE';
-  if (e.userKeyCurrentHash !== undefined)   updates.user_key_current_hash = normalizeStoredHash_(e.userKeyCurrentHash);
-  if (e.userKeyPrevHash !== undefined)      updates.user_key_prev_hash = normalizeStoredHash_(e.userKeyPrevHash);
-  if (e.lastSeenAt !== undefined)           updates.last_seen_at = e.lastSeenAt;
-  if (e.lastRotatedAt !== undefined)        updates.last_rotated_at = e.lastRotatedAt;
-  if (e.failedAttempts !== undefined)       updates.failed_attempts = e.failedAttempts;
-  if (e.lockedUntilMs !== undefined)        updates.locked_until_ms = e.lockedUntilMs;
-  if (e.login !== undefined)                updates.login = String(e.login || '').trim();
-  if (e.passwordHash !== undefined)         updates.password_hash = String(e.passwordHash || '').trim();
-  if (e.passwordSalt !== undefined)         updates.password_salt = String(e.passwordSalt || '').trim();
-  if (e.registrationStatus !== undefined)   updates.registration_status = String(e.registrationStatus || '').trim().toLowerCase();
-  if (e.preferredContact !== undefined)     updates.preferred_contact = String(e.preferredContact || '').trim().toLowerCase();
-  if (e.surname !== undefined)              updates.surname = normalizeHumanName_(e.surname);
-  if (e.firstName !== undefined)            updates.first_name = normalizeHumanName_(e.firstName);
-  if (e.requestUserKeyHash !== undefined)   updates.request_user_key_hash = normalizeStoredHash_(e.requestUserKeyHash);
-  if (e.requestCreatedAt !== undefined)     updates.request_created_at = e.requestCreatedAt;
-  if (e.temporaryPasswordPlain !== undefined)   updates.temporary_password_plain = e.temporaryPasswordPlain;
-  if (e.temporaryPasswordHash !== undefined)    updates.temporary_password_hash = e.temporaryPasswordHash;
-  if (e.temporaryPasswordSalt !== undefined)    updates.temporary_password_salt = e.temporaryPasswordSalt;
+  if (e.email !== undefined)                      updates.email = normalizeEmail_(e.email);
+  if (e.phone !== undefined)                      updates.phone = normalizePhone_(e.phone);
+  if (e.role !== undefined)                       updates.role = normalizeRole_(e.role);
+  if (e.enabled !== undefined)                    updates.enabled = e.enabled ? 'TRUE' : 'FALSE';
+  if (e.note !== undefined)                       updates.note = String(e.note || '');
+  if (e.displayName !== undefined)                updates.display_name = normalizeHumanName_(e.displayName);
+  if (e.personCallsign !== undefined)             updates.person_callsign = normalizeCallsign_(e.personCallsign);
+  if (e.selfBindAllowed !== undefined)            updates.self_bind_allowed = e.selfBindAllowed ? 'TRUE' : 'FALSE';
+  if (e.userKeyCurrentHash !== undefined)         updates.user_key_current_hash = normalizeStoredHash_(e.userKeyCurrentHash);
+  if (e.userKeyPrevHash !== undefined)            updates.user_key_prev_hash = normalizeStoredHash_(e.userKeyPrevHash);
+  if (e.lastSeenAt !== undefined)                 updates.last_seen_at = e.lastSeenAt;
+  if (e.lastRotatedAt !== undefined)              updates.last_rotated_at = e.lastRotatedAt;
+  if (e.failedAttempts !== undefined)             updates.failed_attempts = e.failedAttempts;
+  if (e.lockedUntilMs !== undefined)              updates.locked_until_ms = e.lockedUntilMs;
+  if (e.login !== undefined)                      updates.login = String(e.login || '').trim();
+  if (e.passwordHash !== undefined)               updates.password_hash = String(e.passwordHash || '').trim();
+  if (e.passwordSalt !== undefined)               updates.password_salt = String(e.passwordSalt || '').trim();
+  if (e.registrationStatus !== undefined)         updates.registration_status = String(e.registrationStatus || '').trim().toLowerCase();
+  if (e.preferredContact !== undefined)           updates.preferred_contact = String(e.preferredContact || '').trim().toLowerCase();
+  if (e.surname !== undefined)                    updates.surname = normalizeHumanName_(e.surname);
+  if (e.firstName !== undefined)                  updates.first_name = normalizeHumanName_(e.firstName);
+  if (e.requestUserKeyHash !== undefined)         updates.request_user_key_hash = normalizeStoredHash_(e.requestUserKeyHash);
+  if (e.requestCreatedAt !== undefined)           updates.request_created_at = e.requestCreatedAt;
+  if (e.temporaryPasswordPlain !== undefined)     updates.temporary_password_plain = e.temporaryPasswordPlain;
+  if (e.temporaryPasswordHash !== undefined)      updates.temporary_password_hash = e.temporaryPasswordHash;
+  if (e.temporaryPasswordSalt !== undefined)      updates.temporary_password_salt = e.temporaryPasswordSalt;
   if (e.temporaryPasswordExpiresAt !== undefined) updates.temporary_password_expires_at = e.temporaryPasswordExpiresAt;
-  if (e.temporaryPasswordUsedAt !== undefined)   updates.temporary_password_used_at = e.temporaryPasswordUsedAt;
-  if (e.approvedBy !== undefined)           updates.approved_by = e.approvedBy;
-  if (e.approvedAt !== undefined)           updates.approved_at = e.approvedAt;
-  if (e.activatedAt !== undefined)          updates.activated_at = e.activatedAt;
-  if (e.telegramUsername !== undefined)     updates.telegram_username = e.telegramUsername;
+  if (e.temporaryPasswordUsedAt !== undefined)    updates.temporary_password_used_at = e.temporaryPasswordUsedAt;
+  if (e.approvedBy !== undefined)                 updates.approved_by = e.approvedBy;
+  if (e.approvedAt !== undefined)                 updates.approved_at = e.approvedAt;
+  if (e.activatedAt !== undefined)                updates.activated_at = e.activatedAt;
+  if (e.telegramUsername !== undefined)           updates.telegram_username = e.telegramUsername;
 
   return updates;
 }
@@ -699,44 +705,44 @@ function _updateEntryFields_(sheetRow, updates) {
 
   function has(p) { return Object.prototype.hasOwnProperty.call(updates, p); }
 
-  if (has('email'))                    mapped.email = normalizeEmail_(updates.email);
-  if (has('phone'))                    mapped.phone = normalizePhone_(updates.phone);
-  if (has('role'))                     mapped.role = normalizeRole_(updates.role);
-  if (has('enabled'))                  mapped.enabled = !!updates.enabled;
-  if (has('note'))                     mapped.note = String(updates.note || '');
-  if (has('display_name'))             mapped.displayName = normalizeHumanName_(updates.display_name);
-  if (has('displayName'))              mapped.displayName = normalizeHumanName_(updates.displayName);
-  if (has('person_callsign'))          mapped.personCallsign = normalizeCallsign_(updates.person_callsign);
-  if (has('personCallsign'))           mapped.personCallsign = normalizeCallsign_(updates.personCallsign);
-  if (has('self_bind_allowed'))        mapped.selfBindAllowed = isSelfBindAllowedValue_(updates.self_bind_allowed, mapped.role);
-  if (has('selfBindAllowed'))          mapped.selfBindAllowed = !!updates.selfBindAllowed;
-  if (has('user_key_current_hash'))    mapped.userKeyCurrentHash = normalizeStoredHash_(updates.user_key_current_hash);
-  if (has('userKeyCurrentHash'))       mapped.userKeyCurrentHash = normalizeStoredHash_(updates.userKeyCurrentHash);
-  if (has('user_key_prev_hash'))       mapped.userKeyPrevHash = normalizeStoredHash_(updates.user_key_prev_hash);
-  if (has('last_seen_at'))             mapped.lastSeenAt = String(updates.last_seen_at || '');
-  if (has('last_rotated_at'))          mapped.lastRotatedAt = String(updates.last_rotated_at || '');
-  if (has('failed_attempts'))          mapped.failedAttempts = parseInt(updates.failed_attempts || '0', 10) || 0;
-  if (has('locked_until_ms'))          mapped.lockedUntilMs = parseInt(updates.locked_until_ms || '0', 10) || 0;
-  if (has('login'))                    mapped.login = String(updates.login || '').trim();
-  if (has('password_hash'))            mapped.passwordHash = String(updates.password_hash || '').trim();
-  if (has('password_salt'))            mapped.passwordSalt = String(updates.password_salt || '').trim();
-  if (has('registration_status'))      mapped.registrationStatus = String(updates.registration_status || '').trim().toLowerCase();
-  if (has('preferred_contact'))        mapped.preferredContact = String(updates.preferred_contact || '').trim().toLowerCase();
-  if (has('surname'))                  mapped.surname = normalizeHumanName_(updates.surname);
-  if (has('first_name'))               mapped.firstName = normalizeHumanName_(updates.first_name);
-  if (has('firstName'))                mapped.firstName = normalizeHumanName_(updates.firstName);
-  if (has('request_user_key_hash'))    mapped.requestUserKeyHash = normalizeStoredHash_(updates.request_user_key_hash);
-  if (has('requestUserKeyHash'))       mapped.requestUserKeyHash = normalizeStoredHash_(updates.requestUserKeyHash);
-  if (has('request_created_at'))       mapped.requestCreatedAt = String(updates.request_created_at || '');
-  if (has('temporary_password_plain')) mapped.temporaryPasswordPlain = String(updates.temporary_password_plain || '').trim();
-  if (has('temporary_password_hash'))  mapped.temporaryPasswordHash = String(updates.temporary_password_hash || '').trim();
-  if (has('temporary_password_salt'))  mapped.temporaryPasswordSalt = String(updates.temporary_password_salt || '').trim();
+  if (has('email'))                         mapped.email = normalizeEmail_(updates.email);
+  if (has('phone'))                         mapped.phone = normalizePhone_(updates.phone);
+  if (has('role'))                          mapped.role = normalizeRole_(updates.role);
+  if (has('enabled'))                       mapped.enabled = !!updates.enabled;
+  if (has('note'))                          mapped.note = String(updates.note || '');
+  if (has('display_name'))                  mapped.displayName = normalizeHumanName_(updates.display_name);
+  if (has('displayName'))                   mapped.displayName = normalizeHumanName_(updates.displayName);
+  if (has('person_callsign'))               mapped.personCallsign = normalizeCallsign_(updates.person_callsign);
+  if (has('personCallsign'))                mapped.personCallsign = normalizeCallsign_(updates.personCallsign);
+  if (has('self_bind_allowed'))             mapped.selfBindAllowed = isSelfBindAllowedValue_(updates.self_bind_allowed, mapped.role);
+  if (has('selfBindAllowed'))               mapped.selfBindAllowed = !!updates.selfBindAllowed;
+  if (has('user_key_current_hash'))         mapped.userKeyCurrentHash = normalizeStoredHash_(updates.user_key_current_hash);
+  if (has('userKeyCurrentHash'))            mapped.userKeyCurrentHash = normalizeStoredHash_(updates.userKeyCurrentHash);
+  if (has('user_key_prev_hash'))            mapped.userKeyPrevHash = normalizeStoredHash_(updates.user_key_prev_hash);
+  if (has('last_seen_at'))                  mapped.lastSeenAt = String(updates.last_seen_at || '');
+  if (has('last_rotated_at'))               mapped.lastRotatedAt = String(updates.last_rotated_at || '');
+  if (has('failed_attempts'))               mapped.failedAttempts = parseInt(updates.failed_attempts || '0', 10) || 0;
+  if (has('locked_until_ms'))               mapped.lockedUntilMs = parseInt(updates.locked_until_ms || '0', 10) || 0;
+  if (has('login'))                         mapped.login = String(updates.login || '').trim();
+  if (has('password_hash'))                 mapped.passwordHash = String(updates.password_hash || '').trim();
+  if (has('password_salt'))                 mapped.passwordSalt = String(updates.password_salt || '').trim();
+  if (has('registration_status'))           mapped.registrationStatus = String(updates.registration_status || '').trim().toLowerCase();
+  if (has('preferred_contact'))             mapped.preferredContact = String(updates.preferred_contact || '').trim().toLowerCase();
+  if (has('surname'))                       mapped.surname = normalizeHumanName_(updates.surname);
+  if (has('first_name'))                    mapped.firstName = normalizeHumanName_(updates.first_name);
+  if (has('firstName'))                     mapped.firstName = normalizeHumanName_(updates.firstName);
+  if (has('request_user_key_hash'))         mapped.requestUserKeyHash = normalizeStoredHash_(updates.request_user_key_hash);
+  if (has('requestUserKeyHash'))            mapped.requestUserKeyHash = normalizeStoredHash_(updates.requestUserKeyHash);
+  if (has('request_created_at'))            mapped.requestCreatedAt = String(updates.request_created_at || '');
+  if (has('temporary_password_plain'))      mapped.temporaryPasswordPlain = String(updates.temporary_password_plain || '').trim();
+  if (has('temporary_password_hash'))       mapped.temporaryPasswordHash = String(updates.temporary_password_hash || '').trim();
+  if (has('temporary_password_salt'))       mapped.temporaryPasswordSalt = String(updates.temporary_password_salt || '').trim();
   if (has('temporary_password_expires_at')) mapped.temporaryPasswordExpiresAt = String(updates.temporary_password_expires_at || '');
   if (has('temporary_password_used_at'))    mapped.temporaryPasswordUsedAt = String(updates.temporary_password_used_at || '');
-  if (has('approved_by'))              mapped.approvedBy = String(updates.approved_by || '');
-  if (has('approved_at'))              mapped.approvedAt = String(updates.approved_at || '');
-  if (has('activated_at'))             mapped.activatedAt = String(updates.activated_at || '');
-  if (has('telegram_username'))        mapped.telegramUsername = String(updates.telegram_username || '').trim();
+  if (has('approved_by'))                   mapped.approvedBy = String(updates.approved_by || '');
+  if (has('approved_at'))                   mapped.approvedAt = String(updates.approved_at || '');
+  if (has('activated_at'))                  mapped.activatedAt = String(updates.activated_at || '');
+  if (has('telegram_username'))             mapped.telegramUsername = String(updates.telegram_username || '').trim();
 
   _writeEntryByHeaderMap_(sheetRow, mapped);
   return _getEntryBySheetRow_(sheetRow) || mapped;
@@ -779,6 +785,7 @@ function _hashAccessTextFallback_(value) {
     String(value || ''),
     Utilities.Charset.UTF_8
   );
+
   return digest.map(function(byte) {
     return ('0' + (byte & 0xff).toString(16)).slice(-2);
   }).join('');
@@ -818,15 +825,19 @@ function _ensureTemporaryAccessPasswordForRow_(sh, rowNumber) {
   var tempPlainCol = _getAccessColumnByAny_(sh, headerMap, [
     'temporary_password_plain', 'тимчасовий пароль (текст)'
   ]);
+
   var tempHashCol = _getAccessColumnByAny_(sh, headerMap, [
     'temporary_password_hash', 'хеш тимчасового пароля'
   ]);
+
   var tempSaltCol = _getAccessColumnByAny_(sh, headerMap, [
     'temporary_password_salt', 'сіль тимчасового пароля'
   ]);
+
   var tempExpiresCol = _getAccessColumnByAny_(sh, headerMap, [
     'temporary_password_expires_at', 'тимчасовий пароль діє до', 'термін дії тимчасового пароля'
   ]);
+
   var tempUsedCol = _getAccessColumnByAny_(sh, headerMap, [
     'temporary_password_used_at', 'час використання тимчасового пароля'
   ]);
@@ -844,12 +855,11 @@ function _ensureTemporaryAccessPasswordForRow_(sh, rowNumber) {
   var existingHash  = String(sh.getRange(rowNumber, tempHashCol).getValue() || '').trim();
   var existingSalt  = String(sh.getRange(rowNumber, tempSaltCol).getValue() || '').trim();
 
-  // If plain, hash and salt already exist, the password was already issued.
   if (existingPlain && existingHash && existingSalt) {
     return false;
   }
 
-  var emailCol = _getAccessColumnByAny_(sh, headerMap, ['email', 'електронна пошта']);
+    var emailCol = _getAccessColumnByAny_(sh, headerMap, ['email', 'електронна пошта']);
   var phoneCol = _getAccessColumnByAny_(sh, headerMap, ['phone', 'телефон']);
   var callsignCol = _getAccessColumnByAny_(sh, headerMap, ['person_callsign', 'позивний користувача', 'позивний']);
   var currentHashCol = _getAccessColumnByAny_(sh, headerMap, ['user_key_current_hash', 'хеш поточного ключа']);

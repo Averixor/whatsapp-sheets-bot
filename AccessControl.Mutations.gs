@@ -35,6 +35,7 @@ function _applySuccessfulAuth_(entry, userKeyHash) {
       matchedBy: 'user_key_prev_hash',
       lastRotatedAt: now
     });
+
   } else {
     updated.source = entry.source || 'ACCESS-user-key-current';
     updated.matchedBy = entry.matchedBy || 'user_key_current_hash';
@@ -120,6 +121,7 @@ function _applyEmailBridgeBind_(entry, currentKeyHash) {
         ? entry.userKeyCurrentHash
         : entry.userKeyPrevHash
     );
+
     updates.user_key_current_hash = pair.current;
     updates.user_key_prev_hash = pair.previous;
     if (entry.userKeyCurrentHash && entry.userKeyCurrentHash !== currentKeyHash) {
@@ -140,6 +142,7 @@ function _applyEmailBridgeBind_(entry, currentKeyHash) {
  * Unified operation for prev-key match with rotation
  * Preserves matchSource as 'ACCESS-user-key-rotated'
  */
+ 
 function _applyPrevKeyMatch_(entry, matchedKeyHash) {
   if (!entry || !entry.sheetRow) return entry;
   if (entry.userKeyPrevHash !== matchedKeyHash) return entry;

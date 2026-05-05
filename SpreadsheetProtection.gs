@@ -89,12 +89,12 @@ function _spResolveSheetNames_(options) {
 
   const names = [
     _spGetConfigValue_(config, 'LOG_SHEET', 'LOG'),
-    _spGetConfigValue_(stage7, 'AUDIT_SHEET', 'AUDIT_LOG'),
-    _spGetConfigValue_(stage7, 'JOB_RUNTIME_SHEET', 'JOB_RUNTIME_LOG'),
+    _spGetConfigValue_(stage7, 'AUDIT_LOG_SHEET', 'AUDIT_LOG'),
+    _spGetConfigValue_(stage7, 'JOB_RUNTIME_LOG_SHEET', 'JOB_RUNTIME_LOG'),
     _spGetCoreValue_('OPS_LOG_SHEET', 'OPS_LOG'),
     _spGetCoreValue_('ACTIVE_OPERATIONS_SHEET', 'ACTIVE_OPERATIONS'),
     _spGetCoreValue_('CHECKPOINTS_SHEET', 'CHECKPOINTS'),
-    _spGetCoreValue_('ALERTS_SHEET', 'ALERTS_LOG'),
+    _spGetCoreValue_('ALERTS_LOG_SHEET', 'ALERTS_LOG'),
     _spGetCoreValue_('ACCESS_SHEET', 'ACCESS')
   ];
 

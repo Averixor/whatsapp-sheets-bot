@@ -1,6 +1,6 @@
 /**
  * SystemSheetsSelfHeal.gs
- * Самодостаточный модуль для восстановления и стандартизации системных листов WASB.
+ * Модуль відновлення та стандартизації системних листів.
  */
 
 function _sshIsObject_(value) {
@@ -205,7 +205,7 @@ function _sshBuildRegistry_() {
       minRows: 2
     },
     {
-      name: _sshConfigValue_('AUDIT_SHEET', 'AUDIT_LOG'),
+      name: _sshConfigValue_('AUDIT_LOG_SHEET', 'AUDIT_LOG'),
       schemaKey: null,
       headers: [
         'Мітка часу',
@@ -252,7 +252,7 @@ function _sshBuildRegistry_() {
       minRows: 2
     },
     {
-      name: _sshConfigValue_('ALERTS_SHEET', 'ALERTS_LOG'),
+      name: _sshConfigValue_('ALERTS_LOG_SHEET', 'ALERTS_LOG'),
       schemaKey: null,
       headers: [
         'Мітка часу',
@@ -318,7 +318,7 @@ function _sshBuildRegistry_() {
       minRows: 2
     },
     {
-      name: _sshConfigValue_('JOB_RUNTIME_SHEET', 'JOB_RUNTIME_LOG'),
+      name: _sshConfigValue_('JOB_RUNTIME_LOG_SHEET', 'JOB_RUNTIME_LOG'),
       schemaKey: null,
       headers: [
         'Час початку',
@@ -349,7 +349,7 @@ function _sshBuildRegistry_() {
         'Телефон',
         'Роль',
         'День народження',
-        'Запасний телефон'
+        '2 номер'
       ],
       minRows: 2
     },
@@ -358,8 +358,8 @@ function _sshBuildRegistry_() {
       schemaKey: 'vacations',
       headers: [
         'ПІБ',
-        'Початок',
-        'Кінець',
+        'Початок включно',
+        'Кінець включно',
         'Номер',
         'Активна',
         'Сповістити',
@@ -372,9 +372,9 @@ function _sshBuildRegistry_() {
       schemaKey: 'dictSum',
       headers: [
         'Код',
-        'Мітка',
+        'Назва',
         'Порядок',
-        'Показувати нулі'
+        'Показувати 0'
       ],
       minRows: 2
     },
@@ -383,7 +383,7 @@ function _sshBuildRegistry_() {
       schemaKey: 'dict',
       headers: [
         'Код',
-        'Служба',
+        'Вид служби',
         'Місце',
         'Завдання'
       ],
@@ -408,17 +408,25 @@ function _sshBuildRegistry_() {
 
 var SYSTEM_SHEETS_REGISTRY_ = _sshBuildRegistry_();
 
+function _getSystemSheetsRegistry_() {
+  SYSTEM_SHEETS_REGISTRY_ = _sshBuildRegistry_();
+  return SYSTEM_SHEETS_REGISTRY_;
+}
+
 function getAllSystemSheetNames_() {
-  return SYSTEM_SHEETS_REGISTRY_.map(function(item) {
+  return _getSystemSheetsRegistry_().map(function(item) {
     return item.name;
   });
 }
 
 function _systemSheetRecordByName_(name) {
   var target = _sshTrimmedString_(name, '');
-  for (var i = 0; i < SYSTEM_SHEETS_REGISTRY_.length; i++) {
-    if (SYSTEM_SHEETS_REGISTRY_[i].name === target) return SYSTEM_SHEETS_REGISTRY_[i];
+  var registry = _getSystemSheetsRegistry_();
+
+  for (var i = 0; i < registry.length; i++) {
+    if (registry[i].name === target) return registry[i];
   }
+
   return null;
 }
 
@@ -492,16 +500,19 @@ function _applyAccessCheckboxes_(sheet) {
   if (!sheet) return;
   if (_sshTrimmedString_(sheet.getName(), '') !== _sshConfigValue_('ACCESS_SHEET', 'ACCESS')) return;
 
-  var lastRow = Math.max(Number(sheet.getMaxRows()) || 0, 2);
+  var lastRow = Math.max(Number(sheet.getMaxRows()) || 0, 1);
+  var checkboxRows = Math.max(lastRow - 1, 0);
+
+  if (checkboxRows < 1) return;
 
   try {
-    sheet.getRange(2, 4, lastRow - 1, 1).insertCheckboxes();
+    sheet.getRange(2, 4, checkboxRows, 1).insertCheckboxes();
   } catch (e) {
     _sshLog_('Checkbox enabled error', e);
   }
 
   try {
-    sheet.getRange(2, 8, lastRow - 1, 1).insertCheckboxes();
+    sheet.getRange(2, 8, checkboxRows, 1).insertCheckboxes();
   } catch (e) {
     _sshLog_('Checkbox self_bind_allowed error', e);
   }
@@ -528,6 +539,8 @@ function _resolveSheetSpec_(record) {
   var headers = [];
   var lastCol = 1;
   var minRows = Math.max(Number(record.minRows) || 2, 2);
+  var sheetName = _sshTrimmedString_(record.name, '');
+  var sendPanelName = _sshConfigValue_('SEND_PANEL_SHEET', 'SEND_PANEL');
 
   if (record.schemaKey) {
     schema = _sshGetSheetSchemaSafe_(record.schemaKey);
@@ -537,8 +550,14 @@ function _resolveSheetSpec_(record) {
     headerRow = Math.max(Number(schema.headerRow) || 1, 1);
     headers = _buildHeadersFromSchema_(schema);
     lastCol = Math.max(_sshGetSchemaLastColumnSafe_(schema), headers.length, 1);
-    if (_sshTrimmedString_(record.name, '') === _sshConfigValue_('SEND_PANEL_SHEET', 'SEND_PANEL')) {
-      minRows = Math.max(Number(schema.dataStartRow) || minRows, minRows);
+
+    if (sheetName === sendPanelName) {
+      var dataStartRow = Number(schema && schema.dataStartRow);
+      if (isFinite(dataStartRow) && dataStartRow > 0) {
+        minRows = Math.max(dataStartRow, minRows);
+      } else {
+        minRows = Math.max(headerRow + 1, minRows);
+      }
     } else {
       minRows = Math.max(headerRow + 1, minRows);
     }
@@ -623,9 +642,10 @@ function ensureSystemSheetByName_(sheetName) {
 
 function ensureAllSystemSheets_() {
   var results = [];
+  var registry = _getSystemSheetsRegistry_();
 
-  for (var i = 0; i < SYSTEM_SHEETS_REGISTRY_.length; i++) {
-    var record = SYSTEM_SHEETS_REGISTRY_[i];
+  for (var i = 0; i < registry.length; i++) {
+    var record = registry[i];
     try {
       results.push(ensureSystemSheetByName_(record.name));
     } catch (e) {
