@@ -137,3 +137,8 @@ const DataAccess_ = (function() {
     getMaxSchemaColumn: getMaxSchemaColumn
   };
 })();
+var WASB_SPREADSHEET_ID = '1v8ixM67nG_Bfy5NzcDZbmSjwVOYbkN02ibfP6YqI384';
+
+function getWasbSpreadsheet_() {
+  return SpreadsheetApp.openById(WASB_SPREADSHEET_ID);
+}

@@ -205,13 +205,13 @@ function runSmokeTests(options) {
   });
 
   _smokePush_(report, 'Spreadsheet available', function () {
-    const ss = SpreadsheetApp.getActive();
+    const ss = getWasbSpreadsheet_();
     _smokeAssert_(!!ss, 'Active spreadsheet недоступний');
     return 'Spreadsheet OK: ' + ss.getName();
   });
 
   _smokePush_(report, 'Required sheets exist', function () {
-    const ss = SpreadsheetApp.getActive();
+    const ss = getWasbSpreadsheet_();
     const required = [
       CONFIG.TARGET_SHEET,
       CONFIG.PHONES_SHEET,
@@ -917,4 +917,5 @@ function runRegressionTestSuiteFull_(options) {
 
   return report;
 }
+
 

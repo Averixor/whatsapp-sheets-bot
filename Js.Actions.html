@@ -43,6 +43,7 @@
   // =========================
   // COPY
   // =========================
+
   function fallbackCopy(text) {
     try {
       const el = document.createElement('textarea');
@@ -90,6 +91,7 @@
   // =========================
   // COMMANDER SEND
   // =========================
+
   async function sendDetailedToCommander() {
     if (!STATE.lastDetailedDate || !STATE.lastDetailedText) {
       showToast('✕ Спочатку створи детальне зведення');
@@ -149,6 +151,7 @@
   // =========================
   // BIRTHDAYS
   // =========================
+
   function displayBirthdayResult(result) {
     const contentEl = $id('resultContent');
     if (!contentEl) return;
@@ -209,6 +212,7 @@
     let html = '';
 
     // ---------- NEW SHAPE ----------
+
     if (data.mode === 'new') {
       if (Array.isArray(data.commanderMessages) && data.commanderMessages.length > 0) {
         html += `
@@ -272,6 +276,7 @@
     }
 
     // ---------- LEGACY SHAPE ----------
+
     if (data.mode === 'legacy') {
       if (Array.isArray(data.today) && data.today.length > 0) {
         html += `
@@ -327,9 +332,8 @@
     if (!html) {
       html = `
         <div class="result-item">
-          <div class="result-label">🎂 Дні народження</div>
           <div class="result-value" style="color:var(--text-secondary);">
-            На сьогодні немає нагадувань по днях народження.
+            Сьогодні немає нагадувань по днях народженнях.
           </div>
         </div>
       `;
@@ -370,6 +374,7 @@
   // =========================
   // PERSON CARD
   // =========================
+
   async function openPersonCardByCallsign_(callsign, dateStr = '') {
     if (!callsign) {
       showToast('⚠ Позивний не вказано');
@@ -397,7 +402,7 @@
       }
 
       renderPersonCard(data);
-      logToConsole(`👤 Відкрито картку: ${data.callsign || callsign}`, 'success');
+      logToConsole(`Відкрито картку: ${data.callsign || callsign}`, 'success');
     } catch (error) {
       const msg = normalizeError(error);
       showError(msg);
@@ -512,7 +517,7 @@
 
   async function openPersonCalendarFromCard(callsign) {
     if (!callsign) {
-      showToast('⚠ Позивний не вказано');
+      showToast('Позивний не вказано');
       return;
     }
 
@@ -529,7 +534,7 @@
     const el = $id('personCardMessage');
 
     if (!el) {
-      showToast('⚠ Немає тексту для копіювання');
+      showToast('Немає тексту для копіювання');
       return;
     }
 
@@ -547,6 +552,7 @@
   // =========================
   // PERSONNEL MODAL
   // =========================
+
   function initPersonnelModal() {
     const modal = $id('personnelModal');
     const backdrop = $id('personnelModalBackdrop');
@@ -569,7 +575,6 @@
 
     let filteredCallsigns = Array.isArray(PERSONNEL_CALLSIGNS) ? [...PERSONNEL_CALLSIGNS] : [];
 
-    // Начальное состояние accessibility
     btnOpen.setAttribute('aria-expanded', 'false');
     modal.hidden = true;
 
@@ -694,10 +699,10 @@
         retryDelayMs: 450,
         reason: 'manual-reload'
       });
-      logToConsole(`⟲ SEND_PANEL перечитано: ${Array.isArray(rows) ? rows.length : 0} рядків`, 'success');
+      logToConsole(`SEND_PANEL перечитано: ${Array.isArray(rows) ? rows.length : 0} рядків`, 'success');
       showSendPanel();
     } catch (error) {
-      logToConsole(`✕ Не вдалося перечитати SEND_PANEL: ${normalizeError(error)}`, 'error');
+      logToConsole(`Не вдалося перечитати SEND_PANEL: ${normalizeError(error)}`, 'error');
       showSendPanel();
     }
   }
@@ -705,6 +710,7 @@
   // =========================
   // BOOTSTRAP
   // =========================
+
   async function onSidebarLoad() {
     window.__WASB_BOOTSTRAP_STATE__ = { startedAt: new Date().toISOString(), status: 'starting' };
     registerGlobalRuntimeEvents_();
@@ -721,6 +727,7 @@
   // =========================
   // EXPORTS
   // =========================
+  
   const SidebarApp = {
     STATE,
     PERSONNEL_CALLSIGNS,

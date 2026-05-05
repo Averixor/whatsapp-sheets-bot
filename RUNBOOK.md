@@ -1,7 +1,9 @@
 # WASB Runbook
 
 ## 1. Scope
+
 This runbook covers:
+
 - first import into the GAS web editor
 - initial bootstrap
 - `ACCESS` configuration
@@ -11,6 +13,7 @@ This runbook covers:
 - safe rollback rules
 
 ## 2. First import into GAS
+
 1. Open the target spreadsheet-bound Apps Script project.
 2. Upload all root `.gs`, `.html`, and `appsscript.json` files.
 3. Do **not** upload `_extras/` into runtime. `_extras/` is reference-only.
@@ -18,7 +21,9 @@ This runbook covers:
 5. Reload the Apps Script editor once to make sure all files are visible.
 
 ## 3. Initial bootstrap sequence
+
 Run these in order:
+
 1. `apiStage7BootstrapRuntimeAndAlertsSheets()`
 2. `apiStage7BootstrapAccessSheet()`
 3. fill `ACCESS`
@@ -28,12 +33,16 @@ Run these in order:
 7. `apiStage7QuickHealthCheck()`
 
 Recommended final verification:
+
 - `apiStage7HealthCheck()`
 - `apiRunStage7Diagnostics({ mode: 'quick' })`
 
 ## 4. ACCESS setup
+
 ### Required columns
+
 The sheet bootstrap creates these columns:
+
 - `email`
 - `phone`
 - `role`
@@ -50,7 +59,9 @@ The sheet bootstrap creates these columns:
 - `locked_until_ms`
 
 ### Setup rules
+
 For each active user:
+
 - set the correct `role`
 - set `enabled = TRUE`
 - fill `display_name` if you want a friendly UI label
@@ -60,7 +71,9 @@ For each active user:
 - keep the key hash columns empty until the user is actually registered or self-bound
 
 ## 5. How users are registered now
+
 ### Preferred normal path
+
 1. User opens the sidebar.
 2. The app checks whether the current temporary user key is already registered.
 3. If not registered but allowed to self-bind, the login form asks for **email or phone + callsign**.
@@ -69,20 +82,25 @@ For each active user:
 6. The next sidebar load should resolve the user directly by key.
 
 ### Manual admin-assisted path
+
 Use this only for debugging or controlled setup:
+
 1. Open the `🧑‍💻` block.
 2. Reveal/copy the full current key hash only in the technical/admin view.
 3. Paste it into `ACCESS.user_key_current_hash`.
 4. Save and reload the sidebar.
 
 ## 6. When Google rotates a key
+
 Expected behavior:
+
 - the old current hash becomes the previous hash
 - the new current session hash is promoted into `user_key_current_hash`
 - `last_rotated_at` is updated
 - `last_seen_at` is updated
 
 If the user suddenly loses recognition:
+
 1. check the `🧑‍💻` block
 2. compare the current hash with `ACCESS`
 3. confirm whether the old key is present in `user_key_prev_hash`
@@ -90,21 +108,27 @@ If the user suddenly loses recognition:
 5. use `apiStage7DebugAccess()` if needed
 
 ## 7. Emergency migration bridge
+
 Script property:
+
 - `WASB_ACCESS_MIGRATION_EMAIL_BRIDGE = true`
 
 Use only when:
+
 - you are migrating from email-based identity to user-key identity
 - some users are still not registered by key
 - you need a short transition window to avoid access loss
 
 After migration:
+
 - set the property back to `false`
 - verify that users resolve by key, not by bridge
 - leave bridge mode disabled in normal operation
 
 ## 8. Routine post-deploy checks
+
 ### Role checks
+
 - viewer sees the personnel list
 - viewer can open only their own card
 - viewer cannot open the detailed summary
@@ -114,20 +138,25 @@ After migration:
 - sysadmin can run protections, trigger cleanup, and repair flows
 
 ### Infrastructure checks
+
 - `ACCESS` exists and has the expected schema
 - `ALERTS_LOG`, `AUDIT_LOG`, `JOB_RUNTIME_LOG`, `OPS_LOG`, `ACTIVE_OPERATIONS`, `CHECKPOINTS` exist
 - protections are applied to the expected sheets
 - quick health check is green
 
 ### Sidebar checks
+
 - `🧑‍💻` shows the expected role and source
 - the sidebar opens without implicit heavy diagnostics
 - send-panel data loads when requested
 - login errors do not block the form itself
 
 ## 9. Troubleshooting cheatsheet
+
 ### User is seen as guest but should not be
+
 Check:
+
 - `enabled`
 - key hash registration
 - bridge mode status
@@ -137,7 +166,9 @@ Check:
 - callsign/identifier match for self-bind users
 
 ### Login by identifier + callsign fails
+
 Check:
+
 - `email` or `phone` normalization
 - `person_callsign`
 - `self_bind_allowed`
@@ -145,7 +176,9 @@ Check:
 - login lockout state
 
 ### Sidebar feels slow
+
 Check:
+
 - quick health first
 - then full health / diagnostics
 - whether a heavy route is being called on sidebar load
@@ -153,13 +186,16 @@ Check:
 - whether diagnostics are being triggered automatically by UI actions
 
 ## 10. Safe rollback rule
+
 Do **not** roll back by restoring silent role fallbacks.
 If something breaks:
+
 - fix the `ACCESS` record
 - temporarily use the explicit migration bridge if truly necessary
 - keep dangerous actions server-guarded
 
 ## 11. Recommended release hygiene
+
 - keep `main` stable
 - do active work in `dev`
 - tag release points

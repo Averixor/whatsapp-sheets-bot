@@ -211,7 +211,7 @@ function _getSheet_(createIfMissing) {
       _accessRepoSetSheetCache_(null);
     }
   }
-  var ss = SpreadsheetApp.getActive();
+  var ss = getWasbSpreadsheet_();
   if (!ss) return null;
   var sh = ss.getSheetByName(ACCESS_SHEET);
   if (!sh && createIfMissing) {
@@ -987,4 +987,5 @@ function apiStage7NormalizeAccessSheetFormatting() {
     dateFormat: 'dd.MM.yyyy HH:mm:ss'
   };
 }
+
 

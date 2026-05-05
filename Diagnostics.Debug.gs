@@ -100,10 +100,55 @@ function debugSendPanelBridge_() {
   );
 }
 
-// =========================================================
-// STAGE 7 MERGED DIAGNOSTICS OVERRIDE LAYER
-// Відновлює повний набір старих перевірок + додає актуальні Stage 7 checks.
-// =========================================================
 function debugAccess() {
   Logger.log(JSON.stringify(AccessControl_.describe(), null, 2));
+}
+
+function debugSpreadsheetAccess_() {
+  var id = '1v8ixM67nG_Bfy5NzcDZbmSjwVOYbkN02ibfP6YqI384';
+  var ss = SpreadsheetApp.openById(id);
+  Logger.log(ss.getName());
+}
+
+
+function debugWhoAmI_() {
+  var result = {
+    activeUser: '',
+    effectiveUser: '',
+    scriptTimeZone: '',
+    openByIdOk: false,
+    spreadsheetName: '',
+    spreadsheetId: '1v8ixM67nG_Bfy5NzcDZbmSjwVOYbkN02ibfP6YqI384',
+    error: ''
+  };
+
+  try {
+    result.activeUser = Session.getActiveUser().getEmail();
+  } catch (e1) {
+    result.activeUser = 'ERROR: ' + e1.message;
+  }
+
+  try {
+    result.effectiveUser = Session.getEffectiveUser().getEmail();
+  } catch (e2) {
+    result.effectiveUser = 'ERROR: ' + e2.message;
+  }
+
+  try {
+    result.scriptTimeZone = Session.getScriptTimeZone();
+  } catch (e3) {
+    result.scriptTimeZone = 'ERROR: ' + e3.message;
+  }
+
+  try {
+    var ss = SpreadsheetApp.openById(result.spreadsheetId);
+    result.openByIdOk = true;
+    result.spreadsheetName = ss.getName();
+  } catch (e4) {
+    result.openByIdOk = false;
+    result.error = e4 && e4.message ? e4.message : String(e4);
+  }
+
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
 }
