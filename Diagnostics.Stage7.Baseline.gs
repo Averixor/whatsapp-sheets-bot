@@ -3,7 +3,7 @@ function runStage3HealthCheck_(options) {
   const checks = [];
   const warnings = [];
   const schemas = SheetSchemas_.getAll();
-  const ss = SpreadsheetApp.getActive();
+  const ss = getWasbSpreadsheet_();
 
   Object.keys(schemas).forEach(function(key) {
     const schema = schemas[key];

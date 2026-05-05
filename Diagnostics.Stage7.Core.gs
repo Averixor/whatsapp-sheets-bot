@@ -358,7 +358,7 @@ function _diagBuildReport_(checks, mode, summaryPrefix) {
 }
 function _diagServiceSheetCheck_(checks, name) {
   try {
-    var ss = SpreadsheetApp.getActive();
+    var ss = getWasbSpreadsheet_();
     var sh = ss.getSheetByName(name);
     _stage7PushCheck_(
       checks,

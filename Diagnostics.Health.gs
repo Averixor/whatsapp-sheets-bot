@@ -1,5 +1,5 @@
 function _ensureSendPanelTechnicalSheet_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getWasbSpreadsheet_();
   let sh = ss.getSheetByName(CONFIG.SEND_PANEL_SHEET);
   let created = false;
 
@@ -97,7 +97,7 @@ function healthCheck() {
   });
 
   _runHealthCheckItem_(report, 'Обов\'язкові аркуші', 'CRITICAL', function () {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ss = getWasbSpreadsheet_();
     const sheets = ss.getSheets().map(s => s.getName());
 
     const required = [
@@ -135,7 +135,7 @@ function healthCheck() {
   });
 
   _runHealthCheckItem_(report, 'Статуси SEND_PANEL', 'WARN', function () {
-    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SEND_PANEL_SHEET);
+    const sh = getWasbSpreadsheet_().getSheetByName(CONFIG.SEND_PANEL_SHEET);
     if (!sh || sh.getLastRow() < 3) {
       return {
         status: 'WARN',
@@ -159,7 +159,7 @@ function healthCheck() {
   });
 
   _runHealthCheckItem_(report, 'Активний місяць', 'CRITICAL', function () {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ss = getWasbSpreadsheet_();
     const activeMonth = getBotMonthSheetName_();
     const sh = ss.getSheetByName(activeMonth);
 
@@ -173,7 +173,7 @@ function healthCheck() {
   });
 
   _runHealthCheckItem_(report, 'Дати в активному місяці', 'CRITICAL', function () {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ss = getWasbSpreadsheet_();
     const activeMonth = getBotMonthSheetName_();
     const sh = ss.getSheetByName(activeMonth);
     if (!sh) throw new Error(`Аркуш "${activeMonth}" не знайдено`);
@@ -215,7 +215,7 @@ function healthCheck() {
   });
 
   _runHealthCheckItem_(report, 'PHONES — дані', 'CRITICAL', function () {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ss = getWasbSpreadsheet_();
     const sh = ss.getSheetByName(CONFIG.PHONES_SHEET);
     if (!sh) {
       return {

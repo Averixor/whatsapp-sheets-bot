@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Local debug reports
+_debug_person_card_lookup.txt
+_person_card_compact_report.txt
+
+# Logs/temp
+*.log
+*.tmp
+*.bak
+
+# VS Code local settings
+.vscode/
+.aider*
+
+node_modules/

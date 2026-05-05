@@ -156,7 +156,7 @@ function formatDetailedSummaryLegacy_(date, people) {
 function createDetailedSheet_(date, people) {
   const sh = ensureSheet_(CONFIG.DETAIL_SHEET);
   sh.clear();
-  sh.getRange(1, 1, 1, 4).setValues([['Дата', 'Група', 'Прізвище', 'Код']]).setFontWeight('bold').setHorizontalAlignment('center').setBackground('#f0f0f0');
+  sh.getRange(1, 1, 1, 4).setValues([['Date', 'Group', 'Surname', 'Code']]).setFontWeight('bold').setHorizontalAlignment('center').setBackground('#f0f0f0');
 
   const groupOf = (code) => {
     for (const [g, arr] of Object.entries(SUMMARY_GROUPS)) if (arr.includes(code)) return g;

@@ -927,7 +927,7 @@ var Stage7TestRunner = (function () {
     try {
       if (!runId) return;
 
-      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      var ss = getWasbSpreadsheet_();
       if (!ss) return;
 
       var sheet = ss.getSheetByName('TEST_RESULTS');
@@ -1644,7 +1644,7 @@ var Stage7TestRunner = (function () {
     try { env.scriptId = ScriptApp.getScriptId(); } catch (error5) {}
 
     try {
-      var ss = SpreadsheetApp.getActive();
+      var ss = getWasbSpreadsheet_();
       env.spreadsheetId = ss.getId();
       env.spreadsheetName = ss.getName();
       env.activeSheetName = ss.getActiveSheet().getName();
@@ -1715,7 +1715,7 @@ var Stage7TestRunner = (function () {
   }
 
   function getOrCreateSheet_(sheetName) {
-    var ss = SpreadsheetApp.getActive();
+    var ss = getWasbSpreadsheet_();
     var sheet = ss.getSheetByName(sheetName);
     if (!sheet) sheet = ss.insertSheet(sheetName);
     return sheet;
@@ -1796,7 +1796,7 @@ var Stage7TestRunner = (function () {
 
     if (!exists) {
       ScriptApp.newTrigger('stage7TestRunnerOnOpen')
-        .forSpreadsheet(SpreadsheetApp.getActive())
+        .forSpreadsheet(getWasbSpreadsheet_())
         .onOpen()
         .create();
     }

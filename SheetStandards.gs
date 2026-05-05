@@ -98,7 +98,7 @@ function _sheetStandardsSafeGetRange_(sheet, a1Notation) {
 function applyGlobalSheetStandards_() {
   var ss;
   try {
-    ss = SpreadsheetApp.getActive();
+    ss = getWasbSpreadsheet_();
   } catch (e) {
     _sheetStandardsLog_('Unable to get active spreadsheet', e);
     return;

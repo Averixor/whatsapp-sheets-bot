@@ -95,7 +95,7 @@ function _sshUniqueStrings_(items) {
 function _sshGetSpreadsheet_() {
   var ss = null;
   try {
-    ss = SpreadsheetApp.getActive();
+    ss = getWasbSpreadsheet_();
   } catch (e) {
     _sshLog_('Не вдалося отримати активну таблицю', e);
   }
@@ -179,18 +179,18 @@ function _sshBuildRegistry_() {
       name: _sshConfigValue_('LOG_SHEET', 'LOG'),
       schemaKey: 'log',
       headers: [
-        'Мітка часу',
-        'Дата звіту',
-        'Аркуш',
-        'Клітинка',
-        'ПІБ',
-        'Телефон',
-        'Код',
-        'Служба',
-        'Місце',
-        'Завдання',
-        'Повідомлення',
-        'Посилання'
+        'Timestamp',
+        'ReportDate',
+        'Sheet',
+        'Cell',
+        'FML',
+        'Phone',
+        'Code',
+        'Service',
+        'Place',
+        'Tasks',
+        'Message',
+        'Link'
       ],
       minRows: 2
     },
@@ -199,11 +199,11 @@ function _sshBuildRegistry_() {
       name: _sshConfigValue_('TEMPLATES_SHEET', 'TEMPLATES'),
       schemaKey: null,
       headers: [
-        'КЛЮЧ',
-        'ТЕКСТ',
-        'АКТИВНИЙ',
-        'ПІДКАЗКА ТЕГІВ',
-        'ПРИМІТКА'
+        'key',
+        'text',
+        'enabled',
+        'tag_hint',
+        'note'
       ],
       minRows: 2
     },
@@ -212,26 +212,26 @@ function _sshBuildRegistry_() {
       name: _sshConfigValue_('AUDIT_LOG_SHEET', 'AUDIT_LOG'),
       schemaKey: null,
       headers: [
-        'Мітка часу',
-        'ID Операції',
-        'Сценарій',
-        'Рівень',
-        'Статус',
-        'Ініціатор',
-        'Тестовий запуск',
-        'Частково',
-        'Зачеплені аркуші',
-        'Зачеплені об’єкти',
-        'Застосовані зміни',
-        'Пропущені зміни',
-        'Попередження',
-        'Дані JSON',
-        'Стан ДО',
-        'Стан ПІСЛЯ',
-        'Зміни JSON',
-        'Діагностика JSON',
-        'Повідомлення',
-        'Помилка'
+        'Timestamp',
+        'OperationId',
+        'Scenario',
+        'Level',
+        'Status',
+        'Initiator',
+        'DryRun',
+        'Partial',
+        'AffectedSheets',
+        'AffectedEntities',
+        'AppliedChanges',
+        'SkippedChanges',
+        'Warnings',
+        'PayloadJson',
+        'BeforeJson',
+        'AfterJson',
+        'ChangesJson',
+        'DiagnosticsJson',
+        'Message',
+        'Error'
       ],
       minRows: 2
     },
@@ -240,19 +240,19 @@ function _sshBuildRegistry_() {
       name: _sshConfigValue_('ACTIVE_OPERATIONS_SHEET', 'ACTIVE_OPERATIONS'),
       schemaKey: null,
       headers: [
-        'ID Операції',
-        'Сценарій',
-        'Відбиток',
-        'Статус',
-        'Початок',
-        'Останній сигнал',
-        'Ініціатор',
-        'Джерело запуску',
-        'Закінчується о',
-        'Власник блокування',
-        'ID батьківської операції',
-        'Нотатки',
-        'Дані JSON'
+        'OperationId',
+        'Scenario',
+        'Fingerprint',
+        'Status',
+        'StartedAt',
+        'LastHeartbeat',
+        'Initiator',
+        'RunSource',
+        'ExpiresAt',
+        'LockHolder',
+        'ParentOperationId',
+        'Notes',
+        'PayloadJson'
       ],
       minRows: 2
     },
@@ -261,18 +261,18 @@ function _sshBuildRegistry_() {
       name: _sshConfigValue_('ALERTS_LOG_SHEET', 'ALERTS_LOG'),
       schemaKey: null,
       headers: [
-        'Мітка часу',
-        'Тип',
-        'Важливість',
-        'Дія',
-        'Результат',
-        'Роль',
-        'Ім’я',
-        'Ключ користувача',
-        'Ел. пошта',
-        'Джерело',
-        'Повідомлення',
-        'Деталі JSON'
+        'Timestamp',
+        'Type',
+        'Severity',
+        'Action',
+        'Outcome',
+        'Role',
+        'DisplayName',
+        'UserKey',
+        'Email',
+        'Source',
+        'Message',
+        'DetailsJson'
       ],
       minRows: 2
     },
@@ -281,31 +281,31 @@ function _sshBuildRegistry_() {
       name: _sshConfigValue_('OPS_LOG_SHEET', 'OPS_LOG'),
       schemaKey: null,
       headers: [
-        'Час початку',
-        'Час завершення',
+        'TimestampStarted',
+        'TimestampFinished',
         'ID Операції',
-        'ID батьківської операції',
+        'ParentOperationId',
         'Сценарій',
-        'Вихідний сценарій',
+        'RawScenario',
         'Ініціатор',
-        'Джерело запуску',
-        'Статус',
-        'Відбиток',
-        'Зачеплені рядки',
-        'Зачеплені об’єкти',
-        'Результат перевірки',
-        'Потрібен ремонт',
-        'Помилка',
-        'Причина переходу',
-        'Нотатки',
-        'Вирішено операцією (ID)',
-        'Вирішено о',
-        'Статус вирішення',
-        'Останній сигнал',
-        'Закінчується о',
-        'Дані JSON',
-        'Результат JSON',
-        'Кількість чекпоїнтів'
+        'RunSource',
+        'status',
+        'Fingerprint',
+        'AffectedRows',
+        'AffectedEntities',
+        'VerificationResult',
+        'RepairNeeded',
+        'Error',
+        'TransitionReason',
+        'Notes',
+        'ResolvedByOperationId',
+        'ResolvedAt',
+        'ResolutionStatus',
+        'LastHeartbeat',
+        'ExpiresAt',
+        'PayloadJson',
+        'ResultJson',
+        'CheckpointCount'
       ],
       minRows: 2
     },
@@ -314,14 +314,14 @@ function _sshBuildRegistry_() {
       name: _sshConfigValue_('CHECKPOINTS_SHEET', 'CHECKPOINTS'),
       schemaKey: null,
       headers: [
-        'ID Операції',
-        'Індекс точки',
-        'Оброблено до',
-        'Останній об’єкт',
-        'Останній рядок',
-        'Мітка часу точки',
-        'Дані точки',
-        'Snapshot перевірки'
+        'OperationId',
+        'CheckpointIndex',
+        'ProcessedUpTo',
+        'LastProcessedEntity',
+        'LastProcessedRow',
+        'CheckpointTimestamp',
+        'CheckpointPayload',
+        'VerificationSnapshot'
       ],
       minRows: 2
     },
@@ -330,23 +330,23 @@ function _sshBuildRegistry_() {
       name: _sshConfigValue_('JOB_RUNTIME_LOG_SHEET', 'JOB_RUNTIME_LOG'),
       schemaKey: null,
       headers: [
-        'Час початку',
-        'Час завершення',
-        'Назва завдання',
-        'Статус',
-        'Джерело',
-        'Тривалість (мс)',
-        'Тестовий запуск',
-        'ID операції',
+        'TimestampStarted',
+        'TimestampFinished',
+        'jobName',
+        'status',
+        'source',
+        'durationMs',
+        'dryRun',
+        'operationId',
         'Повідомлення',
-        'Помилка',
-        'Email ініціатора',
-        'Ім’я ініціатора',
-        'Роль ініціатора',
-        'Позивний ініціатора',
-        'Точка входу',
-        'ID тригера',
-        'Нотатки'
+        'Error',
+        'initiatorEmail',
+        'initiatorName',
+        'initiatorRole',
+        'initiatorCallsign',
+        'entryPoint',
+        'triggerId',
+        'Notes'
       ],
       minRows: 2
     },
@@ -355,11 +355,11 @@ function _sshBuildRegistry_() {
       name: _sshConfigValue_('PHONES_SHEET', 'PHONES'),
       schemaKey: 'phones',
       headers: [
-        'ПІБ',
-        'Телефон',
-        'Роль',
-        'День народження',
-        '2 номер'
+        'FML',
+        'Phone',
+        'Role',
+        'Birthday',
+        'Phone2'
       ],
       minRows: 2
     },
@@ -368,13 +368,13 @@ function _sshBuildRegistry_() {
       name: _sshVacationConfigValue_('VACATIONS_SHEET', 'VACATIONS'),
       schemaKey: 'vacations',
       headers: [
-        'ПІБ',
-        'Початок включно',
-        'Кінець включно',
-        'Номер',
-        'Активна',
-        'Сповістити',
-        'Примітка'
+        'FML',
+        'StartDate',
+        'EndDate',
+        'VacationNo',
+        'Active',
+        'Notify',
+        'Note'
       ],
       minRows: 2
     },
@@ -383,10 +383,10 @@ function _sshBuildRegistry_() {
       name: _sshConfigValue_('DICT_SUM_SHEET', 'DICT_SUM'),
       schemaKey: 'dictSum',
       headers: [
-        'Код',
-        'Назва',
-        'Порядок',
-        'Показувати 0'
+        'Code',
+        'Label',
+        'SortOrder',
+        'ShowZero'
       ],
       minRows: 2
     },
@@ -395,10 +395,10 @@ function _sshBuildRegistry_() {
       name: _sshConfigValue_('DICT_SHEET', 'DICT'),
       schemaKey: 'dict',
       headers: [
-        'Код',
-        'Вид служби',
-        'Місце',
-        'Завдання'
+        'Code',
+        'Service',
+        'Place',
+        'Tasks'
       ],
       minRows: 2
     },
@@ -406,13 +406,13 @@ function _sshBuildRegistry_() {
       name: _sshConfigValue_('SEND_PANEL_SHEET', 'SEND_PANEL'),
       schemaKey: 'sendPanel',
       headers: [
-        'ПІБ',
-        'Телефон',
-        'Код',
-        'Завдання',
-        'Статус',
-        'Відправлено',
-        'Дія'
+        'FML',
+        'Phone',
+        'Code',
+        'Tasks',
+        'Status',
+        'Sent',
+        'Action'
       ],
       minRows: 3
     }

@@ -498,7 +498,7 @@ function runVacationEngine_(targetDate) {
   };
 
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ss = getWasbSpreadsheet_();
 
     if (!ss) {
       result.debug.error = 'Активну таблицю не знайдено';

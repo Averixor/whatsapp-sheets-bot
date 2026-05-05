@@ -71,7 +71,7 @@ function _loadTemplatesMap_() {
     } catch (e) {}
   }
 
-  const ss = SpreadsheetApp.getActive();
+  const ss = getWasbSpreadsheet_();
   const sh = ss.getSheetByName(TEMPLATES_SHEET_NAME);
   if (!sh) return {};
 

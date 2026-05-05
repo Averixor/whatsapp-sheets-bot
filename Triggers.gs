@@ -127,12 +127,12 @@ const Stage7Triggers_ = (function() {
       .create();
 
     ScriptApp.newTrigger('stage7SecurityAuditOnEdit')
-      .forSpreadsheet(SpreadsheetApp.getActive())
+      .forSpreadsheet(getWasbSpreadsheet_())
       .onEdit()
       .create();
 
     ScriptApp.newTrigger('stage7SecurityAuditOnChange')
-      .forSpreadsheet(SpreadsheetApp.getActive())
+      .forSpreadsheet(getWasbSpreadsheet_())
       .onChange()
       .create();
 

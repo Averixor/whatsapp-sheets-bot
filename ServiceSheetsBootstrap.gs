@@ -126,7 +126,7 @@ function _ssbBuildMaintenanceResponse_(success, message, data, scenario, warning
 
 function _ssbGetActiveSpreadsheet_() {
   try {
-    return SpreadsheetApp.getActive();
+    return getWasbSpreadsheet_();
   } catch (e) {
     _ssbLog_('Unable to get active spreadsheet', e);
     return null;

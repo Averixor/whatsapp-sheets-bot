@@ -162,7 +162,7 @@ const Stage7AuditTrail_ = (function () {
   }
 
   function _getSpreadsheet_() {
-    const ss = SpreadsheetApp.getActive();
+    const ss = getWasbSpreadsheet_();
     if (!ss) {
       throw new Error('Active spreadsheet is not available');
     }
@@ -444,5 +444,5 @@ function ensureAuditTrailSheet_() {
   if (!result.success) {
     throw new Error(result.error);
   }
-  return SpreadsheetApp.getActive().getSheetByName(result.sheet);
+  return getWasbSpreadsheet_().getSheetByName(result.sheet);
 }

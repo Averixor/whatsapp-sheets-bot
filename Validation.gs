@@ -137,7 +137,7 @@ function validateSendOperation_(payload) {
 function validateMonthSwitch_(monthSheetName) {
   const month = String(monthSheetName || '').trim();
   _stage7Assert_(/^\d{2}$/.test(month), 'validateMonthSwitch_', { month: month }, `Некоректна назва місяця "${month}"`);
-  const sh = SpreadsheetApp.getActive().getSheetByName(month);
+  const sh = getWasbSpreadsheet_().getSheetByName(month);
   _stage7Assert_(!!sh, 'validateMonthSwitch_', { month: month }, `Аркуш "${month}" не знайдено`);
   return {
     month: month,

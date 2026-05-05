@@ -37,7 +37,7 @@ function wasbAccessFindColHotfix_(headers, variants) {
 }
 
 function wasbAccessGetSheetHotfix_() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getWasbSpreadsheet_();
   var sheet = ss.getSheetByName(WASB_ACCESS_SHEET_NAME_HOTFIX_);
 
   if (!sheet) {
@@ -99,7 +99,7 @@ function wasbAccessApplyTemplateToRowHotfix_(sheet, row) {
 }
 
 function wasbAccessEnsureOutboxHotfix_() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getWasbSpreadsheet_();
   var sheet = ss.getSheetByName(WASB_ACCESS_KEYS_OUTBOX_SHEET_NAME_HOTFIX_);
 
   if (!sheet) {
@@ -302,7 +302,7 @@ function wasbInstallAccessSheetAutofillTriggerHotfix() {
   });
 
   ScriptApp.newTrigger('wasbAccessSheetOnEditAutofillHotfix_')
-    .forSpreadsheet(SpreadsheetApp.getActive())
+    .forSpreadsheet(getWasbSpreadsheet_())
     .onEdit()
     .create();
 

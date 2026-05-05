@@ -11,7 +11,7 @@ function readDictSum_() {
   const defaults = getDefaultDictSumRules_();
 
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ss = getWasbSpreadsheet_();
     if (!ss) return defaults;
 
     const sheetName =

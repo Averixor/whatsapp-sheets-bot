@@ -63,7 +63,7 @@ const OperationRepository_ = (function() {
     return _iso(date);
   }
 
-  function _ss() { return SpreadsheetApp.getActive(); }
+  function _ss() { return getWasbSpreadsheet_(); }
   function _tz() { return (typeof getTimeZone_ === 'function' ? getTimeZone_() : Session.getScriptTimeZone()) || Session.getScriptTimeZone(); }
   function _now() { return new Date(); }
   function _fmt(date, pattern) { return Utilities.formatDate(date instanceof Date ? date : new Date(date), _tz(), pattern); }

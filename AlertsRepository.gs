@@ -53,7 +53,7 @@ const AlertsRepository_ = (function () {
   }
 
   function _getSheet_() {
-    const ss = SpreadsheetApp.getActive();
+    const ss = getWasbSpreadsheet_();
     const name = _getSheetName_();
     let sh = ss.getSheetByName(name);
 

@@ -44,7 +44,7 @@ colorWeekendDateHeaders_(sheet, row, startCol, daysInMonth, year, month);
 function createNextMonthSheet() {
   const ui = SpreadsheetApp.getUi();
   try {
-    const ss = SpreadsheetApp.getActive();
+    const ss = getWasbSpreadsheet_();
     const src = ss.getActiveSheet();
     const srcName = String(src.getName()).trim();
 
@@ -84,7 +84,7 @@ function createNextMonthSheet() {
 
 /************ ПЕРЕМИКАННЯ БОТА НА ІНШИЙ МІСЯЦЬ ************/
 function switchBotToSheet() {
-  const ss = SpreadsheetApp.getActive();
+  const ss = getWasbSpreadsheet_();
   const months = ss.getSheets().map(s => s.getName()).filter(n => /^\d{2}$/.test(n)).sort();
   if (!months.length) return SpreadsheetApp.getUi().alert('✕ Немає аркушів місяців (01..12)');
 
@@ -118,7 +118,7 @@ function switchBotToSheet() {
 
 function switchBotToMonth_(monthSheetName) {
   setBotMonthSheetName_(monthSheetName);
-  const ss = SpreadsheetApp.getActive();
+  const ss = getWasbSpreadsheet_();
   const sh = ss.getSheetByName(monthSheetName);
   if (sh) sh.activate();
   SpreadsheetApp.getUi().toast(`Бот активний: ${monthSheetName}`, ' WhatsApp-Sheets-Bot', 3);

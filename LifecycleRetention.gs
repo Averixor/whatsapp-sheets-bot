@@ -78,9 +78,9 @@ function _retGetSpreadsheet_() {
   var ss = null;
 
   try {
-    ss = SpreadsheetApp.getActive();
+    ss = getWasbSpreadsheet_();
   } catch (e) {
-    _retLog_('Не вдалося отримати активну таблицю через SpreadsheetApp.getActive()', e);
+    _retLog_('Не вдалося отримати активну таблицю через getWasbSpreadsheet_()', e);
   }
 
   if (!ss) {

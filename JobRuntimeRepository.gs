@@ -80,7 +80,7 @@ const JobRuntimeRepository_ = (function() {
   }
 
   function _sheet() {
-    const ss = SpreadsheetApp.getActive();
+    const ss = getWasbSpreadsheet_();
     let sh = ss.getSheetByName(_sheetName());
     if (!sh) {
       sh = ss.insertSheet(_sheetName());

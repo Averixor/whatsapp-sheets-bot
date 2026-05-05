@@ -102,7 +102,7 @@ function _stage7BuildSendPanelWarnings_(stats) {
 }
 
 function _stage7CreateNextMonthCore_(payload) {
-  const ss = SpreadsheetApp.getActive();
+  const ss = getWasbSpreadsheet_();
   const explicitSource = payload && payload.sourceMonth ? validateMonthSwitch_(payload.sourceMonth).sheet : getBotSheet_();
   const src = explicitSource;
   const srcName = String(src.getName()).trim();
@@ -612,7 +612,7 @@ const Stage7UseCases_ = (function() {
       write: false,
       lock: false,
       execute: function() {
-        const ss = SpreadsheetApp.getActive();
+        const ss = getWasbSpreadsheet_();
         const months = ss.getSheets()
           .map(function(sheet) { return sheet.getName(); })
           .filter(function(name) { return /^\d{2}$/.test(name); })
@@ -943,7 +943,7 @@ const Stage7UseCases_ = (function() {
       verify: function(input, beforeState, plan, execution) {
         if (input.dryRun) return { ok: true, createdMonth: execution.result && execution.result.createdMonth || '', partial: false };
         const createdMonth = execution.result && execution.result.createdMonth || '';
-        const exists = !!SpreadsheetApp.getActive().getSheetByName(createdMonth);
+        const exists = !!getWasbSpreadsheet_().getSheetByName(createdMonth);
         return { ok: exists, createdMonth: createdMonth, partial: !exists, warnings: exists ? [] : ['Післяопераційна перевірка не знайшла створений місяць'] };
       }
     });
@@ -1002,7 +1002,7 @@ const Stage7UseCases_ = (function() {
   }
 
   function resolveRestartBotMonth_() {
-    const ss = SpreadsheetApp.getActive();
+    const ss = getWasbSpreadsheet_();
     let month = '';
 
     try { month = String(getBotMonthSheetName_() || '').trim(); } catch (_) {}
@@ -1170,7 +1170,7 @@ const Stage7UseCases_ = (function() {
             setBotMonthSheetName_(month);
             highlightActiveMonthTab_(month);
             try {
-              const sh = SpreadsheetApp.getActive().getSheetByName(month);
+              const sh = getWasbSpreadsheet_().getSheetByName(month);
               if (sh) sh.activate();
             } catch (_) {}
             return {

@@ -92,7 +92,7 @@ function debugSendPanelBlockedRowsManual() {
 
 
 function debugSendPanelSheetStateManual() {
-  var ss = SpreadsheetApp.getActive();
+  var ss = getWasbSpreadsheet_();
   var sheetName = (typeof CONFIG !== 'undefined' && CONFIG && CONFIG.SEND_PANEL_SHEET)
     ? CONFIG.SEND_PANEL_SHEET
     : 'SEND_PANEL';
@@ -233,7 +233,7 @@ function debugManualSheetAccess_() {
   };
 
   try {
-    var active = SpreadsheetApp.getActiveSpreadsheet();
+    var active = getWasbSpreadsheet_();
 
     if (active) {
       result.activeSpreadsheetOk = true;

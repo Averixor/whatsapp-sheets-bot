@@ -211,7 +211,7 @@ const SendPanelFastPaths_ = (function() {
     var safeDate = _normalizeDate_(dateStr);
     _assertAccess_('buildSendPanelFast', { requestedDate: safeDate });
 
-    var ss = SpreadsheetApp.getActive();
+    var ss = getWasbSpreadsheet_();
     var built = _fastBuildRowsForDate_(safeDate);
     var panel = ss.getSheetByName(CONFIG.SEND_PANEL_SHEET);
     var previousMeta = panel ? getSendPanelMetadata_(panel) : { date: '', month: '', hasMetadata: false };

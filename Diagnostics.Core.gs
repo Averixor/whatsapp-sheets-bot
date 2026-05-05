@@ -13,7 +13,7 @@ function isTestMode() {
 }
 
 function _getSS_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getWasbSpreadsheet_();
   if (!ss) throw new Error('Не вдалося отримати активну таблицю');
   return ss;
 }

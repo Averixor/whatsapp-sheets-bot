@@ -70,7 +70,7 @@ function apiStage7BootstrapSidebar() {
     ? AccessControl_.describe({ includeSensitiveDebug: false })
     : { role: 'guest', isAdmin: false, knownUser: false, reasonString: 'AccessControl_ недоступний' };
 
-  const ss = SpreadsheetApp.getActive();
+  const ss = getWasbSpreadsheet_();
   const months = ss.getSheets()
     .map(function(sheet) { return sheet.getName(); })
     .filter(function(name) { return /^\d{2}$/.test(name); })
@@ -96,7 +96,7 @@ function apiStage7BootstrapSidebar() {
 }
 
 function apiStage7GetMonthsList() {
-  const ss = SpreadsheetApp.getActive();
+  const ss = getWasbSpreadsheet_();
   const months = ss.getSheets()
     .map(function(sheet) { return sheet.getName(); })
     .filter(function(name) { return /^\d{2}$/.test(name); })

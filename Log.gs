@@ -1,6 +1,6 @@
 /************ LOG WRITER ************/
 function _ensureLogSheet_() {
-  const ss = SpreadsheetApp.getActive();
+  const ss = getWasbSpreadsheet_();
   let sh = ss.getSheetByName(CONFIG.LOG_SHEET);
 
   if (!sh) {

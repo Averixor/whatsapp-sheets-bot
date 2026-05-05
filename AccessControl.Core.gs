@@ -39,7 +39,7 @@ const LOCKOUT_ESCALATION_MS = Object.freeze([
 ]);
 
 const MAX_FAILED_ATTEMPTS_SHEET = 5;
-const MAX_SHEET_ROWS = 30;
+const MAX_SHEET_ROWS = 1000;
 const ROTATION_PERIOD_DAYS = 30;
 
 // ==================== РОЛІ ТА ПРАВА ====================
@@ -65,13 +65,13 @@ const ROLE_ORDER = Object.freeze({
 });
 
 const ROLE_METADATA = Object.freeze({
-  guest: Object.freeze({ label: 'Гість', note: 'Гість • лише безпечний перегляд' }),
-  viewer: Object.freeze({ label: 'Спостерігач', note: 'Спостерігач • тільки своя картка' }),
-  operator: Object.freeze({ label: 'Оператор', note: 'Оператор • робочий доступ до карток, зведень' }),
-  maintainer: Object.freeze({ label: 'Редактор', note: 'Редактор • розширений робочий доступ, перевірка і супровід' }),
-  admin: Object.freeze({ label: 'Адмін', note: 'Адмін • керування доступом, журналами і системними інструментами' }),
-  sysadmin: Object.freeze({ label: 'Сисадмін', note: 'Сисадмін • повне технічне обслуговування, repair і тригери' }),
-  owner: Object.freeze({ label: 'Власник', note: 'Власник • повний root-доступ до всієї системи' })
+  guest: Object.freeze({ label: 'Guest', note: 'Guest • safe read-only preview only' }),
+  viewer: Object.freeze({ label: 'Viewer', note: 'Viewer • own card only' }),
+  operator: Object.freeze({ label: 'Operator', note: 'Operator • working access to cards and summaries' }),
+  maintainer: Object.freeze({ label: 'Maintainer', note: 'Maintainer • extended diagnostics and maintenance access' }),
+  admin: Object.freeze({ label: 'Admin', note: 'Admin • access, logs, and system tools management' }),
+  sysadmin: Object.freeze({ label: 'Sysadmin', note: 'Sysadmin • full technical maintenance, repair, and triggers' }),
+  owner: Object.freeze({ label: 'Owner', note: 'Owner • full root access to the entire system' })
 });
 
 const SHEET_HEADERS = Object.freeze([

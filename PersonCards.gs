@@ -27,7 +27,7 @@ function _personCardJsString_(value) {
 
 function _getSheetByDateStr_(dateStr) {
   const d = DateUtils_.parseUaDate(dateStr);
-  const ss = SpreadsheetApp.getActive();
+  const ss = getWasbSpreadsheet_();
   if (d) {
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const sh = ss.getSheetByName(mm);
@@ -39,7 +39,7 @@ function _getSheetByDateStr_(dateStr) {
 function _getPrevMonthSheetByDateStr_(dateStr) {
   const d = DateUtils_.parseUaDate(dateStr);
   if (!d) return null;
-  const ss = SpreadsheetApp.getActive();
+  const ss = getWasbSpreadsheet_();
   const prev = new Date(d);
   prev.setMonth(prev.getMonth() - 1);
   const mm = String(prev.getMonth() + 1).padStart(2, '0');

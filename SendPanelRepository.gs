@@ -201,7 +201,7 @@ const SendPanelRepository_ = (function() {
   }
 
   function rebuild(dateStr) {
-    const ss = SpreadsheetApp.getActive();
+    const ss = getWasbSpreadsheet_();
     const built = buildRowsForDate(dateStr);
     let panel = ss.getSheetByName(CONFIG.SEND_PANEL_SHEET);
     const prevMeta = panel ? getSendPanelMetadata_(panel) : { month: '', date: '', hasMetadata: false };

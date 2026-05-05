@@ -11,7 +11,7 @@ var PersonsRepository_ = PersonsRepository_ || (function() {
   function getSheetByDate(dateStr) {
     const safeDate = normalizeDateStr(dateStr);
     const d = DateUtils_.parseUaDate(safeDate);
-    const ss = SpreadsheetApp.getActive();
+    const ss = getWasbSpreadsheet_();
     if (d) {
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       const sh = ss.getSheetByName(mm);
@@ -24,7 +24,7 @@ var PersonsRepository_ = PersonsRepository_ || (function() {
     const safeDate = normalizeDateStr(dateStr);
     const d = DateUtils_.parseUaDate(safeDate);
     if (!d) return null;
-    const ss = SpreadsheetApp.getActive();
+    const ss = getWasbSpreadsheet_();
     const prev = new Date(d);
     prev.setMonth(prev.getMonth() - 1);
     const mm = String(prev.getMonth() + 1).padStart(2, '0');

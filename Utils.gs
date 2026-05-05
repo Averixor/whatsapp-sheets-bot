@@ -227,7 +227,7 @@ function rangesIntersect_(r1, r2) {
 }
 
 function ensureSheet_(name) {
-  const ss = SpreadsheetApp.getActive();
+  const ss = getWasbSpreadsheet_();
   let sh = ss.getSheetByName(name);
   if (!sh) sh = ss.insertSheet(name);
   return sh;
@@ -235,16 +235,16 @@ function ensureSheet_(name) {
 
 function ensureLogHeader_(sheet) {
   if (sheet.getLastRow() > 0) return;
-  sheet.appendRow(['Час', 'Дата звіту', 'Аркуш', 'Клітинка', 'ПІБ', 'Телефон', 'Код', 'Послуга', 'Місце', 'Завдання', 'Повідомлення', 'Посилання']);
+  sheet.appendRow(['Timestamp', 'ReportDate', 'Sheet', 'Cell', 'FML', 'Phone', 'Code', 'Service', 'Place', 'Tasks', 'Message', 'Link']);
   sheet.getRange(1, 1, 1, 12).setFontWeight('bold').setBackground('#f0f0f0');
 }
 
-function cacheKeyPhones_() { return `PHONES_FLAT_V5_${SpreadsheetApp.getActive().getId()}`; }
-function cacheKeyPhonesIndex_() { return `PHONES_INDEX_V5_${SpreadsheetApp.getActive().getId()}`; }
-function cacheKeyPhonesProfiles_() { return `PHONES_PROFILES_V2_${SpreadsheetApp.getActive().getId()}`; }
-function cacheKeyDict_() { return `DICT_${SpreadsheetApp.getActive().getId()}`; }
-function cacheKeyDictSum_() { return `DICT_SUM_${SpreadsheetApp.getActive().getId()}`; }
-function cacheKeyTemplates_() { return `TEMPLATES_${SpreadsheetApp.getActive().getId()}`; }
+function cacheKeyPhones_() { return `PHONES_FLAT_V5_${getWasbSpreadsheet_().getId()}`; }
+function cacheKeyPhonesIndex_() { return `PHONES_INDEX_V5_${getWasbSpreadsheet_().getId()}`; }
+function cacheKeyPhonesProfiles_() { return `PHONES_PROFILES_V2_${getWasbSpreadsheet_().getId()}`; }
+function cacheKeyDict_() { return `DICT_${getWasbSpreadsheet_().getId()}`; }
+function cacheKeyDictSum_() { return `DICT_SUM_${getWasbSpreadsheet_().getId()}`; }
+function cacheKeyTemplates_() { return `TEMPLATES_${getWasbSpreadsheet_().getId()}`; }
 
 function _safeLoadPhonesMap_() {
   try {
@@ -274,7 +274,7 @@ function _getPhoneByFml_(fml) {
 function _getCallsignByFml_(fml) {
   if (!fml) return '';
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ss = getWasbSpreadsheet_();
     const phonesSheet = ss.getSheetByName(CONFIG.PHONES_SHEET);
     if (!phonesSheet || phonesSheet.getLastRow() < 2) return '';
     const data = phonesSheet.getRange(2, 1, phonesSheet.getLastRow() - 1, 3).getDisplayValues();
@@ -291,7 +291,7 @@ function _getCallsignByFml_(fml) {
 
 function clearCacheCore_() {
   CacheService.getScriptCache().removeAll([
-    'PHONES_' + SpreadsheetApp.getActive().getId(),
+    'PHONES_' + getWasbSpreadsheet_().getId(),
     cacheKeyPhones_(),
     cacheKeyPhonesIndex_(),
     cacheKeyPhonesProfiles_(),
@@ -309,7 +309,7 @@ function waClearCache() {
 }
 
 function _clearSheetDataPreserveHeaders_(sheetName, headerRows, ensureFn) {
-  const sh = SpreadsheetApp.getActive().getSheetByName(sheetName);
+  const sh = getWasbSpreadsheet_().getSheetByName(sheetName);
   if (!sh) {
     return { sheet: sheetName, cleared: false, exists: false, rowsCleared: 0 };
   }

@@ -31,9 +31,9 @@ function wasbAccessAutoFillOnEdit_(e) {
 }
 
 function wasbAccessAutoFillAll_() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getWasbSpreadsheet_();
   if (!ss) {
-    throw new Error('SpreadsheetApp.getActiveSpreadsheet() is empty. Запускайте з таблиці.');
+    throw new Error('getWasbSpreadsheet_() is empty. Запускайте з таблиці.');
   }
 
   var sheet = ss.getSheetByName('ACCESS');
@@ -60,9 +60,9 @@ function wasbAccessAutoFillAll_() {
 }
 
 function wasbInstallAccessAutoFillTrigger_() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getWasbSpreadsheet_();
   if (!ss) {
-    throw new Error('SpreadsheetApp.getActiveSpreadsheet() is empty. Відкрийте таблицю і запускайте звідти.');
+    throw new Error('getWasbSpreadsheet_() is empty. Відкрийте таблицю і запускайте звідти.');
   }
 
   var triggers = ScriptApp.getProjectTriggers();
@@ -326,13 +326,11 @@ function wasbAccessNormalizePhoneFallback_(value) {
 
 function wasbAccessRoleNoteFallback_(role) {
   var normalized = String(role || '').toLowerCase().trim();
-
-  if (normalized === 'owner') return 'Власник • повний root-доступ до всієї системи';
-  if (normalized === 'admin') return 'Адміністратор • керування доступом і системними діями';
-  if (normalized === 'maintainer') return 'Технічний супровід • діагностика та обслуговування';
-  if (normalized === 'operator') return 'Оператор • робота з панеллю та щоденними діями';
-  if (normalized === 'viewer') return 'Перегляд • доступ без змін';
-  if (normalized === 'guest') return 'Гість • доступ очікує підтвердження';
-
-  return 'Роль: ' + normalized;
+  if (normalized === 'owner') return 'Owner • full root access to the entire system';
+  if (normalized === 'admin') return 'Admin • access and system action management';
+  if (normalized === 'maintainer') return 'Maintainer • diagnostics and maintenance';
+  if (normalized === 'operator') return 'Operator • panel and daily actions';
+  if (normalized === 'viewer') return 'Viewer • read-only access';
+  if (normalized === 'guest') return 'Guest • access pending approval';
+  return 'Role: ' + normalized;
 }

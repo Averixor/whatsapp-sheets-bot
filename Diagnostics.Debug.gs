@@ -1,5 +1,5 @@
 function debugSendPanelNow() {
-  const ss = SpreadsheetApp.getActive();
+  const ss = getWasbSpreadsheet_();
   const sh = ss.getSheetByName(CONFIG.SEND_PANEL_SHEET);
 
   const out = {
@@ -40,7 +40,7 @@ function debugSendPanelNow() {
   );
 }
 function debugSendPanelBridge_() {
-  const ss = SpreadsheetApp.getActive();
+  const ss = getWasbSpreadsheet_();
   const sh = ss.getSheetByName(CONFIG.SEND_PANEL_SHEET);
 
   const out = {

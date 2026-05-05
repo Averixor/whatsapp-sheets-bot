@@ -204,7 +204,7 @@ function validateTriggers() {
 
 function getProtectedSheetsInfo() {
   const protectedSheets = _getProtectedSheets_();
-  const ss = SpreadsheetApp.getActive();
+  const ss = getWasbSpreadsheet_();
   const sheets = ss.getSheets();
 
   const existingSheetNames = [];

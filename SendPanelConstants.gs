@@ -86,7 +86,7 @@ function getSendPanelActionSentLabel_() {
 
 function resolveSendPanelFormulaArgSeparator_() {
   try {
-    const locale = String(SpreadsheetApp.getActive().getSpreadsheetLocale() || '').trim().toLowerCase();
+    const locale = String(getWasbSpreadsheet_().getSpreadsheetLocale() || '').trim().toLowerCase();
     if (!locale) return ';';
     const commaFirstLocales = ['en', 'zh', 'ja', 'ko'];
     return commaFirstLocales.some(function(prefix) {

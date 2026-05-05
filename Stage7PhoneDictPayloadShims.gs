@@ -24,7 +24,7 @@ function _stage7ShimFindHeaderCol_(headers, names, fallbackIndex) {
 }
 
 function loadPhonesIndex_() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getWasbSpreadsheet_();
   var sheetName = (typeof CONFIG !== 'undefined' && CONFIG && CONFIG.PHONES_SHEET) ? CONFIG.PHONES_SHEET : 'PHONES';
   var sheet = ss.getSheetByName(sheetName);
 
@@ -320,7 +320,7 @@ function findPhone_(query, options) {
 
 
 function loadDictMap_() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getWasbSpreadsheet_();
   var sheetName = (typeof CONFIG !== 'undefined' && CONFIG && CONFIG.DICT_SHEET) ? CONFIG.DICT_SHEET : 'DICT';
   var sheet = ss.getSheetByName(sheetName);
   var map = {};

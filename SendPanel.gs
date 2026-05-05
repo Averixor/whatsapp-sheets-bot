@@ -166,7 +166,7 @@ function clearSendPanelStateMap_(arg) {
 
 function resetSendPanelTodayState_() {
   const ok = clearSendPanelStateMap_(getSendPanelToday_());
-  const panel = SpreadsheetApp.getActive().getSheetByName(CONFIG.SEND_PANEL_SHEET);
+  const panel = getWasbSpreadsheet_().getSheetByName(CONFIG.SEND_PANEL_SHEET);
   if (panel) normalizeSendPanelDailyState_(panel);
   return ok;
 }
@@ -215,7 +215,7 @@ function deriveSendPanelStatusFromInputs_(fml, phone, code, tasks) {
 }
 
 function ensureSendPanelStatusFormula_(panel) {
-  const sheet = panel || SpreadsheetApp.getActive().getSheetByName(CONFIG.SEND_PANEL_SHEET);
+  const sheet = panel || getWasbSpreadsheet_().getSheetByName(CONFIG.SEND_PANEL_SHEET);
   if (!sheet) return false;
 
   const startRow = Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3;
@@ -270,7 +270,7 @@ function setSendPanelMetadata_(panel, botMonth, panelDate) {
 }
 
 function getSendPanelMetadata_(panel) {
-  const sheet = panel || SpreadsheetApp.getActive().getSheetByName(CONFIG.SEND_PANEL_SHEET);
+  const sheet = panel || getWasbSpreadsheet_().getSheetByName(CONFIG.SEND_PANEL_SHEET);
   if (!sheet) {
     return { month: '', date: '', hasMetadata: false };
   }
@@ -288,7 +288,7 @@ function getSendPanelMetadata_(panel) {
 
 function readSendPanelStateObjectMap_(panel) {
   const map = {};
-  const sheet = panel || SpreadsheetApp.getActive().getSheetByName(CONFIG.SEND_PANEL_SHEET);
+  const sheet = panel || getWasbSpreadsheet_().getSheetByName(CONFIG.SEND_PANEL_SHEET);
   if (!sheet || typeof sheet.getLastRow !== 'function') return map;
 
   const last = sheet.getLastRow();
@@ -316,7 +316,7 @@ function readSendPanelStateObjectMap_(panel) {
 }
 
 function normalizeSendPanelDailyState_(panel) {
-  panel = panel || SpreadsheetApp.getActive().getSheetByName(CONFIG.SEND_PANEL_SHEET);
+  panel = panel || getWasbSpreadsheet_().getSheetByName(CONFIG.SEND_PANEL_SHEET);
   if (!panel) return false;
 
   ensureSendPanelStatusFormula_(panel);
@@ -357,7 +357,7 @@ function normalizeSendPanelDailyState_(panel) {
 function rebuildSendPanelCore_() {
   cleanupOldSendPanelStateMaps_(7);
 
-  const ss = SpreadsheetApp.getActive();
+  const ss = getWasbSpreadsheet_();
   const source = getBotSheet_();
   let panel = ss.getSheetByName(CONFIG.SEND_PANEL_SHEET);
   if (!panel) panel = ss.insertSheet(CONFIG.SEND_PANEL_SHEET);
@@ -439,7 +439,7 @@ function rebuildSendPanelCore_() {
 }
 
 function readSendPanelSidebarData_() {
-  const panel = SpreadsheetApp.getActive().getSheetByName(CONFIG.SEND_PANEL_SHEET);
+  const panel = getWasbSpreadsheet_().getSheetByName(CONFIG.SEND_PANEL_SHEET);
   if (!panel) return [];
 
   normalizeSendPanelDailyState_(panel);
@@ -492,7 +492,7 @@ function generateSendPanel() {
 
 function sendAllFromSendPanel() {
   const ui = SpreadsheetApp.getUi();
-  const panel = SpreadsheetApp.getActive().getSheetByName(CONFIG.SEND_PANEL_SHEET);
+  const panel = getWasbSpreadsheet_().getSheetByName(CONFIG.SEND_PANEL_SHEET);
   if (!panel) return ui.alert('Спочатку створіть панель');
 
   normalizeSendPanelDailyState_(panel);
@@ -530,7 +530,7 @@ function sendAllFromSendPanel() {
 }
 
 function markSendPanelSent_(row) {
-  const panel = SpreadsheetApp.getActive().getSheetByName(CONFIG.SEND_PANEL_SHEET);
+  const panel = getWasbSpreadsheet_().getSheetByName(CONFIG.SEND_PANEL_SHEET);
   if (!panel) return false;
 
   const fml = String(panel.getRange(row, 1).getDisplayValue() || '').trim();
@@ -555,7 +555,7 @@ function markSendPanelSent_(row) {
 }
 
 function markSendPanelUnsent_(row) {
-  const panel = SpreadsheetApp.getActive().getSheetByName(CONFIG.SEND_PANEL_SHEET);
+  const panel = getWasbSpreadsheet_().getSheetByName(CONFIG.SEND_PANEL_SHEET);
   if (!panel) return false;
 
   const fml = String(panel.getRange(row, 1).getDisplayValue() || '').trim();

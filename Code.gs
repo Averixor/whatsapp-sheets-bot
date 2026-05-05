@@ -24,7 +24,7 @@ const CONFIG = {
   COMMANDER_ROLE: 'ГРАФ',
 
   // Звіти та історія
-  DETAIL_SHEET: 'ЗВЕДЕННЯ_ПО_ДНЯХ',
+  DETAIL_SHEET: 'DAILY_SUMMARIES',
 
   // Візуалізація
   ACTIVE_MONTH_TAB_COLOR: '#fbbc04',
@@ -121,14 +121,14 @@ function getBotMonthSheetName_() {
   const props = PropertiesService.getDocumentProperties();
   const p = props.getProperty(CONFIG.BOT_MONTH_PROP_KEY);
   const name = (p && String(p).trim()) ? String(p).trim() : CONFIG.TARGET_SHEET;
-  const ss = SpreadsheetApp.getActive();
+  const ss = getWasbSpreadsheet_();
   return ss.getSheetByName(name) ? name : CONFIG.TARGET_SHEET;
 }
 
 function setBotMonthSheetName_(name) {
   name = String(name || '').trim();
   if (!name) throw new Error('Порожня назва аркуша');
-  const ss = SpreadsheetApp.getActive();
+  const ss = getWasbSpreadsheet_();
   const sh = ss.getSheetByName(name);
   if (!sh) throw new Error(`Аркуш "${name}" не знайдено`);
   PropertiesService.getDocumentProperties().setProperty(CONFIG.BOT_MONTH_PROP_KEY, name);
@@ -136,7 +136,7 @@ function setBotMonthSheetName_(name) {
 }
 
 function getBotSheet_() {
-  const ss = SpreadsheetApp.getActive();
+  const ss = getWasbSpreadsheet_();
   const name = getBotMonthSheetName_();
   const sh = ss.getSheetByName(name);
   if (!sh) throw new Error(`Активний аркуш бота "${name}" не знайдено`);
@@ -144,7 +144,7 @@ function getBotSheet_() {
 }
 
 function highlightActiveMonthTab_(activeName) {
-  const ss = SpreadsheetApp.getActive();
+  const ss = getWasbSpreadsheet_();
   const sheets = ss.getSheets();
   sheets.forEach(s => {
     const n = s.getName();
@@ -345,7 +345,7 @@ function cleanupDuplicateTriggers(functionName) {
 /** Діагностика аркуша PHONES — кнопка "📞 Діагностика" */
 function debugPhones() {
   try {
-    const ss = SpreadsheetApp.getActive();
+    const ss = getWasbSpreadsheet_();
     const sheet = ss.getSheetByName(CONFIG.PHONES_SHEET);
 
     if (!sheet) {

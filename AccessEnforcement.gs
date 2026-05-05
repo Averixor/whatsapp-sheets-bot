@@ -958,7 +958,7 @@ function stage7SecurityAuditOnEdit(e) {
 
 function stage7SecurityAuditOnChange(e) {
   try {
-    var source = (e && e.source) ? e.source : SpreadsheetApp.getActive();
+    var source = (e && e.source) ? e.source : getWasbSpreadsheet_();
     if (!source) return;
 
     var changeType = (e && e.changeType) ? _safeStringForTrigger_(e.changeType, 'OTHER').toUpperCase() : 'OTHER';

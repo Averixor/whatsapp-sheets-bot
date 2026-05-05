@@ -685,7 +685,7 @@ function handleAccessSheetEdit(e) {
 
   if (emailCol && column === emailCol && numColumns === 1 && numRows === 1) {
     var email = normalizeEmail_(range.getValue());
-    if (email && email.indexOf('@') === -1) { range.setValue(''); SpreadsheetApp.getActive().toast('Некоректний email', 'Помилка', 3); }
+    if (email && email.indexOf('@') === -1) { range.setValue(''); getWasbSpreadsheet_().toast('Некоректний email', 'Помилка', 3); }
   }
 
   _invalidateAccessCaches_();
@@ -959,31 +959,19 @@ function testAccessControl_() {
 }
 
 function smokeTestAccessControl_() {
-  var results = {
-    describe: null,
-    bootstrapSheet: null,
-    validate: null,
-    diagnostics: null,
-    allPassed: false,
-    error: null
-  };
-
-  try {
-    results.describe = AccessControl_.describe();
-    results.validate = AccessControl_.validateAccessSheet();
-    results.diagnostics = AccessControl_.runAccessDiagnostics();
-    results.bootstrapSheet = AccessControl_.bootstrapSheet();
-    results.allPassed = true;
-  } catch (e) {
-    results.allPassed = false;
-    results.error = e && e.message ? e.message : String(e);
+  var results = { describe: null, validate: null, diagnostics: null, bootstrapSheet: null, allPassed: false, failedStep: '', error: null };
+  function runStep(name, fn) {
+    try { results[name] = fn(); Logger.log('[ACCESS SMOKE OK] ' + name); return true; }
+    catch (e) { results.failedStep = name; results.error = '[' + name + '] ' + (e && e.message ? e.message : String(e)); Logger.log('[ACCESS SMOKE FAIL] ' + results.error); return false; }
   }
-
+  if (!runStep('describe', function () { return AccessControl_.describe(); })) return results;
+  if (!runStep('validate', function () { return AccessControl_.validateAccessSheet(); })) return results;
+  if (!runStep('diagnostics', function () { return AccessControl_.runAccessDiagnostics(); })) return results;
+  var schemaOk = !!(results.diagnostics && results.diagnostics.schema && results.diagnostics.schema.present === true && results.diagnostics.schema.headersOk === true);
+  if (schemaOk) { results.bootstrapSheet = { skipped: true, reason: 'ACCESS schema already present and headers OK' }; Logger.log('[ACCESS SMOKE OK] bootstrapSheet skipped: schema already OK'); }
+  else if (!runStep('bootstrapSheet', function () { return AccessControl_.bootstrapSheet(); })) return results;
+  results.allPassed = true;
   Logger.log('=== SMOKE TEST ===');
-  Logger.log('All functions executed: ' + results.allPassed);
-  if (!results.allPassed) {
-    Logger.log('Error: ' + results.error);
-  }
-
+  Logger.log(JSON.stringify(results, null, 2));
   return results;
 }

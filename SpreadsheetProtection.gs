@@ -261,7 +261,7 @@ function applySpreadsheetProtections_(options) {
 
   let ss;
   try {
-    ss = SpreadsheetApp.getActive();
+    ss = getWasbSpreadsheet_();
   } catch (error) {
     summary.warnings.push('Не вдалося отримати активну таблицю: ' + (error && error.message ? error.message : error));
     return summary;

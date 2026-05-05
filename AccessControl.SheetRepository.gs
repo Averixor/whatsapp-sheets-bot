@@ -88,60 +88,41 @@ function _invalidateAccessRepoCachesSafe_(options) {
 
 function _getAccessHeaderDisplayLabels_() {
   return {
-    email: 'електронна пошта',
-    phone: 'телефон',
-    role: 'роль',
-    enabled: 'активний',
-    note: 'примітка',
-    display_name: 'імʼя, що відображається',
-    person_callsign: 'позивний користувача',
-    self_bind_allowed: 'дозволена самостійна привʼязка',
-    user_key_current_hash: 'хеш поточного ключа',
-    user_key_prev_hash: 'хеш попереднього ключа',
-    last_seen_at: 'час останнього візиту',
-    last_rotated_at: 'час останнього оновлення',
-    failed_attempts: 'невдалих спроб',
-    locked_until_ms: 'заблоковано до (мс)',
-    login: 'логін',
-    password_hash: 'хеш пароля',
-    password_salt: 'сіль пароля',
-    registration_status: 'статус реєстрації',
-    preferred_contact: 'бажаний спосіб звʼязку',
-    surname: 'прізвище',
-    first_name: 'імʼя',
-    request_user_key_hash: 'хеш ключа із запиту',
-    request_created_at: 'час створення запиту',
-    temporary_password_plain: 'тимчасовий пароль (текст)',
-    temporary_password_hash: 'хеш тимчасового пароля',
-    temporary_password_salt: 'сіль тимчасового пароля',
-    temporary_password_expires_at: 'тимчасовий пароль діє до',
-    temporary_password_used_at: 'час використання тимчасового пароля',
-    approved_by: 'ким схвалено',
-    approved_at: 'час схвалення',
-    activated_at: 'час активації',
-    telegram_username: 'імʼя користувача Telegram'
+    email: 'email', phone: 'phone', role: 'role', enabled: 'enabled', note: 'note',
+    display_name: 'display_name', person_callsign: 'person_callsign', self_bind_allowed: 'self_bind_allowed',
+    user_key_current_hash: 'user_key_current_hash', user_key_prev_hash: 'user_key_prev_hash',
+    last_seen_at: 'last_seen_at', last_rotated_at: 'last_rotated_at', failed_attempts: 'failed_attempts',
+    locked_until_ms: 'locked_until_ms', login: 'login', password_hash: 'password_hash', password_salt: 'password_salt',
+    registration_status: 'registration_status', preferred_contact: 'preferred_contact', surname: 'surname', first_name: 'first_name',
+    request_user_key_hash: 'request_user_key_hash', request_created_at: 'request_created_at', temporary_password_plain: 'temporary_password_plain',
+    temporary_password_hash: 'temporary_password_hash', temporary_password_salt: 'temporary_password_salt', temporary_password_expires_at: 'temporary_password_expires_at',
+    temporary_password_used_at: 'temporary_password_used_at', approved_by: 'approved_by', approved_at: 'approved_at', activated_at: 'activated_at',
+    telegram_username: 'telegram_username'
   };
 }
 
 function _getAccessHeaderAliasMap_() {
   var labels = _getAccessHeaderDisplayLabels_();
   var aliases = {};
-  Object.keys(labels).forEach(function(key) {
-    aliases[String(labels[key] || '').trim().toLowerCase()] = key;
-  });
-
-  aliases.email = 'email';
-  aliases['пошта'] = 'email';
-  aliases['телефон'] = 'phone';
-  aliases['номер телефону'] = 'phone';
-  aliases['роль доступу'] = 'role';
-  aliases['активний користувач'] = 'enabled';
-  aliases['позивний'] = 'person_callsign';
-  aliases['по батькові'] = 'patronymic';
-  aliases['отчество'] = 'patronymic';
-  aliases['посада'] = 'position_title';
-  aliases['должность'] = 'position_title';
-  aliases.position_title = 'position_title';
+  Object.keys(labels).forEach(function(key) { aliases[String(labels[key] || '').trim().toLowerCase()] = key; });
+  var legacy = {
+    'електронна пошта':'email','пошта':'email','email':'email','телефон':'phone','номер телефону':'phone','phone':'phone',
+    'роль':'role','роль доступу':'role','role':'role','активний':'enabled','активна':'enabled','активний користувач':'enabled','enabled':'enabled',
+    'примітка':'note','замітка':'note','note':'note','імʼя, що відображається':'display_name','ім’я, що відображається':'display_name',"ім'я, що відображається":'display_name','display name':'display_name','display_name':'display_name',
+    'позивний користувача':'person_callsign','позивний':'person_callsign','callsign':'person_callsign','person_callsign':'person_callsign',
+    'дозволена самостійна привʼязка':'self_bind_allowed','дозволена самостійна прив’язка':'self_bind_allowed',"дозволена самостійна прив'язка":'self_bind_allowed','self_bind_allowed':'self_bind_allowed',
+    'хеш поточного ключа':'user_key_current_hash','user_key_current_hash':'user_key_current_hash','хеш попереднього ключа':'user_key_prev_hash','user_key_prev_hash':'user_key_prev_hash',
+    'час останнього візиту':'last_seen_at','last_seen_at':'last_seen_at','час останнього оновлення':'last_rotated_at','last_rotated_at':'last_rotated_at','невдалих спроб':'failed_attempts','failed_attempts':'failed_attempts','заблоковано до (мс)':'locked_until_ms','locked_until_ms':'locked_until_ms',
+    'логін':'login','login':'login','хеш пароля':'password_hash','password_hash':'password_hash','сіль пароля':'password_salt','password_salt':'password_salt',
+    'статус реєстрації':'registration_status','registration_status':'registration_status','бажаний спосіб звʼязку':'preferred_contact','preferred_contact':'preferred_contact',
+    'прізвище':'surname','фамілія':'surname','surname':'surname','імʼя':'first_name','ім’я':'first_name',"ім'я":'first_name','імя':'first_name','first_name':'first_name',
+    'хеш ключа із запиту':'request_user_key_hash','request_user_key_hash':'request_user_key_hash','час створення запиту':'request_created_at','request_created_at':'request_created_at',
+    'тимчасовий пароль (текст)':'temporary_password_plain','temporary_password_plain':'temporary_password_plain','хеш тимчасового пароля':'temporary_password_hash','temporary_password_hash':'temporary_password_hash','сіль тимчасового пароля':'temporary_password_salt','temporary_password_salt':'temporary_password_salt',
+    'тимчасовий пароль діє до':'temporary_password_expires_at','термін дії тимчасового пароля':'temporary_password_expires_at','temporary_password_expires_at':'temporary_password_expires_at','час використання тимчасового пароля':'temporary_password_used_at','temporary_password_used_at':'temporary_password_used_at',
+    'ким схвалено':'approved_by','approved_by':'approved_by','час схвалення':'approved_at','approved_at':'approved_at','час активації':'activated_at','activated_at':'activated_at','імʼя користувача telegram':'telegram_username','telegram_username':'telegram_username',
+    'по батькові':'patronymic','отчество':'patronymic','посада':'position_title','должность':'position_title','position_title':'position_title'
+  };
+  Object.keys(legacy).forEach(function(name) { aliases[String(name || '').trim().toLowerCase()] = legacy[name]; });
   return aliases;
 }
 
@@ -304,7 +285,7 @@ function _buildRoleValidationRule_() {
   return SpreadsheetApp.newDataValidation()
     .requireValueInList(roleValues, true)
     .setAllowInvalid(false)
-    .setHelpText('Оберіть роль: ' + roleValues.join(', '))
+    .setHelpText('Choose role: ' + roleValues.join(', '))
     .build();
 }
 
@@ -346,7 +327,7 @@ function _applyEmailValidation_(sh) {
   var rule = SpreadsheetApp.newDataValidation()
     .requireTextIsEmail()
     .setAllowInvalid(false)
-    .setHelpText('Введіть коректну email адресу')
+    .setHelpText('Enter a valid email address')
     .build();
   sh.getRange(2, col, maxRows - 1, 1).setDataValidation(rule);
 }
@@ -354,23 +335,27 @@ function _applyEmailValidation_(sh) {
 function _applyEnabledValidation_(sh) {
   var col = _getHeaderMap_(sh).enabled;
   if (!col) return;
+  var maxRows = _getSafeMaxSheetRows_(sh);
+  if (maxRows < 2) return;
   var rule = SpreadsheetApp.newDataValidation()
     .requireValueInList(['TRUE', 'FALSE'], true)
     .setAllowInvalid(false)
-    .setHelpText('TRUE - активний, FALSE - заблокований')
+    .setHelpText('TRUE - enabled, FALSE - disabled')
     .build();
-  _setSingleRowValidation_(sh, col, rule);
+  sh.getRange(2, col, maxRows - 1, 1).setDataValidation(rule);
 }
 
 function _applySelfBindAllowedValidation_(sh) {
   var col = _getHeaderMap_(sh).self_bind_allowed;
   if (!col) return;
+  var maxRows = _getSafeMaxSheetRows_(sh);
+  if (maxRows < 2) return;
   var rule = SpreadsheetApp.newDataValidation()
     .requireValueInList(['TRUE', 'FALSE'], true)
     .setAllowInvalid(false)
-    .setHelpText('TRUE — користувач може сам завершити реєстрацію')
+    .setHelpText('TRUE - user may finish self-binding')
     .build();
-  _setSingleRowValidation_(sh, col, rule);
+  sh.getRange(2, col, maxRows - 1, 1).setDataValidation(rule);
 }
 
 function _getAccessRegistrationStatusValues_() {
@@ -380,12 +365,14 @@ function _getAccessRegistrationStatusValues_() {
 function _applyRegistrationStatusValidation_(sh) {
   var col = _getHeaderMap_(sh).registration_status;
   if (!col) return;
+  var maxRows = _getSafeMaxSheetRows_(sh);
+  if (maxRows < 2) return;
   var rule = SpreadsheetApp.newDataValidation()
     .requireValueInList(_getAccessRegistrationStatusValues_(), true)
     .setAllowInvalid(false)
-    .setHelpText('Зазвичай статус змінює система: pending_review → key_sent → active')
+    .setHelpText('Usually changed by system: pending_review → approved/key_sent → active')
     .build();
-  _setSingleRowValidation_(sh, col, rule);
+  sh.getRange(2, col, maxRows - 1, 1).setDataValidation(rule);
 }
 
 // ---------------------------------------------------------------------------
