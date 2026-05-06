@@ -248,7 +248,6 @@ function toggleRaportRemindersFromSidebar(enabled) {
     };
   }
 }
-
 function getRaportRemindersState() {
   try {
     return {
@@ -262,21 +261,37 @@ function getRaportRemindersState() {
     };
   }
 }
-
 /************ МЕНЮ ************/
-function onOpen() {
+function onOpen(e) {
   try {
-    highlightActiveMonthTab_(getBotMonthSheetName_());
-    if (typeof AccessControl_ === 'object' && AccessControl_.refreshAccessSheetUi) {
-      try { AccessControl_.refreshAccessSheetUi({ forceRewriteNotes: false }); } catch (_) {}
-    }
-    const wasbMenu = SpreadsheetApp.getUi()
+    SpreadsheetApp.getUi()
       .createMenu('WASB')
-      .addItem('📱 ПАНЕЛЬ', 'showSidebar');
-
-    wasbMenu.addToUi();
+      .addItem('📱 ПАНЕЛЬ', 'showSidebar')
+      .addSeparator()
+      .addItem('🔄 Оновити меню', 'onOpen')
+      .addToUi();
   } catch (err) {
-    console.error('onOpen error:', err);
+    console.error('onOpen menu error:', err);
+  }
+
+  try {
+    if (typeof highlightActiveMonthTab_ === 'function' && typeof getBotMonthSheetName_ === 'function') {
+      highlightActiveMonthTab_(getBotMonthSheetName_());
+    }
+  } catch (err1) {
+    console.error('onOpen highlightActiveMonthTab_ error:', err1);
+  }
+
+  try {
+    if (
+      typeof AccessControl_ === 'object' &&
+      AccessControl_ &&
+      typeof AccessControl_.refreshAccessSheetUi === 'function'
+    ) {
+      AccessControl_.refreshAccessSheetUi({ forceRewriteNotes: false });
+    }
+  } catch (err2) {
+    console.error('onOpen refreshAccessSheetUi error:', err2);
   }
 }
 
@@ -467,3 +482,5 @@ function debugPhones() {
     };
   }
 }
+
+

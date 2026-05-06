@@ -530,7 +530,7 @@ function runVacationEngine_(targetDate) {
     today.setHours(12, 0, 0, 0);
 
     const tz = _veTimeZone_();
-    const raportEnabled = _veRaportEnabled();
+    const raportEnabled = _veRaportEnabled_();
     const commanderPhone = VACATION_ENGINE_CONFIG.NOTIFY_COMMANDER
       ? _veCommanderPhone_()
       : '';
