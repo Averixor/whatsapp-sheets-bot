@@ -136,6 +136,10 @@ const Stage7Triggers_ = (function() {
       .onChange()
       .create();
 
+    try {
+      PropertiesService.getDocumentProperties().setProperty('STAGE7:MANAGED_TRIGGERS_INSTALLED_AT', new Date().toISOString());
+    } catch (_) {}
+
     return {
       removed: removed,
       installed: Object.keys(_registry()).length,

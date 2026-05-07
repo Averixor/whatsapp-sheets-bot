@@ -164,42 +164,48 @@ function testCommanderPhone() {
   try {
     const phoneIndex = typeof loadPhonesIndex_ === 'function' ? loadPhonesIndex_() : null;
     const role = CONFIG.COMMANDER_ROLE;
-    let result = `🔍 ПОШУК ТЕЛЕФОНУ КОМАНДИРА
-`;
-    result += `============================
-
-`;
-    result += `Роль в конфігу: "${role}"
-
-`;
-    result += `📞 Canonical lookup: ${findPhone_({ role: role }) || '✕'}
-`;
-    result += `📞 byRole[${role}]: ${phoneIndex && phoneIndex.byRole ? (phoneIndex.byRole[role] || phoneIndex.byRole[_normCallsignKey_(role)] || '✕') : '✕'}
-`;
-    result += `📞 byCallsign[${role}]: ${phoneIndex && phoneIndex.byCallsign ? (phoneIndex.byCallsign[role] || phoneIndex.byCallsign[_normCallsignKey_(role)] || '✕') : '✕'}
-
-`;
-    result += `📋 Можливі кандидати:
-`;
+    const lines = [];
+    lines.push('🔍 ПОШУК ТЕЛЕФОНУ КОМАНДИРА');
+    lines.push('============================');
+    lines.push('');
+    lines.push(`Позивний в конфігу: "${role}"`);
+    lines.push('');
+    lines.push(`📞 Canonical lookup: ${findPhone_({ role: role }) || '✕'}`);
+    lines.push(
+      `📞 byRole[${role}]: ${
+        phoneIndex && phoneIndex.byRole
+          ? (phoneIndex.byRole[role] || phoneIndex.byRole[_normCallsignKey_(role)] || '✕')
+          : '✕'
+      }`
+    );
+    lines.push(
+      `📞 byCallsign[${role}]: ${
+        phoneIndex && phoneIndex.byCallsign
+          ? (phoneIndex.byCallsign[role] || phoneIndex.byCallsign[_normCallsignKey_(role)] || '✕')
+          : '✕'
+      }`
+    );
+    lines.push('');
+    lines.push('📋 Можливі кандидати:');
+    lines.push('');
 
     let found = 0;
     (phoneIndex && Array.isArray(phoneIndex.items) ? phoneIndex.items : []).forEach(function(item) {
       const probe = [item.role, item.callsign, item.fml].filter(Boolean).join(' | ');
       const upperProbe = probe.toUpperCase();
       if (upperProbe.indexOf('КОМАНДИР') !== -1 || upperProbe.indexOf('ГРАФ') !== -1 || upperProbe.indexOf(String(role || '').toUpperCase()) !== -1) {
-        result += `  ${probe} → ${item.phone || '—'}
-`;
+        lines.push(`  ${probe} → ${item.phone || '—'}`);
         found++;
       }
     });
 
     if (!found) {
-      result += `  (нічого не знайдено)
-
-`;
-      result += `✕ В листі PHONES немає запису для командира. Додайте роль або позивний "${role}".`;
+      lines.push('  (нічого не знайдено)');
+      lines.push('');
+      lines.push(`✕ В листі PHONES немає запису для командира. Додайте роль або позивний "${role}".`);
     }
 
+    const result = lines.join('\n');
     ui.alert('📱 Діагностика командира', result, ui.ButtonSet.OK);
   } catch (e) {
     ui.alert('✕ Помилка', String(e && e.message ? e.message : e), ui.ButtonSet.OK);

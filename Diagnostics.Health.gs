@@ -230,7 +230,7 @@ function healthCheck() {
     return {
       status: rows > 0 ? 'OK' : 'FAIL',
       details: `Рядків з даними: ${rows}`,
-      howTo: rows > 0 ? '' : 'Заповніть PHONES: A=ПІБ, B=Телефон, C=Роль'
+      howTo: rows > 0 ? '' : 'Заповніть PHONES: A=ПІБ, B=Телефон, C=Позивний'
     };
   });
 
@@ -266,8 +266,8 @@ function healthCheck() {
       status: phone ? 'OK' : 'FAIL',
       details: phone
         ? `${CONFIG.COMMANDER_ROLE}: ${phone}`
-        : `Роль "${CONFIG.COMMANDER_ROLE}" не знайдена в PHONES`,
-      howTo: phone ? '' : `У PHONES в колонці C має бути роль "${CONFIG.COMMANDER_ROLE}"`
+        : `Позивний "${CONFIG.COMMANDER_ROLE}" не знайдено в PHONES`,
+      howTo: phone ? '' : `У PHONES в колонці C має бути позивний "${CONFIG.COMMANDER_ROLE}"`
     };
   });
 
@@ -380,27 +380,35 @@ function healthCheck() {
 
     const vac = triggers.filter(t => t.getHandlerFunction() === 'autoVacationReminder');
     const bd = triggers.filter(t => t.getHandlerFunction() === 'autoBirthdayReminder');
+    const stage7Daily = triggers.filter(t => t.getHandlerFunction() === 'stage7JobDailyVacationsAndBirthdays');
 
     const hasVac = vac.length > 0;
     const hasBd = bd.length > 0;
+    const hasStage7Daily = stage7Daily.length > 0;
     const dupVac = vac.length > 1;
     const dupBd = bd.length > 1;
+    const dupStage7 = stage7Daily.length > 1;
 
-    const ok = hasVac && hasBd && !dupVac && !dupBd;
+    const okStage7 = hasStage7Daily && !dupStage7;
+    const okLegacy = hasVac && hasBd && !dupVac && !dupBd;
+    const ok = okStage7 || okLegacy;
 
     return {
       status: ok ? 'OK' : 'WARN',
       severity: 'WARN',
       details: [
+        `Stage7 daily job: ${hasStage7Daily ? `✓ (${stage7Daily.length} шт)` : '—'}`,
         `Відпустки: ${hasVac ? `✓ (${vac.length} шт)` : '✕ немає'}`,
         `ДН: ${hasBd ? `✓ (${bd.length} шт)` : '✕ немає'}`,
-        dupVac || dupBd ? '⚠ Є дублікати тригерів' : ''
+        (dupStage7 || dupVac || dupBd) ? '⚠ Є дублікати тригерів' : ''
       ].filter(Boolean).join('\n'),
-      howTo: (!hasVac || !hasBd)
-        ? 'Натисніть "⏰ Створити тригер"'
-        : (dupVac || dupBd)
-          ? 'Натисніть "🧹 Дублі"'
-          : ''
+      howTo: ok
+        ? ''
+        : (!hasStage7Daily && (!hasVac || !hasBd))
+          ? 'Натисніть "⏰ Створити тригер" (або встановіть Stage7 jobs)'
+          : (dupStage7 || dupVac || dupBd)
+            ? 'Натисніть "🧹 Дублі"'
+            : ''
     };
   });
 

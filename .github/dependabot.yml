@@ -1,9 +1,3 @@
-# Dependabot version updates for WhatsApp-Sheets-Bot.
-# Project type: Google Apps Script + npm tooling.
-# Manifest files are located in the repository root:
-#   - package.json
-#   - package-lock.json
-
 version: 2
 updates:
   - package-ecosystem: "npm"

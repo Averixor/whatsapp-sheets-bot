@@ -309,6 +309,28 @@ function setupVacationTrigger() {
       }
     });
 
+    // Stage7 canonical path: використовуй managed jobs замість legacy auto* тригерів,
+    // щоб уникнути дублювання перевірок/повідомлень.
+    try {
+      if (
+        typeof stage7GetFeatureFlag_ === 'function' &&
+        stage7GetFeatureFlag_('managedTriggers', true) &&
+        typeof Stage7Triggers_ === 'object' &&
+        Stage7Triggers_ &&
+        typeof Stage7Triggers_.installManagedTriggers === 'function'
+      ) {
+        const stage7 = Stage7Triggers_.installManagedTriggers();
+        return {
+          success: true,
+          removed: removed,
+          stage7: stage7,
+          message:
+            `✓ Stage7 jobs встановлено (managedTriggers).\n` +
+            `Видалено legacy auto* тригерів: ${removed}`
+        };
+      }
+    } catch (_) {}
+
     ScriptApp.newTrigger('autoVacationReminder')
       .timeBased()
       .everyDays(1)

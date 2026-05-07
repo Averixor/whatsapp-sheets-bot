@@ -21,8 +21,50 @@ const TRIGGERS_CHANGE_TYPES_ = Object.freeze([
 ]);
 
 let _protectedSheetsCache_ = null;
+let _managedAuditTriggerCache_ = null;
 
 // ==================== INTERNAL HELPERS ====================
+
+function _hasManagedSecurityAuditTriggers_() {
+  if (_managedAuditTriggerCache_ !== null) {
+    return _managedAuditTriggerCache_;
+  }
+
+  try {
+    if (typeof stage7GetFeatureFlag_ === 'function' && stage7GetFeatureFlag_('managedTriggers', true) === false) {
+      _managedAuditTriggerCache_ = false;
+      return _managedAuditTriggerCache_;
+    }
+  } catch (_) {}
+
+  try {
+    const props = PropertiesService.getDocumentProperties();
+    const raw = props.getProperty('STAGE7:MANAGED_TRIGGERS_INSTALLED_AT');
+    if (raw) {
+      _managedAuditTriggerCache_ = true;
+      return _managedAuditTriggerCache_;
+    }
+  } catch (_) {}
+
+  try {
+    const triggers = ScriptApp.getProjectTriggers();
+    let hasEdit = false;
+    let hasChange = false;
+
+    for (let i = 0; i < triggers.length; i++) {
+      const t = triggers[i];
+      const fn = t.getHandlerFunction();
+      if (fn === 'stage7SecurityAuditOnEdit') hasEdit = true;
+      if (fn === 'stage7SecurityAuditOnChange') hasChange = true;
+    }
+
+    _managedAuditTriggerCache_ = hasEdit && hasChange;
+    return _managedAuditTriggerCache_;
+  } catch (_) {
+    _managedAuditTriggerCache_ = false;
+    return _managedAuditTriggerCache_;
+  }
+}
 
 function _getAccessSheetName_() {
   if (typeof appGetCore === 'function') {
@@ -133,7 +175,9 @@ function onEdit(e) {
 
   if (isProtectedSheet) {
     try {
-      if (typeof stage7SecurityAuditOnEdit === 'function') {
+      // Якщо Stage7 managed triggers встановлені — audit піде через installable trigger,
+      // а simple trigger тут не дублює перевірку.
+      if (!_hasManagedSecurityAuditTriggers_() && typeof stage7SecurityAuditOnEdit === 'function') {
         stage7SecurityAuditOnEdit(e);
       }
     } catch (error) {
@@ -150,7 +194,7 @@ function onChange(e) {
   if (!_isRelevantChangeType_(e.changeType)) return;
 
   try {
-    if (typeof stage7SecurityAuditOnChange === 'function') {
+    if (!_hasManagedSecurityAuditTriggers_() && typeof stage7SecurityAuditOnChange === 'function') {
       stage7SecurityAuditOnChange(e);
     }
   } catch (error) {

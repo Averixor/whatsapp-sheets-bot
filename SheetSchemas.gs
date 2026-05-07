@@ -190,7 +190,10 @@ function _ssBuildPhonesSchema_() {
     }),
 
     headerAliases: _ssFreeze_({
-      fml: ['FML', 'FullName', 'ПІБ'], phone: ['Phone', 'Телефон'], role: ['Role', 'Роль'], birthday: ['Birthday', 'День народження']
+      fml: ['FML', 'FullName', 'ПІБ'],
+      phone: ['Phone', 'Телефон'],
+      role: ['Role', 'Роль', 'Позивний'],
+      birthday: ['Birthday', 'День народження']
     }),
 
     keyFields: ['fml', 'role'],
