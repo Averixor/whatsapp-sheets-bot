@@ -1,0 +1,31 @@
+# Dependabot version updates for WhatsApp-Sheets-Bot.
+# Project type: Google Apps Script + npm tooling.
+# Manifest files are located in the repository root:
+#   - package.json
+#   - package-lock.json
+
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Kyiv"
+
+    open-pull-requests-limit: 5
+
+    labels:
+      - "dependencies"
+      - "npm"
+
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+
+    groups:
+      npm-development-dependencies:
+        dependency-type: "development"
+        patterns:
+          - "*"
