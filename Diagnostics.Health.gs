@@ -8,7 +8,8 @@ function _ensureSendPanelTechnicalSheet_() {
     created = true;
   }
 
-  if (sh.getLastRow() < 1) {
+  if (sh.getLastRow() < 1) {clasp status
+git add .
     sh.getRange(1, 1, 1, 7)
       .merge()
       .setValue(`Активний місяць: ${getBotMonthSheetName_()}`)
