@@ -1,5 +1,5 @@
 {
-  "scriptId": "PUT_SCRIPT_ID_HERE",
-  "rootDir": ".",
-  "parentId": ["PUT_BOUND_SPREADSHEET_ID_HERE"]
-}
+    "scriptId": "PUT_SCRIPT_ID_HERE",
+    "rootDir": ".",
+    "parentId": ["PUT_BOUND_SPREADSHEET_ID_HERE"]
+  }
