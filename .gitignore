@@ -15,3 +15,9 @@ _person_card_compact_report.txt
 .aider*
 
 node_modules/
+
+# Local Google Apps Script / clasp mapping.
+# Contains scriptId and bound spreadsheet parentId.
+.clasp.json
+.clasp.*.json
+!.clasp.example.json
