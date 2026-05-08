@@ -8,8 +8,7 @@ function _ensureSendPanelTechnicalSheet_() {
     created = true;
   }
 
-  if (sh.getLastRow() < 1) {clasp status
-git add .
+  if (sh.getLastRow() < 1) {
     sh.getRange(1, 1, 1, 7)
       .merge()
       .setValue(`Активний місяць: ${getBotMonthSheetName_()}`)
@@ -19,7 +18,7 @@ git add .
   }
 
   if (sh.getLastRow() < 2) {
-    sh.getRange(2, 1, 1, 7)
+    sh.getRange(2, 1, 2, 7)
       .setValues([['FML', 'Phone', 'Code', 'Tasks', 'Status', 'Sent', 'Action']])
       .setFontWeight('bold')
       .setHorizontalAlignment('center')
