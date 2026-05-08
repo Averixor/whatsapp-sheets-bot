@@ -750,8 +750,7 @@ function openPersonCardByCallsignAndDate_(callsign, dateStr) {
   `;
 
   const html = HtmlService.createHtmlOutput(htmlContent)
-    .setTitle(`👤 ${data.callsign}`)
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    .setTitle(`👤 ${data.callsign}`);
 
   SpreadsheetApp.getUi().showSidebar(html);
   return true;
@@ -762,8 +761,7 @@ function openPersonCalendar_(callsign) {
   t.callsign = String(callsign || '').trim();
   t.today = _todayStr_();
   const html = t.evaluate()
-    .setTitle(`📅 ${callsign}`)
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    .setTitle(`📅 ${callsign}`);
   SpreadsheetApp.getUi().showSidebar(html);
 }
 

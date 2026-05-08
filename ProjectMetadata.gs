@@ -1,5 +1,5 @@
 /**
- * ProjectMetadata.gs — truthful release metadata for the active Stage 7.1.2 baseline.
+ * ProjectMetadata.gs — truthful release metadata for the active Stage 7.1.5 baseline.
  */
 
 function _projectMetaDeepCopy_(value) {
@@ -8,12 +8,12 @@ function _projectMetaDeepCopy_(value) {
 
 const PROJECT_RELEASE_NAMING_ = Object.freeze({
   stage: '7.1',
-  stageLabel: 'Stage 7.1.2 — Security & Ops Hardened Baseline (Final Clean)',
-  stageVersion: '7.1.2-final-clean',
-  activeBaseline: 'stage7-1-2-final-clean-baseline',
-  archiveBaseName: 'gas_wasb_stage7_1_2_final_clean',
-  archiveFileName: 'gas_wasb_stage7_1_2_final_clean.zip',
-  rootFolderName: 'gas_wasb_stage7_1_2_final_clean'
+  stageLabel: 'Stage 7.1.5 — Maintenance & repository hygiene',
+  stageVersion: '7.1.5',
+  activeBaseline: 'stage7-1-5-maintenance-baseline',
+  archiveBaseName: 'gas_wasb_stage7_1_5_maintenance',
+  archiveFileName: 'gas_wasb_stage7_1_5_maintenance.zip',
+  rootFolderName: 'gas_wasb_stage7_1_5_maintenance'
 });
 
 const PROJECT_DOCUMENTATION_MAP_ = Object.freeze({
@@ -533,7 +533,7 @@ const PROJECT_BUNDLE_METADATA_ = Object.freeze({
   sunsetPolicyMarker: 'stage7-sunset-governed',
   manifestIncluded: true,
   documentation: PROJECT_DOCUMENTATION_MAP_,
-  diagnosticsPolicy: Object.freeze({ wording: 'stage7-1-2-final-clean-baseline' }),
+  diagnosticsPolicy: Object.freeze({ wording: 'stage7-1-5-maintenance-baseline' }),
   maintenanceLayerPolicy: PROJECT_MAINTENANCE_POLICY_,
   clientRuntimePolicy: PROJECT_CLIENT_RUNTIME_POLICY_,
   clientRoutingPolicy: PROJECT_CLIENT_ROUTING_POLICY_,
@@ -549,7 +549,7 @@ const PROJECT_BUNDLE_METADATA_ = Object.freeze({
   ]),
 
   notes: Object.freeze([
-    'Metadata is aligned to the active Stage 7.1.2 final clean release identity.',
+    'Metadata is aligned to the active Stage 7.1.5 maintenance release identity.',
     'Root documentation is reduced to five active markdown files.',
     'Historical notes are intentionally not shipped in this compact release archive.'
   ])

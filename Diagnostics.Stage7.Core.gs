@@ -189,7 +189,7 @@ function _stage7HasFn_(name) {
 }
 function _releaseStageLabel_() {
   var meta = typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_() : null;
-  return meta && meta.stageLabel ? meta.stageLabel : 'Stage 7.1.2 — Security & Ops Hardened Baseline (Final Clean)';
+  return meta && meta.stageLabel ? meta.stageLabel : 'Stage 7.1.5 — Maintenance & repository hygiene';
 }
 function _diagNormalizeStatus_(status) {
   var normalized = String(status || 'WARN').toUpperCase();
@@ -381,7 +381,7 @@ function _diagBuildStage7CoreChecks_(options) {
   var runtimeContract = typeof getClientRuntimeContract_ === 'function' ? getClientRuntimeContract_() : {};
 
   _stage7PushCheck_(checks, 'Release stage marker', String(meta && meta.stage || '') === '7.1' ? 'OK' : 'FAIL', 'stage=' + (meta && meta.stage || 'n/a') + ', label=' + (meta && meta.stageLabel || 'n/a'), 'Оновіть ProjectMetadata.gs під Stage 7.1');
-  _stage7PushCheck_(checks, 'Active baseline marker', meta && meta.activeBaseline === 'stage7-1-2-final-clean-baseline' ? 'OK' : 'FAIL', 'activeBaseline=' + (meta && meta.activeBaseline || 'n/a'), 'Оновіть activeBaseline');
+  _stage7PushCheck_(checks, 'Active baseline marker', meta && meta.activeBaseline === 'stage7-1-5-maintenance-baseline' ? 'OK' : 'FAIL', 'activeBaseline=' + (meta && meta.activeBaseline || 'n/a'), 'Оновіть activeBaseline');
   _stage7PushCheck_(checks, 'Release naming aligned', release && release.archiveBaseName === 'gas_wasb_stage7_1_2_final_clean' && release.rootFolderName === 'gas_wasb_stage7_1_2_final_clean' ? 'OK' : 'FAIL', (release && release.archiveBaseName || 'n/a') + ' / ' + (release && release.rootFolderName || 'n/a'), 'Вирівняйте archive/root naming');
   _stage7PushCheck_(checks, 'Stage7 report active', docs && docs.active && docs.active.changelog === 'CHANGELOG.md' ? 'OK' : 'FAIL', docs && docs.active && docs.active.changelog ? docs.active.changelog : 'Не задано', 'Зафіксуйте CHANGELOG.md як active release report');
   _stage7PushCheck_(checks, 'Modular runtime policy', policy && policy.runtimeStatus === 'canonical-modular-runtime' ? 'OK' : 'FAIL', policy && policy.runtimeStatus ? policy.runtimeStatus : 'Не задано', 'Оновіть clientRuntimePolicy.runtimeStatus');

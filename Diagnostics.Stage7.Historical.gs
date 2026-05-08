@@ -171,7 +171,7 @@ function runHistoricalStructuralDiagnosticsInternal_(options) {
   return {
     ok: checks.filter(function(item) { return item.status === 'FAIL'; }).length === 0,
     status: checks.some(function(item) { return item.status === 'FAIL'; }) ? 'FAIL' : 'OK',
-    stage: (typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_().stageVersion : '7.1.2-final-clean'),
+    stage: (typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_().stageVersion : '7.1.5'),
     mode: opts.mode || 'structural',
     checks: checks,
     warnings: warnings,
@@ -233,7 +233,7 @@ function runHistoricalCompatibilityDiagnosticsInternal_(options) {
   return {
     ok: checks.filter(function(item) { return item.status === 'FAIL'; }).length === 0,
     status: checks.some(function(item) { return item.status === 'FAIL'; }) ? 'FAIL' : 'OK',
-    stage: (typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_().stageVersion : '7.1.2-final-clean'),
+    stage: (typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_().stageVersion : '7.1.5'),
     mode: opts.mode || 'compatibility',
     checks: checks,
     warnings: [...new Set(warnings)],
@@ -255,7 +255,7 @@ function runHistoricalQuickDiagnosticsInternal_(options) {
   return {
     ok: checks.filter(function(item) { return item.status === 'FAIL'; }).length === 0,
     status: checks.some(function(item) { return item.status === 'FAIL'; }) ? 'FAIL' : 'OK',
-    stage: (typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_().stageVersion : '7.1.2-final-clean'),
+    stage: (typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_().stageVersion : '7.1.5'),
     mode: opts.mode || 'quick',
     checks: checks,
     warnings: [],
@@ -276,7 +276,7 @@ function runHistoricalFullDiagnosticsInternal_(options) {
   return {
     ok: checks.filter(function(item) { return item.status === 'FAIL'; }).length === 0,
     status: checks.some(function(item) { return item.status === 'FAIL'; }) ? 'FAIL' : 'OK',
-    stage: (typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_().stageVersion : '7.1.2-final-clean'),
+    stage: (typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_().stageVersion : '7.1.5'),
     mode: opts.mode || 'full',
     checks: checks,
     warnings: warnings,

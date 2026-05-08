@@ -310,7 +310,7 @@ function runStage4HealthCheck_(options) {
   return {
     ok: failures === 0,
     status: failures === 0 ? 'OK' : 'FAIL',
-    stage: (typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_().stageVersion : '7.1.2-final-clean'),
+    stage: (typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_().stageVersion : '7.1.5'),
     checks: checks,
     warnings: [...new Set(warnings)],
     summary: failures === 0
@@ -331,7 +331,7 @@ function runStage5MetadataConsistencyCheck_() {
   if (!meta) return checks;
 
   _stage7PushCheck_(checks, 'Release stage marker', String(meta.stage || '') === '7.1' ? 'OK' : 'FAIL', `stage=${meta.stage || 'n/a'}, stageVersion=${meta.stageVersion || 'n/a'}, label=${meta.stageLabel || 'n/a'}`, 'Оновіть ProjectMetadata.gs до Stage 7.1');
-  _stage7PushCheck_(checks, 'Active baseline marker', meta.activeBaseline === 'stage7-1-2-final-clean-baseline' ? 'OK' : 'FAIL', `activeBaseline=${meta.activeBaseline || 'n/a'}`, 'Зафіксуйте Stage 7.1 як active baseline');
+  _stage7PushCheck_(checks, 'Active baseline marker', meta.activeBaseline === 'stage7-1-5-maintenance-baseline' ? 'OK' : 'FAIL', `activeBaseline=${meta.activeBaseline || 'n/a'}`, 'Зафіксуйте Stage 7.1 як active baseline');
   _stage7PushCheck_(checks, 'Release archive naming', release && release.archiveFileName === 'gas_wasb_stage7_1_2_final_clean.zip' ? 'OK' : 'FAIL', release && release.archiveFileName ? release.archiveFileName : 'Не задано', 'Вирівняйте archive naming');
   _stage7PushCheck_(checks, 'Release root folder naming', release && release.rootFolderName === 'gas_wasb_stage7_1_2_final_clean' ? 'OK' : 'FAIL', release && release.rootFolderName ? release.rootFolderName : 'Не задано', 'Вирівняйте root folder naming');
   _stage7PushCheck_(checks, 'Packaging policy marker', meta.packagingPolicy && meta.packagingPolicy.policy === 'root-manifest-web-editor-only' ? 'OK' : 'FAIL', meta.packagingPolicy && meta.packagingPolicy.policy ? meta.packagingPolicy.policy : 'Не задано', 'Зафіксуйте web-editor-only packaging policy');
@@ -350,7 +350,7 @@ function runStage5MetadataConsistencyCheck_() {
   _stage7PushCheck_(checks, 'Client runtime file', clientRuntimePolicy.runtimeFile === 'JavaScript.html' ? 'OK' : 'FAIL', clientRuntimePolicy.runtimeFile || 'Не задано', 'Зафіксуйте JavaScript.html як canonical runtime');
   _stage7PushCheck_(checks, 'Client bootstrap mode', clientRuntimePolicy.bootstrapMode === 'sidebar-includeTemplate' ? 'OK' : 'FAIL', clientRuntimePolicy.bootstrapMode || 'Не задано', 'Використовуйте Sidebar.html -> includeTemplate(\'JavaScript\')');
   _stage7PushCheck_(checks, 'Client modular status', clientRuntimePolicy.modularStatus === 'active-js-include-chain' ? 'OK' : 'WARN', clientRuntimePolicy.modularStatus || 'Не задано', 'Позначте Js.*.html як non-active experimental/reference artifacts');
-  _stage7PushCheck_(checks, 'Diagnostics wording policy', meta.diagnosticsPolicy && meta.diagnosticsPolicy.wording === 'stage7-1-2-final-clean-baseline' ? 'OK' : 'WARN', meta.diagnosticsPolicy && meta.diagnosticsPolicy.wording ? meta.diagnosticsPolicy.wording : 'Не задано', 'Зафіксуйте Stage 7.1 diagnostics wording policy');
+  _stage7PushCheck_(checks, 'Diagnostics wording policy', meta.diagnosticsPolicy && meta.diagnosticsPolicy.wording === 'stage7-1-5-maintenance-baseline' ? 'OK' : 'WARN', meta.diagnosticsPolicy && meta.diagnosticsPolicy.wording ? meta.diagnosticsPolicy.wording : 'Не задано', 'Зафіксуйте Stage 7.1 diagnostics wording policy');
 
   const requiredDocs = Array.isArray(meta.requiredDocs) ? meta.requiredDocs : [];
   requiredDocs.forEach(function(doc) {

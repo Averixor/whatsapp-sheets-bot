@@ -61,7 +61,7 @@ For this project, the commit message should match the current project version wh
 Example:
 
 ```powershell
-git commit -m "7.1.2"
+git commit -m "7.1.5"
 ```
 
 ## Code Guidelines
@@ -121,7 +121,7 @@ Use clear commit messages.
 For release workflow commits, use the current version number:
 
 ```text
-7.1.2
+7.1.5
 ```
 
 For normal development commits, use a short descriptive message:

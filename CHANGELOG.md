@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-05-08 — Stage 7.1.5 maintenance
+
+- dropped unused `script.external_request` OAuth scope from `appsscript.json`
+- person card and calendar sidebars use default X-Frame-Options (no `ALLOWALL`)
+- documented `setHtml()` contract in the client (`Js.Core.html`)
+- aligned bundle metadata, smoke assertions, and diagnostics baseline markers to **7.1.5**
+- added GitHub Actions workflow and `npm run ci` to catch accidental shell text pasted into `.gs` files
+
 ## 2026-04-05 — access and sidebar stabilization
 
 - separated the read-only access descriptor path from mutating login/bind behavior

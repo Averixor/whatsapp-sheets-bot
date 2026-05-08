@@ -65,6 +65,10 @@
   // =========================
   var $id = id => document.getElementById(id);
 
+  /**
+   * Inserts HTML into a node. Caller must pass static markup or strings already passed through escapeHtml() —
+   * never raw server/user text.
+   */
   function setHtml(id, html) {
     const el = $id(id);
     if (el) el.innerHTML = String(html ?? '');
