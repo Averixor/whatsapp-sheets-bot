@@ -1,6 +1,6 @@
 {
   "name": "whatsapp-sheets-bot",
-  "version": "7.1.4",
+  "version": "7.1.5",
   "private": true,
   "description": "WhatsApp-Sheets-Bot Google Apps Script project",
   "scripts": {
