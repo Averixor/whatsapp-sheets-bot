@@ -21,3 +21,4 @@ node_modules/
 .clasp.json
 .clasp.*.json
 !.clasp.example.json
+.npmrc
