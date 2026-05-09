@@ -47,21 +47,6 @@ function debugDataAccessContractManual() {
 }
 
 
-function debugDataAccessContractManual() {
-  var out = {
-    dataAccessType: typeof DataAccess_,
-    keys: typeof DataAccess_ === 'object' && DataAccess_ ? Object.keys(DataAccess_) : [],
-    hasGetSheet: typeof DataAccess_ !== 'undefined' && DataAccess_ && typeof DataAccess_.getSheet,
-    hasReadRows: typeof DataAccess_ !== 'undefined' && DataAccess_ && typeof DataAccess_.readRows,
-    hasReadObjects: typeof DataAccess_ !== 'undefined' && DataAccess_ && typeof DataAccess_.readObjects,
-    hasAppendObjects: typeof DataAccess_ !== 'undefined' && DataAccess_ && typeof DataAccess_.appendObjects
-  };
-
-  Logger.log(JSON.stringify(out, null, 2));
-  return out;
-}
-
-
 function debugSendPanelBlockedRowsManual() {
   var rows = SendPanelRepository_.readRows();
   var blocked = rows.filter(function(item) {
