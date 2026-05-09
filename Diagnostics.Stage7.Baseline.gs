@@ -332,8 +332,21 @@ function runStage5MetadataConsistencyCheck_() {
 
   _stage7PushCheck_(checks, 'Release stage marker', String(meta.stage || '') === '7.1' ? 'OK' : 'FAIL', `stage=${meta.stage || 'n/a'}, stageVersion=${meta.stageVersion || 'n/a'}, label=${meta.stageLabel || 'n/a'}`, 'Оновіть ProjectMetadata.gs до Stage 7.1');
   _stage7PushCheck_(checks, 'Active baseline marker', meta.activeBaseline === 'stage7-1-5-maintenance-baseline' ? 'OK' : 'FAIL', `activeBaseline=${meta.activeBaseline || 'n/a'}`, 'Зафіксуйте Stage 7.1 як active baseline');
-  _stage7PushCheck_(checks, 'Release archive naming', release && release.archiveFileName === 'gas_wasb_stage7_1_2_final_clean.zip' ? 'OK' : 'FAIL', release && release.archiveFileName ? release.archiveFileName : 'Не задано', 'Вирівняйте archive naming');
-  _stage7PushCheck_(checks, 'Release root folder naming', release && release.rootFolderName === 'gas_wasb_stage7_1_2_final_clean' ? 'OK' : 'FAIL', release && release.rootFolderName ? release.rootFolderName : 'Не задано', 'Вирівняйте root folder naming');
+  _stage7PushCheck_(
+    checks,
+    'Release archive naming',
+    release && release.archiveFileName === 'gas_wasb_stage7_1_5_maintenance.zip' ? 'OK' : 'FAIL',
+    release && release.archiveFileName ? release.archiveFileName : 'Не задано',
+    'Вирівняйте archive naming'
+  );
+
+  _stage7PushCheck_(
+    checks,
+    'Release root folder naming',
+    release && release.rootFolderName === 'gas_wasb_stage7_1_5_maintenance' ? 'OK' : 'FAIL',
+    release && release.rootFolderName ? release.rootFolderName : 'Не задано',
+    'Вирівняйте root folder naming'
+  );
   _stage7PushCheck_(checks, 'Packaging policy marker', meta.packagingPolicy && meta.packagingPolicy.policy === 'root-manifest-web-editor-only' ? 'OK' : 'FAIL', meta.packagingPolicy && meta.packagingPolicy.policy ? meta.packagingPolicy.policy : 'Не задано', 'Зафіксуйте web-editor-only packaging policy');
   _stage7PushCheck_(checks, 'Root manifest declared', meta.manifestIncluded === true ? 'OK' : 'FAIL', `manifestIncluded=${meta.manifestIncluded}`, 'Вирівняйте metadata');
   _stage7PushCheck_(checks, 'Root manifest physical', _projectBundleHas_((meta.packagingPolicy && meta.packagingPolicy.manifestPath) || 'appsscript.json') ? 'OK' : 'FAIL', _projectBundleHas_((meta.packagingPolicy && meta.packagingPolicy.manifestPath) || 'appsscript.json') ? ((meta.packagingPolicy && meta.packagingPolicy.manifestPath) || 'appsscript.json') : 'manifest missing', 'Додайте appsscript.json у root');

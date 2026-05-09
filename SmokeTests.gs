@@ -677,9 +677,9 @@ function runRegressionTestSuiteFull_(options) {
   });
 
   _smokePush_(report, 'release naming consistency', function () {
-    _smokeAssert_(release.archiveBaseName === 'gas_wasb_stage7_1_2_final_clean', 'archiveBaseName має бути gas_wasb_stage7_1_2_final_clean');
-    _smokeAssert_(release.archiveFileName === 'gas_wasb_stage7_1_2_final_clean.zip', 'archiveFileName має бути gas_wasb_stage7_1_2_final_clean.zip');
-    _smokeAssert_(release.rootFolderName === 'gas_wasb_stage7_1_2_final_clean', 'rootFolderName має бути gas_wasb_stage7_1_2_final_clean');
+    _smokeAssert_(release.archiveBaseName === 'gas_wasb_stage7_1_5_maintenance', 'archiveBaseName має бути gas_wasb_stage7_1_5_maintenance');
+    _smokeAssert_(release.archiveFileName === 'gas_wasb_stage7_1_5_maintenance.zip', 'archiveFileName має бути gas_wasb_stage7_1_5_maintenance.zip');
+    _smokeAssert_(release.rootFolderName === 'gas_wasb_stage7_1_5_maintenance', 'rootFolderName має бути gas_wasb_stage7_1_5_maintenance');
     _smokeAssert_(meta.hardeningOverlay && meta.hardeningOverlay.label === 'Stage 7A hardening evolved into Stage 7 lifecycle baseline', 'overlay label невірний');
     return 'release-naming-ok';
   });
