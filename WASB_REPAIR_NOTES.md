@@ -14,16 +14,6 @@ Main changes:
 - Converted SheetSchemas labels to English.
 - Reworked `smokeTestAccessControl_()` into safe step-by-step smoke diagnostics; skips schema bootstrap when ACCESS schema already exists and required headers are present.
 
-Recommended terminal flow:
-
-```powershell
-cd C:\Users\User\Desktop\whatsapp-sheets-bot-git
-Expand-Archive -Path .\wasb_repaired_7.1.2.zip -DestinationPath .\_wasb_repaired -Force
-Copy-Item .\_wasb_repaired\whatsapp-sheets-bot-git\* . -Recurse -Force
-clasp status
-clasp push
-```
-
 Then run:
 - `refreshAccessSheetUi`
 - `smokeTestAccessControl_`

@@ -1,16 +1,19 @@
 {
   "name": "whatsapp-sheets-bot",
-  "version": "7.1.6",
+  "version": "7",
   "private": true,
   "description": "WhatsApp-Sheets-Bot Google Apps Script project",
   "scripts": {
     "ci": "node scripts/ci-gas-sanity.mjs",
-    "gas:status": "clasp status",
-    "gas:pull": "clasp pull",
-    "gas:push": "clasp push",
-    "gas:open": "clasp open"
+    "gas status": "clasp status",
+    "gas pull": "clasp pull",
+    "gas push": "clasp push",
+    "gas open": "clasp open"
   },
   "devDependencies": {
     "@google/clasp": "^3.3.0"
+  },
+  "dependencies": {
+    "uuid": "^14.0.0"
   }
 }
