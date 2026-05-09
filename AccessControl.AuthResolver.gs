@@ -1075,7 +1075,10 @@ function registerAccessWithTemporaryPassword(payload) {
     if (entry.temporaryPasswordUsedAt) return { success: false, code: 'access.registration.temp_password_used', message: 'Тимчасовий код уже використано.' };
     if (entry.temporaryPasswordExpiresAt) { const expiresRaw = String(entry.temporaryPasswordExpiresAt || '').trim(); const expiresDate = new Date(expiresRaw.replace(' ', 'T')); if (!isNaN(expiresDate.getTime()) && Date.now() > expiresDate.getTime()) return { success: false, code: 'access.registration.temp_password_expired', message: 'Термін дії тимчасового коду минув. Попросіть адміністратора видати новий код.' }; }
     const enteredHash = hashAccessPasswordWithSalt_(temporaryPassword, entry.temporaryPasswordSalt);
-    if (enteredHash !== entry.temporaryPasswordHash) { _updateEntryFields_(entry.sheetRow, { failed_attempts: Number(entry.failedAttempts || 0) + 1 }); return { success: false, code: 'access.registration.temp_password_invalid', message: 'Невірний тимчасовий код доступу.' }; }
+    if (enteredHash !== entry.temporaryPasswordHash) {
+      _applyFailedAuthCore_(entry, 'access.registration.temp_password_invalid', 'Невірний тимчасовий код доступу.');
+      return { success: false, code: 'access.registration.temp_password_invalid', message: 'Невірний тимчасовий код доступу.' };
+    }
     const passwordSalt = generateAccessSalt_();
     const passwordHash = hashAccessPasswordWithSalt_(password, passwordSalt);
     const nowText = _nowText_('long');

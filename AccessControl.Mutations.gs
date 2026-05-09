@@ -44,61 +44,70 @@ function _applySuccessfulAuth_(entry, userKeyHash) {
   return updated;
 }
 
+/**
+ * Оновлення failed_attempts / lockout без ScriptLock — викликати лише всередині вже утриманого script lock або з одного синхронного шару.
+ */
+function _applyFailedAuthCore_(entry, violationType, reason) {
+  if (!entry || !entry.sheetRow || !entry.enabled) return entry;
+  if (_isAdminDisabled_(entry) || _isTimedLocked_(entry)) return entry;
+
+  const fresh = _getEntryBySheetRow_(entry.sheetRow) || entry;
+  if (!fresh.enabled || _isAdminDisabled_(fresh) || _isTimedLocked_(fresh)) return fresh;
+
+  const nowMs = _nowMs_();
+  const nowText = _nowText_();
+  const newFailedCount = (fresh.failedAttempts || 0) + 1;
+  const updates = {
+    failed_attempts: newFailedCount,
+    last_seen_at: nowText
+  };
+
+  let justLocked = false;
+  let appliedDurationMs = 0;
+  let appliedLevel = 0;
+
+  if (newFailedCount >= MAX_FAILED_ATTEMPTS_SHEET) {
+    const meta = _readLockoutMeta_(fresh);
+    appliedLevel = _clampLevel_(meta.nextLevel);
+    appliedDurationMs = LOCKOUT_ESCALATION_MS[appliedLevel] || LOCKOUT_DURATION_MS;
+
+    updates.failed_attempts = 0;
+    updates.locked_until_ms = nowMs + appliedDurationMs;
+
+    _writeLockoutMeta_(fresh, {
+      nextLevel: _clampLevel_(appliedLevel + 1),
+      lastAppliedLevel: appliedLevel,
+      updatedAtMs: nowMs,
+      lastReason: String(reason || violationType || '')
+    });
+
+    justLocked = true;
+  }
+
+  const updated = _updateEntryFields_(fresh.sheetRow, updates) || Object.assign({}, fresh, {
+    failedAttempts: updates.failed_attempts,
+    lockedUntilMs: updates.locked_until_ms || 0,
+    lastSeenAt: nowText
+  });
+
+  if (justLocked) {
+    Logger.log(
+      '[AccessControl] Lockout applied for ' + (updated.email || ('row:' + updated.sheetRow)) +
+      ' for ' + _minutesText_(appliedDurationMs) + ' min (level ' + appliedLevel + ' → ' + (appliedLevel + 1) + ')'
+    );
+  }
+
+  return updated;
+}
+
 function _applyFailedAuth_(entry, violationType, reason) {
   if (!entry || !entry.sheetRow || !entry.enabled) return entry;
   if (_isAdminDisabled_(entry) || _isTimedLocked_(entry)) return entry;
 
   const lock = LockService.getScriptLock();
   lock.waitLock(5000);
-
   try {
-    const fresh = _getEntryBySheetRow_(entry.sheetRow) || entry;
-    if (!fresh.enabled || _isAdminDisabled_(fresh) || _isTimedLocked_(fresh)) return fresh;
-
-    const nowMs = _nowMs_();
-    const nowText = _nowText_();
-    const newFailedCount = (fresh.failedAttempts || 0) + 1;
-    const updates = {
-      failed_attempts: newFailedCount,
-      last_seen_at: nowText
-    };
-
-    let justLocked = false;
-    let appliedDurationMs = 0;
-    let appliedLevel = 0;
-
-    if (newFailedCount >= MAX_FAILED_ATTEMPTS_SHEET) {
-      const meta = _readLockoutMeta_(fresh);
-      appliedLevel = _clampLevel_(meta.nextLevel);
-      appliedDurationMs = LOCKOUT_ESCALATION_MS[appliedLevel] || LOCKOUT_DURATION_MS;
-
-      updates.failed_attempts = 0;
-      updates.locked_until_ms = nowMs + appliedDurationMs;
-
-      _writeLockoutMeta_(fresh, {
-        nextLevel: _clampLevel_(appliedLevel + 1),
-        lastAppliedLevel: appliedLevel,
-        updatedAtMs: nowMs,
-        lastReason: String(reason || violationType || '')
-      });
-
-      justLocked = true;
-    }
-
-    const updated = _updateEntryFields_(fresh.sheetRow, updates) || Object.assign({}, fresh, {
-      failedAttempts: updates.failed_attempts,
-      lockedUntilMs: updates.locked_until_ms || 0,
-      lastSeenAt: nowText
-    });
-
-    if (justLocked) {
-      Logger.log(
-        '[AccessControl] Lockout applied for ' + (updated.email || ('row:' + updated.sheetRow)) +
-        ' for ' + _minutesText_(appliedDurationMs) + ' min (level ' + appliedLevel + ' → ' + (appliedLevel + 1) + ')'
-      );
-    }
-
-    return updated;
+    return _applyFailedAuthCore_(entry, violationType, reason);
   } finally {
     lock.releaseLock();
   }
