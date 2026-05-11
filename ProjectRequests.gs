@@ -9,7 +9,8 @@
 const ProjectRequests_ = (function () {
   const PROJECTS_SHEET_NAME = "Проєкти";
   const REQUESTS_SHEET_NAME = "Заявки";
-  const MAX_PAYLOAD_BYTES = 45_000; // запас під ліміт передачі/серіалізації google.script.run
+  // GAS інколи запускається на парсері без numeric separators (45_000), тому тримаємо просте число.
+  const MAX_PAYLOAD_BYTES = 45000; // запас під ліміт передачі/серіалізації google.script.run
 
   function isValidEmail_(value) {
     const s = String(value || "").trim();
@@ -20,14 +21,20 @@ const ProjectRequests_ = (function () {
   function estimateUtf8Bytes_(value) {
     // Utilities.newBlob uses UTF-8 by default for string data in GAS.
     try {
-      return Utilities.newBlob(String(value ?? "")).getBytes().length;
+      return Utilities.newBlob(
+        String(value === null || value === undefined ? "" : value),
+      ).getBytes().length;
     } catch (_) {
-      return String(value ?? "").length * 2; // fallback approximation
+      return (
+        String(value === null || value === undefined ? "" : value).length * 2
+      ); // fallback approximation
     }
   }
 
   function assertPayloadSize_(payload) {
-    const json = JSON.stringify(payload ?? {});
+    const json = JSON.stringify(
+      payload === null || payload === undefined ? {} : payload,
+    );
     const bytes = estimateUtf8Bytes_(json);
     if (bytes > MAX_PAYLOAD_BYTES) {
       throw new Error(
