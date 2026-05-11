@@ -6,6 +6,8 @@
     showMenu() {},
     showRequestsForm() {},
     submitRequestForm() {},
+    showRaportsForm() {},
+    submitRaportForm() {},
     toggleConsole() {},
     clearConsole() {},
     scrollConsole() {},
@@ -145,6 +147,148 @@
 
   window.SidebarApp.showRequestsForm = showRequestsForm;
   window.SidebarApp.submitRequestForm = submitRequestForm;
+
+  // =========================
+  // RAPORTS MODULE
+  // =========================
+
+  async function showRaportsForm() {
+    showStandardResult("📄 Рапорти");
+    setText("resultTitle", "Рапорти");
+    setHtml(
+      "resultContent",
+      `
+      <div class="result-item">
+        <div class="result-label">Створення рапорту</div>
+        <div class="result-value" style="color:var(--muted-color);">Завантажую військовослужбовців...</div>
+      </div>
+    `,
+    );
+
+    showLoading();
+    try {
+      const res = await gsRun("apiGetRaportsFormData");
+      const data = res?.data?.result || res?.data || {};
+      if (!res?.success) throw new Error(res?.error || "Не вдалося завантажити модуль рапортів");
+
+      const health = data.health || {};
+      const persons = Array.isArray(data.persons) ? data.persons : [];
+      const personOptions = persons
+        .map((p) => {
+          const id = escapeHtml(String(p?.id ?? ""));
+          const label = escapeHtml(String(p?.fioView || p?.id || ""));
+          return `<option value="${id}">${label}</option>`;
+        })
+        .join("");
+
+      const missing = Array.isArray(health.missing) && health.missing.length
+        ? `<div class="result-message" style="margin:10px 0;color:#b45309;">⚠ Не знайдено листи: ${escapeHtml(health.missing.join(", "))}</div>`
+        : "";
+
+      setHtml(
+        "resultContent",
+        `
+        <div class="result-item">
+          <div class="result-label">Рапорт на відпустку</div>
+          <div class="result-message">
+            ${missing}
+
+            <label style="display:block;margin:8px 0 6px 0;font-weight:700;">Військовослужбовець *</label>
+            <select id="raportPersonId" class="input" style="width:100%;padding:10px;border-radius:12px;border:1px solid rgba(0,0,0,.12);">
+              <option value="">— Обери людину —</option>
+              ${personOptions}
+            </select>
+
+            <label style="display:block;margin:10px 0 6px 0;font-weight:700;">Початок відпустки *</label>
+            <input id="raportDateStart" class="input" type="date" style="width:100%;padding:10px;border-radius:12px;border:1px solid rgba(0,0,0,.12);" />
+
+            <label style="display:block;margin:10px 0 6px 0;font-weight:700;">Кінець відпустки *</label>
+            <input id="raportDateEnd" class="input" type="date" style="width:100%;padding:10px;border-radius:12px;border:1px solid rgba(0,0,0,.12);" />
+
+            <label style="display:block;margin:10px 0 6px 0;font-weight:700;">Адреса проведення відпустки</label>
+            <textarea id="raportAddress" class="input" rows="3" maxlength="1000"
+              style="width:100%;padding:10px;border-radius:12px;border:1px solid rgba(0,0,0,.12);resize:vertical;"
+              placeholder="Наприклад: за місцем проживання..."></textarea>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+              <button class="btn btn-primary" type="button" onclick="SidebarApp.submitRaportForm()">Згенерувати</button>
+              <button class="btn" type="button" onclick="SidebarApp.showMenu()">Назад</button>
+            </div>
+          </div>
+        </div>
+      `,
+      );
+      logToConsole(`✓ RaportsModule: осіб завантажено ${persons.length}`, "success");
+    } catch (e) {
+      logToConsole(`✕ Рапорти: ${normalizeError(e)}`, "error");
+      displayInResult("error", { error: normalizeError(e) });
+    } finally {
+      hideLoading();
+    }
+  }
+
+  async function submitRaportForm() {
+    const personId = String($id("raportPersonId")?.value || "").trim();
+    const dateStart = String($id("raportDateStart")?.value || "").trim();
+    const dateEnd = String($id("raportDateEnd")?.value || "").trim();
+    const address = String($id("raportAddress")?.value || "").trim();
+
+    if (!personId) {
+      showToast("✕ Обери людину");
+      return;
+    }
+    if (!dateStart || !dateEnd) {
+      showToast("✕ Заповни дати відпустки");
+      return;
+    }
+    if (dateEnd < dateStart) {
+      showToast("✕ Кінець раніше початку");
+      return;
+    }
+
+    showLoading();
+    try {
+      const res = await gsRun("apiCreateVacationRaport", {
+        personId,
+        dateStart,
+        dateEnd,
+        address,
+        templateKey: "vac_main",
+      });
+      const result = res?.data?.result || res?.data || {};
+      if (!res?.success) throw new Error(res?.error || "Не вдалося створити рапорт");
+
+      const docUrl = escapeHtml(String(result.docUrl || ""));
+      const personName = escapeHtml(String(result.personName || ""));
+      setHtml(
+        "resultContent",
+        `
+        <div class="result-item">
+          <div class="result-label">Рапорт створено</div>
+          <div class="result-value">${personName}</div>
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+            <a class="btn btn-primary" href="${docUrl}" target="_blank" rel="noopener noreferrer">Відкрити документ</a>
+            <button class="btn" type="button" onclick="SidebarApp.showRaportsForm()">Ще один</button>
+          </div>
+          <div class="result-message" style="margin-top:10px;color:var(--muted-color);">
+            Підпис: ${result.signInserted ? "вставлено" : "не вставлено / не налаштовано"}
+          </div>
+        </div>
+      `,
+      );
+      showToast("✓ Рапорт створено");
+      logToConsole(`📄 Рапорт створено: ${result.docUrl || "без URL"}`, "success");
+    } catch (e) {
+      logToConsole(`✕ Створення рапорту: ${normalizeError(e)}`, "error");
+      displayInResult("error", { error: normalizeError(e) });
+    } finally {
+      hideLoading();
+    }
+  }
+
+  window.SidebarApp.showRaportsForm = showRaportsForm;
+  window.SidebarApp.submitRaportForm = submitRaportForm;
+
 
   function canOpenPersonCardClientSafe_(callsign) {
     if (typeof canOpenPersonCardClient_ === "function") {
@@ -990,6 +1134,8 @@
     initPersonnelModal,
     showRequestsForm,
     submitRequestForm,
+    showRaportsForm,
+    submitRaportForm,
   };
 
   window.SidebarApp = SidebarApp;

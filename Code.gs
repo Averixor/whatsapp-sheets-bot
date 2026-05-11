@@ -283,6 +283,14 @@ function onOpen(e) {
   }
 
   try {
+    if (typeof raportsOnOpen === 'function') {
+      raportsOnOpen();
+    }
+  } catch (errRaports) {
+    console.error('onOpen raportsOnOpen error:', errRaports);
+  }
+
+  try {
     if (
       typeof AccessControl_ === 'object' &&
       AccessControl_ &&
