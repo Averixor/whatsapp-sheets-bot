@@ -67,8 +67,30 @@ const ProjectRequests_ = (function () {
     return sh;
   }
 
+  function ensureProjectsSheet_(ss) {
+    let sh = ss.getSheetByName(PROJECTS_SHEET_NAME);
+    if (!sh) sh = ss.insertSheet(PROJECTS_SHEET_NAME);
+
+    // Мінімальна схема для сайдбару:
+    // - id (optional)
+    // - проєкт (required)
+    // - активний (optional)
+    // - email менеджера (optional, але бажано для sendMonthlyReport)
+    if (sh.getLastRow() < 1) {
+      sh.getRange(1, 1, 1, 4).setValues([
+        ["id", "проєкт", "активний", "email менеджера"],
+      ]);
+      // приклад (не активує логіку, але підказує формат)
+      sh.getRange(2, 1, 1, 4).setValues([
+        ["proj-1", "Приклад проєкту", "true", ""],
+      ]);
+    }
+
+    return sh;
+  }
+
   function readProjects_(ss) {
-    const sh = getSheetRequired_(ss, PROJECTS_SHEET_NAME);
+    const sh = ensureProjectsSheet_(ss);
     const lastRow = sh.getLastRow();
     const lastCol = sh.getLastColumn();
     if (lastRow < 2 || lastCol < 1) return [];
@@ -200,6 +222,7 @@ const ProjectRequests_ = (function () {
 
   return {
     readProjects_,
+    ensureProjectsSheet_,
     ensureRequestsSheet_,
     normalizeText_,
     computeDedupeKey_,
@@ -216,10 +239,16 @@ const ProjectRequests_ = (function () {
 function apiGetActiveProjects() {
   try {
     const ss = getWasbSpreadsheet_();
+    const wasMissing = !ss.getSheetByName("Проєкти");
+    if (wasMissing) ProjectRequests_.ensureProjectsSheet_(ss);
     const projects = ProjectRequests_.readProjects_(ss);
-    return okResponse_({ projects }, "OK", {
-      function: "apiGetActiveProjects",
-    });
+    return okResponse_(
+      { projects, createdProjectsSheet: wasMissing },
+      wasMissing ? 'Створено аркуш "Проєкти". Заповни його і повтори.' : "OK",
+      {
+        function: "apiGetActiveProjects",
+      },
+    );
   } catch (e) {
     return errorResponse_(e, "✕ Не вдалося отримати список проєктів", {
       function: "apiGetActiveProjects",
