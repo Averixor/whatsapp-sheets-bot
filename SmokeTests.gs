@@ -3,61 +3,102 @@
  */
 
 function _smokeAssert_(condition, message) {
-  if (!condition) throw new Error(message || 'Smoke assert failed');
+  if (!condition) throw new Error(message || "Smoke assert failed");
 }
 
 function _smokeBundleHas_(path) {
-  return typeof isProjectBundleFilePresent_ === 'function' ? isProjectBundleFilePresent_(path) : false;
+  return typeof isProjectBundleFilePresent_ === "function"
+    ? isProjectBundleFilePresent_(path)
+    : false;
 }
 
 function _smokeHasRouteApi_(fnName) {
-  const target = String(fnName || '').trim();
+  const target = String(fnName || "").trim();
   if (!target) return false;
   try {
-    if (typeof getRoutingRouteByApiMethod_ === 'function') return !!getRoutingRouteByApiMethod_(target);
-  } catch (e) { }
+    if (typeof getRoutingRouteByApiMethod_ === "function")
+      return !!getRoutingRouteByApiMethod_(target);
+  } catch (e) {}
   try {
-    if (typeof listRoutingRoutes_ === 'function') {
+    if (typeof listRoutingRoutes_ === "function") {
       return (listRoutingRoutes_() || []).some(function (item) {
         return item && item.publicApiMethod === target;
       });
     }
-  } catch (e) { }
+  } catch (e) {}
   try {
-    if (typeof getRoutingRegistry_ === 'function') {
+    if (typeof getRoutingRegistry_ === "function") {
       return Object.keys(getRoutingRegistry_() || {}).some(function (key) {
         const item = (getRoutingRegistry_() || {})[key];
         return item && item.publicApiMethod === target;
       });
     }
-  } catch (e) { }
+  } catch (e) {}
   return false;
 }
 
 function _smokeResolveKnownSymbol_(name) {
-  switch (String(name || '').trim()) {
-    case 'DataAccess_': return typeof DataAccess_ !== 'undefined' ? DataAccess_ : undefined;
-    case 'DictionaryRepository_': return typeof DictionaryRepository_ !== 'undefined' ? DictionaryRepository_ : undefined;
-    case 'PersonsRepository_': return typeof PersonsRepository_ !== 'undefined' ? PersonsRepository_ : undefined;
-    case 'SendPanelRepository_': return typeof SendPanelRepository_ !== 'undefined' ? SendPanelRepository_ : undefined;
-    case 'VacationsRepository_': return typeof VacationsRepository_ !== 'undefined' ? VacationsRepository_ : undefined;
-    case 'SummaryRepository_': return typeof SummaryRepository_ !== 'undefined' ? SummaryRepository_ : undefined;
-    case 'LogsRepository_': return typeof LogsRepository_ !== 'undefined' ? LogsRepository_ : undefined;
-    case 'Stage7UseCases_': return typeof Stage7UseCases_ !== 'undefined' ? Stage7UseCases_ : undefined;
-    case 'WorkflowOrchestrator_': return typeof WorkflowOrchestrator_ !== 'undefined' ? WorkflowOrchestrator_ : undefined;
-    case 'Stage7AuditTrail_': return typeof Stage7AuditTrail_ !== 'undefined' ? Stage7AuditTrail_ : undefined;
-    case 'Reconciliation_': return typeof Reconciliation_ !== 'undefined' ? Reconciliation_ : undefined;
-    case 'Stage7Triggers_': return typeof Stage7Triggers_ !== 'undefined' ? Stage7Triggers_ : undefined;
-    case 'Stage7Templates_': return typeof Stage7Templates_ !== 'undefined' ? Stage7Templates_ : undefined;
-    default: return undefined;
+  switch (String(name || "").trim()) {
+    case "DataAccess_":
+      return typeof DataAccess_ !== "undefined" ? DataAccess_ : undefined;
+    case "DictionaryRepository_":
+      return typeof DictionaryRepository_ !== "undefined"
+        ? DictionaryRepository_
+        : undefined;
+    case "PersonsRepository_":
+      return typeof PersonsRepository_ !== "undefined"
+        ? PersonsRepository_
+        : undefined;
+    case "SendPanelRepository_":
+      return typeof SendPanelRepository_ !== "undefined"
+        ? SendPanelRepository_
+        : undefined;
+    case "VacationsRepository_":
+      return typeof VacationsRepository_ !== "undefined"
+        ? VacationsRepository_
+        : undefined;
+    case "SummaryRepository_":
+      return typeof SummaryRepository_ !== "undefined"
+        ? SummaryRepository_
+        : undefined;
+    case "LogsRepository_":
+      return typeof LogsRepository_ !== "undefined"
+        ? LogsRepository_
+        : undefined;
+    case "Stage7UseCases_":
+      return typeof Stage7UseCases_ !== "undefined"
+        ? Stage7UseCases_
+        : undefined;
+    case "WorkflowOrchestrator_":
+      return typeof WorkflowOrchestrator_ !== "undefined"
+        ? WorkflowOrchestrator_
+        : undefined;
+    case "Stage7AuditTrail_":
+      return typeof Stage7AuditTrail_ !== "undefined"
+        ? Stage7AuditTrail_
+        : undefined;
+    case "Reconciliation_":
+      return typeof Reconciliation_ !== "undefined"
+        ? Reconciliation_
+        : undefined;
+    case "Stage7Triggers_":
+      return typeof Stage7Triggers_ !== "undefined"
+        ? Stage7Triggers_
+        : undefined;
+    case "Stage7Templates_":
+      return typeof Stage7Templates_ !== "undefined"
+        ? Stage7Templates_
+        : undefined;
+    default:
+      return undefined;
   }
 }
 
 function _smokeResolveFn_(name) {
-  const target = String(name || '').trim();
+  const target = String(name || "").trim();
   if (!target) return undefined;
 
-  const parts = target.split('.').filter(Boolean);
+  const parts = target.split(".").filter(Boolean);
   if (!parts.length) return undefined;
 
   const knownRoot = _smokeResolveKnownSymbol_(parts[0]);
@@ -71,43 +112,48 @@ function _smokeResolveFn_(name) {
   }
 
   try {
-    const g = (typeof globalThis !== 'undefined') ? globalThis : Function('return this')();
+    const g =
+      typeof globalThis !== "undefined"
+        ? globalThis
+        : Function("return this")();
     let current = g;
     for (let i = 0; i < parts.length; i++) {
       if (!current || !(parts[i] in current)) return undefined;
       current = current[parts[i]];
     }
     return current;
-  } catch (e) { }
+  } catch (e) {}
 
   return undefined;
 }
 
 function _smokeHasFn_(name) {
-  const target = String(name || '').trim();
+  const target = String(name || "").trim();
   if (!target) return false;
-  return typeof _smokeResolveFn_(target) === 'function' || _smokeHasRouteApi_(target);
+  return (
+    typeof _smokeResolveFn_(target) === "function" || _smokeHasRouteApi_(target)
+  );
 }
 
 function _smokeResolveAccessSecurityRunner_() {
-  if (typeof runAccessSecurityE2ETests_ === 'function') {
+  if (typeof runAccessSecurityE2ETests_ === "function") {
     return {
-      name: 'runAccessSecurityE2ETests_',
-      fn: runAccessSecurityE2ETests_
+      name: "runAccessSecurityE2ETests_",
+      fn: runAccessSecurityE2ETests_,
     };
   }
 
-  if (typeof runAccessPolicyChecks === 'function') {
+  if (typeof runAccessPolicyChecks === "function") {
     return {
-      name: 'runAccessPolicyChecks',
-      fn: runAccessPolicyChecks
+      name: "runAccessPolicyChecks",
+      fn: runAccessPolicyChecks,
     };
   }
 
-  if (typeof runAllPolicyChecks === 'function') {
+  if (typeof runAllPolicyChecks === "function") {
     return {
-      name: 'runAllPolicyChecks',
-      fn: runAllPolicyChecks
+      name: "runAllPolicyChecks",
+      fn: runAllPolicyChecks,
     };
   }
 
@@ -120,30 +166,45 @@ function _smokePush_(report, name, fn, options) {
     const details = fn();
     report.checks.push({
       name: name,
-      status: 'OK',
-      details: details || 'OK'
+      status: "OK",
+      details: details || "OK",
     });
   } catch (e) {
     if (opts.skipOnError) {
       report.skipped = report.skipped || [];
-      report.skipped.push({ name: name, reason: e && e.message ? e.message : String(e) });
-      report.checks.push({ name: name, status: 'SKIP', details: e && e.message ? e.message : String(e) });
+      report.skipped.push({
+        name: name,
+        reason: e && e.message ? e.message : String(e),
+      });
+      report.checks.push({
+        name: name,
+        status: "SKIP",
+        details: e && e.message ? e.message : String(e),
+      });
       return;
     }
     report.ok = false;
     report.checks.push({
       name: name,
-      status: 'FAIL',
-      details: e && e.message ? e.message : String(e)
+      status: "FAIL",
+      details: e && e.message ? e.message : String(e),
     });
   }
 }
 
 function _assertUnifiedContract_(result, functionName) {
-  _smokeAssert_(result && typeof result === 'object', `${functionName}() не повернув об'єкт`);
-  ['success', 'message', 'error', 'data', 'context', 'warnings'].forEach(function (field) {
-    _smokeAssert_(field in result, `${functionName}() не повернув поле ${field}`);
-  });
+  _smokeAssert_(
+    result && typeof result === "object",
+    `${functionName}() не повернув об'єкт`,
+  );
+  ["success", "message", "error", "data", "context", "warnings"].forEach(
+    function (field) {
+      _smokeAssert_(
+        field in result,
+        `${functionName}() не повернув поле ${field}`,
+      );
+    },
+  );
 }
 
 function _pickTestDate_() {
@@ -157,27 +218,43 @@ function _pickTestDate_() {
 
 function _pickTestCallsign_() {
   try {
-    return (typeof PersonsRepository_ === 'object' && PersonsRepository_ && typeof PersonsRepository_.getAnyCallsign === 'function')
-      ? (PersonsRepository_.getAnyCallsign() || '')
-      : '';
+    return typeof PersonsRepository_ === "object" &&
+      PersonsRepository_ &&
+      typeof PersonsRepository_.getAnyCallsign === "function"
+      ? PersonsRepository_.getAnyCallsign() || ""
+      : "";
   } catch (_) {
-    return '';
+    return "";
   }
 }
 
 function _assertStage4Meta_(result, functionName) {
   _assertUnifiedContract_(result, functionName);
-  _smokeAssert_(result.data && typeof result.data === 'object', `${functionName}() не повернув data object`);
-  _smokeAssert_('result' in result.data, `${functionName}() не повернув data.result`);
-  _smokeAssert_('meta' in result.data, `${functionName}() не повернув data.meta`);
+  _smokeAssert_(
+    result.data && typeof result.data === "object",
+    `${functionName}() не повернув data object`,
+  );
+  _smokeAssert_(
+    "result" in result.data,
+    `${functionName}() не повернув data.result`,
+  );
+  _smokeAssert_(
+    "meta" in result.data,
+    `${functionName}() не повернув data.meta`,
+  );
 }
 
 function _runContractTest_(report, name, fn, options) {
-  _smokePush_(report, name, function () {
-    const result = fn();
-    _assertStage4Meta_(result, name);
-    return `success=${result.success}`;
-  }, options);
+  _smokePush_(
+    report,
+    name,
+    function () {
+      const result = fn();
+      _assertStage4Meta_(result, name);
+      return `success=${result.success}`;
+    },
+    options,
+  );
 }
 
 function runScenarioTests(options) {
@@ -188,99 +265,191 @@ function runSmokeTests(options) {
   const opts = options || {};
   const report = {
     ok: true,
-    stage: '7.1.5',
+    stage: "7.1.5",
     ts: new Date().toISOString(),
     dryRun: opts.dryRun !== false,
     checks: [],
     skipped: [],
-    warnings: []
+    warnings: [],
   };
 
-  _smokePush_(report, 'CONFIG object available', function () {
-    _smokeAssert_(typeof CONFIG === 'object' && CONFIG !== null, 'CONFIG відсутній');
-    _smokeAssert_(!!CONFIG.TARGET_SHEET, 'CONFIG.TARGET_SHEET відсутній');
-    _smokeAssert_(!!CONFIG.PHONES_SHEET, 'CONFIG.PHONES_SHEET відсутній');
-    _smokeAssert_(!!CONFIG.LOG_SHEET, 'CONFIG.LOG_SHEET відсутній');
-    return 'CONFIG OK: TARGET_SHEET=' + CONFIG.TARGET_SHEET;
+  _smokePush_(report, "CONFIG object available", function () {
+    _smokeAssert_(
+      typeof CONFIG === "object" && CONFIG !== null,
+      "CONFIG відсутній",
+    );
+    _smokeAssert_(!!CONFIG.TARGET_SHEET, "CONFIG.TARGET_SHEET відсутній");
+    _smokeAssert_(!!CONFIG.PHONES_SHEET, "CONFIG.PHONES_SHEET відсутній");
+    _smokeAssert_(!!CONFIG.LOG_SHEET, "CONFIG.LOG_SHEET відсутній");
+    return "CONFIG OK: TARGET_SHEET=" + CONFIG.TARGET_SHEET;
   });
 
-  _smokePush_(report, 'Spreadsheet available', function () {
+  _smokePush_(report, "Spreadsheet available", function () {
     const ss = getWasbSpreadsheet_();
-    _smokeAssert_(!!ss, 'Active spreadsheet недоступний');
-    return 'Spreadsheet OK: ' + ss.getName();
+    _smokeAssert_(!!ss, "Active spreadsheet недоступний");
+    return "Spreadsheet OK: " + ss.getName();
   });
 
-  _smokePush_(report, 'Required sheets exist', function () {
+  _smokePush_(report, "Required sheets exist", function () {
     const ss = getWasbSpreadsheet_();
     const required = [
       CONFIG.TARGET_SHEET,
       CONFIG.PHONES_SHEET,
       CONFIG.DICT_SHEET,
       CONFIG.DICT_SUM_SHEET,
-      CONFIG.LOG_SHEET
+      CONFIG.LOG_SHEET,
     ].filter(Boolean);
 
     const missing = required.filter(function (name) {
       return !ss.getSheetByName(name);
     });
 
-    _smokeAssert_(missing.length === 0, 'Відсутні аркуші: ' + missing.join(', '));
-    return 'Sheets OK: ' + required.join(', ');
+    _smokeAssert_(
+      missing.length === 0,
+      "Відсутні аркуші: " + missing.join(", "),
+    );
+    return "Sheets OK: " + required.join(", ");
   });
 
-  _smokePush_(report, 'HTML include helpers available', function () {
-    _smokeAssert_(typeof include === 'function', 'include() відсутній');
-    _smokeAssert_(typeof includeTemplate === 'function', 'includeTemplate() відсутній');
-    return 'include helpers OK';
+  // Optional sheets used by monthly report + requests sidebar.
+  _smokePush_(
+    report,
+    "Optional business sheets exist (Дані/Проєкти/Заявки)",
+    function () {
+      const ss = getWasbSpreadsheet_();
+      const optional = ["Дані", "Проєкти", "Заявки"];
+      const missing = optional.filter(function (name) {
+        return !ss.getSheetByName(name);
+      });
+      _smokeAssert_(
+        missing.length === 0,
+        "Відсутні optional аркуші: " + missing.join(", "),
+      );
+      return "Optional sheets OK: " + optional.join(", ");
+    },
+    { skipOnError: true },
+  );
+
+  _smokePush_(report, "Monthly report API available", function () {
+    _smokeAssert_(
+      typeof sendMonthlyReport === "function",
+      "sendMonthlyReport() відсутній",
+    );
+    return "sendMonthlyReport OK";
   });
 
-  _smokePush_(report, 'Sidebar raw template exists', function () {
-    const rawSidebar = include('Sidebar');
-    _smokeAssert_(typeof rawSidebar === 'string' && rawSidebar.length > 0, 'Sidebar.html порожній або недоступний');
-    return 'Sidebar.html OK, chars=' + rawSidebar.length;
-  }, { skipOnError: true });
+  _smokePush_(report, "Requests API available", function () {
+    _smokeAssert_(
+      typeof apiGetActiveProjects === "function",
+      "apiGetActiveProjects() відсутній",
+    );
+    _smokeAssert_(
+      typeof apiSubmitRequest === "function",
+      "apiSubmitRequest() відсутній",
+    );
+    return "Requests API OK";
+  });
 
-  _smokePush_(report, 'JavaScript raw template exists', function () {
-    const rawJavaScript = include('JavaScript');
-    _smokeAssert_(typeof rawJavaScript === 'string' && rawJavaScript.length > 0, 'JavaScript.html порожній або недоступний');
-    return 'JavaScript.html OK, chars=' + rawJavaScript.length;
-  }, { skipOnError: true });
+  _smokePush_(report, "HTML include helpers available", function () {
+    _smokeAssert_(typeof include === "function", "include() відсутній");
+    _smokeAssert_(
+      typeof includeTemplate === "function",
+      "includeTemplate() відсутній",
+    );
+    return "include helpers OK";
+  });
 
-  _smokePush_(report, 'Stage 7 public API available', function () {
-    [
-      'apiStage7GetMonthsList',
-      'apiStage7GetSidebarData',
-      'apiStage7GetSendPanelData',
-      'apiRunStage7Diagnostics',
-      'apiStage7HealthCheck'
-    ].forEach(function (fnName) {
-      _smokeAssert_(typeof this[fnName] === 'function' || _smokeHasFn_(fnName), fnName + ' відсутній');
-    });
+  _smokePush_(
+    report,
+    "Sidebar raw template exists",
+    function () {
+      const rawSidebar = include("Sidebar");
+      _smokeAssert_(
+        typeof rawSidebar === "string" && rawSidebar.length > 0,
+        "Sidebar.html порожній або недоступний",
+      );
+      return "Sidebar.html OK, chars=" + rawSidebar.length;
+    },
+    { skipOnError: true },
+  );
 
-    return 'Stage 7 API functions OK';
-  }, { skipOnError: true });
+  _smokePush_(
+    report,
+    "JavaScript raw template exists",
+    function () {
+      const rawJavaScript = include("JavaScript");
+      _smokeAssert_(
+        typeof rawJavaScript === "string" && rawJavaScript.length > 0,
+        "JavaScript.html порожній або недоступний",
+      );
+      return "JavaScript.html OK, chars=" + rawJavaScript.length;
+    },
+    { skipOnError: true },
+  );
 
-  _smokePush_(report, 'Routing registry available', function () {
-    _smokeAssert_(typeof getRoutingRegistry_ === 'function', 'getRoutingRegistry_ відсутній');
-    const routes = getRoutingRegistry_() || {};
-    _smokeAssert_(Object.keys(routes).length > 0, 'Routing registry порожній');
-    return 'routes=' + Object.keys(routes).length;
-  }, { skipOnError: true });
+  _smokePush_(
+    report,
+    "Stage 7 public API available",
+    function () {
+      [
+        "apiStage7GetMonthsList",
+        "apiStage7GetSidebarData",
+        "apiStage7GetSendPanelData",
+        "apiRunStage7Diagnostics",
+        "apiStage7HealthCheck",
+      ].forEach(function (fnName) {
+        _smokeAssert_(
+          typeof this[fnName] === "function" || _smokeHasFn_(fnName),
+          fnName + " відсутній",
+        );
+      });
 
-  _smokePush_(report, 'Quick health check', function () {
-    _smokeAssert_(typeof healthCheck === 'function', 'healthCheck відсутній');
-    const result = healthCheck();
-    _smokeAssert_(result && typeof result === 'object', 'healthCheck не повернув object');
-    return result.ok === false ? 'healthCheck returned ok=false' : 'healthCheck OK';
-  }, { skipOnError: true });
+      return "Stage 7 API functions OK";
+    },
+    { skipOnError: true },
+  );
+
+  _smokePush_(
+    report,
+    "Routing registry available",
+    function () {
+      _smokeAssert_(
+        typeof getRoutingRegistry_ === "function",
+        "getRoutingRegistry_ відсутній",
+      );
+      const routes = getRoutingRegistry_() || {};
+      _smokeAssert_(
+        Object.keys(routes).length > 0,
+        "Routing registry порожній",
+      );
+      return "routes=" + Object.keys(routes).length;
+    },
+    { skipOnError: true },
+  );
+
+  _smokePush_(
+    report,
+    "Quick health check",
+    function () {
+      _smokeAssert_(typeof healthCheck === "function", "healthCheck відсутній");
+      const result = healthCheck();
+      _smokeAssert_(
+        result && typeof result === "object",
+        "healthCheck не повернув object",
+      );
+      return result.ok === false
+        ? "healthCheck returned ok=false"
+        : "healthCheck OK";
+    },
+    { skipOnError: true },
+  );
 
   report.ok = report.checks.every(function (check) {
-    return check.status !== 'FAIL';
+    return check.status !== "FAIL";
   });
 
   return report;
 }
-
 
 function runStage4ScenarioTests(options) {
   const opts = options || {};
@@ -288,147 +457,293 @@ function runStage4ScenarioTests(options) {
   const testCallsign = opts.callsign || _pickTestCallsign();
   const report = {
     ok: true,
-    stage: '7.1.5',
+    stage: "7.1.5",
     ts: new Date().toISOString(),
     dryRun: opts.dryRun !== false,
     checks: [],
     skipped: [],
-    warnings: []
+    warnings: [],
   };
 
-  _runContractTest_(report, 'apiStage7GetMonthsList', function () {
+  _runContractTest_(report, "apiStage7GetMonthsList", function () {
     const result = apiStage7GetMonthsList();
-    _smokeAssert_(Array.isArray(result.data.result.months), 'months[] не повернуто');
+    _smokeAssert_(
+      Array.isArray(result.data.result.months),
+      "months[] не повернуто",
+    );
     return result;
   });
 
-  _runContractTest_(report, 'apiStage7GetSidebarData', function () {
-    const result = apiStage7GetSidebarData(testDate);
-    _smokeAssert_(Array.isArray(result.data.result.personnel), 'personnel[] не повернуто');
-    return result;
-  }, { skipOnError: true });
+  _runContractTest_(
+    report,
+    "apiStage7GetSidebarData",
+    function () {
+      const result = apiStage7GetSidebarData(testDate);
+      _smokeAssert_(
+        Array.isArray(result.data.result.personnel),
+        "personnel[] не повернуто",
+      );
+      return result;
+    },
+    { skipOnError: true },
+  );
 
-  _runContractTest_(report, 'apiStage7GetSendPanelData', function () {
-    const result = apiStage7GetSendPanelData();
-    _smokeAssert_(Array.isArray(result.data.result.rows), 'rows[] не повернуто');
-    return result;
-  }, { skipOnError: true });
+  _runContractTest_(
+    report,
+    "apiStage7GetSendPanelData",
+    function () {
+      const result = apiStage7GetSendPanelData();
+      _smokeAssert_(
+        Array.isArray(result.data.result.rows),
+        "rows[] не повернуто",
+      );
+      return result;
+    },
+    { skipOnError: true },
+  );
 
-  _runContractTest_(report, 'apiGenerateSendPanelForDate', function () {
-    const result = apiGenerateSendPanelForDate({ dryRun: true, date: testDate });
-    _smokeAssert_(Array.isArray(result.data.result.rows), 'rows[] не повернуто');
+  _runContractTest_(report, "apiGenerateSendPanelForDate", function () {
+    const result = apiGenerateSendPanelForDate({
+      dryRun: true,
+      date: testDate,
+    });
+    _smokeAssert_(
+      Array.isArray(result.data.result.rows),
+      "rows[] не повернуто",
+    );
     return result;
   });
 
-  _runContractTest_(report, 'apiGenerateSendPanelForRange', function () {
-    const result = apiGenerateSendPanelForRange({ dryRun: true, startDate: testDate, endDate: testDate });
-    _smokeAssert_(Array.isArray(result.data.result.reports), 'reports[] не повернуто');
+  _runContractTest_(report, "apiGenerateSendPanelForRange", function () {
+    const result = apiGenerateSendPanelForRange({
+      dryRun: true,
+      startDate: testDate,
+      endDate: testDate,
+    });
+    _smokeAssert_(
+      Array.isArray(result.data.result.reports),
+      "reports[] не повернуто",
+    );
     return result;
   });
 
-  _runContractTest_(report, 'apiMarkPanelRowsAsSent', function () {
-    return apiMarkPanelRowsAsSent([Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3], { dryRun: true });
-  }, { skipOnError: true });
+  _runContractTest_(
+    report,
+    "apiMarkPanelRowsAsSent",
+    function () {
+      return apiMarkPanelRowsAsSent(
+        [Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3],
+        { dryRun: true },
+      );
+    },
+    { skipOnError: true },
+  );
 
-  _runContractTest_(report, 'apiMarkPanelRowsAsUnsent', function () {
-    return apiMarkPanelRowsAsUnsent([Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3], { dryRun: true });
-  }, { skipOnError: true });
+  _runContractTest_(
+    report,
+    "apiMarkPanelRowsAsUnsent",
+    function () {
+      return apiMarkPanelRowsAsUnsent(
+        [Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3],
+        { dryRun: true },
+      );
+    },
+    { skipOnError: true },
+  );
 
-  _runContractTest_(report, 'apiSendPendingRows', function () {
-    return apiSendPendingRows({ dryRun: true, limit: 10 });
-  }, { skipOnError: true });
+  _runContractTest_(
+    report,
+    "apiSendPendingRows",
+    function () {
+      return apiSendPendingRows({ dryRun: true, limit: 10 });
+    },
+    { skipOnError: true },
+  );
 
-  _runContractTest_(report, 'apiBuildDaySummary', function () {
-    const result = apiBuildDaySummary(testDate);
-    _smokeAssert_(typeof result.data.result.summary === 'string', 'summary не повернуто');
-    return result;
-  }, { skipOnError: true });
+  _runContractTest_(
+    report,
+    "apiBuildDaySummary",
+    function () {
+      const result = apiBuildDaySummary(testDate);
+      _smokeAssert_(
+        typeof result.data.result.summary === "string",
+        "summary не повернуто",
+      );
+      return result;
+    },
+    { skipOnError: true },
+  );
 
-  _runContractTest_(report, 'apiBuildDetailedSummary', function () {
-    const result = apiBuildDetailedSummary(testDate);
-    _smokeAssert_(typeof result.data.result.summary === 'string', 'summary не повернуто');
-    return result;
-  }, { skipOnError: true });
+  _runContractTest_(
+    report,
+    "apiBuildDetailedSummary",
+    function () {
+      const result = apiBuildDetailedSummary(testDate);
+      _smokeAssert_(
+        typeof result.data.result.summary === "string",
+        "summary не повернуто",
+      );
+      return result;
+    },
+    { skipOnError: true },
+  );
 
-  _runContractTest_(report, 'apiOpenPersonCard', function () {
-    _smokeAssert_(!!testCallsign, 'Не знайдено позивного для тесту картки');
-    const result = apiOpenPersonCard(testCallsign, testDate);
-    _smokeAssert_(!!result.data.result.callsign, 'callsign не повернуто');
-    return result;
-  }, { skipOnError: true });
+  _runContractTest_(
+    report,
+    "apiOpenPersonCard",
+    function () {
+      _smokeAssert_(!!testCallsign, "Не знайдено позивного для тесту картки");
+      const result = apiOpenPersonCard(testCallsign, testDate);
+      _smokeAssert_(!!result.data.result.callsign, "callsign не повернуто");
+      return result;
+    },
+    { skipOnError: true },
+  );
 
-  _runContractTest_(report, 'apiCheckVacationsAndBirthdays', function () {
+  _runContractTest_(report, "apiCheckVacationsAndBirthdays", function () {
     return apiCheckVacationsAndBirthdays(testDate);
   });
 
-  _runContractTest_(report, 'apiStage7SwitchBotToMonth', function () {
+  _runContractTest_(report, "apiStage7SwitchBotToMonth", function () {
     return apiStage7SwitchBotToMonth(getBotMonthSheetName_());
   });
 
-  _runContractTest_(report, 'apiStage7CreateNextMonth', function () {
-    return apiStage7CreateNextMonth({ dryRun: true, switchToNewMonth: false });
-  }, { skipOnError: true });
+  _runContractTest_(
+    report,
+    "apiStage7CreateNextMonth",
+    function () {
+      return apiStage7CreateNextMonth({
+        dryRun: true,
+        switchToNewMonth: false,
+      });
+    },
+    { skipOnError: true },
+  );
 
-  _runContractTest_(report, 'apiRunReconciliation', function () {
-    return apiRunReconciliation({ mode: 'report', dryRun: true, date: testDate });
-  });
-
-  _runContractTest_(report, 'apiRunMaintenanceScenario', function () {
-    return apiRunMaintenanceScenario({ type: 'healthCheck', shallow: true });
-  });
-
-  _smokePush_(report, 'jobs api contract suite', function () {
-    [apiListStage4Jobs(), apiInstallStage4Jobs()].forEach(function (result, idx) {
-      _assertStage4Meta_(result, 'jobs#' + (idx + 1));
+  _runContractTest_(report, "apiRunReconciliation", function () {
+    return apiRunReconciliation({
+      mode: "report",
+      dryRun: true,
+      date: testDate,
     });
-    _assertUnifiedContract_(apiRunStage4Job(STAGE7_CONFIG.JOBS.SCHEDULED_HEALTHCHECK, { dryRun: true }), 'apiRunStage4Job');
-    return 'jobs-contracts-ok';
-  }, { skipOnError: true });
+  });
 
-  _smokePush_(report, 'compatibility registry sanity', function () {
+  _runContractTest_(report, "apiRunMaintenanceScenario", function () {
+    return apiRunMaintenanceScenario({ type: "healthCheck", shallow: true });
+  });
+
+  _smokePush_(
+    report,
+    "jobs api contract suite",
+    function () {
+      [apiListStage4Jobs(), apiInstallStage4Jobs()].forEach(
+        function (result, idx) {
+          _assertStage4Meta_(result, "jobs#" + (idx + 1));
+        },
+      );
+      _assertUnifiedContract_(
+        apiRunStage4Job(STAGE7_CONFIG.JOBS.SCHEDULED_HEALTHCHECK, {
+          dryRun: true,
+        }),
+        "apiRunStage4Job",
+      );
+      return "jobs-contracts-ok";
+    },
+    { skipOnError: true },
+  );
+
+  _smokePush_(report, "compatibility registry sanity", function () {
     const registry = getStage4CompatibilityMap_();
-    _smokeAssert_(Array.isArray(registry) && registry.length >= 10, 'Compatibility registry надто малий');
+    _smokeAssert_(
+      Array.isArray(registry) && registry.length >= 10,
+      "Compatibility registry надто малий",
+    );
     registry.forEach(function (item) {
-      _smokeAssert_(!!item.name && !!item.replacement, 'Compatibility record пошкоджений');
+      _smokeAssert_(
+        !!item.name && !!item.replacement,
+        "Compatibility record пошкоджений",
+      );
     });
     return `compat=${registry.length}`;
   });
 
-  _smokePush_(report, 'compatibility wrappers lead to canonical api', function () {
-    getStage4CompatibilityMap_()
-      .filter(function (item) { return !!item.verifySourceToken; })
-      .forEach(function (item) {
-        const resolved = _smokeResolveFn_(item.name);
-        if (typeof resolved !== 'function') return;
-        const src = String(resolved);
-        _smokeAssert_(src.indexOf(item.verifySourceToken) !== -1, `${item.name} не веде до ${item.verifySourceToken}`);
-      });
-    return 'wrapper-sources-ok';
+  _smokePush_(
+    report,
+    "compatibility wrappers lead to canonical api",
+    function () {
+      getStage4CompatibilityMap_()
+        .filter(function (item) {
+          return !!item.verifySourceToken;
+        })
+        .forEach(function (item) {
+          const resolved = _smokeResolveFn_(item.name);
+          if (typeof resolved !== "function") return;
+          const src = String(resolved);
+          _smokeAssert_(
+            src.indexOf(item.verifySourceToken) !== -1,
+            `${item.name} не веде до ${item.verifySourceToken}`,
+          );
+        });
+      return "wrapper-sources-ok";
+    },
+  );
+
+  _smokePush_(report, "canonical helper consistency", function () {
+    _smokeAssert_(
+      typeof HtmlUtils_ === "object" &&
+        typeof HtmlUtils_.escapeHtml === "function",
+      "HtmlUtils_.escapeHtml відсутній",
+    );
+    _smokeAssert_(
+      escapeHtml_("<x>") === HtmlUtils_.escapeHtml("<x>"),
+      "escapeHtml_() не узгоджений",
+    );
+    _smokeAssert_(
+      _escapeHtml_("<x>") === HtmlUtils_.escapeHtml("<x>"),
+      "_escapeHtml_() не узгоджений",
+    );
+    return "helper-ok";
   });
 
-  _smokePush_(report, 'canonical helper consistency', function () {
-    _smokeAssert_(typeof HtmlUtils_ === 'object' && typeof HtmlUtils_.escapeHtml === 'function', 'HtmlUtils_.escapeHtml відсутній');
-    _smokeAssert_(escapeHtml_('<x>') === HtmlUtils_.escapeHtml('<x>'), 'escapeHtml_() не узгоджений');
-    _smokeAssert_(_escapeHtml_('<x>') === HtmlUtils_.escapeHtml('<x>'), '_escapeHtml_() не узгоджений');
-    return 'helper-ok';
-  });
-
-  _smokePush_(report, 'bundle metadata / manifest / docs markers', function () {
+  _smokePush_(report, "bundle metadata / manifest / docs markers", function () {
     const meta = getProjectBundleMetadata_();
-    _smokeAssert_(meta.manifestIncluded === true, 'manifestIncluded має бути true');
-    _smokeAssert_(meta.maintenanceLayerStatus === 'stage7-canonical-maintenance-api', 'maintenanceLayerStatus має вказувати на Stage 7 canonical layer');
-    _smokeAssert_(Array.isArray(meta.documentation.historical), 'metadata.documentation.historical має бути масивом');
-    _smokeAssert_(meta.documentation.historical.length === 0, 'Compact release archive не повинен заявляти відсутні historical-файли');
-    _smokeAssert_(_smokeBundleHas_('appsscript.json'), 'appsscript.json має фізично існувати у root bundle');
-    _smokeAssert_(!_smokeBundleHas_('.clasp.json.example'), '.clasp.json.example не повинен існувати у web-editor-ready root bundle');
-    return 'bundle-ok';
+    _smokeAssert_(
+      meta.manifestIncluded === true,
+      "manifestIncluded має бути true",
+    );
+    _smokeAssert_(
+      meta.maintenanceLayerStatus === "stage7-canonical-maintenance-api",
+      "maintenanceLayerStatus має вказувати на Stage 7 canonical layer",
+    );
+    _smokeAssert_(
+      Array.isArray(meta.documentation.historical),
+      "metadata.documentation.historical має бути масивом",
+    );
+    _smokeAssert_(
+      meta.documentation.historical.length === 0,
+      "Compact release archive не повинен заявляти відсутні historical-файли",
+    );
+    _smokeAssert_(
+      _smokeBundleHas_("appsscript.json"),
+      "appsscript.json має фізично існувати у root bundle",
+    );
+    _smokeAssert_(
+      !_smokeBundleHas_(".clasp.json.example"),
+      ".clasp.json.example не повинен існувати у web-editor-ready root bundle",
+    );
+    return "bundle-ok";
   });
 
-  _smokePush_(report, 'stage7 diagnostics modes available', function () {
-    ['runHistoricalQuickDiagnosticsInternal_', 'runHistoricalStructuralDiagnosticsInternal_', 'runHistoricalCompatibilityDiagnosticsInternal_', 'runHistoricalFullDiagnosticsInternal_'].forEach(function (fnName) {
+  _smokePush_(report, "stage7 diagnostics modes available", function () {
+    [
+      "runHistoricalQuickDiagnosticsInternal_",
+      "runHistoricalStructuralDiagnosticsInternal_",
+      "runHistoricalCompatibilityDiagnosticsInternal_",
+      "runHistoricalFullDiagnosticsInternal_",
+    ].forEach(function (fnName) {
       _smokeAssert_(_smokeHasFn_(fnName), `${fnName} відсутній`);
     });
-    return 'diagnostics-modes-ok';
+    return "diagnostics-modes-ok";
   });
 
   return report;
@@ -438,84 +753,188 @@ function runStage5ScenarioTests(options) {
   const opts = options || {};
   const report = {
     ok: true,
-    stage: (typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_().stageVersion : '7.1.5'),
+    stage:
+      typeof getProjectBundleMetadata_ === "function"
+        ? getProjectBundleMetadata_().stageVersion
+        : "7.1.5",
     ts: new Date().toISOString(),
     dryRun: opts.dryRun !== false,
     checks: [],
     skipped: [],
-    warnings: []
+    warnings: [],
   };
 
-  _runContractTest_(report, 'apiPreviewSelectionMessage', function () {
-    const result = apiPreviewSelectionMessage({});
-    _smokeAssert_(result.data.result.kind === 'singleMessagePreview', 'Невірний kind для single preview');
-    return result;
-  }, { skipOnError: true });
+  _runContractTest_(
+    report,
+    "apiPreviewSelectionMessage",
+    function () {
+      const result = apiPreviewSelectionMessage({});
+      _smokeAssert_(
+        result.data.result.kind === "singleMessagePreview",
+        "Невірний kind для single preview",
+      );
+      return result;
+    },
+    { skipOnError: true },
+  );
 
-  _runContractTest_(report, 'apiPreviewMultipleMessages', function () {
-    const result = apiPreviewMultipleMessages({});
-    _smokeAssert_(result.data.result.kind === 'multipleMessagesPreview', 'Невірний kind для multiple preview');
-    return result;
-  }, { skipOnError: true });
+  _runContractTest_(
+    report,
+    "apiPreviewMultipleMessages",
+    function () {
+      const result = apiPreviewMultipleMessages({});
+      _smokeAssert_(
+        result.data.result.kind === "multipleMessagesPreview",
+        "Невірний kind для multiple preview",
+      );
+      return result;
+    },
+    { skipOnError: true },
+  );
 
-  _runContractTest_(report, 'apiPreviewGroupedMessages', function () {
-    const result = apiPreviewGroupedMessages({});
-    _smokeAssert_(result.data.result.kind === 'multipleMessagesPreview', 'Невірний kind для grouped preview');
-    return result;
-  }, { skipOnError: true });
+  _runContractTest_(
+    report,
+    "apiPreviewGroupedMessages",
+    function () {
+      const result = apiPreviewGroupedMessages({});
+      _smokeAssert_(
+        result.data.result.kind === "multipleMessagesPreview",
+        "Невірний kind для grouped preview",
+      );
+      return result;
+    },
+    { skipOnError: true },
+  );
 
-  _runContractTest_(report, 'apiPrepareRangeMessages', function () {
-    const result = apiPrepareRangeMessages({});
-    _smokeAssert_(result.data.result.kind === 'multipleMessagesPreview', 'Невірний kind для range preview');
-    return result;
-  }, { skipOnError: true });
+  _runContractTest_(
+    report,
+    "apiPrepareRangeMessages",
+    function () {
+      const result = apiPrepareRangeMessages({});
+      _smokeAssert_(
+        result.data.result.kind === "multipleMessagesPreview",
+        "Невірний kind для range preview",
+      );
+      return result;
+    },
+    { skipOnError: true },
+  );
 
-  _runContractTest_(report, 'apiBuildCommanderSummaryPreview', function () {
-    const result = apiBuildCommanderSummaryPreview({});
-    _smokeAssert_(result.data.result.kind === 'summaryPreview', 'Невірний kind для commander preview');
-    return result;
-  }, { skipOnError: true });
+  _runContractTest_(
+    report,
+    "apiBuildCommanderSummaryPreview",
+    function () {
+      const result = apiBuildCommanderSummaryPreview({});
+      _smokeAssert_(
+        result.data.result.kind === "summaryPreview",
+        "Невірний kind для commander preview",
+      );
+      return result;
+    },
+    { skipOnError: true },
+  );
 
-  _runContractTest_(report, 'apiBuildCommanderSummaryLink', function () {
-    const result = apiBuildCommanderSummaryLink({});
-    _smokeAssert_(result.data.result.kind === 'summaryPreview', 'Невірний kind для commander link preview');
-    return result;
-  }, { skipOnError: true });
+  _runContractTest_(
+    report,
+    "apiBuildCommanderSummaryLink",
+    function () {
+      const result = apiBuildCommanderSummaryLink({});
+      _smokeAssert_(
+        result.data.result.kind === "summaryPreview",
+        "Невірний kind для commander link preview",
+      );
+      return result;
+    },
+    { skipOnError: true },
+  );
 
-  _runContractTest_(report, 'apiLogPreparedMessages', function () {
-    const result = apiLogPreparedMessages({ mode: 'selection', dryRun: true });
-    _smokeAssert_(!!result.data.result.kind, 'LOG preview не повернув prepared result');
-    return result;
-  }, { skipOnError: true });
+  _runContractTest_(
+    report,
+    "apiLogPreparedMessages",
+    function () {
+      const result = apiLogPreparedMessages({
+        mode: "selection",
+        dryRun: true,
+      });
+      _smokeAssert_(
+        !!result.data.result.kind,
+        "LOG preview не повернув prepared result",
+      );
+      return result;
+    },
+    { skipOnError: true },
+  );
 
-  _runContractTest_(report, 'apiRunSelectionDiagnostics', function () {
-    const result = apiRunSelectionDiagnostics({});
-    _smokeAssert_(result.data.result.kind === 'selectionDiagnostics', 'Selection diagnostics не повернув expected kind');
-    return result;
-  }, { skipOnError: true });
+  _runContractTest_(
+    report,
+    "apiRunSelectionDiagnostics",
+    function () {
+      const result = apiRunSelectionDiagnostics({});
+      _smokeAssert_(
+        result.data.result.kind === "selectionDiagnostics",
+        "Selection diagnostics не повернув expected kind",
+      );
+      return result;
+    },
+    { skipOnError: true },
+  );
 
-  _runContractTest_(report, 'apiStage7HealthCheck', function () {
-    const result = apiStage7HealthCheck({ mode: 'quick' });
-    _smokeAssert_(Array.isArray(result.data.result.checks), 'checks[] не повернуто');
-    return result;
-  }, { skipOnError: true });
+  _runContractTest_(
+    report,
+    "apiStage7HealthCheck",
+    function () {
+      const result = apiStage7HealthCheck({ mode: "quick" });
+      _smokeAssert_(
+        Array.isArray(result.data.result.checks),
+        "checks[] не повернуто",
+      );
+      return result;
+    },
+    { skipOnError: true },
+  );
 
-  _runContractTest_(report, 'apiRunStage7Diagnostics', function () {
-    const result = apiRunStage7Diagnostics({ mode: 'structural' });
-    _smokeAssert_(Array.isArray(result.data.result.checks), 'checks[] не повернуто');
-    return result;
-  }, { skipOnError: true });
+  _runContractTest_(
+    report,
+    "apiRunStage7Diagnostics",
+    function () {
+      const result = apiRunStage7Diagnostics({ mode: "structural" });
+      _smokeAssert_(
+        Array.isArray(result.data.result.checks),
+        "checks[] не повернуто",
+      );
+      return result;
+    },
+    { skipOnError: true },
+  );
 
-  _smokePush_(report, 'apiRunStage7RegressionTests contract (non-reentrant)', function () {
-    _smokeAssert_(typeof apiRunStage7RegressionTests === 'function', 'apiRunStage7RegressionTests відсутній');
-    const route = (typeof getRoutingRegistry_ === 'function' ? getRoutingRegistry_() : {}) || {};
-    const hasCanonicalRoute = Object.keys(route).some(function (key) {
-      const item = route[key];
-      return item && item.publicApiMethod === 'apiRunStage7RegressionTests' && item.useCase === 'runRegressionTestSuite';
-    });
-    _smokeAssert_(hasCanonicalRoute, 'Routing registry не веде apiRunStage7RegressionTests до runRegressionTestSuite');
-    return 'self-recursive invocation intentionally skipped';
-  }, { skipOnError: true });
+  _smokePush_(
+    report,
+    "apiRunStage7RegressionTests contract (non-reentrant)",
+    function () {
+      _smokeAssert_(
+        typeof apiRunStage7RegressionTests === "function",
+        "apiRunStage7RegressionTests відсутній",
+      );
+      const route =
+        (typeof getRoutingRegistry_ === "function"
+          ? getRoutingRegistry_()
+          : {}) || {};
+      const hasCanonicalRoute = Object.keys(route).some(function (key) {
+        const item = route[key];
+        return (
+          item &&
+          item.publicApiMethod === "apiRunStage7RegressionTests" &&
+          item.useCase === "runRegressionTestSuite"
+        );
+      });
+      _smokeAssert_(
+        hasCanonicalRoute,
+        "Routing registry не веде apiRunStage7RegressionTests до runRegressionTestSuite",
+      );
+      return "self-recursive invocation intentionally skipped";
+    },
+    { skipOnError: true },
+  );
 
   return report;
 }
@@ -523,73 +942,113 @@ function runStage5ScenarioTests(options) {
 function runRegressionTestSuite(options) {
   const opts = options || {};
 
-  if (opts.full === true || opts.mode === 'full' || opts.regressionMode === 'full') {
+  if (
+    opts.full === true ||
+    opts.mode === "full" ||
+    opts.regressionMode === "full"
+  ) {
     return runRegressionTestSuiteFull_(opts);
   }
 
-  const meta = typeof getProjectBundleMetadata_ === 'function'
-    ? getProjectBundleMetadata_()
-    : null;
+  const meta =
+    typeof getProjectBundleMetadata_ === "function"
+      ? getProjectBundleMetadata_()
+      : null;
 
   const report = {
     ok: true,
-    stage: meta && meta.stageVersion ? meta.stageVersion : '7.1.5',
+    stage: meta && meta.stageVersion ? meta.stageVersion : "7.1.5",
     ts: new Date().toISOString(),
     dryRun: opts.dryRun !== false,
-    mode: 'fast-regression',
+    mode: "fast-regression",
     checks: [],
     skipped: [],
-    warnings: []
+    warnings: [],
   };
 
-  _smokePush_(report, 'Smoke suite', function () {
+  _smokePush_(report, "Smoke suite", function () {
     const smoke = runSmokeTests(opts);
-    _smokeAssert_(smoke && typeof smoke === 'object', 'runSmokeTests() не повернув report');
-    _smokeAssert_(Array.isArray(smoke.checks), 'runSmokeTests() не повернув checks[]');
+    _smokeAssert_(
+      smoke && typeof smoke === "object",
+      "runSmokeTests() не повернув report",
+    );
+    _smokeAssert_(
+      Array.isArray(smoke.checks),
+      "runSmokeTests() не повернув checks[]",
+    );
 
     if (smoke.ok === false) {
-      throw new Error('Smoke suite має FAIL');
+      throw new Error("Smoke suite має FAIL");
     }
 
-    return 'checks=' + smoke.checks.length;
+    return "checks=" + smoke.checks.length;
   });
 
-  _smokePush_(report, 'Regression full suite is available', function () {
-    _smokeAssert_(typeof runRegressionTestSuiteFull_ === 'function', 'runRegressionTestSuiteFull_ відсутній');
-    return 'full regression callable with { full: true }';
+  _smokePush_(report, "Regression full suite is available", function () {
+    _smokeAssert_(
+      typeof runRegressionTestSuiteFull_ === "function",
+      "runRegressionTestSuiteFull_ відсутній",
+    );
+    return "full regression callable with { full: true }";
   });
 
-  _smokePush_(report, 'Regression route contract', function () {
-    _smokeAssert_(typeof apiRunStage7RegressionTests === 'function' || _smokeHasFn_('apiRunStage7RegressionTests'), 'apiRunStage7RegressionTests відсутній');
+  _smokePush_(
+    report,
+    "Regression route contract",
+    function () {
+      _smokeAssert_(
+        typeof apiRunStage7RegressionTests === "function" ||
+          _smokeHasFn_("apiRunStage7RegressionTests"),
+        "apiRunStage7RegressionTests відсутній",
+      );
 
-    if (typeof getRoutingRegistry_ === 'function') {
-      const route = getRoutingRegistry_() || {};
-      const hasRoute = Object.keys(route).some(function (key) {
-        const item = route[key];
-        return item && item.publicApiMethod === 'apiRunStage7RegressionTests';
-      });
+      if (typeof getRoutingRegistry_ === "function") {
+        const route = getRoutingRegistry_() || {};
+        const hasRoute = Object.keys(route).some(function (key) {
+          const item = route[key];
+          return item && item.publicApiMethod === "apiRunStage7RegressionTests";
+        });
 
-      _smokeAssert_(hasRoute, 'Routing registry не містить apiRunStage7RegressionTests');
-      return 'route-ok';
-    }
+        _smokeAssert_(
+          hasRoute,
+          "Routing registry не містить apiRunStage7RegressionTests",
+        );
+        return "route-ok";
+      }
 
-    return 'route check skipped: getRoutingRegistry_ unavailable';
-  }, { skipOnError: true });
+      return "route check skipped: getRoutingRegistry_ unavailable";
+    },
+    { skipOnError: true },
+  );
 
-  _smokePush_(report, 'Metadata baseline', function () {
-    if (!meta) {
-      return 'metadata unavailable';
-    }
+  _smokePush_(
+    report,
+    "Metadata baseline",
+    function () {
+      if (!meta) {
+        return "metadata unavailable";
+      }
 
-    _smokeAssert_(String(meta.stage) === '7.1', 'metadata.stage має бути 7.1');
-    _smokeAssert_(meta.stageVersion === '7.1.5', 'stageVersion має бути 7.1.5');
-    _smokeAssert_(meta.activeBaseline === 'stage7-1-5-maintenance-baseline', 'activeBaseline має бути stage7-1-5-maintenance-baseline');
+      _smokeAssert_(
+        String(meta.stage) === "7.1",
+        "metadata.stage має бути 7.1",
+      );
+      _smokeAssert_(
+        meta.stageVersion === "7.1.5",
+        "stageVersion має бути 7.1.5",
+      );
+      _smokeAssert_(
+        meta.activeBaseline === "stage7-1-5-maintenance-baseline",
+        "activeBaseline має бути stage7-1-5-maintenance-baseline",
+      );
 
-    return 'metadata-ok';
-  }, { skipOnError: true });
+      return "metadata-ok";
+    },
+    { skipOnError: true },
+  );
 
   report.ok = report.checks.every(function (check) {
-    return check.status !== 'FAIL';
+    return check.status !== "FAIL";
   });
 
   return report;
@@ -601,321 +1060,682 @@ function runRegressionTestSuiteFull(options) {
 
 function runRegressionTestSuiteFull_(options) {
   const opts = options || {};
-  const meta = typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_() : PROJECT_BUNDLE_METADATA_;
-  const docs = typeof getProjectDocumentationMap_ === 'function' ? getProjectDocumentationMap_() : {};
-  const release = typeof getProjectReleaseNaming_ === 'function' ? getProjectReleaseNaming_() : (meta && meta.release) || {};
+  const meta =
+    typeof getProjectBundleMetadata_ === "function"
+      ? getProjectBundleMetadata_()
+      : PROJECT_BUNDLE_METADATA_;
+  const docs =
+    typeof getProjectDocumentationMap_ === "function"
+      ? getProjectDocumentationMap_()
+      : {};
+  const release =
+    typeof getProjectReleaseNaming_ === "function"
+      ? getProjectReleaseNaming_()
+      : (meta && meta.release) || {};
   const report = {
     ok: true,
-    stage: meta && meta.stageVersion ? meta.stageVersion : '7.1.5',
+    stage: meta && meta.stageVersion ? meta.stageVersion : "7.1.5",
     ts: new Date().toISOString(),
     dryRun: opts.dryRun !== false,
     checks: [],
     skipped: [],
-    warnings: []
+    warnings: [],
   };
 
-  _smokePush_(report, 'canonical scenario contract suite', function () {
-    const scenarios = runStage5ScenarioTests(opts);
-    _smokeAssert_(Array.isArray(scenarios.checks), 'runStage5ScenarioTests() не повернув checks[]');
-    _smokeAssert_(scenarios.checks.length >= 11, 'Замало canonical contract checks');
-    return `checks=${scenarios.checks.length}`;
-  }, { skipOnError: true });
+  _smokePush_(
+    report,
+    "canonical scenario contract suite",
+    function () {
+      const scenarios = runStage5ScenarioTests(opts);
+      _smokeAssert_(
+        Array.isArray(scenarios.checks),
+        "runStage5ScenarioTests() не повернув checks[]",
+      );
+      _smokeAssert_(
+        scenarios.checks.length >= 11,
+        "Замало canonical contract checks",
+      );
+      return `checks=${scenarios.checks.length}`;
+    },
+    { skipOnError: true },
+  );
 
-  _smokePush_(report, 'release metadata truth model', function () {
-    _smokeAssert_(String(meta.stage) === '7.1', 'metadata.stage має бути 7.1');
-    _smokeAssert_(meta.stageLabel === 'Stage 7.1.5 — Maintenance & repository hygiene', 'stageLabel має бути Stage 7.1.5 — Maintenance & repository hygiene');
-    _smokeAssert_(meta.stageVersion === '7.1.5', 'stageVersion має бути 7.1.5');
-    _smokeAssert_(meta.activeBaseline === 'stage7-1-5-maintenance-baseline', 'activeBaseline має бути stage7-1-5-maintenance-baseline');
-    _smokeAssert_(meta.maintenanceLayerStatus === 'stage7-canonical-maintenance-api', 'maintenanceLayerStatus не Stage 7 canonical');
-    _smokeAssert_(meta.packagingPolicy && meta.packagingPolicy.policy === 'root-manifest-web-editor-only', 'Packaging policy має бути root-manifest-web-editor-only');
-    _smokeAssert_(meta.requiredDocs.indexOf('SECURITY.md') !== -1, 'SECURITY.md відсутній у metadata');
-    _smokeAssert_(meta.requiredDocs.indexOf('CHANGELOG.md') !== -1, 'CHANGELOG.md відсутній у metadata');
-    _smokeAssert_(meta.requiredDocs.length === 5, 'requiredDocs має бути зведено до 5 головних документів');
-    return 'metadata-ok';
+  _smokePush_(report, "release metadata truth model", function () {
+    _smokeAssert_(String(meta.stage) === "7.1", "metadata.stage має бути 7.1");
+    _smokeAssert_(
+      meta.stageLabel === "Stage 7.1.5 — Maintenance & repository hygiene",
+      "stageLabel має бути Stage 7.1.5 — Maintenance & repository hygiene",
+    );
+    _smokeAssert_(meta.stageVersion === "7.1.5", "stageVersion має бути 7.1.5");
+    _smokeAssert_(
+      meta.activeBaseline === "stage7-1-5-maintenance-baseline",
+      "activeBaseline має бути stage7-1-5-maintenance-baseline",
+    );
+    _smokeAssert_(
+      meta.maintenanceLayerStatus === "stage7-canonical-maintenance-api",
+      "maintenanceLayerStatus не Stage 7 canonical",
+    );
+    _smokeAssert_(
+      meta.packagingPolicy &&
+        meta.packagingPolicy.policy === "root-manifest-web-editor-only",
+      "Packaging policy має бути root-manifest-web-editor-only",
+    );
+    _smokeAssert_(
+      meta.requiredDocs.indexOf("SECURITY.md") !== -1,
+      "SECURITY.md відсутній у metadata",
+    );
+    _smokeAssert_(
+      meta.requiredDocs.indexOf("CHANGELOG.md") !== -1,
+      "CHANGELOG.md відсутній у metadata",
+    );
+    _smokeAssert_(
+      meta.requiredDocs.length === 5,
+      "requiredDocs має бути зведено до 5 головних документів",
+    );
+    return "metadata-ok";
   });
 
-  _smokePush_(report, 'physical bundle layout', function () {
+  _smokePush_(report, "physical bundle layout", function () {
     [
-      'appsscript.json',
-      'README.md',
-      'ARCHITECTURE.md',
-      'RUNBOOK.md',
-      'SECURITY.md',
-      'CHANGELOG.md',
-      'AccessControl.Core.gs',
-      'AccessControl.AuthResolver.gs',
-      'AccessControl.PublicApi.gs',
-      'AccessControl.SheetRepository.gs',
-      'Diagnostics.Core.gs',
-      'Diagnostics.Stage7.Core.gs',
-      'Diagnostics.Stage7.Historical.gs',
-      'AccessE2ETests.gs',
-      'AccessPolicyChecks.gs',
-      'OperationRepository.gs',
-      'ServiceSheetsBootstrap.gs',
-      'JavaScript.html',
-      'Js.Core.html',
-      'Js.Actions.html',
-      'Js.Events.html'
+      "appsscript.json",
+      "README.md",
+      "ARCHITECTURE.md",
+      "RUNBOOK.md",
+      "SECURITY.md",
+      "CHANGELOG.md",
+      "AccessControl.Core.gs",
+      "AccessControl.AuthResolver.gs",
+      "AccessControl.PublicApi.gs",
+      "AccessControl.SheetRepository.gs",
+      "Diagnostics.Core.gs",
+      "Diagnostics.Stage7.Core.gs",
+      "Diagnostics.Stage7.Historical.gs",
+      "AccessE2ETests.gs",
+      "AccessPolicyChecks.gs",
+      "OperationRepository.gs",
+      "ServiceSheetsBootstrap.gs",
+      "JavaScript.html",
+      "Js.Core.html",
+      "Js.Actions.html",
+      "Js.Events.html",
     ].forEach(function (path) {
       _smokeAssert_(_smokeBundleHas_(path), `Файл відсутній у bundle: ${path}`);
     });
-    return 'bundle-layout-ok';
+    return "bundle-layout-ok";
   });
 
-  _smokePush_(report, 'docs hierarchy truthfulness', function () {
+  _smokePush_(report, "docs hierarchy truthfulness", function () {
     const activeDocs = docs && docs.active ? Object.values(docs.active) : [];
-    const historicalDocs = Array.isArray(docs.historical) ? docs.historical : [];
-    _smokeAssert_(activeDocs.length === 5, 'Active docs мають бути зведені до 5 файлів');
+    const historicalDocs = Array.isArray(docs.historical)
+      ? docs.historical
+      : [];
+    _smokeAssert_(
+      activeDocs.length === 5,
+      "Active docs мають бути зведені до 5 файлів",
+    );
     activeDocs.forEach(function (path) {
-      _smokeAssert_(String(path).indexOf('_extras/') !== 0, `Active doc має лежати в root: ${path}`);
-      _smokeAssert_(_smokeBundleHas_(path), `Active doc відсутній фізично: ${path}`);
+      _smokeAssert_(
+        String(path).indexOf("_extras/") !== 0,
+        `Active doc має лежати в root: ${path}`,
+      );
+      _smokeAssert_(
+        _smokeBundleHas_(path),
+        `Active doc відсутній фізично: ${path}`,
+      );
     });
-    _smokeAssert_(docs.active.changelog === 'CHANGELOG.md', 'CHANGELOG.md має бути active release report');
-    _smokeAssert_(historicalDocs.length === 0, 'Compact release archive не повинен заявляти historical docs, яких немає в ZIP');
-    return 'docs-ok';
+    _smokeAssert_(
+      docs.active.changelog === "CHANGELOG.md",
+      "CHANGELOG.md має бути active release report",
+    );
+    _smokeAssert_(
+      historicalDocs.length === 0,
+      "Compact release archive не повинен заявляти historical docs, яких немає в ZIP",
+    );
+    return "docs-ok";
   });
 
-  _smokePush_(report, 'release naming consistency', function () {
-    _smokeAssert_(release.archiveBaseName === 'gas_wasb_stage7_1_5_maintenance', 'archiveBaseName має бути gas_wasb_stage7_1_5_maintenance');
-    _smokeAssert_(release.archiveFileName === 'gas_wasb_stage7_1_5_maintenance.zip', 'archiveFileName має бути gas_wasb_stage7_1_5_maintenance.zip');
-    _smokeAssert_(release.rootFolderName === 'gas_wasb_stage7_1_5_maintenance', 'rootFolderName має бути gas_wasb_stage7_1_5_maintenance');
-    _smokeAssert_(meta.hardeningOverlay && meta.hardeningOverlay.label === 'Stage 7A hardening evolved into Stage 7 lifecycle baseline', 'overlay label невірний');
-    return 'release-naming-ok';
+  _smokePush_(report, "release naming consistency", function () {
+    _smokeAssert_(
+      release.archiveBaseName === "gas_wasb_stage7_1_5_maintenance",
+      "archiveBaseName має бути gas_wasb_stage7_1_5_maintenance",
+    );
+    _smokeAssert_(
+      release.archiveFileName === "gas_wasb_stage7_1_5_maintenance.zip",
+      "archiveFileName має бути gas_wasb_stage7_1_5_maintenance.zip",
+    );
+    _smokeAssert_(
+      release.rootFolderName === "gas_wasb_stage7_1_5_maintenance",
+      "rootFolderName має бути gas_wasb_stage7_1_5_maintenance",
+    );
+    _smokeAssert_(
+      meta.hardeningOverlay &&
+        meta.hardeningOverlay.label ===
+          "Stage 7A hardening evolved into Stage 7 lifecycle baseline",
+      "overlay label невірний",
+    );
+    return "release-naming-ok";
   });
 
-  _smokePush_(report, 'client runtime policy', function () {
+  _smokePush_(report, "client runtime policy", function () {
     const policy = meta.clientRuntimePolicy || {};
-    _smokeAssert_(policy.runtimeFile === 'JavaScript.html', 'runtimeFile має бути JavaScript.html');
-    _smokeAssert_(policy.bootstrapMode === 'sidebar-includeTemplate', 'bootstrapMode має бути sidebar-includeTemplate');
-    _smokeAssert_(policy.modularStatus === 'active-js-include-chain', 'modularStatus має бути active-js-include-chain');
-    return 'client-policy-ok';
+    _smokeAssert_(
+      policy.runtimeFile === "JavaScript.html",
+      "runtimeFile має бути JavaScript.html",
+    );
+    _smokeAssert_(
+      policy.bootstrapMode === "sidebar-includeTemplate",
+      "bootstrapMode має бути sidebar-includeTemplate",
+    );
+    _smokeAssert_(
+      policy.modularStatus === "active-js-include-chain",
+      "modularStatus має бути active-js-include-chain",
+    );
+    return "client-policy-ok";
   });
 
-  _smokePush_(report, 'client bootstrap helpers', function () {
-    _smokeAssert_(typeof include === 'function', 'include() відсутній');
-    _smokeAssert_(typeof includeTemplate === 'function', 'includeTemplate() відсутній');
-    const runtime = includeTemplate('JavaScript');
-    _smokeAssert_(runtime.indexOf('<script') !== -1, 'includeTemplate(\'JavaScript\') не повернув script block');
-    return 'bootstrap-helpers-ok';
+  _smokePush_(report, "client bootstrap helpers", function () {
+    _smokeAssert_(typeof include === "function", "include() відсутній");
+    _smokeAssert_(
+      typeof includeTemplate === "function",
+      "includeTemplate() відсутній",
+    );
+    const runtime = includeTemplate("JavaScript");
+    _smokeAssert_(
+      runtime.indexOf("<script") !== -1,
+      "includeTemplate('JavaScript') не повернув script block",
+    );
+    return "bootstrap-helpers-ok";
   });
 
-  _smokePush_(report, 'sidebar template include path', function () {
-    const rawSidebar = include('Sidebar');
-    _smokeAssert_(rawSidebar.indexOf("<?!= includeTemplate('JavaScript'); ?>") !== -1 || rawSidebar.indexOf('<?!= includeTemplate("JavaScript"); ?>') !== -1, 'Sidebar.html має підключати JavaScript через includeTemplate');
-    _smokeAssert_(rawSidebar.indexOf("<?!= include('JavaScript'); ?>") === -1 && rawSidebar.indexOf('<?!= include("JavaScript"); ?>') === -1, 'Sidebar.html не повинен використовувати raw include для JavaScript');
-    return 'sidebar-include-ok';
+  _smokePush_(report, "sidebar template include path", function () {
+    const rawSidebar = include("Sidebar");
+    _smokeAssert_(
+      rawSidebar.indexOf("<?!= includeTemplate('JavaScript'); ?>") !== -1 ||
+        rawSidebar.indexOf('<?!= includeTemplate("JavaScript"); ?>') !== -1,
+      "Sidebar.html має підключати JavaScript через includeTemplate",
+    );
+    _smokeAssert_(
+      rawSidebar.indexOf("<?!= include('JavaScript'); ?>") === -1 &&
+        rawSidebar.indexOf('<?!= include("JavaScript"); ?>') === -1,
+      "Sidebar.html не повинен використовувати raw include для JavaScript",
+    );
+    return "sidebar-include-ok";
   });
 
-  _smokePush_(report, 'javascript runtime is modular', function () {
-    const rawJavaScript = include('JavaScript');
-    const runtime = includeTemplate('JavaScript');
-    _smokeAssert_(rawJavaScript.indexOf("include('Js.Core')") !== -1 || rawJavaScript.indexOf('include("Js.Core")') !== -1, 'JavaScript.html має бути include-агрегатором для Js.*');
-    _smokeAssert_(runtime.indexOf('<script') !== -1, "includeTemplate(\'JavaScript\') не повернув script block");
-    _smokeAssert_(runtime.indexOf('stage7-sidebar-runtime') !== -1, 'runtime marker stage7-sidebar-runtime відсутній');
-    _smokeAssert_(runtime.indexOf('window.SidebarApp = SidebarApp;') !== -1, 'SidebarApp export відсутній');
-    return 'javascript-modular-ok';
+  _smokePush_(report, "javascript runtime is modular", function () {
+    const rawJavaScript = include("JavaScript");
+    const runtime = includeTemplate("JavaScript");
+    _smokeAssert_(
+      rawJavaScript.indexOf("include('Js.Core')") !== -1 ||
+        rawJavaScript.indexOf('include("Js.Core")') !== -1,
+      "JavaScript.html має бути include-агрегатором для Js.*",
+    );
+    _smokeAssert_(
+      runtime.indexOf("<script") !== -1,
+      "includeTemplate(\'JavaScript\') не повернув script block",
+    );
+    _smokeAssert_(
+      runtime.indexOf("stage7-sidebar-runtime") !== -1,
+      "runtime marker stage7-sidebar-runtime відсутній",
+    );
+    _smokeAssert_(
+      runtime.indexOf("window.SidebarApp = SidebarApp;") !== -1,
+      "SidebarApp export відсутній",
+    );
+    return "javascript-modular-ok";
   });
 
-  _smokePush_(report, 'runtime wording hygiene', function () {
-    const rawJavaScript = include('JavaScript');
-    const rawSidebar = include('Sidebar');
+  _smokePush_(report, "runtime wording hygiene", function () {
+    const rawJavaScript = include("JavaScript");
+    const rawSidebar = include("Sidebar");
     const runtimeContract = getClientRuntimeContract_();
-    [{ token: 'runtime consolidated in RC2', label: 'legacy-runtime-token-1' }, { token: 'Показує тільки швидку актуальну Stage 7 перевірку без legacy-шуму.', label: 'legacy-runtime-token-2' }, { token: 'stage7a-canonical-runtime', label: 'legacy-runtime-token-3' }].forEach(function (item) {
-      _smokeAssert_(rawJavaScript.indexOf(item.token) === -1, `У JavaScript.html залишився legacy runtime marker: ${item.label}`);
+    [
+      { token: "runtime consolidated in RC2", label: "legacy-runtime-token-1" },
+      {
+        token:
+          "Показує тільки швидку актуальну Stage 7 перевірку без legacy-шуму.",
+        label: "legacy-runtime-token-2",
+      },
+      { token: "stage7a-canonical-runtime", label: "legacy-runtime-token-3" },
+    ].forEach(function (item) {
+      _smokeAssert_(
+        rawJavaScript.indexOf(item.token) === -1,
+        `У JavaScript.html залишився legacy runtime marker: ${item.label}`,
+      );
     });
-    _smokeAssert_(rawSidebar.indexOf('Stage 7A bootstrap contract') === -1, 'У Sidebar.html залишився legacy bootstrap comment marker');
-    _smokeAssert_(runtimeContract.policyMarker === 'stage7-sidebar-runtime', 'policyMarker має бути stage7-sidebar-runtime');
+    _smokeAssert_(
+      rawSidebar.indexOf("Stage 7A bootstrap contract") === -1,
+      "У Sidebar.html залишився legacy bootstrap comment marker",
+    );
+    _smokeAssert_(
+      runtimeContract.policyMarker === "stage7-sidebar-runtime",
+      "policyMarker має бути stage7-sidebar-runtime",
+    );
     const activeRuntimeMarker =
-    (typeof STAGE7_CONFIG !== 'undefined' &&
-     STAGE7_CONFIG &&
-     STAGE7_CONFIG.ACTIVE_RUNTIME_MARKER)
-      ? STAGE7_CONFIG.ACTIVE_RUNTIME_MARKER
-      : 'stage7-sidebar-runtime';
+      typeof STAGE7_CONFIG !== "undefined" &&
+      STAGE7_CONFIG &&
+      STAGE7_CONFIG.ACTIVE_RUNTIME_MARKER
+        ? STAGE7_CONFIG.ACTIVE_RUNTIME_MARKER
+        : "stage7-sidebar-runtime";
 
-  _smokeAssert_(activeRuntimeMarker === 'stage7-sidebar-runtime', 'ACTIVE_RUNTIME_MARKER має бути stage7-sidebar-runtime');
-    return 'runtime-wording-ok';
+    _smokeAssert_(
+      activeRuntimeMarker === "stage7-sidebar-runtime",
+      "ACTIVE_RUNTIME_MARKER має бути stage7-sidebar-runtime",
+    );
+    return "runtime-wording-ok";
   });
 
-  _smokePush_(report, 'lifecycle retention cleanup api contract', function () {
-    _smokeAssert_(_smokeHasFn_('apiStage7RunLifecycleRetentionCleanup'), 'apiStage7RunLifecycleRetentionCleanup відсутній');
-    _smokeAssert_(STAGE7_CONFIG && STAGE7_CONFIG.JOBS && STAGE7_CONFIG.JOBS.LIFECYCLE_RETENTION_CLEANUP === 'lifecycleRetentionCleanup', 'JOBS.LIFECYCLE_RETENTION_CLEANUP має бути lifecycleRetentionCleanup');
-    return 'retention-cleanup-contract-ok';
+  _smokePush_(report, "lifecycle retention cleanup api contract", function () {
+    _smokeAssert_(
+      _smokeHasFn_("apiStage7RunLifecycleRetentionCleanup"),
+      "apiStage7RunLifecycleRetentionCleanup відсутній",
+    );
+    _smokeAssert_(
+      STAGE7_CONFIG &&
+        STAGE7_CONFIG.JOBS &&
+        STAGE7_CONFIG.JOBS.LIFECYCLE_RETENTION_CLEANUP ===
+          "lifecycleRetentionCleanup",
+      "JOBS.LIFECYCLE_RETENTION_CLEANUP має бути lifecycleRetentionCleanup",
+    );
+    return "retention-cleanup-contract-ok";
   });
 
-  _smokePush_(report, 'public diagnostics wording is stage7-1', function () {
-    const quick = runQuickDiagnostics_({ mode: 'quick' });
-    const full = runFullDiagnostics_({ mode: 'full' });
-    const sunset = runSunsetDiagnostics_({ mode: 'compatibility sunset' });
-    const maintHealth = apiStage7HealthCheck({ mode: 'quick' });
-    const maintDiagnostics = apiRunStage7Diagnostics({ mode: 'full' });
+  _smokePush_(report, "public diagnostics wording is stage7-1", function () {
+    const quick = runQuickDiagnostics_({ mode: "quick" });
+    const full = runFullDiagnostics_({ mode: "full" });
+    const sunset = runSunsetDiagnostics_({ mode: "compatibility sunset" });
+    const maintHealth = apiStage7HealthCheck({ mode: "quick" });
+    const maintDiagnostics = apiRunStage7Diagnostics({ mode: "full" });
     const texts = [
-      quick.summary || '',
-      full.summary || '',
-      maintHealth.message || '',
-      maintHealth.data && maintHealth.data.result && maintHealth.data.result.summary || '',
-      maintDiagnostics.message || '',
-      maintDiagnostics.data && maintDiagnostics.data.result && maintDiagnostics.data.result.summary || ''
+      quick.summary || "",
+      full.summary || "",
+      maintHealth.message || "",
+      (maintHealth.data &&
+        maintHealth.data.result &&
+        maintHealth.data.result.summary) ||
+        "",
+      maintDiagnostics.message || "",
+      (maintDiagnostics.data &&
+        maintDiagnostics.data.result &&
+        maintDiagnostics.data.result.summary) ||
+        "",
     ];
 
     texts.forEach(function (text) {
-      [{ token: 'Stage 7.2', label: 'legacy-diagnostics-token-1' }, { token: 'Stage 7 health bridge', label: 'legacy-diagnostics-token-2' }, { token: 'Stage 7 compatibility diagnostics', label: 'legacy-diagnostics-token-3' }, { token: 'Stage 7 quick compatibility diagnostics', label: 'legacy-diagnostics-token-4' }, { token: 'Stage 7 full compatibility diagnostics', label: 'legacy-diagnostics-token-5' }, { token: 'Stage 7 structural compatibility diagnostics', label: 'legacy-diagnostics-token-6' }].forEach(function (item) {
-        _smokeAssert_(String(text).indexOf(item.token) === -1, `У public diagnostics wording залишився legacy marker: ${item.label}`);
+      [
+        { token: "Stage 7.2", label: "legacy-diagnostics-token-1" },
+        { token: "Stage 7 health bridge", label: "legacy-diagnostics-token-2" },
+        {
+          token: "Stage 7 compatibility diagnostics",
+          label: "legacy-diagnostics-token-3",
+        },
+        {
+          token: "Stage 7 quick compatibility diagnostics",
+          label: "legacy-diagnostics-token-4",
+        },
+        {
+          token: "Stage 7 full compatibility diagnostics",
+          label: "legacy-diagnostics-token-5",
+        },
+        {
+          token: "Stage 7 structural compatibility diagnostics",
+          label: "legacy-diagnostics-token-6",
+        },
+      ].forEach(function (item) {
+        _smokeAssert_(
+          String(text).indexOf(item.token) === -1,
+          `У public diagnostics wording залишився legacy marker: ${item.label}`,
+        );
       });
     });
 
-    _smokeAssert_(String(full.summary || '').indexOf('Stage 7.1.5 — Maintenance & repository hygiene') !== -1, 'Stage 7.1 wording не знайдено в diagnostics summary');
-    _smokeAssert_((sunset.checks || []).some(function (item) { return item.name === 'Compatibility split report (informational)'; }), 'Informational compatibility split report не знайдено');
-    _smokeAssert_((sunset.checks || []).every(function (item) { return item.name !== 'Canonical vs compatibility split'; }), 'Залишився старий compatibility split check name');
-    _smokeAssert_((quick.checks || []).every(function (item) { return item.name !== 'Stage7 baseline health bridge'; }), 'У quick diagnostics залишився старий baseline health marker');
-    return 'diagnostics-wording-ok';
+    _smokeAssert_(
+      String(full.summary || "").indexOf(
+        "Stage 7.1.5 — Maintenance & repository hygiene",
+      ) !== -1,
+      "Stage 7.1 wording не знайдено в diagnostics summary",
+    );
+    _smokeAssert_(
+      (sunset.checks || []).some(function (item) {
+        return item.name === "Compatibility split report (informational)";
+      }),
+      "Informational compatibility split report не знайдено",
+    );
+    _smokeAssert_(
+      (sunset.checks || []).every(function (item) {
+        return item.name !== "Canonical vs compatibility split";
+      }),
+      "Залишився старий compatibility split check name",
+    );
+    _smokeAssert_(
+      (quick.checks || []).every(function (item) {
+        return item.name !== "Stage7 baseline health bridge";
+      }),
+      "У quick diagnostics залишився старий baseline health marker",
+    );
+    return "diagnostics-wording-ok";
   });
 
-  _smokePush_(report, 'maintenance public wording is release-neutral', function () {
-    const responses = [
-      apiStage7HealthCheck({ mode: 'quick' }),
-      apiRunStage7Diagnostics({ mode: 'quick' }),
-      apiRunStage7RegressionTests({ dryRun: true }),
-      apiListStage7JobRuntime(),
-      apiListStage7Jobs()
-    ];
-    responses.forEach(function (result) {
-      const texts = [
-        result && result.message || '',
-        result && result.data && result.data.result && result.data.result.summary || ''
+  _smokePush_(
+    report,
+    "maintenance public wording is release-neutral",
+    function () {
+      const responses = [
+        apiStage7HealthCheck({ mode: "quick" }),
+        apiRunStage7Diagnostics({ mode: "quick" }),
+        apiRunStage7RegressionTests({ dryRun: true }),
+        apiListStage7JobRuntime(),
+        apiListStage7Jobs(),
       ];
-      texts.forEach(function (text) {
-        [{ token: 'Stage 7.2', label: 'legacy-maintenance-token-1' }, { token: 'Stage 7 jobs', label: 'legacy-maintenance-token-2' }, { token: 'Stage 7 health check', label: 'legacy-maintenance-token-3' }, { token: 'Stage 7 full health check', label: 'legacy-maintenance-token-4' }, { token: 'Stage 7 diagnostics', label: 'legacy-maintenance-token-5' }, { token: 'Stage 7 regression tests', label: 'legacy-maintenance-token-6' }, { token: 'Stage 7 job runtime', label: 'legacy-maintenance-token-7' }].forEach(function (item) {
-          _smokeAssert_(String(text).indexOf(item.token) === -1, `У maintenance response залишився legacy marker: ${item.label}`);
+      responses.forEach(function (result) {
+        const texts = [
+          (result && result.message) || "",
+          (result &&
+            result.data &&
+            result.data.result &&
+            result.data.result.summary) ||
+            "",
+        ];
+        texts.forEach(function (text) {
+          [
+            { token: "Stage 7.2", label: "legacy-maintenance-token-1" },
+            { token: "Stage 7 jobs", label: "legacy-maintenance-token-2" },
+            {
+              token: "Stage 7 health check",
+              label: "legacy-maintenance-token-3",
+            },
+            {
+              token: "Stage 7 full health check",
+              label: "legacy-maintenance-token-4",
+            },
+            {
+              token: "Stage 7 diagnostics",
+              label: "legacy-maintenance-token-5",
+            },
+            {
+              token: "Stage 7 regression tests",
+              label: "legacy-maintenance-token-6",
+            },
+            {
+              token: "Stage 7 job runtime",
+              label: "legacy-maintenance-token-7",
+            },
+          ].forEach(function (item) {
+            _smokeAssert_(
+              String(text).indexOf(item.token) === -1,
+              `У maintenance response залишився legacy marker: ${item.label}`,
+            );
+          });
         });
       });
-    });
-    return 'maintenance-wording-ok';
-  });
+      return "maintenance-wording-ok";
+    },
+  );
 
-  _smokePush_(report, 'diagnostics modes available', function () {
-    ['runQuickDiagnostics_', 'runStructuralDiagnostics_', 'runOperationalDiagnostics_', 'runSunsetDiagnostics_', 'runFullDiagnostics_'].forEach(function (fnName) {
+  _smokePush_(report, "diagnostics modes available", function () {
+    [
+      "runQuickDiagnostics_",
+      "runStructuralDiagnostics_",
+      "runOperationalDiagnostics_",
+      "runSunsetDiagnostics_",
+      "runFullDiagnostics_",
+    ].forEach(function (fnName) {
       _smokeAssert_(_smokeHasFn_(fnName), `${fnName} відсутній`);
     });
-    return 'diagnostics-modes-ok';
+    return "diagnostics-modes-ok";
   });
 
-  _smokePush_(report, 'diagnostics suite', function () {
-    const diagnostics = runFullDiagnostics_({ mode: 'full' });
-    _smokeAssert_(Array.isArray(diagnostics.checks), 'runFullDiagnostics_() не повернув checks[]');
-    return `checks=${diagnostics.checks.length}`;
-  }, { skipOnError: true });
+  _smokePush_(
+    report,
+    "diagnostics suite",
+    function () {
+      const diagnostics = runFullDiagnostics_({ mode: "full" });
+      _smokeAssert_(
+        Array.isArray(diagnostics.checks),
+        "runFullDiagnostics_() не повернув checks[]",
+      );
+      return `checks=${diagnostics.checks.length}`;
+    },
+    { skipOnError: true },
+  );
 
-  _smokePush_(report, 'job runtime contract', function () {
+  _smokePush_(report, "job runtime contract", function () {
     const runtime = JobRuntime_.buildRuntimeReport();
-    _smokeAssert_(typeof runtime === 'object', 'JobRuntime_.buildRuntimeReport() не повернув обʼєкт');
+    _smokeAssert_(
+      typeof runtime === "object",
+      "JobRuntime_.buildRuntimeReport() не повернув обʼєкт",
+    );
     return `jobs=${runtime.totalJobs || 0}`;
   });
 
-  _smokePush_(report, 'template governance contract', function () {
+  _smokePush_(report, "template governance contract", function () {
     const templates = TemplateRegistry_.list();
-    _smokeAssert_(Array.isArray(templates), 'TemplateRegistry_.list() не повернув масив');
-    const resolved = TemplateResolver_.resolve('DAY_SUMMARY_HEADER', { date: '01.01.2026' }, { preview: true });
-    _smokeAssert_(typeof resolved.text === 'string', 'TemplateResolver_.resolve() не повернув text');
+    _smokeAssert_(
+      Array.isArray(templates),
+      "TemplateRegistry_.list() не повернув масив",
+    );
+    const resolved = TemplateResolver_.resolve(
+      "DAY_SUMMARY_HEADER",
+      { date: "01.01.2026" },
+      { preview: true },
+    );
+    _smokeAssert_(
+      typeof resolved.text === "string",
+      "TemplateResolver_.resolve() не повернув text",
+    );
     return `templates=${templates.length}`;
   });
 
-  _smokePush_(report, 'compatibility sunset report', function () {
+  _smokePush_(report, "compatibility sunset report", function () {
     const sunset = getCompatibilitySunsetReport_();
-    _smokeAssert_(typeof sunset.total === 'number', 'getCompatibilitySunsetReport_() не повернув total');
-    _smokeAssert_(typeof sunset.counts === 'object', 'getCompatibilitySunsetReport_() не повернув counts');
+    _smokeAssert_(
+      typeof sunset.total === "number",
+      "getCompatibilitySunsetReport_() не повернув total",
+    );
+    _smokeAssert_(
+      typeof sunset.counts === "object",
+      "getCompatibilitySunsetReport_() не повернув counts",
+    );
     return `total=${sunset.total}`;
   });
 
-  _smokePush_(report, 'hardening domain test suite', function () {
+  _smokePush_(report, "hardening domain test suite", function () {
     const domain = runStage6ADomainTests_({ dryRun: true });
-    _smokeAssert_(Array.isArray(domain.checks), 'runStage6ADomainTests_() не повернув checks[]');
-    _smokeAssert_(domain.total >= 20, 'Замало Stage 7A domain tests');
-    if (!domain.ok) throw new Error('Stage 7A domain tests не повинні мати FAIL');
+    _smokeAssert_(
+      Array.isArray(domain.checks),
+      "runStage6ADomainTests_() не повернув checks[]",
+    );
+    _smokeAssert_(domain.total >= 20, "Замало Stage 7A domain tests");
+    if (!domain.ok)
+      throw new Error("Stage 7A domain tests не повинні мати FAIL");
     return `tests=${domain.total}`;
   });
 
-  _smokePush_(report, 'hardening routing registry coverage', function () {
+  _smokePush_(report, "hardening routing registry coverage", function () {
     const coverage = getRouteCoverageReport_();
-    _smokeAssert_(coverage.total >= 20, 'routing registry надто малий');
-    _smokeAssert_(coverage.criticalWrites === coverage.lockCoverage, 'Не всі critical writes мають lock coverage');
+    _smokeAssert_(coverage.total >= 20, "routing registry надто малий");
+    _smokeAssert_(
+      coverage.criticalWrites === coverage.lockCoverage,
+      "Не всі critical writes мають lock coverage",
+    );
     return `routes=${coverage.total}`;
   });
 
-  _smokePush_(report, 'hardening job runtime governance', function () {
+  _smokePush_(report, "hardening job runtime governance", function () {
     const runtime = JobRuntime_.buildRuntimeReport();
-    _smokeAssert_(runtime.storagePolicy && runtime.storagePolicy.policy === 'hybrid-sheet-plus-properties', 'Hybrid runtime policy не описана');
-    _smokeAssert_(runtime.storagePolicy.propertiesArePrimaryJournal === false, 'PropertiesService не може бути primary journal');
+    _smokeAssert_(
+      runtime.storagePolicy &&
+        runtime.storagePolicy.policy === "hybrid-sheet-plus-properties",
+      "Hybrid runtime policy не описана",
+    );
+    _smokeAssert_(
+      runtime.storagePolicy.propertiesArePrimaryJournal === false,
+      "PropertiesService не може бути primary journal",
+    );
     return runtime.storagePolicy.policy;
   });
 
-  _smokePush_(report, 'safety-aware response contract', function () {
-    const response = buildServerResponse_(true, 'OK', null, {}, [], { operationId: 'op', scenario: 'x', dryRun: false, affectedSheets: ['SEND_PANEL'], affectedEntities: ['x'], appliedChangesCount: 1, skippedChangesCount: 0, partial: false, retrySafe: true, lockUsed: true }, { lifecycle: [] }, { scenario: 'x' }, []);
-    ['operationId', 'scenario', 'dryRun', 'affectedSheets', 'affectedEntities', 'appliedChangesCount', 'skippedChangesCount', 'partial', 'retrySafe', 'lockUsed'].forEach(function (field) {
+  _smokePush_(report, "safety-aware response contract", function () {
+    const response = buildServerResponse_(
+      true,
+      "OK",
+      null,
+      {},
+      [],
+      {
+        operationId: "op",
+        scenario: "x",
+        dryRun: false,
+        affectedSheets: ["SEND_PANEL"],
+        affectedEntities: ["x"],
+        appliedChangesCount: 1,
+        skippedChangesCount: 0,
+        partial: false,
+        retrySafe: true,
+        lockUsed: true,
+      },
+      { lifecycle: [] },
+      { scenario: "x" },
+      [],
+    );
+    [
+      "operationId",
+      "scenario",
+      "dryRun",
+      "affectedSheets",
+      "affectedEntities",
+      "appliedChangesCount",
+      "skippedChangesCount",
+      "partial",
+      "retrySafe",
+      "lockUsed",
+    ].forEach(function (field) {
       _smokeAssert_(field in response, `Response missing ${field}`);
     });
-    return 'contract-ok';
+    return "contract-ok";
   });
 
-  _smokePush_(report, 'lifecycle repository contract', function () {
-    _smokeAssert_(typeof OperationRepository_ === 'object', 'OperationRepository_ відсутній');
-    _smokeAssert_(typeof OperationRepository_.buildFingerprint === 'function', 'buildFingerprint() відсутній');
-    _smokeAssert_(typeof OperationRepository_.transitionStatus === 'function', 'transitionStatus() відсутній');
-    _smokeAssert_(typeof OperationRepository_.appendNote === 'function', 'appendNote() відсутній');
-    const fp1 = OperationRepository_.buildFingerprint('markPanelRowsAsSent', { rowNumbers: [7, 3, 7, 3], callsigns: [' A ', 'b', 'a'] });
-    const fp2 = OperationRepository_.buildFingerprint('markPanelRowsAsSent', { rowNumbers: [3, 7], callsigns: ['b', 'a'] });
-    _smokeAssert_(fp1 === fp2, 'fingerprint normalization не працює стабільно');
-    return 'lifecycle-contract-ok';
+  _smokePush_(report, "lifecycle repository contract", function () {
+    _smokeAssert_(
+      typeof OperationRepository_ === "object",
+      "OperationRepository_ відсутній",
+    );
+    _smokeAssert_(
+      typeof OperationRepository_.buildFingerprint === "function",
+      "buildFingerprint() відсутній",
+    );
+    _smokeAssert_(
+      typeof OperationRepository_.transitionStatus === "function",
+      "transitionStatus() відсутній",
+    );
+    _smokeAssert_(
+      typeof OperationRepository_.appendNote === "function",
+      "appendNote() відсутній",
+    );
+    const fp1 = OperationRepository_.buildFingerprint("markPanelRowsAsSent", {
+      rowNumbers: [7, 3, 7, 3],
+      callsigns: [" A ", "b", "a"],
+    });
+    const fp2 = OperationRepository_.buildFingerprint("markPanelRowsAsSent", {
+      rowNumbers: [3, 7],
+      callsigns: ["b", "a"],
+    });
+    _smokeAssert_(fp1 === fp2, "fingerprint normalization не працює стабільно");
+    return "lifecycle-contract-ok";
   });
 
-  _smokePush_(report, 'access security e2e dry-run', function () {
+  _smokePush_(report, "access security e2e dry-run", function () {
     const runner = _smokeResolveAccessSecurityRunner_();
-    _smokeAssert_(runner && typeof runner.fn === 'function', 'Access security runner відсутній');
+    _smokeAssert_(
+      runner && typeof runner.fn === "function",
+      "Access security runner відсутній",
+    );
 
     const e2e = runner.fn({
       dryRun: true,
-      safeTestEnvironment: true
+      safeTestEnvironment: true,
     });
 
-    _smokeAssert_(e2e && Array.isArray(e2e.checks), 'Access E2E не повернув checks[]');
-    _smokeAssert_(e2e.checks.length >= 8, 'Замало access security E2E checks');
-    _smokeAssert_(e2e.status !== 'BLOCKED', 'Access security E2E повернув BLOCKED');
-    _smokeAssert_(e2e.ok !== false, 'Access security E2E повернув ok=false');
+    _smokeAssert_(
+      e2e && Array.isArray(e2e.checks),
+      "Access E2E не повернув checks[]",
+    );
+    _smokeAssert_(e2e.checks.length >= 8, "Замало access security E2E checks");
+    _smokeAssert_(
+      e2e.status !== "BLOCKED",
+      "Access security E2E повернув BLOCKED",
+    );
+    _smokeAssert_(e2e.ok !== false, "Access security E2E повернув ok=false");
     return `runner=${runner.name}; checks=${e2e.checks.length}`;
   });
 
-  _smokePush_(report, 'security hardening helpers', function () {
-    _smokeAssert_(typeof AccessControl_ === 'object', 'AccessControl_ відсутній');
-    _smokeAssert_(typeof SecurityRedaction_ === 'object', 'SecurityRedaction_ відсутній');
-    _smokeAssert_(typeof applySpreadsheetProtections_ === 'function', 'applySpreadsheetProtections_ відсутня');
-    _smokeAssert_(typeof cleanupLogsAndAuditRetention_ === 'function', 'cleanupLogsAndAuditRetention_ відсутня');
-    return 'security-helpers-ok';
+  _smokePush_(report, "security hardening helpers", function () {
+    _smokeAssert_(
+      typeof AccessControl_ === "object",
+      "AccessControl_ відсутній",
+    );
+    _smokeAssert_(
+      typeof SecurityRedaction_ === "object",
+      "SecurityRedaction_ відсутній",
+    );
+    _smokeAssert_(
+      typeof applySpreadsheetProtections_ === "function",
+      "applySpreadsheetProtections_ відсутня",
+    );
+    _smokeAssert_(
+      typeof cleanupLogsAndAuditRetention_ === "function",
+      "cleanupLogsAndAuditRetention_ відсутня",
+    );
+    return "security-helpers-ok";
   });
 
-  _smokePush_(report, 'maintenance repair api contract', function () {
-    ['apiStage7ListPendingRepairs', 'apiStage7GetOperationDetails', 'apiStage7RunRepair'].forEach(function (name) {
-      _smokeAssert_(_smokeHasFn_(name), name + ' відсутній');
+  _smokePush_(report, "maintenance repair api contract", function () {
+    [
+      "apiStage7ListPendingRepairs",
+      "apiStage7GetOperationDetails",
+      "apiStage7RunRepair",
+    ].forEach(function (name) {
+      _smokeAssert_(_smokeHasFn_(name), name + " відсутній");
     });
-    return 'repair-api-ok';
+    return "repair-api-ok";
   });
 
-  _smokePush_(report, 'pending repairs visibility contract', function () {
-    const result = apiStage7ListPendingRepairs({});
-    _assertStage4Meta_(result, 'apiStage7ListPendingRepairs');
-    const payload = result && result.data && result.data.result ? result.data.result : {};
-    _smokeAssert_(typeof payload.total === 'number', 'total pending repairs не повернуто');
-    _smokeAssert_(Array.isArray(payload.operations), 'operations[] не повернуто');
-    return `visible=${payload.total}`;
-  }, { skipOnError: true });
+  _smokePush_(
+    report,
+    "pending repairs visibility contract",
+    function () {
+      const result = apiStage7ListPendingRepairs({});
+      _assertStage4Meta_(result, "apiStage7ListPendingRepairs");
+      const payload =
+        result && result.data && result.data.result ? result.data.result : {};
+      _smokeAssert_(
+        typeof payload.total === "number",
+        "total pending repairs не повернуто",
+      );
+      _smokeAssert_(
+        Array.isArray(payload.operations),
+        "operations[] не повернуто",
+      );
+      return `visible=${payload.total}`;
+    },
+    { skipOnError: true },
+  );
 
-  _smokePush_(report, 'historical docs kept non-active', function () {
-    _smokeAssert_(docs.active.changelog === 'CHANGELOG.md', 'CHANGELOG має бути активним');
-    _smokeAssert_(Array.isArray(docs.historical), 'historical має бути масивом');
-    _smokeAssert_(docs.historical.length === 0, 'Compact release archive не повинен заявляти відсутні historical docs');
-    return 'historical-docs-ok';
+  _smokePush_(report, "historical docs kept non-active", function () {
+    _smokeAssert_(
+      docs.active.changelog === "CHANGELOG.md",
+      "CHANGELOG має бути активним",
+    );
+    _smokeAssert_(
+      Array.isArray(docs.historical),
+      "historical має бути масивом",
+    );
+    _smokeAssert_(
+      docs.historical.length === 0,
+      "Compact release archive не повинен заявляти відсутні historical docs",
+    );
+    return "historical-docs-ok";
   });
 
   return report;
 }
-
-

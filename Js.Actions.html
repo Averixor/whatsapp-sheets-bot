@@ -1,9 +1,11 @@
 <script>
-// Js.Actions — active Stage 7.1 runtime fragment.
+  // Js.Actions — active Stage 7.1 runtime fragment.
 
   window.SidebarApp = window.SidebarApp || {
     handleMenuAction() {},
     showMenu() {},
+    showRequestsForm() {},
+    submitRequestForm() {},
     toggleConsole() {},
     clearConsole() {},
     scrollConsole() {},
@@ -12,27 +14,163 @@
     sendOneFromPanel() {},
     confirmSendFromPanel() {},
     rejectSendFromPanel() {},
-    debugAccess() {}
+    debugAccess() {},
   };
 
+  // =========================
+  // REQUESTS (Projects -> Requests)
+  // =========================
+
+  async function showRequestsForm() {
+    showStandardResult("📝 Заявка");
+    setText("resultTitle", "Заявки");
+    setHtml(
+      "resultContent",
+      `
+      <div class="result-item">
+        <div class="result-label">Нова заявка</div>
+        <div class="result-value" style="color:var(--muted-color);">Завантажую список проєктів...</div>
+      </div>
+    `,
+    );
+
+    showLoading();
+    try {
+      const res = await gsRun("apiGetActiveProjects");
+      if (!res?.success)
+        throw new Error(res?.error || "Не вдалося отримати проєкти");
+
+      const projects = Array.isArray(res?.data?.result?.projects)
+        ? res.data.result.projects
+        : [];
+      const options = projects
+        .map((p) => {
+          const id = escapeHtml(String(p?.id ?? ""));
+          const name = escapeHtml(String(p?.name ?? ""));
+          return `<option value="${id}">${name}</option>`;
+        })
+        .join("");
+
+      setHtml(
+        "resultContent",
+        `
+        <div class="result-item">
+          <div class="result-label">Нова заявка</div>
+          <div class="result-message">
+            <label style="display:block;margin:8px 0 6px 0;font-weight:700;">Проєкт *</label>
+            <select id="reqProject" class="input" style="width:100%;padding:10px;border-radius:12px;border:1px solid rgba(0,0,0,.12);">
+              <option value="">— Обери проєкт —</option>
+              ${options}
+            </select>
+
+            <label style="display:block;margin:10px 0 6px 0;font-weight:700;">Тема *</label>
+            <input id="reqTitle" class="input" type="text" maxlength="140"
+              style="width:100%;padding:10px;border-radius:12px;border:1px solid rgba(0,0,0,.12);" placeholder="Коротко про суть" />
+
+            <label style="display:block;margin:10px 0 6px 0;font-weight:700;">Опис *</label>
+            <textarea id="reqDetails" class="input" rows="6" maxlength="3000"
+              style="width:100%;padding:10px;border-radius:12px;border:1px solid rgba(0,0,0,.12);resize:vertical;"
+              placeholder="Що саме потрібно зробити / що не працює / посилання / приклади"></textarea>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+              <button class="btn btn-primary" type="button" onclick="SidebarApp.submitRequestForm()">Зберегти</button>
+              <button class="btn" type="button" onclick="SidebarApp.showMenu()">Назад</button>
+            </div>
+          </div>
+        </div>
+      `,
+      );
+      logToConsole(`✓ Проєкти завантажено: ${projects.length}`, "success");
+    } catch (e) {
+      logToConsole(`✕ Заявки: ${normalizeError(e)}`, "error");
+      displayInResult("error", { error: normalizeError(e) });
+    } finally {
+      hideLoading();
+    }
+  }
+
+  async function submitRequestForm() {
+    const projectId = String($id("reqProject")?.value || "").trim();
+    const title = String($id("reqTitle")?.value || "").trim();
+    const details = String($id("reqDetails")?.value || "").trim();
+
+    if (!projectId) {
+      showToast("✕ Обери проєкт");
+      return;
+    }
+    if (!title) {
+      showToast("✕ Заповни тему");
+      return;
+    }
+    if (!details) {
+      showToast("✕ Заповни опис");
+      return;
+    }
+
+    const projectName = String(
+      $id("reqProject")?.selectedOptions?.[0]?.textContent || "",
+    ).trim();
+
+    showLoading();
+    try {
+      const res = await gsRun("apiSubmitRequest", {
+        projectId,
+        projectName,
+        title,
+        details,
+      });
+      if (res?.success) {
+        showToast("✓ Заявку збережено");
+        displayInResult("success", {
+          message: res.message || "✓ Заявку збережено",
+        });
+      } else if (res && res.success === true && res.message) {
+        // warnResponse_ також має success=true — тоді message пояснює дубль
+        showToast(res.message);
+        displayInResult("success", { message: res.message });
+      } else {
+        throw new Error(res?.error || "Не вдалося зберегти");
+      }
+      logToConsole(
+        `📝 Заявка: ${res?.message || "операція виконана"}`,
+        res?.success ? "info" : "warning",
+      );
+    } catch (e) {
+      logToConsole(`✕ Збереження заявки: ${normalizeError(e)}`, "error");
+      displayInResult("error", { error: normalizeError(e) });
+    } finally {
+      hideLoading();
+    }
+  }
+
+  window.SidebarApp.showRequestsForm = showRequestsForm;
+  window.SidebarApp.submitRequestForm = submitRequestForm;
+
   function canOpenPersonCardClientSafe_(callsign) {
-    if (typeof canOpenPersonCardClient_ === 'function') {
+    if (typeof canOpenPersonCardClient_ === "function") {
       try {
         return !!canOpenPersonCardClient_(callsign);
       } catch (_) {}
     }
-    const access = (typeof STATE !== 'undefined' && STATE && STATE.access) ? STATE.access : {};
-    const role = String(access.role || 'guest').trim().toLowerCase();
-    const target = String(callsign || '').trim().toUpperCase();
-    const own = String(access.personCallsign || '').trim().toUpperCase();
+    const access =
+      typeof STATE !== "undefined" && STATE && STATE.access ? STATE.access : {};
+    const role = String(access.role || "guest")
+      .trim()
+      .toLowerCase();
+    const target = String(callsign || "")
+      .trim()
+      .toUpperCase();
+    const own = String(access.personCallsign || "")
+      .trim()
+      .toUpperCase();
     if (!target) return false;
     if (access.isOperator || access.isAdmin) return true;
-    if (role !== 'viewer') return false;
+    if (role !== "viewer") return false;
     return !!own && own === target;
   }
 
   async function reportAccessViolationSafe_(actionName, details) {
-    if (typeof reportAccessViolation_ === 'function') {
+    if (typeof reportAccessViolation_ === "function") {
       try {
         return await reportAccessViolation_(actionName, details);
       } catch (_) {}
@@ -46,35 +184,35 @@
 
   function fallbackCopy(text) {
     try {
-      const el = document.createElement('textarea');
+      const el = document.createElement("textarea");
       el.value = text;
-      el.style.position = 'fixed';
-      el.style.left = '-9999px';
+      el.style.position = "fixed";
+      el.style.left = "-9999px";
 
       document.body.appendChild(el);
       el.focus();
       el.select();
-      document.execCommand('copy');
+      document.execCommand("copy");
       document.body.removeChild(el);
 
-      showToast('✓ Скопійовано');
+      showToast("✓ Скопійовано");
     } catch (_) {
-      showToast('✕ Не вдалося скопіювати');
+      showToast("✕ Не вдалося скопіювати");
     }
   }
 
   function copyResultText(text) {
-    const value = String(text ?? '');
+    const value = String(text ?? "");
 
     if (!value) {
-      showToast('⚠ Нічого копіювати');
+      showToast("⚠ Нічого копіювати");
       return;
     }
 
     if (navigator.clipboard?.writeText) {
       navigator.clipboard
         .writeText(value)
-        .then(() => showToast('✓ Скопійовано'))
+        .then(() => showToast("✓ Скопійовано"))
         .catch(() => fallbackCopy(value));
       return;
     }
@@ -83,7 +221,7 @@
   }
 
   function copyToClipboard(btn) {
-    const text = btn?.getAttribute?.('data-text') || btn?.innerText;
+    const text = btn?.getAttribute?.("data-text") || btn?.innerText;
     if (!text) return;
     copyResultText(text);
   }
@@ -94,7 +232,7 @@
 
   async function sendDetailedToCommander() {
     if (!STATE.lastDetailedDate || !STATE.lastDetailedText) {
-      showToast('✕ Спочатку створи детальне зведення');
+      showToast("✕ Спочатку створи детальне зведення");
       return;
     }
 
@@ -102,19 +240,19 @@
 
     try {
       const result = await gsRun(
-        'sendDetailedToCommanderSidebar',
+        "sendDetailedToCommanderSidebar",
         STATE.lastDetailedDate,
-        STATE.lastDetailedText
+        STATE.lastDetailedText,
       );
 
       if (result?.success) {
         if (!STATE.DIAG_TEST_MODE) openLinkSafe(result.link);
-        showToast('✓ Відправлено командиру');
+        showToast("✓ Відправлено командиру");
       } else {
-        showToast('✕ ' + (result?.error || 'Помилка'));
+        showToast("✕ " + (result?.error || "Помилка"));
       }
     } catch (error) {
-      showToast('✕ ' + normalizeError(error));
+      showToast("✕ " + normalizeError(error));
     } finally {
       hideLoading();
     }
@@ -122,7 +260,7 @@
 
   async function sendDaySummaryToCommander() {
     if (!STATE.lastSummaryDate || !STATE.lastSummaryText) {
-      showToast('✕ Спочатку створи зведення дня');
+      showToast("✕ Спочатку створи зведення дня");
       return;
     }
 
@@ -130,19 +268,19 @@
 
     try {
       const result = await gsRun(
-        'sendDaySummaryToCommanderSidebar',
+        "sendDaySummaryToCommanderSidebar",
         STATE.lastSummaryDate,
-        STATE.lastSummaryText
+        STATE.lastSummaryText,
       );
 
       if (result?.success) {
         if (!STATE.DIAG_TEST_MODE) openLinkSafe(result.link);
-        showToast('✓ Відправлено командиру');
+        showToast("✓ Відправлено командиру");
       } else {
-        showToast('✕ ' + (result?.error || 'Помилка'));
+        showToast("✕ " + (result?.error || "Помилка"));
       }
     } catch (error) {
-      showToast('✕ ' + normalizeError(error));
+      showToast("✕ " + normalizeError(error));
     } finally {
       hideLoading();
     }
@@ -153,74 +291,77 @@
   // =========================
 
   function displayBirthdayResult(result) {
-    const contentEl = $id('resultContent');
+    const contentEl = $id("resultContent");
     if (!contentEl) return;
     contentEl.innerHTML = renderBirthdayResult(result);
   }
-
 
   function formatYearsUa(age) {
     const n = Math.abs(Number(age)) % 100;
     const n1 = n % 10;
 
-    if (n > 10 && n < 20) return 'років';
-    if (n1 === 1) return 'рік';
-    if (n1 >= 2 && n1 <= 4) return 'роки';
-    return 'років';
+    if (n > 10 && n < 20) return "років";
+    if (n1 === 1) return "рік";
+    if (n1 >= 2 && n1 <= 4) return "роки";
+    return "років";
   }
 
   function formatBirthdayWithAge(birthday, age) {
-    const b = String(birthday || '').trim();
+    const b = String(birthday || "").trim();
     const a = Number(age);
 
-    if (!b) return '—';
+    if (!b) return "—";
     if (!Number.isFinite(a) || a <= 0) return b;
 
     return `${b} (${a} ${formatYearsUa(a)})`;
   }
 
-
   function formatBirthdayDayWord(days) {
     const n = Math.abs(Number(days)) % 100;
     const n1 = n % 10;
-    if (n > 10 && n < 20) return 'днів';
-    if (n1 === 1) return 'день';
-    if (n1 >= 2 && n1 <= 4) return 'дні';
-    return 'днів';
+    if (n > 10 && n < 20) return "днів";
+    if (n1 === 1) return "день";
+    if (n1 >= 2 && n1 <= 4) return "дні";
+    return "днів";
   }
 
   function formatBirthdayCardNote(daysUntil, mode) {
     const d = Number(daysUntil);
-    if (!Number.isFinite(d)) return '';
+    if (!Number.isFinite(d)) return "";
 
-    if (d === 0) return '🥳 Сьогодні день народження!';
-    if (d === 1) return '⏳ Завтра день народження';
+    if (d === 0) return "🥳 Сьогодні день народження!";
+    if (d === 1) return "⏳ Завтра день народження";
 
     const word = formatBirthdayDayWord(d);
-    return mode === 'commander'
+    return mode === "commander"
       ? `Нагадування: через ${d} ${word}`
       : `До свята: ${d} ${word}`;
   }
 
   function renderBirthdayResult(rawData) {
     const data = normalizeBirthdayData(rawData);
-    const esc = value => escapeHtml(String(value || ''));
-    const itemStyle = 'background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:10px 12px;margin-top:8px;';
-    const fmlStyle = 'color:#111827;font-weight:800;font-size:14px;';
-    const btnStyle = 'margin-top:8px;width:100%;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:#25D366;color:#fff;border:none;border-radius:999px;cursor:pointer;font-weight:700;font-size:13px;';
+    const esc = (value) => escapeHtml(String(value || ""));
+    const itemStyle =
+      "background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:10px 12px;margin-top:8px;";
+    const fmlStyle = "color:#111827;font-weight:800;font-size:14px;";
+    const btnStyle =
+      "margin-top:8px;width:100%;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:#25D366;color:#fff;border:none;border-radius:999px;cursor:pointer;font-weight:700;font-size:13px;";
 
-    let html = '';
+    let html = "";
 
     // ---------- NEW SHAPE ----------
 
-    if (data.mode === 'new') {
-      if (Array.isArray(data.commanderMessages) && data.commanderMessages.length > 0) {
+    if (data.mode === "new") {
+      if (
+        Array.isArray(data.commanderMessages) &&
+        data.commanderMessages.length > 0
+      ) {
         html += `
           <div style="background:#e3f2fd;border:1px solid #2196F3;border-left:4px solid #2196F3;border-radius:14px;padding:12px;margin-bottom:12px;">
             <div style="font-weight:800;font-size:13px;color:#0b5e9e;margin-bottom:10px;">КОМАНДИРУ (${data.commanderMessages.length})</div>
         `;
 
-        data.commanderMessages.forEach(row => {
+        data.commanderMessages.forEach((row) => {
           html += `
             <div style="${itemStyle}">
               <div style="${fmlStyle}; text-align:left;">🎂 ${esc(row.fml || row.callsign)}</div>
@@ -228,7 +369,7 @@
                 ${esc(formatBirthdayWithAge(row.birthday, row.age))}
               </div>
               <div style="font-size:12px;color:#6b7280;margin-top:4px;text-align:left;line-height:1.35;">
-                ${esc(formatBirthdayCardNote(row.daysUntil, 'commander'))}
+                ${esc(formatBirthdayCardNote(row.daysUntil, "commander"))}
               </div>
               ${
                 row.link
@@ -242,13 +383,16 @@
         html += `</div>`;
       }
 
-      if (Array.isArray(data.birthdayMessages) && data.birthdayMessages.length > 0) {
+      if (
+        Array.isArray(data.birthdayMessages) &&
+        data.birthdayMessages.length > 0
+      ) {
         html += `
           <div style="background:#fff3e0;border:1px solid #ff9800;border-left:4px solid #ff9800;border-radius:14px;padding:12px;margin-bottom:12px;">
             <div style="font-weight:800;font-size:13px;color:#e65100;margin-bottom:10px;">ІМЕНИННИКУ (${data.birthdayMessages.length})</div>
         `;
 
-        data.birthdayMessages.forEach(person => {
+        data.birthdayMessages.forEach((person) => {
           html += `
             <div style="${itemStyle}">
               <div style="${fmlStyle}; text-align:left;">🎂 ${esc(person.fml || person.displayName)}</div>
@@ -256,16 +400,14 @@
                 ${esc(formatBirthdayWithAge(person.birthday, person.age))}
               </div>
               <div style="font-size:12px;color:#6b7280;margin-top:4px;text-align:left;line-height:1.35;">
-                ${esc(formatBirthdayCardNote(person.daysUntil, 'person'))}
+                ${esc(formatBirthdayCardNote(person.daysUntil, "person"))}
               </div>
               ${
                 person.link
                   ? `<button style="${btnStyle}" onclick="SidebarApp.sendBirthdayMessage('${escapeJsString(person.link)}')">Привітати</button>`
-                  : (
-                      person.phone
-                        ? `<button style="${btnStyle}" onclick="SidebarApp.openBirthdayWA('${escapeJsString(person.phone)}', '${escapeJsString(person.displayName || person.fml)}')">Привітати у WhatsApp</button>`
-                        : `<div style="color:#888;font-size:12px;margin-top:6px;">⚠ Немає телефону</div>`
-                    )
+                  : person.phone
+                    ? `<button style="${btnStyle}" onclick="SidebarApp.openBirthdayWA('${escapeJsString(person.phone)}', '${escapeJsString(person.displayName || person.fml)}')">Привітати у WhatsApp</button>`
+                    : `<div style="color:#888;font-size:12px;margin-top:6px;">⚠ Немає телефону</div>`
               }
             </div>
           `;
@@ -277,14 +419,14 @@
 
     // ---------- LEGACY SHAPE ----------
 
-    if (data.mode === 'legacy') {
+    if (data.mode === "legacy") {
       if (Array.isArray(data.today) && data.today.length > 0) {
         html += `
           <div style="background:#fff3e0;border:1px solid #ff9800;border-left:4px solid #ff9800;border-radius:14px;padding:12px;margin-bottom:12px;">
             <div style="font-weight:800;font-size:13px;color:#e65100;margin-bottom:10px;">🎂 СЬОГОДНІ ДН (${data.today.length})</div>
         `;
 
-        data.today.forEach(person => {
+        data.today.forEach((person) => {
           html += `
             <div style="${itemStyle}">
               <div style="${fmlStyle}; text-align:left;">🎉 ${esc(person.fml || person.displayName)}</div>
@@ -309,7 +451,7 @@
             <div style="font-weight:800;font-size:13px;color:#0b5e9e;margin-bottom:10px;">⏳ ЗАВТРА ДН (${data.tomorrow.length})</div>
         `;
 
-        data.tomorrow.forEach(person => {
+        data.tomorrow.forEach((person) => {
           html += `
             <div style="${itemStyle}">
               <div style="${fmlStyle}; text-align:left;">🎂 ${esc(person.fml || person.displayName)}</div>
@@ -350,12 +492,12 @@
 
       if (result?.success && result.link) {
         if (!STATE.DIAG_TEST_MODE) openLinkSafe(result.link);
-        showToast('✓ WhatsApp відкрито');
+        showToast("✓ WhatsApp відкрито");
       } else {
-        showToast('✕ ' + (result?.error || 'Немає телефону'));
+        showToast("✕ " + (result?.error || "Немає телефону"));
       }
     } catch (error) {
-      showToast('✕ ' + normalizeError(error));
+      showToast("✕ " + normalizeError(error));
     } finally {
       hideLoading();
     }
@@ -363,84 +505,92 @@
 
   function sendBirthdayMessage(link) {
     if (!link) {
-      logToConsole('✕ Немає посилання для відправки', 'error');
+      logToConsole("✕ Немає посилання для відправки", "error");
       return;
     }
 
     if (!STATE.DIAG_TEST_MODE) openLinkSafe(link);
-    logToConsole('📱 WhatsApp відкрито', 'success');
+    logToConsole("📱 WhatsApp відкрито", "success");
   }
 
   // =========================
   // PERSON CARD
   // =========================
 
-  async function openPersonCardByCallsign_(callsign, dateStr = '') {
+  async function openPersonCardByCallsign_(callsign, dateStr = "") {
     if (!callsign) {
-      showToast('⚠ Позивний не вказано');
+      showToast("⚠ Позивний не вказано");
       return;
     }
 
     if (!canOpenPersonCardClientSafe_(callsign)) {
-      await reportAccessViolationSafe_('openPersonCardUiDenied', {
-        source: 'person-card-open',
+      await reportAccessViolationSafe_("openPersonCardUiDenied", {
+        source: "person-card-open",
         requestedCallsign: callsign,
-        requestedDate: dateStr || ''
+        requestedDate: dateStr || "",
       });
-      showToast('Можна відкрити лише власну картку');
-      logToConsole('✕ Недостатньо прав для відкриття картки: ' + callsign, 'warning');
+      showToast("Можна відкрити лише власну картку");
+      logToConsole(
+        "✕ Недостатньо прав для відкриття картки: " + callsign,
+        "warning",
+      );
       return;
     }
 
     try {
-      const data = await ActionDispatcher.run('openPersonCard', () => Stage7Api.openPersonCard(callsign, dateStr || ''));
+      const data = await ActionDispatcher.run("openPersonCard", () =>
+        Stage7Api.openPersonCard(callsign, dateStr || ""),
+      );
       if (!data || !data.success) {
-        const msg = data?.error || 'Не вдалося отримати дані картки';
+        const msg = data?.error || "Не вдалося отримати дані картки";
         showError(msg);
-        logToConsole(`✕ ${msg}`, 'error');
+        logToConsole(`✕ ${msg}`, "error");
         return;
       }
 
       renderPersonCard(data);
-      logToConsole(`Відкрито картку: ${data.callsign || callsign}`, 'success');
+      logToConsole(`Відкрито картку: ${data.callsign || callsign}`, "success");
     } catch (error) {
       const msg = normalizeError(error);
       showError(msg);
-      logToConsole(`✕ ${msg}`, 'error');
+      logToConsole(`✕ ${msg}`, "error");
     }
   }
 
   function renderPersonCard(data) {
-    const root = $id('personCardContainer');
+    const root = $id("personCardContainer");
     if (!root) return;
 
-    showCardResult(`Картка: ${data.callsign || 'Боєць'}`);
+    showCardResult(`Картка: ${data.callsign || "Боєць"}`);
 
     const currentVacHtml =
       data.vac && data.vac.inVacation && Array.isArray(data.vac.matches)
         ? `
           <div class="person-card__section person-card__section--warn">
             <div class="person-card__section-title">Відпустка зараз</div>
-            ${data.vac.matches.map(v => `
+            ${data.vac.matches
+              .map(
+                (v) => `
               <div class="person-card__vac-row">
-                <b>${escapeHtml(v.no || '—')}</b>: ${escapeHtml(v.start || '—')} — ${escapeHtml(v.end || '—')}
+                <b>${escapeHtml(v.no || "—")}</b>: ${escapeHtml(v.start || "—")} — ${escapeHtml(v.end || "—")}
               </div>
-            `).join('')}
+            `,
+              )
+              .join("")}
           </div>
         `
-        : '';
+        : "";
 
-    const nextVacHtml =
-      data.nextVacation
-        ? `
+    const nextVacHtml = data.nextVacation
+      ? `
           <div class="person-card__section person-card__section--info">
             <div class="person-card__section-title">Найближча відпустка</div>
-            <div><b>Номер:</b> ${escapeHtml(data.nextVacation.word || '—')}</div>
-            <div><b>Період:</b> ${escapeHtml(data.nextVacation.start || '—')} — ${escapeHtml(data.nextVacation.end || '—')}</div>
-            <div><b>Залишилось:</b> ${escapeHtml(String(data.nextVacation.daysUntil ?? '—'))} дн.</div>
+            <div><b>Номер:</b> ${escapeHtml(data.nextVacation.word || "—")}</div>
+            <div><b>Період:</b> ${escapeHtml(data.nextVacation.start || "—")} — ${escapeHtml(data.nextVacation.end || "—")}</div>
+            <div><b>Залишилось:</b> ${escapeHtml(String(data.nextVacation.daysUntil ?? "—"))} дн.</div>
           </div>
         `
-        : '';
+      : "";
 
     const waButton = data.waLink
       ? `<a class="person-card__btn person-card__btn--primary" href="${escapeAttr(data.waLink)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>`
@@ -449,54 +599,54 @@
     root.innerHTML = `
       <div class="person-card">
         <div class="person-card__header">
-          <div class="person-card__callsign">${escapeHtml(data.callsign || '—')}</div>
-          <div class="person-card__rank">${escapeHtml(data.rank || '—')}</div>
+          <div class="person-card__callsign">${escapeHtml(data.callsign || "—")}</div>
+          <div class="person-card__rank">${escapeHtml(data.rank || "—")}</div>
         </div>
 
         <div class="person-card__meta">
           <div class="person-card__field">
             <div class="person-card__label">Дата</div>
-            <div class="person-card__value">${escapeHtml(data.dateStr || '—')}</div>
+            <div class="person-card__value">${escapeHtml(data.dateStr || "—")}</div>
           </div>
 
           <div class="person-card__field">
             <div class="person-card__label">ПІБ</div>
-            <div class="person-card__value">${escapeHtml(data.fml || '—')}</div>
+            <div class="person-card__value">${escapeHtml(data.fml || "—")}</div>
           </div>
 
           <div class="person-card__field">
             <div class="person-card__label">Посада</div>
-            <div class="person-card__value">${escapeHtml(data.position || '—')}</div>
+            <div class="person-card__value">${escapeHtml(data.position || "—")}</div>
           </div>
 
           <div class="person-card__field">
             <div class="person-card__label">ОШС</div>
-            <div class="person-card__value">${escapeHtml(data.oshs || '—')}</div>
+            <div class="person-card__value">${escapeHtml(data.oshs || "—")}</div>
           </div>
 
           <div class="person-card__field">
             <div class="person-card__label">Телефон</div>
-            <div class="person-card__value">${escapeHtml(data.phoneDisplay || '—')}</div>
+            <div class="person-card__value">${escapeHtml(data.phoneDisplay || "—")}</div>
           </div>
 
           <div class="person-card__field">
             <div class="person-card__label">ДН</div>
-            <div class="person-card__value">${escapeHtml(data.birthday || '—')}</div>
+            <div class="person-card__value">${escapeHtml(data.birthday || "—")}</div>
           </div>
 
           <div class="person-card__field">
             <div class="person-card__label">Група</div>
-            <div class="person-card__value">${escapeHtml(data.todayGroup || '—')}</div>
+            <div class="person-card__value">${escapeHtml(data.todayGroup || "—")}</div>
           </div>
 
           <div class="person-card__field">
             <div class="person-card__label">БР цей місяць</div>
-            <div class="person-card__value">${escapeHtml(data.brDaysThisMonth || '0')}</div>
+            <div class="person-card__value">${escapeHtml(data.brDaysThisMonth || "0")}</div>
           </div>
 
           <div class="person-card__field">
             <div class="person-card__label">БР минулий місяць</div>
-            <div class="person-card__value">${escapeHtml(data.brDaysPrevMonth || '0')}</div>
+            <div class="person-card__value">${escapeHtml(data.brDaysPrevMonth || "0")}</div>
           </div>
         </div>
 
@@ -506,47 +656,47 @@
         <div class="person-card__actions">
           ${waButton}
           <button class="person-card__btn" type="button" onclick="SidebarApp.copyPersonMessage()">Копіювати</button>
-          <button class="person-card__btn" type="button" onclick="SidebarApp.openPersonCalendarFromCard('${escapeJsString(data.callsign || '')}')">Календар</button>
+          <button class="person-card__btn" type="button" onclick="SidebarApp.openPersonCalendarFromCard('${escapeJsString(data.callsign || "")}')">Календар</button>
         </div>
 
         <div class="person-card__message-label">Текст повідомлення</div>
-        <pre class="person-card__message" id="personCardMessage">${escapeHtml(data.message || '')}</pre>
+        <pre class="person-card__message" id="personCardMessage">${escapeHtml(data.message || "")}</pre>
       </div>
     `;
   }
 
   async function openPersonCalendarFromCard(callsign) {
     if (!callsign) {
-      showToast('Позивний не вказано');
+      showToast("Позивний не вказано");
       return;
     }
 
     try {
-      await gsRun('openPersonCalendar', callsign);
+      await gsRun("openPersonCalendar", callsign);
     } catch (error) {
       const msg = normalizeError(error);
-      showToast('✕ ' + msg);
-      logToConsole(`✕ ${msg}`, 'error');
+      showToast("✕ " + msg);
+      logToConsole(`✕ ${msg}`, "error");
     }
   }
 
   function copyPersonMessage() {
-    const el = $id('personCardMessage');
+    const el = $id("personCardMessage");
 
     if (!el) {
-      showToast('Немає тексту для копіювання');
+      showToast("Немає тексту для копіювання");
       return;
     }
 
-    copyResultText(el.innerText || '');
+    copyResultText(el.innerText || "");
   }
 
   function showError(message) {
-    const root = $id('personCardContainer');
+    const root = $id("personCardContainer");
     if (!root) return;
 
-    showCardResult('Помилка');
-    root.innerHTML = `<div class="person-card-error">✕ ${escapeHtml(message || 'Помилка')}</div>`;
+    showCardResult("Помилка");
+    root.innerHTML = `<div class="person-card-error">✕ ${escapeHtml(message || "Помилка")}</div>`;
   }
 
   // =========================
@@ -554,28 +704,39 @@
   // =========================
 
   function initPersonnelModal() {
-    const modal = $id('personnelModal');
-    const backdrop = $id('personnelModalBackdrop');
-    const btnOpen = $id('btnOpenPersonnelModal');
-    const btnClose = $id('btnClosePersonnelModal');
-    const grid = $id('personnelGrid');
-    const searchInput = $id('personnelSearchInput');
-    const countEl = $id('personnelModalCount');
-    const emptyState = $id('personnelEmptyState');
+    const modal = $id("personnelModal");
+    const backdrop = $id("personnelModalBackdrop");
+    const btnOpen = $id("btnOpenPersonnelModal");
+    const btnClose = $id("btnClosePersonnelModal");
+    const grid = $id("personnelGrid");
+    const searchInput = $id("personnelSearchInput");
+    const countEl = $id("personnelModalCount");
+    const emptyState = $id("personnelEmptyState");
 
-    if (!modal || !backdrop || !btnOpen || !btnClose || !grid || !searchInput || !countEl || !emptyState) {
+    if (
+      !modal ||
+      !backdrop ||
+      !btnOpen ||
+      !btnClose ||
+      !grid ||
+      !searchInput ||
+      !countEl ||
+      !emptyState
+    ) {
       return;
     }
 
-    const normalizeText = value =>
-      String(value || '')
+    const normalizeText = (value) =>
+      String(value || "")
         .trim()
         .toUpperCase()
-        .replace(/\s+/g, ' ');
+        .replace(/\s+/g, " ");
 
-    let filteredCallsigns = Array.isArray(PERSONNEL_CALLSIGNS) ? [...PERSONNEL_CALLSIGNS] : [];
+    let filteredCallsigns = Array.isArray(PERSONNEL_CALLSIGNS)
+      ? [...PERSONNEL_CALLSIGNS]
+      : [];
 
-    btnOpen.setAttribute('aria-expanded', 'false');
+    btnOpen.setAttribute("aria-expanded", "false");
     modal.hidden = true;
 
     function updateCount(count) {
@@ -584,8 +745,8 @@
 
     function openModal() {
       modal.hidden = false;
-      modal.classList.add('open');
-      btnOpen.setAttribute('aria-expanded', 'true');
+      modal.classList.add("open");
+      btnOpen.setAttribute("aria-expanded", "true");
 
       setTimeout(() => {
         try {
@@ -596,9 +757,9 @@
     }
 
     function closeModal() {
-      modal.classList.remove('open');
+      modal.classList.remove("open");
       modal.hidden = true;
-      btnOpen.setAttribute('aria-expanded', 'false');
+      btnOpen.setAttribute("aria-expanded", "false");
 
       try {
         btnOpen.focus();
@@ -606,37 +767,37 @@
     }
 
     function renderGrid(list) {
-      grid.innerHTML = '';
+      grid.innerHTML = "";
 
       if (!Array.isArray(list) || !list.length) {
-        emptyState.classList.remove('hidden');
+        emptyState.classList.remove("hidden");
         updateCount(0);
         return;
       }
 
-      emptyState.classList.add('hidden');
+      emptyState.classList.add("hidden");
       updateCount(list.length);
 
       const fragment = document.createDocumentFragment();
 
-      list.forEach(callsign => {
-        const btn = document.createElement('button');
+      list.forEach((callsign) => {
+        const btn = document.createElement("button");
         const allowed = canOpenPersonCardClientSafe_(callsign);
 
-        btn.type = 'button';
-        btn.className = 'personnel-card';
-        btn.textContent = allowed ? callsign : (callsign + ' 🔒');
-        btn.classList.toggle('is-locked', !allowed);
-        btn.setAttribute('aria-disabled', allowed ? 'false' : 'true');
-        btn.title = allowed ? callsign : 'Доступно лише до власної картки';
+        btn.type = "button";
+        btn.className = "personnel-card";
+        btn.textContent = allowed ? callsign : callsign + " 🔒";
+        btn.classList.toggle("is-locked", !allowed);
+        btn.setAttribute("aria-disabled", allowed ? "false" : "true");
+        btn.title = allowed ? callsign : "Доступно лише до власної картки";
 
-        btn.addEventListener('click', async () => {
+        btn.addEventListener("click", async () => {
           if (!allowed) {
-            await reportAccessViolationSafe_('personnelListUiDenied', {
-              source: 'personnel-modal',
-              requestedCallsign: callsign
+            await reportAccessViolationSafe_("personnelListUiDenied", {
+              source: "personnel-modal",
+              requestedCallsign: callsign,
             });
-            showToast('Можна відкрити лише власну картку');
+            showToast("Можна відкрити лише власну картку");
             return;
           }
 
@@ -655,27 +816,29 @@
 
       filteredCallsigns = !q
         ? [...PERSONNEL_CALLSIGNS]
-        : PERSONNEL_CALLSIGNS.filter(callsign => normalizeText(callsign).includes(q));
+        : PERSONNEL_CALLSIGNS.filter((callsign) =>
+            normalizeText(callsign).includes(q),
+          );
 
       renderGrid(filteredCallsigns);
     }
 
-    btnOpen.addEventListener('click', () => {
-      searchInput.value = '';
+    btnOpen.addEventListener("click", () => {
+      searchInput.value = "";
       filteredCallsigns = [...PERSONNEL_CALLSIGNS];
       renderGrid(filteredCallsigns);
       openModal();
     });
 
-    btnClose.addEventListener('click', closeModal);
-    backdrop.addEventListener('click', closeModal);
+    btnClose.addEventListener("click", closeModal);
+    backdrop.addEventListener("click", closeModal);
 
-    searchInput.addEventListener('input', event => {
+    searchInput.addEventListener("input", (event) => {
       filterGrid(event.target.value);
     });
 
-    document.addEventListener('keydown', event => {
-      if (!modal.hidden && event.key === 'Escape') {
+    document.addEventListener("keydown", (event) => {
+      if (!modal.hidden && event.key === "Escape") {
         closeModal();
       }
     });
@@ -683,9 +846,8 @@
     renderGrid(filteredCallsigns);
   }
 
-
   function registerLegacyPersonnelButtons() {
-    PERSONNEL_CALLSIGNS.forEach(callsign => {
+    PERSONNEL_CALLSIGNS.forEach((callsign) => {
       window[`btn_${callsign}`] = () => openPersonCardByCallsign_(callsign);
     });
   }
@@ -697,12 +859,18 @@
         preserveNonEmpty: false,
         retries: 2,
         retryDelayMs: 450,
-        reason: 'manual-reload'
+        reason: "manual-reload",
       });
-      logToConsole(`SEND_PANEL перечитано: ${Array.isArray(rows) ? rows.length : 0} рядків`, 'success');
+      logToConsole(
+        `SEND_PANEL перечитано: ${Array.isArray(rows) ? rows.length : 0} рядків`,
+        "success",
+      );
       showSendPanel();
     } catch (error) {
-      logToConsole(`Не вдалося перечитати SEND_PANEL: ${normalizeError(error)}`, 'error');
+      logToConsole(
+        `Не вдалося перечитати SEND_PANEL: ${normalizeError(error)}`,
+        "error",
+      );
       showSendPanel();
     }
   }
@@ -712,22 +880,33 @@
   // =========================
 
   async function onSidebarLoad() {
-    window.__WASB_BOOTSTRAP_STATE__ = { startedAt: new Date().toISOString(), status: 'starting' };
+    window.__WASB_BOOTSTRAP_STATE__ = {
+      startedAt: new Date().toISOString(),
+      status: "starting",
+    };
     registerGlobalRuntimeEvents_();
     await initSidebar();
     updateSendUnsentButtonState();
     initPersonnelModal();
     registerLegacyPersonnelButtons();
-    window.addEventListener('beforeunload', stopSending);
-    window.__WASB_BOOTSTRAP_STATE__ = { startedAt: window.__WASB_BOOTSTRAP_STATE__ && window.__WASB_BOOTSTRAP_STATE__.startedAt || new Date().toISOString(), finishedAt: new Date().toISOString(), status: 'ready', policyMarker: CLIENT_RUNTIME_POLICY.policyMarker };
+    window.addEventListener("beforeunload", stopSending);
+    window.__WASB_BOOTSTRAP_STATE__ = {
+      startedAt:
+        (window.__WASB_BOOTSTRAP_STATE__ &&
+          window.__WASB_BOOTSTRAP_STATE__.startedAt) ||
+        new Date().toISOString(),
+      finishedAt: new Date().toISOString(),
+      status: "ready",
+      policyMarker: CLIENT_RUNTIME_POLICY.policyMarker,
+    };
   }
 
-  window.addEventListener('load', onSidebarLoad);
+  window.addEventListener("load", onSidebarLoad);
 
   // =========================
   // EXPORTS
   // =========================
-  
+
   const SidebarApp = {
     STATE,
     PERSONNEL_CALLSIGNS,
@@ -768,7 +947,9 @@
     copyHealthReport,
     copyProjectTestReport,
     setHealthCheckMode,
-    debugAccess: function() { return handleMenuAction('debugAccess'); },
+    debugAccess: function () {
+      return handleMenuAction("debugAccess");
+    },
 
     sendDaySummaryToCommander,
     sendDetailedToCommander,
@@ -806,7 +987,7 @@
     ActionDispatcher,
 
     openPersonCardByCallsign_,
-    initPersonnelModal
+    initPersonnelModal,
   };
 
   window.SidebarApp = SidebarApp;
