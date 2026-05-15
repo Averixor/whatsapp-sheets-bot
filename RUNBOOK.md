@@ -201,3 +201,37 @@ If something breaks:
 - tag release points
 - keep `CHANGELOG.md` concise and current
 - keep one-off reports outside this compact GAS import ZIP
+
+## 12. Release checklist (GitHub + Apps Script)
+
+1. Run local checks (`wcheck` or `npm run ci`, or the two `node scripts/...` commands—see `CONTRIBUTING.md`).
+2. Confirm `audit-function-graph` ends with **`MISSING: none`**.
+3. Commit using the **current version string** for release drops (example: **`7`**). Avoid vague messages for version cuts.
+4. **`git push origin main`**.
+5. **`clasp status`** then **`clasp push`** — GitHub alone does not update the bound script project.
+6. In Apps Script → **Project settings → Script properties**: ensure **`WASB_SPREADSHEET_ID`** is set if you rely on triggers/headless runs (use your production spreadsheet ID).
+7. Reload the spreadsheet UI; close and reopen the sidebar.
+8. Run smoke / policy checks when appropriate (see §13).
+9. If **PHONES** or birthday/ДН logic changed: run **`apiStage7ClearPhoneCache()`**, then re-check a person card.
+
+## 13. Post-deploy checks (manual GAS functions)
+
+Run from the Apps Script editor when relevant after a deploy or config change:
+
+- `apiStage7GetAccessDescriptor()` — lightweight descriptor sanity
+- `apiStage7DebugAccess()` — access debug payload
+- `runAccessPolicyChecks()` — access policy assertions
+- `runSmokeTests()` — smoke bundle
+- `apiStage7ClearPhoneCache()` — invalidate phone/profile caches after **PHONES** or related code changes
+
+## 14. Script property: WASB spreadsheet ID
+
+Canonical resolver (**`DataAccess.gs`**): **`WASB_SPREADSHEET_ID`** in **Script properties** (`PropertiesService.getScriptProperties()`). If unset, the code falls back to **`SpreadsheetApp.getActiveSpreadsheet()`** when the script is bound and a spreadsheet context exists.
+
+Headless executions (scheduled triggers without an open UI) **require** `WASB_SPREADSHEET_ID` set, or they may fail with a clear error.
+
+## 15. PHONES cache and birthday (ДН)
+
+After editing the **PHONES** sheet structure, cached phone/profile data under the hood may be stale. Run **`apiStage7ClearPhoneCache()`**, then reopen the sidebar and verify person cards (**ДН** / phone) against the sheet.
+
+Operational detail: canonical **PHONES** schema includes **`birthday`** as column 4; index loaders match headers and fallback where applicable (`Stage7PhoneDictPayloadShims.gs`).

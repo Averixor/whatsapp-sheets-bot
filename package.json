@@ -5,6 +5,8 @@
   "description": "WhatsApp-Sheets-Bot Google Apps Script project",
   "scripts": {
     "ci": "node scripts/ci-gas-sanity.mjs && node scripts/audit-function-graph.mjs",
+    "ci:gas": "node scripts/ci-gas-sanity.mjs",
+    "audit:functions": "node scripts/audit-function-graph.mjs",
     "gas status": "clasp status",
     "gas pull": "clasp pull",
     "gas push": "clasp push",

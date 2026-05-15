@@ -26,6 +26,35 @@ This repository is packaged for the **GAS web editor first**:
 - role-separated maintenance access: maintainer, admin, sysadmin, and owner have different server-side permissions
 - lightweight sidebar bootstrap and read-only access descriptor support for faster UI startup
 
+## Maintainer workflow
+
+**Primary** (PowerShell profile with project aliases):
+
+```powershell
+Set-Location "C:\Users\User\Desktop\whatsapp-sheets-bot"
+wcheck
+wpush -Message "7"
+```
+
+**Fallback** (no aliases — same checks, standard git + clasp):
+
+```powershell
+Set-Location "C:\Users\User\Desktop\whatsapp-sheets-bot"
+node .\scripts\ci-gas-sanity.mjs
+node .\scripts\audit-function-graph.mjs
+git add .
+git commit -m "7"
+git push origin main
+clasp push
+```
+
+Or: `npm run ci` then commit/push/clasp as needed.
+
+- **Script property** for headless/triggers: set **`WASB_SPREADSHEET_ID`** in Apps Script → Project settings → Script properties (see `RUNBOOK.md`).
+- After **PHONES** / birthday changes: run **`apiStage7ClearPhoneCache()`** in the GAS editor, then reload the sidebar.
+
+Full workflow, release checklist, and post-deploy checks: **`CONTRIBUTING.md`** and **`RUNBOOK.md`**.
+
 ## Documentation map
 
 These are the only active root markdown files:

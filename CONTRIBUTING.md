@@ -4,15 +4,107 @@ Thank you for helping improve this project.
 
 This repository contains a Google Apps Script and Google Sheets automation project. Changes should be careful, focused, testable, and easy to review.
 
-## Basic Workflow
+## Local workflow (source of truth)
 
-1. Create a separate branch for your change.
+The maintainers’ machine often uses **PowerShell profile aliases** (`wcheck`, `wpush`, `wstatus`). In environments where those aliases are missing (for example Cursor without your profile), use the **fallback** commands in the next section—the checks are the same; only the wrapper differs.
+
+### Primary workflow (aliases available)
+
+```powershell
+Set-Location "C:\Users\User\Desktop\whatsapp-sheets-bot"
+
+wcheck
+wpush -Message "7"
+```
+
+**`wcheck`** (project-specific alias) should run, in substance:
+
+- `node scripts/ci-gas-sanity.mjs` — scans `.gs` for accidental pasted shell text, validates `appsscript.json` scopes, etc.
+- `node scripts/audit-function-graph.mjs` — ensures menu/trigger/client-bound function names exist (`MISSING: none`).
+
+**`wpush -Message "7"`** (project-specific alias) should, in substance:
+
+- `git status`
+- the same Node checks as above
+- `git add` / `git commit` / `git push origin main`
+- `clasp status` and `clasp push` so **GitHub and Apps Script both** get the update.
+
+### Fallback workflow (no `wcheck` / `wpush`)
+
+```powershell
+Set-Location "C:\Users\User\Desktop\whatsapp-sheets-bot"
+
+node .\scripts\ci-gas-sanity.mjs
+node .\scripts\audit-function-graph.mjs
+
+git status
+git add .
+git commit -m "7"
+git push origin main
+
+clasp status
+clasp push
+```
+
+Equivalent via **npm** (runs Node directly, no `cmd.exe` required):
+
+```powershell
+npm run ci
+```
+
+Or stepwise:
+
+```powershell
+npm run ci:gas
+npm run audit:functions
+```
+
+If `npm run ci` fails only because of a disabled **Command Prompt** / broken **npm script shell**, run the two `node ...` lines above manually—they are the canonical checks.
+
+### Commit message policy (release line on `main`)
+
+For the current release line, the commit message for release-style commits should be exactly the version string, for example:
+
+```text
+7
+```
+
+Do **not** use vague release commits such as `fix`, `update`, `final`, or `test` when cutting a versioned drop to `main`. For **non-release** feature branches, short descriptive messages remain fine.
+
+### Apps Script deployment
+
+**Pushing to GitHub does not update Google Apps Script.** After `git push`:
+
+```powershell
+clasp status
+clasp push
+```
+
+### Script Properties (spreadsheet binding)
+
+For **headless** runs (time-driven triggers, executions without an open spreadsheet UI), set in **Apps Script → Project settings → Script properties**:
+
+- **`WASB_SPREADSHEET_ID`** — the target Google Sheet ID.
+
+If this property is empty, `getWasbSpreadsheet_()` falls back to **`SpreadsheetApp.getActiveSpreadsheet()`** when a container spreadsheet is active. Pure headless execution without property and without context will throw a clear error—set the property for production triggers.
+
+### PHONES sheet / birthday (ДН) cache
+
+After changing the **PHONES** sheet layout, phone index logic, or birthday column behavior, clear the script cache that backs phone profiles:
+
+- Run **`apiStage7ClearPhoneCache()`** in the Apps Script editor (maintenance API).
+
+Then in the spreadsheet: close the sidebar → open it again → open a person card and confirm **ДН** and phone fields.
+
+## Basic workflow (contributors)
+
+1. Use a branch for non-trivial work when possible.
 2. Make focused edits.
-3. Run formatting and checks where available.
-4. Commit with a clear message.
-5. Open a pull request.
+3. Run **`wcheck`** or **`npm run ci`** (or the two `node` commands) before pushing.
+4. Commit with an appropriate message (see above).
+5. Open a pull request when collaboration is needed.
 
-## Local Setup
+## Local setup
 
 Install dependencies:
 
@@ -20,51 +112,14 @@ Install dependencies:
 npm install
 ```
 
-Check project status:
+Check project state:
 
 ```powershell
 git status
 clasp status
 ```
 
-## Recommended Checks
-
-Before submitting changes, run the available checks:
-
-```powershell
-npm run format:check
-npm run lint
-```
-
-If a command is not available in your local setup, explain that in the pull request.
-
-## Apps Script / clasp Workflow
-
-When working with Google Apps Script files, check both Git and Apps Script state before pushing:
-
-```powershell
-git status
-clasp status
-```
-
-Normal release flow:
-
-```powershell
-git add .
-git commit -m "<version>"
-git push origin main
-clasp push
-```
-
-For this project, the commit message should match the current project version when following the release workflow.
-
-Example:
-
-```powershell
-git commit -m "7"
-```
-
-## Code Guidelines
+## Code guidelines
 
 - Keep changes focused and reviewable.
 - Avoid duplicate helper functions.
@@ -76,7 +131,7 @@ git commit -m "7"
 - Avoid changing unrelated files.
 - Do not rename public functions unless compatibility aliases are added.
 
-## File Organization
+## File organization
 
 Use logical separation:
 
@@ -89,7 +144,7 @@ Use logical separation:
 
 Before adding a new file, check whether the code belongs in an existing module.
 
-## Security Rules
+## Security rules
 
 Never commit:
 
@@ -104,7 +159,7 @@ Never commit:
 
 If sensitive data is committed accidentally, remove it immediately and rotate the exposed secret.
 
-## Pull Request Expectations
+## Pull request expectations
 
 A pull request should include:
 
@@ -114,37 +169,20 @@ A pull request should include:
 - Any known risks or limitations.
 - Screenshots or logs if the change affects UI or diagnostics.
 
-## Commit Messages
+## Commit messages (non-release work)
 
-Use clear commit messages.
-
-For release workflow commits, use the current version number:
-
-```text
-7
-```
-
-For normal development commits, use a short descriptive message:
+For everyday development (not version cuts to `main`), use short descriptive messages, for example:
 
 ```text
 fix access self-registration autofill
 refactor stage7 diagnostics helpers
-update dependabot config
 ```
 
-## Testing Notes
+## Testing notes
 
-For Apps Script changes, test carefully because some errors only appear inside the Google Apps Script runtime.
+Apps Script errors often appear only at runtime in Google’s environment.
 
-Useful local checks:
-
-```powershell
-git status
-clasp status
-clasp push
-```
-
-After pushing to Apps Script, run the relevant smoke tests or manual diagnostics from the Apps Script editor where applicable.
+After `clasp push`, run smoke or diagnostics from the editor when relevant (see `RUNBOOK.md` — Post-deploy checks).
 
 ## Documentation
 
@@ -159,7 +197,7 @@ Update documentation when changing:
 - Configuration files
 - Project workflow
 
-## Review Principles
+## Review principles
 
 Good contributions are:
 
