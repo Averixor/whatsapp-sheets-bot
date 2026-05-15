@@ -12,50 +12,48 @@
 
 // ==================== INTERNAL HELPERS ====================
 
-function _saGetGlobalScope_() {
-  try {
-    if (typeof globalThis !== 'undefined') return globalThis;
-  } catch (_) {}
-  try {
-    return this;
-  } catch (_) {}
-  return {};
-}
-
-function _saResolveDependencyByIdentifier_(name) {
-  const safeName = String(name || '').trim();
-
-  if (!/^[A-Za-z_$][0-9A-Za-z_$]*$/.test(safeName)) {
-    return null;
-  }
-
-  try {
-    return Function(
-      'return (typeof ' + safeName + ' !== "undefined" && ' + safeName + ' !== null) ? ' + safeName + ' : null;'
-    )();
-  } catch (_) {
-    try {
-      return eval(safeName);
-    } catch (__) {
-      return null;
+/** @return {Object<string, function(): *>} explicit dependency getters (no eval / Function / dynamic scope[name]). */
+function _saGetSpreadsheetApiDependencyHandlers_() {
+  return {
+    WorkflowOrchestrator_: function getWorkflowOrchestratorDependency_() {
+      return typeof WorkflowOrchestrator_ !== 'undefined' && WorkflowOrchestrator_ !== null
+        ? WorkflowOrchestrator_
+        : null;
+    },
+    SelectionActionService_: function getSelectionActionServiceDependency_() {
+      return typeof SelectionActionService_ !== 'undefined' && SelectionActionService_ !== null
+        ? SelectionActionService_
+        : null;
+    },
+    PreviewLinkService_: function getPreviewLinkServiceDependency_() {
+      return typeof PreviewLinkService_ !== 'undefined' && PreviewLinkService_ !== null
+        ? PreviewLinkService_
+        : null;
     }
-  }
+  };
 }
 
 function _saRequireDependency_(name) {
-  const directValue = _saResolveDependencyByIdentifier_(name);
+  const key = String(name || '').trim();
+  const handlers = _saGetSpreadsheetApiDependencyHandlers_();
 
-  if (typeof directValue !== 'undefined' && directValue !== null) {
-    return directValue;
+  if (!Object.prototype.hasOwnProperty.call(handlers, key)) {
+    throw new Error('Unknown SpreadsheetActionsApi dependency: ' + key);
   }
 
-  const scope = _saGetGlobalScope_();
+  const handler = handlers[key];
 
-  if (scope && typeof scope[name] !== 'undefined' && scope[name] !== null) {
-    return scope[name];
+  if (typeof handler !== 'function') {
+    throw new Error('SpreadsheetActionsApi dependency resolver is not a function: ' + key);
   }
 
-  throw new Error('Missing global dependency: ' + name);
+  const value = handler();
+
+  if (value === null || typeof value === 'undefined') {
+    throw new Error('Missing global dependency: ' + key);
+  }
+
+  return value;
 }
 
 function _saRequireDependencies_() {
