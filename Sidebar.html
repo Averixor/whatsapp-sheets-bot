@@ -75,6 +75,20 @@
             >
               <span class="whatsapp-icon" aria-hidden="true">🧑‍💻</span>
             </button>
+            <button
+              type="button"
+              class="header-tool-btn"
+              id="btnHeaderLogin"
+              style="display: none"
+              onclick="
+                if (typeof openAccessLoginFlow === 'function')
+                  openAccessLoginFlow('login');
+              "
+              title="Увійти (email/телефон + позивний)"
+              aria-label="Увійти за позивним"
+            >
+              <span class="whatsapp-icon" aria-hidden="true">🔑</span>
+            </button>
           </div>
 
           <div

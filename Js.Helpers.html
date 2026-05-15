@@ -147,9 +147,54 @@
         `✕ Помилка ініціалізації: ${normalizeError(error)}`,
         "error",
       );
+      try {
+        STATE.access =
+          typeof normalizeAccessForUi_ === "function"
+            ? normalizeAccessForUi_({
+                role: "guest",
+                isAdmin: false,
+                knownUser: false,
+                reasonString: normalizeError(error),
+              })
+            : {
+                role: "guest",
+                isAdmin: false,
+                knownUser: false,
+                reasonString: normalizeError(error),
+              };
+        if (typeof applyAccessPolicyUI === "function") applyAccessPolicyUI();
+      } catch (_) {}
     } finally {
       hideLoading();
+      finalizeSidebarMonthStatus_();
     }
+  }
+
+  function finalizeSidebarMonthStatus_() {
+    const statusEl =
+      typeof $id === "function" ? $id("botMonthStatus") : document.getElementById("botMonthStatus");
+    if (!statusEl) return;
+    const textEl = statusEl.querySelector(".status-text");
+    const stillLoading =
+      textEl &&
+      /завантаженн/i.test(String(textEl.textContent || "").trim());
+    if (!stillLoading) return;
+
+    const m = String(STATE.currentMonth || "").trim();
+    if (m && typeof updateMonthBadge === "function") {
+      updateMonthBadge(m);
+      return;
+    }
+    if (
+      Array.isArray(STATE.monthsList) &&
+      STATE.monthsList.length &&
+      typeof updateMonthBadge === "function"
+    ) {
+      updateMonthBadge(STATE.monthsList[0]);
+      return;
+    }
+    statusEl.innerHTML =
+      '<span class="status-dot"></span><span class="status-text">Місяць не визначено</span>';
   }
 
   function formatOperationDate(value) {
