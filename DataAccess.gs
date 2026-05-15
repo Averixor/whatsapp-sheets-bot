@@ -1,7 +1,29 @@
-var WASB_SPREADSHEET_ID = '1v8ixM67nG_Bfy5NzcDZbmSjwVOYbkN02ibfP6YqI384';
+/**
+ * Canonical spreadsheet resolver: Script Property WASB_SPREADSHEET_ID → openById,
+ * інакше привʼязана активна таблиця. Жорсткий ID у коді не зберігаємо —
+ * для старих інсталяцій один раз задайте властивість WASB_SPREADSHEET_ID у
+ * налаштуваннях проєкту Apps Script або працюйте з відкритою таблицею контейнера.
+ */
+
+function getWasbSpreadsheetId_() {
+  var props = PropertiesService.getScriptProperties();
+  return String(props.getProperty("WASB_SPREADSHEET_ID") || "").trim();
+}
 
 function getWasbSpreadsheet_() {
-  return SpreadsheetApp.openById(WASB_SPREADSHEET_ID);
+  var id = getWasbSpreadsheetId_();
+  if (id) {
+    return SpreadsheetApp.openById(id);
+  }
+
+  var active = SpreadsheetApp.getActiveSpreadsheet();
+  if (active) {
+    return active;
+  }
+
+  throw new Error(
+    "WASB_SPREADSHEET_ID не задано в Script Properties і активна таблиця недоступна.",
+  );
 }
 
 /**

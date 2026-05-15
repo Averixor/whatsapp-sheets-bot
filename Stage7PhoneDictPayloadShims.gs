@@ -103,6 +103,17 @@ function loadPhonesIndex_() {
     var birthday =
       birthdayCol >= 0 ? String(row[birthdayCol] || "").trim() : "";
 
+    if (!birthday && birthdayCol < 0 && row.length > 3) {
+      var cand4 = String(row[3] || "").trim();
+      var col4Claimed = false;
+      [fmlCol, phoneCol, callsignCol, roleCol].forEach(function (c) {
+        if (Number(c) === 3) col4Claimed = true;
+      });
+      if (cand4 && !col4Claimed) {
+        birthday = cand4;
+      }
+    }
+
     if (!fml && !phone && !callsign && !role) return;
 
     var item = {
