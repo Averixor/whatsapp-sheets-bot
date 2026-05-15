@@ -20,8 +20,6 @@
       consoleSection.classList.contains("open"),
     );
   }
-    return result;
-  }
 
   function logToConsole(message, type = "info") {
     const consoleEl = $id("consoleOutput");
@@ -172,12 +170,13 @@
 
   function finalizeSidebarMonthStatus_() {
     const statusEl =
-      typeof $id === "function" ? $id("botMonthStatus") : document.getElementById("botMonthStatus");
+      typeof $id === "function"
+        ? $id("botMonthStatus")
+        : document.getElementById("botMonthStatus");
     if (!statusEl) return;
     const textEl = statusEl.querySelector(".status-text");
     const stillLoading =
-      textEl &&
-      /завантаженн/i.test(String(textEl.textContent || "").trim());
+      textEl && /завантаженн/i.test(String(textEl.textContent || "").trim());
     if (!stillLoading) return;
 
     const m = String(STATE.currentMonth || "").trim();
