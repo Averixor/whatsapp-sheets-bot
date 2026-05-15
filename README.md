@@ -6,7 +6,7 @@ This repository is packaged for the **GAS web editor first**:
 
 - runtime files stay in the repository root (`.gs`, `.html`, `appsscript.json`)
 - active operational documentation stays in the repository root
-- this compact ZIP ships only runtime files and the five active root markdown documents
+- this compact ZIP ships only runtime files and the **five** operational root markdown documents (see Documentation map)
 
 ## Active release baseline
 
@@ -15,7 +15,7 @@ This repository is packaged for the **GAS web editor first**:
 - **Identity model:** strict user-key access based on `Session.getTemporaryActiveUserKey()`
 - **Current access flow:** automatic key recognition first, self-bind login by **email/phone + callsign** only when the current key is not registered
 - **Runtime style:** modular HtmlService sidebar (`Sidebar.html` → `JavaScript.html` → `Js.*` chain)
-- **Packaging policy:** exactly **5 active root markdown documents**
+- **Packaging policy:** compact GAS bundle ships **5 operational root markdown files** (runtime docs only; see Documentation map)
 
 ## What is active in this release
 
@@ -57,7 +57,7 @@ Full workflow, release checklist, and post-deploy checks: **`CONTRIBUTING.md`** 
 
 ## GitHub Actions CI
 
-The repository runs a lightweight CI workflow on push and pull requests to **`main`**.
+The repository runs a lightweight CI workflow on **`push`** and **`pull_request`** to **`main`**, and **`workflow_dispatch`**.
 
 It checks:
 
@@ -68,7 +68,7 @@ The workflow does not deploy to Apps Script. Deployment remains local via **`cla
 
 ## Documentation map
 
-These are the only active root markdown files:
+**Operational set (typical compact GAS import / ZIP):**
 
 - `README.md` — release overview, layout, quick start, document map
 - `ARCHITECTURE.md` — runtime shape, canonical layers, data flow, service sheets, client/runtime policy
@@ -76,21 +76,27 @@ These are the only active root markdown files:
 - `SECURITY.md` — identity, login flow, roles, lockouts, alerts, protections, security boundaries
 - `CHANGELOG.md` — concise release history for maintainers
 
-Additional documentation:
+**Also in this Git repository (maintainers; usually not uploaded into the GAS editor):**
 
-- Historical/audit materials are intentionally not shipped in this compact ZIP. Keep them in the repository history or a separate archive, not in the GAS import bundle.
+- `CONTRIBUTING.md` — local workflow, fallback commands, GitHub Actions CI, commit policy, Script properties
+
+**Other root markdown (optional / meta):**
+
+- `CODE_OF_CONDUCT.md`, `WASB_REPAIR_NOTES.md` — policy and ad-hoc notes; not part of the GAS runtime bundle
+
+Historical/audit materials beyond the above are kept outside the compact import ZIP when you package for GAS.
 
 ## Repository layout
 
 ```text
 .
 ├── *.gs / *.html / appsscript.json   # GAS runtime files
-├── README.md                         # active docs
+├── README.md                         # ops docs (+ CONTRIBUTING.md, etc. — see Documentation map)
 ├── ARCHITECTURE.md
 ├── RUNBOOK.md
 ├── SECURITY.md
 ├── CHANGELOG.md
-└── no _extras/ in this compact release ZIP
+└── no _extras/ in compact GAS release ZIP
 ```
 
 ## Quick import checklist

@@ -46,7 +46,7 @@ clasp status
 clasp push
 ```
 
-Equivalent via **npm** (runs Node directly, no `cmd.exe` required):
+Via **npm** (same checks as above; `package.json` wires them to `node scripts/...`):
 
 ```powershell
 npm run ci
@@ -59,7 +59,7 @@ npm run ci:gas
 npm run audit:functions
 ```
 
-If `npm run ci` fails only because of a disabled **Command Prompt** / broken **npm script shell**, run the two `node ...` lines above manually—they are the canonical checks.
+On **Windows**, `npm run ci` can still invoke **Command Prompt** for the `&&` chain in some setups. If scripts fail with a disabled **cmd.exe** or administrator lockdown, use the two `node .\scripts\...` lines from the fallback block above — those are the canonical checks and match **GitHub Actions** (see `.github/workflows/ci.yml`).
 
 ### Commit message policy (release line on `main`)
 
