@@ -55,6 +55,17 @@ Or: `npm run ci` then commit/push/clasp as needed.
 
 Full workflow, release checklist, and post-deploy checks: **`CONTRIBUTING.md`** and **`RUNBOOK.md`**.
 
+## GitHub Actions CI
+
+The repository runs a lightweight CI workflow on push and pull requests to **`main`**.
+
+It checks:
+
+- GAS source sanity: `node scripts/ci-gas-sanity.mjs`
+- Function graph audit: `node scripts/audit-function-graph.mjs`
+
+The workflow does not deploy to Apps Script. Deployment remains local via **`clasp push`** / **`wpush`**.
+
 ## Documentation map
 
 These are the only active root markdown files:

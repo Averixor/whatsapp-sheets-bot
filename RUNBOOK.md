@@ -204,6 +204,17 @@ If something breaks:
 
 ## 12. Release checklist (GitHub + Apps Script)
 
+### GitHub Actions CI
+
+The repository runs the same lightweight checks automatically on **`push`** and **`pull_request`** to **`main`**, and **`workflow_dispatch`**.
+
+- `node scripts/ci-gas-sanity.mjs`
+- `node scripts/audit-function-graph.mjs`
+
+There is **no** Apps Script deployment in CI (`clasp` is local only). See `.github/workflows/ci.yml`.
+
+---
+
 1. Run local checks (`wcheck` or `npm run ci`, or the two `node scripts/...` commands—see `CONTRIBUTING.md`).
 2. Confirm `audit-function-graph` ends with **`MISSING: none`**.
 3. Commit using the **current version string** for release drops (example: **`7`**). Avoid vague messages for version cuts.

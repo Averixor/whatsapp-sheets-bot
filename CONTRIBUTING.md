@@ -96,6 +96,17 @@ After changing the **PHONES** sheet layout, phone index logic, or birthday colum
 
 Then in the spreadsheet: close the sidebar → open it again → open a person card and confirm **ДН** and phone fields.
 
+## GitHub Actions CI
+
+The repository runs a lightweight CI workflow on push and pull requests to **`main`** (also **`workflow_dispatch`**).
+
+It checks:
+
+- GAS source sanity: `node scripts/ci-gas-sanity.mjs`
+- Function graph audit: `node scripts/audit-function-graph.mjs`
+
+The workflow does **not** deploy to Apps Script. Deployment stays local (`clasp push` / **`wpush`**). No Google secrets.
+
 ## Basic workflow (contributors)
 
 1. Use a branch for non-trivial work when possible.

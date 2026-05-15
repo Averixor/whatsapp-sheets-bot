@@ -1,0 +1,36 @@
+name: WASB CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gas-sanity:
+    name: GAS sanity and function graph audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run GAS sanity check
+        run: node scripts/ci-gas-sanity.mjs
+
+      - name: Run function graph audit
+        run: node scripts/audit-function-graph.mjs
