@@ -14,7 +14,6 @@ const VacationService_ = (function() {
       vacations: vacations || {},
       birthdays: birthdays || {},
       summary: {
-        vacationRaports: Number((vacations && vacations.raportReminders || []).length),
         vacationSoldiers: Number((vacations && vacations.soldierMessages || []).length),
         vacationCommander: Number((vacations && vacations.commanderMessages || []).length),
         birthdayCommander: Number((birthdays && birthdays.commanderMessages || []).length),

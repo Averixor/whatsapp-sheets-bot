@@ -8,11 +8,8 @@ const VACATION_ENGINE_CONFIG = {
   NUM_COL: 4,
   ACTIVE_COL: 5,
   NOTIFY_COL: 6,
-  RAPORT_DAYS: [20, 19, 18, 17],
   SOLDIER_DAYS: [3, 1],
   NOTIFY_COMMANDER: true,
-  SOLDIER_RAPORT_TEMPLATE: 'SOLDIER_RAPORT_REMINDER',
-  COMMANDER_RAPORT_TEMPLATE: 'COMMANDER_RAPORT_REMINDER',
   COMMANDER_SOON3_TEMPLATE: 'COMMANDER_VACATION_SOON_3',
   COMMANDER_TODAY_TEMPLATE: 'COMMANDER_VACATION_TODAY',
   SOLDIER_TEMPLATES: {
@@ -114,15 +111,6 @@ function _veBool_(value, defaultValue) {
   return !!defaultValue;
 }
 
-function _veRaportEnabled_() {
-  try {
-    if (typeof getRaportRemindersEnabled === 'function') {
-      return !!getRaportRemindersEnabled();
-    }
-  } catch (_) {}
-
-  return true;
-}
 
 function _veNormId_(fml) {
   try {
@@ -415,23 +403,11 @@ function _veYearsWord_(n) {
 
 // ==================== VACATION MESSAGE BUILDERS ====================
 
-function _veBuildVacationSoldierRaportMessage_(data) {
-  const d = _vePrepareData_(data);
-
-  return _veRenderTemplateOrFallback_(
-    VACATION_ENGINE_CONFIG.SOLDIER_RAPORT_TEMPLATE,
-    d,
-    `${d.callsign}, нагадую: через ${d.days} днів у тебе починається відпустка ${d.vacationWord}.\nПовідом, де саме будеш її проводити!\n\nПеріод: ${d.startDate} - ${d.endDate}`
-  );
-}
 
 function _veBuildVacationSoldierMessage_(kind, data) {
   const d = _vePrepareData_(data);
 
   switch (kind) {
-    case 'report':
-      return _veBuildVacationSoldierRaportMessage_(d);
-
     case 'soon_3':
       return _veRandomTemplateOrFallback_(
         VACATION_ENGINE_CONFIG.SOLDIER_TEMPLATES[3],
@@ -455,12 +431,6 @@ function _veBuildVacationCommanderMessage_(kind, data) {
   const d = _vePrepareData_(data);
 
   switch (kind) {
-    case 'report':
-      return _veRenderTemplateOrFallback_(
-        VACATION_ENGINE_CONFIG.COMMANDER_RAPORT_TEMPLATE,
-        d,
-        `Боєць ${d.callsign} (${d.fml}) планує йти у відпустку через ${d.days} днів.\nУ період: ${d.startDate} - ${d.endDate}\n\nНеобхідно нагадати ШАХТАРЮ щоб він написав рапорт.`
-      );
 
     case 'soon_3':
       return _veRenderTemplateOrFallback_(
@@ -485,7 +455,6 @@ function _veBuildVacationCommanderMessage_(kind, data) {
 
 function runVacationEngine_(targetDate) {
   const result = {
-    raportReminders: [],
     soldierMessages: [],
     commanderMessages: [],
     debug: {
@@ -530,7 +499,6 @@ function runVacationEngine_(targetDate) {
     today.setHours(12, 0, 0, 0);
 
     const tz = _veTimeZone_();
-    const raportEnabled = _veRaportEnabled_();
     const commanderPhone = VACATION_ENGINE_CONFIG.NOTIFY_COMMANDER
       ? _veCommanderPhone_()
       : '';
@@ -592,60 +560,6 @@ function runVacationEngine_(targetDate) {
       const soldierPhone = notifyPerson && typeof _getPhoneByFml_ === 'function'
         ? _getPhoneByFml_(fml)
         : '';
-
-      if (raportEnabled && VACATION_ENGINE_CONFIG.RAPORT_DAYS.includes(daysUntil)) {
-        result.raportReminders.push({
-          fml: fml,
-          surname: surname,
-          callsign: callsign,
-          startDate: startStr,
-          endDate: endStr,
-          daysUntil: daysUntil,
-          vacationWord: vacationWord,
-          id: `raport_${_veNormId_(fml)}_${startStr}_${daysUntil}`
-        });
-
-        if (commanderPhone) {
-          const commanderMessage = _veBuildVacationCommanderMessage_('report', baseData);
-
-          result.commanderMessages.push({
-            type: 'commander_report',
-            fml: fml,
-            callsign: callsign,
-            daysUntil: daysUntil,
-            startDate: startStr,
-            endDate: endStr,
-            vacationWord: vacationWord,
-            message: commanderMessage,
-            link: _veWaLink_(commanderPhone, commanderMessage),
-            id: `commander_report_${_veNormId_(fml)}_${startStr}_${daysUntil}`
-          });
-        }
-
-        if (soldierPhone) {
-          const soldierMessage = _veBuildVacationSoldierMessage_('report', baseData);
-
-          result.soldierMessages.push({
-            type: 'soldier_report',
-            fml: fml,
-            surname: surname,
-            callsign: callsign,
-            phone: soldierPhone,
-            phoneDisplay: soldierPhone,
-            daysUntil: daysUntil,
-            startDate: startStr,
-            endDate: endStr,
-            vacationWord: vacationWord,
-            message: soldierMessage,
-            link: _veWaLink_(soldierPhone, soldierMessage),
-            id: `soldier_report_${_veNormId_(fml)}_${startStr}_${daysUntil}`
-          });
-        }
-
-        result.debug.processed.push(`РАПОРТ: ${fml} (${daysUntil})`);
-
-        continue;
-      }
 
       if (daysUntil === 3) {
         if (commanderPhone) {
@@ -732,10 +646,6 @@ function runVacationEngine_(targetDate) {
       }
     }
 
-    result.raportReminders.sort(function(a, b) {
-      return a.daysUntil - b.daysUntil;
-    });
-
     result.soldierMessages.sort(function(a, b) {
       return a.daysUntil - b.daysUntil;
     });
@@ -753,8 +663,6 @@ function runVacationEngine_(targetDate) {
 
 function testVacationEngine() {
   const res = runVacationEngine_(new Date());
-
-  console.log('RAPORT:', res.raportReminders.length);
   console.log('SOLDIER:', res.soldierMessages.length);
   console.log('COMMANDER:', res.commanderMessages.length);
   console.log(res.debug);
@@ -779,8 +687,7 @@ function autoVacationReminder() {
     console.error('autoVacationReminder error:', e);
 
     return {
-      raportReminders: [],
-      soldierMessages: [],
+        soldierMessages: [],
       commanderMessages: [],
       error: e && e.message ? e.message : String(e)
     };

@@ -1386,13 +1386,11 @@ var Stage7TestRunner = (function () {
     }
 
     if (
-      Object.prototype.hasOwnProperty.call(raw, 'raportReminders') ||
       Object.prototype.hasOwnProperty.call(raw, 'soldierMessages') ||
       Object.prototype.hasOwnProperty.call(raw, 'commanderMessages')
     ) {
       return compact_(
-        'Vacation engine: raportReminders=' + countArray_(raw.raportReminders) +
-        '; soldierMessages=' + countArray_(raw.soldierMessages) +
+        'Vacation engine: soldierMessages=' + countArray_(raw.soldierMessages) +
         '; commanderMessages=' + countArray_(raw.commanderMessages)
       );
     }

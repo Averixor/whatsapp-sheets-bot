@@ -262,6 +262,10 @@ function _ssbEnsureAlertsSheetFallback_() {
     'details'
   ]);
 
+  if (typeof resetAlertsSchemaCache === 'function') {
+    try { resetAlertsSchemaCache(); } catch (_) {}
+  }
+
   return sheet;
 }
 

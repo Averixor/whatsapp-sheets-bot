@@ -341,6 +341,30 @@ function healthCheck() {
     };
   });
 
+  _runHealthCheckItem_(report, 'Журнал ALERTS', 'WARN', function () {
+    if (!_fnExists_('getAlertsStatistics') || !_fnExists_('getRecentAlerts')) {
+      return {
+        status: 'FAIL',
+        details: 'Відсутні getAlertsStatistics / getRecentAlerts',
+        howTo: 'Перевірте AlertsRepository.gs'
+      };
+    }
+
+    let stats = null;
+    let recent = null;
+    try { stats = getAlertsStatistics(); } catch (e) { stats = { error: e && e.message ? e.message : String(e) }; }
+    try { recent = getRecentAlerts(3); } catch (e) { recent = { error: e && e.message ? e.message : String(e) }; }
+
+    const total = stats && stats.total != null ? Number(stats.total) : null;
+    const recentCount = Array.isArray(recent) ? recent.length : (recent && recent.rows ? recent.rows.length : 0);
+
+    return {
+      status: 'OK',
+      details: 'ALERTS stats: total=' + (total == null ? 'n/a' : total) + ', recent=' + recentCount,
+      howTo: ''
+    };
+  });
+
 
   _runHealthCheckItem_(report, 'Canonical date/html layer', 'CRITICAL', function () {
     const hasDateUtils = typeof DateUtils_ === 'object' && DateUtils_ !== null;

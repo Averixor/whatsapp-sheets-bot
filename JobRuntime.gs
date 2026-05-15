@@ -38,7 +38,7 @@ const JobRuntime_ = (function() {
     if (streak < threshold || typeof AlertsRepository_ !== 'object') return;
 
     try {
-      AlertsRepository_.appendAlert({
+      var alertPayload = {
         timestamp: new Date(),
         jobName: String(jobName || 'unknownJob'),
         severity: 'error',
@@ -48,7 +48,12 @@ const JobRuntime_ = (function() {
           error: String(error && error.message ? error.message : error || ''),
           backoff: backoff || null
         }
-      });
+      };
+      if (typeof addAlert === 'function') {
+        addAlert('job', 'error', alertPayload.message, alertPayload.details || alertPayload);
+      } else if (typeof AlertsRepository_ === 'object' && AlertsRepository_ && AlertsRepository_.appendAlert) {
+        AlertsRepository_.appendAlert(alertPayload);
+      }
     } catch (_) {}
   }
 

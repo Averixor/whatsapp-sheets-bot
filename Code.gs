@@ -209,58 +209,6 @@ function getClientRuntimeContract_() {
   };
 }
 
-// ========== НАЛАШТУВАННЯ НАГАДУВАНЬ ==========
-const RAPORT_SETTINGS_KEY = 'RAPORT_REMINDERS_ENABLED';
-
-function normalizeBoolean_(value, defaultValue = true) {
-  if (value === true || value === 'true' || value === 1 || value === '1') return true;
-  if (value === false || value === 'false' || value === 0 || value === '0') return false;
-  return defaultValue;
-}
-
-function getRaportRemindersEnabled() {
-  const props = PropertiesService.getScriptProperties();
-  const value = props.getProperty(RAPORT_SETTINGS_KEY);
-  return normalizeBoolean_(value, true);
-}
-
-function setRaportRemindersEnabled(enabled) {
-  const props = PropertiesService.getScriptProperties();
-  const normalized = normalizeBoolean_(enabled, true);
-  props.setProperty(RAPORT_SETTINGS_KEY, String(normalized));
-  return normalized;
-}
-
-function toggleRaportRemindersFromSidebar(enabled) {
-  try {
-    const normalized = setRaportRemindersEnabled(enabled);
-    return {
-      success: true,
-      enabled: normalized,
-      message: normalized
-        ? '✓ Нагадування про рапорти ввімкнено'
-        : '🔕 Нагадування про рапорти вимкнено'
-    };
-  } catch (e) {
-    return {
-      success: false,
-      error: e && e.message ? e.message : String(e)
-    };
-  }
-}
-function getRaportRemindersState() {
-  try {
-    return {
-      success: true,
-      enabled: getRaportRemindersEnabled()
-    };
-  } catch (e) {
-    return {
-      success: false,
-      error: e && e.message ? e.message : String(e)
-    };
-  }
-}
 /************ МЕНЮ ************/
 function onOpen(e) {
   try {
@@ -280,14 +228,6 @@ function onOpen(e) {
     }
   } catch (err1) {
     console.error('onOpen highlightActiveMonthTab_ error:', err1);
-  }
-
-  try {
-    if (typeof raportsOnOpen === 'function') {
-      raportsOnOpen();
-    }
-  } catch (errRaports) {
-    console.error('onOpen raportsOnOpen error:', errRaports);
   }
 
   try {

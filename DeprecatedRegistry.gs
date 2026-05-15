@@ -108,6 +108,24 @@ const STAGE7_COMPATIBILITY_MAP_ = Object.freeze([
     verifySourceToken: 'apiCheckVacationsAndBirthdays'
   },
   {
+    name: 'sendFromSidebar',
+    replacement: 'apiSendPendingRows / SEND_PANEL sidebar flow',
+    scope: 'removed from SidebarServer.gs',
+    status: 'removed',
+    uiAllowed: false,
+    risk: 'low',
+    sunset: 'removed — no client callers in Stage 7 baseline'
+  },
+  {
+    name: 'sendAllFromSidebar',
+    replacement: 'apiSendPendingRows / SEND_PANEL sidebar flow',
+    scope: 'removed from SidebarServer.gs',
+    status: 'removed',
+    uiAllowed: false,
+    risk: 'low',
+    sunset: 'removed — no client callers in Stage 7 baseline'
+  },
+  {
     name: 'createNextMonthSheetSidebar',
     replacement: 'apiStage7CreateNextMonth({ switchToNewMonth: true })',
     scope: 'SidebarServer.gs',

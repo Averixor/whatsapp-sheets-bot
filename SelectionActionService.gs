@@ -25,6 +25,128 @@ const SelectionActionService_ = (function() {
     return DateUtils_.normalizeDate(dateCell.getValue(), dateCell.getDisplayValue());
   }
 
+
+  function getSelectedRanges_(sheet) {
+    const activeSheet = sheet || SpreadsheetApp.getActiveSheet();
+    if (!activeSheet) return [];
+
+    try {
+      const rangeList = SpreadsheetApp.getActiveRangeList && SpreadsheetApp.getActiveRangeList();
+      if (rangeList && typeof rangeList.getRanges === 'function') {
+        return rangeList.getRanges().filter(function(range) {
+          return range && range.getSheet && range.getSheet().getName() === activeSheet.getName();
+        });
+      }
+    } catch (_) {}
+
+    try {
+      const range = activeSheet.getActiveRange();
+      return range ? [range] : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function collectPayloads_(sheet, ranges) {
+    const source = sheet || SpreadsheetApp.getActiveSheet();
+    const list = Array.isArray(ranges) ? ranges.filter(Boolean) : [];
+    const payloads = [];
+    const errors = [];
+    const phones = loadPhonesIndex_();
+    const dict = loadDictMap_();
+    const codeRange = source.getRange(CONFIG.CODE_RANGE_A1);
+
+    list.forEach(function(range) {
+      if (!range || !rangesIntersect_(range, codeRange)) return;
+
+      const rowStart = Math.max(range.getRow(), codeRange.getRow());
+      const rowEnd = Math.min(range.getLastRow(), codeRange.getLastRow());
+      const colStart = Math.max(range.getColumn(), codeRange.getColumn());
+      const colEnd = Math.min(range.getLastColumn(), codeRange.getLastColumn());
+
+      for (let row = rowStart; row <= rowEnd; row++) {
+        for (let col = colStart; col <= colEnd; col++) {
+          const a1 = a1FromRowCol_(row, col);
+          try {
+            const raw = String(source.getRange(row, col).getDisplayValue() || '').trim();
+            if (!raw) continue;
+
+            const payload = buildPayloadForCell_(source, row, col, phones, dict);
+            if (payload && payload.code) payloads.push(payload);
+          } catch (e) {
+            errors.push({
+              cell: a1,
+              error: e && e.message ? e.message : String(e)
+            });
+          }
+        }
+      }
+    });
+
+    return { payloads: payloads, errors: errors };
+  }
+
+  function groupPayloadsByPhone_(payloads) {
+    const groupsByPhone = {};
+    const noPhone = [];
+
+    (Array.isArray(payloads) ? payloads : []).forEach(function(item) {
+      if (!item) return;
+      const phone = String(item.phone || '').trim();
+      if (!phone) {
+        noPhone.push(item);
+        return;
+      }
+      if (!groupsByPhone[phone]) groupsByPhone[phone] = { phone: phone, items: [] };
+      groupsByPhone[phone].items.push(item);
+    });
+
+    return Object.keys(groupsByPhone).sort().map(function(phone) {
+      return groupsByPhone[phone];
+    }).concat(noPhone.map(function(item) {
+      return { phone: '', items: [item] };
+    }));
+  }
+
+  function buildAggregatedPayloadsForPhone_(phone, items) {
+    const list = Array.isArray(items) ? items.filter(Boolean) : [];
+    if (!list.length) return [];
+    if (list.length === 1) return [list[0]];
+
+    const first = list[0];
+    const lines = list.map(function(item) {
+      return [
+        item.date || item.reportDateStr || '',
+        item.code || '',
+        item.tasks || item.service || item.label || ''
+      ].filter(Boolean).join(' — ');
+    });
+
+    let message = [
+      first.fml ? 'ПІБ: ' + first.fml : '',
+      first.callsign ? 'Позивний: ' + first.callsign : '',
+      'Завдання:',
+      lines.map(function(line) { return '• ' + line; }).join('\n')
+    ].filter(Boolean).join('\n');
+
+    if (typeof trimToEncoded_ === 'function') {
+      try { message = trimToEncoded_(message, CONFIG.MAX_WA_TEXT || 3800); } catch (_) {}
+    }
+
+    const digits = String(phone || first.phone || '').replace(/[^\d]/g, '');
+    const link = digits ? 'https://wa.me/' + digits + '?text=' + encodeURIComponent(message) : '';
+
+    return [Object.assign({}, first, {
+      phone: phone || first.phone || '',
+      code: list.map(function(item) { return item.code; }).filter(Boolean).join(', '),
+      tasks: lines.join('\n'),
+      message: message,
+      link: link,
+      grouped: true,
+      groupedCount: list.length
+    })];
+  }
+
   function prepareSingleSelection() {
     const ctx = _getContext();
     if (!ctx.range || ctx.range.getNumRows() !== 1 || ctx.range.getNumColumns() !== 1) {

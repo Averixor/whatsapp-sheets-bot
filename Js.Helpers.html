@@ -20,6 +20,8 @@
       consoleSection.classList.contains("open"),
     );
   }
+    return result;
+  }
 
   function logToConsole(message, type = "info") {
     const consoleEl = $id("consoleOutput");
@@ -259,7 +261,6 @@
       birthdayCheck: "Дні Народження",
       debugAccess: "Перевірка доступу",
       requests: "Заявки",
-      raports: "Рапорти",
     };
 
     return names[action] || action;
@@ -480,10 +481,6 @@
 
         case "requests":
           await SidebarApp.showRequestsForm();
-          break;
-
-        case "raports":
-          await SidebarApp.showRaportsForm();
           break;
 
         default:

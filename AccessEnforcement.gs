@@ -307,6 +307,16 @@ function _safeUniqueId_(prefix) {
 
   function _appendAlert_(record) {
     try {
+      if (typeof addAlert === 'function') {
+        var rec = record || {};
+        addAlert(
+          rec.type || rec.action || 'security',
+          rec.severity || 'info',
+          rec.message || '',
+          rec.details || rec
+        );
+        return;
+      }
       if (typeof AlertsRepository_ === 'object' && AlertsRepository_ && _isFunction_(AlertsRepository_.appendAlert)) {
         AlertsRepository_.appendAlert(record || {});
         return;

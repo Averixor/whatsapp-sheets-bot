@@ -1263,10 +1263,22 @@ const Stage7UseCases_ = (function() {
             const cleanup = (typeof OperationRepository_ === 'object')
               ? OperationRepository_.runRetentionCleanup()
               : { archived: 0, removedActiveStale: 0, archivedCheckpoints: 0 };
+            var alertsCleanup = null;
+            if (typeof clearOldAlerts === 'function') {
+              try {
+                alertsCleanup = clearOldAlerts(
+                  Number(appGetCore('ALERTS_RETENTION_DAYS', 30)) || 30
+                );
+              } catch (alertsErr) {
+                alertsCleanup = { success: false, error: alertsErr && alertsErr.message ? alertsErr.message : String(alertsErr) };
+              }
+            }
             return {
               success: true,
               message: 'Lifecycle retention cleanup виконано',
-              result: Object.assign({ type: 'cleanupLifecycleRetention' }, cleanup || {}),
+              result: Object.assign({ type: 'cleanupLifecycleRetention' }, cleanup || {}, {
+                alertsCleanup: alertsCleanup
+              }),
               changes: [{
                 type: 'cleanupLifecycleRetention',
                 archived: Number(cleanup && cleanup.archived || 0),
