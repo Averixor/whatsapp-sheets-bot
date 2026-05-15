@@ -281,3 +281,14 @@ Do **not** remove aliases until **all** of the following are true:
 - **Diagnostics compatibility checks:** **KEEP**; they guard the sunset process.
 
 For day-to-day operations, prefer calling **`apiStage7*`** and documented Stage7 routes from §13 and **`CONTRIBUTING.md`**.
+
+## 17. Reflective helpers: eval / `Function('return this')` (P2.e audit)
+
+| Location | Usage | Role | Risk | Decision |
+|---------|-------|------|------|----------|
+| **`Stage7TestRunner.gs`** | ~~`eval(name)`~~ removed; explicit registry **`getStage7TestRunnerExplicitRegistry_()`** + **`globalThis[name]`** for discovery only | Manual / menu test runner | Was **medium** (string eval); now **lower** | **DONE (P2.e)** — registered task names bind to real functions; no runtime `eval` |
+| **`SmokeTests.gs`** | `Function("return this")()` only if `globalThis` is unavailable | Smoke / symbol resolution fallback | Low in V8 (branch rarely taken) | **DEFER** — replace only if a zero-`Function` pattern is validated on all hosts |
+| **`Diagnostics.Core.gs`** | `_global_()` → `Function('return this')()` | Diagnostics global scope | Low | **DEFER** |
+| **`Diagnostics.Stage7.Core.gs`** | `_diagGlobal_()` → same pattern after `globalThis` | Stage7 diagnostics | Low | **DEFER** |
+
+Do **not** reintroduce `eval` for resolving test or handler names; extend **`getStage7TestRunnerExplicitRegistry_()`** when adding fixed registry tasks.

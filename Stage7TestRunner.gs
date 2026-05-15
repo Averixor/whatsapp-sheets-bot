@@ -6,7 +6,7 @@
  */
 
 var Stage7TestRunner = (function () {
-  var VERSION = 'stage7-project-test-runner-3.1.3-compat-section-safe';
+  var VERSION = 'stage7-project-test-runner-3.1.4-explicit-registry-no-eval';
   var DEFAULT_TIMEOUT_MS = 330000;
   var DEFAULT_RESULT_SHEET_NAME = 'TEST_RESULTS';
   var DEFAULT_LOCK_WAIT_MS = 60000;
@@ -1599,14 +1599,63 @@ var Stage7TestRunner = (function () {
     return new Date() - startedAt > timeoutMs;
   }
 
-  function resolveFunction_(name) {
-    var globalObject = getGlobalObject_();
-    if (globalObject && typeof globalObject[name] === 'function') return globalObject[name];
+  /**
+   * Explicit bindings for every name in buildRegisteredTasks_ (functionName field).
+   * Discovered tasks still resolve via getGlobalObject_()[name] only (no eval).
+   */
+  function getStage7TestRunnerExplicitRegistry_() {
+    return {
+      healthCheck: healthCheck,
+      runSmokeTests: runSmokeTests,
+      runRegressionTestSuite: runRegressionTestSuite,
+      checkSheets: checkSheets,
+      checkFiles: checkFiles,
+      checkDuplicates: checkDuplicates,
+      testFunctions: testFunctions,
+      runDiagnostics: runDiagnostics,
+      runAllDiagnostics: runAllDiagnostics,
+      runFullDiagnostics: runFullDiagnostics,
+      runSheetsCheck: runSheetsCheck,
+      runFilesCheck: runFilesCheck,
+      runDuplicatesCheck: runDuplicatesCheck,
+      runTestsCheck: runTestsCheck,
+      runQuickDiagnostics_: runQuickDiagnostics_,
+      runStructuralDiagnostics_: runStructuralDiagnostics_,
+      runOperationalDiagnostics_: runOperationalDiagnostics_,
+      runSunsetDiagnostics_: runSunsetDiagnostics_,
+      runHardeningDiagnostics_: runHardeningDiagnostics_,
+      runFullDiagnostics_: runFullDiagnostics_,
+      runFullVerboseDiagnostics_: runFullVerboseDiagnostics_,
+      runStage5MetadataConsistencyCheck_: runStage5MetadataConsistencyCheck_,
+      runStage41ProjectConsistencyCheck_: runStage41ProjectConsistencyCheck_,
+      runHistoricalQuickDiagnosticsInternal_: runHistoricalQuickDiagnosticsInternal_,
+      runStage6ADomainTests_: runStage6ADomainTests_,
+      runAccessPolicyChecks: runAccessPolicyChecks,
+      runAllPolicyChecks: runAllPolicyChecks,
+      runAccessSecurityE2ETests_: runAccessSecurityE2ETests_,
+      runAccessE2ETests: runAccessE2ETests,
+      runAccessDiagnostics: runAccessDiagnostics,
+      testWasbAccessControl: testWasbAccessControl,
+      testAccessControl_: testAccessControl_,
+      smokeTestAccessControl_: smokeTestAccessControl_,
+      testDiagnostics: testDiagnostics,
+      testNotifyWithTemplate_: testNotifyWithTemplate_,
+      testVacationEngine: testVacationEngine
+    };
+  }
 
-    try {
-      var candidate = eval(name);
-      if (typeof candidate === 'function') return candidate;
-    } catch (error) {}
+  function resolveFunction_(name) {
+    var key = String(name || '').trim();
+    if (!key) return null;
+
+    var registry = getStage7TestRunnerExplicitRegistry_();
+    if (Object.prototype.hasOwnProperty.call(registry, key)) {
+      var registered = registry[key];
+      if (typeof registered === 'function') return registered;
+    }
+
+    var globalObject = getGlobalObject_();
+    if (globalObject && typeof globalObject[key] === 'function') return globalObject[key];
 
     return null;
   }
