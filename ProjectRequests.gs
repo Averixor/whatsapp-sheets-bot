@@ -2,8 +2,10 @@
  * ProjectRequests.gs — заявки з сайдбару (Projects + Requests).
  *
  * Очікувані аркуші:
- * - "Проєкти": список проєктів (мін. колонки: назва; бажано: активний, id)
- * - "Заявки": база заявок
+ * - "Проєкти": колонки id, проєкт, активний, email менеджера; при порожньому аркуші —
+ *   заголовок + неактивний шаблонний рядок (не показується в сайдбарі доки active≠true).
+ * - "Заявки": технічні заголовки для appendRow; при порожньому аркуші —
+ *   заголовок + шаблонний рядок (timestamp 2000-01-01, dedupe_key `wasb-template-row-v1`, status template).
  */
 
 const ProjectRequests_ = (function () {
@@ -77,13 +79,31 @@ const ProjectRequests_ = (function () {
     // - активний (optional)
     // - email менеджера (optional, але бажано для sendMonthlyReport)
     if (sh.getLastRow() < 1) {
-      sh.getRange(1, 1, 1, 4).setValues([
+      const colCount = 4;
+      sh.getRange(1, 1, 1, colCount).setValues([
         ["id", "проєкт", "активний", "email менеджера"],
       ]);
-      // приклад (не активує логіку, але підказує формат)
-      sh.getRange(2, 1, 1, 4).setValues([
-        ["proj-1", "Приклад проєкту", "true", ""],
+      // Неактивний рядок — не потрапляє в сайдбар (readProjects_ фільтрує active=true).
+      sh.getRange(2, 1, 2, colCount).setValues([
+        [
+          "example-id",
+          "Приклад: заміни на реальну назву",
+          "false",
+          "manager@company.com",
+        ],
       ]);
+      try {
+        sh.setFrozenRows(1);
+      } catch (_) {}
+      try {
+        const head = sh.getRange(1, 1, 1, colCount);
+        head.setFontWeight("bold");
+        head.setBackground("#eef2ff");
+        head.setWrap(true);
+      } catch (_) {}
+      try {
+        sh.autoResizeColumns(1, colCount);
+      } catch (_) {}
     }
 
     return sh;
@@ -159,7 +179,8 @@ const ProjectRequests_ = (function () {
 
     // Заголовки (якщо порожній)
     if (sh.getLastRow() < 1) {
-      sh.getRange(1, 1, 1, 8).setValues([
+      const colCount = 8;
+      sh.getRange(1, 1, 1, colCount).setValues([
         [
           "timestamp",
           "user_email",
@@ -171,6 +192,37 @@ const ProjectRequests_ = (function () {
           "status",
         ],
       ]);
+      const tplTs = new Date(2000, 0, 1);
+      sh.getRange(2, 1, 2, colCount).setValues([
+        [
+          tplTs,
+          "",
+          "example-id",
+          "Приклад: назва проєкту",
+          "Приклад теми заявки",
+          "Шаблон: видали цей рядок після першої реальної заявки.",
+          "wasb-template-row-v1",
+          "template",
+        ],
+      ]);
+      try {
+        sh.getRange(2, 6).setWrap(true);
+      } catch (_) {}
+      try {
+        sh.setFrozenRows(1);
+      } catch (_) {}
+      try {
+        const head = sh.getRange(1, 1, 1, colCount);
+        head.setFontWeight("bold");
+        head.setBackground("#eef2ff");
+        head.setWrap(true);
+      } catch (_) {}
+      try {
+        sh.autoResizeColumns(1, colCount);
+      } catch (_) {}
+      try {
+        sh.getRange(2, 1).setNumberFormat("dd.mm.yyyy hh:mm");
+      } catch (_) {}
     }
     return sh;
   }
@@ -212,7 +264,7 @@ const ProjectRequests_ = (function () {
     // dedupe_key в нашому заголовку — 7 колонка
     const col = 7;
     const values = sheet
-      .getRange(2, col, lastRow - 1, 1)
+      .getRange(2, col, lastRow, col)
       .getDisplayValues()
       .map((r) => String(r[0] || "").trim());
     const idx = values.findIndex((v) => v === dedupeKey);

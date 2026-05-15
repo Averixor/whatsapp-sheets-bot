@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-05-15 — optional business sheets documentation
+
+- documented auto-seeding of **`Дані` / `Проєкти` / `Заявки`** (sidebar bootstrap, empty-sheet-only rule, template rows) in **`RUNBOOK.md`** §18, **`ARCHITECTURE.md`**, **`README.md`**, **`CONTRIBUTING.md`**
+- aligned inline comments in **`Stage7ServerApi.gs`** and **`ProjectRequests.gs`** with the same behaviour
+
 ## 2026-05-08 — Stage 7.1.5 maintenance
 
 - dropped unused `script.external_request` OAuth scope from `appsscript.json`

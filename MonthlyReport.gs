@@ -66,6 +66,60 @@ const MonthlyReport_ = (function () {
     return sheet;
   }
 
+  /**
+   * Створює аркуш «Дані»: заголовки, приклад (дата поза робочими місяцями — не потрапляє в звіти),
+   * заморожений рядок 1, базове оформлення.
+   */
+  function ensureDataSheet_(ss) {
+    let sh = ss.getSheetByName(DATA_SHEET_NAME);
+    if (!sh) sh = ss.insertSheet(DATA_SHEET_NAME);
+
+    if (sh.getLastRow() < 1) {
+      const hdr = [
+        "Дата",
+        "Подія / опис",
+        "Проєкт",
+        "Категорія",
+        "Кількість / години",
+        "Примітки",
+      ];
+      const colCount = hdr.length;
+      const exampleDate = new Date(2000, 0, 1);
+      const exampleNote =
+        "Приклад: видаліть цей рядок або замініть на ваші записи.";
+      const dataRow = [
+        exampleDate,
+        "Шаблон: короткий опис події",
+        "Шаблон: код або назва проєкту",
+        "приклад-категорія",
+        "",
+        exampleNote,
+      ];
+
+      sh.getRange(1, 1, 1, colCount).setValues([hdr]);
+      sh.getRange(2, 1, 2, colCount).setValues([dataRow]);
+      sh.getRange(2, colCount).setWrap(true);
+
+      try {
+        sh.setFrozenRows(1);
+      } catch (_) {}
+      try {
+        const head = sh.getRange(1, 1, 1, colCount);
+        head.setFontWeight("bold");
+        head.setBackground("#eef2ff");
+        head.setWrap(true);
+      } catch (_) {}
+      try {
+        sh.autoResizeColumns(1, colCount);
+      } catch (_) {}
+      try {
+        sh.getRange(2, 1, 2, 1).setNumberFormat("dd.mm.yyyy");
+      } catch (_) {}
+    }
+
+    return sh;
+  }
+
   function normalizeHeader_(value) {
     return String(value || "")
       .trim()
@@ -365,6 +419,8 @@ const MonthlyReport_ = (function () {
     buildHtml_,
     buildFromMonthSheet_,
     getSheetRequired_,
+    ensureDataSheet_,
+    DATA_SHEET_NAME,
     _logInfo,
     _logError,
     EMAIL_SENDER_NAME,
@@ -666,8 +722,9 @@ function sendMonthlyReport(monthYearOrSheetName) {
     const parsed = MonthlyReport_.parseMonthYear_(input);
     MonthlyReport_._logInfo("start", `monthYear=${parsed.monthYear}`);
 
-    const dataSheet = MonthlyReport_.getSheetRequired_(ss, DATA_SHEET_NAME);
-    MonthlyReport_._logInfo("read", DATA_SHEET_NAME);
+    MonthlyReport_.ensureDataSheet_(ss);
+    const dataSheet = ss.getSheetByName(MonthlyReport_.DATA_SHEET_NAME);
+    MonthlyReport_._logInfo("read", MonthlyReport_.DATA_SHEET_NAME);
     const { headers, rows } = MonthlyReport_.readMonthlyRows_(
       dataSheet,
       parsed.start,

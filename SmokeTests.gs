@@ -311,19 +311,26 @@ function runSmokeTests(options) {
     return "Sheets OK: " + required.join(", ");
   });
 
-  // Optional sheets used by monthly report + requests sidebar.
+  // Optional sheets: автоматично створюємо за відсутності (як bootstrap sidebar).
   _smokePush_(
     report,
-    "Optional business sheets exist (Дані/Проєкти/Заявки)",
+    "Optional business sheets ensured (Дані/Проєкти/Заявки)",
     function () {
-      const ss = getWasbSpreadsheet_();
-      const optional = ["Дані", "Проєкти", "Заявки"];
-      const missing = optional.filter(function (name) {
+      var ss = getWasbSpreadsheet_();
+      if (typeof ProjectRequests_ !== "undefined" && ProjectRequests_) {
+        ProjectRequests_.ensureProjectsSheet_(ss);
+        ProjectRequests_.ensureRequestsSheet_(ss);
+      }
+      if (typeof MonthlyReport_ !== "undefined" && MonthlyReport_) {
+        MonthlyReport_.ensureDataSheet_(ss);
+      }
+      var optional = ["Дані", "Проєкти", "Заявки"];
+      var missing = optional.filter(function (name) {
         return !ss.getSheetByName(name);
       });
       _smokeAssert_(
         missing.length === 0,
-        "Відсутні optional аркуші: " + missing.join(", "),
+        "Усе ще немає аркушів: " + missing.join(", "),
       );
       return "Optional sheets OK: " + optional.join(", ");
     },

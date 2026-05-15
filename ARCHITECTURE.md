@@ -182,6 +182,18 @@ Protected / service sheets include:
 - `JOB_RUNTIME_LOG`
 - `ALERTS_LOG`
 
+### Optional business sheets (auto-seeded)
+
+Три аркуші для заявок із сайдбару та місячного звіту за даними таблиці:
+
+| Sheet (name) | Primary module                                         | Seeded when                         |
+| ------------ | ------------------------------------------------------ | ----------------------------------- |
+| `Дані`       | `MonthlyReport.gs` (`MonthlyReport_.ensureDataSheet_`) | Sidebar bootstrap; empty sheet only |
+| `Проєкти`    | `ProjectRequests.gs` (`ensureProjectsSheet_`)          | same                                |
+| `Заявки`     | `ProjectRequests.gs` (`ensureRequestsSheet_`)          | same                                |
+
+Тригер входу: **`apiStage7BootstrapSidebar()`** → **`_ensureOptionalBusinessSheetsQuiet_()`** in `Stage7ServerApi.gs`. Деталі колонок і шаблонних рядків — **`RUNBOOK.md` §18**.
+
 ## 8. Sidebar runtime principles
 
 - first paint should stay lightweight

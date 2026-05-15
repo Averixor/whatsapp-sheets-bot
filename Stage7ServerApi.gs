@@ -93,6 +93,42 @@ function apiStage7GetAccessDescriptorLite() {
   );
 }
 
+/**
+ * Гарантує наявність optional бізнес-аркушів «Дані» / «Проєкти» / «Заявки»: вставляє аркуші,
+ * якщо їх немає, і лише для повністю порожніх аркушів заповнює заголовки, шаблонний рядок і базове оформлення
+ * (див. `MonthlyReport_.ensureDataSheet_`, `ProjectRequests_.ensureProjectsSheet_`, `ensureRequestsSheet_`).
+ * Без падіння UI: недостатні права або помилки — ігноруємо (`Logger` при наявності).
+ */
+function _ensureOptionalBusinessSheetsQuiet_() {
+  try {
+    var ss = getWasbSpreadsheet_();
+    if (
+      typeof ProjectRequests_ !== "undefined" &&
+      ProjectRequests_ &&
+      typeof ProjectRequests_.ensureProjectsSheet_ === "function"
+    ) {
+      ProjectRequests_.ensureProjectsSheet_(ss);
+      ProjectRequests_.ensureRequestsSheet_(ss);
+    }
+    if (
+      typeof MonthlyReport_ !== "undefined" &&
+      MonthlyReport_ &&
+      typeof MonthlyReport_.ensureDataSheet_ === "function"
+    ) {
+      MonthlyReport_.ensureDataSheet_(ss);
+    }
+  } catch (_e) {
+    try {
+      if (typeof Logger !== "undefined" && Logger.log) {
+        Logger.log(
+          "_ensureOptionalBusinessSheetsQuiet_: " +
+            String(_e && _e.message ? _e.message : _e),
+        );
+      }
+    } catch (_) {}
+  }
+}
+
 function apiStage7BootstrapSidebar() {
   const descriptor =
     typeof AccessControl_ === "object" &&
@@ -105,6 +141,8 @@ function apiStage7BootstrapSidebar() {
           knownUser: false,
           reasonString: "AccessControl_ недоступний",
         };
+
+  _ensureOptionalBusinessSheetsQuiet_();
 
   const ss = getWasbSpreadsheet_();
   const months = ss

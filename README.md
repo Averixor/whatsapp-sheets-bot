@@ -112,6 +112,8 @@ Historical/audit materials beyond the above are kept outside the compact import 
 9. Run `apiStage7QuickHealthCheck()`.
 10. Verify the `🧑‍💻` sidebar block for each role you actually use.
 
+Після першого відкриття сайдбару (або явного виклику **`apiStage7BootstrapSidebar()`**) за потреби створюються порожні optional аркуші **`Дані`**, **`Проєкти`**, **`Заявки`** із заголовками й одним шаблонним рядком; якщо аркуш уже має дані, вміст не перезаписується. Див. **`RUNBOOK.md`** §18.
+
 ## ACCESS sheet schema
 
 The bootstrap creates these columns:
