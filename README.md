@@ -11,7 +11,7 @@ This repository is packaged for the **GAS web editor first**:
 ## Active release baseline
 
 - **Stage:** 7.1
-- **Release label:** Stage 7.1.5 — Maintenance & repository hygiene
+- **Release label:** Stage 7 — Maintenance & repository hygiene
 - **Identity model:** strict user-key access based on `Session.getTemporaryActiveUserKey()`
 - **Current access flow:** automatic key recognition first, self-bind login by **email/phone + callsign** only when the current key is not registered
 - **Runtime style:** modular HtmlService sidebar (`Sidebar.html` → `JavaScript.html` → `Js.*` chain)

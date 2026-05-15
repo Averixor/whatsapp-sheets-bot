@@ -6,152 +6,243 @@
  */
 
 function _stage7FastContext_(scenario) {
-  const stage = (typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_().stageVersion : '7.0.0');
+  const stage =
+    typeof getProjectBundleMetadata_ === "function"
+      ? getProjectBundleMetadata_().stageVersion
+      : "7.0.0";
   return {
     stage: stage,
     scenario: scenario,
-    layer: 'application',
-    fastPath: true
+    layer: "application",
+    fastPath: true,
   };
 }
 
 function _stage7FastMeta_(scenario, extraMeta) {
-  return Object.assign({
-    stage: (typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_().stageVersion : '7.0.0'),
-    scenario: scenario,
-    operationId: typeof stage7UniqueId_ === 'function' ? stage7UniqueId_(scenario) : (scenario + '_' + Date.now()),
-    affectedSheets: [],
-    affectedEntities: [],
-    appliedChangesCount: 0,
-    skippedChangesCount: 0,
-    dryRun: true,
-    partial: false,
-    retrySafe: true,
-    lockUsed: false,
-    lockRequired: false
-  }, extraMeta || {});
+  return Object.assign(
+    {
+      stage:
+        typeof getProjectBundleMetadata_ === "function"
+          ? getProjectBundleMetadata_().stageVersion
+          : "7.0.0",
+      scenario: scenario,
+      operationId:
+        typeof stage7UniqueId_ === "function"
+          ? stage7UniqueId_(scenario)
+          : scenario + "_" + Date.now(),
+      affectedSheets: [],
+      affectedEntities: [],
+      appliedChangesCount: 0,
+      skippedChangesCount: 0,
+      dryRun: true,
+      partial: false,
+      retrySafe: true,
+      lockUsed: false,
+      lockRequired: false,
+    },
+    extraMeta || {},
+  );
 }
 
 function _stage7FastResponse_(scenario, message, result, warnings, extraMeta) {
   const meta = _stage7FastMeta_(scenario, extraMeta);
   return buildServerResponse_(
     true,
-    message || '',
+    message || "",
     null,
     result === undefined ? null : result,
     [],
     meta,
     null,
     _stage7FastContext_(scenario),
-    warnings || []
+    warnings || [],
   );
 }
 
 function apiStage7GetAccessDescriptorLite() {
-  const descriptor = (typeof AccessControl_ === 'object' && AccessControl_ && typeof AccessControl_.describe === 'function')
-    ? AccessControl_.describe({ includeSensitiveDebug: false })
-    : { role: 'guest', isAdmin: false, knownUser: false, reasonString: 'AccessControl_ недоступний' };
+  const descriptor =
+    typeof AccessControl_ === "object" &&
+    AccessControl_ &&
+    typeof AccessControl_.describe === "function"
+      ? AccessControl_.describe({ includeSensitiveDebug: false })
+      : {
+          role: "guest",
+          isAdmin: false,
+          knownUser: false,
+          reasonString: "AccessControl_ недоступний",
+        };
 
   const warnings = [];
-  if (descriptor && descriptor.reason && descriptor.reason.message && descriptor.reason.code !== 'access.ok' && descriptor.reason.code !== 'access.ok.bootstrap') {
+  if (
+    descriptor &&
+    descriptor.reason &&
+    descriptor.reason.message &&
+    descriptor.reason.code !== "access.ok" &&
+    descriptor.reason.code !== "access.ok.bootstrap"
+  ) {
     warnings.push(String(descriptor.reason.message));
   }
 
   return _stage7FastResponse_(
-    'getAccessDescriptorLite',
-    descriptor && descriptor.isAdmin ? 'Роль доступу визначено' : 'Доступ визначено',
+    "getAccessDescriptorLite",
+    descriptor && descriptor.isAdmin
+      ? "Роль доступу визначено"
+      : "Доступ визначено",
     descriptor,
-    warnings
+    warnings,
   );
 }
 
 function apiStage7BootstrapSidebar() {
-  const descriptor = (typeof AccessControl_ === 'object' && AccessControl_ && typeof AccessControl_.describe === 'function')
-    ? AccessControl_.describe({ includeSensitiveDebug: false })
-    : { role: 'guest', isAdmin: false, knownUser: false, reasonString: 'AccessControl_ недоступний' };
+  const descriptor =
+    typeof AccessControl_ === "object" &&
+    AccessControl_ &&
+    typeof AccessControl_.describe === "function"
+      ? AccessControl_.describe({ includeSensitiveDebug: false })
+      : {
+          role: "guest",
+          isAdmin: false,
+          knownUser: false,
+          reasonString: "AccessControl_ недоступний",
+        };
 
   const ss = getWasbSpreadsheet_();
-  const months = ss.getSheets()
-    .map(function(sheet) { return sheet.getName(); })
-    .filter(function(name) { return /^\d{2}$/.test(name); })
+  const months = ss
+    .getSheets()
+    .map(function (sheet) {
+      return sheet.getName();
+    })
+    .filter(function (name) {
+      return /^\d{2}$/.test(name);
+    })
     .sort();
   const current = getBotMonthSheetName_();
 
   const warnings = [];
-  if (descriptor && descriptor.reason && descriptor.reason.message && descriptor.reason.code !== 'access.ok' && descriptor.reason.code !== 'access.ok.bootstrap') {
+  if (
+    descriptor &&
+    descriptor.reason &&
+    descriptor.reason.message &&
+    descriptor.reason.code !== "access.ok" &&
+    descriptor.reason.code !== "access.ok.bootstrap"
+  ) {
     warnings.push(String(descriptor.reason.message));
   }
 
   return _stage7FastResponse_(
-    'bootstrapSidebar',
-    'Базові дані сайдбару завантажено',
+    "bootstrapSidebar",
+    "Базові дані сайдбару завантажено",
     {
       access: descriptor,
       months: months,
-      current: current
+      current: current,
     },
     warnings,
-    { affectedSheets: months }
+    { affectedSheets: months },
   );
 }
 
 function apiStage7GetMonthsList() {
   const ss = getWasbSpreadsheet_();
-  const months = ss.getSheets()
-    .map(function(sheet) { return sheet.getName(); })
-    .filter(function(name) { return /^\d{2}$/.test(name); })
+  const months = ss
+    .getSheets()
+    .map(function (sheet) {
+      return sheet.getName();
+    })
+    .filter(function (name) {
+      return /^\d{2}$/.test(name);
+    })
     .sort();
   const current = getBotMonthSheetName_();
 
   return _stage7FastResponse_(
-    'listMonths',
-    'Місяці завантажено',
+    "listMonths",
+    "Місяці завантажено",
     { months: months, current: current },
     [],
-    { affectedSheets: months }
+    { affectedSheets: months },
   );
 }
 
+function _stage7LoadSidebarPersonnelForSession_(dateStr, actionName) {
+  const info = validateDatePayload_({ date: dateStr || _todayStr_() }, "date");
+  const safeDate = info.payload.dateStr || info.payload.date || _todayStr_();
+  let descriptor = null;
+
+  if (
+    typeof AccessEnforcement_ === "object" &&
+    AccessEnforcement_.assertCanViewSidebarPersonnel
+  ) {
+    descriptor = AccessEnforcement_.assertCanViewSidebarPersonnel(
+      actionName || "getSidebarData",
+    );
+  }
+
+  const sidebar = PersonsRepository_.getSidebarPersonnel(safeDate);
+
+  if (
+    typeof AccessEnforcement_ === "object" &&
+    AccessEnforcement_.applySidebarPersonnelAccessPolicy
+  ) {
+    return AccessEnforcement_.applySidebarPersonnelAccessPolicy(
+      sidebar,
+      descriptor,
+    );
+  }
+
+  return sidebar;
+}
+
 function apiStage7GetSidebarData(dateStr) {
-  const info = validateDatePayload_({ date: dateStr || _todayStr_() }, 'date');
-  const sidebar = PersonsRepository_.getSidebarPersonnel(info.payload.dateStr || info.payload.date || _todayStr_());
+  const sidebar = _stage7LoadSidebarPersonnelForSession_(
+    dateStr,
+    "getSidebarData",
+  );
 
   return _stage7FastResponse_(
-    'loadCalendarDay',
-    'Дані дня завантажено',
+    "loadCalendarDay",
+    "Дані дня завантажено",
     sidebar,
     [],
-    { affectedSheets: [sidebar.month || getBotMonthSheetName_()] }
+    { affectedSheets: [sidebar.month || getBotMonthSheetName_()] },
   );
 }
 
 function apiStage7GetSendPanelData() {
-  if (typeof AccessEnforcement_ === 'object' && AccessEnforcement_.assertCanUseSendPanel) {
-    AccessEnforcement_.assertCanUseSendPanel('getSendPanelData', {});
+  if (
+    typeof AccessEnforcement_ === "object" &&
+    AccessEnforcement_.assertCanUseSendPanel
+  ) {
+    AccessEnforcement_.assertCanUseSendPanel("getSendPanelData", {});
   }
 
   const rows = SendPanelRepository_.readRows();
   const stats = SendPanelRepository_.buildStats(rows);
-  const panelMeta = typeof SendPanelRepository_.getPanelMetadata === 'function'
-    ? (SendPanelRepository_.getPanelMetadata() || {})
-    : {};
+  const panelMeta =
+    typeof SendPanelRepository_.getPanelMetadata === "function"
+      ? SendPanelRepository_.getPanelMetadata() || {}
+      : {};
 
   return _stage7FastResponse_(
-    'getSendPanelData',
-    'SEND_PANEL перечитано',
+    "getSendPanelData",
+    "SEND_PANEL перечитано",
     {
       rows: rows,
       stats: stats,
       month: panelMeta.month || getBotMonthSheetName_(),
-      date: panelMeta.date || ''
+      date: panelMeta.date || "",
     },
     [],
-    { affectedSheets: [CONFIG.SEND_PANEL_SHEET, getBotMonthSheetName_()].filter(Boolean) }
+    {
+      affectedSheets: [CONFIG.SEND_PANEL_SHEET, getBotMonthSheetName_()].filter(
+        Boolean,
+      ),
+    },
   );
 }
 
 function apiStage7SwitchBotToMonth(monthSheetName) {
-  return Stage7UseCases_.switchBotToMonth({ month: monthSheetName || '' });
+  return Stage7UseCases_.switchBotToMonth({ month: monthSheetName || "" });
 }
 
 function apiGenerateSendPanelForDate(options) {
@@ -171,11 +262,13 @@ function apiMarkPanelRowsAsSent(rowNumbers, options) {
 }
 
 function _sanitizeFastSendPanelRows_(rowNumbers) {
-  const rows = Array.isArray(rowNumbers) ? rowNumbers.map(function(value) {
-    return Number(value);
-  }) : [];
+  const rows = Array.isArray(rowNumbers)
+    ? rowNumbers.map(function (value) {
+        return Number(value);
+      })
+    : [];
   const seen = {};
-  return rows.filter(function(row) {
+  return rows.filter(function (row) {
     if (!Number.isFinite(row) || row <= 0) return false;
     const key = String(row);
     if (seen[key]) return false;
@@ -185,42 +278,55 @@ function _sanitizeFastSendPanelRows_(rowNumbers) {
 }
 
 function apiMarkPanelRowsAsSentFast(rowNumbers, options) {
-  const opts = Object.assign({
-    dryRun: false,
-    returnRows: false,
-    targetedVisualUpdate: true
-  }, options || {});
+  const opts = Object.assign(
+    {
+      dryRun: false,
+      returnRows: false,
+      targetedVisualUpdate: true,
+    },
+    options || {},
+  );
 
   const rows = _sanitizeFastSendPanelRows_(rowNumbers);
   if (!rows.length) {
-    throw new Error('Не передано коректні рядки SEND_PANEL');
+    throw new Error("Не передано коректні рядки SEND_PANEL");
   }
 
-  if (typeof AccessEnforcement_ === 'object' && AccessEnforcement_.assertCanUseSendPanel) {
-    AccessEnforcement_.assertCanUseSendPanel('markPanelRowsAsSentFast', { rowNumbers: rows });
+  if (
+    typeof AccessEnforcement_ === "object" &&
+    AccessEnforcement_.assertCanUseSendPanel
+  ) {
+    AccessEnforcement_.assertCanUseSendPanel("markPanelRowsAsSentFast", {
+      rowNumbers: rows,
+    });
   }
 
   const result = SendPanelRepository_.markRowsAsSent(rows, opts);
 
   return {
     success: true,
-    message: 'Позначено ' + (Array.isArray(result.updatedRows) ? result.updatedRows.length : 0) + ' рядків',
+    message:
+      "Позначено " +
+      (Array.isArray(result.updatedRows) ? result.updatedRows.length : 0) +
+      " рядків",
     warnings: [],
     context: {
-      route: 'sidebar.markPanelRowsAsSentFast',
-      scenario: 'markPanelRowsAsSentFast',
-      fastPath: true
+      route: "sidebar.markPanelRowsAsSentFast",
+      scenario: "markPanelRowsAsSentFast",
+      fastPath: true,
     },
     data: {
       result: {
         rows: Array.isArray(result.rows) ? result.rows : [],
-        updatedRows: Array.isArray(result.updatedRows) ? result.updatedRows : [],
+        updatedRows: Array.isArray(result.updatedRows)
+          ? result.updatedRows
+          : [],
         stats: result.stats || {},
-        month: '',
-        date: ''
+        month: "",
+        date: "",
       },
-      meta: {}
-    }
+      meta: {},
+    },
   };
 }
 
@@ -237,30 +343,42 @@ function apiBuildDaySummary(dateStr) {
 }
 
 function apiBuildDetailedSummary(dateStr) {
-  return Stage7UseCases_.buildDetailedSummary({ date: dateStr || _todayStr_() });
+  return Stage7UseCases_.buildDetailedSummary({
+    date: dateStr || _todayStr_(),
+  });
 }
 
 function apiOpenPersonCard(callsign, dateStr) {
   const info = validatePersonLookupPayload_({
-    callsign: callsign || '',
-    date: dateStr || _todayStr_()
+    callsign: callsign || "",
+    date: dateStr || _todayStr_(),
   });
-  if (typeof AccessEnforcement_ === 'object' && AccessEnforcement_.assertCanOpenPersonCard) {
-    AccessEnforcement_.assertCanOpenPersonCard(info.payload.callsign || '', info.payload.dateStr || info.payload.date || '');
+  if (
+    typeof AccessEnforcement_ === "object" &&
+    AccessEnforcement_.assertCanOpenPersonCard
+  ) {
+    AccessEnforcement_.assertCanOpenPersonCard(
+      info.payload.callsign || "",
+      info.payload.dateStr || info.payload.date || "",
+    );
   }
 
-  const person = PersonsRepository_.getPersonByCallsign(info.payload.callsign, info.payload.dateStr || info.payload.date);
-  const warnings = person && person.phone ? [] : ['Для бійця не знайдено телефон'];
+  const person = PersonsRepository_.getPersonByCallsign(
+    info.payload.callsign,
+    info.payload.dateStr || info.payload.date,
+  );
+  const warnings =
+    person && person.phone ? [] : ["Для бійця не знайдено телефон"];
 
   return _stage7FastResponse_(
-    'openPersonCard',
-    'Картку бійця зібрано',
+    "openPersonCard",
+    "Картку бійця зібрано",
     person,
     warnings,
     {
       affectedSheets: [person.sheet || getBotMonthSheetName_()].filter(Boolean),
-      affectedEntities: [person.callsign || person.fml || ''].filter(Boolean)
-    }
+      affectedEntities: [person.callsign || person.fml || ""].filter(Boolean),
+    },
   );
 }
 
@@ -269,30 +387,56 @@ function apiLoadCalendarDay(dateStr) {
 }
 
 function apiCheckVacationsAndBirthdays(dateStr) {
-  const info = validateDatePayload_({ date: dateStr || _todayStr_() }, 'date');
-  if (typeof AccessEnforcement_ === 'object' && AccessEnforcement_.assertCanUseWorkingActions) {
-    AccessEnforcement_.assertCanUseWorkingActions('checkVacationsAndBirthdays', { requestedDate: info.payload.dateStr || info.payload.date || '' });
+  const info = validateDatePayload_({ date: dateStr || _todayStr_() }, "date");
+  if (
+    typeof AccessEnforcement_ === "object" &&
+    AccessEnforcement_.assertCanUseWorkingActions
+  ) {
+    AccessEnforcement_.assertCanUseWorkingActions(
+      "checkVacationsAndBirthdays",
+      { requestedDate: info.payload.dateStr || info.payload.date || "" },
+    );
   }
 
-  const daily = (typeof VacationService_ === 'object' && VacationService_ && typeof VacationService_.check === 'function')
-    ? VacationService_.check(info.payload.dateStr || info.payload.date || _todayStr_())
-    : {
-        date: info.payload.dateStr || info.payload.date || _todayStr_(),
-        vacations: runVacationEngine_(DateUtils_.parseUaDate(info.payload.dateStr || info.payload.date) || new Date()) || {},
-        birthdays: runBirthdayEngine_(DateUtils_.parseUaDate(info.payload.dateStr || info.payload.date) || new Date()) || {}
-      };
+  const daily =
+    typeof VacationService_ === "object" &&
+    VacationService_ &&
+    typeof VacationService_.check === "function"
+      ? VacationService_.check(
+          info.payload.dateStr || info.payload.date || _todayStr_(),
+        )
+      : {
+          date: info.payload.dateStr || info.payload.date || _todayStr_(),
+          vacations:
+            runVacationEngine_(
+              DateUtils_.parseUaDate(
+                info.payload.dateStr || info.payload.date,
+              ) || new Date(),
+            ) || {},
+          birthdays:
+            runBirthdayEngine_(
+              DateUtils_.parseUaDate(
+                info.payload.dateStr || info.payload.date,
+              ) || new Date(),
+            ) || {},
+        };
 
   return _stage7FastResponse_(
-    'checkVacationsAndBirthdays',
-    'Перевірку відпусток виконано',
+    "checkVacationsAndBirthdays",
+    "Перевірку відпусток виконано",
     {
-      date: daily.date || info.payload.dateStr || info.payload.date || _todayStr_(),
+      date:
+        daily.date || info.payload.dateStr || info.payload.date || _todayStr_(),
       vacations: daily.vacations || {},
       birthdays: daily.birthdays || {},
-      summary: daily.summary || {}
+      summary: daily.summary || {},
     },
     [],
-    { affectedSheets: [getBotMonthSheetName_(), CONFIG.PHONES_SHEET].filter(Boolean) }
+    {
+      affectedSheets: [getBotMonthSheetName_(), CONFIG.PHONES_SHEET].filter(
+        Boolean,
+      ),
+    },
   );
 }
 

@@ -265,7 +265,7 @@ function runSmokeTests(options) {
   const opts = options || {};
   const report = {
     ok: true,
-    stage: "7.1.5",
+    stage: "7",
     ts: new Date().toISOString(),
     dryRun: opts.dryRun !== false,
     checks: [],
@@ -457,7 +457,7 @@ function runStage4ScenarioTests(options) {
   const testCallsign = opts.callsign || _pickTestCallsign();
   const report = {
     ok: true,
-    stage: "7.1.5",
+    stage: "7",
     ts: new Date().toISOString(),
     dryRun: opts.dryRun !== false,
     checks: [],
@@ -756,7 +756,7 @@ function runStage5ScenarioTests(options) {
     stage:
       typeof getProjectBundleMetadata_ === "function"
         ? getProjectBundleMetadata_().stageVersion
-        : "7.1.5",
+        : "7",
     ts: new Date().toISOString(),
     dryRun: opts.dryRun !== false,
     checks: [],
@@ -957,7 +957,7 @@ function runRegressionTestSuite(options) {
 
   const report = {
     ok: true,
-    stage: meta && meta.stageVersion ? meta.stageVersion : "7.1.5",
+    stage: meta && meta.stageVersion ? meta.stageVersion : "7",
     ts: new Date().toISOString(),
     dryRun: opts.dryRun !== false,
     mode: "fast-regression",
@@ -1033,10 +1033,7 @@ function runRegressionTestSuite(options) {
         String(meta.stage) === "7.1",
         "metadata.stage має бути 7.1",
       );
-      _smokeAssert_(
-        meta.stageVersion === "7.1.5",
-        "stageVersion має бути 7.1.5",
-      );
+      _smokeAssert_(meta.stageVersion === "7", "stageVersion має бути 7");
       _smokeAssert_(
         meta.activeBaseline === "stage7-1-5-maintenance-baseline",
         "activeBaseline має бути stage7-1-5-maintenance-baseline",
@@ -1074,7 +1071,7 @@ function runRegressionTestSuiteFull_(options) {
       : (meta && meta.release) || {};
   const report = {
     ok: true,
-    stage: meta && meta.stageVersion ? meta.stageVersion : "7.1.5",
+    stage: meta && meta.stageVersion ? meta.stageVersion : "7",
     ts: new Date().toISOString(),
     dryRun: opts.dryRun !== false,
     checks: [],
@@ -1103,10 +1100,10 @@ function runRegressionTestSuiteFull_(options) {
   _smokePush_(report, "release metadata truth model", function () {
     _smokeAssert_(String(meta.stage) === "7.1", "metadata.stage має бути 7.1");
     _smokeAssert_(
-      meta.stageLabel === "Stage 7.1.5 — Maintenance & repository hygiene",
-      "stageLabel має бути Stage 7.1.5 — Maintenance & repository hygiene",
+      meta.stageLabel === "Stage 7 — Maintenance & repository hygiene",
+      "stageLabel має бути Stage 7 — Maintenance & repository hygiene",
     );
-    _smokeAssert_(meta.stageVersion === "7.1.5", "stageVersion має бути 7.1.5");
+    _smokeAssert_(meta.stageVersion === "7", "stageVersion має бути 7");
     _smokeAssert_(
       meta.activeBaseline === "stage7-1-5-maintenance-baseline",
       "activeBaseline має бути stage7-1-5-maintenance-baseline",
@@ -1391,7 +1388,7 @@ function runRegressionTestSuiteFull_(options) {
 
     _smokeAssert_(
       String(full.summary || "").indexOf(
-        "Stage 7.1.5 — Maintenance & repository hygiene",
+        "Stage 7 — Maintenance & repository hygiene",
       ) !== -1,
       "Stage 7.1 wording не знайдено в diagnostics summary",
     );
