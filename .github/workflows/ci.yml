@@ -34,3 +34,38 @@ jobs:
 
       - name: Run function graph audit
         run: node scripts/audit-function-graph.mjs
+
+  preprod-checklist:
+    name: WASB pre-prod checklist (manual)
+    runs-on: ubuntu-latest
+    needs: gas-sanity
+
+    steps:
+      - name: Publish pre-prod checklist to Step Summary
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          ## WASB pre-prod checklist (manual — GAS editor)
+
+          Виконайте в **production** Apps Script / таблиці перед релізом. CI не запускає GAS і не деплоїть clasp.
+
+          ### Bootstrap і ACCESS
+          - [ ] `apiStage7BootstrapRuntimeAndAlertsSheets()`
+          - [ ] `apiStage7BootstrapAccessSheet()`
+          - [ ] **ACCESS**: мінімум один рядок `enabled=TRUE` з роллю **owner**, **admin** або **sysadmin**
+          - [ ] `apiStage7DebugAccess()`: `bootstrapAllowed=false`
+          - [ ] `apiStage7DebugAccess()`: `adminConfigured=true`
+          - [ ] owner/admin залогінився; у рядку заповнений `user_key_current_hash`
+
+          ### Захисти та Script Properties
+          - [ ] `apiStage7ApplyProtections({ dryRun: true })` — переглянути звіт
+          - [ ] `apiStage7ApplyProtections({ dryRun: false })`
+          - [ ] **WASB_SPREADSHEET_ID** заданий у Script Properties (обовʼязково для тригерів / headless)
+          - [ ] **WASB_OWNER_EMAIL** заданий у Script Properties (security-листи з повним user key)
+          - [ ] **WASB_ACCESS_MIGRATION_EMAIL_BRIDGE** вимкнений (не `true`)
+
+          ### Перевірки після деплою коду
+          - [ ] `npm run ci` локально — зелений
+          - [ ] `apiRunStage7RegressionTests()` у GAS editor
+          - [ ] `apiStage7QuickHealthCheck()` (перевірка `WASB_OWNER_EMAIL` — WARN якщо не задано)
+
+          EOF

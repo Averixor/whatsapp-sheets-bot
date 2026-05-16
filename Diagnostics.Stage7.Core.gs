@@ -440,14 +440,42 @@ function _diagBuildCounts_(checks) {
 
   return counts;
 }
+function _diagAppendPreprodScriptPropertyChecks_(checks) {
+  var ownerDiag =
+    typeof getWasbOwnerEmailDiagnostics_ === "function"
+      ? getWasbOwnerEmailDiagnostics_()
+      : {
+          ownerEmailConfigured: false,
+          warning: "getWasbOwnerEmailDiagnostics_ недоступний",
+        };
+
+  _stage7PushCheck_(
+    checks,
+    "Pre-prod WASB_OWNER_EMAIL",
+    ownerDiag.ownerEmailConfigured ? "OK" : "WARN",
+    ownerDiag.ownerEmailConfigured
+      ? "WASB_OWNER_EMAIL заданий і схожий на email"
+      : ownerDiag.warning || "WASB_OWNER_EMAIL не заданий",
+    ownerDiag.ownerEmailConfigured
+      ? ""
+      : "Script properties → WASB_OWNER_EMAIL=owner@example.com",
+  );
+}
+
 function _diagBuildReport_(checks, mode, summaryPrefix) {
   var list = Array.isArray(checks) ? checks : [];
   var counts = _diagBuildCounts_(list);
+  var ownerDiag =
+    typeof getWasbOwnerEmailDiagnostics_ === "function"
+      ? getWasbOwnerEmailDiagnostics_()
+      : { ownerEmailConfigured: false, warning: "" };
   return {
     ok: counts.failures === 0,
     stage: "7.1",
     mode: mode || "full",
     checks: list,
+    ownerEmailConfigured: !!ownerDiag.ownerEmailConfigured,
+    ownerEmailWarning: ownerDiag.warning || "",
     warnings: _diagBuildWarningsFromChecks_(list),
     counts: counts,
     summary:
@@ -701,6 +729,8 @@ function _diagBuildStage7CoreChecks_(options) {
       "Перевірте JobRuntime.gs",
     );
   }
+
+  _diagAppendPreprodScriptPropertyChecks_(checks);
 
   return _diagNormalizeReportChecks_({ checks: checks });
 }

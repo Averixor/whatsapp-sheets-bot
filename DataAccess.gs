@@ -10,6 +10,35 @@ function getWasbSpreadsheetId_() {
   return String(props.getProperty("WASB_SPREADSHEET_ID") || "").trim();
 }
 
+function getWasbOwnerEmail_() {
+  var value =
+    PropertiesService.getScriptProperties().getProperty("WASB_OWNER_EMAIL");
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
+
+function getWasbOwnerEmailDiagnostics_() {
+  var raw = String(
+    PropertiesService.getScriptProperties().getProperty("WASB_OWNER_EMAIL") ||
+      "",
+  ).trim();
+  var email = raw.toLowerCase();
+  var configured = !!email;
+  var looksLikeEmail = !!email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  return {
+    ownerEmailConfigured: configured && looksLikeEmail,
+    configured: configured,
+    looksLikeEmail: looksLikeEmail,
+    warning: configured
+      ? looksLikeEmail
+        ? ""
+        : "WASB_OWNER_EMAIL заданий, але не схожий на email"
+      : "WASB_OWNER_EMAIL не заданий у Script Properties (security-листи без повного user key)",
+  };
+}
+
 function getWasbSpreadsheet_() {
   var id = getWasbSpreadsheetId_();
   if (id) {

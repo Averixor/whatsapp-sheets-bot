@@ -833,13 +833,15 @@ var AccessEnforcement_ =
         }
       }
       var fullEmailBody = fullEmailBodyParts.join("\n");
-      var ownerEmail = "ryabinin.sergei.alekseevich@gmail.com";
+      var ownerEmail =
+        typeof getWasbOwnerEmail_ === "function" ? getWasbOwnerEmail_() : "";
       var recipients = _notificationEmails_();
 
       var mailResult = { sent: false, recipients: [] };
 
       recipients.forEach(function (email) {
-        var isOwner = String(email).toLowerCase() === ownerEmail.toLowerCase();
+        var isOwner =
+          !!ownerEmail && String(email).toLowerCase() === ownerEmail;
         var bodyToSend = isOwner ? fullEmailBody : emailBody;
 
         try {
