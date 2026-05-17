@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-05-17 — Stage 7.1 production release CLOSED
+
+- Production-реліз WASB Stage 7.1 закрито.
+- Підтверджено: Git working tree clean, GitHub main up-to-date, GAS pushed.
+- CI локально: `ci-gas-sanity` OK, `audit-function-graph` OK, `MISSING: none`.
+- GAS validation: project test pack PASS, Access diagnostics PASS, protections apply OK.
+- Виправлено й підтверджено envelope `dryRun`: `data.result.dryRun=false`, `data.meta.dryRun=false`, top-level `dryRun=false`.
+- Додано `WASB_RELEASE_AUDIT.md` як фінальний audit/status-документ релізу.
+
 ## 2026-05-15 — optional business sheets documentation
 
 - documented auto-seeding of **`Дані` / `Проєкти` / `Заявки`** (sidebar bootstrap, empty-sheet-only rule, template rows) in **`RUNBOOK.md`** §18, **`ARCHITECTURE.md`**, **`README.md`**, **`CONTRIBUTING.md`**

@@ -16,6 +16,7 @@ This repository is packaged for the **GAS web editor first**:
 - **Current access flow:** automatic key recognition first, self-bind login by **email/phone + callsign** only when the current key is not registered
 - **Runtime style:** modular HtmlService sidebar (`Sidebar.html` → `JavaScript.html` → `Js.*` chain)
 - **Packaging policy:** compact GAS bundle ships **5 operational root markdown files** (runtime docs only; see Documentation map)
+- **Production status:** **CLOSED** (Stage 7.1) — [`WASB_RELEASE_AUDIT.md`](./WASB_RELEASE_AUDIT.md)
 
 ## What is active in this release
 
@@ -78,6 +79,7 @@ The workflow does not deploy to Apps Script. Deployment remains local via **`cla
 
 **Also in this Git repository (maintainers; usually not uploaded into the GAS editor):**
 
+- [`WASB_RELEASE_AUDIT.md`](./WASB_RELEASE_AUDIT.md) — повний технічний аналіз WASB і фінальний статус production-релізу Stage 7.1.
 - `CONTRIBUTING.md` — local workflow, fallback commands, GitHub Actions CI, commit policy, Script properties
 
 **Other root markdown (optional / meta):**
