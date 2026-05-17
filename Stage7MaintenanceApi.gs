@@ -14,7 +14,8 @@ function _stage7BuildMaintenanceResponse_(
   extraMeta,
 ) {
   const safeReport = report && typeof report === "object" ? report : {};
-  const safeExtraMeta = extraMeta && typeof extraMeta === "object" ? extraMeta : {};
+  const safeExtraMeta =
+    extraMeta && typeof extraMeta === "object" ? extraMeta : {};
 
   const hasExtraDryRun = Object.prototype.hasOwnProperty.call(
     safeExtraMeta,
