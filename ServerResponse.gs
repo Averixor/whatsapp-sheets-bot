@@ -119,7 +119,9 @@ function buildServerResponseEnvelope_(success, message, error, result, changes, 
     warnings: normalizeServerWarnings_(warnings),
     operationId: safeMeta.operationId || (safeContext && safeContext.operationId) || null,
     scenario: safeMeta.scenario || (safeContext && safeContext.scenario) || null,
-    dryRun: !!(safeMeta.dryRun || (safeContext && safeContext.dryRun)),
+    dryRun: Object.prototype.hasOwnProperty.call(safeMeta, 'dryRun')
+      ? safeMeta.dryRun === true
+      : !!(safeContext && safeContext.dryRun === true),
     affectedSheets: serverResponseAsArray_(safeMeta.affectedSheets),
     affectedEntities: serverResponseAsArray_(safeMeta.affectedEntities),
     appliedChangesCount: toServerResponseCount_(safeMeta.appliedChangesCount, data.changes.length),

@@ -5,17 +5,54 @@
  * Compatibility wrappers live in LegacyMaintenanceAliases.gs.
  */
 
-function _stage7BuildMaintenanceResponse_(success, message, report, scenario, warnings, extraMeta) {
-  const meta = Object.assign({
-    stage: (typeof getProjectBundleMetadata_ === 'function' ? getProjectBundleMetadata_().stageVersion : '6.0.0-final'),
-    scenario: scenario,
-    operationId: stage7UniqueId_(scenario),
-    affectedSheets: [],
-    affectedEntities: [],
-    appliedChangesCount: 0,
-    skippedChangesCount: 0,
-    dryRun: true
-  }, extraMeta || {});
+function _stage7BuildMaintenanceResponse_(
+  success,
+  message,
+  report,
+  scenario,
+  warnings,
+  extraMeta,
+) {
+  const safeReport = report && typeof report === "object" ? report : {};
+  const safeExtraMeta = extraMeta && typeof extraMeta === "object" ? extraMeta : {};
+
+  const hasExtraDryRun = Object.prototype.hasOwnProperty.call(
+    safeExtraMeta,
+    "dryRun",
+  );
+  const hasReportDryRun = Object.prototype.hasOwnProperty.call(
+    safeReport,
+    "dryRun",
+  );
+
+  const derivedDryRun = hasExtraDryRun
+    ? safeExtraMeta.dryRun === true
+    : hasReportDryRun
+      ? safeReport.dryRun === true
+      : true;
+
+  const meta = Object.assign(
+    {
+      stage:
+        typeof getProjectBundleMetadata_ === "function"
+          ? getProjectBundleMetadata_().stageVersion
+          : "6.0.0-final",
+      scenario: scenario,
+      operationId: stage7UniqueId_(scenario),
+      affectedSheets: [],
+      affectedEntities: [],
+      appliedChangesCount: 0,
+      skippedChangesCount: 0,
+      dryRun: derivedDryRun,
+    },
+    safeExtraMeta,
+  );
+
+  meta.dryRun = hasExtraDryRun
+    ? safeExtraMeta.dryRun === true
+    : hasReportDryRun
+      ? safeReport.dryRun === true
+      : meta.dryRun === true;
 
   return buildServerResponse_(
     success !== false,
@@ -24,31 +61,34 @@ function _stage7BuildMaintenanceResponse_(success, message, report, scenario, wa
     report || {},
     [],
     meta,
-    { stage: meta.stage, scenario: scenario, lifecycle: ['report.built'] },
-    { stage: meta.stage, scenario: scenario, layer: 'maintenance' },
-    warnings || []
+    { stage: meta.stage, scenario: scenario, lifecycle: ["report.built"] },
+    { stage: meta.stage, scenario: scenario, layer: "maintenance" },
+    warnings || [],
   );
 }
 
-
 function _stage7AssertRole_(requiredRole, actionLabel) {
-  return (typeof AccessControl_ === 'object')
-    ? AccessControl_.assertRoleAtLeast(requiredRole || 'admin', actionLabel || 'maintenance action')
-    : { role: requiredRole || 'admin', source: 'fallback' };
+  return typeof AccessControl_ === "object"
+    ? AccessControl_.assertRoleAtLeast(
+        requiredRole || "admin",
+        actionLabel || "maintenance action",
+      )
+    : { role: requiredRole || "admin", source: "fallback" };
 }
 
 function _stage7AssertAdminAccess_(actionLabel) {
-  return _stage7AssertRole_('admin', actionLabel || 'maintenance action');
+  return _stage7AssertRole_("admin", actionLabel || "maintenance action");
 }
 
 function _stage7NormalizeWarningText_(value) {
-  if (value == null) return '';
-  if (typeof value === 'string') return value.trim();
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value).trim();
+  if (value == null) return "";
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value).trim();
 
-  if (typeof value === 'object') {
-    const message = value.message != null ? String(value.message).trim() : '';
-    const code = value.code != null ? String(value.code).trim() : '';
+  if (typeof value === "object") {
+    const message = value.message != null ? String(value.message).trim() : "";
+    const code = value.code != null ? String(value.code).trim() : "";
 
     if (message) return message;
     if (code) return code;
@@ -66,332 +106,414 @@ function _stage7NormalizeWarningText_(value) {
 function _stage7BuildDescriptorWarnings_(descriptor) {
   const reason = descriptor && descriptor.reason;
   const warningText = _stage7NormalizeWarningText_(reason);
-  const code = descriptor && descriptor.reason && typeof descriptor.reason === 'object' && descriptor.reason.code != null
-    ? String(descriptor.reason.code).trim()
-    : '';
+  const code =
+    descriptor &&
+    descriptor.reason &&
+    typeof descriptor.reason === "object" &&
+    descriptor.reason.code != null
+      ? String(descriptor.reason.code).trim()
+      : "";
 
   if (!warningText) return [];
-  if (warningText === 'ok' || warningText === 'access.ok' || code === 'access.ok') return [];
+  if (
+    warningText === "ok" ||
+    warningText === "access.ok" ||
+    code === "access.ok"
+  )
+    return [];
 
   return [warningText];
 }
 
-
 function apiStage7BootstrapAccessSheet() {
-  _stage7AssertRole_('admin', 'bootstrap access sheet');
-  const result = (typeof AccessControl_ === 'object' && AccessControl_.bootstrapSheet)
-    ? AccessControl_.bootstrapSheet()
-    : { success: false, message: 'AccessControl_ недоступний' };
+  _stage7AssertRole_("admin", "bootstrap access sheet");
+  const result =
+    typeof AccessControl_ === "object" && AccessControl_.bootstrapSheet
+      ? AccessControl_.bootstrapSheet()
+      : { success: false, message: "AccessControl_ недоступний" };
   return _stage7BuildMaintenanceResponse_(
     result.success !== false,
-    result.message || 'ACCESS sheet ініціалізовано для user key-доступу',
+    result.message || "ACCESS sheet ініціалізовано для user key-доступу",
     result,
-    'stage7BootstrapAccessSheet',
-    result.success === false ? [_stage7NormalizeWarningText_(result.message) || 'Не вдалося ініціалізувати ACCESS'] : [],
-    { affectedSheets: [appGetCore('ACCESS_SHEET', 'ACCESS')] }
+    "stage7BootstrapAccessSheet",
+    result.success === false
+      ? [
+          _stage7NormalizeWarningText_(result.message) ||
+            "Не вдалося ініціалізувати ACCESS",
+        ]
+      : [],
+    { affectedSheets: [appGetCore("ACCESS_SHEET", "ACCESS")] },
   );
 }
 
 function apiStage7GetAccessDescriptor() {
-  const descriptor = (typeof AccessControl_ === 'object')
-    ? AccessControl_.describe({ includeSensitiveDebug: false })
-    : { role: 'guest', knownUser: false, reason: 'AccessControl_ недоступний' };
+  const descriptor =
+    typeof AccessControl_ === "object"
+      ? AccessControl_.describe({ includeSensitiveDebug: false })
+      : {
+          role: "guest",
+          knownUser: false,
+          reason: "AccessControl_ недоступний",
+        };
 
   const warnings = _stage7BuildDescriptorWarnings_(descriptor);
 
   return _stage7BuildMaintenanceResponse_(
     true,
-    descriptor.isAdmin ? 'Роль доступу визначено' : 'Доступ визначено',
+    descriptor.isAdmin ? "Роль доступу визначено" : "Доступ визначено",
     descriptor,
-    'stage7AccessDescriptor',
-    warnings
+    "stage7AccessDescriptor",
+    warnings,
   );
 }
 
 function apiStage7DebugAccess() {
-  const descriptor = (typeof AccessControl_ === 'object')
-    ? AccessControl_.describe({ includeSensitiveDebug: false })
-    : { role: 'guest', knownUser: false, reason: 'AccessControl_ недоступний' };
+  const descriptor =
+    typeof AccessControl_ === "object"
+      ? AccessControl_.describe({ includeSensitiveDebug: false })
+      : {
+          role: "guest",
+          knownUser: false,
+          reason: "AccessControl_ недоступний",
+        };
 
   return _stage7BuildMaintenanceResponse_(
     true,
-    'Перевірку доступу виконано',
+    "Перевірку доступу виконано",
     descriptor,
-    'stage7DebugAccess',
-    descriptor.reason ? [descriptor.reason] : []
+    "stage7DebugAccess",
+    descriptor.reason ? [descriptor.reason] : [],
   );
 }
 
 function apiStage7ReportAccessViolation(actionName, details) {
-  const result = (typeof AccessEnforcement_ === 'object' && AccessEnforcement_.reportViolation)
-    ? AccessEnforcement_.reportViolation(actionName || '', details || {})
-    : { success: false, message: 'AccessEnforcement_ недоступний' };
+  const result =
+    typeof AccessEnforcement_ === "object" && AccessEnforcement_.reportViolation
+      ? AccessEnforcement_.reportViolation(actionName || "", details || {})
+      : { success: false, message: "AccessEnforcement_ недоступний" };
   return _stage7BuildMaintenanceResponse_(
     result.success !== false,
-    result.message || 'Порушення доступу зафіксовано',
+    result.message || "Порушення доступу зафіксовано",
     result.data || result,
-    'stage7ReportAccessViolation',
+    "stage7ReportAccessViolation",
     [],
-    { affectedSheets: [appGetCore('ALERTS_LOG_SHEET', 'ALERTS_LOG')] }
+    { affectedSheets: [appGetCore("ALERTS_LOG_SHEET", "ALERTS_LOG")] },
   );
 }
 
 function apiStage7ListBindableCallsigns() {
-  const callsigns = (typeof AccessControl_ === 'object' && AccessControl_.listBindableCallsigns)
-    ? AccessControl_.listBindableCallsigns()
-    : [];
-  const descriptor = (typeof AccessControl_ === 'object')
-    ? AccessControl_.describe({ includeSensitiveDebug: false })
-    : { keyAvailable: false, registered: false, supportEmail: '' };
+  const callsigns =
+    typeof AccessControl_ === "object" && AccessControl_.listBindableCallsigns
+      ? AccessControl_.listBindableCallsigns()
+      : [];
+  const descriptor =
+    typeof AccessControl_ === "object"
+      ? AccessControl_.describe({ includeSensitiveDebug: false })
+      : { keyAvailable: false, registered: false, supportEmail: "" };
 
   return _stage7BuildMaintenanceResponse_(
     true,
-    callsigns.length ? 'Список позивних для входу отримано' : 'Немає доступних позивних для самостійного входу',
+    callsigns.length
+      ? "Список позивних для входу отримано"
+      : "Немає доступних позивних для самостійного входу",
     {
       callsigns: callsigns,
       count: callsigns.length,
-      supportEmail: descriptor.supportEmail || '',
+      supportEmail: descriptor.supportEmail || "",
       keyAvailable: !!descriptor.keyAvailable,
-      registered: !!descriptor.registered
+      registered: !!descriptor.registered,
     },
-    'stage7ListBindableCallsigns',
-    []
+    "stage7ListBindableCallsigns",
+    [],
   );
 }
 
+function apiStage7LoginByIdentifierAndCallsign(
+  identifierOrPayload,
+  callsign,
+  loginMeta,
+) {
+  const payload =
+    identifierOrPayload &&
+    typeof identifierOrPayload === "object" &&
+    !Array.isArray(identifierOrPayload)
+      ? Object.assign({}, identifierOrPayload)
+      : {
+          identifier: identifierOrPayload || "",
+          callsign: callsign || "",
+          loginMeta: loginMeta || {},
+        };
 
-function apiStage7LoginByIdentifierAndCallsign(identifierOrPayload, callsign, loginMeta) {
-  const payload = (identifierOrPayload && typeof identifierOrPayload === 'object' && !Array.isArray(identifierOrPayload))
-    ? Object.assign({}, identifierOrPayload)
-    : { identifier: identifierOrPayload || '', callsign: callsign || '', loginMeta: loginMeta || {} };
-
-  const result = (typeof AccessControl_ === 'object' && AccessControl_.loginByIdentifierAndCallsign)
-    ? AccessControl_.loginByIdentifierAndCallsign(payload)
-    : { success: false, message: 'AccessControl_ недоступний', code: 'access.self_bind.unavailable' };
+  const result =
+    typeof AccessControl_ === "object" &&
+    AccessControl_.loginByIdentifierAndCallsign
+      ? AccessControl_.loginByIdentifierAndCallsign(payload)
+      : {
+          success: false,
+          message: "AccessControl_ недоступний",
+          code: "access.self_bind.unavailable",
+        };
 
   return _stage7BuildMaintenanceResponse_(
     result.success !== false,
-    result.message || (result.success ? 'Вхід виконано' : 'Не вдалося виконати вхід'),
+    result.message ||
+      (result.success ? "Вхід виконано" : "Не вдалося виконати вхід"),
     result,
-    'stage7LoginByIdentifierAndCallsign',
-    result.success ? [] : [_stage7NormalizeWarningText_(result.message) || 'Не вдалося виконати вхід через email/телефон і позивний']
+    "stage7LoginByIdentifierAndCallsign",
+    result.success
+      ? []
+      : [
+          _stage7NormalizeWarningText_(result.message) ||
+            "Не вдалося виконати вхід через email/телефон і позивний",
+        ],
   );
 }
 
 function apiStage7BindCurrentKeyToCallsign(callsign) {
-  const result = (typeof AccessControl_ === 'object' && AccessControl_.bindCurrentKeyToCallsign)
-    ? AccessControl_.bindCurrentKeyToCallsign(callsign || '')
-    : { success: false, message: 'AccessControl_ недоступний', code: 'access.self_bind.unavailable' };
+  const result =
+    typeof AccessControl_ === "object" &&
+    AccessControl_.bindCurrentKeyToCallsign
+      ? AccessControl_.bindCurrentKeyToCallsign(callsign || "")
+      : {
+          success: false,
+          message: "AccessControl_ недоступний",
+          code: "access.self_bind.unavailable",
+        };
 
   return _stage7BuildMaintenanceResponse_(
     result.success !== false,
-    result.message || (result.success ? 'Вхід виконано' : 'Не вдалося виконати вхід'),
+    result.message ||
+      (result.success ? "Вхід виконано" : "Не вдалося виконати вхід"),
     result,
-    'stage7BindCurrentKeyToCallsign',
-    result.success ? [] : [_stage7NormalizeWarningText_(result.message) || 'Не вдалося прив’язати ключ до позивного']
+    "stage7BindCurrentKeyToCallsign",
+    result.success
+      ? []
+      : [
+          _stage7NormalizeWarningText_(result.message) ||
+            "Не вдалося прив’язати ключ до позивного",
+        ],
   );
 }
 
 function apiStage7ApplyProtections(options) {
-  _stage7AssertRole_('sysadmin', 'apply spreadsheet protections');
+  _stage7AssertRole_("sysadmin", "apply spreadsheet protections");
 
   const normalizedOptions = options || {};
-  const result = (typeof applySpreadsheetProtections_ === 'function')
-    ? applySpreadsheetProtections_(normalizedOptions)
-    : {
-        dryRun: normalizedOptions.dryRun !== false,
-        protectedSheets: [],
-        plannedSheets: [],
-        warnings: ['applySpreadsheetProtections_ недоступна']
-      };
+  const result =
+    typeof applySpreadsheetProtections_ === "function"
+      ? applySpreadsheetProtections_(normalizedOptions)
+      : {
+          dryRun: normalizedOptions.dryRun !== false,
+          protectedSheets: [],
+          plannedSheets: [],
+          warnings: ["applySpreadsheetProtections_ недоступна"],
+        };
 
   const dryRun = result && result.dryRun === false ? false : true;
 
   return _stage7BuildMaintenanceResponse_(
     true,
-    dryRun ? 'План захисту листів побудовано' : 'Захист службових листів застосовано',
+    dryRun
+      ? "План захисту листів побудовано"
+      : "Захист службових листів застосовано",
     result,
-    'stage7ApplyProtections',
+    "stage7ApplyProtections",
     result.warnings || [],
     {
       affectedSheets: result.plannedSheets || result.protectedSheets || [],
-      dryRun: dryRun
-    }
+      dryRun: dryRun,
+    },
   );
 }
 
 function apiStage7ClearCache() {
-  _stage7AssertRole_('sysadmin', 'clear cache');
-  return Stage7UseCases_.runMaintenanceScenario({ type: 'cleanupCaches' });
+  _stage7AssertRole_("sysadmin", "clear cache");
+  return Stage7UseCases_.runMaintenanceScenario({ type: "cleanupCaches" });
 }
 
 function apiStage7ClearLog() {
-  _stage7AssertRole_('admin', 'clear log');
-  return Stage7UseCases_.runMaintenanceScenario({ type: 'clearLog' });
+  _stage7AssertRole_("admin", "clear log");
+  return Stage7UseCases_.runMaintenanceScenario({ type: "clearLog" });
 }
 
 function apiStage7ClearPhoneCache() {
-  _stage7AssertRole_('sysadmin', 'clear phone cache');
-  return Stage7UseCases_.runMaintenanceScenario({ type: 'clearPhoneCache' });
+  _stage7AssertRole_("sysadmin", "clear phone cache");
+  return Stage7UseCases_.runMaintenanceScenario({ type: "clearPhoneCache" });
 }
 
 function apiStage7RestartBot() {
-  _stage7AssertRole_('sysadmin', 'restart bot');
-  return Stage7UseCases_.runMaintenanceScenario({ type: 'restartBot' });
+  _stage7AssertRole_("sysadmin", "restart bot");
+  return Stage7UseCases_.runMaintenanceScenario({ type: "restartBot" });
 }
 
 function apiStage7SetupVacationTriggers() {
-  _stage7AssertRole_('sysadmin', 'setup triggers');
-  return Stage7UseCases_.runMaintenanceScenario({ type: 'setupVacationTriggers' });
+  _stage7AssertRole_("sysadmin", "setup triggers");
+  return Stage7UseCases_.runMaintenanceScenario({
+    type: "setupVacationTriggers",
+  });
 }
 
 function apiStage7CleanupDuplicateTriggers(functionName) {
-  _stage7AssertRole_('sysadmin', 'cleanup duplicate triggers');
+  _stage7AssertRole_("sysadmin", "cleanup duplicate triggers");
   return Stage7UseCases_.runMaintenanceScenario({
-    type: 'cleanupDuplicateTriggers',
-    functionName: functionName || ''
+    type: "cleanupDuplicateTriggers",
+    functionName: functionName || "",
   });
 }
 
 function apiStage7DebugPhones() {
-  _stage7AssertRole_('maintainer', 'debug phones');
-  return Stage7UseCases_.runMaintenanceScenario({ type: 'debugPhones' });
+  _stage7AssertRole_("maintainer", "debug phones");
+  return Stage7UseCases_.runMaintenanceScenario({ type: "debugPhones" });
 }
 
 function apiStage7BuildBirthdayLink(phone, name) {
   return WorkflowOrchestrator_.run({
-    scenario: 'stage7BuildBirthdayLink',
+    scenario: "stage7BuildBirthdayLink",
     payload: {
-      phone: phone || '',
-      name: name || ''
+      phone: phone || "",
+      name: name || "",
     },
 
     write: false,
-    validate: function(input) {
+    validate: function (input) {
       return { payload: input, warnings: [] };
     },
 
-    execute: function(input) {
+    execute: function (input) {
       const legacy = normalizeServerResponse_(
-        buildBirthdayLink(input.phone || '', input.name || ''),
-        'apiStage7BuildBirthdayLink',
-        {}
+        buildBirthdayLink(input.phone || "", input.name || ""),
+        "apiStage7BuildBirthdayLink",
+        {},
       );
 
-      const result = Object.assign({
-        phone: input.phone || '',
-        name: input.name || ''
-      }, legacy.data || {});
+      const result = Object.assign(
+        {
+          phone: input.phone || "",
+          name: input.name || "",
+        },
+        legacy.data || {},
+      );
 
       return {
         success: legacy.success !== false,
-        message: legacy.message || (legacy.success ? 'Посилання на привітання підготовлено' : 'Не вдалося підготувати посилання'),
+        message:
+          legacy.message ||
+          (legacy.success
+            ? "Посилання на привітання підготовлено"
+            : "Не вдалося підготувати посилання"),
         result: result,
         changes: [],
         affectedSheets: [],
         affectedEntities: [],
         appliedChangesCount: 0,
         skippedChangesCount: 0,
-        warnings: legacy.warnings || []
+        warnings: legacy.warnings || [],
       };
-    }
+    },
   });
 }
 
 function apiRunStage7MaintenanceScenario(options) {
-  _stage7AssertRole_('admin', 'run maintenance scenario');
+  _stage7AssertRole_("admin", "run maintenance scenario");
   return Stage7UseCases_.runMaintenanceScenario(options || {});
 }
 
 function apiInstallStage7Jobs() {
-  _stage7AssertRole_('sysadmin', 'install jobs');
+  _stage7AssertRole_("sysadmin", "install jobs");
   return WorkflowOrchestrator_.run({
-    scenario: 'installStage7Jobs',
+    scenario: "installStage7Jobs",
     payload: {},
     write: true,
-    execute: function() {
+    execute: function () {
       const result = Stage7Triggers_.installManagedTriggers();
       return {
         success: true,
-        message: 'Jobs встановлено',
+        message: "Jobs встановлено",
         result: result,
-        changes: [{
-          type: 'installManagedTriggers',
-          installed: result.installed,
-          removed: result.removed
-        }],
+        changes: [
+          {
+            type: "installManagedTriggers",
+            installed: result.installed,
+            removed: result.removed,
+          },
+        ],
 
         affectedSheets: [],
         affectedEntities: [],
         appliedChangesCount: Number(result.installed || 0),
-        skippedChangesCount: Number(result.removed || 0)
+        skippedChangesCount: Number(result.removed || 0),
       };
-    }
+    },
   });
 }
 
 function apiListStage7Jobs() {
-  _stage7AssertRole_('sysadmin', 'list jobs');
+  _stage7AssertRole_("sysadmin", "list jobs");
   return _stage7BuildMaintenanceResponse_(
     true,
-    'Jobs перелічено',
+    "Jobs перелічено",
     { jobs: Stage7Triggers_.listJobs() },
-    'listStage7Jobs'
+    "listStage7Jobs",
   );
 }
 
 function apiRunStage7Job(jobName, options) {
-  const descriptor = _stage7AssertRole_('sysadmin', 'run job') || {};
-  const normalizedJobName = String(jobName || '').trim();
+  const descriptor = _stage7AssertRole_("sysadmin", "run job") || {};
+  const normalizedJobName = String(jobName || "").trim();
 
   if (!normalizedJobName) {
-    const jobs = (typeof Stage7Triggers_ === 'object' && Stage7Triggers_.listJobs)
-      ? Stage7Triggers_.listJobs()
-      : [];
+    const jobs =
+      typeof Stage7Triggers_ === "object" && Stage7Triggers_.listJobs
+        ? Stage7Triggers_.listJobs()
+        : [];
 
     return _stage7BuildMaintenanceResponse_(
       false,
-      'Не передано jobName. Не запускай apiRunStage7Job вручну з GAS-редактора. Запускай одну з manual-функцій: apiRunStage7JobScheduledHealthCheckManual, apiRunStage7JobCleanupCachesManual, apiRunStage7JobDailyVacationsAndBirthdaysManual.',
+      "Не передано jobName. Не запускай apiRunStage7Job вручну з GAS-редактора. Запускай одну з manual-функцій: apiRunStage7JobScheduledHealthCheckManual, apiRunStage7JobCleanupCachesManual, apiRunStage7JobDailyVacationsAndBirthdaysManual.",
       {
         success: false,
-        reason: 'missing-jobName',
-        availableJobs: jobs.map(function(job) {
+        reason: "missing-jobName",
+        availableJobs: jobs.map(function (job) {
           return {
-            jobName: job.jobName || '',
-            handler: job.handler || '',
-            description: job.description || ''
+            jobName: job.jobName || "",
+            handler: job.handler || "",
+            description: job.description || "",
           };
-        })
+        }),
       },
-      'stage7RunJob',
-      ['jobName не передано'],
+      "stage7RunJob",
+      ["jobName не передано"],
       {
-        requestedJobName: '',
-        availableJobsCount: jobs.length
-      }
+        requestedJobName: "",
+        availableJobsCount: jobs.length,
+      },
     );
   }
 
   const opts = Object.assign({}, options || {}, {
     trigger: false,
-    source: String((options && options.source) || 'manual'),
-    entryPoint: String((options && options.entryPoint) || 'apiRunStage7Job'),
-    initiatorEmail: String((options && options.initiatorEmail) || descriptor.email || ''),
+    source: String((options && options.source) || "manual"),
+    entryPoint: String((options && options.entryPoint) || "apiRunStage7Job"),
+    initiatorEmail: String(
+      (options && options.initiatorEmail) || descriptor.email || "",
+    ),
     initiatorName: String(
       (options && options.initiatorName) ||
-      descriptor.displayName ||
-      (descriptor.identity && descriptor.identity.displayName) ||
-      descriptor.email ||
-      ''
+        descriptor.displayName ||
+        (descriptor.identity && descriptor.identity.displayName) ||
+        descriptor.email ||
+        "",
     ),
-    initiatorRole: String((options && options.initiatorRole) || descriptor.role || ''),
+    initiatorRole: String(
+      (options && options.initiatorRole) || descriptor.role || "",
+    ),
     initiatorCallsign: String(
       (options && options.initiatorCallsign) ||
-      descriptor.personCallsign ||
-      (descriptor.identity && descriptor.identity.personCallsign) ||
-      ''
+        descriptor.personCallsign ||
+        (descriptor.identity && descriptor.identity.personCallsign) ||
+        "",
     ),
-    userDescriptor: descriptor
+    userDescriptor: descriptor,
   });
 
   return Stage7Triggers_.runJob(normalizedJobName, opts);
@@ -399,151 +521,169 @@ function apiRunStage7Job(jobName, options) {
 
 function apiRunStage7JobDailyVacationsAndBirthdaysManual() {
   return apiRunStage7Job(STAGE7_CONFIG.JOBS.DAILY_VACATIONS_AND_BIRTHDAYS, {
-    source: 'manual-editor',
-    entryPoint: 'apiRunStage7JobDailyVacationsAndBirthdaysManual'
+    source: "manual-editor",
+    entryPoint: "apiRunStage7JobDailyVacationsAndBirthdaysManual",
   });
 }
 
 function apiRunStage7JobScheduledReconciliationManual() {
   return apiRunStage7Job(STAGE7_CONFIG.JOBS.SCHEDULED_RECONCILIATION, {
-    source: 'manual-editor',
-    entryPoint: 'apiRunStage7JobScheduledReconciliationManual'
+    source: "manual-editor",
+    entryPoint: "apiRunStage7JobScheduledReconciliationManual",
   });
 }
 
 function apiRunStage7JobScheduledHealthCheckManual() {
   return apiRunStage7Job(STAGE7_CONFIG.JOBS.SCHEDULED_HEALTHCHECK, {
-    source: 'manual-editor',
-    entryPoint: 'apiRunStage7JobScheduledHealthCheckManual'
+    source: "manual-editor",
+    entryPoint: "apiRunStage7JobScheduledHealthCheckManual",
   });
 }
 
 function apiRunStage7JobCleanupCachesManual() {
   return apiRunStage7Job(STAGE7_CONFIG.JOBS.CLEANUP_CACHES, {
-    source: 'manual-editor',
-    entryPoint: 'apiRunStage7JobCleanupCachesManual'
+    source: "manual-editor",
+    entryPoint: "apiRunStage7JobCleanupCachesManual",
   });
 }
 
 function apiRunStage7JobDetectStaleOperationsManual() {
   return apiRunStage7Job(STAGE7_CONFIG.JOBS.STALE_OPERATION_DETECTOR, {
-    source: 'manual-editor',
-    entryPoint: 'apiRunStage7JobDetectStaleOperationsManual'
+    source: "manual-editor",
+    entryPoint: "apiRunStage7JobDetectStaleOperationsManual",
   });
 }
 
 function apiRunStage7JobLifecycleRetentionCleanupManual() {
   return apiRunStage7Job(STAGE7_CONFIG.JOBS.LIFECYCLE_RETENTION_CLEANUP, {
-    source: 'manual-editor',
-    entryPoint: 'apiRunStage7JobLifecycleRetentionCleanupManual'
+    source: "manual-editor",
+    entryPoint: "apiRunStage7JobLifecycleRetentionCleanupManual",
   });
 }
 
 function runDiagnosticsByMode_(options) {
   const opts = options || {};
-  const mode = String(opts.mode || 'full').toLowerCase();
+  const mode = String(opts.mode || "full").toLowerCase();
 
-  if (mode === 'quick') return runQuickDiagnostics_(opts);
-  if (mode === 'structural') return runStructuralDiagnostics_(opts);
-  if (mode === 'operational') return runOperationalDiagnostics_(opts);
-  if (mode === 'compatibility' || mode === 'compatibility sunset' || mode === 'sunset') return runSunsetDiagnostics_(opts);
-  if (mode === 'full-verbose' || mode === 'verbose') return runFullVerboseDiagnostics_(opts);
-  if (mode === 'stage7a-hardening') return runHardeningDiagnostics_(opts);
+  if (mode === "quick") return runQuickDiagnostics_(opts);
+  if (mode === "structural") return runStructuralDiagnostics_(opts);
+  if (mode === "operational") return runOperationalDiagnostics_(opts);
+  if (
+    mode === "compatibility" ||
+    mode === "compatibility sunset" ||
+    mode === "sunset"
+  )
+    return runSunsetDiagnostics_(opts);
+  if (mode === "full-verbose" || mode === "verbose")
+    return runFullVerboseDiagnostics_(opts);
+  if (mode === "stage7a-hardening") return runHardeningDiagnostics_(opts);
   return runFullDiagnostics_(opts);
 }
 
 function apiStage7QuickHealthCheck(options) {
-  _stage7AssertRole_('maintainer', 'quick health check');
+  _stage7AssertRole_("maintainer", "quick health check");
   const opts = Object.assign({}, options || {}, {
-    mode: 'quick',
+    mode: "quick",
     shallow: true,
     includeStage3Base: false,
     includeCompatibilityLayer: false,
-    includeReconciliationPreview: false
+    includeReconciliationPreview: false,
   });
 
   const report = runDiagnosticsByMode_(opts);
   return _stage7BuildMaintenanceResponse_(
     report.ok,
-    report.summary || 'Швидку перевірку системи завершено',
+    report.summary || "Швидку перевірку системи завершено",
     report,
-    'stage7QuickHealthCheck',
-    report.warnings || []
+    "stage7QuickHealthCheck",
+    report.warnings || [],
   );
 }
 
 function apiStage7HealthCheck(options) {
-  _stage7AssertRole_('maintainer', 'health check');
+  _stage7AssertRole_("maintainer", "health check");
   const opts = Object.assign({}, options || {});
   const resolvedMode = opts.mode
     ? String(opts.mode).toLowerCase()
-    : ((opts.shallow === false || opts.includeStage3Base || opts.includeCompatibilityLayer || opts.includeReconciliationPreview)
-      ? 'full'
-      : 'quick');
+    : opts.shallow === false ||
+        opts.includeStage3Base ||
+        opts.includeCompatibilityLayer ||
+        opts.includeReconciliationPreview
+      ? "full"
+      : "quick";
 
-  const report = runDiagnosticsByMode_(Object.assign({}, opts, { mode: resolvedMode }));
+  const report = runDiagnosticsByMode_(
+    Object.assign({}, opts, { mode: resolvedMode }),
+  );
   return _stage7BuildMaintenanceResponse_(
     report.ok,
-    report.summary || ('full' === resolvedMode ? 'Повну перевірку системи завершено' : 'Перевірку системи завершено'),
+    report.summary ||
+      ("full" === resolvedMode
+        ? "Повну перевірку системи завершено"
+        : "Перевірку системи завершено"),
     report,
-    'stage7HealthCheck',
-    report.warnings || []
+    "stage7HealthCheck",
+    report.warnings || [],
   );
 }
 
 function apiRunStage7Diagnostics(options) {
-  _stage7AssertRole_('maintainer', 'run diagnostics');
+  _stage7AssertRole_("maintainer", "run diagnostics");
   const report = runDiagnosticsByMode_(options || {});
   return _stage7BuildMaintenanceResponse_(
     report.ok,
-    report.summary || 'Діагностику системи завершено',
+    report.summary || "Діагностику системи завершено",
     report,
-    'stage7Diagnostics',
-    report.warnings || []
+    "stage7Diagnostics",
+    report.warnings || [],
   );
 }
 
 function apiRunStage7RegressionTests(options) {
-  _stage7AssertRole_('admin', 'run regression tests');
+  _stage7AssertRole_("admin", "run regression tests");
   const report = runRegressionTestSuite(options || {});
   return _stage7BuildMaintenanceResponse_(
     report.ok,
-    report.ok ? 'Регресійні тести пройдено' : 'У регресійних тестах є збої',
+    report.ok ? "Регресійні тести пройдено" : "У регресійних тестах є збої",
     report,
-    'stage7RegressionTests',
-    report.warnings || []
+    "stage7RegressionTests",
+    report.warnings || [],
   );
 }
 
 function apiRunStage7AllProjectTests(options) {
-  _stage7AssertRole_('admin', 'run all project tests');
+  _stage7AssertRole_("admin", "run all project tests");
   const opts = Object.assign({}, options || {}, {
     writeToSheet: true,
     writeToLogger: true,
     useLock: true,
     includeDiscovery: true,
     dryRun: true,
-    timeoutMs: Math.min(Number((options || {}).timeoutMs || 240000), 240000)
+    timeoutMs: Math.min(Number((options || {}).timeoutMs || 240000), 240000),
   });
 
   // Compatibility endpoint. The sidebar uses apiRunStage7ProjectTestChunk, because a single GAS call can hit runtime limits.
-  const report = runProjectTestChunk(Object.assign({}, opts, {
-    offset: Number(opts.offset || 0),
-    limit: Number(opts.limit || 4),
-    maxRuntimeMs: Number(opts.maxRuntimeMs || 240000)
-  }));
+  const report = runProjectTestChunk(
+    Object.assign({}, opts, {
+      offset: Number(opts.offset || 0),
+      limit: Number(opts.limit || 4),
+      maxRuntimeMs: Number(opts.maxRuntimeMs || 240000),
+    }),
+  );
 
   return _stage7BuildMaintenanceResponse_(
     true,
-    report.done ? 'Пакет тестів проєкту завершено' : 'Пакет тестів виконано, потрібен наступний пакет',
+    report.done
+      ? "Пакет тестів проєкту завершено"
+      : "Пакет тестів виконано, потрібен наступний пакет",
     report,
-    'stage7AllProjectTests',
-    report.warnings || []
+    "stage7AllProjectTests",
+    report.warnings || [],
   );
 }
 
 function apiRunStage7ProjectTestChunk(options) {
-  _stage7AssertRole_('admin', 'run project test chunk');
+  _stage7AssertRole_("admin", "run project test chunk");
   const opts = Object.assign({}, options || {}, {
     writeToSheet: true,
     writeToLogger: true,
@@ -551,16 +691,21 @@ function apiRunStage7ProjectTestChunk(options) {
     includeDiscovery: true,
     dryRun: true,
     limit: Math.max(1, Math.min(25, Number((options || {}).limit || 4))),
-    maxRuntimeMs: Math.max(30000, Math.min(300000, Number((options || {}).maxRuntimeMs || 240000)))
+    maxRuntimeMs: Math.max(
+      30000,
+      Math.min(300000, Number((options || {}).maxRuntimeMs || 240000)),
+    ),
   });
 
   const report = runProjectTestChunk(opts);
 
   return _stage7BuildMaintenanceResponse_(
     true,
-    report.done ? 'Усі пакети тестів проєкту виконано' : 'Пакет тестів виконано, продовжуйте наступний пакет',
+    report.done
+      ? "Усі пакети тестів проєкту виконано"
+      : "Пакет тестів виконано, продовжуйте наступний пакет",
     report,
-    'stage7ProjectTestChunk',
+    "stage7ProjectTestChunk",
     report.warnings || [],
     {
       runId: report.runId,
@@ -568,76 +713,88 @@ function apiRunStage7ProjectTestChunk(options) {
       nextOffset: report.nextOffset,
       totalTasks: report.totalTasks,
       done: report.done === true,
-      progressPct: report.progressPct
-    }
+      progressPct: report.progressPct,
+    },
   );
 }
 
 function apiListStage7JobRuntime() {
-  _stage7AssertRole_('admin', 'list job runtime');
+  _stage7AssertRole_("admin", "list job runtime");
   const report = JobRuntime_.buildRuntimeReport();
   return _stage7BuildMaintenanceResponse_(
     true,
-    'Job runtime перелічено',
+    "Job runtime перелічено",
     report,
-    'listStage7JobRuntime',
+    "listStage7JobRuntime",
     [],
-    { affectedSheets: [STAGE7_CONFIG.JOB_RUNTIME_LOG_SHEET] }
+    { affectedSheets: [STAGE7_CONFIG.JOB_RUNTIME_LOG_SHEET] },
   );
 }
 
-
 function apiStage7ListPendingRepairs(filters) {
-  _stage7AssertRole_('maintainer', 'list pending repairs');
+  _stage7AssertRole_("maintainer", "list pending repairs");
   return _stage7BuildMaintenanceResponse_(
     true,
-    'Pending repairs перелічено',
-    typeof OperationRepository_ === 'object' ? OperationRepository_.listPendingRepairs(filters || {}) : { operations: [], total: 0 },
-    'stage7ListPendingRepairs',
+    "Pending repairs перелічено",
+    typeof OperationRepository_ === "object"
+      ? OperationRepository_.listPendingRepairs(filters || {})
+      : { operations: [], total: 0 },
+    "stage7ListPendingRepairs",
     [],
-    { affectedSheets: ['OPS_LOG', 'CHECKPOINTS'] }
+    { affectedSheets: ["OPS_LOG", "CHECKPOINTS"] },
   );
 }
 
 function apiStage7GetOperationDetails(operationId) {
-  _stage7AssertRole_('maintainer', 'get operation details');
-  const normalizedId = String(operationId || '').trim();
+  _stage7AssertRole_("maintainer", "get operation details");
+  const normalizedId = String(operationId || "").trim();
   if (!normalizedId) {
     return _stage7BuildMaintenanceResponse_(
       false,
-      'Не передано operationId',
+      "Не передано operationId",
       { operation: null, checkpoints: [] },
-      'stage7GetOperationDetails',
-      ['Не передано operationId'],
-      { affectedSheets: ['OPS_LOG', 'CHECKPOINTS'] }
+      "stage7GetOperationDetails",
+      ["Не передано operationId"],
+      { affectedSheets: ["OPS_LOG", "CHECKPOINTS"] },
     );
   }
-  
-  const details = typeof OperationRepository_ === 'object' ? OperationRepository_.getOperationDetails(normalizedId) : null;
+
+  const details =
+    typeof OperationRepository_ === "object"
+      ? OperationRepository_.getOperationDetails(normalizedId)
+      : null;
   return _stage7BuildMaintenanceResponse_(
     !!details,
-    details ? 'Деталі операції отримано' : ('Операцію не знайдено: ' + normalizedId),
+    details
+      ? "Деталі операції отримано"
+      : "Операцію не знайдено: " + normalizedId,
     details || { operation: null, checkpoints: [] },
-    'stage7GetOperationDetails',
-    details ? [] : [('Операцію не знайдено: ' + normalizedId)],
-    { affectedSheets: ['OPS_LOG', 'CHECKPOINTS'] }
+    "stage7GetOperationDetails",
+    details ? [] : ["Операцію не знайдено: " + normalizedId],
+    { affectedSheets: ["OPS_LOG", "CHECKPOINTS"] },
   );
 }
 
 function apiStage7RunRepair(operationId, options) {
-  _stage7AssertRole_('sysadmin', 'run repair');
-  if (typeof OperationRepository_ !== 'object') {
-    return _stage7BuildMaintenanceResponse_(false, 'Сховище виправлення недоступне', { success: false }, 'stage7RunRepair', ['Сховище операцій недоступне']);
+  _stage7AssertRole_("sysadmin", "run repair");
+  if (typeof OperationRepository_ !== "object") {
+    return _stage7BuildMaintenanceResponse_(
+      false,
+      "Сховище виправлення недоступне",
+      { success: false },
+      "stage7RunRepair",
+      ["Сховище операцій недоступне"],
+    );
   }
-  const normalizedId = String(operationId || '').trim();
+  const normalizedId = String(operationId || "").trim();
   if (!normalizedId) {
     return _stage7BuildMaintenanceResponse_(
       false,
-      'Не передано operationId для repair',
-      { success: false, operationId: '' },
-      'stage7RunRepair',
-      ['Не передано operationId для repair'],
-      { affectedSheets: ['OPS_LOG', 'CHECKPOINTS'] }
+      "Не передано operationId для repair",
+      { success: false, operationId: "" },
+      "stage7RunRepair",
+      ["Не передано operationId для repair"],
+      { affectedSheets: ["OPS_LOG", "CHECKPOINTS"] },
     );
   }
   try {
@@ -645,42 +802,96 @@ function apiStage7RunRepair(operationId, options) {
     if (result && result.result) return result.result;
     return _stage7BuildMaintenanceResponse_(
       !!(result && result.success),
-      result && result.message ? result.message : (result && result.success ? 'Виправлення виконано' : 'Виправлення завершилося з помилкою'),
+      result && result.message
+        ? result.message
+        : result && result.success
+          ? "Виправлення виконано"
+          : "Виправлення завершилося з помилкою",
       result || {},
-      'stage7RunRepair',
-      result && result.success ? [] : [result && result.message ? result.message : 'Виправлення завершилося з помилкою'],
-      { affectedSheets: ['OPS_LOG', 'CHECKPOINTS'] }
+      "stage7RunRepair",
+      result && result.success
+        ? []
+        : [
+            result && result.message
+              ? result.message
+              : "Виправлення завершилося з помилкою",
+          ],
+      { affectedSheets: ["OPS_LOG", "CHECKPOINTS"] },
     );
   } catch (error) {
     return _stage7BuildMaintenanceResponse_(
       false,
-      error && error.message ? error.message : 'Виправлення завершилося з помилкою',
+      error && error.message
+        ? error.message
+        : "Виправлення завершилося з помилкою",
       { success: false, operationId: normalizedId },
-      'stage7RunRepair',
-      [error && error.message ? error.message : 'Виправлення завершилося з помилкою'],
-      { affectedSheets: ['OPS_LOG', 'CHECKPOINTS'] }
+      "stage7RunRepair",
+      [
+        error && error.message
+          ? error.message
+          : "Виправлення завершилося з помилкою",
+      ],
+      { affectedSheets: ["OPS_LOG", "CHECKPOINTS"] },
     );
   }
 }
 
-
 function apiStage7RunLifecycleRetentionCleanup() {
-  _stage7AssertRole_('sysadmin', 'cleanup lifecycle retention');
-  return Stage7UseCases_.runMaintenanceScenario({ type: 'cleanupLifecycleRetention' });
+  _stage7AssertRole_("sysadmin", "cleanup lifecycle retention");
+  return Stage7UseCases_.runMaintenanceScenario({
+    type: "cleanupLifecycleRetention",
+  });
 }
 
-
-
 function apiStage7SubmitAccessKeyRequest(payload) {
-  const result = (typeof AccessControl_ === 'object' && AccessControl_.submitAccessKeyRequest) ? AccessControl_.submitAccessKeyRequest(payload || {}) : { success: false, message: 'AccessControl_ недоступний', code: 'access.registration.unavailable' };
+  const result =
+    typeof AccessControl_ === "object" && AccessControl_.submitAccessKeyRequest
+      ? AccessControl_.submitAccessKeyRequest(payload || {})
+      : {
+          success: false,
+          message: "AccessControl_ недоступний",
+          code: "access.registration.unavailable",
+        };
   const success = result && result.success !== false;
-  const message = result && result.message ? result.message : (success ? 'Заявку надіслано' : 'Не вдалося надіслати заявку');
-  return _stage7BuildMaintenanceResponse_(success, message, result || {}, 'stage7SubmitAccessKeyRequest', success ? [] : [message], { affectedSheets: [appGetCore('ACCESS_SHEET', 'ACCESS')] });
+  const message =
+    result && result.message
+      ? result.message
+      : success
+        ? "Заявку надіслано"
+        : "Не вдалося надіслати заявку";
+  return _stage7BuildMaintenanceResponse_(
+    success,
+    message,
+    result || {},
+    "stage7SubmitAccessKeyRequest",
+    success ? [] : [message],
+    { affectedSheets: [appGetCore("ACCESS_SHEET", "ACCESS")] },
+  );
 }
 
 function apiStage7RegisterAccessWithTemporaryPassword(payload) {
-  const result = (typeof AccessControl_ === 'object' && AccessControl_.registerAccessWithTemporaryPassword) ? AccessControl_.registerAccessWithTemporaryPassword(payload || {}) : { success: false, message: 'AccessControl_ недоступний', code: 'access.registration.unavailable' };
+  const result =
+    typeof AccessControl_ === "object" &&
+    AccessControl_.registerAccessWithTemporaryPassword
+      ? AccessControl_.registerAccessWithTemporaryPassword(payload || {})
+      : {
+          success: false,
+          message: "AccessControl_ недоступний",
+          code: "access.registration.unavailable",
+        };
   const success = result && result.success !== false;
-  const message = result && result.message ? result.message : (success ? 'Доступ активовано' : 'Не вдалося активувати доступ');
-  return _stage7BuildMaintenanceResponse_(success, message, result || {}, 'stage7RegisterAccessWithTemporaryPassword', success ? [] : [message], { affectedSheets: [appGetCore('ACCESS_SHEET', 'ACCESS')] });
+  const message =
+    result && result.message
+      ? result.message
+      : success
+        ? "Доступ активовано"
+        : "Не вдалося активувати доступ";
+  return _stage7BuildMaintenanceResponse_(
+    success,
+    message,
+    result || {},
+    "stage7RegisterAccessWithTemporaryPassword",
+    success ? [] : [message],
+    { affectedSheets: [appGetCore("ACCESS_SHEET", "ACCESS")] },
+  );
 }
