@@ -194,16 +194,29 @@ function apiStage7BindCurrentKeyToCallsign(callsign) {
 
 function apiStage7ApplyProtections(options) {
   _stage7AssertRole_('sysadmin', 'apply spreadsheet protections');
+
+  const normalizedOptions = options || {};
   const result = (typeof applySpreadsheetProtections_ === 'function')
-    ? applySpreadsheetProtections_(options || {})
-    : { protectedSheets: [], warnings: ['applySpreadsheetProtections_ недоступна'] };
+    ? applySpreadsheetProtections_(normalizedOptions)
+    : {
+        dryRun: normalizedOptions.dryRun !== false,
+        protectedSheets: [],
+        plannedSheets: [],
+        warnings: ['applySpreadsheetProtections_ недоступна']
+      };
+
+  const dryRun = result && result.dryRun === false ? false : true;
+
   return _stage7BuildMaintenanceResponse_(
     true,
-    result.dryRun ? 'План захисту листів побудовано' : 'Захист службових листів застосовано',
+    dryRun ? 'План захисту листів побудовано' : 'Захист службових листів застосовано',
     result,
     'stage7ApplyProtections',
     result.warnings || [],
-    { affectedSheets: result.plannedSheets || [] }
+    {
+      affectedSheets: result.plannedSheets || result.protectedSheets || [],
+      dryRun: dryRun
+    }
   );
 }
 
