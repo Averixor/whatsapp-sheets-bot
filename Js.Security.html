@@ -865,7 +865,7 @@
         "        </div>",
         "      </div>",
         '      <div id="accessHaveKeyForm" style="display:none;">',
-        '        <label class="access-login-modal__field"><span class="access-login-modal__label">Ключ доступу</span><input id="accessHaveKeyInput" class="access-login-modal__input" type="text" autocomplete="off" placeholder="Вставте отриманий ключ"></label>',
+        '        <label class="access-login-modal__field"><span class="access-login-modal__label">Тимчасовий код (WASB-…)</span><input id="accessHaveKeyInput" class="access-login-modal__input" type="text" autocomplete="off" placeholder="WASB-XXXX-XXXX-XXXX (не номер заявки ARQ-)"></label>',
         '        <label class="access-login-modal__field"><span class="access-login-modal__label">Логін</span><input id="accessHaveLoginInput" class="access-login-modal__input" type="text" autocomplete="username" placeholder="Створіть логін"></label>',
         '        <label class="access-login-modal__field"><span class="access-login-modal__label">Пароль</span><input id="accessHavePasswordInput" class="access-login-modal__input" type="password" autocomplete="new-password" placeholder="Створіть пароль"></label>',
         '        <label class="access-login-modal__field"><span class="access-login-modal__label">Повторіть пароль</span><input id="accessHavePassword2Input" class="access-login-modal__input" type="password" autocomplete="new-password" placeholder="Повторіть пароль"></label>',
@@ -1765,6 +1765,13 @@
       );
       if (!temporaryPassword) {
         setAccessLoginModalMessage_("Введіть тимчасовий код доступу.", true);
+        return;
+      }
+      if (/^ARQ-/i.test(temporaryPassword)) {
+        setAccessLoginModalMessage_(
+          "Це номер заявки, а не ключ. Введіть код WASB-…, який надішле адміністратор після підтвердження.",
+          true,
+        );
         return;
       }
       if (!login) {

@@ -1109,6 +1109,14 @@ function registerAccessWithTemporaryPassword(payload) {
       code: "access.registration.temp_password_required",
       message: "Введіть тимчасовий код доступу.",
     };
+  if (/^ARQ-/i.test(temporaryPassword)) {
+    return {
+      success: false,
+      code: "access.registration.wrong_key_type",
+      message:
+        "Це номер заявки (ARQ-…), а не ключ доступу. Дочекайтесь підтвердження адміністратора та введіть код виду WASB-XXXX-XXXX-XXXX, який вам надішлють окремо.",
+    };
+  }
   if (!login)
     return {
       success: false,
@@ -1150,13 +1158,37 @@ function registerAccessWithTemporaryPassword(payload) {
         break;
       }
     }
-    if (!entry)
+    if (!entry) {
+      var pendingQueueMessage = "";
+      if (typeof readAccessRequests_ === "function") {
+        var queueRows = readAccessRequests_();
+        for (let qi = 0; qi < queueRows.length; qi++) {
+          const q = queueRows[qi];
+          const qHash = String(q.request_user_key_hash || "").trim();
+          const qStatus = String(q.status || "").toLowerCase();
+          if (
+            qHash &&
+            qHash === currentKeyHash &&
+            (qStatus === "pending" || qStatus === "approved")
+          ) {
+            pendingQueueMessage =
+              "Заявку вже подано (№ " +
+              String(q.request_id || "").trim() +
+              "), але адміністратор ще не видав тимчасовий код WASB-…. Очікуйте підтвердження.";
+            break;
+          }
+        }
+      }
       return {
         success: false,
-        code: "access.registration.request_not_found",
+        code: pendingQueueMessage
+          ? "access.registration.pending_not_promoted"
+          : "access.registration.request_not_found",
         message:
+          pendingQueueMessage ||
           "Заявку для цього пристрою не знайдено. Спочатку подайте заявку на доступ.",
       };
+    }
     const status = String(entry.registrationStatus || "")
       .trim()
       .toLowerCase();
