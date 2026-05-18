@@ -4,7 +4,8 @@
   "private": true,
   "description": "WhatsApp-Sheets-Bot Google Apps Script project",
   "scripts": {
-    "ci": "node scripts/ci-gas-sanity.mjs && node scripts/audit-function-graph.mjs",
+    "ci": "node scripts/verify-jsconfig.mjs && node scripts/ci-gas-sanity.mjs && node scripts/audit-function-graph.mjs",
+    "verify:jsconfig": "node scripts/verify-jsconfig.mjs",
     "ci:gas": "node scripts/ci-gas-sanity.mjs",
     "audit:functions": "node scripts/audit-function-graph.mjs",
     "gas status": "clasp status",
@@ -13,6 +14,7 @@
     "gas open": "clasp open"
   },
   "devDependencies": {
-    "@google/clasp": "^3.3.0"
+    "@google/clasp": "^3.3.0",
+    "@types/google-apps-script": "^1.0.100"
   }
 }

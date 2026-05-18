@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2015",
+    "lib": ["ES2015"],
+    "checkJs": false,
+    "allowJs": true,
+    "types": ["google-apps-script"]
+  },
+  "include": ["gas-jsconfig-shim.js", "scripts/**/*.mjs", "**/*.gs"],
+  "exclude": ["node_modules", "**/node_modules/**"],
+  "typeAcquisition": {
+    "include": ["google-apps-script"]
+  }
+}
