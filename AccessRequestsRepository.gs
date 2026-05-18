@@ -343,18 +343,7 @@ function _arRemoveSheetFilter_(sheet) {
 }
 
 function _arApplyStatusValidation_(sheet, rowNumber) {
-  if (!sheet || rowNumber < 2) return;
-  var statusCol = ACCESS_REQUESTS_HEADERS_.indexOf("status") + 1;
-  if (statusCol < 1) return;
-  try {
-    var rule = SpreadsheetApp.newDataValidation()
-      .requireValueInList(ACCESS_REQUESTS_STATUS_VALUES_, true)
-      .setAllowInvalid(false)
-      .build();
-    sheet.getRange(rowNumber, statusCol).setDataValidation(rule);
-  } catch (e) {
-    _arLog_("status validation", e);
-  }
+  // Статус змінюється лише через API (approve/reject/queue), не вручну в таблиці.
 }
 
 function buildAccessRequestDedupeKey_(requestType, fields) {

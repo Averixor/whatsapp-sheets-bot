@@ -920,13 +920,18 @@ function apiStage7ListAccessRequests(payload) {
   try {
     if (typeof ensureAccessRequestsSheet_ === "function")
       ensureAccessRequestsSheet_();
+    var listOptions = {
+      requestType: payload.requestType || payload.request_type || "",
+      limit: payload.limit || 0,
+    };
+    if (payload.all === true || payload.all === "true") {
+      listOptions.all = true;
+    } else {
+      listOptions.status = payload.status || "pending";
+    }
     var rows =
       typeof listAccessRequests_ === "function"
-        ? listAccessRequests_({
-            status: payload.status || "pending",
-            requestType: payload.requestType || payload.request_type || "",
-            limit: payload.limit || 0,
-          })
+        ? listAccessRequests_(listOptions)
         : [];
     return _stage7BuildMaintenanceResponse_(
       true,

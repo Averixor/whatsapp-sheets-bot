@@ -12,7 +12,15 @@ function _arpAssertAdmin_(actionLabel) {
   throw new Error("AccessControl недоступний");
 }
 
-function canWriteProtectedAccess_() {
+function canWriteProtectedAccess_(options) {
+  options = options || {};
+  if (options.trustedQueueRunner === true) {
+    try {
+      return typeof _getSheet_ === "function" && !!_getSheet_(false);
+    } catch (_) {
+      return false;
+    }
+  }
   try {
     _arpAssertAdmin_("ACCESS write check");
     return true;
@@ -51,6 +59,53 @@ function _arpCurrentEmail_() {
   } catch (_) {
     return "";
   }
+}
+
+function _arpIsFullyActivatedAccessEntry_(entry) {
+  if (!entry) return false;
+  var status = String(entry.registrationStatus || "").toLowerCase();
+  if (status !== "active") return false;
+  return !!(
+    String(entry.login || "").trim() && String(entry.passwordHash || "").trim()
+  );
+}
+
+function _arpFindAccessEntryByDeviceOrTempKey_(entries, hash, tempPlain) {
+  entries = entries || [];
+  hash = String(hash || "").trim();
+  tempPlain = String(tempPlain || "").trim();
+
+  for (var i = 0; i < entries.length; i++) {
+    var entry = entries[i];
+    if (hash && entry.requestUserKeyHash && entry.requestUserKeyHash === hash) {
+      return entry;
+    }
+    if (hash && entry.userKeyCurrentHash && entry.userKeyCurrentHash === hash) {
+      return entry;
+    }
+  }
+
+  if (!tempPlain || !/^WASB-/i.test(tempPlain)) return null;
+
+  for (var j = 0; j < entries.length; j++) {
+    var row = entries[j];
+    if (String(row.temporaryPasswordPlain || "").trim() === tempPlain) {
+      return row;
+    }
+    if (
+      row.temporaryPasswordSalt &&
+      row.temporaryPasswordHash &&
+      typeof hashAccessPasswordWithSalt_ === "function"
+    ) {
+      var enteredHash = hashAccessPasswordWithSalt_(
+        tempPlain,
+        row.temporaryPasswordSalt,
+      );
+      if (enteredHash === row.temporaryPasswordHash) return row;
+    }
+  }
+
+  return null;
 }
 
 function _arpNormalizeApproveRole_(role) {
@@ -131,7 +186,70 @@ function approveAccessRequest_(requestId, role, note) {
   }
 
   _arpSetRequestApprovedWithProof_(row, role, note);
-  return processAccessRequestsQueue_({ requestId: row.request_id });
+
+  var hydrated =
+    typeof getAccessRequestById_ === "function"
+      ? getAccessRequestById_(requestId)
+      : row;
+  var promoteResult = promoteAccessRequestToAccess_(hydrated || row);
+
+  if (!promoteResult || promoteResult.success !== true) {
+    var errMsg =
+      (promoteResult && promoteResult.message) ||
+      "Не вдалося перенести заявку в ACCESS.";
+    updateAccessRequestRow_(row.sheetRow, {
+      status: "pending",
+      result_message: errMsg,
+      error_code: "promote.failed",
+      error_message: errMsg,
+      decision_proof: "",
+      decision_by: "",
+      decision_at: "",
+      decision_role: "",
+    });
+    return {
+      success: false,
+      code: "access.requests.promote_failed",
+      message: errMsg,
+      requestId: requestId,
+      processed: [],
+      errors: [{ requestId: requestId, message: errMsg }],
+    };
+  }
+
+  return {
+    success: true,
+    code: "access.requests.merged",
+    message: promoteResult.message || "Заявку перенесено в ACCESS.",
+    requestId: requestId,
+    processed: [promoteResult],
+    errors: [],
+    temporaryPasswordPlain: promoteResult.temporaryPasswordPlain || "",
+    accessSheetRow: promoteResult.accessSheetRow || "",
+  };
+}
+
+function reconcileApprovedAccessRequest_(requestId) {
+  _arpAssertAdmin_("reconcile approved access request");
+  ensureAccessRequestsSheet_();
+
+  var row = getAccessRequestById_(requestId);
+  if (!row) {
+    return {
+      success: false,
+      message: "Заявку не знайдено.",
+    };
+  }
+
+  var status = String(row.status || "").toLowerCase();
+  if (status !== "approved") {
+    return {
+      success: false,
+      message: "Заявка не в статусі approved (поточний: " + status + ").",
+    };
+  }
+
+  return promoteAccessRequestToAccess_(row);
 }
 
 function rejectAccessRequest_(requestId, note) {
@@ -186,7 +304,8 @@ function listAccessRequests_(options) {
   _arpAssertAdmin_("list access requests");
   ensureAccessRequestsSheet_();
   options = options || {};
-  if (!options.status) options.status = "pending";
+  if (!options.status && options.all !== true) options.status = "pending";
+  if (options.all === true) options.status = "";
   return readAccessRequests_(options);
 }
 
@@ -277,10 +396,7 @@ function promoteAccessRequestToAccess_(requestRow) {
     }
   }
 
-  if (
-    existing &&
-    String(existing.registrationStatus || "").toLowerCase() === "active"
-  ) {
+  if (existing && _arpIsFullyActivatedAccessEntry_(existing)) {
     return { success: false, message: "Користувач уже активований у ACCESS." };
   }
 
@@ -293,17 +409,34 @@ function promoteAccessRequestToAccess_(requestRow) {
           "yyyy-MM-dd HH:mm:ss",
         );
   var tempPlain =
-    typeof generateAccessTemporaryPassword_ === "function"
-      ? generateAccessTemporaryPassword_(
-          hash + "|" + email + "|" + phone + "|" + requestRow.request_id,
-        )
-      : "";
+    existing && String(existing.temporaryPasswordPlain || "").trim()
+      ? String(existing.temporaryPasswordPlain || "").trim()
+      : typeof generateAccessTemporaryPassword_ === "function"
+        ? generateAccessTemporaryPassword_(
+            hash + "|" + email + "|" + phone + "|" + requestRow.request_id,
+          )
+        : "";
+
+  if (!existing && tempPlain) {
+    existing = _arpFindAccessEntryByDeviceOrTempKey_(entries, hash, tempPlain);
+  }
+
   var tempSalt =
-    typeof generateAccessSalt_ === "function" ? generateAccessSalt_() : "";
+    existing &&
+    String(existing.temporaryPasswordSalt || "").trim() &&
+    String(existing.temporaryPasswordHash || "").trim()
+      ? String(existing.temporaryPasswordSalt || "").trim()
+      : typeof generateAccessSalt_ === "function"
+        ? generateAccessSalt_()
+        : "";
   var tempHash =
-    typeof hashAccessPasswordWithSalt_ === "function"
-      ? hashAccessPasswordWithSalt_(tempPlain, tempSalt)
-      : "";
+    existing &&
+    String(existing.temporaryPasswordSalt || "").trim() &&
+    String(existing.temporaryPasswordHash || "").trim()
+      ? String(existing.temporaryPasswordHash || "").trim()
+      : typeof hashAccessPasswordWithSalt_ === "function"
+        ? hashAccessPasswordWithSalt_(tempPlain, tempSalt)
+        : "";
   var tempExpires =
     typeof getAccessTemporaryPasswordExpiresAt_ === "function"
       ? getAccessTemporaryPasswordExpiresAt_(
@@ -520,7 +653,11 @@ function processAccessRequestsQueue_(options) {
     }
   }
 
-  if (!canWriteProtectedAccess_()) {
+  if (
+    !canWriteProtectedAccess_({
+      trustedQueueRunner: requireAdmin === false,
+    })
+  ) {
     return {
       success: false,
       message:
@@ -545,13 +682,27 @@ function processAccessRequestsQueue_(options) {
 
     try {
       if (type === "access_request" && status === "approved") {
-        var promoteResult = promoteAccessRequestToAccess_(row);
-        if (promoteResult.success) processed.push(promoteResult);
-        else
+        var hydrated =
+          typeof getAccessRequestById_ === "function"
+            ? getAccessRequestById_(row.request_id)
+            : row;
+        var promoteResult = promoteAccessRequestToAccess_(hydrated || row);
+        if (promoteResult.success) {
+          processed.push(promoteResult);
+        } else {
+          var failMsg =
+            (promoteResult && promoteResult.message) ||
+            "Не вдалося перенести в ACCESS.";
+          updateAccessRequestRow_(row.sheetRow, {
+            result_message: failMsg,
+            error_code: "promote.failed",
+            error_message: failMsg,
+          });
           errors.push({
             requestId: row.request_id,
-            message: promoteResult.message,
+            message: failMsg,
           });
+        }
       } else if (
         type === "activation_request" &&
         status === "activation_pending"

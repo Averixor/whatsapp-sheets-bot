@@ -1491,9 +1491,7 @@
       const surname = escapeHtml(safeString_(req.surname));
       const fio = [surname, name].filter(Boolean).join(" ") || "—";
       const phone = escapeHtml(safeString_(req.phone) || "—");
-      const email = escapeHtml(
-        safeString_(req.user_email || req.email) || "—",
-      );
+      const email = escapeHtml(safeString_(req.user_email || req.email) || "—");
       const login = escapeHtml(safeString_(req.login));
       const type = escapeHtml(safeString_(req.request_type) || "—");
       const source = escapeHtml(safeString_(req.source) || "—");
@@ -1501,6 +1499,11 @@
         safeString_(req.request_user_key_hash_masked),
       );
       const id = escapeHtml(requestId);
+      const status = safeString_(req.status).toLowerCase();
+      const isApprovedStuck = status === "approved";
+      const errMsg = escapeHtml(
+        safeString_(req.error_message || req.result_message),
+      );
 
       return (
         '<div class="access-requests-admin-card">' +
@@ -1508,7 +1511,15 @@
         callsign +
         "</b> · " +
         fio +
+        (status
+          ? ' <span style="opacity:0.85;">(' + escapeHtml(status) + ")</span>"
+          : "") +
         "</div>" +
+        (isApprovedStuck
+          ? '<div class="access-requests-admin-card__meta" style="color:#fbbf24;">Схвалено, але не перенесено в ACCESS. Натисніть «Догнати».' +
+            (errMsg ? " " + errMsg : "") +
+            "</div>"
+          : "") +
         '<div class="access-requests-admin-card__meta">' +
         phone +
         " · " +
@@ -1525,20 +1536,27 @@
         id +
         "</div>" +
         '<div class="access-requests-admin-card__actions">' +
-        '<label class="access-requests-admin-card__role-label">Роль ' +
-        '<select id="accessReqRole_' +
-        ridJs +
-        '" class="access-requests-admin-card__role-select">' +
-        '<option value="viewer">viewer</option>' +
-        '<option value="operator" selected>operator</option>' +
-        '<option value="maintainer">maintainer</option>' +
-        "</select></label>" +
-        '<button type="button" class="btn btn-primary" onclick="approveAccessRequestFromUi_(\'' +
-        ridJs +
-        "')\">Схвалити</button>" +
-        '<button type="button" class="btn" onclick="rejectAccessRequestFromUi_(\'' +
-        ridJs +
-        "')\">Відхилити</button>" +
+        (isApprovedStuck
+          ? '<button type="button" class="btn btn-primary" onclick="reconcileAccessRequestFromUi_(\'' +
+            ridJs +
+            "')\">Догнати</button>" +
+            '<button type="button" class="btn" onclick="rejectAccessRequestFromUi_(\'' +
+            ridJs +
+            "')\">Відхилити</button>"
+          : '<label class="access-requests-admin-card__role-label">Роль ' +
+            '<select id="accessReqRole_' +
+            ridJs +
+            '" class="access-requests-admin-card__role-select">' +
+            '<option value="viewer">viewer</option>' +
+            '<option value="operator" selected>operator</option>' +
+            '<option value="maintainer">maintainer</option>' +
+            "</select></label>" +
+            '<button type="button" class="btn btn-primary" onclick="approveAccessRequestFromUi_(\'' +
+            ridJs +
+            "')\">Схвалити</button>" +
+            '<button type="button" class="btn" onclick="rejectAccessRequestFromUi_(\'' +
+            ridJs +
+            "')\">Відхилити</button>") +
         "</div></div>"
       );
     }
@@ -1575,19 +1593,21 @@
           body.textContent = "API listAccessRequests недоступний";
           return;
         }
-        const result = await api.listAccessRequests({ status: "pending" });
+        const result = await api.listAccessRequests({ all: true });
         const requests = Array.isArray(result && result.requests)
           ? result.requests
-          : result &&
-              result.data &&
-              Array.isArray(result.data.requests)
+          : result && result.data && Array.isArray(result.data.requests)
             ? result.data.requests
             : [];
-        if (!requests.length) {
-          body.textContent = "Немає pending-заявок.";
+        const actionable = requests.filter(function (req) {
+          const st = safeString_(req && req.status).toLowerCase();
+          return st === "pending" || st === "approved";
+        });
+        if (!actionable.length) {
+          body.textContent = "Немає заявок для обробки (pending/approved).";
           return;
         }
-        body.innerHTML = requests
+        body.innerHTML = actionable
           .map(function (req) {
             return buildAccessRequestAdminCardHtml_(req);
           })
@@ -1608,9 +1628,21 @@
           requestId: requestId,
           role: role,
         });
+        if (result && result.success === false) {
+          const err =
+            (Array.isArray(result.errors) &&
+              result.errors[0] &&
+              result.errors[0].message) ||
+            result.message ||
+            "Не вдалося схвалити заявку";
+          showToast("Помилка: " + err);
+          await refreshAccessRequestsAdminPanel_();
+          return;
+        }
         const data = result && result.data ? result.data : {};
         const processed = Array.isArray(data.processed) ? data.processed : [];
         const temp =
+          result.temporaryPasswordPlain ||
           data.temporaryPasswordPlain ||
           (processed[0] && processed[0].temporaryPasswordPlain) ||
           "";
@@ -1627,6 +1659,51 @@
           }
         } else {
           showToast((result && result.message) || "Заявку схвалено");
+        }
+        await refreshAccessRequestsAdminPanel_();
+      } catch (error) {
+        showToast("Помилка: " + normalizeError(error));
+      }
+    }
+
+    async function reconcileAccessRequestFromUi_(requestId) {
+      try {
+        const api = window.MaintenanceApi || MaintenanceApi || {};
+        if (typeof api.processAccessRequestsQueue !== "function") {
+          showToast("API processAccessRequestsQueue недоступний");
+          return;
+        }
+        const result = await api.processAccessRequestsQueue({
+          requestId: requestId,
+        });
+        if (result && result.success === false) {
+          const err =
+            (Array.isArray(result.errors) &&
+              result.errors[0] &&
+              result.errors[0].message) ||
+            result.message ||
+            "Не вдалося догнати заявку";
+          showToast("Помилка: " + err);
+          await refreshAccessRequestsAdminPanel_();
+          return;
+        }
+        const data = result && result.data ? result.data : {};
+        const processed = Array.isArray(data.processed) ? data.processed : [];
+        const temp =
+          (processed[0] && processed[0].temporaryPasswordPlain) || "";
+        if (temp) {
+          showToast("Тимчасовий ключ: " + temp);
+          if (
+            typeof navigator !== "undefined" &&
+            navigator.clipboard &&
+            navigator.clipboard.writeText
+          ) {
+            try {
+              await navigator.clipboard.writeText(temp);
+            } catch (_) {}
+          }
+        } else {
+          showToast((result && result.message) || "Заявку перенесено в ACCESS");
         }
         await refreshAccessRequestsAdminPanel_();
       } catch (error) {
@@ -2002,6 +2079,7 @@
     window.assertActionAccess_ = assertActionAccess_;
     window.assertAdminAction_ = assertAdminAction_;
     window.approveAccessRequestFromUi_ = approveAccessRequestFromUi_;
+    window.reconcileAccessRequestFromUi_ = reconcileAccessRequestFromUi_;
     window.rejectAccessRequestFromUi_ = rejectAccessRequestFromUi_;
     window.refreshAccessRequestsAdminPanel_ = refreshAccessRequestsAdminPanel_;
   })();

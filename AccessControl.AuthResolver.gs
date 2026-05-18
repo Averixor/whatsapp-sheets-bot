@@ -1085,6 +1085,30 @@ function submitAccessKeyRequest(payload) {
   }
 }
 
+function _findAccessEntryByTemporaryPassword_(entries, temporaryPassword) {
+  const tempPlain = String(temporaryPassword || "").trim();
+  if (!tempPlain || !/^WASB-/i.test(tempPlain)) return null;
+  const list = Array.isArray(entries) ? entries : [];
+  for (let i = 0; i < list.length; i++) {
+    const row = list[i];
+    if (String(row.temporaryPasswordPlain || "").trim() === tempPlain) {
+      return row;
+    }
+    if (
+      row.temporaryPasswordSalt &&
+      row.temporaryPasswordHash &&
+      typeof hashAccessPasswordWithSalt_ === "function"
+    ) {
+      const enteredHash = hashAccessPasswordWithSalt_(
+        tempPlain,
+        row.temporaryPasswordSalt,
+      );
+      if (enteredHash === row.temporaryPasswordHash) return row;
+    }
+  }
+  return null;
+}
+
 function registerAccessWithTemporaryPassword(payload) {
   payload = payload || {};
   const currentKeyHash = getCurrentUserKeyHash_();
@@ -1159,6 +1183,9 @@ function registerAccessWithTemporaryPassword(payload) {
       }
     }
     if (!entry) {
+      entry = _findAccessEntryByTemporaryPassword_(entries, temporaryPassword);
+    }
+    if (!entry) {
       var pendingQueueMessage = "";
       if (typeof readAccessRequests_ === "function") {
         var queueRows = readAccessRequests_();
@@ -1172,9 +1199,13 @@ function registerAccessWithTemporaryPassword(payload) {
             (qStatus === "pending" || qStatus === "approved")
           ) {
             pendingQueueMessage =
-              "Заявку вже подано (№ " +
-              String(q.request_id || "").trim() +
-              "), але адміністратор ще не видав тимчасовий код WASB-…. Очікуйте підтвердження.";
+              qStatus === "approved"
+                ? "Заявку № " +
+                  String(q.request_id || "").trim() +
+                  " схвалено, але перенос у ACCESS не завершено. Адміністратор: у sidebar натисніть «Оновити» після схвалення або запустіть обробку черги. Введіть виданий код WASB-… і створіть пароль."
+                : "Заявку вже подано (№ " +
+                  String(q.request_id || "").trim() +
+                  "), але адміністратор ще не видав тимчасовий код WASB-…. Очікуйте підтвердження.";
             break;
           }
         }
@@ -1189,9 +1220,12 @@ function registerAccessWithTemporaryPassword(payload) {
           "Заявку для цього пристрою не знайдено. Спочатку подайте заявку на доступ.",
       };
     }
-    const status = String(entry.registrationStatus || "")
+    let status = String(entry.registrationStatus || "")
       .trim()
       .toLowerCase();
+    if (status === "active" && !String(entry.passwordHash || "").trim()) {
+      status = "key_sent";
+    }
     if (status === "active")
       return {
         success: false,
