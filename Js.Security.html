@@ -1472,9 +1472,79 @@
       refreshAccessRequestsAdminPanel_();
     }
 
-    async function refreshAccessRequestsAdminPanel_() {
+    function canManageAccessRequestsUi_() {
       const access = normalizeAccessForUi_(STATE.access || {});
-      if (!access.isAdmin) return;
+      if (access.isAdmin) return true;
+      const role = safeString_(access.role).toLowerCase();
+      return role === "owner" || role === "sysadmin" || role === "admin";
+    }
+
+    function buildAccessRequestAdminCardHtml_(req) {
+      const requestId = safeString_(req.request_id);
+      const ridJs = escapeJsString(requestId);
+      const callsign = escapeHtml(
+        safeString_(req.person_callsign || req.personCallsign) || "—",
+      );
+      const name = escapeHtml(
+        safeString_(req.display_name || req.displayName) || "",
+      );
+      const surname = escapeHtml(safeString_(req.surname));
+      const fio = [surname, name].filter(Boolean).join(" ") || "—";
+      const phone = escapeHtml(safeString_(req.phone) || "—");
+      const email = escapeHtml(
+        safeString_(req.user_email || req.email) || "—",
+      );
+      const login = escapeHtml(safeString_(req.login));
+      const type = escapeHtml(safeString_(req.request_type) || "—");
+      const source = escapeHtml(safeString_(req.source) || "—");
+      const hashMasked = escapeHtml(
+        safeString_(req.request_user_key_hash_masked),
+      );
+      const id = escapeHtml(requestId);
+
+      return (
+        '<div class="access-requests-admin-card">' +
+        '<div class="access-requests-admin-card__title"><b>' +
+        callsign +
+        "</b> · " +
+        fio +
+        "</div>" +
+        '<div class="access-requests-admin-card__meta">' +
+        phone +
+        " · " +
+        email +
+        (login ? " · login: " + login : "") +
+        "</div>" +
+        '<div class="access-requests-admin-card__meta">Тип: ' +
+        type +
+        " · Джерело: " +
+        source +
+        (hashMasked ? " · hash: " + hashMasked : "") +
+        "</div>" +
+        '<div class="access-requests-admin-card__meta">ID: ' +
+        id +
+        "</div>" +
+        '<div class="access-requests-admin-card__actions">' +
+        '<label class="access-requests-admin-card__role-label">Роль ' +
+        '<select id="accessReqRole_' +
+        ridJs +
+        '" class="access-requests-admin-card__role-select">' +
+        '<option value="viewer">viewer</option>' +
+        '<option value="operator" selected>operator</option>' +
+        '<option value="maintainer">maintainer</option>' +
+        "</select></label>" +
+        '<button type="button" class="btn btn-primary" onclick="approveAccessRequestFromUi_(\'' +
+        ridJs +
+        "')\">Схвалити</button>" +
+        '<button type="button" class="btn" onclick="rejectAccessRequestFromUi_(\'' +
+        ridJs +
+        "')\">Відхилити</button>" +
+        "</div></div>"
+      );
+    }
+
+    async function refreshAccessRequestsAdminPanel_() {
+      if (!canManageAccessRequestsUi_()) return;
 
       let panel = document.getElementById("accessRequestsAdminPanel");
       if (!panel) {
@@ -1490,7 +1560,11 @@
       }
 
       panel.innerHTML =
-        '<div class="result-label">Заявки доступу (ACCESS_REQUESTS)</div><div class="result-value" id="accessRequestsAdminBody">Завантаження...</div>';
+        '<div class="result-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">' +
+        "<span>Заявки доступу (ACCESS_REQUESTS)</span>" +
+        '<button type="button" class="btn" style="min-width:auto;padding:4px 10px;" onclick="refreshAccessRequestsAdminPanel_()">Оновити</button>' +
+        "</div>" +
+        '<div class="result-value" id="accessRequestsAdminBody">Завантаження...</div>';
 
       const body = document.getElementById("accessRequestsAdminBody");
       if (!body) return;
@@ -1502,66 +1576,22 @@
           return;
         }
         const result = await api.listAccessRequests({ status: "pending" });
-        const requests =
-          result && result.data && Array.isArray(result.data.requests)
+        const requests = Array.isArray(result && result.requests)
+          ? result.requests
+          : result &&
+              result.data &&
+              Array.isArray(result.data.requests)
             ? result.data.requests
             : [];
         if (!requests.length) {
           body.textContent = "Немає pending-заявок.";
           return;
         }
-        const rows = requests
+        body.innerHTML = requests
           .map(function (req) {
-            const id = escapeHtml(safeString_(req.request_id));
-            const callsign = escapeHtml(
-              safeString_(req.person_callsign || req.personCallsign),
-            );
-            const name = escapeHtml(
-              safeString_(req.display_name || req.displayName),
-            );
-            const phone = escapeHtml(safeString_(req.phone));
-            const email = escapeHtml(safeString_(req.user_email || req.email));
-            const type = escapeHtml(safeString_(req.request_type));
-            const surname = escapeHtml(safeString_(req.surname));
-            const login = escapeHtml(safeString_(req.login));
-            const source = escapeHtml(safeString_(req.source));
-            const hashMasked = escapeHtml(
-              safeString_(req.request_user_key_hash_masked),
-            );
-            const fio = [surname, name].filter(Boolean).join(" ");
-            return (
-              '<div style="border:1px solid var(--border-color); border-radius:10px; padding:10px; margin-bottom:8px;">' +
-              "<motionlessdiv><b>" +
-              (callsign || "—") +
-              "</motionlessmotionlessmotionlessdiv> " +
-              (fio || name || "—") +
-              "<br><motionlessmotionlessmotionlesssmall>" +
-              phone +
-              " · " +
-              email +
-              (login ? " · login: " + login : "") +
-              "</motionlessmotionlesssmall><br><motionlessmotionlesssmall>Тип: " +
-              type +
-              " · Джерело: " +
-              source +
-              (hashMasked ? " · hash: " + hashMasked : "") +
-              "</motionlessmotionlesssmall><br><motionlessmotionlesssmall>ID: " +
-              id +
-              '</motionlessmotionlesssmall><div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">' +
-              '<select id="accessReqRole_' +
-              escapeJsString(safeString_(req.request_id)) +
-              '" class="access-login-modal__input" style="max-width:140px;"><option value="viewer">viewer</option><option value="operator" selected>operator</option><option value="maintainer">maintainer</option></select>' +
-              '<button type="button" class="btn btn-primary" onclick="approveAccessRequestFromUi_(\'' +
-              escapeJsString(safeString_(req.request_id)) +
-              "')\">Схвалити</button>" +
-              '<button type="button" class="btn" onclick="rejectAccessRequestFromUi_(\'' +
-              escapeJsString(safeString_(req.request_id)) +
-              "')\">Відхилити</button>" +
-              "</div></div>"
-            );
+            return buildAccessRequestAdminCardHtml_(req);
           })
           .join("");
-        body.innerHTML = rows.replace(/motionless/g, "");
       } catch (error) {
         body.textContent = "Помилка: " + normalizeError(error);
       }

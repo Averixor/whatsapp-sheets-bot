@@ -332,6 +332,16 @@ function _arClearBulkSheetControls_(sheet) {
   }
 }
 
+function _arRemoveSheetFilter_(sheet) {
+  if (!sheet) return;
+  try {
+    var filter = sheet.getFilter();
+    if (filter) filter.remove();
+  } catch (e) {
+    _arLog_("remove filter", e);
+  }
+}
+
 function _arApplyStatusValidation_(sheet, rowNumber) {
   if (!sheet || rowNumber < 2) return;
   var statusCol = ACCESS_REQUESTS_HEADERS_.indexOf("status") + 1;
@@ -390,6 +400,7 @@ function _arHeadersNeedUpgrade_(map) {
 function _arEnsureHeaders_(sheet) {
   var map = getAccessRequestsHeaderMap_(sheet);
   if (!_arHeadersNeedUpgrade_(map) && sheet.getLastRow() >= 1) {
+    _arRemoveSheetFilter_(sheet);
     _arClearBulkSheetControls_(sheet);
     _arPruneGhostRows_(sheet);
     return map;
@@ -407,15 +418,7 @@ function _arEnsureHeaders_(sheet) {
     head.setBackground("#eef2ff");
     head.setWrap(true);
   } catch (_) {}
-  try {
-    if (sheet.getFilter()) sheet.getFilter().remove();
-    var dataLast = _arFindLastDataRow_(sheet);
-    var filterRows = Math.max(dataLast, 2);
-    sheet
-      .getRange(1, 1, filterRows, ACCESS_REQUESTS_HEADERS_.length)
-      .createFilter();
-  } catch (_) {}
-
+  _arRemoveSheetFilter_(sheet);
   _arClearBulkSheetControls_(sheet);
   _arPruneGhostRows_(sheet);
 
@@ -442,7 +445,7 @@ function ensureAccessRequestsSheet_() {
   }
   _arEnsureHeaders_(sheet);
   try {
-    sheet.hideSheet();
+    sheet.showSheet();
   } catch (_) {}
   return sheet;
 }
