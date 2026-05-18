@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-05-18 — Registration loading screens
+
+- Access login modal: unified loading panel (spinner + title + subtext) for screen transitions, key request submit, WASB activation, and login.
+- Fixed `setAccessLoginLoading_` so the loading UI is actually shown (form hidden while busy).
+
 ## 2026-05-18 — WASB Tests restricted to sysadmin/owner
 
 - Spreadsheet menu **WASB Tests** and sheet **TEST_RESULTS** visible only for **sysadmin** and **owner** (`stage7TestRunnerOnOpen`, server guards, sidebar API `sysadmin`).

@@ -893,6 +893,7 @@
       const haveKeySubmitBtn = document.getElementById(
         "accessHaveKeySubmitBtn",
       );
+      ensureAccessHaveKeyBackButton_();
       if (haveKeyModeBtn)
         haveKeyModeBtn.addEventListener("click", function () {
           setAccessLoginMode_("haveKey");
@@ -917,6 +918,24 @@
       return modal;
     }
 
+    function ensureAccessHaveKeyBackButton_() {
+      var form = document.getElementById("accessHaveKeyForm");
+      if (!form || document.getElementById("accessLoginModeRequestBtn")) return;
+      var actions = form.querySelector(".access-login-modal__actions");
+      if (!actions) return;
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.id = "accessLoginModeRequestBtn";
+      btn.className =
+        "access-login-modal__submit access-login-modal__submit--ghost";
+      btn.setAttribute("data-access-registration-submit", "1");
+      btn.textContent = "\u2190 Назад до заявки";
+      btn.addEventListener("click", function () {
+        setAccessLoginMode_("request");
+      });
+      actions.appendChild(btn);
+    }
+
     function setAccessLoginModalMessage_(message, isError) {
       const box = document.getElementById("accessLoginModalMessage");
       if (!box) return;
@@ -928,70 +947,117 @@
       box.textContent = text;
     }
 
-    function setAccessLoginLoading_(loading) {
+    var ACCESS_LOGIN_LOADING_PRESETS_ = {
+      switchRequest: {
+        title: "Підготовка форми заявки",
+        subtext: "Завантажуємо екран отримання ключа доступу.",
+      },
+      switchHaveKey: {
+        title: "Перехід до реєстрації",
+        subtext: "Відкриваємо форму активації коду WASB.",
+      },
+      submitRequest: {
+        title: "Надсилаємо заявку",
+        subtext: "Перевіряємо контакти та створюємо запит для адміністратора.",
+      },
+      submitActivation: {
+        title: "Активуємо доступ",
+        subtext: "Перевіряємо тимчасовий код і параметри облікового запису.",
+      },
+      login: {
+        title: "Підтверджуємо вхід",
+        subtext: "Перевірка даних, часу та точки входу.",
+      },
+      default: {
+        title: "Зачекайте",
+        subtext: "Виконуємо операцію…",
+      },
+    };
+
+    function setAccessLoginLoading_(loading, presetKey, customSubtext) {
       var isLoading = !!loading;
+      var state = ensureAccessLoginState_();
+      state.loading = isLoading;
 
-      var identifierInputEl =
-        document.getElementById("identifierInput") ||
-        document.getElementById("accessIdentifierInput") ||
-        document.getElementById("accessLoginIdentifier") ||
-        document.getElementById("accessLoginInput") ||
-        document.querySelector('[name="identifier"]') ||
-        document.querySelector('[name="login"]') ||
-        document.querySelector("[data-access-identifier]") ||
-        document.querySelector("[data-login-input]");
+      var preset =
+        ACCESS_LOGIN_LOADING_PRESETS_[presetKey] ||
+        ACCESS_LOGIN_LOADING_PRESETS_.default;
+      var titleText =
+        typeof presetKey === "string" &&
+        presetKey &&
+        !ACCESS_LOGIN_LOADING_PRESETS_[presetKey] &&
+        presetKey.indexOf("switch") !== 0 &&
+        presetKey.indexOf("submit") !== 0
+          ? presetKey
+          : (preset && preset.title) ||
+            ACCESS_LOGIN_LOADING_PRESETS_.default.title;
+      var subText =
+        customSubtext ||
+        (preset && preset.subtext) ||
+        ACCESS_LOGIN_LOADING_PRESETS_.default.subtext;
 
-      var passwordInputEl =
-        document.getElementById("passwordInput") ||
-        document.getElementById("accessPasswordInput") ||
-        document.getElementById("accessLoginPassword") ||
-        document.querySelector('[name="password"]') ||
-        document.querySelector("[data-access-password]") ||
-        document.querySelector("[data-password-input]");
+      var modal = document.getElementById("accessLoginModal");
+      var loadingBox = document.getElementById("accessLoginModalLoading");
+      var bodyBox = document.getElementById("accessLoginModalBody");
+      var messageBox = document.getElementById("accessLoginModalMessage");
+      var contentBox = modal
+        ? modal.querySelector(".access-login-modal__content")
+        : null;
+      var titleEl = document.getElementById("accessLoginModalLoadingText");
+      var subEl =
+        document.getElementById("accessLoginModalLoadingSubtext") ||
+        (loadingBox
+          ? loadingBox.querySelector(".access-login-modal__loading-subtext")
+          : null);
+      var closeBtn = document.getElementById("btnCloseAccessLoginModal");
 
-      var keyInputEl =
-        document.getElementById("accessKeyInput") ||
-        document.getElementById("userKeyInput") ||
-        document.querySelector('[name="userKey"]') ||
-        document.querySelector('[name="accessKey"]') ||
-        document.querySelector("[data-access-key]");
+      if (titleEl) titleEl.textContent = titleText;
+      if (subEl) subEl.textContent = subText;
 
-      var repeatPasswordInputEl =
-        document.getElementById("repeatPasswordInput") ||
-        document.getElementById("passwordRepeatInput") ||
-        document.getElementById("accessRepeatPassword") ||
-        document.querySelector('[name="repeatPassword"]') ||
-        document.querySelector('[name="passwordRepeat"]') ||
-        document.querySelector("[data-repeat-password-input]");
-
-      [
-        identifierInputEl,
-        passwordInputEl,
-        keyInputEl,
-        repeatPasswordInputEl,
-      ].forEach(function (el) {
-        if (el) {
-          el.disabled = isLoading;
-          el.setAttribute("aria-busy", isLoading ? "true" : "false");
+      if (isLoading) {
+        if (loadingBox) {
+          loadingBox.style.display = "grid";
+          loadingBox.classList.add("is-visible");
+          loadingBox.setAttribute("aria-hidden", "false");
         }
-      });
+        if (bodyBox) bodyBox.style.display = "none";
+        if (messageBox) messageBox.style.display = "none";
+        if (contentBox) contentBox.classList.add("is-loading");
+      } else {
+        if (loadingBox) {
+          loadingBox.style.display = "none";
+          loadingBox.classList.remove("is-visible");
+          loadingBox.setAttribute("aria-hidden", "true");
+        }
+        if (bodyBox) bodyBox.style.display = "";
+        if (contentBox) contentBox.classList.remove("is-loading");
+      }
 
-      Array.prototype.slice
-        .call(
-          document.querySelectorAll(
-            "[data-access-login-submit], " +
-              "[data-access-registration-submit], " +
-              "[data-register-submit], " +
-              ".access-login-submit, " +
-              ".access-registration-submit",
-          ),
-        )
-        .forEach(function (btn) {
-          if (btn) {
-            btn.disabled = isLoading;
-            btn.setAttribute("aria-busy", isLoading ? "true" : "false");
-          }
-        });
+      if (modal) {
+        modal.classList.toggle("is-busy", isLoading);
+        modal.setAttribute("aria-busy", isLoading ? "true" : "false");
+      }
+      if (closeBtn) {
+        closeBtn.disabled = isLoading;
+        closeBtn.classList.toggle("is-disabled", isLoading);
+      }
+    }
+
+    function updateAccessLoginHeader_(mode) {
+      var sub = document.querySelector(
+        "#accessLoginModal .access-login-modal__subtext",
+      );
+      if (!sub) return;
+      sub.textContent =
+        mode === "haveKey"
+          ? "Введіть код WASB-… від адміністратора та створіть логін і пароль"
+          : "Отримайте ключ доступу або зареєструйте вже отриманий ключ";
+    }
+
+    function accessLoginDelay_(ms) {
+      return new Promise(function (resolve) {
+        setTimeout(resolve, ms);
+      });
     }
 
     function closeAccessLoginModal() {
@@ -1037,12 +1103,14 @@
       if (typeof hideToast === "function") hideToast();
       modal.style.display = "block";
       state.modalOpen = true;
-      setAccessLoginLoading_(false, "Підтверджую вхід...");
       setAccessLoginModalMessage_(
         "Заповніть заявку на отримання ключа доступу або введіть уже отриманий ключ.",
         false,
       );
-      setAccessLoginMode_(mode === "haveKey" ? "haveKey" : "request");
+      setAccessLoginMode_(mode === "haveKey" ? "haveKey" : "request", {
+        skipLoading: true,
+      });
+      setAccessLoginLoading_(false);
     }
 
     async function submitAccessLoginForm_() {
@@ -1065,7 +1133,8 @@
       }
 
       setAccessLoginModalMessage_("", false);
-      setAccessLoginLoading_(true, "Підтверджую вхід...");
+      state.loading = true;
+      setAccessLoginLoading_(true, "login");
 
       try {
         const loginMeta = await buildLoginMeta_();
@@ -1080,7 +1149,7 @@
           const message =
             (result && (result.error || result.message)) ||
             "Не вдалося виконати вхід";
-          setAccessLoginLoading_(false, "Підтверджую вхід...");
+          setAccessLoginLoading_(false);
           setAccessLoginModalMessage_(message, true);
           if (typeof hideToast === "function") hideToast();
           await loadAccessDescriptor();
@@ -1094,7 +1163,7 @@
         }
 
         STATE.access = normalizeAccessForUi_(data.descriptor || {});
-        setAccessLoginLoading_(false, "Підтверджую вхід...");
+        setAccessLoginLoading_(false);
         closeAccessLoginModal();
         applyAccessPolicyUI();
         showToast(data.message || "Вхід виконано: " + callsign);
@@ -1107,7 +1176,7 @@
         );
       } catch (error) {
         const message = normalizeError(error);
-        setAccessLoginLoading_(false, "Підтверджую вхід...");
+        setAccessLoginLoading_(false);
         setAccessLoginModalMessage_(message, true);
         if (typeof hideToast === "function") hideToast();
         if (callsignInput) {
@@ -1116,6 +1185,12 @@
           callsignInput.select();
         }
         if (identifierInput) identifierInput.disabled = false;
+      } finally {
+        const st = ensureAccessLoginState_();
+        if (st.loading) {
+          st.loading = false;
+          setAccessLoginLoading_(false);
+        }
       }
     }
 
@@ -1654,13 +1729,30 @@
     window.copyAccessDebugTechDetails = copyAccessDebugTechDetails;
     window.copyAccessDebugFullReport = copyAccessDebugFullReport;
 
-    function setAccessLoginMode_(mode) {
+    async function setAccessLoginMode_(mode, options) {
+      options = options || {};
+      const target = mode === "haveKey" ? "haveKey" : "request";
+      const state = ensureAccessLoginState_();
+      if (state.loading && !options.skipLoading) return;
+
+      if (!options.skipLoading) {
+        setAccessLoginLoading_(
+          true,
+          target === "haveKey" ? "switchHaveKey" : "switchRequest",
+        );
+        await accessLoginDelay_(240);
+      }
+
       const requestForm = document.getElementById("accessKeyRequestForm");
       const haveKeyForm = document.getElementById("accessHaveKeyForm");
       if (requestForm)
-        requestForm.style.display = mode === "haveKey" ? "none" : "block";
+        requestForm.style.display = target === "haveKey" ? "none" : "block";
       if (haveKeyForm)
-        haveKeyForm.style.display = mode === "haveKey" ? "block" : "none";
+        haveKeyForm.style.display = target === "haveKey" ? "block" : "none";
+      updateAccessLoginHeader_(target);
+      setAccessLoginModalMessage_("", false);
+
+      if (!options.skipLoading) setAccessLoginLoading_(false);
     }
 
     let accessKeyRequestLastSentAt_ = Number(
@@ -1668,6 +1760,9 @@
     );
 
     async function submitAccessKeyRequestForm_() {
+      const state = ensureAccessLoginState_();
+      if (state.loading) return;
+
       const nowMs = Date.now();
       const cooldownMs = 5 * 60 * 1000;
       const remainingMs = cooldownMs - (nowMs - accessKeyRequestLastSentAt_);
@@ -1720,6 +1815,11 @@
         );
         return;
       }
+
+      state.loading = true;
+      setAccessLoginLoading_(true, "submitRequest");
+      setAccessLoginModalMessage_("", false);
+
       try {
         const result = await Stage7Api.submitAccessKeyRequest(payload);
         if (result && result.success === false) {
@@ -1755,10 +1855,16 @@
           error && error.message ? error.message : String(error),
           true,
         );
+      } finally {
+        state.loading = false;
+        setAccessLoginLoading_(false);
       }
     }
 
     async function submitHaveKeyRegistrationForm_() {
+      const state = ensureAccessLoginState_();
+      if (state.loading) return;
+
       const temporaryPassword = safeString_(
         document.getElementById("accessHaveKeyInput") &&
           document.getElementById("accessHaveKeyInput").value,
@@ -1803,8 +1909,9 @@
         setAccessLoginModalMessage_("Паролі не збігаються.", true);
         return;
       }
-      setAccessLoginLoading_(true);
-      setAccessLoginModalMessage_("Перевіряю код і активую доступ...", false);
+      state.loading = true;
+      setAccessLoginLoading_(true, "submitActivation");
+      setAccessLoginModalMessage_("", false);
       try {
         const api =
           window.Stage7Api ||
@@ -1827,8 +1934,10 @@
             result.message || "Не вдалося активувати доступ.",
             true,
           );
+          setAccessLoginLoading_(false);
           return;
         }
+        setAccessLoginLoading_(true, "submitActivation", "Оновлюємо панель…");
         setAccessLoginModalMessage_(
           (result && result.message) || "Доступ активовано. Оновіть панель.",
           false,
@@ -1849,6 +1958,7 @@
           true,
         );
       } finally {
+        state.loading = false;
         setAccessLoginLoading_(false);
       }
     }
