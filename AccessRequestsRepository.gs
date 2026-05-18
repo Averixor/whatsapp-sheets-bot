@@ -445,10 +445,34 @@ function _arRowToObject_(sheet, rowNumber, headerMap) {
   return row;
 }
 
+function _arAdminFlagCellValue_(value) {
+  return value === true || String(value || "").toUpperCase() === "TRUE"
+    ? true
+    : "";
+}
+
+function _arNormalizeAdminFlagCells_(sheet, rowNumber) {
+  if (!sheet || rowNumber < 2) return;
+  var approveCol = ACCESS_REQUESTS_HEADERS_.indexOf("admin_approve") + 1;
+  var rejectCol = ACCESS_REQUESTS_HEADERS_.indexOf("admin_reject") + 1;
+  try {
+    if (approveCol > 0) {
+      sheet.getRange(rowNumber, approveCol).removeCheckboxes();
+      sheet.getRange(rowNumber, approveCol).setValue(false);
+    }
+    if (rejectCol > 0) {
+      sheet.getRange(rowNumber, rejectCol).removeCheckboxes();
+      sheet.getRange(rowNumber, rejectCol).setValue(false);
+    }
+  } catch (e) {
+    _arLog_("normalize admin flags", e);
+  }
+}
+
 function _arObjectToRowValues_(entry) {
   return ACCESS_REQUESTS_HEADERS_.map(function (key) {
     if (key === "admin_approve" || key === "admin_reject") {
-      return !!entry[key];
+      return _arAdminFlagCellValue_(entry[key]);
     }
     return entry[key] !== undefined && entry[key] !== null ? entry[key] : "";
   });
@@ -533,6 +557,7 @@ function updateAccessRequestRow_(sheetRow, updates) {
   sheet
     .getRange(sheetRow, 1, 1, colCount)
     .setValues([_arObjectToRowValues_(sheetRowValues)]);
+  _arNormalizeAdminFlagCells_(sheet, sheetRow);
   return _arHydrateRowFromPayload_(_arRowToObject_(sheet, sheetRow, headerMap));
 }
 
@@ -617,6 +642,7 @@ function appendAccessRequest_(entry) {
   sheet
     .getRange(nextRow, 1, 1, ACCESS_REQUESTS_HEADERS_.length)
     .setValues([_arObjectToRowValues_(sheetEntry)]);
+  _arNormalizeAdminFlagCells_(sheet, nextRow);
   return {
     duplicate: false,
     request: _arHydrateRowFromPayload_(

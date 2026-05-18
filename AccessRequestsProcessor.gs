@@ -213,7 +213,11 @@ function promoteAccessRequestToAccess_(requestRow) {
     return { success: false, message: "decision_by не є адміністратором." };
   }
 
-  if (requestRow.admin_approve !== true || requestRow.admin_reject === true) {
+  if (requestRow.admin_reject === true) {
+    return { success: false, message: "Заявку відхилено (admin_reject)." };
+  }
+
+  if (requestRow.admin_approve === true && requestRow.admin_reject === true) {
     return { success: false, message: "Суперечливі прапорці approve/reject." };
   }
 
