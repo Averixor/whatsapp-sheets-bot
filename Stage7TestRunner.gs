@@ -5,68 +5,6 @@
  * Він запускає реальні test / diagnostics / check runners, які вже є у проєкті.
  */
 
-var STAGE7_TEST_RUNNER_RESULT_SHEET_ = "TEST_RESULTS";
-
-/** Меню/лист TEST_RESULTS — лише sysadmin та owner (без reportViolation на onOpen). */
-function _stage7TestRunnerCanUseUi_() {
-  try {
-    if (
-      typeof AccessControl_ === "object" &&
-      AccessControl_ &&
-      typeof AccessControl_.describe === "function"
-    ) {
-      var resp = AccessControl_.describe();
-      var access = resp && resp.access ? resp.access : {};
-      var role = String(access.role || "guest").toLowerCase();
-      if (access.enabled === false) return false;
-      return role === "sysadmin" || role === "owner";
-    }
-  } catch (e) {
-    try {
-      Logger.log(
-        "[Stage7TestRunner] role check failed: " +
-          (e && e.message ? e.message : e),
-      );
-    } catch (_) {}
-  }
-  return false;
-}
-
-function _stage7TestRunnerAssertSysadminOrOwner_(actionLabel) {
-  if (_stage7TestRunnerCanUseUi_()) return true;
-  var message =
-    "Недостатньо прав для «" +
-    String(actionLabel || "тести WASB") +
-    "». Потрібна роль sysadmin або owner.";
-  try {
-    SpreadsheetApp.getUi().alert(
-      "WASB Tests",
-      message,
-      SpreadsheetApp.getUi().ButtonSet.OK,
-    );
-  } catch (_) {}
-  throw new Error(message);
-}
-
-function _stage7TestRunnerSyncResultsSheetVisibility_() {
-  try {
-    if (typeof getWasbSpreadsheet_ !== "function") return;
-    var ss = getWasbSpreadsheet_();
-    if (!ss) return;
-    var sheet = ss.getSheetByName(STAGE7_TEST_RUNNER_RESULT_SHEET_);
-    if (!sheet) return;
-    if (_stage7TestRunnerCanUseUi_()) sheet.showSheet();
-    else sheet.hideSheet();
-  } catch (e) {
-    try {
-      Logger.log(
-        "[Stage7TestRunner] sync sheet visibility: " +
-          (e && e.message ? e.message : e),
-      );
-    } catch (_) {}
-  }
-}
-
 var Stage7TestRunner = (function () {
   var VERSION = "stage7-project-test-runner-3.1.4-explicit-registry-no-eval";
   var DEFAULT_TIMEOUT_MS = 330000;
@@ -2450,12 +2388,6 @@ var Stage7TestRunner = (function () {
     var ss = getWasbSpreadsheet_();
     var sheet = ss.getSheetByName(sheetName);
     if (!sheet) sheet = ss.insertSheet(sheetName);
-    if (
-      sheetName === DEFAULT_RESULT_SHEET_NAME &&
-      typeof _stage7TestRunnerSyncResultsSheetVisibility_ === "function"
-    ) {
-      _stage7TestRunnerSyncResultsSheetVisibility_();
-    }
     return sheet;
   }
 
@@ -2506,16 +2438,6 @@ var Stage7TestRunner = (function () {
   }
 
   function addMenu() {
-    if (typeof _stage7TestRunnerSyncResultsSheetVisibility_ === "function") {
-      _stage7TestRunnerSyncResultsSheetVisibility_();
-    }
-    if (
-      typeof _stage7TestRunnerCanUseUi_ === "function" &&
-      !_stage7TestRunnerCanUseUi_()
-    ) {
-      return { ok: false, skipped: true, reason: "role_not_sysadmin_or_owner" };
-    }
-
     SpreadsheetApp.getUi()
       .createMenu("WASB Tests")
       .addItem("Усі тести проєкту", "runStage7AllProjectTests")
@@ -2537,10 +2459,6 @@ var Stage7TestRunner = (function () {
   }
 
   function installOpenTrigger() {
-    if (typeof _stage7TestRunnerAssertSysadminOrOwner_ === "function") {
-      _stage7TestRunnerAssertSysadminOrOwner_("встановлення меню WASB Tests");
-    }
-
     var triggers = ScriptApp.getProjectTriggers();
     var exists = false;
 
@@ -2871,12 +2789,10 @@ function runProjectTestChunk(options) {
 }
 
 function runStage7ProjectTestChunk(options) {
-  _stage7TestRunnerAssertSysadminOrOwner_("пакет тестів проєкту");
   return runProjectTestChunk(options || {});
 }
 
 function runAllProjectTests(options) {
-  _stage7TestRunnerAssertSysadminOrOwner_("запуск тестів проєкту");
   return Stage7TestRunner.runAllProjectTests(
     Object.assign(
       {
@@ -2895,7 +2811,6 @@ function runAllTests(options) {
 }
 
 function runStage7AllProjectTests() {
-  _stage7TestRunnerAssertSysadminOrOwner_("усі тести проєкту");
   var startedAt = new Date();
   var tz =
     typeof Session !== "undefined" && Session.getScriptTimeZone
@@ -3028,7 +2943,6 @@ function runStage7TestsAll() {
 }
 
 function runStage7TestsFast() {
-  _stage7TestRunnerAssertSysadminOrOwner_("швидка перевірка тестів");
   var report = Stage7TestRunner.runFast({
     writeToSheet: true,
     writeToLogger: true,
@@ -3039,7 +2953,6 @@ function runStage7TestsFast() {
 }
 
 function runStage7DiagnosticsOnly() {
-  _stage7TestRunnerAssertSysadminOrOwner_("діагностика WASB");
   var report = Stage7TestRunner.runDiagnosticsOnly({
     writeToSheet: true,
     writeToLogger: true,
@@ -3050,7 +2963,6 @@ function runStage7DiagnosticsOnly() {
 }
 
 function runStage7SmokeOnly() {
-  _stage7TestRunnerAssertSysadminOrOwner_("smoke/regression тести");
   var report = Stage7TestRunner.runSmokeOnly({
     writeToSheet: true,
     writeToLogger: true,
@@ -3061,7 +2973,6 @@ function runStage7SmokeOnly() {
 }
 
 function runStage7HealthOnly() {
-  _stage7TestRunnerAssertSysadminOrOwner_("health-перевірка");
   var report = Stage7TestRunner.runHealthOnly({
     writeToSheet: true,
     writeToLogger: true,
@@ -3072,7 +2983,6 @@ function runStage7HealthOnly() {
 }
 
 function runStage7AccessOnly() {
-  _stage7TestRunnerAssertSysadminOrOwner_("access-тести");
   var report = Stage7TestRunner.runAccessOnly({
     writeToSheet: true,
     writeToLogger: true,
@@ -3083,7 +2993,6 @@ function runStage7AccessOnly() {
 }
 
 function runStage7DomainOnly() {
-  _stage7TestRunnerAssertSysadminOrOwner_("domain-тести");
   var report = Stage7TestRunner.runDomainOnly({
     writeToSheet: true,
     writeToLogger: true,
@@ -3094,12 +3003,10 @@ function runStage7DomainOnly() {
 }
 
 function showStage7TestReport() {
-  _stage7TestRunnerAssertSysadminOrOwner_("перегляд звіту тестів");
   return Stage7TestRunner.showDialog();
 }
 
 function resetStage7TestResultsSheet() {
-  _stage7TestRunnerAssertSysadminOrOwner_("очищення TEST_RESULTS");
   var result = Stage7TestRunner.resetResultsSheet();
 
   try {
@@ -3118,7 +3025,6 @@ function stage7TestRunnerOnOpen() {
 }
 
 function installStage7TestRunner() {
-  _stage7TestRunnerAssertSysadminOrOwner_("встановлення тригера WASB Tests");
   return Stage7TestRunner.installOpenTrigger();
 }
 

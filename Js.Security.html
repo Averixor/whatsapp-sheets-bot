@@ -865,7 +865,7 @@
         "        </div>",
         "      </div>",
         '      <div id="accessHaveKeyForm" style="display:none;">',
-        '        <label class="access-login-modal__field"><span class="access-login-modal__label">Тимчасовий код (WASB-…)</span><input id="accessHaveKeyInput" class="access-login-modal__input" type="text" autocomplete="off" placeholder="WASB-XXXX-XXXX-XXXX (не номер заявки ARQ-)"></label>',
+        '        <label class="access-login-modal__field"><span class="access-login-modal__label">Ключ доступу</span><input id="accessHaveKeyInput" class="access-login-modal__input" type="text" autocomplete="off" placeholder="Вставте отриманий ключ"></label>',
         '        <label class="access-login-modal__field"><span class="access-login-modal__label">Логін</span><input id="accessHaveLoginInput" class="access-login-modal__input" type="text" autocomplete="username" placeholder="Створіть логін"></label>',
         '        <label class="access-login-modal__field"><span class="access-login-modal__label">Пароль</span><input id="accessHavePasswordInput" class="access-login-modal__input" type="password" autocomplete="new-password" placeholder="Створіть пароль"></label>',
         '        <label class="access-login-modal__field"><span class="access-login-modal__label">Повторіть пароль</span><input id="accessHavePassword2Input" class="access-login-modal__input" type="password" autocomplete="new-password" placeholder="Повторіть пароль"></label>',
@@ -893,7 +893,6 @@
       const haveKeySubmitBtn = document.getElementById(
         "accessHaveKeySubmitBtn",
       );
-      ensureAccessHaveKeyBackButton_();
       if (haveKeyModeBtn)
         haveKeyModeBtn.addEventListener("click", function () {
           setAccessLoginMode_("haveKey");
@@ -918,24 +917,6 @@
       return modal;
     }
 
-    function ensureAccessHaveKeyBackButton_() {
-      var form = document.getElementById("accessHaveKeyForm");
-      if (!form || document.getElementById("accessLoginModeRequestBtn")) return;
-      var actions = form.querySelector(".access-login-modal__actions");
-      if (!actions) return;
-      var btn = document.createElement("button");
-      btn.type = "button";
-      btn.id = "accessLoginModeRequestBtn";
-      btn.className =
-        "access-login-modal__submit access-login-modal__submit--ghost";
-      btn.setAttribute("data-access-registration-submit", "1");
-      btn.textContent = "\u2190 Назад до заявки";
-      btn.addEventListener("click", function () {
-        setAccessLoginMode_("request");
-      });
-      actions.appendChild(btn);
-    }
-
     function setAccessLoginModalMessage_(message, isError) {
       const box = document.getElementById("accessLoginModalMessage");
       if (!box) return;
@@ -947,117 +928,70 @@
       box.textContent = text;
     }
 
-    var ACCESS_LOGIN_LOADING_PRESETS_ = {
-      switchRequest: {
-        title: "Підготовка форми заявки",
-        subtext: "Завантажуємо екран отримання ключа доступу.",
-      },
-      switchHaveKey: {
-        title: "Перехід до реєстрації",
-        subtext: "Відкриваємо форму активації коду WASB.",
-      },
-      submitRequest: {
-        title: "Надсилаємо заявку",
-        subtext: "Перевіряємо контакти та створюємо запит для адміністратора.",
-      },
-      submitActivation: {
-        title: "Активуємо доступ",
-        subtext: "Перевіряємо тимчасовий код і параметри облікового запису.",
-      },
-      login: {
-        title: "Підтверджуємо вхід",
-        subtext: "Перевірка даних, часу та точки входу.",
-      },
-      default: {
-        title: "Зачекайте",
-        subtext: "Виконуємо операцію…",
-      },
-    };
-
-    function setAccessLoginLoading_(loading, presetKey, customSubtext) {
+    function setAccessLoginLoading_(loading) {
       var isLoading = !!loading;
-      var state = ensureAccessLoginState_();
-      state.loading = isLoading;
 
-      var preset =
-        ACCESS_LOGIN_LOADING_PRESETS_[presetKey] ||
-        ACCESS_LOGIN_LOADING_PRESETS_.default;
-      var titleText =
-        typeof presetKey === "string" &&
-        presetKey &&
-        !ACCESS_LOGIN_LOADING_PRESETS_[presetKey] &&
-        presetKey.indexOf("switch") !== 0 &&
-        presetKey.indexOf("submit") !== 0
-          ? presetKey
-          : (preset && preset.title) ||
-            ACCESS_LOGIN_LOADING_PRESETS_.default.title;
-      var subText =
-        customSubtext ||
-        (preset && preset.subtext) ||
-        ACCESS_LOGIN_LOADING_PRESETS_.default.subtext;
+      var identifierInputEl =
+        document.getElementById("identifierInput") ||
+        document.getElementById("accessIdentifierInput") ||
+        document.getElementById("accessLoginIdentifier") ||
+        document.getElementById("accessLoginInput") ||
+        document.querySelector('[name="identifier"]') ||
+        document.querySelector('[name="login"]') ||
+        document.querySelector("[data-access-identifier]") ||
+        document.querySelector("[data-login-input]");
 
-      var modal = document.getElementById("accessLoginModal");
-      var loadingBox = document.getElementById("accessLoginModalLoading");
-      var bodyBox = document.getElementById("accessLoginModalBody");
-      var messageBox = document.getElementById("accessLoginModalMessage");
-      var contentBox = modal
-        ? modal.querySelector(".access-login-modal__content")
-        : null;
-      var titleEl = document.getElementById("accessLoginModalLoadingText");
-      var subEl =
-        document.getElementById("accessLoginModalLoadingSubtext") ||
-        (loadingBox
-          ? loadingBox.querySelector(".access-login-modal__loading-subtext")
-          : null);
-      var closeBtn = document.getElementById("btnCloseAccessLoginModal");
+      var passwordInputEl =
+        document.getElementById("passwordInput") ||
+        document.getElementById("accessPasswordInput") ||
+        document.getElementById("accessLoginPassword") ||
+        document.querySelector('[name="password"]') ||
+        document.querySelector("[data-access-password]") ||
+        document.querySelector("[data-password-input]");
 
-      if (titleEl) titleEl.textContent = titleText;
-      if (subEl) subEl.textContent = subText;
+      var keyInputEl =
+        document.getElementById("accessKeyInput") ||
+        document.getElementById("userKeyInput") ||
+        document.querySelector('[name="userKey"]') ||
+        document.querySelector('[name="accessKey"]') ||
+        document.querySelector("[data-access-key]");
 
-      if (isLoading) {
-        if (loadingBox) {
-          loadingBox.style.display = "grid";
-          loadingBox.classList.add("is-visible");
-          loadingBox.setAttribute("aria-hidden", "false");
+      var repeatPasswordInputEl =
+        document.getElementById("repeatPasswordInput") ||
+        document.getElementById("passwordRepeatInput") ||
+        document.getElementById("accessRepeatPassword") ||
+        document.querySelector('[name="repeatPassword"]') ||
+        document.querySelector('[name="passwordRepeat"]') ||
+        document.querySelector("[data-repeat-password-input]");
+
+      [
+        identifierInputEl,
+        passwordInputEl,
+        keyInputEl,
+        repeatPasswordInputEl,
+      ].forEach(function (el) {
+        if (el) {
+          el.disabled = isLoading;
+          el.setAttribute("aria-busy", isLoading ? "true" : "false");
         }
-        if (bodyBox) bodyBox.style.display = "none";
-        if (messageBox) messageBox.style.display = "none";
-        if (contentBox) contentBox.classList.add("is-loading");
-      } else {
-        if (loadingBox) {
-          loadingBox.style.display = "none";
-          loadingBox.classList.remove("is-visible");
-          loadingBox.setAttribute("aria-hidden", "true");
-        }
-        if (bodyBox) bodyBox.style.display = "";
-        if (contentBox) contentBox.classList.remove("is-loading");
-      }
-
-      if (modal) {
-        modal.classList.toggle("is-busy", isLoading);
-        modal.setAttribute("aria-busy", isLoading ? "true" : "false");
-      }
-      if (closeBtn) {
-        closeBtn.disabled = isLoading;
-        closeBtn.classList.toggle("is-disabled", isLoading);
-      }
-    }
-
-    function updateAccessLoginHeader_(mode) {
-      var sub = document.querySelector(
-        "#accessLoginModal .access-login-modal__subtext",
-      );
-      if (!sub) return;
-      sub.textContent =
-        mode === "haveKey"
-          ? "Введіть код WASB-… від адміністратора та створіть логін і пароль"
-          : "Отримайте ключ доступу або зареєструйте вже отриманий ключ";
-    }
-
-    function accessLoginDelay_(ms) {
-      return new Promise(function (resolve) {
-        setTimeout(resolve, ms);
       });
+
+      Array.prototype.slice
+        .call(
+          document.querySelectorAll(
+            "[data-access-login-submit], " +
+              "[data-access-registration-submit], " +
+              "[data-register-submit], " +
+              ".access-login-submit, " +
+              ".access-registration-submit",
+          ),
+        )
+        .forEach(function (btn) {
+          if (btn) {
+            btn.disabled = isLoading;
+            btn.setAttribute("aria-busy", isLoading ? "true" : "false");
+          }
+        });
     }
 
     function closeAccessLoginModal() {
@@ -1089,13 +1023,8 @@
         return;
       }
 
-      if (access.registered && access.knownUser) {
+      if (!access.selfBindRequired && !access.canSelfBind) {
         showToast("Вхід уже підтверджено");
-        return;
-      }
-
-      if (!access.keyAvailable) {
-        showToast("Спочатку оновіть панель — ключ користувача недоступний");
         return;
       }
 
@@ -1103,14 +1032,12 @@
       if (typeof hideToast === "function") hideToast();
       modal.style.display = "block";
       state.modalOpen = true;
+      setAccessLoginLoading_(false, "Підтверджую вхід...");
       setAccessLoginModalMessage_(
         "Заповніть заявку на отримання ключа доступу або введіть уже отриманий ключ.",
         false,
       );
-      setAccessLoginMode_(mode === "haveKey" ? "haveKey" : "request", {
-        skipLoading: true,
-      });
-      setAccessLoginLoading_(false);
+      setAccessLoginMode_(mode === "haveKey" ? "haveKey" : "request");
     }
 
     async function submitAccessLoginForm_() {
@@ -1133,8 +1060,7 @@
       }
 
       setAccessLoginModalMessage_("", false);
-      state.loading = true;
-      setAccessLoginLoading_(true, "login");
+      setAccessLoginLoading_(true, "Підтверджую вхід...");
 
       try {
         const loginMeta = await buildLoginMeta_();
@@ -1149,7 +1075,7 @@
           const message =
             (result && (result.error || result.message)) ||
             "Не вдалося виконати вхід";
-          setAccessLoginLoading_(false);
+          setAccessLoginLoading_(false, "Підтверджую вхід...");
           setAccessLoginModalMessage_(message, true);
           if (typeof hideToast === "function") hideToast();
           await loadAccessDescriptor();
@@ -1163,7 +1089,7 @@
         }
 
         STATE.access = normalizeAccessForUi_(data.descriptor || {});
-        setAccessLoginLoading_(false);
+        setAccessLoginLoading_(false, "Підтверджую вхід...");
         closeAccessLoginModal();
         applyAccessPolicyUI();
         showToast(data.message || "Вхід виконано: " + callsign);
@@ -1176,7 +1102,7 @@
         );
       } catch (error) {
         const message = normalizeError(error);
-        setAccessLoginLoading_(false);
+        setAccessLoginLoading_(false, "Підтверджую вхід...");
         setAccessLoginModalMessage_(message, true);
         if (typeof hideToast === "function") hideToast();
         if (callsignInput) {
@@ -1185,12 +1111,6 @@
           callsignInput.select();
         }
         if (identifierInput) identifierInput.disabled = false;
-      } finally {
-        const st = ensureAccessLoginState_();
-        if (st.loading) {
-          st.loading = false;
-          setAccessLoginLoading_(false);
-        }
       }
     }
 
@@ -1273,7 +1193,7 @@
             <button class="btn btn-primary" type="button" onclick="SidebarApp.copyResultText('${escapeJsString(reportText)}')">Копіювати звіт</button>
             <button class="btn" type="button" onclick="copyAccessDebugFullReport()">Копіювати все</button>
             <button class="btn" type="button" onclick="copyAccessDebugTechDetails()">Копіювати тех. деталі</button>
-            ${access.keyAvailable && !access.registered ? '<button type="button" class="btn btn-primary" style="min-width:auto; padding:6px 10px;" onclick="openAccessLoginFlow(&quot;request&quot;)">Отримати ключ доступу</button>' : ""}
+            ${access.selfBindRequired && access.canSelfBind ? '<button class="btn" type="button" onclick="openAccessLoginFlow(&quot;login&quot;)">Увійти</button> <button type="button" class="btn btn-primary" style="min-width:auto; padding:6px 10px;" onclick="openAccessLoginFlow(&quot;request&quot;)">Отримати ключ доступу</button>' : ""}
             ${showHashButtons ? '<button class="btn" type="button" id="accessDebugToggleHashBtn" onclick="toggleAccessDebugHash()">Показати повний hash</button>' : ""}
             ${showHashButtons ? '<button class="btn" type="button" id="accessDebugCopyHashBtn" onclick="copyAccessDebugHash()">Копіювати повний hash</button>' : ""}
           </div>
@@ -1410,9 +1330,9 @@
             escapeHtml(String(access.loginLockout.remainingMinutes || 0)) +
             " хв</span>",
         );
-      } else if (access.keyAvailable && !access.registered) {
+      } else if (access.selfBindRequired && access.canSelfBind) {
         parts.push(
-          '<button type="button" class="btn btn-primary" style="min-width:auto; padding:6px 10px;" onclick="openAccessLoginFlow(&quot;request&quot;)">Отримати ключ доступу</button>',
+          '<button type="button" class="btn" style="min-width:auto; padding:6px 10px;" onclick="openAccessLoginFlow(&quot;login&quot;)">Увійти</button> <button type="button" class="btn btn-primary" style="min-width:auto; padding:6px 10px;" onclick="openAccessLoginFlow(&quot;request&quot;)">Отримати ключ доступу</button>',
         );
       } else if (!access.keyAvailable && !access.registered) {
         parts.push(
@@ -1469,260 +1389,6 @@
       }
 
       applyAccessPolicyUI();
-      refreshAccessRequestsAdminPanel_();
-    }
-
-    function canManageAccessRequestsUi_() {
-      const access = normalizeAccessForUi_(STATE.access || {});
-      if (access.isAdmin) return true;
-      const role = safeString_(access.role).toLowerCase();
-      return role === "owner" || role === "sysadmin" || role === "admin";
-    }
-
-    function buildAccessRequestAdminCardHtml_(req) {
-      const requestId = safeString_(req.request_id);
-      const ridJs = escapeJsString(requestId);
-      const callsign = escapeHtml(
-        safeString_(req.person_callsign || req.personCallsign) || "—",
-      );
-      const name = escapeHtml(
-        safeString_(req.display_name || req.displayName) || "",
-      );
-      const surname = escapeHtml(safeString_(req.surname));
-      const fio = [surname, name].filter(Boolean).join(" ") || "—";
-      const phone = escapeHtml(safeString_(req.phone) || "—");
-      const email = escapeHtml(safeString_(req.user_email || req.email) || "—");
-      const login = escapeHtml(safeString_(req.login));
-      const type = escapeHtml(safeString_(req.request_type) || "—");
-      const source = escapeHtml(safeString_(req.source) || "—");
-      const hashMasked = escapeHtml(
-        safeString_(req.request_user_key_hash_masked),
-      );
-      const id = escapeHtml(requestId);
-      const status = safeString_(req.status).toLowerCase();
-      const isApprovedStuck = status === "approved";
-      const errMsg = escapeHtml(
-        safeString_(req.error_message || req.result_message),
-      );
-
-      return (
-        '<div class="access-requests-admin-card">' +
-        '<div class="access-requests-admin-card__title"><b>' +
-        callsign +
-        "</b> · " +
-        fio +
-        (status
-          ? ' <span style="opacity:0.85;">(' + escapeHtml(status) + ")</span>"
-          : "") +
-        "</div>" +
-        (isApprovedStuck
-          ? '<div class="access-requests-admin-card__meta" style="color:#fbbf24;">Схвалено, але не перенесено в ACCESS. Натисніть «Догнати».' +
-            (errMsg ? " " + errMsg : "") +
-            "</div>"
-          : "") +
-        '<div class="access-requests-admin-card__meta">' +
-        phone +
-        " · " +
-        email +
-        (login ? " · login: " + login : "") +
-        "</div>" +
-        '<div class="access-requests-admin-card__meta">Тип: ' +
-        type +
-        " · Джерело: " +
-        source +
-        (hashMasked ? " · hash: " + hashMasked : "") +
-        "</div>" +
-        '<div class="access-requests-admin-card__meta">ID: ' +
-        id +
-        "</div>" +
-        '<div class="access-requests-admin-card__actions">' +
-        (isApprovedStuck
-          ? '<button type="button" class="btn btn-primary" onclick="reconcileAccessRequestFromUi_(\'' +
-            ridJs +
-            "')\">Догнати</button>" +
-            '<button type="button" class="btn" onclick="rejectAccessRequestFromUi_(\'' +
-            ridJs +
-            "')\">Відхилити</button>"
-          : '<label class="access-requests-admin-card__role-label">Роль ' +
-            '<select id="accessReqRole_' +
-            ridJs +
-            '" class="access-requests-admin-card__role-select">' +
-            '<option value="viewer">viewer</option>' +
-            '<option value="operator" selected>operator</option>' +
-            '<option value="maintainer">maintainer</option>' +
-            "</select></label>" +
-            '<button type="button" class="btn btn-primary" onclick="approveAccessRequestFromUi_(\'' +
-            ridJs +
-            "')\">Схвалити</button>" +
-            '<button type="button" class="btn" onclick="rejectAccessRequestFromUi_(\'' +
-            ridJs +
-            "')\">Відхилити</button>") +
-        "</div></div>"
-      );
-    }
-
-    async function refreshAccessRequestsAdminPanel_() {
-      if (!canManageAccessRequestsUi_()) return;
-
-      let panel = document.getElementById("accessRequestsAdminPanel");
-      if (!panel) {
-        const host =
-          document.getElementById("results") ||
-          document.getElementById("resultArea") ||
-          document.querySelector(".results");
-        if (!host) return;
-        panel = document.createElement("div");
-        panel.id = "accessRequestsAdminPanel";
-        panel.className = "result-item";
-        host.prepend(panel);
-      }
-
-      panel.innerHTML =
-        '<div class="result-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">' +
-        "<span>Заявки доступу (ACCESS_REQUESTS)</span>" +
-        '<button type="button" class="btn" style="min-width:auto;padding:4px 10px;" onclick="refreshAccessRequestsAdminPanel_()">Оновити</button>' +
-        "</div>" +
-        '<div class="result-value" id="accessRequestsAdminBody">Завантаження...</div>';
-
-      const body = document.getElementById("accessRequestsAdminBody");
-      if (!body) return;
-
-      try {
-        const api = window.MaintenanceApi || MaintenanceApi || {};
-        if (typeof api.listAccessRequests !== "function") {
-          body.textContent = "API listAccessRequests недоступний";
-          return;
-        }
-        const result = await api.listAccessRequests({ all: true });
-        const requests = Array.isArray(result && result.requests)
-          ? result.requests
-          : result && result.data && Array.isArray(result.data.requests)
-            ? result.data.requests
-            : [];
-        const actionable = requests.filter(function (req) {
-          const st = safeString_(req && req.status).toLowerCase();
-          return st === "pending" || st === "approved";
-        });
-        if (!actionable.length) {
-          body.textContent = "Немає заявок для обробки (pending/approved).";
-          return;
-        }
-        body.innerHTML = actionable
-          .map(function (req) {
-            return buildAccessRequestAdminCardHtml_(req);
-          })
-          .join("");
-      } catch (error) {
-        body.textContent = "Помилка: " + normalizeError(error);
-      }
-    }
-
-    async function approveAccessRequestFromUi_(requestId) {
-      const roleEl = document.getElementById(
-        "accessReqRole_" + safeString_(requestId),
-      );
-      const role = safeString_(roleEl && roleEl.value) || "operator";
-      try {
-        const api = window.MaintenanceApi || MaintenanceApi || {};
-        const result = await api.approveAccessRequest({
-          requestId: requestId,
-          role: role,
-        });
-        if (result && result.success === false) {
-          const err =
-            (Array.isArray(result.errors) &&
-              result.errors[0] &&
-              result.errors[0].message) ||
-            result.message ||
-            "Не вдалося схвалити заявку";
-          showToast("Помилка: " + err);
-          await refreshAccessRequestsAdminPanel_();
-          return;
-        }
-        const data = result && result.data ? result.data : {};
-        const processed = Array.isArray(data.processed) ? data.processed : [];
-        const temp =
-          result.temporaryPasswordPlain ||
-          data.temporaryPasswordPlain ||
-          (processed[0] && processed[0].temporaryPasswordPlain) ||
-          "";
-        if (temp) {
-          showToast("Тимчасовий ключ: " + temp);
-          if (
-            typeof navigator !== "undefined" &&
-            navigator.clipboard &&
-            navigator.clipboard.writeText
-          ) {
-            try {
-              await navigator.clipboard.writeText(temp);
-            } catch (_) {}
-          }
-        } else {
-          showToast((result && result.message) || "Заявку схвалено");
-        }
-        await refreshAccessRequestsAdminPanel_();
-      } catch (error) {
-        showToast("Помилка: " + normalizeError(error));
-      }
-    }
-
-    async function reconcileAccessRequestFromUi_(requestId) {
-      try {
-        const api = window.MaintenanceApi || MaintenanceApi || {};
-        if (typeof api.processAccessRequestsQueue !== "function") {
-          showToast("API processAccessRequestsQueue недоступний");
-          return;
-        }
-        const result = await api.processAccessRequestsQueue({
-          requestId: requestId,
-        });
-        if (result && result.success === false) {
-          const err =
-            (Array.isArray(result.errors) &&
-              result.errors[0] &&
-              result.errors[0].message) ||
-            result.message ||
-            "Не вдалося догнати заявку";
-          showToast("Помилка: " + err);
-          await refreshAccessRequestsAdminPanel_();
-          return;
-        }
-        const data = result && result.data ? result.data : {};
-        const processed = Array.isArray(data.processed) ? data.processed : [];
-        const temp =
-          (processed[0] && processed[0].temporaryPasswordPlain) || "";
-        if (temp) {
-          showToast("Тимчасовий ключ: " + temp);
-          if (
-            typeof navigator !== "undefined" &&
-            navigator.clipboard &&
-            navigator.clipboard.writeText
-          ) {
-            try {
-              await navigator.clipboard.writeText(temp);
-            } catch (_) {}
-          }
-        } else {
-          showToast((result && result.message) || "Заявку перенесено в ACCESS");
-        }
-        await refreshAccessRequestsAdminPanel_();
-      } catch (error) {
-        showToast("Помилка: " + normalizeError(error));
-      }
-    }
-
-    async function rejectAccessRequestFromUi_(requestId) {
-      try {
-        const api = window.MaintenanceApi || MaintenanceApi || {};
-        await api.rejectAccessRequest({
-          requestId: requestId,
-          note: "Відхилено з панелі",
-        });
-        showToast("Заявку відхилено");
-        await refreshAccessRequestsAdminPanel_();
-      } catch (error) {
-        showToast("Помилка: " + normalizeError(error));
-      }
     }
 
     function getActionRequiredRole_(actionName) {
@@ -1737,7 +1403,7 @@
         birthdayCheck: "maintainer",
         debugPhones: "maintainer",
         healthCheck: "maintainer",
-        runAllProjectTests: "sysadmin",
+        runAllProjectTests: "admin",
         pendingRepairs: "maintainer",
         operationDetails: "maintainer",
         runRepair: "sysadmin",
@@ -1836,30 +1502,13 @@
     window.copyAccessDebugTechDetails = copyAccessDebugTechDetails;
     window.copyAccessDebugFullReport = copyAccessDebugFullReport;
 
-    async function setAccessLoginMode_(mode, options) {
-      options = options || {};
-      const target = mode === "haveKey" ? "haveKey" : "request";
-      const state = ensureAccessLoginState_();
-      if (state.loading && !options.skipLoading) return;
-
-      if (!options.skipLoading) {
-        setAccessLoginLoading_(
-          true,
-          target === "haveKey" ? "switchHaveKey" : "switchRequest",
-        );
-        await accessLoginDelay_(240);
-      }
-
+    function setAccessLoginMode_(mode) {
       const requestForm = document.getElementById("accessKeyRequestForm");
       const haveKeyForm = document.getElementById("accessHaveKeyForm");
       if (requestForm)
-        requestForm.style.display = target === "haveKey" ? "none" : "block";
+        requestForm.style.display = mode === "haveKey" ? "none" : "block";
       if (haveKeyForm)
-        haveKeyForm.style.display = target === "haveKey" ? "block" : "none";
-      updateAccessLoginHeader_(target);
-      setAccessLoginModalMessage_("", false);
-
-      if (!options.skipLoading) setAccessLoginLoading_(false);
+        haveKeyForm.style.display = mode === "haveKey" ? "block" : "none";
     }
 
     let accessKeyRequestLastSentAt_ = Number(
@@ -1867,9 +1516,6 @@
     );
 
     async function submitAccessKeyRequestForm_() {
-      const state = ensureAccessLoginState_();
-      if (state.loading) return;
-
       const nowMs = Date.now();
       const cooldownMs = 5 * 60 * 1000;
       const remainingMs = cooldownMs - (nowMs - accessKeyRequestLastSentAt_);
@@ -1922,11 +1568,6 @@
         );
         return;
       }
-
-      state.loading = true;
-      setAccessLoginLoading_(true, "submitRequest");
-      setAccessLoginModalMessage_("", false);
-
       try {
         const result = await Stage7Api.submitAccessKeyRequest(payload);
         if (result && result.success === false) {
@@ -1938,7 +1579,7 @@
         }
         setAccessLoginModalMessage_(
           (result && result.message) ||
-            "Заявку надіслано. Очікуйте підтвердження адміністратора.",
+            "Заявку надіслано. Очікуйте ключ доступу.",
           false,
         );
         accessKeyRequestLastSentAt_ = Date.now();
@@ -1962,16 +1603,10 @@
           error && error.message ? error.message : String(error),
           true,
         );
-      } finally {
-        state.loading = false;
-        setAccessLoginLoading_(false);
       }
     }
 
     async function submitHaveKeyRegistrationForm_() {
-      const state = ensureAccessLoginState_();
-      if (state.loading) return;
-
       const temporaryPassword = safeString_(
         document.getElementById("accessHaveKeyInput") &&
           document.getElementById("accessHaveKeyInput").value,
@@ -1994,13 +1629,6 @@
         setAccessLoginModalMessage_("Введіть тимчасовий код доступу.", true);
         return;
       }
-      if (/^ARQ-/i.test(temporaryPassword)) {
-        setAccessLoginModalMessage_(
-          "Це номер заявки, а не ключ. Введіть код WASB-…, який надішле адміністратор після підтвердження.",
-          true,
-        );
-        return;
-      }
       if (!login) {
         setAccessLoginModalMessage_("Введіть логін.", true);
         return;
@@ -2016,9 +1644,8 @@
         setAccessLoginModalMessage_("Паролі не збігаються.", true);
         return;
       }
-      state.loading = true;
-      setAccessLoginLoading_(true, "submitActivation");
-      setAccessLoginModalMessage_("", false);
+      setAccessLoginLoading_(true);
+      setAccessLoginModalMessage_("Перевіряю код і активую доступ...", false);
       try {
         const api =
           window.Stage7Api ||
@@ -2041,10 +1668,8 @@
             result.message || "Не вдалося активувати доступ.",
             true,
           );
-          setAccessLoginLoading_(false);
           return;
         }
-        setAccessLoginLoading_(true, "submitActivation", "Оновлюємо панель…");
         setAccessLoginModalMessage_(
           (result && result.message) || "Доступ активовано. Оновіть панель.",
           false,
@@ -2065,7 +1690,6 @@
           true,
         );
       } finally {
-        state.loading = false;
         setAccessLoginLoading_(false);
       }
     }
@@ -2078,9 +1702,5 @@
     window.getActionRequiredRole_ = getActionRequiredRole_;
     window.assertActionAccess_ = assertActionAccess_;
     window.assertAdminAction_ = assertAdminAction_;
-    window.approveAccessRequestFromUi_ = approveAccessRequestFromUi_;
-    window.reconcileAccessRequestFromUi_ = reconcileAccessRequestFromUi_;
-    window.rejectAccessRequestFromUi_ = rejectAccessRequestFromUi_;
-    window.refreshAccessRequestsAdminPanel_ = refreshAccessRequestsAdminPanel_;
   })();
 </script>

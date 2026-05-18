@@ -440,36 +440,6 @@ function _diagBuildCounts_(checks) {
 
   return counts;
 }
-function _diagAppendAccessRequestsChecks_(checks) {
-  var diag =
-    typeof getAccessRequestsDiagnostics_ === "function"
-      ? getAccessRequestsDiagnostics_()
-      : {
-          accessRequestsSheetExists: false,
-          accessRequestsHeadersOk: false,
-          accessRequestsPendingCount: 0,
-          accessRequestsErrorCount: 0,
-        };
-
-  _stage7PushCheck_(
-    checks,
-    "ACCESS_REQUESTS sheet",
-    diag.accessRequestsSheetExists && diag.accessRequestsHeadersOk
-      ? "OK"
-      : "WARN",
-    diag.accessRequestsSheetExists
-      ? diag.accessRequestsHeadersOk
-        ? "ACCESS_REQUESTS існує, заголовки OK (pending: " +
-          diag.accessRequestsPendingCount +
-          ")"
-        : "ACCESS_REQUESTS існує, але заголовки неповні"
-      : "ACCESS_REQUESTS відсутній (створиться при першій заявці)",
-    diag.accessRequestsSheetExists
-      ? ""
-      : "Виконайте apiStage7EnsureAccessRequestsSheet() або надішліть тестову заявку",
-  );
-}
-
 function _diagAppendPreprodScriptPropertyChecks_(checks) {
   var ownerDiag =
     typeof getWasbOwnerEmailDiagnostics_ === "function"
@@ -760,7 +730,6 @@ function _diagBuildStage7CoreChecks_(options) {
     );
   }
 
-  _diagAppendAccessRequestsChecks_(checks);
   _diagAppendPreprodScriptPropertyChecks_(checks);
 
   return _diagNormalizeReportChecks_({ checks: checks });
