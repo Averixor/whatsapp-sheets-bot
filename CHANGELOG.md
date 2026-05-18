@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-05-18 — WASB Tests restricted to sysadmin/owner
+
+- Spreadsheet menu **WASB Tests** and sheet **TEST_RESULTS** visible only for **sysadmin** and **owner** (`stage7TestRunnerOnOpen`, server guards, sidebar API `sysadmin`).
+- `Code.onOpen` syncs TEST_RESULTS visibility for all users.
+
 ## 2026-05-18 — ACCESS_REQUESTS registration queue
 
 - Added `ACCESS_REQUESTS` sheet (auto-created via `ensureAccessRequestsSheet_()`) as untrusted inbox for user registration.

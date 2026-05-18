@@ -649,7 +649,7 @@ function apiRunStage7Diagnostics(options) {
 }
 
 function apiRunStage7RegressionTests(options) {
-  _stage7AssertRole_("admin", "run regression tests");
+  _stage7AssertRole_("sysadmin", "run regression tests");
   const report = runRegressionTestSuite(options || {});
   return _stage7BuildMaintenanceResponse_(
     report.ok,
@@ -661,7 +661,7 @@ function apiRunStage7RegressionTests(options) {
 }
 
 function apiRunStage7AllProjectTests(options) {
-  _stage7AssertRole_("admin", "run all project tests");
+  _stage7AssertRole_("sysadmin", "run all project tests");
   const opts = Object.assign({}, options || {}, {
     writeToSheet: true,
     writeToLogger: true,
@@ -692,7 +692,7 @@ function apiRunStage7AllProjectTests(options) {
 }
 
 function apiRunStage7ProjectTestChunk(options) {
-  _stage7AssertRole_("admin", "run project test chunk");
+  _stage7AssertRole_("sysadmin", "run project test chunk");
   const opts = Object.assign({}, options || {}, {
     writeToSheet: true,
     writeToLogger: true,
