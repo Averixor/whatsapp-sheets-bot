@@ -69,6 +69,47 @@ function _arpNormalizeApproveRole_(role) {
   return normalized;
 }
 
+function _arpSetRequestApprovedWithProof_(row, role, note) {
+  if (!row || !row.sheetRow) {
+    throw new Error("Заявку не знайдено.");
+  }
+  if (String(row.request_type || "").toLowerCase() !== "access_request") {
+    throw new Error("Непідтримуваний тип заявки для approve.");
+  }
+
+  var decisionRole = _arpNormalizeApproveRole_(
+    role || row.decision_role || "operator",
+  );
+  var decisionBy = _arpCurrentEmail_();
+  var decisionAt =
+    typeof _nowText_ === "function"
+      ? _nowText_("long")
+      : Utilities.formatDate(
+          new Date(),
+          Session.getScriptTimeZone(),
+          "yyyy-MM-dd HH:mm:ss",
+        );
+  var proof = buildAccessApprovalProof_({
+    requestId: row.request_id,
+    decisionBy: decisionBy,
+    decisionAt: decisionAt,
+    decisionRole: decisionRole,
+  });
+
+  updateAccessRequestRow_(row.sheetRow, {
+    status: "approved",
+    admin_approve: true,
+    admin_reject: false,
+    decision_role: decisionRole,
+    decision_note: String(note || row.decision_note || "").trim(),
+    decision_by: decisionBy,
+    decision_at: decisionAt,
+    decision_proof: proof,
+  });
+
+  return getAccessRequestById_(row.request_id);
+}
+
 function approveAccessRequest_(requestId, role, note) {
   _arpAssertAdmin_("approve access request");
   ensureAccessRequestsSheet_();
@@ -91,42 +132,7 @@ function approveAccessRequest_(requestId, role, note) {
     };
   }
 
-  if (String(row.request_type || "").toLowerCase() !== "access_request") {
-    return {
-      success: false,
-      code: "access.requests.invalid_type",
-      message: "Непідтримуваний тип заявки для approve.",
-    };
-  }
-
-  var decisionRole = _arpNormalizeApproveRole_(role);
-  var decisionBy = _arpCurrentEmail_();
-  var decisionAt =
-    typeof _nowText_ === "function"
-      ? _nowText_("long")
-      : Utilities.formatDate(
-          new Date(),
-          Session.getScriptTimeZone(),
-          "yyyy-MM-dd HH:mm:ss",
-        );
-  var proof = buildAccessApprovalProof_({
-    requestId: row.request_id,
-    decisionBy: decisionBy,
-    decisionAt: decisionAt,
-    decisionRole: decisionRole,
-  });
-
-  updateAccessRequestRow_(row.sheetRow, {
-    status: "approved",
-    admin_approve: true,
-    admin_reject: false,
-    decision_role: decisionRole,
-    decision_note: String(note || "").trim(),
-    decision_by: decisionBy,
-    decision_at: decisionAt,
-    decision_proof: proof,
-  });
-
+  _arpSetRequestApprovedWithProof_(row, role, note);
   return processAccessRequestsQueue_({ requestId: row.request_id });
 }
 
@@ -422,13 +428,6 @@ function promoteActivationRequestToAccess_(requestRow) {
     };
   }
 
-  requestRow._tempPasswordHashForProof = String(
-    entry.temporaryPasswordHash || "",
-  ).trim();
-  if (!verifyAccessActivationProof_(requestRow)) {
-    return { success: false, message: "Невалідний activation_proof." };
-  }
-
   var hash = String(requestRow.request_user_key_hash || "").trim();
   var entries =
     typeof _readSheetEntries_ === "function" ? _readSheetEntries_() : [];
@@ -450,6 +449,13 @@ function promoteActivationRequestToAccess_(requestRow) {
       success: false,
       message: "Запис ACCESS для активації не знайдено.",
     };
+  }
+
+  requestRow._tempPasswordHashForProof = String(
+    entry.temporaryPasswordHash || "",
+  ).trim();
+  if (!verifyAccessActivationProof_(requestRow)) {
+    return { success: false, message: "Невалідний activation_proof." };
   }
 
   var status = String(entry.registrationStatus || "").toLowerCase();
@@ -554,6 +560,20 @@ function processAccessRequestsQueue_(options) {
     var status = String(row.status || "").toLowerCase();
 
     try {
+      if (
+        type === "access_request" &&
+        status === "pending" &&
+        row.admin_approve === true &&
+        row.admin_reject !== true
+      ) {
+        row = _arpSetRequestApprovedWithProof_(
+          row,
+          row.decision_role || options.defaultRole || "operator",
+          row.decision_note || "Схвалено (прапорець у листі)",
+        );
+        status = "approved";
+      }
+
       if (type === "access_request" && status === "approved") {
         var promoteResult = promoteAccessRequestToAccess_(row);
         if (promoteResult.success) processed.push(promoteResult);
