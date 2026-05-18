@@ -98,8 +98,6 @@ function _arpSetRequestApprovedWithProof_(row, role, note) {
 
   updateAccessRequestRow_(row.sheetRow, {
     status: "approved",
-    admin_approve: true,
-    admin_reject: false,
     decision_role: decisionRole,
     decision_note: String(note || row.decision_note || "").trim(),
     decision_by: decisionBy,
@@ -170,8 +168,6 @@ function rejectAccessRequest_(requestId, note) {
 
   updateAccessRequestRow_(row.sheetRow, {
     status: "rejected",
-    admin_reject: true,
-    admin_approve: false,
     decision_note: String(note || "").trim(),
     processed_by: processedBy,
     processed_at: processedAt,
@@ -217,14 +213,6 @@ function promoteAccessRequestToAccess_(requestRow) {
 
   if (!_arpIsAdminEmail_(requestRow.decision_by)) {
     return { success: false, message: "decision_by не є адміністратором." };
-  }
-
-  if (requestRow.admin_reject === true) {
-    return { success: false, message: "Заявку відхилено (admin_reject)." };
-  }
-
-  if (requestRow.admin_approve === true && requestRow.admin_reject === true) {
-    return { success: false, message: "Суперечливі прапорці approve/reject." };
   }
 
   var hash = String(requestRow.request_user_key_hash || "").trim();
@@ -383,10 +371,6 @@ function promoteAccessRequestToAccess_(requestRow) {
     error_code: "",
     error_message: "",
   });
-
-  if (typeof _arDeleteRequestPayload_ === "function") {
-    _arDeleteRequestPayload_(requestRow.request_id);
-  }
 
   if (typeof stage7ReportAccessViolation === "function") {
     try {
@@ -560,20 +544,6 @@ function processAccessRequestsQueue_(options) {
     var status = String(row.status || "").toLowerCase();
 
     try {
-      if (
-        type === "access_request" &&
-        status === "pending" &&
-        row.admin_approve === true &&
-        row.admin_reject !== true
-      ) {
-        row = _arpSetRequestApprovedWithProof_(
-          row,
-          row.decision_role || options.defaultRole || "operator",
-          row.decision_note || "Схвалено (прапорець у листі)",
-        );
-        status = "approved";
-      }
-
       if (type === "access_request" && status === "approved") {
         var promoteResult = promoteAccessRequestToAccess_(row);
         if (promoteResult.success) processed.push(promoteResult);

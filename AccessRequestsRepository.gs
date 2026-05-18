@@ -1,46 +1,22 @@
 /**
  * AccessRequestsRepository.gs — черга заявок ACCESS_REQUESTS (недовірений inbox).
+ * Лист: лише індекс (request_id, статус, результат). PII — Script Properties + admin API.
  */
 
 var ACCESS_REQUESTS_SHEET_NAME_ = "ACCESS_REQUESTS";
-var ACCESS_REQUESTS_SCHEMA_VERSION_ = "1";
+var ACCESS_REQUESTS_SCHEMA_VERSION_ = "2";
 
+/** Колонки на листі — без PII і секретів. */
 var ACCESS_REQUESTS_HEADERS_ = [
   "request_id",
   "created_at",
   "updated_at",
   "status",
   "request_type",
-  "source",
-  "user_email",
-  "phone",
-  "login",
-  "person_callsign",
-  "surname",
-  "first_name",
-  "patronymic",
-  "display_name",
-  "preferred_contact",
-  "telegram_username",
-  "request_user_key_hash",
-  "request_user_key_hash_masked",
-  "dedupe_key",
-  "admin_approve",
-  "admin_reject",
-  "decision_role",
-  "decision_note",
-  "decision_by",
-  "decision_at",
-  "decision_proof",
+  "result_message",
+  "access_row",
   "processed_at",
   "processed_by",
-  "access_row",
-  "result_message",
-  "activation_login",
-  "activation_password_hash",
-  "activation_password_salt",
-  "activation_proof",
-  "activation_requested_at",
   "error_code",
   "error_message",
   "schema_version",
@@ -74,23 +50,16 @@ var ACCESS_REQUESTS_DECISION_ROLES_ = [
   "sysadmin",
 ];
 
-/** Не пишемо на лист — лише Script Properties (admin API). */
-var ACCESS_REQUESTS_SENSITIVE_PAYLOAD_FIELDS_ = [
-  "user_email",
-  "phone",
-  "login",
-  "surname",
-  "first_name",
-  "patronymic",
-  "telegram_username",
-  "request_user_key_hash",
-  "activation_login",
-  "activation_password_hash",
-  "activation_password_salt",
-  "activation_proof",
-];
-
 var ACCESS_REQUESTS_PAYLOAD_PROP_PREFIX_ = "WASB_ARQ_PAYLOAD_";
+var ACCESS_REQUESTS_DEDUPE_PROP_PREFIX_ = "WASB_ARQ_DEDUPE_";
+
+var ACCESS_REQUESTS_TERMINAL_STATUSES_ = [
+  "merged",
+  "rejected",
+  "activation_done",
+  "cancelled",
+  "error",
+];
 
 function _arLog_(message, error) {
   try {
@@ -213,12 +182,16 @@ function _arPayloadPropertyKey_(requestId) {
   return ACCESS_REQUESTS_PAYLOAD_PROP_PREFIX_ + _arSafeString_(requestId);
 }
 
+function _arDedupePropertyKey_(dedupeKey) {
+  return ACCESS_REQUESTS_DEDUPE_PROP_PREFIX_ + _arSafeString_(dedupeKey);
+}
+
 function _arSaveRequestPayload_(requestId, payload) {
   var id = _arSafeString_(requestId);
   if (!id) return false;
   try {
     var json = JSON.stringify(payload || {});
-    if (json.length > 4500) {
+    if (json.length > 9000) {
       _arLog_("Payload too large for property", id);
       return false;
     }
@@ -256,24 +229,58 @@ function _arDeleteRequestPayload_(requestId) {
   } catch (_) {}
 }
 
-function _arStripSensitiveForSheet_(entry) {
+function _arSetDedupeIndex_(dedupeKey, requestId) {
+  var dk = _arSafeString_(dedupeKey);
+  var id = _arSafeString_(requestId);
+  if (!dk || !id) return;
+  try {
+    PropertiesService.getScriptProperties().setProperty(
+      _arDedupePropertyKey_(dk),
+      id,
+    );
+  } catch (e) {
+    _arLog_("Set dedupe index failed", e);
+  }
+}
+
+function _arClearDedupeIndex_(dedupeKey) {
+  var dk = _arSafeString_(dedupeKey);
+  if (!dk) return;
+  try {
+    PropertiesService.getScriptProperties().deleteProperty(
+      _arDedupePropertyKey_(dk),
+    );
+  } catch (_) {}
+}
+
+function _arIsTerminalStatus_(status) {
+  return (
+    ACCESS_REQUESTS_TERMINAL_STATUSES_.indexOf(
+      String(status || "").toLowerCase(),
+    ) !== -1
+  );
+}
+
+function _arFinalizeRequestSecrets_(requestId, dedupeKey) {
+  _arDeleteRequestPayload_(requestId);
+  _arClearDedupeIndex_(dedupeKey);
+}
+
+function _arEntryToSheetRow_(entry) {
   var out = {};
-  Object.keys(entry || {}).forEach(function (key) {
-    out[key] = entry[key];
-  });
-  for (var i = 0; i < ACCESS_REQUESTS_SENSITIVE_PAYLOAD_FIELDS_.length; i++) {
-    var field = ACCESS_REQUESTS_SENSITIVE_PAYLOAD_FIELDS_[i];
-    if (field === "request_user_key_hash") {
-      out[field] = "";
-    } else if (Object.prototype.hasOwnProperty.call(out, field)) {
-      out[field] = "";
-    }
+  for (var i = 0; i < ACCESS_REQUESTS_HEADERS_.length; i++) {
+    var key = ACCESS_REQUESTS_HEADERS_[i];
+    out[key] =
+      entry && entry[key] !== undefined && entry[key] !== null
+        ? entry[key]
+        : "";
   }
   return out;
 }
 
 function _arHydrateRowFromPayload_(row) {
   if (!row || !_arSafeString_(row.request_id)) return row;
+  if (_arIsTerminalStatus_(row.status)) return row;
   var payload = _arLoadRequestPayload_(row.request_id);
   if (!payload || typeof payload !== "object") return row;
   Object.keys(payload).forEach(function (key) {
@@ -323,17 +330,20 @@ function _arClearBulkSheetControls_(sheet) {
   } catch (e) {
     _arLog_("clearDataValidations", e);
   }
-  var approveCol = ACCESS_REQUESTS_HEADERS_.indexOf("admin_approve") + 1;
-  var rejectCol = ACCESS_REQUESTS_HEADERS_.indexOf("admin_reject") + 1;
+}
+
+function _arApplyStatusValidation_(sheet, rowNumber) {
+  if (!sheet || rowNumber < 2) return;
+  var statusCol = ACCESS_REQUESTS_HEADERS_.indexOf("status") + 1;
+  if (statusCol < 1) return;
   try {
-    if (approveCol > 0) {
-      sheet.getRange(2, approveCol, lastRow - 1, 1).removeCheckboxes();
-    }
-    if (rejectCol > 0) {
-      sheet.getRange(2, rejectCol, lastRow - 1, 1).removeCheckboxes();
-    }
+    var rule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(ACCESS_REQUESTS_STATUS_VALUES_, true)
+      .setAllowInvalid(false)
+      .build();
+    sheet.getRange(rowNumber, statusCol).setDataValidation(rule);
   } catch (e) {
-    _arLog_("removeCheckboxes", e);
+    _arLog_("status validation", e);
   }
 }
 
@@ -368,14 +378,22 @@ function getAccessRequestsHeaderMap_(sheet) {
   return map;
 }
 
+function _arHeadersNeedUpgrade_(map) {
+  if (!map || !map.request_id) return true;
+  if (map.user_email || map.admin_approve || map.person_callsign) return true;
+  for (var i = 0; i < ACCESS_REQUESTS_HEADERS_.length; i++) {
+    if (!map[ACCESS_REQUESTS_HEADERS_[i]]) return true;
+  }
+  return false;
+}
+
 function _arEnsureHeaders_(sheet) {
   var map = getAccessRequestsHeaderMap_(sheet);
-  var missing = [];
-  for (var i = 0; i < ACCESS_REQUESTS_HEADERS_.length; i++) {
-    if (!map[ACCESS_REQUESTS_HEADERS_[i]])
-      missing.push(ACCESS_REQUESTS_HEADERS_[i]);
+  if (!_arHeadersNeedUpgrade_(map) && sheet.getLastRow() >= 1) {
+    _arClearBulkSheetControls_(sheet);
+    _arPruneGhostRows_(sheet);
+    return map;
   }
-  if (!missing.length && sheet.getLastRow() >= 1) return map;
 
   sheet
     .getRange(1, 1, 1, ACCESS_REQUESTS_HEADERS_.length)
@@ -397,12 +415,13 @@ function _arEnsureHeaders_(sheet) {
       .getRange(1, 1, filterRows, ACCESS_REQUESTS_HEADERS_.length)
       .createFilter();
   } catch (_) {}
-  try {
-    sheet.autoResizeColumns(1, ACCESS_REQUESTS_HEADERS_.length);
-  } catch (_) {}
 
   _arClearBulkSheetControls_(sheet);
   _arPruneGhostRows_(sheet);
+
+  try {
+    sheet.autoResizeColumns(1, ACCESS_REQUESTS_HEADERS_.length);
+  } catch (_) {}
 
   return getAccessRequestsHeaderMap_(sheet);
 }
@@ -436,44 +455,13 @@ function _arRowToObject_(sheet, rowNumber, headerMap) {
     var key = ACCESS_REQUESTS_HEADERS_[i];
     var col = headerMap[key] || i + 1;
     var val = values[col - 1];
-    if (key === "admin_approve" || key === "admin_reject") {
-      row[key] = val === true || String(val).toUpperCase() === "TRUE";
-    } else {
-      row[key] = val === null || typeof val === "undefined" ? "" : val;
-    }
+    row[key] = val === null || typeof val === "undefined" ? "" : val;
   }
   return row;
 }
 
-function _arAdminFlagCellValue_(value) {
-  return value === true || String(value || "").toUpperCase() === "TRUE"
-    ? true
-    : "";
-}
-
-function _arNormalizeAdminFlagCells_(sheet, rowNumber) {
-  if (!sheet || rowNumber < 2) return;
-  var approveCol = ACCESS_REQUESTS_HEADERS_.indexOf("admin_approve") + 1;
-  var rejectCol = ACCESS_REQUESTS_HEADERS_.indexOf("admin_reject") + 1;
-  try {
-    if (approveCol > 0) {
-      sheet.getRange(rowNumber, approveCol).removeCheckboxes();
-      sheet.getRange(rowNumber, approveCol).setValue(false);
-    }
-    if (rejectCol > 0) {
-      sheet.getRange(rowNumber, rejectCol).removeCheckboxes();
-      sheet.getRange(rowNumber, rejectCol).setValue(false);
-    }
-  } catch (e) {
-    _arLog_("normalize admin flags", e);
-  }
-}
-
 function _arObjectToRowValues_(entry) {
   return ACCESS_REQUESTS_HEADERS_.map(function (key) {
-    if (key === "admin_approve" || key === "admin_reject") {
-      return _arAdminFlagCellValue_(entry[key]);
-    }
     return entry[key] !== undefined && entry[key] !== null ? entry[key] : "";
   });
 }
@@ -492,12 +480,13 @@ function readAccessRequests_(options) {
     ? String(options.requestType).toLowerCase()
     : "";
   var limit = Number(options.limit) > 0 ? Number(options.limit) : 0;
+  var hydrate = options.hydrate !== false;
   var out = [];
 
   for (var r = 2; r <= lastRow; r++) {
     var row = _arRowToObject_(sheet, r, headerMap);
     if (!_arSafeString_(row.request_id)) continue;
-    row = _arHydrateRowFromPayload_(row);
+    if (hydrate) row = _arHydrateRowFromPayload_(row);
     if (statusFilter && String(row.status || "").toLowerCase() !== statusFilter)
       continue;
     if (
@@ -514,9 +503,14 @@ function readAccessRequests_(options) {
 function getAccessRequestById_(requestId) {
   var id = _arSafeString_(requestId);
   if (!id) return null;
-  var rows = readAccessRequests_();
-  for (var i = 0; i < rows.length; i++) {
-    if (_arSafeString_(rows[i].request_id) === id) return rows[i];
+  var sheet = ensureAccessRequestsSheet_();
+  if (!sheet) return null;
+  var headerMap = getAccessRequestsHeaderMap_(sheet);
+  var lastRow = sheet.getLastRow();
+  for (var r = 2; r <= lastRow; r++) {
+    var row = _arRowToObject_(sheet, r, headerMap);
+    if (_arSafeString_(row.request_id) !== id) continue;
+    return _arHydrateRowFromPayload_(row);
   }
   return null;
 }
@@ -524,13 +518,29 @@ function getAccessRequestById_(requestId) {
 function findPendingAccessRequestDuplicate_(dedupeKey) {
   var key = _arSafeString_(dedupeKey);
   if (!key) return null;
-  var rows = readAccessRequests_();
-  for (var i = 0; i < rows.length; i++) {
-    var row = rows[i];
+
+  var existingId = PropertiesService.getScriptProperties().getProperty(
+    _arDedupePropertyKey_(key),
+  );
+  if (!existingId) return null;
+
+  var sheet = ensureAccessRequestsSheet_();
+  if (!sheet) return null;
+  var headerMap = getAccessRequestsHeaderMap_(sheet);
+  var lastRow = sheet.getLastRow();
+
+  for (var r = 2; r <= lastRow; r++) {
+    var row = _arRowToObject_(sheet, r, headerMap);
+    if (_arSafeString_(row.request_id) !== existingId) continue;
     var status = String(row.status || "").toLowerCase();
-    if (ACCESS_REQUESTS_PENDING_STATUSES_.indexOf(status) === -1) continue;
-    if (_arSafeString_(row.dedupe_key) === key) return row;
+    if (ACCESS_REQUESTS_PENDING_STATUSES_.indexOf(status) === -1) {
+      _arClearDedupeIndex_(key);
+      return null;
+    }
+    return _arHydrateRowFromPayload_(row);
   }
+
+  _arClearDedupeIndex_(key);
   return null;
 }
 
@@ -547,17 +557,26 @@ function updateAccessRequestRow_(sheetRow, updates) {
     current[key] = updates[key];
   });
   current.updated_at = _arNowText_();
-  if (!current.schema_version)
-    current.schema_version = ACCESS_REQUESTS_SCHEMA_VERSION_;
+  current.schema_version = ACCESS_REQUESTS_SCHEMA_VERSION_;
 
-  _arSaveRequestPayload_(current.request_id, current);
-  var sheetRowValues = _arStripSensitiveForSheet_(current);
+  var terminal = _arIsTerminalStatus_(current.status);
+  var dedupeKey = _arSafeString_(current.dedupe_key);
 
+  if (terminal) {
+    _arFinalizeRequestSecrets_(current.request_id, dedupeKey);
+  } else {
+    _arSaveRequestPayload_(current.request_id, current);
+    if (dedupeKey) _arSetDedupeIndex_(dedupeKey, current.request_id);
+  }
+
+  var sheetEntry = _arEntryToSheetRow_(current);
   var colCount = ACCESS_REQUESTS_HEADERS_.length;
   sheet
     .getRange(sheetRow, 1, 1, colCount)
-    .setValues([_arObjectToRowValues_(sheetRowValues)]);
-  _arNormalizeAdminFlagCells_(sheet, sheetRow);
+    .setValues([_arObjectToRowValues_(sheetEntry)]);
+  _arApplyStatusValidation_(sheet, sheetRow);
+
+  if (terminal) return _arRowToObject_(sheet, sheetRow, headerMap);
   return _arHydrateRowFromPayload_(_arRowToObject_(sheet, sheetRow, headerMap));
 }
 
@@ -614,8 +633,6 @@ function appendAccessRequest_(entry) {
       entry.request_user_key_hash_masked,
     ),
     dedupe_key: dedupeKey,
-    admin_approve: false,
-    admin_reject: false,
     decision_role: "",
     decision_note: "",
     decision_by: "",
@@ -636,13 +653,15 @@ function appendAccessRequest_(entry) {
   };
 
   _arSaveRequestPayload_(requestId, rowEntry);
+  _arSetDedupeIndex_(dedupeKey, requestId);
 
-  var sheetEntry = _arStripSensitiveForSheet_(rowEntry);
   var nextRow = _arFindLastDataRow_(sheet) + 1;
+  var sheetEntry = _arEntryToSheetRow_(rowEntry);
   sheet
     .getRange(nextRow, 1, 1, ACCESS_REQUESTS_HEADERS_.length)
     .setValues([_arObjectToRowValues_(sheetEntry)]);
-  _arNormalizeAdminFlagCells_(sheet, nextRow);
+  _arApplyStatusValidation_(sheet, nextRow);
+
   return {
     duplicate: false,
     request: _arHydrateRowFromPayload_(
@@ -669,14 +688,16 @@ function getAccessRequestsDiagnostics_() {
   var headersOk = !!sheet;
   if (sheet) {
     var map = getAccessRequestsHeaderMap_(sheet);
-    headersOk = ACCESS_REQUESTS_HEADERS_.every(function (h) {
-      return !!map[h];
-    });
+    headersOk =
+      !_arHeadersNeedUpgrade_(map) &&
+      ACCESS_REQUESTS_HEADERS_.every(function (h) {
+        return !!map[h];
+      });
   }
 
   var pending = 0;
   var errors = 0;
-  readAccessRequests_().forEach(function (row) {
+  readAccessRequests_({ hydrate: false }).forEach(function (row) {
     var status = String(row.status || "").toLowerCase();
     if (
       status === "pending" ||

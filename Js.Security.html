@@ -1446,16 +1446,30 @@
             );
             const phone = escapeHtml(safeString_(req.phone));
             const email = escapeHtml(safeString_(req.user_email || req.email));
+            const type = escapeHtml(safeString_(req.request_type));
+            const surname = escapeHtml(safeString_(req.surname));
+            const login = escapeHtml(safeString_(req.login));
+            const source = escapeHtml(safeString_(req.source));
+            const hashMasked = escapeHtml(
+              safeString_(req.request_user_key_hash_masked),
+            );
+            const fio = [surname, name].filter(Boolean).join(" ");
             return (
               '<div style="border:1px solid var(--border-color); border-radius:10px; padding:10px; margin-bottom:8px;">' +
               "<motionlessdiv><b>" +
-              callsign +
-              "</motionlessmotionlessdiv> " +
-              name +
-              "<br><motionlessmotionlesssmall>" +
+              (callsign || "—") +
+              "</motionlessmotionlessmotionlessdiv> " +
+              (fio || name || "—") +
+              "<br><motionlessmotionlessmotionlesssmall>" +
               phone +
               " · " +
               email +
+              (login ? " · login: " + login : "") +
+              "</motionlessmotionlesssmall><br><motionlessmotionlesssmall>Тип: " +
+              type +
+              " · Джерело: " +
+              source +
+              (hashMasked ? " · hash: " + hashMasked : "") +
               "</motionlessmotionlesssmall><br><motionlessmotionlesssmall>ID: " +
               id +
               '</motionlessmotionlesssmall><div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">' +

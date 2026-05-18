@@ -5,9 +5,10 @@
 - Added `ACCESS_REQUESTS` sheet (auto-created via `ensureAccessRequestsSheet_()`) as untrusted inbox for user registration.
 - `submitAccessKeyRequest` and guest `registerAccessWithTemporaryPassword` no longer write to protected `ACCESS`; admin promote via `apiStage7ApproveAccessRequest` / `processAccessRequestsQueue_`.
 - Self-bind login disabled while `ACCESS` is strictly protected; use «Отримати ключ доступу» flow.
-- Admin sidebar block lists pending requests; temporary password generated only in `ACCESS` after approve.
-- Fix: no bulk checkboxes on 1000+ rows (ghost FALSE rows); append uses last row with `request_id`.
-- PII (email, phone, full key hash, passwords) stored in Script Properties; sheet shows index fields + masked hash only; sheet hidden from UI.
+- Admin sidebar block lists pending requests (full PII from Script Properties); temporary password generated only in `ACCESS` after approve.
+- Sheet schema v2: only `request_id`, timestamps, `status`, `request_type`, result/audit columns — no email, phone, callsign, hashes, proofs, or admin checkboxes on sheet.
+- PII and secrets live in Script Properties until terminal status; payload and dedupe index removed after merge/reject/activation_done/error.
+- Fix: no bulk checkboxes on 1000+ rows; new rows append after last real `request_id`; sheet hidden from UI.
 
 ## 2026-05-17 — Stage 7.1 production release CLOSED
 
