@@ -90,6 +90,12 @@ const PROJECT_STAGE7_CANONICAL_API_MAP_ = Object.freeze({
     "apiStage7ApplyProtections",
     "apiStage7BootstrapRuntimeAndAlertsSheets",
     "apiStage7BootstrapAccessSheet",
+    "apiStage7EnsureAccessRequestsSheet",
+    "apiStage7ListAccessRequests",
+    "apiStage7ApproveAccessRequest",
+    "apiStage7RejectAccessRequest",
+    "apiStage7ProcessAccessRequestsQueue",
+    "apiStage7InstallAccessRequestsProcessorTrigger",
   ]),
 
   compatibility: Object.freeze([
@@ -409,6 +415,8 @@ const PROJECT_BUNDLE_FILE_INDEX_ = Object.freeze([
   "AccessE2ETests.gs",
   "AccessEnforcement.gs",
   "AccessPolicyChecks.gs",
+  "AccessRequestsProcessor.gs",
+  "AccessRequestsRepository.gs",
   "AccessSheetTriggers.gs",
   "Actions.gs",
   "AlertsRepository.gs",

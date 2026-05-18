@@ -1023,8 +1023,13 @@
         return;
       }
 
-      if (!access.selfBindRequired && !access.canSelfBind) {
+      if (access.registered && access.knownUser) {
         showToast("Вхід уже підтверджено");
+        return;
+      }
+
+      if (!access.keyAvailable) {
+        showToast("Спочатку оновіть панель — ключ користувача недоступний");
         return;
       }
 
@@ -1193,7 +1198,7 @@
             <button class="btn btn-primary" type="button" onclick="SidebarApp.copyResultText('${escapeJsString(reportText)}')">Копіювати звіт</button>
             <button class="btn" type="button" onclick="copyAccessDebugFullReport()">Копіювати все</button>
             <button class="btn" type="button" onclick="copyAccessDebugTechDetails()">Копіювати тех. деталі</button>
-            ${access.selfBindRequired && access.canSelfBind ? '<button class="btn" type="button" onclick="openAccessLoginFlow(&quot;login&quot;)">Увійти</button> <button type="button" class="btn btn-primary" style="min-width:auto; padding:6px 10px;" onclick="openAccessLoginFlow(&quot;request&quot;)">Отримати ключ доступу</button>' : ""}
+            ${access.keyAvailable && !access.registered ? '<button type="button" class="btn btn-primary" style="min-width:auto; padding:6px 10px;" onclick="openAccessLoginFlow(&quot;request&quot;)">Отримати ключ доступу</button>' : ""}
             ${showHashButtons ? '<button class="btn" type="button" id="accessDebugToggleHashBtn" onclick="toggleAccessDebugHash()">Показати повний hash</button>' : ""}
             ${showHashButtons ? '<button class="btn" type="button" id="accessDebugCopyHashBtn" onclick="copyAccessDebugHash()">Копіювати повний hash</button>' : ""}
           </div>
@@ -1330,9 +1335,9 @@
             escapeHtml(String(access.loginLockout.remainingMinutes || 0)) +
             " хв</span>",
         );
-      } else if (access.selfBindRequired && access.canSelfBind) {
+      } else if (access.keyAvailable && !access.registered) {
         parts.push(
-          '<button type="button" class="btn" style="min-width:auto; padding:6px 10px;" onclick="openAccessLoginFlow(&quot;login&quot;)">Увійти</button> <button type="button" class="btn btn-primary" style="min-width:auto; padding:6px 10px;" onclick="openAccessLoginFlow(&quot;request&quot;)">Отримати ключ доступу</button>',
+          '<button type="button" class="btn btn-primary" style="min-width:auto; padding:6px 10px;" onclick="openAccessLoginFlow(&quot;request&quot;)">Отримати ключ доступу</button>',
         );
       } else if (!access.keyAvailable && !access.registered) {
         parts.push(
@@ -1389,6 +1394,139 @@
       }
 
       applyAccessPolicyUI();
+      refreshAccessRequestsAdminPanel_();
+    }
+
+    async function refreshAccessRequestsAdminPanel_() {
+      const access = normalizeAccessForUi_(STATE.access || {});
+      if (!access.isAdmin) return;
+
+      let panel = document.getElementById("accessRequestsAdminPanel");
+      if (!panel) {
+        const host =
+          document.getElementById("results") ||
+          document.getElementById("resultArea") ||
+          document.querySelector(".results");
+        if (!host) return;
+        panel = document.createElement("div");
+        panel.id = "accessRequestsAdminPanel";
+        panel.className = "result-item";
+        host.prepend(panel);
+      }
+
+      panel.innerHTML =
+        '<div class="result-label">Заявки доступу (ACCESS_REQUESTS)</div><div class="result-value" id="accessRequestsAdminBody">Завантаження...</div>';
+
+      const body = document.getElementById("accessRequestsAdminBody");
+      if (!body) return;
+
+      try {
+        const api = window.MaintenanceApi || MaintenanceApi || {};
+        if (typeof api.listAccessRequests !== "function") {
+          body.textContent = "API listAccessRequests недоступний";
+          return;
+        }
+        const result = await api.listAccessRequests({ status: "pending" });
+        const requests =
+          result && result.data && Array.isArray(result.data.requests)
+            ? result.data.requests
+            : [];
+        if (!requests.length) {
+          body.textContent = "Немає pending-заявок.";
+          return;
+        }
+        const rows = requests
+          .map(function (req) {
+            const id = escapeHtml(safeString_(req.request_id));
+            const callsign = escapeHtml(
+              safeString_(req.person_callsign || req.personCallsign),
+            );
+            const name = escapeHtml(
+              safeString_(req.display_name || req.displayName),
+            );
+            const phone = escapeHtml(safeString_(req.phone));
+            const email = escapeHtml(safeString_(req.user_email || req.email));
+            return (
+              '<div style="border:1px solid var(--border-color); border-radius:10px; padding:10px; margin-bottom:8px;">' +
+              "<motionlessdiv><b>" +
+              callsign +
+              "</motionlessmotionlessdiv> " +
+              name +
+              "<br><motionlessmotionlesssmall>" +
+              phone +
+              " · " +
+              email +
+              "</motionlessmotionlesssmall><br><motionlessmotionlesssmall>ID: " +
+              id +
+              '</motionlessmotionlesssmall><div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">' +
+              '<select id="accessReqRole_' +
+              escapeJsString(safeString_(req.request_id)) +
+              '" class="access-login-modal__input" style="max-width:140px;"><option value="viewer">viewer</option><option value="operator" selected>operator</option><option value="maintainer">maintainer</option></select>' +
+              '<button type="button" class="btn btn-primary" onclick="approveAccessRequestFromUi_(\'' +
+              escapeJsString(safeString_(req.request_id)) +
+              "')\">Схвалити</button>" +
+              '<button type="button" class="btn" onclick="rejectAccessRequestFromUi_(\'' +
+              escapeJsString(safeString_(req.request_id)) +
+              "')\">Відхилити</button>" +
+              "</div></div>"
+            );
+          })
+          .join("");
+        body.innerHTML = rows.replace(/motionless/g, "");
+      } catch (error) {
+        body.textContent = "Помилка: " + normalizeError(error);
+      }
+    }
+
+    async function approveAccessRequestFromUi_(requestId) {
+      const roleEl = document.getElementById(
+        "accessReqRole_" + safeString_(requestId),
+      );
+      const role = safeString_(roleEl && roleEl.value) || "operator";
+      try {
+        const api = window.MaintenanceApi || MaintenanceApi || {};
+        const result = await api.approveAccessRequest({
+          requestId: requestId,
+          role: role,
+        });
+        const data = result && result.data ? result.data : {};
+        const processed = Array.isArray(data.processed) ? data.processed : [];
+        const temp =
+          data.temporaryPasswordPlain ||
+          (processed[0] && processed[0].temporaryPasswordPlain) ||
+          "";
+        if (temp) {
+          showToast("Тимчасовий ключ: " + temp);
+          if (
+            typeof navigator !== "undefined" &&
+            navigator.clipboard &&
+            navigator.clipboard.writeText
+          ) {
+            try {
+              await navigator.clipboard.writeText(temp);
+            } catch (_) {}
+          }
+        } else {
+          showToast((result && result.message) || "Заявку схвалено");
+        }
+        await refreshAccessRequestsAdminPanel_();
+      } catch (error) {
+        showToast("Помилка: " + normalizeError(error));
+      }
+    }
+
+    async function rejectAccessRequestFromUi_(requestId) {
+      try {
+        const api = window.MaintenanceApi || MaintenanceApi || {};
+        await api.rejectAccessRequest({
+          requestId: requestId,
+          note: "Відхилено з панелі",
+        });
+        showToast("Заявку відхилено");
+        await refreshAccessRequestsAdminPanel_();
+      } catch (error) {
+        showToast("Помилка: " + normalizeError(error));
+      }
     }
 
     function getActionRequiredRole_(actionName) {
@@ -1579,7 +1717,7 @@
         }
         setAccessLoginModalMessage_(
           (result && result.message) ||
-            "Заявку надіслано. Очікуйте ключ доступу.",
+            "Заявку надіслано. Очікуйте підтвердження адміністратора.",
           false,
         );
         accessKeyRequestLastSentAt_ = Date.now();
@@ -1702,5 +1840,8 @@
     window.getActionRequiredRole_ = getActionRequiredRole_;
     window.assertActionAccess_ = assertActionAccess_;
     window.assertAdminAction_ = assertAdminAction_;
+    window.approveAccessRequestFromUi_ = approveAccessRequestFromUi_;
+    window.rejectAccessRequestFromUi_ = rejectAccessRequestFromUi_;
+    window.refreshAccessRequestsAdminPanel_ = refreshAccessRequestsAdminPanel_;
   })();
 </script>

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-05-18 — ACCESS_REQUESTS registration queue
+
+- Added `ACCESS_REQUESTS` sheet (auto-created via `ensureAccessRequestsSheet_()`) as untrusted inbox for user registration.
+- `submitAccessKeyRequest` and guest `registerAccessWithTemporaryPassword` no longer write to protected `ACCESS`; admin promote via `apiStage7ApproveAccessRequest` / `processAccessRequestsQueue_`.
+- Self-bind login disabled while `ACCESS` is strictly protected; use «Отримати ключ доступу» flow.
+- Admin sidebar block lists pending requests; temporary password generated only in `ACCESS` after approve.
+
 ## 2026-05-17 — Stage 7.1 production release CLOSED
 
 - Production-реліз WASB Stage 7.1 закрито.

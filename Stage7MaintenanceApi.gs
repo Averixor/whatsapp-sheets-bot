@@ -132,10 +132,16 @@ function apiStage7BootstrapAccessSheet() {
     typeof AccessControl_ === "object" && AccessControl_.bootstrapSheet
       ? AccessControl_.bootstrapSheet()
       : { success: false, message: "AccessControl_ недоступний" };
+  var accessRequests =
+    typeof ensureAccessRequestsSheet_ === "function"
+      ? ensureAccessRequestsSheet_()
+      : null;
   return _stage7BuildMaintenanceResponse_(
     result.success !== false,
     result.message || "ACCESS sheet ініціалізовано для user key-доступу",
-    result,
+    Object.assign({}, result || {}, {
+      accessRequestsSheetReady: !!accessRequests,
+    }),
     "stage7BootstrapAccessSheet",
     result.success === false
       ? [
@@ -143,7 +149,9 @@ function apiStage7BootstrapAccessSheet() {
             "Не вдалося ініціалізувати ACCESS",
         ]
       : [],
-    { affectedSheets: [appGetCore("ACCESS_SHEET", "ACCESS")] },
+    {
+      affectedSheets: [appGetCore("ACCESS_SHEET", "ACCESS"), "ACCESS_REQUESTS"],
+    },
   );
 }
 
@@ -866,8 +874,222 @@ function apiStage7SubmitAccessKeyRequest(payload) {
     result || {},
     "stage7SubmitAccessKeyRequest",
     success ? [] : [message],
-    { affectedSheets: [appGetCore("ACCESS_SHEET", "ACCESS")] },
+    {
+      affectedSheets: ["ACCESS_REQUESTS", appGetCore("ACCESS_SHEET", "ACCESS")],
+    },
   );
+}
+
+function apiStage7EnsureAccessRequestsSheet() {
+  try {
+    var sheet =
+      typeof ensureAccessRequestsSheet_ === "function"
+        ? ensureAccessRequestsSheet_()
+        : null;
+    var diagnostics =
+      typeof getAccessRequestsDiagnostics_ === "function"
+        ? getAccessRequestsDiagnostics_()
+        : {};
+    return _stage7BuildMaintenanceResponse_(
+      !!sheet,
+      sheet
+        ? "Лист ACCESS_REQUESTS підготовлено"
+        : "Не вдалося підготувати ACCESS_REQUESTS",
+      Object.assign({ sheetName: "ACCESS_REQUESTS" }, diagnostics || {}),
+      "stage7EnsureAccessRequestsSheet",
+      sheet ? [] : ["ACCESS_REQUESTS sheet missing"],
+      { affectedSheets: ["ACCESS_REQUESTS"], dryRun: false },
+    );
+  } catch (error) {
+    return _stage7BuildMaintenanceResponse_(
+      false,
+      error && error.message
+        ? error.message
+        : "Помилка підготовки ACCESS_REQUESTS",
+      {},
+      "stage7EnsureAccessRequestsSheet",
+      [error && error.message ? error.message : String(error)],
+      { affectedSheets: ["ACCESS_REQUESTS"], dryRun: false },
+    );
+  }
+}
+
+function apiStage7ListAccessRequests(payload) {
+  _stage7AssertRole_("admin", "list access requests");
+  payload = payload || {};
+  try {
+    if (typeof ensureAccessRequestsSheet_ === "function")
+      ensureAccessRequestsSheet_();
+    var rows =
+      typeof listAccessRequests_ === "function"
+        ? listAccessRequests_({
+            status: payload.status || "pending",
+            requestType: payload.requestType || payload.request_type || "",
+            limit: payload.limit || 0,
+          })
+        : [];
+    return _stage7BuildMaintenanceResponse_(
+      true,
+      "Заявки завантажено",
+      { requests: rows, count: rows.length },
+      "stage7ListAccessRequests",
+      [],
+      { affectedSheets: ["ACCESS_REQUESTS"], dryRun: false },
+    );
+  } catch (error) {
+    return _stage7BuildMaintenanceResponse_(
+      false,
+      error && error.message ? error.message : "Не вдалося отримати заявки",
+      { requests: [] },
+      "stage7ListAccessRequests",
+      [error && error.message ? error.message : String(error)],
+      { affectedSheets: ["ACCESS_REQUESTS"], dryRun: false },
+    );
+  }
+}
+
+function apiStage7ApproveAccessRequest(payload) {
+  _stage7AssertRole_("admin", "approve access request");
+  payload = payload || {};
+  var requestId = String(payload.requestId || payload.request_id || "").trim();
+  var role = String(payload.role || payload.decision_role || "operator").trim();
+  var note = String(payload.note || payload.decision_note || "").trim();
+  if (!requestId) {
+    return _stage7BuildMaintenanceResponse_(
+      false,
+      "requestId обовʼязковий",
+      {},
+      "stage7ApproveAccessRequest",
+      ["requestId обовʼязковий"],
+      {
+        affectedSheets: [
+          "ACCESS_REQUESTS",
+          appGetCore("ACCESS_SHEET", "ACCESS"),
+        ],
+        dryRun: false,
+      },
+    );
+  }
+  var result =
+    typeof approveAccessRequest_ === "function"
+      ? approveAccessRequest_(requestId, role, note)
+      : { success: false, message: "approveAccessRequest_ недоступний" };
+  var success = result && result.success !== false;
+  return _stage7BuildMaintenanceResponse_(
+    success,
+    result && result.message
+      ? result.message
+      : success
+        ? "Заявку схвалено"
+        : "Не вдалося схвалити заявку",
+    result || {},
+    "stage7ApproveAccessRequest",
+    success
+      ? []
+      : [result && result.message ? result.message : "Помилка approve"],
+    {
+      affectedSheets: ["ACCESS_REQUESTS", appGetCore("ACCESS_SHEET", "ACCESS")],
+      dryRun: false,
+    },
+  );
+}
+
+function apiStage7RejectAccessRequest(payload) {
+  _stage7AssertRole_("admin", "reject access request");
+  payload = payload || {};
+  var requestId = String(payload.requestId || payload.request_id || "").trim();
+  var note = String(payload.note || payload.decision_note || "").trim();
+  if (!requestId) {
+    return _stage7BuildMaintenanceResponse_(
+      false,
+      "requestId обовʼязковий",
+      {},
+      "stage7RejectAccessRequest",
+      ["requestId обовʼязковий"],
+      { affectedSheets: ["ACCESS_REQUESTS"], dryRun: false },
+    );
+  }
+  var result =
+    typeof rejectAccessRequest_ === "function"
+      ? rejectAccessRequest_(requestId, note)
+      : { success: false, message: "rejectAccessRequest_ недоступний" };
+  var success = result && result.success !== false;
+  return _stage7BuildMaintenanceResponse_(
+    success,
+    result && result.message
+      ? result.message
+      : success
+        ? "Заявку відхилено"
+        : "Не вдалося відхилити заявку",
+    result || {},
+    "stage7RejectAccessRequest",
+    success
+      ? []
+      : [result && result.message ? result.message : "Помилка reject"],
+    { affectedSheets: ["ACCESS_REQUESTS"], dryRun: false },
+  );
+}
+
+function apiStage7ProcessAccessRequestsQueue(payload) {
+  _stage7AssertRole_("admin", "process access requests queue");
+  payload = payload || {};
+  var result =
+    typeof processAccessRequestsQueue_ === "function"
+      ? processAccessRequestsQueue_(payload || {})
+      : {
+          success: false,
+          message: "processAccessRequestsQueue_ недоступний",
+          processed: [],
+          errors: [],
+        };
+  var success = result && result.success !== false;
+  return _stage7BuildMaintenanceResponse_(
+    success,
+    result && result.message ? result.message : "Черга оброблена",
+    result || {},
+    "stage7ProcessAccessRequestsQueue",
+    success
+      ? []
+      : result && result.errors
+        ? result.errors.map(function (e) {
+            return e.message;
+          })
+        : [],
+    {
+      affectedSheets: ["ACCESS_REQUESTS", appGetCore("ACCESS_SHEET", "ACCESS")],
+      dryRun: false,
+    },
+  );
+}
+
+function apiStage7InstallAccessRequestsProcessorTrigger() {
+  _stage7AssertRole_("sysadmin", "install access requests processor trigger");
+  try {
+    var result =
+      typeof installAccessRequestsProcessorTrigger_ === "function"
+        ? installAccessRequestsProcessorTrigger_()
+        : {
+            success: false,
+            message: "installAccessRequestsProcessorTrigger_ недоступний",
+          };
+    return _stage7BuildMaintenanceResponse_(
+      result && result.success !== false,
+      result && result.message ? result.message : "Тригер",
+      result || {},
+      "stage7InstallAccessRequestsProcessorTrigger",
+      [],
+      { dryRun: false },
+    );
+  } catch (error) {
+    return _stage7BuildMaintenanceResponse_(
+      false,
+      error && error.message ? error.message : "Помилка встановлення тригера",
+      {},
+      "stage7InstallAccessRequestsProcessorTrigger",
+      [error && error.message ? error.message : String(error)],
+      { dryRun: false },
+    );
+  }
 }
 
 function apiStage7RegisterAccessWithTemporaryPassword(payload) {
