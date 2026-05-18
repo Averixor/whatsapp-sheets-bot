@@ -374,6 +374,10 @@ function promoteAccessRequestToAccess_(requestRow) {
     error_message: "",
   });
 
+  if (typeof _arDeleteRequestPayload_ === "function") {
+    _arDeleteRequestPayload_(requestRow.request_id);
+  }
+
   if (typeof stage7ReportAccessViolation === "function") {
     try {
       stage7ReportAccessViolation("accessKeyApproved", {

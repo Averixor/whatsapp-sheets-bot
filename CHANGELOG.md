@@ -6,6 +6,8 @@
 - `submitAccessKeyRequest` and guest `registerAccessWithTemporaryPassword` no longer write to protected `ACCESS`; admin promote via `apiStage7ApproveAccessRequest` / `processAccessRequestsQueue_`.
 - Self-bind login disabled while `ACCESS` is strictly protected; use «Отримати ключ доступу» flow.
 - Admin sidebar block lists pending requests; temporary password generated only in `ACCESS` after approve.
+- Fix: no bulk checkboxes on 1000+ rows (ghost FALSE rows); append uses last row with `request_id`.
+- PII (email, phone, full key hash, passwords) stored in Script Properties; sheet shows index fields + masked hash only; sheet hidden from UI.
 
 ## 2026-05-17 — Stage 7.1 production release CLOSED
 

@@ -74,6 +74,24 @@ var ACCESS_REQUESTS_DECISION_ROLES_ = [
   "sysadmin",
 ];
 
+/** Не пишемо на лист — лише Script Properties (admin API). */
+var ACCESS_REQUESTS_SENSITIVE_PAYLOAD_FIELDS_ = [
+  "user_email",
+  "phone",
+  "login",
+  "surname",
+  "first_name",
+  "patronymic",
+  "telegram_username",
+  "request_user_key_hash",
+  "activation_login",
+  "activation_password_hash",
+  "activation_password_salt",
+  "activation_proof",
+];
+
+var ACCESS_REQUESTS_PAYLOAD_PROP_PREFIX_ = "WASB_ARQ_PAYLOAD_";
+
 function _arLog_(message, error) {
   try {
     Logger.log(
@@ -191,6 +209,134 @@ function verifyAccessActivationProof_(row) {
   return _arSafeString_(row.activation_proof) === expected;
 }
 
+function _arPayloadPropertyKey_(requestId) {
+  return ACCESS_REQUESTS_PAYLOAD_PROP_PREFIX_ + _arSafeString_(requestId);
+}
+
+function _arSaveRequestPayload_(requestId, payload) {
+  var id = _arSafeString_(requestId);
+  if (!id) return false;
+  try {
+    var json = JSON.stringify(payload || {});
+    if (json.length > 4500) {
+      _arLog_("Payload too large for property", id);
+      return false;
+    }
+    PropertiesService.getScriptProperties().setProperty(
+      _arPayloadPropertyKey_(id),
+      json,
+    );
+    return true;
+  } catch (e) {
+    _arLog_("Save payload failed", e);
+    return false;
+  }
+}
+
+function _arLoadRequestPayload_(requestId) {
+  var id = _arSafeString_(requestId);
+  if (!id) return null;
+  try {
+    var raw = PropertiesService.getScriptProperties().getProperty(
+      _arPayloadPropertyKey_(id),
+    );
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    _arLog_("Load payload failed", e);
+    return null;
+  }
+}
+
+function _arDeleteRequestPayload_(requestId) {
+  try {
+    PropertiesService.getScriptProperties().deleteProperty(
+      _arPayloadPropertyKey_(requestId),
+    );
+  } catch (_) {}
+}
+
+function _arStripSensitiveForSheet_(entry) {
+  var out = {};
+  Object.keys(entry || {}).forEach(function (key) {
+    out[key] = entry[key];
+  });
+  for (var i = 0; i < ACCESS_REQUESTS_SENSITIVE_PAYLOAD_FIELDS_.length; i++) {
+    var field = ACCESS_REQUESTS_SENSITIVE_PAYLOAD_FIELDS_[i];
+    if (field === "request_user_key_hash") {
+      out[field] = "";
+    } else if (Object.prototype.hasOwnProperty.call(out, field)) {
+      out[field] = "";
+    }
+  }
+  return out;
+}
+
+function _arHydrateRowFromPayload_(row) {
+  if (!row || !_arSafeString_(row.request_id)) return row;
+  var payload = _arLoadRequestPayload_(row.request_id);
+  if (!payload || typeof payload !== "object") return row;
+  Object.keys(payload).forEach(function (key) {
+    if (
+      payload[key] !== undefined &&
+      payload[key] !== null &&
+      payload[key] !== ""
+    ) {
+      row[key] = payload[key];
+    }
+  });
+  return row;
+}
+
+function _arFindLastDataRow_(sheet) {
+  if (!sheet) return 1;
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return 1;
+  var ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  for (var i = ids.length - 1; i >= 0; i--) {
+    if (_arSafeString_(ids[i][0])) return i + 2;
+  }
+  return 1;
+}
+
+function _arPruneGhostRows_(sheet) {
+  if (!sheet) return 0;
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return 0;
+  var removed = 0;
+  for (var r = lastRow; r >= 2; r--) {
+    if (!_arSafeString_(sheet.getRange(r, 1).getValue())) {
+      sheet.deleteRow(r);
+      removed++;
+    }
+  }
+  return removed;
+}
+
+function _arClearBulkSheetControls_(sheet) {
+  if (!sheet) return;
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+  var width = ACCESS_REQUESTS_HEADERS_.length;
+  try {
+    sheet.getRange(2, 1, lastRow - 1, width).clearDataValidations();
+  } catch (e) {
+    _arLog_("clearDataValidations", e);
+  }
+  var approveCol = ACCESS_REQUESTS_HEADERS_.indexOf("admin_approve") + 1;
+  var rejectCol = ACCESS_REQUESTS_HEADERS_.indexOf("admin_reject") + 1;
+  try {
+    if (approveCol > 0) {
+      sheet.getRange(2, approveCol, lastRow - 1, 1).removeCheckboxes();
+    }
+    if (rejectCol > 0) {
+      sheet.getRange(2, rejectCol, lastRow - 1, 1).removeCheckboxes();
+    }
+  } catch (e) {
+    _arLog_("removeCheckboxes", e);
+  }
+}
+
 function buildAccessRequestDedupeKey_(requestType, fields) {
   fields = fields || {};
   return _arHashText_(
@@ -245,71 +391,18 @@ function _arEnsureHeaders_(sheet) {
   } catch (_) {}
   try {
     if (sheet.getFilter()) sheet.getFilter().remove();
+    var dataLast = _arFindLastDataRow_(sheet);
+    var filterRows = Math.max(dataLast, 2);
     sheet
-      .getRange(
-        1,
-        1,
-        Math.max(sheet.getMaxRows(), 2),
-        ACCESS_REQUESTS_HEADERS_.length,
-      )
+      .getRange(1, 1, filterRows, ACCESS_REQUESTS_HEADERS_.length)
       .createFilter();
   } catch (_) {}
   try {
     sheet.autoResizeColumns(1, ACCESS_REQUESTS_HEADERS_.length);
   } catch (_) {}
 
-  var statusCol = ACCESS_REQUESTS_HEADERS_.indexOf("status") + 1;
-  var typeCol = ACCESS_REQUESTS_HEADERS_.indexOf("request_type") + 1;
-  var roleCol = ACCESS_REQUESTS_HEADERS_.indexOf("decision_role") + 1;
-  try {
-    if (statusCol > 0) {
-      sheet
-        .getRange(2, statusCol, Math.max(sheet.getMaxRows(), 2), 1)
-        .setDataValidation(
-          SpreadsheetApp.newDataValidation()
-            .requireValueInList(ACCESS_REQUESTS_STATUS_VALUES_, true)
-            .setAllowInvalid(false)
-            .build(),
-        );
-    }
-    if (typeCol > 0) {
-      sheet
-        .getRange(2, typeCol, Math.max(sheet.getMaxRows(), 2), 1)
-        .setDataValidation(
-          SpreadsheetApp.newDataValidation()
-            .requireValueInList(ACCESS_REQUESTS_TYPE_VALUES_, true)
-            .setAllowInvalid(false)
-            .build(),
-        );
-    }
-    if (roleCol > 0) {
-      sheet
-        .getRange(2, roleCol, Math.max(sheet.getMaxRows(), 2), 1)
-        .setDataValidation(
-          SpreadsheetApp.newDataValidation()
-            .requireValueInList(ACCESS_REQUESTS_DECISION_ROLES_, true)
-            .setAllowInvalid(true)
-            .build(),
-        );
-    }
-  } catch (e) {
-    _arLog_("Data validation warning", e);
-  }
-
-  var approveCol = ACCESS_REQUESTS_HEADERS_.indexOf("admin_approve") + 1;
-  var rejectCol = ACCESS_REQUESTS_HEADERS_.indexOf("admin_reject") + 1;
-  try {
-    if (approveCol > 0)
-      sheet
-        .getRange(2, approveCol, Math.max(sheet.getMaxRows(), 2), 1)
-        .insertCheckboxes();
-    if (rejectCol > 0)
-      sheet
-        .getRange(2, rejectCol, Math.max(sheet.getMaxRows(), 2), 1)
-        .insertCheckboxes();
-  } catch (e) {
-    _arLog_("Checkbox setup warning", e);
-  }
+  _arClearBulkSheetControls_(sheet);
+  _arPruneGhostRows_(sheet);
 
   return getAccessRequestsHeaderMap_(sheet);
 }
@@ -329,6 +422,9 @@ function ensureAccessRequestsSheet_() {
     sheet = ss.insertSheet(ACCESS_REQUESTS_SHEET_NAME_);
   }
   _arEnsureHeaders_(sheet);
+  try {
+    sheet.hideSheet();
+  } catch (_) {}
   return sheet;
 }
 
@@ -376,6 +472,8 @@ function readAccessRequests_(options) {
 
   for (var r = 2; r <= lastRow; r++) {
     var row = _arRowToObject_(sheet, r, headerMap);
+    if (!_arSafeString_(row.request_id)) continue;
+    row = _arHydrateRowFromPayload_(row);
     if (statusFilter && String(row.status || "").toLowerCase() !== statusFilter)
       continue;
     if (
@@ -417,7 +515,9 @@ function updateAccessRequestRow_(sheetRow, updates) {
   if (!sheet || !sheetRow || sheetRow < 2) return null;
 
   var headerMap = getAccessRequestsHeaderMap_(sheet);
-  var current = _arRowToObject_(sheet, sheetRow, headerMap);
+  var current = _arHydrateRowFromPayload_(
+    _arRowToObject_(sheet, sheetRow, headerMap),
+  );
   updates = updates || {};
   Object.keys(updates).forEach(function (key) {
     current[key] = updates[key];
@@ -426,11 +526,14 @@ function updateAccessRequestRow_(sheetRow, updates) {
   if (!current.schema_version)
     current.schema_version = ACCESS_REQUESTS_SCHEMA_VERSION_;
 
+  _arSaveRequestPayload_(current.request_id, current);
+  var sheetRowValues = _arStripSensitiveForSheet_(current);
+
   var colCount = ACCESS_REQUESTS_HEADERS_.length;
   sheet
     .getRange(sheetRow, 1, 1, colCount)
-    .setValues([_arObjectToRowValues_(current)]);
-  return _arRowToObject_(sheet, sheetRow, headerMap);
+    .setValues([_arObjectToRowValues_(sheetRowValues)]);
+  return _arHydrateRowFromPayload_(_arRowToObject_(sheet, sheetRow, headerMap));
 }
 
 function markAccessRequestError_(sheetRow, errorCode, errorMessage) {
@@ -507,16 +610,17 @@ function appendAccessRequest_(entry) {
     schema_version: ACCESS_REQUESTS_SCHEMA_VERSION_,
   };
 
-  var nextRow = Math.max(sheet.getLastRow(), 1) + 1;
+  _arSaveRequestPayload_(requestId, rowEntry);
+
+  var sheetEntry = _arStripSensitiveForSheet_(rowEntry);
+  var nextRow = _arFindLastDataRow_(sheet) + 1;
   sheet
     .getRange(nextRow, 1, 1, ACCESS_REQUESTS_HEADERS_.length)
-    .setValues([_arObjectToRowValues_(rowEntry)]);
+    .setValues([_arObjectToRowValues_(sheetEntry)]);
   return {
     duplicate: false,
-    request: _arRowToObject_(
-      sheet,
-      nextRow,
-      getAccessRequestsHeaderMap_(sheet),
+    request: _arHydrateRowFromPayload_(
+      _arRowToObject_(sheet, nextRow, getAccessRequestsHeaderMap_(sheet)),
     ),
     message: "",
   };
