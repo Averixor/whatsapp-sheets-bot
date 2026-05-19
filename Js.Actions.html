@@ -745,6 +745,8 @@
     }
 
     function openModal() {
+      flashScreenTransition_("Завантаження списку...");
+
       modal.hidden = false;
       modal.classList.add("open");
       btnOpen.setAttribute("aria-expanded", "true");

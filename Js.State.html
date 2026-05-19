@@ -453,6 +453,8 @@
   }
 
   function showMenu() {
+    flashScreenTransition_('Повернення до меню...');
+
     $id('menuSection')?.classList?.add('active');
     $id('resultSection')?.classList?.remove('active');
 
@@ -462,6 +464,8 @@
   }
 
   function showResult(title) {
+    flashScreenTransition_('Завантаження екрана...');
+
     $id('menuSection')?.classList?.remove('active');
     $id('resultSection')?.classList?.add('active');
     setText('resultTitle', title || 'Результат');
@@ -482,16 +486,49 @@
   function setLoadingOverlayText(message) {
     const loadingTextEl = document.querySelector('#loadingOverlay .loading-text');
     if (!loadingTextEl) return;
-    loadingTextEl.textContent = String(message || 'Обробка...');
+    loadingTextEl.textContent = String(message || 'Завантаження...');
   }
 
-  function showLoading(message) {
+  function showLoading(message, options = {}) {
+    const opts = options || {};
+    const overlay = $id('loadingOverlay');
+
     setLoadingOverlayText(message);
+
+    if (typeof STATE === 'object' && STATE) {
+      STATE._loadingToken = Number(STATE._loadingToken || 0) + 1;
+    }
+
+    if (overlay) {
+      overlay.classList.toggle('is-transition', opts.kind === 'transition');
+      overlay.setAttribute('aria-label', String(message || 'Завантаження...'));
+    }
+
     show('loadingOverlay', 'flex');
   }
 
   function hideLoading() {
-    setLoadingOverlayText('Обробка...');
+    const overlay = $id('loadingOverlay');
+    setLoadingOverlayText('Завантаження...');
+    if (overlay) {
+      overlay.classList.remove('is-transition');
+      overlay.removeAttribute('aria-label');
+    }
     hide('loadingOverlay');
+  }
+
+  function flashScreenTransition_(message, durationMs) {
+    if (!$id('loadingOverlay')) return;
+
+    const ms = Math.max(120, Math.min(420, Number(durationMs || 220)));
+    showLoading(message || 'Завантаження екрана...', { kind: 'transition' });
+
+    const token = STATE && Number(STATE._loadingToken || 0);
+    clearTimeout(window.__wasbScreenTransitionTimer__);
+    window.__wasbScreenTransitionTimer__ = setTimeout(function() {
+      if (!STATE || Number(STATE._loadingToken || 0) === token) {
+        hideLoading();
+      }
+    }, ms);
   }
 </script>
