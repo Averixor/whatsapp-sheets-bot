@@ -10,10 +10,16 @@ node_modules/**
 *.md
 *.log
 *.bak*
+*.tmp
 _backup*/**
 _authresolver_*.txt
 _spreadsheet_access_points.txt
 _patch_*.js
+_audit-out.txt
+_audit_function_graph_out.txt
+_ci_gas_sanity_out.txt
+_debug_person_card_lookup.txt
+_person_card_compact_report.txt
 
 package.json
 package-lock.json

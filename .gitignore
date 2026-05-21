@@ -10,13 +10,11 @@ _person_card_compact_report.txt
 *.tmp
 *.bak
 
-# VS Code local settings
+# VS Code / AI local settings
 .vscode/
 .aider*
 
-node_modules/
-
-# Local Google Apps Script / clasp mapping.
+# Local Google Apps Script / clasp mapping
 # Contains scriptId and bound spreadsheet parentId.
 .clasp.json
 .clasp.*.json
