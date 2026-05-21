@@ -1554,6 +1554,10 @@
           document.getElementById("accessRequestPreferredContactInput") &&
             document.getElementById("accessRequestPreferredContactInput").value,
         ),
+        telegramUsername: safeString_(
+          document.getElementById("accessRequestTelegramUsername") &&
+            document.getElementById("accessRequestTelegramUsername").value,
+        ),
       };
 
       const hasContactIdentity = !!(payload.phone || payload.email);

@@ -35,7 +35,7 @@ function _getAccessPolicy_() {
   return Object.assign({}, _policyCache);
 }
 
-// ==================== ОСНОВНИЙ РЕЗОЛЬВЕР КОРИСТУВАЧА (логіка з першого варіанту) ====================
+// ==================== ОСНОВНИЙ РЕЗОЛЬВЕР КОРИСТУВАЧА ====================
 
 /**
  * Визначає користувача за контекстом (з можливістю модифікації)
@@ -311,7 +311,8 @@ function _buildIncompleteRegistrationDescriptor_(
     ),
   };
 }
-// ==================== ДЕСКРИПТОР (логіка з першого варіанту) ====================
+
+// ==================== ДЕСКРИПТОР КОРИСТУВАЧА ====================
 
 /**
  * Формує дескриптор зі знайденого запису
@@ -592,7 +593,7 @@ function listBindableCallsigns() {
     .sort();
 }
 
-// ==================== HELPER-ФУНКЦІЇ (з другого варіанту, без втрати логіки) ====================
+// ==================== HELPER-ФУНКЦІЇ ====================
 
 /**
  * Визначає причину відмови для запису
@@ -1331,6 +1332,30 @@ function submitAccessKeyRequest(payload) {
   }
 }
 
+function _findAccessEntryByTemporaryPassword_(entries, temporaryPassword) {
+  const tempPlain = String(temporaryPassword || "").trim();
+  if (!tempPlain || !/^WASB-/i.test(tempPlain)) return null;
+  const list = Array.isArray(entries) ? entries : [];
+  for (let i = 0; i < list.length; i++) {
+    const row = list[i];
+    if (String(row.temporaryPasswordPlain || "").trim() === tempPlain) {
+      return row;
+    }
+    if (
+      row.temporaryPasswordSalt &&
+      row.temporaryPasswordHash &&
+      typeof hashAccessPasswordWithSalt_ === "function"
+    ) {
+      const enteredHash = hashAccessPasswordWithSalt_(
+        tempPlain,
+        row.temporaryPasswordSalt,
+      );
+      if (enteredHash === row.temporaryPasswordHash) return row;
+    }
+  }
+  return null;
+}
+
 function registerAccessWithTemporaryPassword(payload) {
   payload = payload || {};
   const currentKeyHash = getCurrentUserKeyHash_();
@@ -1396,6 +1421,9 @@ function registerAccessWithTemporaryPassword(payload) {
         break;
       }
     }
+    if (!entry) {
+      entry = _findAccessEntryByTemporaryPassword_(entries, temporaryPassword);
+    }
     if (!entry)
       return {
         success: false,
@@ -1406,13 +1434,21 @@ function registerAccessWithTemporaryPassword(payload) {
     const status = String(entry.registrationStatus || "")
       .trim()
       .toLowerCase();
-    if (status === "active")
+    const hasCredentials = !!(
+      String(entry.login || "").trim() &&
+      String(entry.passwordHash || "").trim()
+    );
+    if (status === "active" && hasCredentials)
       return {
         success: false,
         code: "access.registration.already_active",
         message: "Доступ уже активовано.",
       };
-    if (status !== "approved" && status !== "key_sent")
+    if (
+      status !== "approved" &&
+      status !== "key_sent" &&
+      !(status === "active" && !hasCredentials)
+    )
       return {
         success: false,
         code: "access.registration.not_approved",
@@ -1471,8 +1507,16 @@ function registerAccessWithTemporaryPassword(payload) {
     let savedEntry = null;
     try {
       savedEntry = _updateEntryFields_(entry.sheetRow, {
-        user_key_current_hash: currentKeyHash,
-        request_user_key_hash: currentKeyHash,
+        user_key_current_hash:
+          currentKeyHash ||
+          entry.userKeyCurrentHash ||
+          entry.requestUserKeyHash ||
+          "",
+        request_user_key_hash:
+          currentKeyHash ||
+          entry.requestUserKeyHash ||
+          entry.userKeyCurrentHash ||
+          "",
         login: login,
         password_hash: passwordHash,
         password_salt: passwordSalt,
