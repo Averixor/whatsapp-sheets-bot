@@ -259,8 +259,22 @@ function _timezone_() {
   }
 }
 
+function _accessDateTimePattern_(mode) {
+  return String(mode || "long").toLowerCase() === "short"
+    ? "dd.MM.yyyy HH:mm"
+    : "dd.MM.yyyy HH:mm:ss";
+}
+
 function _nowText_(mode) {
-  return formatAccessDateTime_(new Date());
+  try {
+    return formatAccessDateTime_(new Date(), mode || "long");
+  } catch (_) {
+    return Utilities.formatDate(
+      new Date(),
+      _timezone_(),
+      _accessDateTimePattern_(mode),
+    );
+  }
 }
 
 function _nowMs_() {
@@ -268,13 +282,23 @@ function _nowMs_() {
 }
 
 function _minutesText_(durationMs) {
-  return Math.round(Number(durationMs || 0) / 60000);
+  var value = Number(durationMs || 0);
+  if (!Number.isFinite(value)) return 0;
+  return Math.round(value / 60000);
 }
 
 function _clampLevel_(value) {
-  const lastIndex = Math.max(LOCKOUT_ESCALATION_MS.length - 1, 0);
-  const parsed = parseInt(value || "0", 10);
-  if (!isFinite(parsed) || parsed < 0) return 0;
+  var levels =
+    typeof LOCKOUT_ESCALATION_MS !== "undefined" &&
+    Array.isArray(LOCKOUT_ESCALATION_MS)
+      ? LOCKOUT_ESCALATION_MS
+      : [];
+
+  var lastIndex = Math.max(levels.length - 1, 0);
+  var parsed = parseInt(value || "0", 10);
+
+  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+
   return Math.min(parsed, lastIndex);
 }
 
@@ -701,13 +725,17 @@ function formatUaLongDateTime_(value) {
   );
 }
 
-function formatAccessDateTime_(value) {
-  if (value === null || value === undefined || value === "") return "";
+function formatAccessDateTime_(value, mode) {
+  if (value === null || typeof value === "undefined" || value === "") {
+    return "";
+  }
 
   var tz = _timezone_();
+  var pattern = _accessDateTimePattern_(mode);
+  var isShort = String(mode || "long").toLowerCase() === "short";
 
   if (value instanceof Date && !isNaN(value.getTime())) {
-    return Utilities.formatDate(value, tz, "dd.MM.yyyy HH:mm:ss");
+    return Utilities.formatDate(value, tz, pattern);
   }
 
   var raw = String(value || "").trim();
@@ -715,19 +743,23 @@ function formatAccessDateTime_(value) {
 
   var directMatch = raw.match(/(\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}:\d{2})/);
   if (directMatch) {
-    return directMatch[1];
+    return isShort ? directMatch[1].replace(/:\d{2}$/, "") : directMatch[1];
+  }
+
+  var directShortMatch = raw.match(/(\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2})/);
+  if (directShortMatch && isShort) {
+    return directShortMatch[1];
   }
 
   var isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}:\d{2}:\d{2})/);
   if (isoMatch) {
-    return (
-      isoMatch[3] + "." + isoMatch[2] + "." + isoMatch[1] + " " + isoMatch[4]
-    );
+    var timePart = isShort ? isoMatch[4].slice(0, 5) : isoMatch[4];
+    return isoMatch[3] + "." + isoMatch[2] + "." + isoMatch[1] + " " + timePart;
   }
 
   var parsed = new Date(raw);
   if (!isNaN(parsed.getTime())) {
-    return Utilities.formatDate(parsed, tz, "dd.MM.yyyy HH:mm:ss");
+    return Utilities.formatDate(parsed, tz, pattern);
   }
 
   return raw;
