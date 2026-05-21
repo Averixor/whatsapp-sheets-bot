@@ -14,6 +14,7 @@ WASB is a spreadsheet-bound Google Apps Script application.
 
 - `Sidebar.html` is the sidebar shell
 - `JavaScript.html` aggregates the modular client runtime
+- `Styles.html` bundles CSS partials via GAS `include()` (see partials `Styles_*.html`)
 - active JS include chain:
   - `Js.Core.html`
   - `Js.State.html`
@@ -49,7 +50,9 @@ Representative entrypoints:
 - `apiBuildDaySummary()`
 - `apiBuildDetailedSummary()`
 - `apiOpenPersonCard()`
+- `apiLoadCalendarDay()`
 - `apiCheckVacationsAndBirthdays()`
+- `apiGetActiveProjects()` / `apiSubmitRequest()` — sidebar projects & requests (`ProjectRequests.gs`)
 
 ### Maintenance API
 
@@ -108,6 +111,8 @@ The repository layer is the boundary between domain/application logic and spread
 Primary identity is `Session.getTemporaryActiveUserKey()`.
 
 That value is treated as the session identity anchor. The project stores **hashes** of it inside `ACCESS`, not raw keys.
+
+The `ACCESS` bootstrap creates the full header set from `SHEET_HEADERS` in `AccessControl.Core.gs` (including `registration_status` and extended registration columns). Operational docs list the minimum admin-facing subset in **`README.md`** and **`RUNBOOK.md`**.
 
 ### Resolution order
 
@@ -216,7 +221,21 @@ Main validation tools:
 
 Diagnostics are for verification, not as a replacement for server-side enforcement.
 
-## 10. Documentation and truth alignment
+## 10. Script properties and spreadsheet binding
+
+Canonical resolver: **`DataAccess.gs`**.
+
+| Property | Purpose |
+| -------- | ------- |
+| `WASB_SPREADSHEET_ID` | Spreadsheet for headless/trigger runs |
+| `WASB_OWNER_EMAIL` | Owner email for privileged security notifications |
+| `WASB_ACCESS_MIGRATION_EMAIL_BRIDGE` | Emergency email bridge; off in normal operation |
+
+Service sheet bootstrap: **`ServiceSheetsBootstrap.gs`** → `apiStage7BootstrapRuntimeAndAlertsSheets()`.
+
+Never hardcode production spreadsheet IDs in source files.
+
+## 11. Documentation and truth alignment
 
 Active documentation is intentionally limited to five root markdown files.
 Historical notes, one-off reports, and transition artifacts are not shipped in this compact GAS import ZIP. Keep them in a separate repository/archive so the runtime bundle stays readable and import-safe.

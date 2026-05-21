@@ -16,7 +16,7 @@ This runbook covers:
 
 1. Open the target spreadsheet-bound Apps Script project.
 2. Upload all root `.gs`, `.html`, and `appsscript.json` files.
-3. Do **not** upload `_extras/` into runtime. `_extras/` is reference-only.
+3. Import only root runtime files from this repository; there is no `_extras/` folder in the compact bundle.
 4. Save the project.
 5. Reload the Apps Script editor once to make sure all files are visible.
 
@@ -24,8 +24,8 @@ This runbook covers:
 
 Run these in order:
 
-1. `apiStage7BootstrapRuntimeAndAlertsSheets()`
-2. `apiStage7BootstrapAccessSheet()`
+1. `apiStage7BootstrapRuntimeAndAlertsSheets()` — `ServiceSheetsBootstrap.gs`
+2. `apiStage7BootstrapAccessSheet()` — `AccessControl.PublicApi.gs`
 3. fill `ACCESS`
 4. `apiStage7ApplyProtections({ dryRun: true })`
 5. fix any issues found by the dry run
@@ -41,22 +41,25 @@ Recommended final verification:
 
 ### Required columns
 
-The sheet bootstrap creates these columns:
+`apiStage7BootstrapAccessSheet()` creates the full header row from `SHEET_HEADERS` in `AccessControl.Core.gs`.
 
-- `email`
-- `phone`
-- `role`
-- `enabled`
-- `note`
-- `display_name`
-- `person_callsign`
-- `self_bind_allowed`
-- `user_key_current_hash`
-- `user_key_prev_hash`
-- `last_seen_at`
-- `last_rotated_at`
-- `failed_attempts`
-- `locked_until_ms`
+**Core columns (configure per user):**
+
+- `email`, `phone`, `role`, `enabled`, `note`, `display_name`, `person_callsign`, `self_bind_allowed`
+- `user_key_current_hash`, `user_key_prev_hash`
+- `registration_status`
+
+**System-managed columns:**
+
+- `last_seen_at`, `last_rotated_at`, `failed_attempts`, `locked_until_ms`
+
+**Extended registration / approval columns (optional):**
+
+- `login`, `password_hash`, `password_salt`, `preferred_contact`, `surname`, `first_name`
+- `request_user_key_hash`, `request_created_at`
+- `temporary_password_*`, `approved_by`, `approved_at`, `activated_at`, `telegram_username`
+
+See **`README.md`** for the full column list.
 
 ### Setup rules
 
@@ -68,6 +71,7 @@ For each active user:
 - fill `person_callsign` for any user tied to a specific callsign
 - fill `email` and/or `phone` if that user may use self-bind login
 - set `self_bind_allowed` intentionally; do not leave the policy ambiguous
+- set `registration_status` to **`active`** for fully registered operational users (other values: `pending_review`, `approved`, `key_sent`, `rejected`, `blocked`, `expired`)
 - keep the key hash columns empty until the user is actually registered or self-bound
 
 ## 5. How users are registered now
@@ -235,11 +239,21 @@ Run from the Apps Script editor when relevant after a deploy or config change:
 - `runSmokeTests()` — smoke bundle
 - `apiStage7ClearPhoneCache()` — invalidate phone/profile caches after **PHONES** or related code changes
 
-## 14. Script property: WASB spreadsheet ID
+## 14. Script properties
 
-Canonical resolver (**`DataAccess.gs`**): **`WASB_SPREADSHEET_ID`** in **Script properties** (`PropertiesService.getScriptProperties()`). If unset, the code falls back to **`SpreadsheetApp.getActiveSpreadsheet()`** when the script is bound and a spreadsheet context exists.
+Canonical resolver (**`DataAccess.gs`**):
 
-Headless executions (scheduled triggers without an open UI) **require** `WASB_SPREADSHEET_ID` set, or they may fail with a clear error.
+| Property | Purpose |
+| -------- | ------- |
+| **`WASB_SPREADSHEET_ID`** | Target spreadsheet for headless runs (triggers, executions without open UI). Required when no container spreadsheet context exists. |
+| **`WASB_OWNER_EMAIL`** | Owner email for security notifications that may include the full user key. Quick health warns if unset. |
+| **`WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`** | Emergency email bridge during migration only. Keep disabled (`false` / unset) in normal operation. |
+
+If **`WASB_SPREADSHEET_ID`** is unset, the code falls back to **`SpreadsheetApp.getActiveSpreadsheet()`** when the script is bound and a spreadsheet context exists.
+
+Headless executions (scheduled triggers without an open UI) **require** `WASB_SPREADSHEET_ID`, or they fail with a clear error.
+
+Do **not** hardcode production spreadsheet IDs in source files; use Script properties instead.
 
 ## 15. PHONES cache and birthday (ДН)
 

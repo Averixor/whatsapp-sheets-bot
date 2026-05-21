@@ -124,6 +124,7 @@ This repository applies server-side checks to at least:
 
 - `failed_attempts`
 - `locked_until_ms`
+- `registration_status` — must be **`active`** with valid credentials for full access after approval/self-bind
 
 ### Self-bind login protection
 
@@ -166,7 +167,17 @@ Rules:
 - do not leave enabled as the normal identity model
 - disable again immediately after key registration is complete
 
-## 9. Alerts, audit, and notifications
+## 9. Script properties (production)
+
+| Property | Purpose |
+| -------- | ------- |
+| `WASB_SPREADSHEET_ID` | Spreadsheet binding for headless/trigger runs |
+| `WASB_OWNER_EMAIL` | Owner email for privileged security notifications |
+| `WASB_ACCESS_MIGRATION_EMAIL_BRIDGE` | Emergency email bridge; off in normal operation |
+
+Never commit real spreadsheet IDs or owner emails into the repository.
+
+## 10. Alerts, audit, and notifications
 
 Violations and security-relevant events are written on a best-effort basis to:
 
@@ -182,7 +193,7 @@ Notification recipients are normally derived from privileged roles such as:
 
 Email delivery is **best-effort only** and must not be treated as a guaranteed incident-delivery channel.
 
-## 10. Protected sheets
+## 11. Protected sheets
 
 Protected or security-sensitive sheets include:
 
@@ -194,7 +205,7 @@ Protected or security-sensitive sheets include:
 - `JOB_RUNTIME_LOG`
 - `ALERTS_LOG`
 
-## 11. Direct spreadsheet edits
+## 12. Direct spreadsheet edits
 
 `onEdit` / `onChange` auditing is best-effort only.
 GAS does not always provide a reliable edit actor for every event type.
@@ -205,7 +216,7 @@ That means:
 - edit auditing is not a perfect forensic source
 - server-side guarded actions remain the primary control layer
 
-## 12. Security operating rules
+## 13. Security operating rules
 
 - do not grant by UI visibility alone
 - do not leave the migration bridge on in daily operation
@@ -213,7 +224,7 @@ That means:
 - do not bypass the server API for dangerous actions
 - do not treat historical compatibility wrappers as the security boundary
 
-## 13. Minimum admin checklist
+## 14. Minimum admin checklist
 
 Before calling security “good enough”, confirm:
 

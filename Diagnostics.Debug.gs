@@ -105,20 +105,26 @@ function debugAccess() {
 }
 
 function debugSpreadsheetAccess_() {
-  var id = '1v8ixM67nG_Bfy5NzcDZbmSjwVOYbkN02ibfP6YqI384';
-  var ss = SpreadsheetApp.openById(id);
+  var ss = getWasbSpreadsheet_();
   Logger.log(ss.getName());
 }
 
 
 function debugWhoAmI_() {
+  var spreadsheetId = '';
+  try {
+    spreadsheetId = getWasbSpreadsheet_().getId();
+  } catch (e0) {
+    spreadsheetId = '';
+  }
+
   var result = {
     activeUser: '',
     effectiveUser: '',
     scriptTimeZone: '',
     openByIdOk: false,
     spreadsheetName: '',
-    spreadsheetId: '1v8ixM67nG_Bfy5NzcDZbmSjwVOYbkN02ibfP6YqI384',
+    spreadsheetId: spreadsheetId,
     error: ''
   };
 
@@ -141,6 +147,9 @@ function debugWhoAmI_() {
   }
 
   try {
+    if (!result.spreadsheetId) {
+      throw new Error('getWasbSpreadsheet_() не повернув ID таблиці');
+    }
     var ss = SpreadsheetApp.openById(result.spreadsheetId);
     result.openByIdOk = true;
     result.spreadsheetName = ss.getName();

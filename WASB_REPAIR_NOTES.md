@@ -1,10 +1,13 @@
 # WASB repair package
 
+> Historical repair log from a one-off recovery import. For current behaviour use **`README.md`**, **`RUNBOOK.md`**, and **`DataAccess.gs`**.
+
 Built from the uploaded current archive with targeted recovery from the uploaded backup archive.
 
 Main changes:
+
 - Restored bound project metadata in `.clasp.json` with `parentId` for the spreadsheet.
-- Added stable spreadsheet resolver `getWasbSpreadsheet_()` using spreadsheet ID `1v8ixM67nG_Bfy5NzcDZbmSjwVOYbkN02ibfP6YqI384` with active-spreadsheet fallback.
+- Added stable spreadsheet resolver `getWasbSpreadsheet_()` via Script property **`WASB_SPREADSHEET_ID`** with active-spreadsheet fallback.
 - Switched core data access and ACCESS repository to the stable spreadsheet resolver.
 - Converted ACCESS header display to English canonical headers.
 - Kept Ukrainian/Russian header aliases for backward compatibility while writing English headers.
@@ -15,6 +18,7 @@ Main changes:
 - Reworked `smokeTestAccessControl_()` into safe step-by-step smoke diagnostics; skips schema bootstrap when ACCESS schema already exists and required headers are present.
 
 Then run:
+
 - `refreshAccessSheetUi`
 - `smokeTestAccessControl_`
 - full package tests

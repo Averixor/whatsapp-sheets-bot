@@ -4,7 +4,7 @@
 **Версія:** Stage 7.1 (maintenance baseline)
 **Платформа:** Google Apps Script V8 + Google Sheets + HtmlService
 **Дата оновлення статусу:** 2026-05-17
-**Стан репозиторію:** `main`, working tree clean, CI зелений (95 `.gs`, 1039 defs, 86 bound refs, 0 missing)
+**Стан репозиторію:** `main`, CI зелений (95 `.gs`, 1045 defs, 86 bound refs, 0 missing) — перевірено `node scripts/audit-function-graph.mjs`
 
 ---
 
@@ -32,7 +32,7 @@
 | Метрика           | Значення                                                          |
 | ----------------- | ----------------------------------------------------------------- |
 | `.gs` файлів      | 95                                                                |
-| Top-level функцій | ~1039                                                             |
+| Top-level функцій | ~1045                                                             |
 | Bound entrypoints | 86 (0 missing)                                                    |
 | Найбільші модулі  | `Stage7TestRunner`, `UseCases`, `SmokeTests`, `AccessEnforcement` |
 | `SheetSchemas.gs` | ~597 рядків (після revert випадкового mass-format)                |
@@ -117,7 +117,7 @@ Resolver: `DataAccess.gs` → `openById` або container spreadsheet.
 ## 9. Технічний борг (post-release, не блокери)
 
 - Звузити OAuth scopes (`drive`, `documents`) після smoke на копії
-- Дописати `WASB_OWNER_EMAIL` у `RUNBOOK.md` / `SECURITY.md`
+- ~~Дописати `WASB_OWNER_EMAIL` у `RUNBOOK.md` / `SECURITY.md`~~ — **done (2026-05-21)**
 - Розбити великі файли: `Stage7TestRunner.gs`, `UseCases.gs`, `SmokeTests.gs`
 - Окремий XSS-аудит `innerHTML` у клієнті
 - Commit messages `"7"` — покращити читабельність історії git
@@ -209,6 +209,6 @@ top-level dryRun: false
 Не блокують production:
 
 1. Звузити OAuth scopes у `appsscript.json` після smoke на копії.
-2. Дописати `WASB_OWNER_EMAIL` у `RUNBOOK.md` / `SECURITY.md`.
+2. ~~Дописати `WASB_OWNER_EMAIL` у `RUNBOOK.md` / `SECURITY.md`.~~ — **done (2026-05-21)**
 3. Пізніше розбити великі файли: `Stage7TestRunner.gs`, `UseCases.gs`, `SmokeTests.gs`.
 4. Провести окремий XSS-аудит місць з `innerHTML`.

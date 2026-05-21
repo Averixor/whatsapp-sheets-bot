@@ -211,6 +211,8 @@ Update documentation when changing:
 - Diagnostics
 - Configuration files
 - Project workflow
+- **`SHEET_HEADERS` / ACCESS schema** — keep **`README.md`**, **`RUNBOOK.md`**, **`ARCHITECTURE.md`** in sync
+- **Script properties** — keep **`README.md`**, **`RUNBOOK.md` §14**, **`SECURITY.md`**, **`CONTRIBUTING.md`** aligned with `DataAccess.gs`
 
 ## Review principles
 

@@ -51,7 +51,10 @@ clasp push
 
 Or: `npm run ci` then commit/push/clasp as needed.
 
-- **Script property** for headless/triggers: set **`WASB_SPREADSHEET_ID`** in Apps Script → Project settings → Script properties (see `RUNBOOK.md`).
+- **Script properties** (Apps Script → Project settings → Script properties):
+  - **`WASB_SPREADSHEET_ID`** — headless/triggers (see `RUNBOOK.md` §14)
+  - **`WASB_OWNER_EMAIL`** — security mail with full user key for owner
+  - **`WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`** — off in normal operation
 - After **PHONES** / birthday changes: run **`apiStage7ClearPhoneCache()`** in the GAS editor, then reload the sidebar.
 
 Full workflow, release checklist, and post-deploy checks: **`CONTRIBUTING.md`** and **`RUNBOOK.md`**.
@@ -118,22 +121,24 @@ Historical/audit materials beyond the above are kept outside the compact import 
 
 ## ACCESS sheet schema
 
-The bootstrap creates these columns:
+`apiStage7BootstrapAccessSheet()` creates the full header row from `SHEET_HEADERS` in `AccessControl.Core.gs`.
 
-- `email`
-- `phone`
-- `role`
-- `enabled`
-- `note`
-- `display_name`
-- `person_callsign`
-- `self_bind_allowed`
-- `user_key_current_hash`
-- `user_key_prev_hash`
-- `last_seen_at`
-- `last_rotated_at`
-- `failed_attempts`
-- `locked_until_ms`
+**Core columns (configure per user):**
+
+- `email`, `phone`, `role`, `enabled`, `note`, `display_name`, `person_callsign`, `self_bind_allowed`
+- `user_key_current_hash`, `user_key_prev_hash`
+- `registration_status` — lifecycle state (`pending_review`, `approved`, `key_sent`, `active`, `rejected`, `blocked`, `expired`); fully registered users normally need **`active`**
+
+**System-managed columns:**
+
+- `last_seen_at`, `last_rotated_at`, `failed_attempts`, `locked_until_ms`
+
+**Extended registration / approval columns (optional; used by access workflows):**
+
+- `login`, `password_hash`, `password_salt`, `preferred_contact`, `surname`, `first_name`
+- `request_user_key_hash`, `request_created_at`
+- `temporary_password_plain`, `temporary_password_hash`, `temporary_password_salt`, `temporary_password_expires_at`, `temporary_password_used_at`
+- `approved_by`, `approved_at`, `activated_at`, `telegram_username`
 
 Notes:
 
@@ -169,7 +174,8 @@ Turn it back off immediately after the needed keys are registered.
 - `apiRunStage7Diagnostics()` — structured diagnostics report
 - `apiRunStage7RegressionTests()` — regression suite entrypoint
 - `apiStage7ApplyProtections()` — spreadsheet protections
-- `apiStage7BootstrapRuntimeAndAlertsSheets()` — service sheet bootstrap
+- `apiStage7BootstrapSidebar()` — sidebar bootstrap + optional business sheets
+- `apiStage7BootstrapRuntimeAndAlertsSheets()` — service sheet bootstrap (`ServiceSheetsBootstrap.gs`)
 - `apiStage7BootstrapAccessSheet()` — `ACCESS` bootstrap
 
 ## Non-goals for this bundle

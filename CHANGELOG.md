@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-05-21 — documentation aligned with codebase
+
+- expanded **`ACCESS`** schema docs to match `SHEET_HEADERS` in `AccessControl.Core.gs` (32 columns, `registration_status` values)
+- documented Script properties (`WASB_SPREADSHEET_ID`, `WASB_OWNER_EMAIL`, migration bridge) in **`README.md`**, **`RUNBOOK.md`**, **`SECURITY.md`**, **`ARCHITECTURE.md`**
+- removed hardcoded spreadsheet IDs from docs and debug helpers; resolver is **`getWasbSpreadsheet_()`** via Script properties
+- corrected **`RUNBOOK.md`**: no `_extras/` folder; bootstrap entrypoints mapped to source files
+- updated **`ARCHITECTURE.md`**: `Styles.html` bundle, `ProjectRequests` APIs, script properties section
+- marked **`WASB_REPAIR_NOTES.md`** as historical; **`WASB_RELEASE_AUDIT.md`** metrics refreshed
+
 ## 2026-05-17 — Stage 7.1 production release CLOSED
 
 - Production-реліз WASB Stage 7.1 закрито.
