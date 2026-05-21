@@ -1,4 +1,5 @@
 /************ ЗВЕДЕННЯ ДНЯ — ПРОСТЕ ************/
+
 function buildDaySummaryForColumn_(sheet, col) {
   const codeRef = sheet.getRange(CONFIG.CODE_RANGE_A1);
   const dateCell = sheet.getRange(Number(CONFIG.DATE_ROW) || 1, col);
@@ -73,6 +74,7 @@ function buildDaySummaryForColumn_(sheet, col) {
 }
 
 /************ ДЕТАЛЬНЕ ЗВЕДЕННЯ ************/
+
 function collectPeopleDetailed_(sheet, col) {
   const ref = sheet.getRange(CONFIG.CODE_RANGE_A1);
   const codes = sheet

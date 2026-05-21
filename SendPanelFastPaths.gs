@@ -339,7 +339,7 @@ const SendPanelFastPaths_ = (function() {
     );
   }
 
-  function markRowSentFast(rowNum, dateStr, options) {
+  function markRowSentFast(rowNum, dateStr) {
     var row = Number(rowNum);
     if (!Number.isFinite(row) || row <= 0) {
       throw new Error('Не передано коректний rowNum SEND_PANEL');
@@ -434,9 +434,9 @@ function resetAllSentFast(dateOrOptions) {
   return SendPanelFastPaths_.resetAllSentFast(payload && payload.date || '');
 }
 
-function markRowSentFast(rowNum, dateOrOptions, options) {
+function markRowSentFast(rowNum, dateOrOptions) {
   var datePayload = (dateOrOptions && typeof dateOrOptions === 'object' && !Array.isArray(dateOrOptions)) ? dateOrOptions : { date: dateOrOptions };
-  return SendPanelFastPaths_.markRowSentFast(rowNum, datePayload && datePayload.date || '', options || {});
+  return SendPanelFastPaths_.markRowSentFast(rowNum, datePayload && datePayload.date || '');
 }
 
 function apiBuildSendPanelFast(options) {
@@ -451,6 +451,6 @@ function apiResetAllSentFast(options) {
   return resetAllSentFast(options || {});
 }
 
-function apiMarkRowSentFast(rowNum, dateOrOptions, options) {
-  return markRowSentFast(rowNum, dateOrOptions || {}, options || {});
+function apiMarkRowSentFast(rowNum, dateOrOptions) {
+  return markRowSentFast(rowNum, dateOrOptions || {});
 }

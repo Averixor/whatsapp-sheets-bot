@@ -138,6 +138,7 @@ function testCommanderPhone() {
 }
 
 // ==================== THIN COMPATIBILITY WRAPPERS ====================
+
 function getMonthsList() {
   return apiStage7GetMonthsList();
 }

@@ -284,8 +284,6 @@ function findPhone_(query, options) {
   function phoneFromRecord_(record) {
     if (record === null || record === undefined) return "";
 
-    // DomainTests передаёт телефон простой строкой:
-    // byFml: { 'Петренко Іван Іванович': '+380661111111' }
     if (typeof record === "string" || typeof record === "number") {
       return clean_(record);
     }

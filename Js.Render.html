@@ -4,6 +4,7 @@
   // =========================
   // SEND PANEL
   // =========================
+
   async function displayPanelResult(result) {
     hideLoading();
 
@@ -698,6 +699,7 @@
   // =========================
   // SUPPLEMENTARY BLOCKS
   // =========================
+
   function hasVacationBlocks(vacData) {
     return !!(
       vacData &&
@@ -766,6 +768,7 @@
   // =========================
   // RESULT RENDERING
   // =========================
+
   function displayInResult(type, data = {}) {
     showStandardResult("Результат");
 
@@ -963,6 +966,7 @@
   // =========================
   // CALENDAR
   // =========================
+
   function showCalendar(action) {
     showStandardResult(
       action === "daySummary" ? "Зведення дня" : "Детальне зведення",
@@ -1105,6 +1109,7 @@
   // =========================
   // MONTH SWITCHER
   // =========================
+  
   async function showMonthSwitcher() {
     if (!STATE.monthsList.length) {
       try {

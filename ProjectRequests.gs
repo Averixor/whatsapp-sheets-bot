@@ -11,8 +11,8 @@
 const ProjectRequests_ = (function () {
   const PROJECTS_SHEET_NAME = "Проєкти";
   const REQUESTS_SHEET_NAME = "Заявки";
-  // GAS інколи запускається на парсері без numeric separators (45_000), тому тримаємо просте число.
-  const MAX_PAYLOAD_BYTES = 45000; // запас під ліміт передачі/серіалізації google.script.run
+ 
+  const MAX_PAYLOAD_BYTES = 45000; 
 
   function isValidEmail_(value) {
     const s = String(value || "").trim();
@@ -21,7 +21,6 @@ const ProjectRequests_ = (function () {
   }
 
   function estimateUtf8Bytes_(value) {
-    // Utilities.newBlob uses UTF-8 by default for string data in GAS.
     try {
       return Utilities.newBlob(
         String(value === null || value === undefined ? "" : value),
@@ -29,7 +28,7 @@ const ProjectRequests_ = (function () {
     } catch (_) {
       return (
         String(value === null || value === undefined ? "" : value).length * 2
-      ); // fallback approximation
+      ); 
     }
   }
 
@@ -63,27 +62,15 @@ const ProjectRequests_ = (function () {
     return -1;
   }
 
-  function getSheetRequired_(ss, name) {
-    const sh = ss.getSheetByName(name);
-    if (!sh) throw new Error(`Аркуш "${name}" не знайдено`);
-    return sh;
-  }
-
   function ensureProjectsSheet_(ss) {
     let sh = ss.getSheetByName(PROJECTS_SHEET_NAME);
     if (!sh) sh = ss.insertSheet(PROJECTS_SHEET_NAME);
 
-    // Мінімальна схема для сайдбару:
-    // - id (optional)
-    // - проєкт (required)
-    // - активний (optional)
-    // - email менеджера (optional, але бажано для sendMonthlyReport)
     if (sh.getLastRow() < 1) {
       const colCount = 4;
       sh.getRange(1, 1, 1, colCount).setValues([
         ["id", "проєкт", "активний", "email менеджера"],
       ]);
-      // Неактивний рядок — не потрапляє в сайдбар (readProjects_ фільтрує active=true).
       sh.getRange(2, 1, 2, colCount).setValues([
         [
           "example-id",
@@ -168,7 +155,6 @@ const ProjectRequests_ = (function () {
       });
     }
 
-    // стабільний порядок
     out.sort((a, b) => a.name.localeCompare(b.name, "uk"));
     return out;
   }
@@ -177,7 +163,6 @@ const ProjectRequests_ = (function () {
     let sh = ss.getSheetByName(REQUESTS_SHEET_NAME);
     if (!sh) sh = ss.insertSheet(REQUESTS_SHEET_NAME);
 
-    // Заголовки (якщо порожній)
     if (sh.getLastRow() < 1) {
       const colCount = 8;
       sh.getRange(1, 1, 1, colCount).setValues([
@@ -261,7 +246,6 @@ const ProjectRequests_ = (function () {
     const lastCol = sheet.getLastColumn();
     if (lastRow < 2 || lastCol < 1) return null;
 
-    // dedupe_key в нашому заголовку — 7 колонка
     const col = 7;
     const values = sheet
       .getRange(2, col, lastRow, col)
@@ -328,7 +312,6 @@ function apiSubmitRequest(payload) {
     if (!title) throw new Error("Заповни тему заявки.");
     if (!details) throw new Error("Заповни опис заявки.");
 
-    // Email може бути порожнім в деяких доменних налаштуваннях.
     const userEmail = String(
       (Session.getActiveUser &&
         Session.getActiveUser().getEmail &&

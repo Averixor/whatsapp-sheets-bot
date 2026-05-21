@@ -311,7 +311,6 @@ function runSmokeTests(options) {
     return "Sheets OK: " + required.join(", ");
   });
 
-  // Optional sheets: автоматично створюємо за відсутності (як bootstrap sidebar).
   _smokePush_(
     report,
     "Optional business sheets ensured (Дані/Проєкти/Заявки)",

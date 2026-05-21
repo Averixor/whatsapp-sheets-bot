@@ -108,7 +108,7 @@ var Stage7TestRunner = (function () {
         }
 
         var task = allTasks[index];
-        report.results.push(runTask_(task, opts));
+        report.results.push(runTask_(task));
         index++;
 
         if (
@@ -274,7 +274,7 @@ var Stage7TestRunner = (function () {
           continue;
         }
 
-        var result = runTask_(task, opts);
+        var result = runTask_(task);
         report.results.push(result);
 
         if (opts.failFast && result.status === "FAIL") {
@@ -848,7 +848,7 @@ var Stage7TestRunner = (function () {
     return tasks;
   }
 
-  function runTask_(task, options) {
+  function runTask_(task) {
     var startedAt = new Date();
     var result = {
       id: task.id,
@@ -1446,7 +1446,6 @@ var Stage7TestRunner = (function () {
         range.setValues(values);
       }
     } catch (err) {
-      // Не валимо тестовий прогін через форматування службового листа.
     }
   }
 

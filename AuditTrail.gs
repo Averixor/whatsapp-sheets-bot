@@ -58,7 +58,6 @@ const Stage7AuditTrail_ = (function () {
     const raw = String(value == null ? '' : value).trim();
     if (!raw) return DEFAULT_AUDIT_LOG_SHEET;
 
-    // У Sheets заборонені деякі символи, а ще не треба диких довжин.
     const cleaned = raw.replace(/[\[\]\*\?:\/\\]/g, '_').substring(0, 99).trim();
     return cleaned || DEFAULT_AUDIT_LOG_SHEET;
   }

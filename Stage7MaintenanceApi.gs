@@ -663,7 +663,6 @@ function apiRunStage7AllProjectTests(options) {
     timeoutMs: Math.min(Number((options || {}).timeoutMs || 240000), 240000),
   });
 
-  // Compatibility endpoint. The sidebar uses apiRunStage7ProjectTestChunk, because a single GAS call can hit runtime limits.
   const report = runProjectTestChunk(
     Object.assign({}, opts, {
       offset: Number(opts.offset || 0),

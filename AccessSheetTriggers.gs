@@ -175,8 +175,6 @@ function onEdit(e) {
 
   if (isProtectedSheet) {
     try {
-      // Якщо Stage7 managed triggers встановлені — audit піде через installable trigger,
-      // а simple trigger тут не дублює перевірку.
       if (!_hasManagedSecurityAuditTriggers_() && typeof stage7SecurityAuditOnEdit === 'function') {
         stage7SecurityAuditOnEdit(e);
       }

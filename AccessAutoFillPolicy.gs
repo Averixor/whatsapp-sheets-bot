@@ -270,19 +270,52 @@ function wasbAccessGetHeaderMap_(sheet) {
 
 function wasbAccessHeaderAliases_() {
   return {
-    email: ["email", "електронна пошта", "електронна_пошта", "пошта"],
-    phone: ["phone", "телефон", "номер телефону"],
-    role: ["role", "роль"],
-    enabled: ["enabled", "активний", "активна", "увімкнено"],
-    note: ["note", "примітка", "замітка"],
-    display_name: [
-      "display_name",
-      "імʼя, що відображається",
-      "ім’я, що відображається",
-      "ім'я, що відображається",
-      "імя, що відображається",
+    email: [
+      "email", 
+      "електронна пошта", 
+      "електронна_пошта", 
+      "пошта"
     ],
-    person_callsign: ["person_callsign", "позивний користувача", "позивний"],
+    phone: [
+      "phone", 
+      "телефон", 
+      "номер телефону", 
+      "номер"
+    ],
+    role: [
+      "role", 
+      "роль", 
+      "посада",
+      "роль доступу"
+    ],
+    enabled: [
+      "enabled", 
+      "активний", 
+      "активна", 
+      "увімкнено",
+      "активний користувач"
+    ],
+    note: [
+      "note", 
+      "примітка", 
+      "замітка", 
+      "коментар"
+    ],
+    display_name: [
+      "display_name", 
+      "імʼя, що відображається", 
+      "ім’я, що відображається", 
+      "ім'я, що відображається", 
+      "імя, що відображається", 
+      "ім'я, що показується", 
+      "імя, що показується"
+    ],
+    person_callsign: [
+      "person_callsign", 
+      "позивний користувача", 
+      "позивний",
+      "callsign"
+    ],
     self_bind_allowed: [
       "self_bind_allowed",
       "дозволена самостійна привʼязка",
@@ -290,13 +323,39 @@ function wasbAccessHeaderAliases_() {
       "дозволена самостійна прив'язка",
     ],
     login: ["login", "логін"],
-    password_hash: ["password_hash", "хеш пароля"],
-    registration_status: ["registration_status", "статус реєстрації"],
-    surname: ["surname", "прізвище", "фамілія"],
-    first_name: ["first_name", "імʼя", "ім’я", "ім'я", "імя"],
+    password_hash: [
+      "password_hash", 
+      "хеш пароля", 
+      "хеш_пароля"
+    ],
+    registration_status: [
+      "registration_status", 
+      "статус реєстрації", 
+      "статус_реєстрації"
+    ],
+    surname: ["surname", "прізвище"],
+    first_name: [
+      "first_name", 
+      "імʼя", 
+      "ім’я", 
+      "ім'я", 
+      "імя"
+    ],
     patronymic: ["patronymic", "по батькові"],
-    approved_by: ["approved_by", "ким схвалено"],
-    approved_at: ["approved_at", "час схвалення"],
+    approved_by: [
+      "approved_by", 
+      "ким схвалено", 
+      "хто схвалив",
+      "хто_схвалив",
+      "ким_схвалено"
+    ],
+    approved_at: [
+      "approved_at", 
+      "час схвалення", 
+      "коли схвалено",
+      "час_схвалення",
+      "коли_схвалено"
+    ],
   };
 }
 
@@ -334,10 +393,8 @@ function wasbAccessIsTruthy_(value) {
   return (
     text === "true" ||
     text === "так" ||
-    text === "да" ||
     text === "yes" ||
     text === "y" ||
-    text === "1" ||
     text === "активний" ||
     text === "active"
   );

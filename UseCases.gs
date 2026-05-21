@@ -234,7 +234,7 @@ const Stage7UseCases_ = (function () {
           warnings: _stage7BuildSendPanelWarnings_(stats),
         };
       },
-      execute: function (input, beforeState, plan) {
+      execute: function (input, _beforeState, plan) {
         const built = input.dryRun
           ? plan.preview
           : SendPanelRepository_.rebuild(input.dateStr || input.date);
@@ -272,7 +272,7 @@ const Stage7UseCases_ = (function () {
           warnings: _stage7BuildSendPanelWarnings_(stats),
         };
       },
-      sync: function (input, beforeState, plan, execution) {
+      sync: function (_input, _beforeState, _plan, execution) {
         return {
           refresh: ["panel", "sidebarCounters"],
           invalidateCaches: ["sendPanel", "sidebar", "summary"],
@@ -282,8 +282,8 @@ const Stage7UseCases_ = (function () {
               : getBotMonthSheetName_(),
         };
       },
-      verify: function (input, beforeState, plan, execution) {
-        return _stage7AVerifySendPanelBuild_(execution);
+      verify: function () {
+        return _stage7AVerifySendPanelBuild_(arguments[3]);
       },
     });
   }
@@ -317,7 +317,7 @@ const Stage7UseCases_ = (function () {
           warnings: range.warnings,
         };
       },
-      execute: function (input, beforeState, plan, context) {
+      execute: function (input) {
         const start = DateUtils_.parseUaDate(input.startDate);
         const end = DateUtils_.parseUaDate(input.endDate);
         const reports = [];
@@ -391,8 +391,8 @@ const Stage7UseCases_ = (function () {
           warnings: warnings,
         };
       },
-      verify: function (input, beforeState, plan, execution) {
-        return _stage7AVerifySendPanelBuild_(execution);
+      verify: function () {
+        return _stage7AVerifySendPanelBuild_(arguments[3]);
       },
     });
   }
@@ -786,7 +786,7 @@ const Stage7UseCases_ = (function () {
           invalidateCaches: ["sendPanel"],
         };
       },
-      verify: function (input, beforeState, plan, execution) {
+      verify: function (input, _beforeState, _plan, execution) {
         if (input.dryRun)
           return { ok: true, verifiedRows: 0, mismatchCount: 0 };
         const updatedRows = stage7AsArray_(
@@ -899,7 +899,7 @@ const Stage7UseCases_ = (function () {
         }
         return { payload: info.payload, warnings: [] };
       },
-      execute: function (input, beforeState, plan, context) {
+      execute: function (input) {
         const summary = SummaryRepository_.buildDaySummary(
           input.dateStr || input.date,
         );
@@ -949,7 +949,7 @@ const Stage7UseCases_ = (function () {
         }
         return { payload: info.payload, warnings: [] };
       },
-      execute: function (input, beforeState, plan, context) {
+      execute: function (input) {
         const summary = SummaryRepository_.buildDetailedSummary(
           input.dateStr || input.date,
         );
@@ -1001,7 +1001,7 @@ const Stage7UseCases_ = (function () {
         }
         return { payload: info.payload, warnings: [] };
       },
-      execute: function (input, beforeState, plan, context) {
+      execute: function (input) {
         const person = PersonsRepository_.getPersonByCallsign(
           input.callsign,
           input.dateStr || input.date,
@@ -1035,7 +1035,7 @@ const Stage7UseCases_ = (function () {
         const info = validateDatePayload_(input, "date");
         return { payload: info.payload, warnings: [] };
       },
-      execute: function (input, beforeState, plan, context) {
+      execute: function (input) {
         let descriptor = null;
         if (
           typeof AccessEnforcement_ === "object" &&
@@ -1094,7 +1094,7 @@ const Stage7UseCases_ = (function () {
         }
         return { payload: info.payload, warnings: [] };
       },
-      execute: function (input, beforeState, plan, context) {
+      execute: function (input) {
         const targetDate =
           DateUtils_.parseUaDate(input.dateStr || input.date) || new Date();
         const vacations = runVacationEngine_(targetDate) || {};
@@ -1148,7 +1148,7 @@ const Stage7UseCases_ = (function () {
           warnings: [],
         };
       },
-      execute: function (input, beforeState, plan, context) {
+      execute: function (input) {
         setBotMonthSheetName_(input.month);
         return {
           success: true,
@@ -1199,7 +1199,7 @@ const Stage7UseCases_ = (function () {
         }
         return { payload: input, warnings: [] };
       },
-      execute: function (input, beforeState, plan, context) {
+      execute: function (input) {
         const created = _stage7CreateNextMonthCore_(input);
         return {
           success: true,
@@ -1219,7 +1219,7 @@ const Stage7UseCases_ = (function () {
           partial: false,
         };
       },
-      sync: function (input, beforeState, plan, execution) {
+      sync: function (_input, _beforeState, _plan, execution) {
         return {
           refresh: ["monthsList", "currentMonth"],
           invalidateCaches: ["sidebar", "summary"],
@@ -1229,7 +1229,7 @@ const Stage7UseCases_ = (function () {
               : getBotMonthSheetName_(),
         };
       },
-      verify: function (input, beforeState, plan, execution) {
+      verify: function (input, _beforeState, _plan, execution) {
         if (input.dryRun)
           return {
             ok: true,
@@ -1270,7 +1270,7 @@ const Stage7UseCases_ = (function () {
         const info = validateRepairOperation_(input);
         return { payload: info.payload, warnings: info.warnings };
       },
-      execute: function (input, beforeState, plan, context) {
+      execute: function (input) {
         const report = Reconciliation_.run(input);
         const mode = String(input.mode || "check");
         const postCheck = report.postCheck || null;
@@ -1293,7 +1293,7 @@ const Stage7UseCases_ = (function () {
           warnings: report.warnings || [],
         };
       },
-      sync: function (input, beforeState, plan, execution) {
+      sync: function (_input, _beforeState, _plan, execution) {
         return {
           refresh: ["panel", "summaryPreview"],
           invalidateCaches: ["sendPanel", "sidebar"],
@@ -1303,7 +1303,7 @@ const Stage7UseCases_ = (function () {
               : null,
         };
       },
-      verify: function (input, beforeState, plan, execution) {
+      verify: function (input, _beforeState, _plan, execution) {
         if (
           input.dryRun ||
           ["repair", "repairSelectedIssues", "repairWithVerification"].indexOf(
@@ -1466,7 +1466,7 @@ const Stage7UseCases_ = (function () {
         }
         return { payload: input, warnings: [] };
       },
-      execute: function (input, beforeState, plan, context) {
+      execute: function (input) {
         switch (String(input.type || "quick")) {
           case "cleanupCaches":
             clearCacheCore_();

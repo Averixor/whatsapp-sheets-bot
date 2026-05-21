@@ -49,28 +49,34 @@ function _stage7PushCheck_(checks, name, status, details, recommendation) {
     howTo: recommendation || "",
   });
 }
+
 function _projectBundleHas_(path) {
   return typeof isProjectBundleFilePresent_ === "function"
     ? isProjectBundleFilePresent_(path)
     : false;
 }
+
 function _projectBundleMissing_(paths) {
   return typeof getMissingProjectBundleFiles_ === "function"
     ? getMissingProjectBundleFiles_(paths || [])
     : (paths || []).slice();
 }
+
 function _isProjectDocPath_(path) {
   const value = String(path || "").trim();
   if (!value) return false;
   if (/^[A-Z0-9_\-]+\.md$/i.test(value)) return true;
   return value.indexOf("_extras/history/") === 0;
 }
+
 function _isArchivePath_(path) {
   return _isProjectDocPath_(path);
 }
+
 function _isReferencePath_(path) {
   return _isProjectDocPath_(path);
 }
+
 function _diagPushPathCheck_(checks, name, path, expectedKind) {
   const present = _projectBundleHas_(path);
   _stage7PushCheck_(
@@ -81,6 +87,7 @@ function _diagPushPathCheck_(checks, name, path, expectedKind) {
     present ? "" : `Відсутній файл ${path}`,
   );
 }
+
 function _diagGlobal_() {
   try {
     if (typeof globalThis !== "undefined") return globalThis;
@@ -90,6 +97,7 @@ function _diagGlobal_() {
   } catch (_) {}
   return {};
 }
+
 function _diagResolvePath_(scope, path) {
   var parts = String(path || "")
     .trim()
@@ -102,6 +110,7 @@ function _diagResolvePath_(scope, path) {
   }
   return current;
 }
+
 function _diagHasRouteApi_(fnName) {
   var target = String(fnName || "").trim();
   if (!target) return false;
@@ -138,6 +147,7 @@ function _diagHasRouteApi_(fnName) {
 
   return false;
 }
+
 function _diagResolveKnownSymbolStage7_(name) {
   switch (String(name || "").trim()) {
     case "DataAccess_":
@@ -206,6 +216,7 @@ function _diagResolveKnownSymbolStage7_(name) {
       return undefined;
   }
 }
+
 function _diagResolveSymbolStage7_(name) {
   var target = String(name || "").trim();
   if (!target) return undefined;
@@ -236,15 +247,19 @@ function _diagResolveSymbolStage7_(name) {
 
   return undefined;
 }
+
 function _fnExists_(name) {
   return typeof _diagResolveSymbolStage7_(name) === "function";
 }
+
 function _stage7ResolveSymbol_(name) {
   return _diagResolveSymbolStage7_(name);
 }
+
 function _stage7HasFn_(name) {
   return typeof _diagResolveSymbolStage7_(name) === "function";
 }
+
 function _releaseStageLabel_() {
   var meta =
     typeof getProjectBundleMetadata_ === "function"
@@ -254,6 +269,7 @@ function _releaseStageLabel_() {
     ? meta.stageLabel
     : "Stage 7 — Maintenance & repository hygiene";
 }
+
 function _diagNormalizeStatus_(status) {
   var normalized = String(status || "WARN").toUpperCase();
   if (normalized === "ERROR") return "FAIL";
@@ -264,6 +280,7 @@ function _diagNormalizeStatus_(status) {
   if (normalized === "PSEUDO-COMPAT") return "PSEUDO";
   return normalized;
 }
+
 function _diagResolveSeverity_(status, rawSeverity) {
   var sev = String(rawSeverity || "").toUpperCase();
   if (sev) return sev;
@@ -272,6 +289,7 @@ function _diagResolveSeverity_(status, rawSeverity) {
   if (s === "WARN") return "WARN";
   return "INFO";
 }
+
 function _diagIsPseudoLikeCheck_(check) {
   var explicitStatus = String((check && check.status) || "").toUpperCase();
   if (
@@ -300,6 +318,7 @@ function _diagIsPseudoLikeCheck_(check) {
     details.indexOf("compatibility wrappers intentionally remain") !== -1
   );
 }
+
 function _diagResolveUiGroup_(check) {
   var explicit = String((check && check.uiGroup) || "").toLowerCase();
   if (
@@ -320,6 +339,7 @@ function _diagResolveUiGroup_(check) {
   if (status === "PSEUDO" || (looksPseudo && status === "OK")) return "pseudo";
   return "ok";
 }
+
 function _diagNormalizeCheck_(check, titlePrefix) {
   var title = String((check && (check.title || check.name)) || "").trim();
   if (!title) title = "Unnamed check";
@@ -363,6 +383,7 @@ function _diagNormalizeCheck_(check, titlePrefix) {
     recommendation: howTo,
   };
 }
+
 function _diagNormalizeReportChecks_(report, titlePrefix) {
   var list = report && Array.isArray(report.checks) ? report.checks : [];
   return list.map(function (item) {
@@ -390,6 +411,7 @@ function _diagMergeChecks_() {
 
   return merged;
 }
+
 function _diagBuildWarningsFromChecks_(checks) {
   return (checks || [])
     .filter(function (item) {
@@ -399,6 +421,7 @@ function _diagBuildWarningsFromChecks_(checks) {
       return item.title;
     });
 }
+
 function _diagBuildCounts_(checks) {
   var list = Array.isArray(checks) ? checks : [];
   var counts = {
@@ -440,6 +463,7 @@ function _diagBuildCounts_(checks) {
 
   return counts;
 }
+
 function _diagAppendPreprodScriptPropertyChecks_(checks) {
   var ownerDiag =
     typeof getWasbOwnerEmailDiagnostics_ === "function"
@@ -495,6 +519,7 @@ function _diagBuildReport_(checks, mode, summaryPrefix) {
     ts: new Date().toISOString(),
   };
 }
+
 function _diagServiceSheetCheck_(checks, name) {
   try {
     var ss = getWasbSpreadsheet_();
@@ -520,6 +545,7 @@ function _diagServiceSheetCheck_(checks, name) {
     );
   }
 }
+
 function _diagBuildStage7CoreChecks_(options) {
   var opts = options || {};
   var checks = [];
@@ -734,6 +760,7 @@ function _diagBuildStage7CoreChecks_(options) {
 
   return _diagNormalizeReportChecks_({ checks: checks });
 }
+
 function _diagAppendPendingRepairsCheck_(checks) {
   try {
     var pending =
@@ -762,6 +789,7 @@ function _diagAppendPendingRepairsCheck_(checks) {
     );
   }
 }
+
 function _diagAppendCompatibilitySplitCheck_(checks) {
   try {
     var sunset =
@@ -785,6 +813,7 @@ function _diagAppendCompatibilitySplitCheck_(checks) {
     );
   }
 }
+
 function _diagAppendLifecyclePolicyCheck_(checks) {
   try {
     var policy =

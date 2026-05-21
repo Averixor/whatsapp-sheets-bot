@@ -199,13 +199,31 @@ function listAllowedActionsForRole_(role) {
     case 'viewer':
       return ['власна картка'];
     case 'operator':
-      return ['усі картки', 'коротке зведення', 'детальне зведення'];
+      return [
+        'усі картки', 
+        'коротке зведення', 
+        'детальне зведення'
+      ];
     case 'maintainer':
-      return ['усі дії operator', 'SEND_PANEL', 'робочі дії', 'діагностика'];
+      return [
+        'усі дії operator', 
+        'SEND_PANEL', 
+        'робочі дії', 
+        'діагностика'
+      ];
     case 'admin':
-      return ['усі дії maintainer', 'керування ACCESS', 'журнали порушень'];
+      return [
+        'усі дії maintainer', 
+        'керування ACCESS', 
+        'журнали порушень'
+      ];
     case 'sysadmin':
-      return ['усі дії admin', 'repair', 'protections', 'triggers'];
+      return [
+        'усі дії admin', 
+        'repair', 
+        'protections', 
+        'triggers'
+      ];
     case 'owner':
       return ['повний доступ до всієї системи'];
     default:
@@ -314,8 +332,6 @@ function validateAccessSheet() {
     validEnabled = (
       rawEnabled === 'true' ||
       rawEnabled === 'false' ||
-      rawEnabled === '1' ||
-      rawEnabled === '0' ||
       rawEnabled === 'yes' ||
       rawEnabled === 'no' ||
       rawEnabled === 'так' ||
@@ -521,8 +537,6 @@ function runAccessDiagnostics() {
     isValid = (
       rawEnabled === 'true' ||
       rawEnabled === 'false' ||
-      rawEnabled === '1' ||
-      rawEnabled === '0' ||
       rawEnabled === 'yes' ||
       rawEnabled === 'no' ||
       rawEnabled === 'так' ||

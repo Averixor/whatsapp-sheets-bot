@@ -301,6 +301,7 @@ function _buildIncompleteRegistrationDescriptor_(
     isMaintainer: false,
     adminDisabled: false,
     timedLocked: false,
+    resolutionMode: policy.mode,
     reasonCode: "access.registration.incomplete",
     reasonMessage:
       "Реєстрацію не завершено. Потрібні активний статус, ключ доступу та пароль.",
@@ -776,7 +777,6 @@ function loginByIdentifierAndCallsign(
         finalCode,
         _failureMessageForSelfBind_(
           REASON_CODES.SELF_BIND_IDENTIFIER_NOT_FOUND,
-          normalizedCallsign,
           failure,
         ),
         supportCallsign,
@@ -802,7 +802,6 @@ function loginByIdentifierAndCallsign(
         finalCode,
         _failureMessageForSelfBind_(
           REASON_CODES.SELF_BIND_IDENTIFIER_MISMATCH,
-          normalizedCallsign,
           failure,
         ),
         supportCallsign,

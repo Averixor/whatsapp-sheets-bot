@@ -42,7 +42,9 @@ function _safeErr_(e) {
  * healthCheck() — перевірка стану системи
  * Викликається кнопкою "🩺 Перевірити" з сайдбару
  */
+
 /************ HEALTH CHECK ************/
+
 function _pushCheck_(report, check) {
   report.checks.push(check);
 

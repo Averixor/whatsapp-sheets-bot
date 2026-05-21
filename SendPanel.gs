@@ -90,7 +90,7 @@ function readSendPanelSentMap_(panel) {
   ).getValues();
 
   vals.forEach(row => {
-    const [fml, phone, code, tasks, status, sent, action] = row;
+    const [fml, phone, code, , , sent] = row;
     if (!fml || !code) return;
 
     const key = makeSendPanelKey_(fml, phone, code);

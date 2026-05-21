@@ -4,6 +4,7 @@
   // =========================
   // HEALTH CHECK
   // =========================
+
   function getHealthCheckOptions_() {
     return STATE.healthCheckMode === 'full'
       ? {
@@ -649,6 +650,7 @@
       </div>
     `;
   }
+
   function renderCheckItemCompact(check) {
     const status = String(check?.status || '').toUpperCase();
     const ok = typeof check?.ok === 'boolean' ? check.ok : status === 'OK';
@@ -675,6 +677,7 @@
   function renderCheckItem(check) {
     return renderCheckItemCompact(check);
   }
+
   function renderHealthReport(report) {
     if (!report || !report.checks) {
       return `
@@ -738,6 +741,7 @@
       </div>
     `;
   }
+  
   function copyHealthReport() {
     const report = STATE.lastHealthReport;
 

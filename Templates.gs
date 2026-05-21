@@ -42,6 +42,7 @@ function renderTemplate_(tpl, data) {
 }
 
 /** Нормализация ENABLED: checkbox boolean или "TRUE"/"1"/"YES" */
+
 function _isEnabled_(v) {
   if (v === true) return true;
   if (v === false) return false;
@@ -50,6 +51,7 @@ function _isEnabled_(v) {
 }
 
 /** Забираем карту шаблонов из листа (и кладём в Cache) */
+
 function _loadTemplatesMap_() {
   const cache = CacheService.getScriptCache();
   const primaryKey = _templatesCacheKey_();
@@ -102,6 +104,7 @@ function _loadTemplatesMap_() {
 }
 
 /** Получить текст шаблона: если ENABLED=false или пусто — вернуть '' */
+
 function getTemplateText_(templateKey) {
   templateKey = String(templateKey ?? '').trim();
   if (!templateKey) return '';
@@ -152,12 +155,14 @@ function notifyWithTemplate_(templateKey, data, targetPhone) {
 }
 
 /** Сброс кеша шаблонов (удобно после правок в TEMPLATES) */
+
 function resetTemplatesCache_() {
   CacheService.getScriptCache().remove(TPL_CACHE_KEY);
   return true;
 }
 
 /** Smoke test */
+
 function testNotifyWithTemplate_() {
   const key = 'VACATION_REMIND_PERSON';
   const data = {

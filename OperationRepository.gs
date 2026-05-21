@@ -64,20 +64,31 @@ const OperationRepository_ = (function() {
   }
 
   function _ss() { return getWasbSpreadsheet_(); }
+
   function _tz() { return (typeof getTimeZone_ === 'function' ? getTimeZone_() : Session.getScriptTimeZone()) || Session.getScriptTimeZone(); }
+
   function _now() { return new Date(); }
+
   function _fmt(date, pattern) { return Utilities.formatDate(date instanceof Date ? date : new Date(date), _tz(), pattern); }
+
   function _iso(date) { return _fmt(date || _now(), "yyyy-MM-dd'T'HH:mm:ss"); }
+
   function _noteStamp() { return _fmt(_now(), 'yyyy-MM-dd HH:mm:ss'); }
+  
   function _safeJson(value) { return stage7SafeStringify_(value === undefined ? null : value, 50000); }
+  
   function _parseJson(value, fallback) {
     try { return value ? JSON.parse(value) : (fallback === undefined ? null : fallback); } catch (_) { return fallback === undefined ? null : fallback; }
   }
+  
   function _string(value) { return value === null || value === undefined ? '' : String(value); }
+  
   function _bool(value) { return value === true || String(value).toLowerCase() === 'true'; }
+  
   function _uniqueStrings(list) {
     return Array.from(new Set(stage7AsArray_(list).filter(function(item) { return item !== null && item !== undefined && item !== ''; }).map(function(item) { return String(item); })));
   }
+  
   function _uniqueNumbers(list) {
     return Array.from(new Set(stage7AsArray_(list).map(Number).filter(function(item) { return isFinite(item); }))).sort(function(a, b) { return a - b; });
   }
@@ -250,7 +261,7 @@ const OperationRepository_ = (function() {
     return _iso(new Date(date.getTime() + ttlMinutesFor(rawScenario, payload) * 60 * 1000));
   }
 
-  function _findDuplicateInActive(rawScenario, fingerprint, operationId) {
+  function _findDuplicateInActive(fingerprint, operationId) {
     var sheet = _sheet(SHEETS.ACTIVE, ACTIVE_HEADERS);
     var nowMs = _now().getTime();
     return _rowsAsObjects(sheet).filter(function(item) {
@@ -294,7 +305,7 @@ const OperationRepository_ = (function() {
     var parentOperationId = _normalizeOperationId(cfg.parentOperationId || payload.parentOperationId || '');
 
     if (!cfg.dryRun) {
-      var duplicateActive = _findDuplicateInActive(rawScenario, fingerprint, operationId);
+      var duplicateActive = _findDuplicateInActive(fingerprint, operationId);
       if (duplicateActive) {
         return { suppressed: true, reason: 'duplicate_active_execution', previous: duplicateActive, operationId: operationId, fingerprint: fingerprint, scenario: canonical };
       }
@@ -729,15 +740,13 @@ const OperationRepository_ = (function() {
       if (status && status !== 'STARTED') {
         var expiresAtMs = new Date(String(item.ExpiresAt || '')).getTime();
         if (!isFinite(expiresAtMs) || expiresAtMs >= _now().getTime()) return;
-        activeSheet.deleteRow(item.__row);
-        removedActiveStale++;
+        if (_removeActiveRow(item.OperationId)) removedActiveStale++;
         return;
       }
       if (status !== 'FAILED_STALE') return;
       var classifiedMs = new Date(String(item.LastHeartbeat || item.StartedAt || '')).getTime();
       if (!isFinite(classifiedMs) || classifiedMs >= staleCutoffMs) return;
-      activeSheet.deleteRow(item.__row);
-      removedActiveStale++;
+      if (_removeActiveRow(item.OperationId)) removedActiveStale++;
     });
 
     return {

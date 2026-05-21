@@ -90,7 +90,6 @@ function _showActionError_(e) {
   try {
     SpreadsheetApp.getUi().alert('Помилка', errorMsg, SpreadsheetApp.getUi().ButtonSet.OK);
   } catch (_) {
-    // Якщо UI недоступний (наприклад, при виконанні з тригера)
     Logger.log('[Actions] Помилка: ' + errorMsg);
   }
 }

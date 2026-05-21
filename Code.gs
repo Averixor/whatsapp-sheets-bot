@@ -163,6 +163,7 @@ function highlightActiveMonthTab_(activeName) {
 }
 
 /************ Include функції для HTML ************/
+
 function include(filename) {
   filename = String(filename || "").trim();
 
@@ -228,6 +229,7 @@ function getClientRuntimeContract_() {
 }
 
 /************ МЕНЮ ************/
+
 function onOpen(e) {
   try {
     SpreadsheetApp.getUi()
@@ -267,6 +269,7 @@ function onOpen(e) {
 }
 
 // ==================== НОВІ ФУНКЦІЇ ====================
+
 function setupVacationTrigger() {
   try {
     const triggers = ScriptApp.getProjectTriggers();
@@ -280,8 +283,6 @@ function setupVacationTrigger() {
       }
     });
 
-    // Stage7 canonical path: використовуй managed jobs замість legacy auto* тригерів,
-    // щоб уникнути дублювання перевірок/повідомлень.
     try {
       if (
         typeof stage7GetFeatureFlag_ === "function" &&
@@ -351,6 +352,7 @@ function cleanupDuplicateTriggers(functionName) {
 }
 
 /** Діагностика аркуша PHONES — кнопка "📞 Діагностика" */
+
 function debugPhones() {
   try {
     const ss = getWasbSpreadsheet_();

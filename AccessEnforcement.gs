@@ -655,28 +655,6 @@ var AccessEnforcement_ =
         : _safeStringify_(info || {}, 9000);
     }
 
-    function _sendMail_(subject, body) {
-      var recipients = _notificationEmails_();
-      if (!recipients.length) {
-        return { sent: false, recipients: [] };
-      }
-
-      try {
-        MailApp.sendEmail(
-          recipients.join(","),
-          _safeString_(subject, "WASB SECURITY ALERT"),
-          _safeString_(body, ""),
-        );
-        return { sent: true, recipients: recipients };
-      } catch (error) {
-        return {
-          sent: false,
-          recipients: recipients,
-          error: error && error.message ? error.message : String(error),
-        };
-      }
-    }
-
     // ==================== ОСНОВНА ФУНКЦІЯ ПОВІДОМЛЕННЯ ====================
 
     function reportViolation(actionName, details, descriptorOpt) {
@@ -1172,6 +1150,7 @@ var AccessEnforcement_ =
       PROTECTED_SHEETS: _protectedSheets_(),
       getProtectedSheets: _protectedSheets_,
       isStructuralChangeType: _isStructuralChangeType_,
+      isHighPrivilegeRole: _isHighPrivilegeRole_,
     };
   })();
 
@@ -1227,7 +1206,8 @@ function stage7SecurityAuditOnEdit(e) {
       hasAccess = !!actor.isAdmin && actor.enabled !== false;
     } else {
       hasAccess =
-        (role === "sysadmin" || role === "owner") && actor.enabled !== false;
+        AccessEnforcement_.isHighPrivilegeRole(role) &&
+        actor.enabled !== false;
     }
 
     if (hasAccess && actor.registered === true) return;
@@ -1272,7 +1252,7 @@ function stage7SecurityAuditOnChange(e) {
     var actor = AccessEnforcement_.describeEditActorByEmail(userEmail);
     var role = _safeStringForTrigger_(actor.role, "").toLowerCase();
     var isHighPrivilege =
-      (role === "sysadmin" || role === "owner") &&
+      AccessEnforcement_.isHighPrivilegeRole(role) &&
       actor.enabled !== false &&
       actor.registered === true;
 

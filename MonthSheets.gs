@@ -1,4 +1,5 @@
 /************ МІСЯЧНІ АРКУШІ ************/
+
 function _inferMonthYearFromSheet_(sheet) {
   const ref = sheet.getRange(CONFIG.CODE_RANGE_A1);
   const row = Number(CONFIG.DATE_ROW) || 1;
@@ -83,6 +84,7 @@ function createNextMonthSheet() {
 }
 
 /************ ПЕРЕМИКАННЯ БОТА НА ІНШИЙ МІСЯЦЬ ************/
+
 function switchBotToSheet() {
   const ss = getWasbSpreadsheet_();
   const months = ss.getSheets().map(s => s.getName()).filter(n => /^\d{2}$/.test(n)).sort();
@@ -123,6 +125,7 @@ function switchBotToMonth_(monthSheetName) {
   if (sh) sh.activate();
   SpreadsheetApp.getUi().toast(`Бот активний: ${monthSheetName}`, ' WhatsApp-Sheets-Bot', 3);
 }
+
 function colorWeekendDateHeaders_(sheet, dateRow, startCol, daysInMonth, year, month) {
   if (!sheet || !dateRow || !startCol || !daysInMonth || !year || !month) return;
 

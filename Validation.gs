@@ -149,7 +149,14 @@ function validateMonthSwitch_(monthSheetName) {
 function validateRepairOperation_(payload) {
   const source = payload || {};
   const mode = String(source.mode || 'check').trim();
-  _stage7Assert_(['check', 'report', 'repair', 'previewRepair', 'repairSelectedIssues', 'repairWithVerification'].indexOf(mode) !== -1, 'validateRepairOperation_', source, `Некоректний mode="${mode}"`);
+  _stage7Assert_([
+    'check', 
+    'report', 
+    'repair', 
+    'previewRepair', 
+    'repairSelectedIssues', 
+    'repairWithVerification'
+  ].indexOf(mode) !== -1, 'validateRepairOperation_', source, `Некоректний mode="${mode}"`);
 
   const dateInfo = validateDatePayload_(source, 'date');
   const repairLikeMode = ['repair', 'previewRepair', 'repairSelectedIssues', 'repairWithVerification'].indexOf(mode) !== -1;

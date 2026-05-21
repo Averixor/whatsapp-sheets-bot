@@ -203,8 +203,6 @@ function debugSendPanelBuildRawForDateManual() {
 }
 
 function debugManualSheetAccess_() {
-  var spreadsheetId = '1v8ixM67nG_Bfy5NzcDZbmSjwVOYbkN02ibfP6YqI384';
-
   var result = {
     activeSpreadsheetOk: false,
     activeSpreadsheetId: '',
@@ -229,8 +227,14 @@ function debugManualSheetAccess_() {
     result.activeSpreadsheetError = e1 && e1.message ? e1.message : String(e1);
   }
 
+  if (!result.activeSpreadsheetId) {
+    result.error = 'getWasbSpreadsheet_() не повернув ID таблиці';
+    Logger.log(JSON.stringify(result, null, 2));
+    return result;
+  }
+
   try {
-    var ss = SpreadsheetApp.openById(spreadsheetId);
+    var ss = SpreadsheetApp.openById(result.activeSpreadsheetId);
 
     result.openByIdOk = true;
     result.openByIdName = ss.getName();

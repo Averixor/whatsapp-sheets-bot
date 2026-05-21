@@ -61,13 +61,6 @@ const WorkflowOrchestrator_ = (function() {
     return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
   }
 
-  function _maskKey(value) {
-    const key = _cleanText(value);
-    if (!key) return '';
-    if (key.length <= 10) return key;
-    return key.slice(0, 6) + '…' + key.slice(-4);
-  }
-
   function _compactJson(value) {
     try {
       const json = JSON.stringify(value == null ? null : value);

@@ -186,7 +186,6 @@ const MonthlyReport_ = (function () {
   }
 
   function readManagerEmails_(ss) {
-    // Основний шлях: аркуш "Проєкти" має колонки типу "менеджер email" або "email менеджера"
     const warnings = [];
     let emails = [];
 
@@ -287,7 +286,6 @@ const MonthlyReport_ = (function () {
       );
     }
 
-    // Таблиця: показуємо до 12 колонок, щоб лист був читабельним.
     const maxCols = Math.min(headers.length, 12);
     const headHtml = headers
       .slice(0, maxCols)
@@ -383,7 +381,6 @@ const MonthlyReport_ = (function () {
       const position =
         col.position >= 0 ? String(row[col.position] || "").trim() : "";
 
-      // Статуси по датах: за рекомендацією — з 8-ї колонки (індекс 7) і далі.
       /** @type {Array<{date:string,status:string}>} */
       const statuses = [];
       for (let j = 7; j < headers.length; j++) {
@@ -569,7 +566,6 @@ function generateMonthlyReportHTML_(personnel, statusSummary, sheetName) {
 
     html += `</tr></thead><tbody>`;
 
-    // Підсумок по групі: кількість БР по кожній даті.
     const brCounts = {};
     heatmapDates.forEach((d) => (brCounts[d] = 0));
 
@@ -718,7 +714,6 @@ function sendMonthlyReport(monthYearOrSheetName) {
       );
     }
 
-    // monthYear mode (YYYY-MM via "Дані")
     const parsed = MonthlyReport_.parseMonthYear_(input);
     MonthlyReport_._logInfo("start", `monthYear=${parsed.monthYear}`);
 

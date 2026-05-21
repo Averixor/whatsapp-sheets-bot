@@ -163,7 +163,7 @@
     }
 
     function getUaWeekdayShort_(date) {
-      const days = ["Нд", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+      const days = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"];
       return days[date.getDay()] || "";
     }
 
@@ -234,6 +234,7 @@
               reason: "",
             });
           },
+          
           function (error) {
             const code =
               error && typeof error.code === "number" ? error.code : 0;

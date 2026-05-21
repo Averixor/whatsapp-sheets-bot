@@ -1,8 +1,11 @@
-<style>
-<?!= include('Styles_00_Base'); ?>
-<?!= include('Styles_30_Personnel'); ?>
-<?!= include('Styles_40_SystemPanels'); ?>
-<?!= include('Styles_50_Modals'); ?>
-<?!= include('Styles_60_Health'); ?>
-<?!= include('Styles_99_Responsive'); ?>
-</style>
+<?
+var __wasbStyles = [
+  include('Styles_00_Base'),
+  include('Styles_30_Personnel'),
+  include('Styles_40_SystemPanels'),
+  include('Styles_50_Modals'),
+  include('Styles_60_Health'),
+  include('Styles_99_Responsive')
+].join('\n');
+?>
+<?!= '<style>' + __wasbStyles + '</style>' ?>

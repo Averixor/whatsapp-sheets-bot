@@ -125,7 +125,6 @@
           message: res.message || "✓ Заявку збережено",
         });
       } else if (res && res.success === true && res.message) {
-        // warnResponse_ також має success=true — тоді message пояснює дубль
         showToast(res.message);
         displayInResult("success", { message: res.message });
       } else {

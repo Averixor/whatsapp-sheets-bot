@@ -226,7 +226,6 @@ function isSelfBindAllowedValue_(value, role) {
   if (!raw) return defaultSelfBindAllowedForRole_(role);
   return !(
     raw === "false" ||
-    raw === "0" ||
     raw === "no" ||
     raw === "ні" ||
     raw === "off"
@@ -643,8 +642,7 @@ function _registerSelfBindFailure_(currentKeyHash, context) {
   };
 }
 
-function _failureMessageForSelfBind_(reasonCode, callsign, failureState) {
-  const normalizedCallsign = normalizeCallsign_(callsign);
+function _failureMessageForSelfBind_(reasonCode, failureState) {
   const blocked = !!failureState?.blocked;
 
   if (blocked) {
@@ -695,7 +693,7 @@ function formatUaLongDateTime_(value) {
 
   var tz = _timezone_();
 
-  var days = ["Нд", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+  var days = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"];
   var months = [
     "Січ",
     "Лют",
