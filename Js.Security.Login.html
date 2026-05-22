@@ -329,7 +329,7 @@
         setAccessLoginLoading_(false, "Підтверджую вхід...");
         closeAccessLoginModal();
         applyAccessPolicyUI();
-        showToast(data.message || "Вхід виконано: " + callsign);
+        showToast(data?.message ?? "Вхід виконано: " + callsign);
         logToConsole(
           "✓ Вхід підтверджено для позивного " +
             callsign +

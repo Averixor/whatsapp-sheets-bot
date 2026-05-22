@@ -704,11 +704,11 @@
         <hr>=============================================<hr>
         
         <div class="person-card__message-label">Текст повідомлення</div>
-        <div class="person-card__message" id="personCardMessage">${escapeHtml(data.message || "")}</div>
+        <div class="person-card__message" id="personCardMessage">${escapeHtml(data?.message ?? "")}</div>
       </div>
     `;
 
-    if (looksLikeMessageTemplate_(data.message)) {
+    if (looksLikeMessageTemplate_(data?.message)) {
       $id("personCardMessage")?.classList?.add("person-card__message--template");
     }
   }

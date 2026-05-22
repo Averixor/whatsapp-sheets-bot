@@ -829,7 +829,7 @@
         html = `
           <div class="result-item">
             <div class="result-label" style="color: var(--success-color);">Результати</div>
-            <div class="result-value">${escapeHtml(data.message || "")}</div>
+            <div class="result-value">${escapeHtml(data?.message ?? "")}</div>
           </div>
         `;
         if (hasVacationBlocks(data)) html += renderVacationAlerts(data);
@@ -839,7 +839,7 @@
         html = `
           <div class="result-item">
             <div class="result-label" style="color: var(--success-color);">Успішно</div>
-            <div class="result-value">${escapeHtml(data.message || "")}</div>
+            <div class="result-value">${escapeHtml(data?.message ?? "")}</div>
           </div>
         `;
         break;
@@ -859,7 +859,7 @@
         html = `
           <div class="result-item">
             <div class="result-label" style="color: var(--success-color);">Місяць створено</div>
-            <div class="result-value">${escapeHtml(data.message || "")}</div>
+            <div class="result-value">${escapeHtml(data?.message ?? "")}</div>
           </div>
         `;
         break;

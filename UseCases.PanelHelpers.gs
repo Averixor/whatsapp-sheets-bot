@@ -3,48 +3,45 @@
  */
 
 function _withPanelHelperTrace_(helperName, fn) {
-  var started = Date.now();
-  if (typeof traceUseCase_ === "function") {
-    traceUseCase_(helperName, {
-      caller: "PanelHelpers",
-      domain: "SendPanel",
-      area: "UseCases.PanelHelpers",
-      runtimePhase: "post-helpers",
-      severity: "debug",
-      samplingRate: 1,
-      ok: true,
-      ms: 0,
-    });
+  if (typeof _traceDebugEnabled_ === "function" && !_traceDebugEnabled_()) {
+    return fn();
   }
+  if (typeof traceUseCase_ !== "function") {
+    return fn();
+  }
+
+  var traceId = typeof _traceId_ === "function" ? _traceId_() : "";
+  var started = Date.now();
+  var baseMeta = {
+    traceId: traceId,
+    caller: "PanelHelpers",
+    domain: "SendPanel",
+    area: "UseCases.PanelHelpers",
+    runtimePhase: "post-helpers",
+    severity: "debug",
+    samplingRate: 1,
+  };
+
   try {
     var result = fn();
-    if (typeof traceUseCase_ === "function") {
-      traceUseCase_(helperName, {
-        caller: "PanelHelpers",
-        domain: "SendPanel",
-        area: "UseCases.PanelHelpers",
-        runtimePhase: "post-helpers",
-        severity: "debug",
-        samplingRate: 1,
+    traceUseCase_(
+      helperName,
+      Object.assign({}, baseMeta, {
         ok: true,
         ms: Date.now() - started,
-      });
-    }
+      }),
+    );
     return result;
   } catch (err) {
-    if (typeof traceUseCase_ === "function") {
-      traceUseCase_(helperName, {
-        caller: "PanelHelpers",
-        domain: "SendPanel",
-        area: "UseCases.PanelHelpers",
-        runtimePhase: "post-helpers",
-        severity: "error",
-        samplingRate: 1,
+    traceUseCase_(
+      helperName,
+      Object.assign({}, baseMeta, {
         ok: false,
         ms: Date.now() - started,
+        severity: "error",
         err: err && err.message ? String(err.message) : String(err),
-      });
-    }
+      }),
+    );
     throw err;
   }
 }
