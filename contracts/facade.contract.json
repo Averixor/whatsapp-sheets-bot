@@ -6,7 +6,7 @@
   "snapshotMetaFields": ["schemaRef", "reviewedAt", "changeReason"],
   "crossCheckSources": {
     "facadeFile": "UseCases.gs",
-    "facadeMarker": "const Stage7UseCases_ = (function () {",
+    "facadeMarker": "var Stage7UseCases_ = (function () {",
     "registryFile": "RoutingRegistry.gs",
     "registryPrefix": "Stage7UseCases_."
   },

@@ -9,6 +9,7 @@ _person_card_compact_report.txt
 *.log
 *.tmp
 *.bak
+_audit-out.txt
 
 # VS Code / AI local settings
 .vscode/

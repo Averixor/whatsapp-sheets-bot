@@ -1,25 +1,40 @@
-# G2 governance roadmap (post-G1)
+# G2 governance roadmap (implemented)
 
-G1 landed executable contracts under `contracts/` and refactored CI scripts to consume them. **G2 is structural enforcement only** — no runtime GAS changes in the G2 PR itself.
+G1 landed executable contracts under `contracts/` and refactored CI scripts to consume them. **G2 adds structural client-layer enforcement** — no runtime GAS changes.
 
-## Planned deliverables
+## Deliverables (status)
 
-| Item | Purpose |
-|------|---------|
-| [`contracts/client-layers.contract.json`](../contracts/client-layers.contract.json) *(planned)* | Client layer graph + forbidden cross-layer references |
-| [`scripts/verify-client-deps.mjs`](../scripts/verify-client-deps.mjs) *(planned)* | Acyclic dependency enforcement across `Js.*.html` |
-| Envelope `version` migration rules | Backward-compat gate when `envelope.contract.json` version bumps |
-| XSS sanitizer-sink migration | Reduce `SAFE_EXPR` growth; route new HTML through `sanitizerSinks` in `xss-policy.contract.json` |
+| Item | Status | Purpose |
+|------|--------|---------|
+| [`contracts/client-layers.contract.json`](../../contracts/client-layers.contract.json) | **done** | Client layer graph + forbidden cross-layer references |
+| [`scripts/verify-client-deps.mjs`](../../scripts/verify-client-deps.mjs) | **done** | Acyclic dependency enforcement across `Js.*.html` |
+| [`contracts/envelope-migration.contract.json`](../../contracts/envelope-migration.contract.json) | **done** | Version bump rules + backward-compat gate |
+| XSS sanitizer-sink migration | **done** | `migrationNotes` / `preferredSinks` in `xss-policy.contract.json`; WARN on new non-sink patterns |
 
-## Sequencing (after G1 merge)
+## Layer graph
 
-1. **G2 PR** — client-layers contract + `verify-client-deps.mjs`
-2. **PR4** — real test split (needs G1 snapshot governance)
-3. **Phase 2** — SheetRepository extract (needs G1 + access baseline discipline)
+```
+core (Js.Core, Js.State, Js.Api)
+  ↑
+render (Js.Render.Panel, Js.Render.Calendar, Js.Render.Results)
+  ↑
+features (Js.Diagnostics, Js.Security, Js.Helpers, Js.Events, Js.Actions)
+```
 
-## Out of scope for G2 doc-only note
+- **core** → no upward deps
+- **render** → core only (+ `SidebarApp` onclick bridge from features)
+- **features** → core + render
+
+Enforced by `npm run ci` → `node scripts/verify-client-deps.mjs`.
+
+## Sequencing (after G2)
+
+1. **PR4** — real test split (needs G1 snapshot governance)
+2. **Phase 2** — SheetRepository extract (needs G1 + access baseline discipline)
+
+## Out of scope (unchanged)
 
 - AccessControl / test monolith surgery
-- Envelope semantic versioning migration implementation (rules only until dedicated PR)
+- Full envelope semantic versioning migration implementation (rules documented; dedicated PR when version bumps)
 
-See also: `wasb_g1_governance` plan G2 preview table in project planning artifacts.
+See also: `RUNBOOK.md` §19, `docs/refactor/operational-stewardship.md`.

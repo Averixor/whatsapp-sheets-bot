@@ -4,7 +4,7 @@
  * UseCases.Calendar.gs, UseCases.Maintenance.gs, UseCases.MonthOps.gs
  */
 
-const Stage7UseCases_ = (function () {
+var Stage7UseCases_ = (function () {
   return {
     generateSendPanelForDate: UseCasesSendPanel_.generateSendPanelForDate,
     generateSendPanelForRange: UseCasesSendPanel_.generateSendPanelForRange,

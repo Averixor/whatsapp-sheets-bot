@@ -2,23 +2,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import { loadContract, repoRoot } from './lib/load-contract.mjs';
 
-const repoRoot = path.resolve(import.meta.dirname, '..');
-const loaderPath = path.join(repoRoot, 'JavaScript.html');
-
-const EXPECTED = [
-  'Js.Core',
-  'Js.State',
-  'Js.Api',
-  'Js.Render.Panel',
-  'Js.Render.Calendar',
-  'Js.Render.Results',
-  'Js.Diagnostics',
-  'Js.Security',
-  'Js.Helpers',
-  'Js.Events',
-  'Js.Actions'
-];
+const includesContract = loadContract('client-includes.contract.json');
+const loaderPath = path.join(repoRoot, includesContract.loaderFile || 'JavaScript.html');
+const EXPECTED = includesContract.expected || [];
 
 function parseIncludes(text) {
   const re = /include\('([^']+)'\)/g;

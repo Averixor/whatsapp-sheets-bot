@@ -220,9 +220,13 @@ Local equivalent: **`npm run ci`** (or `wcheck` if configured).
 | `audit-function-graph.mjs` | Bound entrypoint refs vs definitions |
 | `verify-client-includes.mjs` | `JavaScript.html` include order |
 | `verify-client-js.mjs` | Combined sidebar client parse-check |
+| `verify-client-deps.mjs` | Client layer graph / cross-layer refs (`contracts/client-layers.contract.json`) |
 | `audit-client-xss.mjs` | Unsafe `innerHTML` / `setHtml` interpolations |
 | `audit-envelope-compat.mjs` | Server envelope + client adapters + transport bridge |
 | `verify-usecase-facade.mjs` | `Stage7UseCases_` contract vs snapshot |
+| `verify-snapshot-governance.mjs` | Snapshot mutations require `contracts/SNAPSHOT_CHANGELOG.md` + metadata |
+| `verify-bridge-flags.mjs` | `USE_NEW_API_PATH` registry vs codebase (`contracts/bridge-flags.registry.json`) |
+| `verify-jsconfig.mjs` | `jsconfig.json` include/exclude globs resolve to tsserver inputs |
 
 There is **no** Apps Script deployment in CI (`clasp` is local only). See `.github/workflows/ci.yml`.
 
@@ -278,12 +282,15 @@ See **`docs/refactor/operational-stewardship.md`** for owner/backup roles, month
 |------|----------|
 | Owner / backup | `docs/refactor/operational-stewardship.md` — update on handoff |
 | **Contracts (G1)** | `contracts/` — envelope, facade, access, bridge-flags, xss-policy, client-includes |
+| **Client layers (G2)** | `contracts/client-layers.contract.json` + `scripts/verify-client-deps.mjs` |
+| Envelope migration | `contracts/envelope-migration.contract.json` — version bump checklist |
 | Snapshot governance | `docs/refactor/snapshot-governance.md`, `contracts/SNAPSHOT_CHANGELOG.md` |
 | Canary spreadsheet | Script Property `WASB_CANARY_SPREADSHEET_ID` (non-production; owner-maintained) |
 | Facade contract CI | `contracts/facade.contract.json` + `scripts/snapshots/stage7-usecases-facade.json` + `npm run ci` |
 | Access baseline | `contracts/access.contract.json` + `scripts/snapshots/access-debug-baseline.json` (capture from `apiStage7DebugAccess()` on canary) |
+| Access baseline bootstrap | `scripts/bootstrap-access-baseline.mjs` — merge canary JSON via `ACCESS_DESCRIPTOR_JSON=...` (descriptor stays `null` until capture) |
 | Bridge flags | `contracts/bridge-flags.registry.json` — `USE_NEW_API_PATH` owner/sunset/telemetry |
-| G2 roadmap | `docs/refactor/g2-governance-roadmap.md` (client layers — not in G1) |
+| G2 roadmap | `docs/refactor/g2-governance-roadmap.md` (client layers — **implemented**) |
 | Entropy review | `docs/refactor/entropy-review-YYYY-QN.md` (quarterly; latest: `entropy-review-2026-Q2.md`) |
 | Rollback tags | `wasb-pre-pr7-*`, `wasb-pre-phase2-access` before high-risk merges |
 

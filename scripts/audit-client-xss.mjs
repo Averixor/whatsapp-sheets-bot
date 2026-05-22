@@ -12,6 +12,12 @@ const SAFE_EXPR = patternsToRegExp(xssPolicy.patterns || []);
 const maxPatterns = xssPolicy.maxSafeExprPatterns ?? 100;
 const warnThreshold = xssPolicy.warnThreshold ?? 95;
 const patternCount = xssPolicy.patterns?.length ?? 0;
+const legacyPatternCount = xssPolicy.legacyPatternCount ?? patternCount;
+const preferredSinks = xssPolicy.preferredSinks || {};
+const sinkNamePattern = preferredSinks.sinkNamePattern
+  ? new RegExp(preferredSinks.sinkNamePattern)
+  : null;
+const sanitizerSinks = xssPolicy.sanitizerSinks || [];
 
 function stripScript(html) {
   const match = html.match(/<script\b[^>]*>([\s\S]*?)<\/script>/i);
@@ -85,7 +91,25 @@ function auditFile(relPath) {
   return auditTemplateSinks(source).map((v) => ({ ...v, relPath }));
 }
 
+function warnOnNewPatternsWithoutSink() {
+  if (!preferredSinks.requireSinkForNewPatterns) return;
+  if (patternCount <= legacyPatternCount) return;
+
+  const newPatterns = (xssPolicy.patterns || []).slice(legacyPatternCount);
+  newPatterns.forEach((source) => {
+    const mentionsSink = sanitizerSinks.some((name) => source.includes(name));
+    const matchesSinkPattern = sinkNamePattern ? sinkNamePattern.test(source) : false;
+    if (!mentionsSink && !matchesSinkPattern) {
+      console.warn(
+        `audit-client-xss: WARN — new SAFE_EXPR pattern without sanitizer sink: ${source} (see preferredSinks in contracts/xss-policy.contract.json)`,
+      );
+    }
+  });
+}
+
 function main() {
+  warnOnNewPatternsWithoutSink();
+
   if (patternCount > maxPatterns) {
     console.error(
       `audit-client-xss: FAIL — SAFE_EXPR entropy ${patternCount} > max ${maxPatterns} (contracts/xss-policy.contract.json)`,

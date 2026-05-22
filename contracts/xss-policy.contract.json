@@ -2,6 +2,13 @@
   "version": 1,
   "maxSafeExprPatterns": 100,
   "warnThreshold": 95,
+  "legacyPatternCount": 93,
+  "migrationNotes": "Prefer routing new HTML through sanitizerSinks (escapeHtml, escapeAttr, escapeJsString, esc) instead of expanding SAFE_EXPR. Legacy patterns remain allowed until sink migration completes.",
+  "preferredSinks": {
+    "policy": "New template-literal interpolations should call a sanitizer sink directly; avoid adding new patterns to patterns[] unless migrating legacy code.",
+    "requireSinkForNewPatterns": true,
+    "sinkNamePattern": "^(escapeHtml|escapeHtmlMultiline|escapeAttr|escapeJsString|esc|escJs)\\b"
+  },
   "sanitizerSinks": [
     "escapeHtml",
     "escapeHtmlMultiline",

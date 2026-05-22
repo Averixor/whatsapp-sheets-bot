@@ -7,6 +7,7 @@ import path from 'node:path';
 import { loadContract, repoRoot } from './lib/load-contract.mjs';
 
 const envelope = loadContract('envelope.contract.json');
+const migration = loadContract('envelope-migration.contract.json');
 const SERVER_FIELDS = [...(envelope.required || []), ...(envelope.optional || [])];
 const ADAPTERS = envelope.adapters || [];
 const ADAPTER_FILES = envelope.adapterFiles || ['Js.Core.html'];
@@ -85,8 +86,34 @@ function checkUnsafeMessageAccess() {
   return errors;
 }
 
+function checkEnvelopeVersionGate() {
+  const errors = [];
+  const envelopeVersion = envelope.version;
+  const current = migration.currentEnvelopeVersion;
+  if (envelopeVersion !== current) {
+    errors.push(
+      `envelope version ${envelopeVersion} !== envelope-migration currentEnvelopeVersion ${current} — follow versionBumpChecklist in contracts/envelope-migration.contract.json`,
+    );
+  }
+  const rule = (migration.rules || []).find(
+    (r) => r.fromVersion === envelopeVersion - 1 && r.toVersion === envelopeVersion,
+  );
+  if (envelopeVersion > 1 && !rule) {
+    errors.push(
+      `envelope-migration: no rules[] entry for v${envelopeVersion - 1}→v${envelopeVersion}`,
+    );
+  }
+  for (const field of envelope.forbiddenRemovals || []) {
+    if (!(envelope.required || []).includes(field) && !(envelope.optional || []).includes(field)) {
+      errors.push(`envelope forbiddenRemovals field "${field}" must stay in required or optional`);
+    }
+  }
+  return errors;
+}
+
 function main() {
   const errors = [
+    ...checkEnvelopeVersionGate(),
     ...checkServerResponse(),
     ...checkClientAdapters(),
     ...checkUnsafeMessageAccess(),

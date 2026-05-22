@@ -9,6 +9,8 @@ Doctrine ownership for refactor guardrails, canary, and quarterly entropy recove
 | **Owner** | *(primary maintainer — update on handoff)* | 2026-05-22 |
 | **Backup owner** | *(secondary maintainer — update on handoff)* | 2026-05-22 |
 
+> **Fill assignee names before Phase 2** — placeholders are intentional until handoff.
+
 Owner owns the canary spreadsheet Script Property (`WASB_CANARY_SPREADSHEET_ID`), approves emergency exceptions (E1–E4), and signs off on `blast-radius-high` merges outside freeze windows.
 
 Backup owner covers owner absence, may approve E1–E4 with mandatory post-mortem, and must run one full canary smoke before accepting ownership.
@@ -87,3 +89,4 @@ CI: `node scripts/verify-bridge-flags.mjs` (WARN after `sunsetTarget`; `BRIDGE_S
 - `docs/refactor/entropy-review-2026-Q2.md` (latest quarterly output)
 - `scripts/snapshots/stage7-usecases-facade.json`
 - `scripts/snapshots/access-debug-baseline.json`
+- `scripts/bootstrap-access-baseline.mjs` — opt-in merge of canary `apiStage7DebugAccess()` capture

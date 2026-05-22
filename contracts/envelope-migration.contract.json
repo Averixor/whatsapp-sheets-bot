@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "envelopeRef": "envelope.contract.json",
+  "currentEnvelopeVersion": 1,
+  "rules": [
+    {
+      "fromVersion": 1,
+      "toVersion": 2,
+      "requires": [
+        "Update contracts/envelope.contract.json version field",
+        "Update adapterFiles / adapters if shape changes",
+        "Document migration in contracts/SNAPSHOT_CHANGELOG.md or release notes",
+        "Keep forbiddenRemovals honored for at least one release"
+      ],
+      "backwardCompat": "Js.Core.html adapters must accept prior response shape until callers migrate",
+      "gate": "audit-envelope-compat.mjs"
+    }
+  ],
+  "versionBumpChecklist": [
+    "Bump envelope.contract.json version",
+    "Bump currentEnvelopeVersion here",
+    "Add a rules[] entry describing fromVersion → toVersion",
+    "Run npm run ci",
+    "Verify adapterFiles and callSiteFiles still match codebase"
+  ]
+}
