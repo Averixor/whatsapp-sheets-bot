@@ -7,18 +7,7 @@ const PERSON_BR_DAYS_COL = 6;
 const PERSON_FML_COL = 7;
 
 function _personCardSafeHtml_(value) {
-  var text = value === null || typeof value === 'undefined' ? '' : String(value);
-  try {
-    if (typeof HtmlUtils_ === 'object' && HtmlUtils_ && typeof HtmlUtils_.escapeHtml === 'function') {
-      return HtmlUtils_.escapeHtml(text);
-    }
-  } catch (e) {}
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+  return escapeHtml_(value);
 }
 
 function _personCardJsString_(value) {

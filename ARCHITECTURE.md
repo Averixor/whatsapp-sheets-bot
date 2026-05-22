@@ -15,16 +15,17 @@ WASB is a spreadsheet-bound Google Apps Script application.
 - `Sidebar.html` is the sidebar shell
 - `JavaScript.html` aggregates the modular client runtime
 - `Styles.html` bundles CSS partials via GAS `include()` (see partials `Styles_*.html`)
-- active JS include chain:
+- active JS include chain (via `JavaScript.html`):
   - `Js.Core.html`
   - `Js.State.html`
   - `Js.Api.html`
-  - `Js.Render.html`
+  - `Js.Render.Panel.html`, `Js.Render.Calendar.html`, `Js.Render.Results.html`
   - `Js.Diagnostics.html`
   - `Js.Helpers.html`
   - `Js.Security.html`
   - `Js.Events.html`
   - `Js.Actions.html`
+  - `Js.Render.html` — legacy shim only (not in loader chain)
 
 ### Packaging policy
 

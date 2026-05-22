@@ -147,15 +147,6 @@ const Stage7AuditTrail_ = (function () {
     return entry;
   }
 
-  function _todayStr_() {
-    try {
-      const tz = Session.getScriptTimeZone() || 'UTC';
-      return Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
-    } catch (_) {
-      return new Date().toISOString().slice(0, 10);
-    }
-  }
-
   function _now_() {
     return new Date();
   }
@@ -395,7 +386,7 @@ const Stage7AuditTrail_ = (function () {
       }
 
       const e = _normalizeEntry_(entry || {});
-      const dateStr = e.context.date || e.context.dateStr || _todayStr_();
+      const dateStr = e.context.date || e.context.dateStr || (typeof _todayStr_ === 'function' ? _todayStr_() : '');
 
       const legacyRow = {
         timestamp: e.timestamp || _now_(),

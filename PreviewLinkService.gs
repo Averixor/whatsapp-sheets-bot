@@ -5,15 +5,7 @@
 
 const PreviewLinkService_ = (function() {
   function escapeHtmlLocal(value) {
-    if (typeof HtmlUtils_ === 'object' && typeof HtmlUtils_.escapeHtml === 'function') {
-      return HtmlUtils_.escapeHtml(value);
-    }
-    return String(value == null ? '' : value)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+    return escapeHtml_(value);
   }
 
   function safeWaLink(url) {

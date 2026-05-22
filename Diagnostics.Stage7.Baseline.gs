@@ -29,7 +29,7 @@ function runStage3HealthCheck_(options) {
     const status = sheet ? "OK" : schema.required ? "FAIL" : "WARN";
     const details = sheet
       ? `Аркуш "${sheetName}" доступний`
-      : `Аркуш "${sheetName}" ${schema.required ? "обов’язковий, але не знайдений" : "ще не створений"}`;
+      : `Аркуш "${sheetName}" ${schema.required ? "обов'язковий, але не знайдений" : "ще не створений"}`;
 
     _stage7PushCheck_(
       checks,

@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "required": ["success", "message", "data.result", "data.meta"],
+  "optional": ["dryRun"],
+  "forbiddenRemovals": ["success", "message"],
+  "fieldTypes": {
+    "success": "boolean",
+    "message": "string",
+    "data.result": "object|null",
+    "data.meta": "object|null",
+    "dryRun": "boolean|optional"
+  },
+  "adapters": [
+    "unwrapStage4Result",
+    "adaptStage4PanelResponse",
+    "adaptStage4SummaryResponse",
+    "normalizeApiResponse"
+  ],
+  "adapterFiles": ["Js.Core.html"],
+  "callSiteFiles": [
+    "Js.Actions.html",
+    "Js.Render.Panel.html",
+    "Js.Render.Calendar.html",
+    "Js.Render.Results.html"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "schemaRef": "contracts/access.contract.json",
+  "reviewedAt": "2026-05-22",
+  "changeReason": "G1 baseline — descriptorSchema moved to access.contract.json",
+  "note": "Structural schema baseline from AccessControl_.describe() + apiStage7DebugAccess(). Replace descriptor values from canary before Phase 2 structural PRs.",
+  "source": "code-introspection: AccessControl.AuthResolver.gs _buildPublicAccessResponse_, Stage7MaintenanceApi.gs apiStage7DebugAccess",
+  "capturedAt": null,
+  "maintenanceEnvelope": {
+    "success": "boolean",
+    "message": "string",
+    "data.result": "object",
+    "data.meta": "object|null"
+  },
+  "canaryExpectations": {
+    "bootstrapAllowed": "boolean — false when admin row exists",
+    "adminConfigured": "boolean — true when enabled admin/owner in ACCESS"
+  },
+  "descriptor": null
+}

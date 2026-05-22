@@ -242,9 +242,7 @@ function _getAccessHeaderAliasMap_() {
     "імʼя користувача telegram": "telegram_username",
     telegram_username: "telegram_username",
     "по батькові": "patronymic",
-    отчество: "patronymic",
     посада: "position_title",
-    должность: "position_title",
     position_title: "position_title",
   };
   Object.keys(legacy).forEach(function (name) {
@@ -290,11 +288,8 @@ function _removeAccessObsoleteColumns_(sh) {
   var obsolete = {
     patronymic: true,
     "по батькові": true,
-    отчество: true,
-    "по баткові": true,
     position_title: true,
     посада: true,
-    должность: true,
   };
 
   var lastColumn = Number(sh.getLastColumn()) || 0;

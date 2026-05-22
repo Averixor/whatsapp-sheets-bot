@@ -1,0 +1,674 @@
+<script>
+  // Js.Render fragment
+
+  // MONTH SWITCHER
+  // =========================
+  
+  async function showMonthSwitcher() {
+    if (!STATE.monthsList.length) {
+      try {
+        const data = await Stage7Api.getMonths();
+
+        if (data?.months) {
+          STATE.monthsList = data.months;
+          renderMonthSwitcher();
+        } else {
+          showMenu();
+        }
+      } catch (error) {
+        logToConsole(`${normalizeError(error)}`, "error");
+        showMenu();
+      }
+
+      hideLoading();
+      return;
+    }
+
+    renderMonthSwitcher();
+    hideLoading();
+  }
+
+  function renderMonthSwitcher() {
+    showStandardResult("Перемикання місяця");
+
+    const options = STATE.monthsList
+      .map(
+        (month) => `
+        <option value="${escapeHtml(month)}" ${month === STATE.currentMonth ? "selected" : ""}>
+          ${escapeHtml(month)}
+        </option>
+      `,
+      )
+      .join("");
+
+    setHtml(
+      "resultContent",
+      `
+      <div class="result-item month-switcher-card">
+        <div class="month-switcher-hint">Виберіть місяць, на який потрібно перемкнути активний бот.</div>
+        <div class="month-switcher-badge">Активний місяць: ${escapeHtml(STATE.currentMonth || "—")}</div>
+
+        <label class="month-switcher-field" for="monthSelect">
+          <span class="month-switcher-field__label">Виберіть місяць</span>
+          <span class="month-switcher-select-wrap">
+            <select id="monthSelect" class="month-switcher-select">${options}</select>
+          </span>
+        </label>
+
+        <div class="month-switcher-actions">
+          <button type="button" class="result-link" onclick="SidebarApp.switchToSelectedMonth()">Перемкнути</button>
+          <button type="button" class="result-link result-link--secondary" onclick="SidebarApp.showMenu()">Скасувати</button>
+        </div>
+      </div>
+    `,
+    );
+  }
+
+  async function switchToSelectedMonth() {
+    const select = $id("monthSelect");
+    if (!select) return;
+
+    try {
+      const result = await ActionDispatcher.run("switchBotToMonth", () =>
+        Stage7Api.switchMonth(select.value),
+      );
+      if (result?.success) {
+        STATE.currentMonth = result.month;
+        updateMonthBadge(STATE.currentMonth);
+        logToConsole(`✓ Перемкнено на ${STATE.currentMonth}`, "success");
+        showMenu();
+      } else {
+        displayInResult("error", {
+          error: result?.error || "Невідома помилка",
+        });
+      }
+    } catch (error) {
+      handleError(error);
+    }
+  }
+
+  async function clearPhoneCache() {
+    assertAdminAction_("clearPhoneCache");
+    if (!confirm("Очистити кеш телефонів?")) return;
+
+    logToConsole("Очищення кешу телефонів...", "info");
+
+    try {
+      const result = await ActionDispatcher.run("clearPhoneCache", () =>
+        MaintenanceApi.clearPhoneCache(),
+      );
+      if (!result?.success) {
+        showToast("" + (result?.error || "Помилка"));
+        return;
+      }
+
+      showToast("Кеш очищено");
+      showStandardResult("Очищення кешу");
+
+      setHtml(
+        "resultContent",
+        `
+        <div class="result-item">
+          <div class="result-label" style="color: var(--success-color);">Успішно</div>
+          <div class="result-value">${escapeHtml(result.message || "Кеш телефонів очищено")}</div>
+        </div>
+      `,
+      );
+    } catch (error) {
+      showToast("" + normalizeError(error));
+    }
+  }
+
+  async function setupTrigger() {
+    assertAdminAction_("setupTrigger");
+    if (!confirm("Створити щоденні тригери для відпусток і ДН?")) return;
+
+    logToConsole("Створення тригера...", "info");
+
+    try {
+      const result = await ActionDispatcher.run("setupVacationTriggers", () =>
+        MaintenanceApi.setupVacationTriggers(),
+      );
+
+      if (result?.success) {
+        showToast("Тригер створено");
+        showStandardResult("Щоденні тригери");
+
+        setHtml(
+          "resultContent",
+          `
+          <div class="result-item">
+            <div class="result-label" style="color: var(--success-color);">Успішно</div>
+            <div class="result-value">
+              <p>${escapeHtml(result.message || "")
+                .split("\n")
+                .join("<br>")}</p>
+              <p style="font-size:0.8rem; color:var(--text-secondary); margin-top:8px;">
+                Видалено старих тригерів: ${result.removed || 0}
+              </p>
+            </div>
+          </div>
+        `,
+        );
+      } else {
+        showToast("" + (result?.error || "Помилка"));
+      }
+    } catch (error) {
+      showToast("" + normalizeError(error));
+    }
+  }
+
+  async function cleanupTriggers() {
+    assertAdminAction_("cleanupTriggers");
+    if (!confirm("Очистити дублікати тригерів?")) return;
+
+    logToConsole("Очищення дублів тригерів...", "info");
+
+    try {
+      const result = await ActionDispatcher.run(
+        "cleanupDuplicateTriggers",
+        () => MaintenanceApi.cleanupDuplicateTriggers(),
+      );
+
+      if (result?.ok) {
+        const statusMessage =
+          result.removed === 0
+            ? "Дублів не знайдено. Все добре!"
+            : `Видалено дублів: ${result.removed} (було: ${result.found})`;
+
+        showToast(statusMessage);
+        showStandardResult("Очищення дублів тригерів");
+
+        setHtml(
+          "resultContent",
+          `
+          <div class="result-item">
+            <div class="result-label" style="color: var(--success-color);">Результат</div>
+            <div class="result-value">${escapeHtml(statusMessage)}</div>
+          </div>
+        `,
+        );
+      } else {
+        showToast("" + (result?.error || "Помилка"));
+      }
+    } catch (error) {
+      showToast("" + normalizeError(error));
+    }
+  }
+
+  async function debugPhones() {
+    assertAdminAction_("debugPhones");
+    logToConsole("Діагностика PHONES...", "info");
+    showStandardResult("Діагностика PHONES");
+
+    setHtml(
+      "resultContent",
+      `
+      <div class="result-item">
+        <div class="result-label">Діагностика PHONES</div>
+        <div class="result-value">Аналізую аркуш PHONES...</div>
+      </div>
+    `,
+    );
+
+    try {
+      const result = await ActionDispatcher.run(
+        "debugPhones",
+        () => MaintenanceApi.debugPhones(),
+        { successMessage: "" },
+      );
+      if (!result?.success) {
+        throw new Error(
+          result?.error || "Не вдалося виконати діагностику PHONES",
+        );
+      }
+
+      const stats = result.stats || {};
+      const contacts = Array.isArray(result.contacts) ? result.contacts : [];
+      const preview = contacts.slice(0, 20);
+      const rowsHtml = preview.length
+        ? `
+          <div class="result-item">
+            <div class="result-label">Перші записи</div>
+            <div class="result-value">
+              <div style="display:grid; gap:8px;">
+                ${preview
+                  .map(
+                    (item) => `
+                  <div style="padding:8px; border:1px solid var(--border-color); border-radius:10px; background:var(--bg-glass);">
+                    <div><strong>#${Number(item.row || 0)}</strong> ${escapeHtml(item.fml || "—")}</div>
+                    <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:4px;">
+                      ${escapeHtml(formatPhone(item.phone || "—"))}
+                      ${item.role ? `<br>🏷 ${escapeHtml(item.role)}` : ""}
+                      ${item.birthday ? `<br>🎂 ${escapeHtml(item.birthday)}` : ""}
+                    </div>
+                  </div>
+                `,
+                  )
+                  .join("")}
+              </div>
+            </div>
+          </div>
+        `
+        : `
+          <div class="result-item">
+            <div class="result-label">Записи</div>
+            <div class="result-value">Аркуш порожній або не містить контактів.</div>
+          </div>
+        `;
+
+      setHtml(
+        "resultContent",
+        `
+        <div class="result-item">
+          <div class="result-label" style="color: var(--success-color);">Результат</div>
+          <div class="result-value">${escapeHtml(result.message || "Діагностику PHONES виконано")}</div>
+        </div>
+
+        <div class="result-item">
+          <div class="result-label">Аркуш</div>
+          <div class="result-value">${escapeHtml(result.sheetName || "PHONES")}</div>
+        </div>
+
+        <div class="result-item">
+          <div class="result-label">Статистика</div>
+          <div class="result-value">
+            Усього контактів: <strong>${Number(stats.total || contacts.length || 0)}</strong><br>
+            З телефонами: <strong>${Number(stats.withPhone || 0)}</strong><br>
+            Без телефонів: <strong>${Number(stats.withoutPhone || 0)}</strong><br>
+            З роллю/позивним: <strong>${Number(stats.withRole || 0)}</strong><br>
+            З днем народження: <strong>${Number(stats.withBirthday || 0)}</strong>
+          </div>
+        </div>
+
+        ${rowsHtml}
+      `,
+      );
+
+      showToast("Діагностику PHONES завершено");
+      logToConsole(
+        `Діагностика PHONES завершена: ${Number(stats.total || contacts.length || 0)} записів`,
+        "success",
+      );
+    } catch (error) {
+      const message = normalizeError(error);
+      setHtml(
+        "resultContent",
+        `
+        <div class="result-item">
+          <div class="result-label" style="color: var(--danger-color);">Помилка</div>
+          <div class="result-value">${escapeHtml(message)}</div>
+        </div>
+      `,
+      );
+      showToast("✕ " + message);
+      logToConsole("Діагностика PHONES: " + message, "error");
+    }
+  }
+
+  async function applyProtections() {
+    assertAdminAction_("applyProtections");
+    if (!confirm("Застосувати захист до службових листів?")) return;
+    logToConsole("Застосування захисту до службових листів...", "info");
+    showStandardResult("Захист службових листів");
+    setHtml(
+      "resultContent",
+      '<div class="result-item"><div class="result-value">Підготовка захисту...</div></div>',
+    );
+    try {
+      const result = await ActionDispatcher.run(
+        "applyProtections",
+        () => MaintenanceApi.applyProtections({ dryRun: false }),
+        { successMessage: "" },
+      );
+      const protectedSheets = Array.isArray(result?.protectedSheets)
+        ? result.protectedSheets
+        : Array.isArray(result?.data?.protectedSheets)
+          ? result.data.protectedSheets
+          : [];
+      const warnings = Array.isArray(result?.warnings)
+        ? result.warnings
+        : Array.isArray(result?.data?.warnings)
+          ? result.data.warnings
+          : [];
+      setHtml(
+        "resultContent",
+        `
+        <div class="result-item">
+          <div class="result-label" style="color: var(--success-color);">Результат</div>
+          <div class="result-value">${escapeHtml(result?.message || "Захист застосовано")}</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Захищені листи</div>
+          <div class="result-value">${protectedSheets.length ? protectedSheets.map(escapeHtml).join("<br>") : "—"}</div>
+        </div>
+        ${warnings.length ? `<div class="result-item"><div class="result-label">Попередження</div><div class="result-value">${warnings.map(escapeHtml).join("<br>")}</div></div>` : ""}
+      `,
+      );
+      showToast("Захист службових листів застосовано");
+    } catch (error) {
+      setHtml(
+        "resultContent",
+        `<div class="result-item"><div class="result-value">✕ ${escapeHtml(normalizeError(error))}</div></div>`,
+      );
+      showToast("Не вдалося застосувати захист");
+    }
+  }
+
+  async function restartBot() {
+    assertAdminAction_("restartBot");
+    if (
+      !confirm(
+        "Повністю перезапустити бота?\n\nБудуть очищені активні маркери та активні операції життєвого циклу.",
+      )
+    )
+      return;
+    logToConsole("Перезапуск бота...", "info");
+    try {
+      const result = await ActionDispatcher.run(
+        "restartBot",
+        () => MaintenanceApi.restartBot(),
+        { successMessage: "" },
+      );
+      if (!result?.success) {
+        showToast("" + (result?.error || "Помилка"));
+        return;
+      }
+      showToast("" + (result.message || "Бот перезапущено"));
+      showStandardResult("Перезапуск бота");
+      setHtml(
+        "resultContent",
+        `
+      <div class="result-item">
+        <div class="result-label" style="color: var(--success-color);">Успішно</div>
+        <div class="result-value">${escapeHtml(result.message || "Бота перезапущено")}</div>
+      </div>
+    `,
+      );
+      setTimeout(() => {
+        window.location.reload();
+      }, 300);
+    } catch (error) {
+      showToast("✕ " + normalizeError(error));
+    }
+  }
+
+  function getPendingRepairsCacheTtlMs_() {
+    return 30000;
+  }
+
+  function readPendingRepairsCache_() {
+    const cached = STATE._pendingRepairsCache || null;
+    if (!cached || !Array.isArray(cached.items)) return null;
+    if (Date.now() - Number(cached.ts || 0) > getPendingRepairsCacheTtlMs_())
+      return null;
+    return cached;
+  }
+
+  function writePendingRepairsCache_(items, skippedWithoutOperationId) {
+    STATE._pendingRepairsCache = {
+      ts: Date.now(),
+      items: Array.isArray(items) ? items.slice() : [],
+      skippedWithoutOperationId: Number(skippedWithoutOperationId || 0),
+    };
+  }
+
+  function invalidatePendingRepairsCache_() {
+    STATE._pendingRepairsCache = null;
+  }
+
+  function readOperationDetailsCache_(operationId) {
+    const key = String(operationId || "").trim();
+    if (!key) return null;
+    const map = STATE._operationDetailsCache || {};
+    const cached = map[key];
+    if (!cached) return null;
+    if (Date.now() - Number(cached.ts || 0) > getPendingRepairsCacheTtlMs_())
+      return null;
+    return cached.details || null;
+  }
+
+  function writeOperationDetailsCache_(operationId, details) {
+    const key = String(operationId || "").trim();
+    if (!key) return;
+    if (
+      !STATE._operationDetailsCache ||
+      typeof STATE._operationDetailsCache !== "object"
+    ) {
+      STATE._operationDetailsCache = {};
+    }
+    STATE._operationDetailsCache[key] = {
+      ts: Date.now(),
+      details: details || {},
+    };
+  }
+
+  function invalidateOperationDetailsCache_(operationId) {
+    const key = String(operationId || "").trim();
+    if (
+      !key ||
+      !STATE._operationDetailsCache ||
+      typeof STATE._operationDetailsCache !== "object"
+    )
+      return;
+    delete STATE._operationDetailsCache[key];
+  }
+
+  function renderPendingRepairsTable_(items) {
+    if (!Array.isArray(items) || !items.length) {
+      return `
+      <div class="result-item">
+        <div class="result-value">Немає операцій, що потрібно виправити.</div>
+      </div>
+    `;
+    }
+
+    return `
+    <div class="result-item">
+      <div class="result-label">🛠 - ${items.length}</div>
+      <div class="result-value" style="display:grid; gap:10px;">
+        ${items
+          .map(
+            (item) => `
+          <div style="padding:10px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-glass);">
+            <div style="font-weight:700; font-size:12px;">${escapeHtml(item.operationId || "")}</div>
+            <div style="font-size:11px; color:var(--text-secondary); margin-top:4px;">${escapeHtml(translateLifecycleScenario(item.scenario || ""))} • ${escapeHtml(translateLifecycleStatus(item.status || ""))}</div>
+            <div style="font-size:11px; color:var(--text-secondary); margin-top:4px;">${escapeHtml(formatOperationDate(item.startedAt || ""))}</div>
+            ${item.errorMessage ? `<div style="margin-top:6px; color:var(--error-color); font-size:11px;">${escapeHtml(translateLifecycleText(item.errorMessage))}</div>` : ""}
+            <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+              <button class="btn btn-secondary" onclick="SidebarApp.showOperationDetails('${escapeJsString(item.operationId || "")}')">Деталі</button>
+              <button class="btn btn-primary" onclick="SidebarApp.runRepair('${escapeJsString(item.operationId || "")}')">Виправити</button>
+            </div>
+          </div>
+        `,
+          )
+          .join("")}
+      </div>
+    </div>
+  `;
+  }
+
+  async function showPendingRepairs(forceRefresh) {
+    assertAdminAction_("pendingRepairs");
+    logToConsole("Завантаження операцій, що потрібно виправити...", "info");
+    showStandardResult("Операції, що потрібно виправити");
+
+    const cached = forceRefresh ? null : readPendingRepairsCache_();
+    if (cached) {
+      let cachedHtml = renderPendingRepairsTable_(cached.items);
+      if (cached.skippedWithoutOperationId > 0) {
+        cachedHtml += `<div class="result-item"><div class="result-label">Пропущені записи</div><div class="result-value">${escapeHtml(String(cached.skippedWithoutOperationId))} запис(ів) без коректного operationId не показано в списку repair.</div></div>`;
+      }
+      setHtml("resultContent", cachedHtml);
+      logToConsole("📦 Список repair-операцій взято з короткого кешу", "info");
+      return;
+    }
+
+    setHtml(
+      "resultContent",
+      '<div class="result-item"><div class="result-value">Завантаження...</div></div>',
+    );
+    try {
+      const result = await ActionDispatcher.run(
+        "listPendingRepairs",
+        () => MaintenanceApi.listPendingRepairs(),
+        { successMessage: "" },
+      );
+      const items = result?.operations || result?.data?.operations || [];
+      const skippedWithoutOperationId = Number(
+        result?.skippedWithoutOperationId ||
+          result?.data?.skippedWithoutOperationId ||
+          0,
+      );
+      writePendingRepairsCache_(items, skippedWithoutOperationId);
+      let html = renderPendingRepairsTable_(items);
+      if (skippedWithoutOperationId > 0) {
+        html += `<div class="result-item"><div class="result-label">Пропущені записи</div><div class="result-value">${escapeHtml(String(skippedWithoutOperationId))} запис(ів) без коректного operationId не показано в списку repair.</div></div>`;
+      }
+      setHtml("resultContent", html);
+      showToast(
+        items.length
+          ? `Потрібно виправити: ${items.length}`
+          : "Операцій для виправлення немає",
+      );
+    } catch (error) {
+      setHtml(
+        "resultContent",
+        `<div class="result-item"><div class="result-value">✕ ${escapeHtml(normalizeError(error))}</div></div>`,
+      );
+      showToast("Не вдалося завантажити список");
+    }
+  }
+
+  async function showOperationDetails(operationId, forceRefresh) {
+    assertAdminAction_("operationDetails");
+    const opId = String(operationId || "").trim();
+    if (!opId) {
+      setHtml(
+        "resultContent",
+        '<div class="result-item"><div class="result-value">Не передано operationId</div></div>',
+      );
+      showToast("Не знайдено operationId");
+      return;
+    }
+    showStandardResult("Деталі операції");
+
+    const cachedDetails = forceRefresh
+      ? null
+      : readOperationDetailsCache_(opId);
+    if (!cachedDetails) {
+      setHtml(
+        "resultContent",
+        '<div class="result-item"><div class="result-value">Завантаження деталей...</div></div>',
+      );
+    }
+    try {
+      const details =
+        cachedDetails ||
+        (function () {
+          return null;
+        })();
+      const resolved =
+        details ||
+        (function (result) {
+          return result?.operation ? result : result?.data || {};
+        })(
+          await ActionDispatcher.run(
+            "getOperationDetails",
+            () => MaintenanceApi.getOperationDetails(opId),
+            { successMessage: "" },
+          ),
+        );
+      writeOperationDetailsCache_(opId, resolved);
+      const operation = resolved.operation || {};
+      const checkpoints = Array.isArray(resolved.checkpoints)
+        ? resolved.checkpoints
+        : [];
+      if (cachedDetails) {
+        logToConsole("📦 Деталі операції взято з короткого кешу", "info");
+      }
+      setHtml(
+        "resultContent",
+        `
+      <div class="result-item">
+        <div class="result-label">Ідентифікатор операції</div>
+        <div class="result-value">${escapeHtml(operation.OperationId || opId || "")}</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Сценарій / Статус</div>
+        <div class="result-value">${escapeHtml(translateLifecycleScenario(operation.Scenario || ""))} • ${escapeHtml(translateLifecycleStatus(operation.Status || ""))}</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Відбиток операції</div>
+        <div class="result-value">${escapeHtml(operation.Fingerprint || "")}</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Затронуті сутності</div>
+        <div class="result-value">${escapeHtml(operation.AffectedEntities || "") || "—"}</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Перевірка / Результат виправлення</div>
+        <div class="result-value">${escapeHtml(translateLifecycleText(operation.VerificationResult || "")) || "—"} / ${escapeHtml(translateLifecycleText(operation.ResolutionStatus || "")) || "—"}</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Примітки</div>
+        <div class="result-value" style="white-space:pre-wrap;">${escapeHtml(translateLifecycleText(operation.Notes || "")) || "—"}</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Контекст контрольних точок</div>
+        <div class="result-value">${checkpoints.length ? checkpoints.map((cp) => `${escapeHtml(String(cp.CheckpointIndex || ""))}: ${escapeHtml(String(cp.ProcessedUpTo || ""))}`).join("<br>") : "—"}</div>
+      </div>
+    `,
+      );
+    } catch (error) {
+      setHtml(
+        "resultContent",
+        `<div class="result-item"><div class="result-value">✕ ${escapeHtml(normalizeError(error))}</div></div>`,
+      );
+    }
+  }
+
+  async function runRepair(operationId) {
+    assertAdminAction_("runRepair");
+    const opId = String(operationId || "").trim();
+    if (!opId) {
+      setHtml(
+        "resultContent",
+        '<div class="result-item"><div class="result-value">Не передано operationId для repair</div></div>',
+      );
+      showToast("Не знайдено operationId");
+      return;
+    }
+    if (!confirm("Запустити виправлення для цієї операції?")) return;
+    showStandardResult("Запуск виправлення");
+    setHtml(
+      "resultContent",
+      '<div class="result-item"><div class="result-value">Запускаю виправлення...</div></div>',
+    );
+    try {
+      const result = await ActionDispatcher.run(
+        "runRepair",
+        () => MaintenanceApi.runRepair(opId),
+        { successMessage: "" },
+      );
+      invalidatePendingRepairsCache_();
+      invalidateOperationDetailsCache_(opId);
+      if (result?.success) {
+        showToast("Виправлення виконано");
+        await showOperationDetails(result.operationId || opId, true);
+      } else {
+        setHtml(
+          "resultContent",
+          `<div class="result-item"><div class="result-value">✕ ${escapeHtml(translateLifecycleText(result?.error || result?.message || "Repair failed"))}</div></div>`,
+        );
+        showToast("Виправлення завершилося з помилкою");
+      }
+    } catch (error) {
+      setHtml(
+        "resultContent",
+        `<div class="result-item"><div class="result-value">✕ ${escapeHtml(normalizeError(error))}</div></div>`,
+      );
+    }
+  }
+
+</script>

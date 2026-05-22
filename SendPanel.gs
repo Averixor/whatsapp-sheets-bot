@@ -741,6 +741,7 @@ function showSendPanelDialog_(items) {
     }
 
     function escapeHtml(s){
+      // Mirrors HtmlUtils_.escapeHtml — standalone WA sender page (no sidebar bundle).
       return String(s || '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')

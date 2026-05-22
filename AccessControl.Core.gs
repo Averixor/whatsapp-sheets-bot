@@ -368,7 +368,7 @@ function safeGetUserEmail_() {
 // ==================== ACCESS REGISTRATION PASSWORD HELPERS ====================
 
 const ACCESS_TEMP_PASSWORD_TTL_HOURS = 24;
-const ACCESS_TEMP_PASSWORD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const ACCESS_TEMP_PASSWORD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789";
 
 function hashTextSha256_(value) {
   var raw = String(value || "").trim();
@@ -402,7 +402,7 @@ function isSpreadsheetProtectionWriteError_(error) {
   return (
     message.indexOf("protected cell") !== -1 ||
     message.indexOf("protected range") !== -1 ||
-    message.indexOf("захищен") !== -1 ||
+    message.indexOf("захищено") !== -1 ||
     message.indexOf("protected object") !== -1
   );
 }

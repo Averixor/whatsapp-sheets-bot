@@ -299,7 +299,7 @@ function healthCheck() {
       return {
         status: count > 0 ? "OK" : "FAIL",
         details: `Ключів у phonesMap: ${count}`,
-        howTo: count > 0 ? "" : "Перевірте PHONES та очистіть кеш телефонів",
+        howTo: count > 0 ? "" : "Перевірте PHONES та очистить кеш телефонів",
       };
     },
   );
@@ -324,7 +324,7 @@ function healthCheck() {
       howTo:
         ok && items > 0
           ? ""
-          : "Перевірте Stage 7 phone-layer і очистіть кеш телефонів",
+          : "Перевірте Stage 7 phone-layer і очистить кеш телефонів",
     };
   });
 

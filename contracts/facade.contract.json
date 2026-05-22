@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "snapshotPath": "scripts/snapshots/stage7-usecases-facade.json",
+  "envelopeRef": "envelope.contract.json",
+  "methodFields": ["name", "paramCount", "paramOrder", "envelope"],
+  "snapshotMetaFields": ["schemaRef", "reviewedAt", "changeReason"],
+  "crossCheckSources": {
+    "facadeFile": "UseCases.gs",
+    "facadeMarker": "const Stage7UseCases_ = (function () {",
+    "registryFile": "RoutingRegistry.gs",
+    "registryPrefix": "Stage7UseCases_."
+  },
+  "domainFiles": [
+    ["UseCases.SendPanel.gs", "var UseCasesSendPanel_ = (function () {"],
+    ["UseCases.Summaries.gs", "var UseCasesSummaries_ = (function () {"],
+    ["UseCases.Calendar.gs", "var UseCasesCalendar_ = (function () {"],
+    ["UseCases.Maintenance.gs", "var UseCasesMaintenance_ = (function () {"],
+    ["UseCases.MonthOps.gs", "var UseCasesMonthOps_ = (function () {"]
+  ]
+}

@@ -383,319 +383,11 @@ var Stage7TestRunner = (function () {
   }
 
   function buildRegisteredTasks_() {
-    return [
-      task_(
-        "health-check",
-        "Health: healthCheck",
-        "health",
-        "fast",
-        "critical",
-        "healthCheck",
-        optArg_("health"),
-      ),
-
-      task_(
-        "smoke-tests",
-        "Smoke tests: runSmokeTests",
-        "smoke",
-        "fast",
-        "critical",
-        "runSmokeTests",
-        optArg_("smoke"),
-      ),
-      task_(
-        "regression-tests",
-        "Regression tests: runRegressionTestSuite",
-        "regression",
-        "full",
-        "warning",
-        "runRegressionTestSuite",
-        optArg_("regression"),
-      ),
-
-      task_(
-        "basic-check-sheets",
-        "Basic diagnostics: checkSheets",
-        "diagnostics",
-        "fast",
-        "critical",
-        "checkSheets",
-      ),
-      task_(
-        "basic-check-files",
-        "Basic diagnostics: checkFiles",
-        "diagnostics",
-        "fast",
-        "warning",
-        "checkFiles",
-      ),
-      task_(
-        "basic-check-duplicates",
-        "Basic diagnostics: checkDuplicates",
-        "diagnostics",
-        "full",
-        "warning",
-        "checkDuplicates",
-      ),
-      task_(
-        "basic-test-functions",
-        "Basic diagnostics: testFunctions",
-        "diagnostics",
-        "fast",
-        "critical",
-        "testFunctions",
-      ),
-      task_(
-        "basic-run-diagnostics",
-        "Basic diagnostics: runDiagnostics",
-        "diagnostics",
-        "fast",
-        "critical",
-        "runDiagnostics",
-      ),
-      task_(
-        "basic-run-all-diagnostics",
-        "Basic diagnostics: runAllDiagnostics",
-        "diagnostics",
-        "full",
-        "critical",
-        "runAllDiagnostics",
-      ),
-      task_(
-        "basic-run-full-diagnostics",
-        "Basic diagnostics: runFullDiagnostics",
-        "diagnostics",
-        "full",
-        "critical",
-        "runFullDiagnostics",
-      ),
-      task_(
-        "basic-run-sheets-check",
-        "Basic diagnostics: runSheetsCheck",
-        "diagnostics",
-        "full",
-        "warning",
-        "runSheetsCheck",
-      ),
-      task_(
-        "basic-run-files-check",
-        "Basic diagnostics: runFilesCheck",
-        "diagnostics",
-        "full",
-        "warning",
-        "runFilesCheck",
-      ),
-      task_(
-        "basic-run-duplicates-check",
-        "Basic diagnostics: runDuplicatesCheck",
-        "diagnostics",
-        "full",
-        "warning",
-        "runDuplicatesCheck",
-      ),
-      task_(
-        "basic-run-tests-check",
-        "Basic diagnostics: runTestsCheck",
-        "diagnostics",
-        "full",
-        "warning",
-        "runTestsCheck",
-      ),
-
-      task_(
-        "stage7-quick-diagnostics",
-        "Stage7 diagnostics: runQuickDiagnostics_",
-        "diagnostics",
-        "fast",
-        "critical",
-        "runQuickDiagnostics_",
-        optArg_("quick"),
-      ),
-      task_(
-        "stage7-structural-diagnostics",
-        "Stage7 diagnostics: runStructuralDiagnostics_",
-        "diagnostics",
-        "fast",
-        "critical",
-        "runStructuralDiagnostics_",
-        optArg_("structural"),
-      ),
-      task_(
-        "stage7-operational-diagnostics",
-        "Stage7 diagnostics: runOperationalDiagnostics_",
-        "diagnostics",
-        "full",
-        "critical",
-        "runOperationalDiagnostics_",
-        optArg_("operational"),
-      ),
-      task_(
-        "stage7-sunset-diagnostics",
-        "Stage7 diagnostics: runSunsetDiagnostics_",
-        "diagnostics",
-        "full",
-        "warning",
-        "runSunsetDiagnostics_",
-        optArg_("sunset"),
-      ),
-      task_(
-        "stage7-hardening-diagnostics",
-        "Stage7 diagnostics: runHardeningDiagnostics_",
-        "diagnostics",
-        "full",
-        "warning",
-        "runHardeningDiagnostics_",
-        optArg_("stage7a-hardening"),
-      ),
-      task_(
-        "stage7-full-diagnostics",
-        "Stage7 diagnostics: runFullDiagnostics_",
-        "diagnostics",
-        "full",
-        "critical",
-        "runFullDiagnostics_",
-        optArg_("full"),
-      ),
-      task_(
-        "stage7-full-verbose-diagnostics",
-        "Stage7 diagnostics: runFullVerboseDiagnostics_",
-        "diagnostics",
-        "full",
-        "warning",
-        "runFullVerboseDiagnostics_",
-        optArg_("full-verbose"),
-      ),
-
-      task_(
-        "stage5-metadata-consistency-check",
-        "Legacy diagnostics: runStage5MetadataConsistencyCheck_",
-        "diagnostics",
-        "full",
-        "warning",
-        "runStage5MetadataConsistencyCheck_",
-      ),
-      task_(
-        "stage41-project-consistency-check",
-        "Legacy diagnostics: runStage41ProjectConsistencyCheck_",
-        "diagnostics",
-        "full",
-        "warning",
-        "runStage41ProjectConsistencyCheck_",
-      ),
-      task_(
-        "historical-quick-diagnostics",
-        "Historical diagnostics: runHistoricalQuickDiagnosticsInternal_",
-        "diagnostics",
-        "full",
-        "warning",
-        "runHistoricalQuickDiagnosticsInternal_",
-        optArg_("historicalQuick"),
-      ),
-
-      task_(
-        "domain-tests-stage6a",
-        "Domain tests: runStage6ADomainTests_",
-        "domain",
-        "full",
-        "warning",
-        "runStage6ADomainTests_",
-        optArg_("domain"),
-      ),
-
-      task_(
-        "access-policy-checks",
-        "Access tests: runAccessPolicyChecks",
-        "access",
-        "full",
-        "critical",
-        "runAccessPolicyChecks",
-        optArg_("accessPolicy"),
-      ),
-      task_(
-        "access-all-policy-checks",
-        "Access tests: runAllPolicyChecks",
-        "access",
-        "full",
-        "warning",
-        "runAllPolicyChecks",
-        optArg_("allPolicyChecks"),
-      ),
-      task_(
-        "access-security-e2e-tests",
-        "Access tests: runAccessSecurityE2ETests_",
-        "access",
-        "full",
-        "critical",
-        "runAccessSecurityE2ETests_",
-        optArg_("accessSecurity"),
-      ),
-      task_(
-        "access-e2e-tests",
-        "Access tests: runAccessE2ETests",
-        "access",
-        "full",
-        "critical",
-        "runAccessE2ETests",
-        optArg_("accessE2E"),
-      ),
-      task_(
-        "access-diagnostics",
-        "Access diagnostics: runAccessDiagnostics",
-        "access",
-        "full",
-        "warning",
-        "runAccessDiagnostics",
-      ),
-      task_(
-        "access-public-test",
-        "Access tests: testWasbAccessControl",
-        "access",
-        "full",
-        "warning",
-        "testWasbAccessControl",
-      ),
-      task_(
-        "access-internal-test",
-        "Access tests: testAccessControl_",
-        "access",
-        "full",
-        "warning",
-        "testAccessControl_",
-      ),
-      task_(
-        "access-smoke-test",
-        "Access tests: smokeTestAccessControl_",
-        "access",
-        "full",
-        "warning",
-        "smokeTestAccessControl_",
-      ),
-      task_(
-        "access-test-diagnostics",
-        "Access diagnostics: testDiagnostics",
-        "access",
-        "full",
-        "warning",
-        "testDiagnostics",
-      ),
-
-      task_(
-        "template-notify-smoke",
-        "Template tests: testNotifyWithTemplate_",
-        "templates",
-        "full",
-        "warning",
-        "testNotifyWithTemplate_",
-      ),
-      task_(
-        "vacation-engine-test",
-        "Vacation tests: testVacationEngine",
-        "vacations",
-        "full",
-        "warning",
-        "testVacationEngine",
-      ),
-    ];
+    return []
+      .concat(stage7TestRunnerBuildSendPanelTasks_(task_, optArg_))
+      .concat(stage7TestRunnerBuildMaintenanceTasks_(task_, optArg_))
+      .concat(stage7TestRunnerBuildAccessTasks_(task_, optArg_))
+      .concat(stage7TestRunnerBuildSummariesTasks_(task_, optArg_));
   }
 
   function discoverProjectTestTasks_(knownFunctions) {
@@ -2208,45 +1900,21 @@ var Stage7TestRunner = (function () {
    * Discovered tasks still resolve via getGlobalObject_()[name] only (no eval).
    */
   function getStage7TestRunnerExplicitRegistry_() {
-    return {
-      healthCheck: healthCheck,
-      runSmokeTests: runSmokeTests,
-      runRegressionTestSuite: runRegressionTestSuite,
-      checkSheets: checkSheets,
-      checkFiles: checkFiles,
-      checkDuplicates: checkDuplicates,
-      testFunctions: testFunctions,
-      runDiagnostics: runDiagnostics,
-      runAllDiagnostics: runAllDiagnostics,
-      runFullDiagnostics: runFullDiagnostics,
-      runSheetsCheck: runSheetsCheck,
-      runFilesCheck: runFilesCheck,
-      runDuplicatesCheck: runDuplicatesCheck,
-      runTestsCheck: runTestsCheck,
-      runQuickDiagnostics_: runQuickDiagnostics_,
-      runStructuralDiagnostics_: runStructuralDiagnostics_,
-      runOperationalDiagnostics_: runOperationalDiagnostics_,
-      runSunsetDiagnostics_: runSunsetDiagnostics_,
-      runHardeningDiagnostics_: runHardeningDiagnostics_,
-      runFullDiagnostics_: runFullDiagnostics_,
-      runFullVerboseDiagnostics_: runFullVerboseDiagnostics_,
-      runStage5MetadataConsistencyCheck_: runStage5MetadataConsistencyCheck_,
-      runStage41ProjectConsistencyCheck_: runStage41ProjectConsistencyCheck_,
-      runHistoricalQuickDiagnosticsInternal_:
-        runHistoricalQuickDiagnosticsInternal_,
-      runStage6ADomainTests_: runStage6ADomainTests_,
-      runAccessPolicyChecks: runAccessPolicyChecks,
-      runAllPolicyChecks: runAllPolicyChecks,
-      runAccessSecurityE2ETests_: runAccessSecurityE2ETests_,
-      runAccessE2ETests: runAccessE2ETests,
-      runAccessDiagnostics: runAccessDiagnostics,
-      testWasbAccessControl: testWasbAccessControl,
-      testAccessControl_: testAccessControl_,
-      smokeTestAccessControl_: smokeTestAccessControl_,
-      testDiagnostics: testDiagnostics,
-      testNotifyWithTemplate_: testNotifyWithTemplate_,
-      testVacationEngine: testVacationEngine,
-    };
+    return Object.assign(
+      {},
+      typeof stage7TestRunnerExplicitRegistrySendPanel_ === "function"
+        ? stage7TestRunnerExplicitRegistrySendPanel_()
+        : {},
+      typeof stage7TestRunnerExplicitRegistryMaintenance_ === "function"
+        ? stage7TestRunnerExplicitRegistryMaintenance_()
+        : {},
+      typeof stage7TestRunnerExplicitRegistryAccess_ === "function"
+        ? stage7TestRunnerExplicitRegistryAccess_()
+        : {},
+      typeof stage7TestRunnerExplicitRegistrySummaries_ === "function"
+        ? stage7TestRunnerExplicitRegistrySummaries_()
+        : {},
+    );
   }
 
   function resolveFunction_(name) {
@@ -2712,15 +2380,6 @@ var Stage7TestRunner = (function () {
     if (!error) return "";
     if (error.stack) return String(error.stack);
     return "";
-  }
-
-  function escapeHtml_(value) {
-    return String(value === null || typeof value === "undefined" ? "" : value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
   }
 
   function slugify_(value) {

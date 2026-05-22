@@ -34,7 +34,7 @@
 
     const logEntry = document.createElement("div");
     logEntry.className = `log-entry log-${type}`;
-    logEntry.innerHTML = `<span class="log-time">[${timestamp}]</span> ${escapeHtml(message)}`;
+    logEntry.innerHTML = `<span class="log-time">[${escapeHtml(timestamp)}]</span> ${escapeHtml(message)}`;
 
     consoleEl.appendChild(logEntry);
     consoleEl.scrollTop = consoleEl.scrollHeight;

@@ -797,7 +797,6 @@ var AccessEnforcement_ =
 
       var emailBody = emailBodyParts.join("\n");
 
-      // версия с ПОЛНЫМ ключом (только для владельца)
       var fullEmailBodyParts = emailBodyParts.slice();
       for (var i = 0; i < fullEmailBodyParts.length; i++) {
         if (fullEmailBodyParts[i].indexOf("User key:") === 0) {

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "loaderFile": "JavaScript.html",
+  "expected": [
+    "Js.Core",
+    "Js.State",
+    "Js.Api",
+    "Js.Render.Panel",
+    "Js.Render.Calendar",
+    "Js.Render.Results",
+    "Js.Diagnostics",
+    "Js.Security",
+    "Js.Helpers",
+    "Js.Events",
+    "Js.Actions"
+  ]
+}

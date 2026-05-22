@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "baselinePath": "scripts/snapshots/access-debug-baseline.json",
+  "snapshotMetaFields": ["schemaRef", "reviewedAt", "changeReason"],
+  "descriptorSchema": {
+    "identity": {
+      "email": "string",
+      "displayName": "string",
+      "personCallsign": "string",
+      "currentKeyHashMasked": "string"
+    },
+    "access": {
+      "role": "guest|viewer|operator|maintainer|admin|sysadmin|owner",
+      "enabled": "boolean",
+      "registered": "boolean",
+      "knownUser": "boolean",
+      "readOnly": "boolean",
+      "isAdmin": "boolean",
+      "isMaintainer": "boolean",
+      "isOperator": "boolean"
+    },
+    "lockout": "object",
+    "login": {
+      "keyAvailable": "boolean",
+      "selfBindRequired": "boolean",
+      "canSelfBind": "boolean",
+      "supportEmail": "string",
+      "supportCallsign": "string"
+    },
+    "policy": {
+      "mode": "string",
+      "strictUserKeyMode": "boolean",
+      "migrationModeEnabled": "boolean",
+      "rotationPeriodDays": "number"
+    },
+    "audit": {
+      "source": "string",
+      "matchedBy": "string",
+      "lastSeenAt": "string",
+      "lastRotatedAt": "string",
+      "failedAttempts": "number"
+    },
+    "reason": {
+      "code": "string",
+      "message": "string"
+    },
+    "allowedActions": "array",
+    "role": "string",
+    "enabled": "boolean",
+    "knownUser": "boolean",
+    "registered": "boolean"
+  },
+  "maintenanceEnvelopeRef": "envelope.contract.json",
+  "invariants": [
+    {
+      "id": "guestNeverAdmin",
+      "when": "access.role === 'guest'",
+      "assert": "access.isAdmin === false"
+    },
+    {
+      "id": "disabledNotOwner",
+      "when": "access.enabled === false",
+      "assert": "access.role !== 'owner'"
+    },
+    {
+      "id": "guestNotMaintainer",
+      "when": "access.role === 'guest'",
+      "assert": "access.isMaintainer === false"
+    },
+    {
+      "id": "guestNotOperator",
+      "when": "access.role === 'guest'",
+      "assert": "access.isOperator === false"
+    },
+    {
+      "id": "ownerEnabled",
+      "when": "access.role === 'owner'",
+      "assert": "access.enabled === true"
+    },
+    {
+      "id": "disabledNotAdmin",
+      "when": "access.enabled === false",
+      "assert": "access.isAdmin === false"
+    }
+  ]
+}

@@ -1,0 +1,970 @@
+<script>
+  // Js.Render fragment
+
+  // Js.Render — active Stage 7.1 runtime fragment.
+
+  // =========================
+  // SEND PANEL
+  // =========================
+
+  async function displayPanelResult(result) {
+    hideLoading();
+
+    if (!result?.success) {
+      displayInResult("error", { error: result?.error || "Невідома помилка" });
+      return;
+    }
+
+    let rows = Array.isArray(result.rows)
+      ? result.rows
+      : Array.isArray(result.data)
+        ? result.data
+        : [];
+
+    if (result?.date) {
+      STATE.currentPanelDate = String(result.date);
+    } else if (Array.isArray(rows) && rows.length && rows[0]?.date) {
+      STATE.currentPanelDate = String(rows[0].date);
+    }
+
+    setCurrentPanelData(rows);
+
+    if (!rows.length) {
+      try {
+        rows = await ensurePanelDataLoadedFromServer({
+          silent: true,
+          preserveNonEmpty: false,
+          retries: 2,
+          retryDelayMs: 450,
+          reason: "displayPanelResult.empty",
+        });
+      } catch (_) {}
+    }
+
+    const stats = result.stats || {};
+    logToConsole(
+      `Панель створено для ${result.date || "?"} (${result.month || "?"})`,
+      "success",
+    );
+    logToConsole(
+      `Всього: ${stats.totalCount || rows.length || 0}, Готових: ${stats.readyCount || 0}, Відправлено: ${stats.sentCount || 0}, Недопущено: ${stats.errorCount || 0}`,
+      "info",
+    );
+
+    showSendPanel();
+  }
+
+  function showSendPanel() {
+    const data = Array.isArray(STATE.currentPanelData)
+      ? STATE.currentPanelData
+      : [];
+
+    showStandardResult("Панель відправки");
+    stopSending();
+    hideProgressBar();
+    updateSendUnsentButtonState();
+
+    const readyItems = getReadyPanelItems(data);
+    const blockedItems = getPanelErrorItems(data);
+    const sentItems = data.filter((item) => item?.sent === true);
+
+    let html = `
+      <div class="result-item">
+        <div class="result-value">
+          <p>Всього записів: <b>${data.length}</b></p>
+          <p>Готово: <b>${readyItems.length}</b></p>
+          <p>Відправлено: <b>${sentItems.length}</b></p>
+          <p>Недопущено: <b>${blockedItems.length}</b></p>
+        </div>
+      </div>
+    `;
+
+    html += `
+      <div class="result-item">
+        <div class="result-label">Керування панеллю</div>
+        <div class="result-value">
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+            <button class="result-link" onclick="rebuildCurrentSendPanel()" title="Пересобрати SEND_PANEL заново з канонічних джерел" style="flex:1 1 180px;">Пересобрати панель</button>
+            <button class="result-link" onclick="reloadSendPanelFromServer()" title="Перечитати поточні рядки SEND_PANEL без пересборки" style="flex:1 1 180px;">Перечитати SEND_PANEL</button>
+            ${sentItems.length > 0 ? `<button class="result-link" onclick="resetAllSentFromPanel()" title="Повернути всі позначені як відправлені рядки у стан не відправлено" style="flex:1 1 220px;">Скинути відправлені (${sentItems.length})</button>` : ""}
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (!data.length) {
+      html += `
+        <div class="result-item">
+          <div class="result-label">⚠ SEND_PANEL порожній у sidebar</div>
+          <div class="result-value">
+            <p>Лист може містити рядки, але клієнтський стан зараз порожній.</p>
+            <button class="result-link" onclick="SidebarApp.reloadSendPanelFromServer()" title="Перечитати поточний вміст SEND_PANEL з таблиці" style="width:100%; margin-top:8px;">Перечитати SEND_PANEL</button>
+          </div>
+        </div>
+      `;
+    }
+
+    if (readyItems.length > 0) {
+      html += `
+        <div class="result-item">
+          <div class="result-value">
+            <button class="result-link" onclick="SidebarApp.startSendingUnsent()" title="Запустити послідовне відкриття всіх готових чатів" style="width:100%; margin-bottom:8px;">
+              НАДІСЛАТИ ВСІ (${readyItems.length})
+            </button>
+          </div>
+          <div class="result-label">Автовідмітка після відкриття</div>
+        </div>
+      `;
+    }
+
+    html += `<div class="result-item"><div class="result-label">Список повідомлень</div></div>`;
+
+    data.forEach((rawItem, index) => {
+      const item = rawItem || {};
+      const status = String(item.status || "");
+      const isReady =
+        status === PANEL_READY_STATUS && item.sent !== true && !!item.link;
+      const isSent = item.sent === true;
+      const isBlocked = !isReady && !isSent;
+
+      const statusColor = isSent
+        ? "#9C27B0"
+        : isReady
+          ? "var(--success-color)"
+          : "var(--error-color)";
+
+      const actionText = isSent ? "✔" : isReady ? "✓" : "✘";
+
+      html += `
+        <div class="result-item" style="border-left:3px solid ${statusColor}; padding-left:8px; margin-bottom:8px; ${isSent ? "opacity:0.92;" : ""}">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <div>
+              <div><b>${escapeHtml(item.fml || "")}</b></div>
+              <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:2px;">
+                ${escapeHtml(formatPhone(item.phone || ""))}
+              </div>
+              <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">
+                ${escapeHtml(item.code || "")} ${escapeHtml(item.date || "")}
+              </div>
+            </div>
+            <div>
+              <span style="font-size:0.7rem; padding:2px 6px; background:${statusColor}20; border-radius:4px;">
+                ${escapeHtml(actionText)}
+              </span>
+            </div>
+          </div>
+
+          <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:4px;">
+            ${escapeHtml(item.tasks || "")}
+          </div>
+
+          ${
+            item.link
+              ? `
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
+              ${isReady ? `<button type="button" class="result-link" onclick="SidebarApp.sendOneFromPanel(${index})" title="Відкрити чат і зафіксувати відправку для цього рядка" style="font-size:0.7rem; padding:4px 8px; border:none;">Надіслати</button>` : ""}
+              ${isSent ? `<button type="button" class="result-link" onclick="SidebarApp.rejectSendFromPanel(${index})" title="Повернути цей рядок у стан не відправлено" style="font-size:0.7rem; padding:4px 8px; border:none;">Повернути</button>` : ""}
+              <a href="${escapeAttr(item.link)}" target="WA_SENDER_WINDOW" rel="noopener noreferrer" title="Відкрити чат без автоматичної фіксації" style="font-size:0.7rem; color:#888; text-decoration:underline;">(відкрити)</a>
+            </div>`
+              : ""
+          }
+        </div>
+      `;
+    });
+
+    setHtml("resultContent", html);
+  }
+
+  function getPanelAnchorDate_() {
+    const explicitDate = String(STATE.currentPanelDate || "").trim();
+    if (explicitDate) return explicitDate;
+
+    const panelRows = Array.isArray(STATE.currentPanelData)
+      ? STATE.currentPanelData
+      : [];
+    const firstRowWithDate = panelRows.find(function (row) {
+      return row && String(row.date || "").trim();
+    });
+
+    if (firstRowWithDate && firstRowWithDate.date) {
+      return String(firstRowWithDate.date).trim();
+    }
+
+    return typeof _todayStr_ === "function" ? _todayStr_() : "";
+  }
+
+  function showSendPanelBusyScreen_(message) {
+    showLoading(message || "Обробка відправки...");
+  }
+
+  function hideSendPanelBusyScreen_() {
+    hideLoading();
+  }
+
+  async function withUiTimeout_(promise, timeoutMs, timeoutMessage) {
+    const ms = Math.max(1000, Number(timeoutMs || 0));
+    let timeoutId = null;
+
+    const timeoutPromise = new Promise(function (_, reject) {
+      timeoutId = setTimeout(function () {
+        reject(new Error(timeoutMessage || "Час очікування вичерпано"));
+      }, ms);
+    });
+
+    try {
+      return await Promise.race([promise, timeoutPromise]);
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+  }
+
+  function scheduleBackgroundPanelRefresh_(options = {}) {
+    const opts = Object.assign(
+      {
+        silent: true,
+        preserveNonEmpty: false,
+        retries: 0,
+        retryDelayMs: 350,
+      },
+      options || {},
+    );
+
+    setTimeout(async function () {
+      try {
+        await withUiTimeout_(
+          refreshSendPanelDataFromServer(opts),
+          Number(opts.timeoutMs || 8000),
+          "Фонове оновлення панелі перевищило ліміт очікування",
+        );
+      } catch (_) {}
+      showSendPanel();
+    }, 0);
+  }
+
+  async function markPanelRowAsSentSmart_(rowNum, options = {}) {
+    const rows = [Number(rowNum)];
+    const opts = options || {};
+
+    if (Stage7Api && typeof Stage7Api.markAsSentFast === "function") {
+      return Stage7Api.markAsSentFast(rows, opts);
+    }
+
+    return Stage7Api.markAsSent(rows, opts);
+  }
+
+  function isReadyRowMismatchError_(error) {
+    const message = normalizeError(error);
+    return /Немає готових рядків SEND_PANEL для позначення як відправлені/i.test(
+      message,
+    );
+  }
+
+  async function rebuildCurrentSendPanelInternal_(options = {}) {
+    const opts = options || {};
+    const targetDate = String(
+      opts.targetDate || getPanelAnchorDate_() || "",
+    ).trim();
+    if (!targetDate) {
+      throw new Error("Не вдалося визначити дату для пересборки панелі");
+    }
+
+    if (opts.showBusy !== false) {
+      showSendPanelBusyScreen_(opts.busyMessage || "Пересобираю панель...");
+    }
+
+    const result = await withUiTimeout_(
+      ActionDispatcher.run(
+        opts.actionName || "rebuildSendPanelForCurrentDate",
+        () => Stage7Api.generatePanelForDate({ date: targetDate }),
+        { showLoader: false, successMessage: "" },
+      ),
+      Number(opts.waitTimeoutMs || 15000),
+      "Пересобрання панелі зависло. Спробуйте повторити вручну.",
+    );
+
+    if (!result?.success) {
+      throw new Error(result?.error || "Не вдалося пересобрати панель");
+    }
+
+    if (opts.logSuccess !== false) {
+      logToConsole(`Панель пересобрано для ${targetDate}`, "success");
+    }
+
+    await displayPanelResult(result);
+    return result;
+  }
+
+  async function rebuildCurrentSendPanel() {
+    if (STATE._panelSingleSendLock || STATE._panelBatchSendLock) {
+      showSendPanelBusyScreen_("Зачекайте... Триває обробка.");
+      logToConsole(
+        "Пересобрати панель зараз не можна — триває інша операція",
+        "warning",
+      );
+      return;
+    }
+
+    try {
+      await rebuildCurrentSendPanelInternal_({
+        busyMessage: "Пересобираю панель...",
+        actionName: "rebuildSendPanelForCurrentDate",
+      });
+    } catch (error) {
+      logToConsole(
+        `Помилка пересборки панелі: ${normalizeError(error)}`,
+        "error",
+      );
+      try {
+        await refreshSendPanelDataFromServer({
+          silent: true,
+          preserveNonEmpty: false,
+        });
+      } catch (_) {}
+      showSendPanel();
+    } finally {
+      hideSendPanelBusyScreen_();
+    }
+  }
+
+  async function resetAllSentFromPanel() {
+    if (STATE._panelSingleSendLock || STATE._panelBatchSendLock) {
+      showSendPanelBusyScreen_("Зачекайте... Триває обробка.");
+      logToConsole(
+        "Скидання відправлених зараз недоступне — триває інша операція",
+        "warning",
+      );
+      return;
+    }
+
+    const panelRows = Array.isArray(STATE.currentPanelData)
+      ? STATE.currentPanelData
+      : [];
+    const targetDate = getPanelAnchorDate_();
+    const sentRows = panelRows
+      .filter(function (row) {
+        return row && row.sent === true;
+      })
+      .map(function (row) {
+        return Number(row.row);
+      })
+      .filter(function (rowNum) {
+        return Number.isFinite(rowNum) && rowNum > 0;
+      });
+
+    if (!sentRows.length) {
+      logToConsole("Немає відправлених рядків для скидання", "info");
+      return;
+    }
+
+    if (
+      !confirm(`Повернути ${sentRows.length} рядків у стан "не відправлено"?`)
+    ) {
+      return;
+    }
+
+    showSendPanelBusyScreen_("Скидаю статус відправлених рядків...");
+
+    try {
+      const result = await ActionDispatcher.run(
+        "markAllPanelRowsAsUnsent",
+        () => Stage7Api.markAsUnsent(sentRows),
+        { showLoader: false, successMessage: "" },
+      );
+
+      if (!result?.success) {
+        throw new Error(
+          result?.error || "Не вдалося скинути відправлені рядки",
+        );
+      }
+
+      logToConsole(`Скинуто ${sentRows.length} відправлених рядків`, "success");
+      await rebuildCurrentSendPanelInternal_({
+        targetDate: targetDate,
+        busyMessage: "Скидання завершено. Пересобираю панель...",
+        actionName: "rebuildSendPanelAfterReset",
+        logSuccess: false,
+      });
+    } catch (error) {
+      logToConsole(
+        `Помилка скидання відправлених: ${normalizeError(error)}`,
+        "error",
+      );
+      try {
+        await refreshSendPanelDataFromServer({
+          silent: true,
+          preserveNonEmpty: false,
+        });
+      } catch (_) {}
+      showSendPanel();
+    } finally {
+      hideSendPanelBusyScreen_();
+    }
+  }
+
+  function applyOptimisticSentStateByRow_(rowNum) {
+    const targetRow = Number(rowNum);
+    if (!targetRow) return false;
+
+    const optimisticRows = clonePanelRows_(STATE.currentPanelData);
+    const optimisticIndex = optimisticRows.findIndex(function (row) {
+      return Number(row && row.row) === targetRow;
+    });
+
+    if (optimisticIndex === -1) return false;
+
+    optimisticRows[optimisticIndex].sent = true;
+    optimisticRows[optimisticIndex]._optimisticSent = true;
+    setCurrentPanelData(optimisticRows);
+    return true;
+  }
+
+  async function refreshPanelDataSoon_(delayMs) {
+    const waitMs = Number(delayMs) > 0 ? Number(delayMs) : 900;
+    await new Promise(function (resolve) {
+      setTimeout(resolve, waitMs);
+    });
+    try {
+      await refreshSendPanelDataFromServer({ silent: true });
+    } catch (_) {}
+  }
+
+  async function sendOneFromPanel(index) {
+    if (STATE._panelSingleSendLock) {
+      showSendPanelBusyScreen_(
+        "Зачекайте... Попередня відправка ще обробляється.",
+      );
+      logToConsole("Відправка вже виконується — зачекай", "warning");
+      return;
+    }
+
+    STATE._panelSingleSendLock = true;
+
+    let rowNum = 0;
+    let optimisticApplied = false;
+    let phase = "open";
+
+    try {
+      showSendPanelBusyScreen_("Відкриваю чат...");
+
+      const item = Array.isArray(STATE.currentPanelData)
+        ? STATE.currentPanelData[index]
+        : null;
+      if (!item?.link) return;
+      if (item.sent === true) {
+        logToConsole("Відправлені", "info");
+        return;
+      }
+
+      if (!STATE.DIAG_TEST_MODE) openLinkSafe(item.link);
+
+      rowNum = Number(item.row);
+
+      if (rowNum) {
+        optimisticApplied = applyOptimisticSentStateByRow_(rowNum);
+      }
+
+      logToConsole("Чат відкрито", "success");
+      showSendPanel();
+
+      if (!rowNum) return;
+
+      phase = "commit";
+      showSendPanelBusyScreen_("Фіксую відправку. Зачекайте...");
+
+      const result = await withUiTimeout_(
+        ActionDispatcher.run(
+          "markPanelRowsAsSentAuto",
+          () =>
+            markPanelRowAsSentSmart_(rowNum, {
+              returnRows: false,
+              targetedVisualUpdate: true,
+            }),
+          { showLoader: false },
+        ),
+        15000,
+        "Фіксація відправки зависла. Оновіть панель або спробуйте ще раз.",
+      );
+
+      if (!result?.success) {
+        throw new Error(result?.error || "Не вдалось зафіксувати відправку");
+      }
+
+      if (Array.isArray(result.data) && result.data.length) {
+        setCurrentPanelData(result.data);
+      } else {
+        refreshPanelDataSoon_(900);
+      }
+    } catch (error) {
+      if (phase === "commit" && optimisticApplied) {
+        try {
+          const revertedRows = clonePanelRows_(STATE.currentPanelData);
+          const revertedIndex = revertedRows.findIndex(function (row) {
+            return Number(row && row.row) === rowNum;
+          });
+
+          if (
+            revertedIndex !== -1 &&
+            revertedRows[revertedIndex]._optimisticSent
+          ) {
+            revertedRows[revertedIndex].sent = false;
+            delete revertedRows[revertedIndex]._optimisticSent;
+            setCurrentPanelData(revertedRows, { preserveLastNonEmpty: true });
+          }
+        } catch (_) {}
+      }
+
+      if (phase === "commit" && isReadyRowMismatchError_(error)) {
+        hideSendPanelBusyScreen_();
+        logToConsole(
+          "Рядок уже не готовий у SEND_PANEL. Оновлюю список у фоні — якщо потрібно, натисніть «Пересобрати панель».",
+          "warning",
+        );
+        scheduleBackgroundPanelRefresh_({
+          silent: true,
+          preserveNonEmpty: false,
+          retries: 0,
+          retryDelayMs: 350,
+          timeoutMs: 8000,
+        });
+      } else {
+        logToConsole(
+          phase === "commit"
+            ? `Помилка фіксації відправки: ${normalizeError(error)}`
+            : `Помилка відкриття чату: ${normalizeError(error)}`,
+          "error",
+        );
+
+        try {
+          await refreshSendPanelDataFromServer({
+            silent: true,
+            preserveNonEmpty: false,
+          });
+        } catch (_) {}
+      }
+    } finally {
+      STATE._panelSingleSendLock = false;
+      hideSendPanelBusyScreen_();
+      showSendPanel();
+    }
+  }
+
+  async function confirmSendFromPanel(index) {
+    return sendOneFromPanel(index);
+  }
+
+  async function rejectSendFromPanel(index) {
+    showSendPanelBusyScreen_("Повертаю рядок у стан «не відправлено»...");
+
+    try {
+      const item = Array.isArray(STATE.currentPanelData)
+        ? STATE.currentPanelData[index]
+        : null;
+      const rowNum = Number(item?.row);
+      if (!rowNum) return;
+
+      const result = await ActionDispatcher.run(
+        "markPanelRowsAsUnsent",
+        () => Stage7Api.markAsUnsent([rowNum]),
+        { showLoader: false },
+      );
+      if (!result?.success)
+        throw new Error(
+          result?.error || "Не вдалося позначити як не відправлено",
+        );
+
+      if (Array.isArray(result.data)) {
+        setCurrentPanelData(result.data);
+      } else {
+        await refreshSendPanelDataFromServer({ silent: true });
+      }
+
+      logToConsole('Рядок повернуто у стан "не відправлено"', "warning");
+      showSendPanel();
+    } catch (error) {
+      logToConsole(`Помилка повернення: ${normalizeError(error)}`, "error");
+    } finally {
+      hideSendPanelBusyScreen_();
+    }
+  }
+
+  function startSendingUnsent() {
+    if (STATE._panelBatchSendLock) {
+      logToConsole("Серія відправки вже запущена", "warning");
+      return;
+    }
+
+    STATE._panelBatchSendLock = true;
+
+    const releaseBatchLock = function () {
+      STATE._panelBatchSendLock = false;
+    };
+
+    try {
+      const data = Array.isArray(STATE.currentPanelData)
+        ? STATE.currentPanelData
+        : [];
+      const queue = getReadyPanelItems(data);
+
+      if (!queue.length) {
+        logToConsole("Немає рядків для відправки", "success");
+        releaseBatchLock();
+        return;
+      }
+
+      let idx = 0;
+
+      stopSending();
+      hideProgressBar();
+      showProgressBar(queue.length, 0);
+      if (!STATE.DIAG_TEST_MODE) primeWhatsAppSenderTab();
+      STATE._sendingCancelled = false;
+
+      const finishBatch = async () => {
+        stopSending();
+        releaseBatchLock();
+        try {
+          await refreshSendPanelDataFromServer({ silent: true });
+        } catch (_) {}
+        logToConsole(`Автоматично зафіксовано ${idx} рядків`, "success");
+        showSendPanel();
+      };
+
+      const runNextStep = async () => {
+        if (STATE._sendingCancelled) {
+          releaseBatchLock();
+          return;
+        }
+
+        if (idx >= queue.length) {
+          await finishBatch();
+          return;
+        }
+
+        try {
+          const item = queue[idx];
+          if (!STATE.DIAG_TEST_MODE) openLinkSafe(item.link);
+
+          const rowNum = Number(item.row);
+          if (rowNum) {
+            const result = await ActionDispatcher.run(
+              "markPanelRowsAsSentBatchItem",
+              () =>
+                markPanelRowAsSentSmart_(rowNum, {
+                  returnRows: false,
+                  targetedVisualUpdate: true,
+                }),
+              { showLoader: false },
+            );
+
+            if (!result?.success) {
+              throw new Error(
+                result?.error || "Не вдалося позначити як відправлено",
+              );
+            }
+
+            if (Array.isArray(result.data) && result.data.length) {
+              setCurrentPanelData(result.data);
+            } else {
+              applyOptimisticSentStateByRow_(rowNum);
+            }
+          }
+
+          idx += 1;
+          showProgressBar(queue.length, idx);
+        } catch (error) {
+          logToConsole(
+            `Помилка під час серії: ${normalizeError(error)}`,
+            "error",
+          );
+          idx += 1;
+        }
+
+        if (STATE._sendingCancelled) {
+          releaseBatchLock();
+          return;
+        }
+
+        if (idx >= queue.length) {
+          await finishBatch();
+        } else {
+          STATE.sendingInterval = setTimeout(runNextStep, SEND_INTERVAL_MS);
+        }
+      };
+
+      STATE.sendingInterval = setTimeout(runNextStep, 0);
+    } catch (error) {
+      releaseBatchLock();
+      logToConsole(`startSendingUnsent: ${normalizeError(error)}`, "error");
+    }
+  }
+
+  // =========================
+  // SUPPLEMENTARY BLOCKS
+  // =========================
+
+  function hasVacationBlocks(vacData) {
+    return !!(
+      vacData &&
+      ((Array.isArray(vacData.commanderMessages) &&
+        vacData.commanderMessages.length > 0) ||
+        (Array.isArray(vacData.soldierMessages) &&
+          vacData.soldierMessages.length > 0))
+    );
+  }
+
+  function normalizeBirthdayData(raw) {
+    const data = raw || {};
+
+    const isNewShape =
+      Array.isArray(data.commanderMessages) ||
+      Array.isArray(data.birthdayMessages);
+
+    if (isNewShape) {
+      return {
+        mode: "new",
+        commanderMessages: Array.isArray(data.commanderMessages)
+          ? data.commanderMessages
+          : [],
+        birthdayMessages: Array.isArray(data.birthdayMessages)
+          ? data.birthdayMessages
+          : [],
+      };
+    }
+
+    return {
+      mode: "legacy",
+      today: Array.isArray(data.today) ? data.today : [],
+      tomorrow: Array.isArray(data.tomorrow) ? data.tomorrow : [],
+    };
+  }
+
+  function hasBirthdayBlocks(birthData) {
+    const data = normalizeBirthdayData(birthData);
+
+    return !!(
+      (data.mode === "new" &&
+        ((Array.isArray(data.commanderMessages) &&
+          data.commanderMessages.length > 0) ||
+          (Array.isArray(data.birthdayMessages) &&
+            data.birthdayMessages.length > 0))) ||
+      (data.mode === "legacy" &&
+        ((Array.isArray(data.today) && data.today.length > 0) ||
+          (Array.isArray(data.tomorrow) && data.tomorrow.length > 0)))
+    );
+  }
+
+  function renderSupplementaryBlocks(data) {
+    let html = "";
+
+    if (hasVacationBlocks(data?.vacations)) {
+      html += renderVacationAlerts(data.vacations);
+    }
+
+    if (hasBirthdayBlocks(data?.birthdays)) {
+      html += renderBirthdayResult(data.birthdays);
+    }
+
+    return html;
+  }
+
+  // =========================
+  // RESULT RENDERING
+  // =========================
+
+  function displayInResult(type, data = {}) {
+    showStandardResult("Результат");
+
+    const contentEl = $id("resultContent");
+    if (!contentEl) return;
+
+    let html = "";
+
+    switch (type) {
+      case "summary":
+        setText("resultTitle", "Зведення дня");
+        html = `
+          <div class="result-item">
+            <div class="result-label">Зведення дня</div>
+
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 12px 0;">
+              <button class="btn btn-primary" onclick="SidebarApp.sendDaySummaryToCommander()">Командиру</button>
+              <button class="btn" onclick="SidebarApp.copyResultText(SidebarApp.STATE.lastSummaryText)">Копіювати</button>
+            </div>
+
+            <div class="result-message" style="white-space: pre-wrap;">
+              ${escapeHtml(data.summary || "")
+                .split("\n")
+                .join("<br>")}
+            </div>
+          </div>
+        `;
+        html += renderSupplementaryBlocks(data);
+        break;
+
+      case "detailedActionable":
+        setText("resultTitle", "Детальне зведення");
+        html = `
+          <div class="result-item">
+            <div class="result-label">Детальне зведення за ${escapeHtml(data.date || "")}</div>
+
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 12px 0;">
+              <button class="btn btn-primary" onclick="SidebarApp.sendDetailedToCommander()">Командиру</button>
+              <button class="btn" onclick="SidebarApp.copyResultText(SidebarApp.STATE.lastDetailedText)">Копіювати</button>
+            </div>
+
+            <div class="result-value">Осіб: <b>${data.peopleCount || 0}</b></div>
+
+            <div class="result-message" style="white-space: pre-wrap; margin-top:12px;">
+              ${escapeHtml(data.summary || "")
+                .split("\n")
+                .join("<br>")}
+            </div>
+          </div>
+        `;
+        html += renderSupplementaryBlocks(data);
+        break;
+
+      case "vacationResult":
+        setText("resultTitle", "Нагадування про відпустки");
+        html = `
+          <div class="result-item">
+            <div class="result-label" style="color: var(--success-color);">Результати</div>
+            <div class="result-value">${escapeHtml(data.message || "")}</div>
+          </div>
+        `;
+        if (hasVacationBlocks(data)) html += renderVacationAlerts(data);
+        break;
+
+      case "success":
+        html = `
+          <div class="result-item">
+            <div class="result-label" style="color: var(--success-color);">Успішно</div>
+            <div class="result-value">${escapeHtml(data.message || "")}</div>
+          </div>
+        `;
+        break;
+
+      case "error":
+        setText("resultTitle", "Помилка");
+        html = `
+          <div class="result-item">
+            <div class="result-label" style="color: var(--error-color);">Помилка</div>
+            <div class="result-value">${escapeHtml(data.error || "Невідома помилка")}</div>
+          </div>
+        `;
+        break;
+
+      case "createMonth":
+        setText("resultTitle", "Створення місяця");
+        html = `
+          <div class="result-item">
+            <div class="result-label" style="color: var(--success-color);">Місяць створено</div>
+            <div class="result-value">${escapeHtml(data.message || "")}</div>
+          </div>
+        `;
+        break;
+
+      default:
+        html = `
+          <div class="result-item">
+            <div class="result-value">${escapeHtml(JSON.stringify(data, null, 2))}</div>
+          </div>
+        `;
+    }
+
+    contentEl.innerHTML = html;
+  }
+
+  function renderVacationAlerts(vacData) {
+    if (!vacData) return "";
+
+    const esc = (value) => escapeHtml(String(value ?? ""));
+    const escJs = (value) =>
+      String(value ?? "")
+        .replace(/\\/g, "\\\\")
+        .replace(/'/g, "\\'")
+        .replace(/\r/g, "")
+        .replace(/\n/g, "\\n");
+
+    let html = `<div class="vacation-alerts">`;
+
+    if (
+      Array.isArray(vacData.commanderMessages) &&
+      vacData.commanderMessages.length > 0
+    ) {
+      html += `
+        <div class="result-item">
+          <div class="result-label">Командиру</div>
+          <div class="vacation-alerts__list">
+      `;
+
+      vacData.commanderMessages.forEach((row) => {
+        html += `
+          <div class="vacation-card vacation-card--commander">
+            <div class="vacation-card__name">${esc(row.fml)}</div>
+            <div class="vacation-card__text">${esc(row?.message || '')}</div>
+            ${
+              row.link
+                ? `<button class="result-link vacation-card__btn" onclick="SidebarApp.sendVacationMessage('${escJs(row.link)}')">Відправити</button>`
+                : `<div class="vacation-card__empty">Немає посилання</div>`
+            }
+          </div>
+        `;
+      });
+
+      html += `
+          </div>
+        </div>
+      `;
+    }
+
+    if (
+      Array.isArray(vacData.soldierMessages) &&
+      vacData.soldierMessages.length > 0
+    ) {
+      html += `
+        <div class="result-item">
+          <div class="result-label">Для ОС</div>
+          <div class="vacation-alerts__list">
+      `;
+
+      vacData.soldierMessages.forEach((row) => {
+        html += `
+          <div class="vacation-card vacation-card--soldier">
+            <div class="vacation-card__name">${esc(row.fml)}</div>
+            <div class="vacation-card__meta">
+              ${esc(row.startDate)} — ${esc(row.endDate)} | ${esc(row.vacationWord)}
+            </div>
+            <div class="vacation-card__text">${esc(row.message || "")}</div>
+            ${
+              row.link
+                ? `<button class="result-link vacation-card__btn" onclick="SidebarApp.sendVacationMessage('${escJs(row.link)}')">Відправити</button>`
+                : `<div class="vacation-card__empty">Немає телефону</div>`
+            }
+          </div>
+        `;
+      });
+
+      html += `
+          </div>
+        </div>
+      `;
+    }
+
+    html += `</div>`;
+    return html;
+  }
+
+  function sendVacationMessage(link) {
+    if (!link) {
+      logToConsole("Немає посилання для відправки", "error");
+      return;
+    }
+
+    if (!STATE.DIAG_TEST_MODE) openLinkSafe(link);
+    logToConsole("WhatsApp відкрито", "success");
+  }
+
+  // =========================
+
+</script>

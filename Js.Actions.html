@@ -36,7 +36,11 @@
 
     showLoading();
     try {
-      const res = await gsRun("apiGetActiveProjects");
+      const res = await runServerMethod_(
+        "apiGetActiveProjects",
+        [],
+        "Js.Actions.showRequestsForm",
+      );
       if (!res?.success)
         throw new Error(res?.error || "Не вдалося отримати проєкти");
 
@@ -113,20 +117,26 @@
 
     showLoading();
     try {
-      const res = await gsRun("apiSubmitRequest", {
-        projectId,
-        projectName,
-        title,
-        details,
-      });
+      const res = await runServerMethod_(
+        "apiSubmitRequest",
+        [
+          {
+            projectId,
+            projectName,
+            title,
+            details,
+          },
+        ],
+        "Js.Actions.submitRequestForm",
+      );
       if (res?.success) {
         showToast("✓ Заявку збережено");
         displayInResult("success", {
           message: res.message || "✓ Заявку збережено",
         });
-      } else if (res && res.success === true && res.message) {
-        showToast(res.message);
-        displayInResult("success", { message: res.message });
+      } else if (res?.success === true && res?.message) {
+        showToast(res?.message || "");
+        displayInResult("success", { message: res?.message || "" });
       } else {
         throw new Error(res?.error || "Не вдалося зберегти");
       }
@@ -239,10 +249,10 @@
     showLoading();
 
     try {
-      const result = await gsRun(
+      const result = await runServerMethod_(
         "sendDetailedToCommanderSidebar",
-        STATE.lastDetailedDate,
-        STATE.lastDetailedText,
+        [STATE.lastDetailedDate, STATE.lastDetailedText],
+        "Js.Actions.sendDetailedToCommander",
       );
 
       if (result?.success) {
@@ -267,10 +277,10 @@
     showLoading();
 
     try {
-      const result = await gsRun(
+      const result = await runServerMethod_(
         "sendDaySummaryToCommanderSidebar",
-        STATE.lastSummaryDate,
-        STATE.lastSummaryText,
+        [STATE.lastSummaryDate, STATE.lastSummaryText],
+        "Js.Actions.sendDaySummaryToCommander",
       );
 
       if (result?.success) {
@@ -672,7 +682,11 @@
     }
 
     try {
-      await gsRun("openPersonCalendar", callsign);
+      await runServerMethod_(
+        "openPersonCalendar",
+        [callsign],
+        "Js.Actions.openPersonCalendarFromCard",
+      );
     } catch (error) {
       const msg = normalizeError(error);
       showToast("✕ " + msg);

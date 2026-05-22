@@ -1,0 +1,149 @@
+<script>
+  // Js.Render fragment
+
+  // CALENDAR
+  // =========================
+
+  function showCalendar(action) {
+    showStandardResult(
+      action === "daySummary" ? "Зведення дня" : "Детальне зведення",
+    );
+    renderCalendar(action);
+  }
+
+  function renderCalendar(action) {
+    const safeAction = escapeJsString(action || "");
+    const year = STATE.currentCalendarDate.getFullYear();
+    const month = STATE.currentCalendarDate.getMonth();
+    const today = new Date();
+
+    const monthNames = [
+      "Січень",
+      "Лютий",
+      "Березень",
+      "Квітень",
+      "Травень",
+      "Червень",
+      "Липень",
+      "Серпень",
+      "Вересень",
+      "Жовтень",
+      "Листопад",
+      "Грудень",
+    ];
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+
+    let html = `
+      <div class="calendar-container">
+        <div class="calendar-header">
+          <div class="calendar-month-year">${monthNames[month]} ${year}</div>
+          <div class="calendar-nav">
+            <button class="calendar-nav-btn" onclick="SidebarApp.changeMonth(-1, '${safeAction}')">↢</button>
+            <button class="calendar-nav-btn" onclick="SidebarApp.changeMonth(1, '${safeAction}')">↣</button>
+          </div>
+        </div>
+
+        <div class="calendar-weekdays">
+          <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Нд</div>
+        </div>
+
+        <div class="calendar-days">
+    `;
+
+    for (let i = 0; i < startOffset; i++) {
+      html += '<div class="calendar-day empty"></div>';
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${String(day).padStart(2, "0")}.${String(month + 1).padStart(2, "0")}.${year}`;
+      const isToday =
+        day === today.getDate() &&
+        month === today.getMonth() &&
+        year === today.getFullYear();
+      const isSelected = STATE.selectedDate === dateStr;
+
+      html += `
+        <div class="calendar-day ${isToday ? "today" : ""} ${isSelected ? "selected" : ""}" onclick="SidebarApp.selectDate('${escapeJsString(dateStr)}', '${safeAction}')">
+          ${day}
+        </div>
+      `;
+    }
+
+    const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+
+    for (let i = startOffset + daysInMonth; i < totalCells; i++) {
+      html += '<div class="calendar-day empty"></div>';
+    }
+
+    html += `
+        </div>
+
+        <div class="calendar-actions">
+          <button class="result-link" onclick="SidebarApp.processSelectedDate('${safeAction}')" ${!STATE.selectedDate ? "disabled" : ""}>
+            ${action === "daySummary" ? "Отримати зведення" : "Детальне зведення"}
+          </button>
+        </div>
+      </div>
+    `;
+
+    setHtml("resultContent", html);
+  }
+
+  function changeMonth(delta, action) {
+    STATE.currentCalendarDate.setMonth(
+      STATE.currentCalendarDate.getMonth() + delta,
+    );
+    renderCalendar(action);
+  }
+
+  function selectDate(dateStr, action) {
+    STATE.selectedDate = dateStr;
+    renderCalendar(action);
+    logToConsole(`Обрано дату: ${formatDateForDisplay(dateStr)}`, "info");
+  }
+
+  async function processSelectedDate(action) {
+    if (!STATE.selectedDate) {
+      logToConsole("Оберіть дату в календарі", "warning");
+      return;
+    }
+
+    try {
+      if (action === "daySummary") {
+        const result = await ActionDispatcher.run("buildDaySummary", () =>
+          Stage7Api.buildDaySummary(STATE.selectedDate),
+        );
+        if (result?.success) {
+          STATE.lastSummaryText = result.summary || "";
+          STATE.lastSummaryDate = STATE.selectedDate;
+          displayInResult("summary", result);
+        } else {
+          displayInResult("error", {
+            error: result?.error || "Невідома помилка",
+          });
+        }
+      } else {
+        const result = await ActionDispatcher.run("buildDetailedSummary", () =>
+          Stage7Api.buildDetailedSummary(STATE.selectedDate),
+        );
+        if (result?.success) {
+          STATE.lastDetailedText = result.summary || "";
+          STATE.lastDetailedDate = STATE.selectedDate;
+          displayInResult("detailedActionable", result);
+        } else {
+          displayInResult("error", {
+            error: result?.error || "Невідома помилка",
+          });
+        }
+      }
+    } catch (error) {
+      handleError(error);
+    }
+  }
+
+  // =========================
+
+</script>

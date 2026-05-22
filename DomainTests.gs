@@ -29,7 +29,7 @@ function runStage6ADomainTests_(options) {
   // Templates
   _domainPush_(report, 'templates.renderTemplate basic substitution', function() {
     const out = renderTemplate_('Привіт, {name}!', { name: 'Сергій' });
-    _domainAssert_(out === 'Привіт, Сергій!', 'Некоректна базова підстановка');
+    _domainAssert_(out === 'Привіт, Сергій!', 'Некоректна базова підставка');
     return out;
   });
 
@@ -224,7 +224,7 @@ function runStage6ADomainTests_(options) {
     } catch (_) {
       thrown = true;
     }
-    _domainAssert_(thrown, 'normalizeDate повинен кидати помилку на неіснуючу дату');
+    _domainAssert_(thrown, 'normalizeDate повинен кидати помилку на не існуючу дату');
     return 'throws-ok';
   });
 

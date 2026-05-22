@@ -210,10 +210,19 @@ If something breaks:
 
 ### GitHub Actions CI
 
-The repository runs the same lightweight checks automatically on **`push`** and **`pull_request`** to **`main`**, and **`workflow_dispatch`**.
+The repository runs CI automatically on **`push`** and **`pull_request`** to **`main`**, and **`workflow_dispatch`**.
 
-- `node scripts/ci-gas-sanity.mjs`
-- `node scripts/audit-function-graph.mjs`
+Local equivalent: **`npm run ci`** (or `wcheck` if configured).
+
+| Script | Purpose |
+|--------|---------|
+| `ci-gas-sanity.mjs` | Syntax check all `.gs` files |
+| `audit-function-graph.mjs` | Bound entrypoint refs vs definitions |
+| `verify-client-includes.mjs` | `JavaScript.html` include order |
+| `verify-client-js.mjs` | Combined sidebar client parse-check |
+| `audit-client-xss.mjs` | Unsafe `innerHTML` / `setHtml` interpolations |
+| `audit-envelope-compat.mjs` | Server envelope + client adapters + transport bridge |
+| `verify-usecase-facade.mjs` | `Stage7UseCases_` contract vs snapshot |
 
 There is **no** Apps Script deployment in CI (`clasp` is local only). See `.github/workflows/ci.yml`.
 
@@ -260,6 +269,68 @@ Do **not** hardcode production spreadsheet IDs in source files; use Script prope
 After editing the **PHONES** sheet structure, cached phone/profile data under the hood may be stale. Run **`apiStage7ClearPhoneCache()`**, then reopen the sidebar and verify person cards (**ДН** / phone) against the sheet.
 
 Operational detail: canonical **PHONES** schema includes **`birthday`** as column 4; index loaders match headers and fallback where applicable (`Stage7PhoneDictPayloadShims.gs`).
+
+## 19. Operational stewardship (refactor doctrine)
+
+See **`docs/refactor/operational-stewardship.md`** for owner/backup roles, monthly checklist, handoff, and emergency exceptions.
+
+| Item | Location |
+|------|----------|
+| Owner / backup | `docs/refactor/operational-stewardship.md` — update on handoff |
+| **Contracts (G1)** | `contracts/` — envelope, facade, access, bridge-flags, xss-policy, client-includes |
+| Snapshot governance | `docs/refactor/snapshot-governance.md`, `contracts/SNAPSHOT_CHANGELOG.md` |
+| Canary spreadsheet | Script Property `WASB_CANARY_SPREADSHEET_ID` (non-production; owner-maintained) |
+| Facade contract CI | `contracts/facade.contract.json` + `scripts/snapshots/stage7-usecases-facade.json` + `npm run ci` |
+| Access baseline | `contracts/access.contract.json` + `scripts/snapshots/access-debug-baseline.json` (capture from `apiStage7DebugAccess()` on canary) |
+| Bridge flags | `contracts/bridge-flags.registry.json` — `USE_NEW_API_PATH` owner/sunset/telemetry |
+| G2 roadmap | `docs/refactor/g2-governance-roadmap.md` (client layers — not in G1) |
+| Entropy review | `docs/refactor/entropy-review-YYYY-QN.md` (quarterly; latest: `entropy-review-2026-Q2.md`) |
+| Rollback tags | `wasb-pre-pr7-*`, `wasb-pre-phase2-access` before high-risk merges |
+
+**Cadences:** monthly stewardship checklist (~30 min); quarterly entropy + canary parity (~2 h).
+
+**Freeze window:** no `blast-radius-high` merges Fri 16:00 – Mon 10:00 local, or during send-panel peak / month rollover (owner may mark additional freeze periods here).
+
+## 20. Canary spreadsheet (refactor / runtime PR gate)
+
+Permanent non-production copy for automated and manual smoke before runtime-critical merges (`requires-canary`, PR3+).
+
+### Setup
+
+1. Create or designate a **separate spreadsheet** (never production).
+2. In the **canary** Apps Script project → Script properties: set **`WASB_CANARY_SPREADSHEET_ID`** to that spreadsheet ID.
+3. Set **`WASB_SPREADSHEET_ID`** on the canary deployment to the same ID (headless runs).
+4. Reduced dataset: 2–3 monthly sheets, minimal `SEND_PANEL`, synthetic `ACCESS` rows.
+5. Synthetic edge cases: guest / operator / admin roles, incomplete registration, empty panel row.
+
+Do **not** commit production spreadsheet IDs to source; record the canary ID only in Script properties and owner notes.
+
+### Smoke flows (after PR3, PR6, PR7+)
+
+Run on canary before merging `requires-canary` PRs:
+
+| Flow | API / action |
+|------|----------------|
+| Generate panel | `generateSendPanelForDate` |
+| Calendar load | `loadCalendarDay` |
+| Person card | `openPersonCard` |
+| Access policy | `apiStage7DebugAccess` |
+| Maintenance | `runMaintenanceScenario` (shallow health) |
+
+Gate: canary smoke **PASS** before merge of runtime-critical PRs.
+
+### Quarterly canary parity review
+
+Every **3 months** or after major production change (owner + backup):
+
+| Check | Action |
+|-------|--------|
+| Schema drift | Compare `SheetSchemas` / ACCESS columns canary vs production |
+| New edge cases | Add synthetic rows from production incidents (anonymized) |
+| Role matrix | Verify guest / operator / admin / incomplete registration |
+| Smoke flows | Re-run full canary automation; refresh `access-debug-baseline.json` if needed |
+
+If parity review is **overdue > 90 days**, block merge of `rollback-required` PRs until refresh (see `docs/refactor/entropy-review-checklist.md`).
 
 ## 16. Legacy aliases sunset plan (P2.c audit)
 

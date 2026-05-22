@@ -1,14 +1,3 @@
-/**
- * WASB ACCESS sheet row autofill hotfix.
- *
- * Назначение:
- * - не удаляет строки ACCESS;
- * - не чистит содержимое;
- * - копирует выпадающие списки/формат из шаблонной строки;
- * - генерирует новый ключ только если хеш текущего ключа пустой;
- * - выводит plain-key в отдельный лист ACCESS_KEYS_OUTBOX, потому что из хеша ключ восстановить нельзя.
- */
-
 var WASB_ACCESS_SHEET_NAME_HOTFIX_ = 'ACCESS';
 var WASB_ACCESS_KEYS_OUTBOX_SHEET_NAME_HOTFIX_ = 'ACCESS_KEYS_OUTBOX';
 var WASB_ACCESS_TEMPLATE_ROW_HOTFIX_ = 2;
@@ -41,7 +30,7 @@ function wasbAccessGetSheetHotfix_() {
   var sheet = ss.getSheetByName(WASB_ACCESS_SHEET_NAME_HOTFIX_);
 
   if (!sheet) {
-    throw new Error('Лист ACCESS не найден.');
+    throw new Error('Лист ACCESS не знайдено.');
   }
 
   return sheet;
@@ -134,7 +123,7 @@ function wasbRepairAccessSheetRowsHotfix() {
       ok: true,
       repairedRows: 0,
       generatedKeys: 0,
-      message: 'ACCESS пустой.'
+      message: 'ACCESS пустий.'
     };
   }
 
@@ -267,7 +256,7 @@ function wasbRepairAccessSheetRowsHotfix() {
         displayName,
         callsign,
         plainKey,
-        'Новий ключ створено. Передайте користувачу і після використання очистіть рядок.'
+        'Новий ключ створено. Передайте користувачу і після використання очистить рядок.'
       ]);
 
       generatedKeys++;

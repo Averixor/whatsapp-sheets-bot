@@ -99,10 +99,6 @@
     }
   };
 
-  function gsRun(method, ...args) {
-    return Api.run(method, ...args);
-  }
-
   function stopSending() {
   STATE._sendingCancelled = true;
   if (STATE.sendingInterval) {

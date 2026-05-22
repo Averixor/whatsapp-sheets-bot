@@ -1,0 +1,252 @@
+{
+  "version": 1,
+  "schemaRef": "contracts/facade.contract.json",
+  "reviewedAt": "2026-05-22",
+  "changeReason": "G1 governance metadata — contract-owned envelope schema",
+  "generatedNote": "PR6 strict facade contract — public Stage7UseCases_ exports only",
+  "methods": [
+    {
+      "name": "buildDaySummary",
+      "paramCount": 1,
+      "paramOrder": [
+        "options"
+      ],
+      "envelope": {
+        "success": "boolean",
+        "message": "string",
+        "data.result": "object|null",
+        "data.meta": "object|null",
+        "dryRun": "boolean|optional"
+      }
+    },
+    {
+      "name": "buildDetailedSummary",
+      "paramCount": 1,
+      "paramOrder": [
+        "options"
+      ],
+      "envelope": {
+        "success": "boolean",
+        "message": "string",
+        "data.result": "object|null",
+        "data.meta": "object|null",
+        "dryRun": "boolean|optional"
+      }
+    },
+    {
+      "name": "openPersonCard",
+      "paramCount": 2,
+      "paramOrder": [
+        "options",
+        "dateStr"
+      ],
+      "envelope": {
+        "success": "boolean",
+        "message": "string",
+        "data.result": "object|null",
+        "data.meta": "object|null",
+        "dryRun": "boolean|optional"
+      }
+    },
+    {
+      "name": "loadCalendarDay",
+      "paramCount": 1,
+      "paramOrder": [
+        "options"
+      ],
+      "envelope": {
+        "success": "boolean",
+        "message": "string",
+        "data.result": "object|null",
+        "data.meta": "object|null",
+        "dryRun": "boolean|optional"
+      }
+    },
+    {
+      "name": "checkVacationsAndBirthdays",
+      "paramCount": 1,
+      "paramOrder": [
+        "options"
+      ],
+      "envelope": {
+        "success": "boolean",
+        "message": "string",
+        "data.result": "object|null",
+        "data.meta": "object|null",
+        "dryRun": "boolean|optional"
+      }
+    },
+    {
+      "name": "switchBotToMonth",
+      "paramCount": 2,
+      "paramOrder": [
+        "options",
+        "monthSheetName"
+      ],
+      "envelope": {
+        "success": "boolean",
+        "message": "string",
+        "data.result": "object|null",
+        "data.meta": "object|null",
+        "dryRun": "boolean|optional"
+      }
+    },
+    {
+      "name": "createNextMonth",
+      "paramCount": 1,
+      "paramOrder": [
+        "options"
+      ],
+      "envelope": {
+        "success": "boolean",
+        "message": "string",
+        "data.result": "object|null",
+        "data.meta": "object|null",
+        "dryRun": "boolean|optional"
+      }
+    },
+    {
+      "name": "runReconciliation",
+      "paramCount": 1,
+      "paramOrder": [
+        "options"
+      ],
+      "envelope": {
+        "success": "boolean",
+        "message": "string",
+        "data.result": "object|null",
+        "data.meta": "object|null",
+        "dryRun": "boolean|optional"
+      }
+    },
+    {
+      "name": "runMaintenanceScenario",
+      "paramCount": 1,
+      "paramOrder": [
+        "options"
+      ],
+      "envelope": {
+        "success": "boolean",
+        "message": "string",
+        "data.result": "object|null",
+        "data.meta": "object|null",
+        "dryRun": "boolean|optional"
+      }
+    },
+    {
+      "name": "generateSendPanelForDate",
+      "paramCount": 1,
+      "paramOrder": [
+        "options"
+      ],
+      "envelope": {
+        "success": "boolean",
+        "message": "string",
+        "data.result": "object|null",
+        "data.meta": "object|null",
+        "dryRun": "boolean|optional"
+      }
+    },
+    {
+      "name": "generateSendPanelForRange",
+      "paramCount": 1,
+      "paramOrder": [
+        "options"
+      ],
+      "envelope": {
+        "success": "boolean",
+        "message": "string",
+        "data.result": "object|null",
+        "data.meta": "object|null",
+        "dryRun": "boolean|optional"
+      }
+    },
+    {
+      "name": "markPanelRowsAsPending",
+      "paramCount": 2,
+      "paramOrder": [
+        "rowNumbers",
+        "options"
+      ],
+      "envelope": {
+        "success": "boolean",
+        "message": "string",
+        "data.result": "object|null",
+        "data.meta": "object|null",
+        "dryRun": "boolean|optional"
+      }
+    },
+    {
+      "name": "markPanelRowsAsSent",
+      "paramCount": 2,
+      "paramOrder": [
+        "rowNumbers",
+        "options"
+      ],
+      "envelope": {
+        "success": "boolean",
+        "message": "string",
+        "data.result": "object|null",
+        "data.meta": "object|null",
+        "dryRun": "boolean|optional"
+      }
+    },
+    {
+      "name": "markPanelRowsAsUnsent",
+      "paramCount": 2,
+      "paramOrder": [
+        "rowNumbers",
+        "options"
+      ],
+      "envelope": {
+        "success": "boolean",
+        "message": "string",
+        "data.result": "object|null",
+        "data.meta": "object|null",
+        "dryRun": "boolean|optional"
+      }
+    },
+    {
+      "name": "sendPendingRows",
+      "paramCount": 1,
+      "paramOrder": [
+        "options"
+      ],
+      "envelope": {
+        "success": "boolean",
+        "message": "string",
+        "data.result": "object|null",
+        "data.meta": "object|null",
+        "dryRun": "boolean|optional"
+      }
+    },
+    {
+      "name": "listMonths",
+      "paramCount": 1,
+      "paramOrder": [
+        "options"
+      ],
+      "envelope": {
+        "success": "boolean",
+        "message": "string",
+        "data.result": "object|null",
+        "data.meta": "object|null",
+        "dryRun": "boolean|optional"
+      }
+    },
+    {
+      "name": "getSendPanelData",
+      "paramCount": 1,
+      "paramOrder": [
+        "options"
+      ],
+      "envelope": {
+        "success": "boolean",
+        "message": "string",
+        "data.result": "object|null",
+        "data.meta": "object|null",
+        "dryRun": "boolean|optional"
+      }
+    }
+  ]
+}

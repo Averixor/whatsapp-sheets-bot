@@ -241,6 +241,15 @@ const WorkflowOrchestrator_ = (function() {
     const rawScenario = String(cfg.scenario || 'unknownScenario');
     let payload = Object.assign({}, cfg.payload || {});
     const startedAt = new Date();
+    const routeForTrace = _routeDescriptor(cfg, rawScenario);
+    const traceHandle = typeof useCaseTraceBegin_ === 'function'
+      ? useCaseTraceBegin_(
+          rawScenario,
+          routeForTrace && routeForTrace.publicApiMethod
+            ? routeForTrace.publicApiMethod
+            : (cfg.routeName || 'WorkflowOrchestrator')
+        )
+      : null;
     const warnings = [];
     const diagnostics = {
       stage: STAGE7_CONFIG.VERSION,
@@ -251,7 +260,7 @@ const WorkflowOrchestrator_ = (function() {
     };
 
     const dryRun = !!payload.dryRun;
-    const route = _routeDescriptor(cfg, rawScenario);
+    const route = routeForTrace;
     const lockRequired = cfg.lock !== false && !!cfg.write;
     const lockScope = _resolveLockScope(cfg, rawScenario);
     const retrySafe = cfg.retrySafe !== false;
@@ -586,8 +595,20 @@ const WorkflowOrchestrator_ = (function() {
         });
       }
 
+      if (typeof useCaseTraceEnd_ === 'function') {
+        useCaseTraceEnd_(traceHandle, { ok: execution.success !== false });
+      }
+
       return response;
     } catch (e) {
+      if (typeof useCaseTraceEnd_ === 'function') {
+        useCaseTraceEnd_(traceHandle, {
+          ok: false,
+          err: e && e.message ? e.message : String(e),
+          severity: 'error'
+        });
+      }
+
       diagnostics.lifecycle.push('error');
       diagnostics.durationMs = new Date().getTime() - startedAt.getTime();
 
