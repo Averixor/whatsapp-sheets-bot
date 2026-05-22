@@ -312,51 +312,95 @@ function buildMessage_({ reportDate, service, place, tasks, brDays, minimal }) {
         "*(ʢ ￣︿￣)*   *⨦*   *(￣︿￣ ʡ)*",
       ].join("\n");
     }
+
     const lines = [d, ""];
-    if (service) lines.push(`Вид служби: ${service}`);
+
+    if (service) {
+      lines.push(`Вид служби: ${service}`);
+    }
+
     lines.push(`Днів на БР: ${br}`);
-    if (place) lines.push(`\nМісце виконання:\n${place}`);
-    if (tasks) lines.push(`\nВиконувані завдання:\n${tasks}`);
+
+    if (place) {
+      lines.push(`\nМісце виконання:\n${place}`);
+    }
+
+    if (tasks) {
+      lines.push(`\nВиконувані завдання:\n${tasks}`);
+    }
+
     lines.push("\n*(ʢ ￣︿￣)*   *⨦*   *(￣︿￣ ʡ)*");
+
     return lines.join("\n");
+  }
+
+  function _cleanEnd_(value) {
+    return String(value || "").replace(/\s+$/g, "");
+  }
+
+  function _line_(value) {
+    const text = _cleanEnd_(value);
+    return text ? text + "\n" : "";
+  }
+
+  function _block_(value) {
+    const text = _cleanEnd_(value);
+    return text ? text + "\n\n" : "";
   }
 
   try {
     if (minimal) {
       const template = getTemplateText_("MESSAGE_MINIMAL");
+
       if (template) {
-        return renderTemplate_(template, { date: d, brDays: String(br) });
+        return renderTemplate_(template, {
+          date: d,
+          brDays: String(br),
+        });
       }
+
       return _fallback_();
     }
 
     const mainTemplate = getTemplateText_("MESSAGE_FULL");
+
     if (!mainTemplate) {
       return _fallback_();
     }
 
+    const serviceTemplate = getTemplateText_("MESSAGE_SERVICE_LINE");
+    const brTemplate = getTemplateText_("MESSAGE_BR_LINE");
+    const placeTemplate = getTemplateText_("MESSAGE_PLACE_BLOCK");
+    const tasksTemplate = getTemplateText_("MESSAGE_TASKS_BLOCK");
+
     const serviceLine = service
-      ? getTemplateText_("MESSAGE_SERVICE_LINE")
-        ? renderTemplate_(getTemplateText_("MESSAGE_SERVICE_LINE"), { service })
-        : `Вид служби: ${service}\n`
+      ? _line_(
+          serviceTemplate
+            ? renderTemplate_(serviceTemplate, { service })
+            : `Вид служби: ${service}`
+        )
       : "";
 
-    const brLine = getTemplateText_("MESSAGE_BR_LINE")
-      ? renderTemplate_(getTemplateText_("MESSAGE_BR_LINE"), {
-          brDays: String(br),
-        })
-      : `Днів на БР: ${br}\n`;
+    const brLine = _line_(
+      brTemplate
+        ? renderTemplate_(brTemplate, { brDays: String(br) })
+        : `Днів на БР: ${br}`
+    );
 
     const placeBlock = place
-      ? getTemplateText_("MESSAGE_PLACE_BLOCK")
-        ? renderTemplate_(getTemplateText_("MESSAGE_PLACE_BLOCK"), { place })
-        : `Місце виконання:\n${place}\n\n`
+      ? _block_(
+          placeTemplate
+            ? renderTemplate_(placeTemplate, { place })
+            : `Місце виконання:\n${place}`
+        )
       : "";
 
     const tasksBlock = tasks
-      ? getTemplateText_("MESSAGE_TASKS_BLOCK")
-        ? renderTemplate_(getTemplateText_("MESSAGE_TASKS_BLOCK"), { tasks })
-        : `Виконувані завдання:\n${tasks}\n\n`
+      ? _block_(
+          tasksTemplate
+            ? renderTemplate_(tasksTemplate, { tasks })
+            : `Виконувані завдання:\n${tasks}`
+        )
       : "";
 
     return renderTemplate_(mainTemplate, {
