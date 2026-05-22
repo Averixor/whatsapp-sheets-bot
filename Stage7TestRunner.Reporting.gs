@@ -1092,7 +1092,7 @@ function stage7TestRunnerAttachReporting_(ctx) {
     report.counts.warnings = warnings;
     report.counts.discovered = discovered;
     report.ok = failed === 0;
-    report.checks = report.results.map(resultToCheck_);
+    report.checks = report.results.map(ctx.resultToCheck_);
 
     if (discovered > 0)
       report.warnings.push(

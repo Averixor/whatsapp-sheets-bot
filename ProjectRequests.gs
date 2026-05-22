@@ -155,7 +155,7 @@ const ProjectRequests_ = (function () {
       });
     }
 
-    out.sort((a, b) => a.name.localeCompare(b.name, "uk"));
+    out.sort((a, b) => a.name.localeCompare(b.name, "uk-UA"));
     return out;
   }
 

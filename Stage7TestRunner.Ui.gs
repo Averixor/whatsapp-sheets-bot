@@ -70,10 +70,10 @@ function stage7TestRunnerAttachUi_(ctx) {
   }
 
   ctx.resetResultsSheet = function() {
-    var sheet = ctx.getOrCreateSheet_(DEFAULT_RESULT_SHEET_NAME);
+    var sheet = ctx.getOrCreateSheet_(ctx.DEFAULT_RESULT_SHEET_NAME);
     sheet.clear();
     ctx.ensureResultHeader_(sheet);
-    return { ok: true, sheetName: DEFAULT_RESULT_SHEET_NAME };
+    return { ok: true, sheetName: ctx.DEFAULT_RESULT_SHEET_NAME };
   }
 
   ctx.buildDialogHtml_ = function(report) {

@@ -90,7 +90,7 @@ function readDictSum_() {
 
     return rows.sort(function (a, b) {
       if (a.order !== b.order) return a.order - b.order;
-      return String(a.code).localeCompare(String(b.code), "uk");
+      return String(a.code).localeCompare(String(b.code), "uk-UA");
     });
   } catch (e) {
     console.warn("Помилка в readDictSum_:", e);
