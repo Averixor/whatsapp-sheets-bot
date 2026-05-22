@@ -810,17 +810,19 @@
   }
 
   .result-message {
-    background: var(--bg-secondary);
-    padding: var(--space-sm);
-    border-radius: var(--radius-sm);
+    background: transparent;
+    padding: var(--space-xs) 0;
+    border-radius: 0;
     font-family: var(--font-mono);
     white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
     margin: var(--space-xs) 0;
     font-size: 0.9rem;
+    line-height: 1.5;
     width: 100%;
-    overflow-x: auto;
-    border: 1px solid var(--border-color);
+    overflow: visible;
+    border: 0;
     max-height: none;
-    overflow-y: visible;
     color: var(--text-primary);
   }
