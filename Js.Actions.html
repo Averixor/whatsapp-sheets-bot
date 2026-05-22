@@ -594,6 +594,11 @@
     }
   }
 
+  function looksLikeMessageTemplate_(message) {
+    const text = String(message || "");
+    return /\{\{|\[\[|%[A-Z_]+%|<<|>>/.test(text);
+  }
+
   function renderPersonCard(data) {
     const root = $id("personCardContainer");
     if (!root) return;
@@ -697,9 +702,13 @@
         </div>
 
         <div class="person-card__message-label">Текст повідомлення</div>
-        <pre class="person-card__message" id="personCardMessage">${escapeHtml(data.message || "")}</pre>
+        <div class="person-card__message" id="personCardMessage">${escapeHtml(data.message || "")}</div>
       </div>
     `;
+
+    if (looksLikeMessageTemplate_(data.message)) {
+      $id("personCardMessage")?.classList?.add("person-card__message--template");
+    }
   }
 
   async function openPersonCalendarFromCard(callsign) {
@@ -973,6 +982,12 @@
 
     processSelectedDate,
     changeMonth,
+    changeCalendarYear,
+    navigateCalendarWeek,
+    navigateCalendarDay,
+    setCalendarViewMode,
+    selectCalendarMonth,
+    selectCalendarDay,
     selectDate,
     switchToSelectedMonth,
 

@@ -230,16 +230,23 @@
 
   .person-card__message {
     margin: 0;
-    padding: 12px;
-    border-radius: 12px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
+    padding: 0;
+    border: 0;
+    background: transparent;
     color: var(--text-primary);
     white-space: pre-wrap;
-    font-size: 0.9rem;
+    word-break: break-word;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    font-family: inherit;
+    overflow: visible;
+    max-height: none;
+  }
+
+  .person-card__message--template {
     font-family: var(--font-mono);
-    max-height: 280px;
-    overflow-y: auto;
+    font-size: 0.88rem;
+    line-height: 1.5;
   }
 
   .person-card-error {

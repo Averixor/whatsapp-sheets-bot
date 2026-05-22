@@ -406,7 +406,7 @@
           <button class="btn" onclick="SidebarApp.copyProjectTestReport()">📋 Копіювати звіт</button>
         </div>
 
-        <div class="health-scroll-container" style="max-height:360px;">
+        <div class="health-report-sections">
           ${renderHealthGroup('Провалені тести', '✕', groups.critical, 'Провалених тестів немає')}
           ${renderHealthGroup('Попередження', '⚠', groups.warnings, 'Попереджень немає')}
           ${renderHealthGroup('Пропущені / compatibility', 'SKIP', groups.pseudo, 'Пропущених перевірок немає')}
@@ -732,7 +732,7 @@
           <button class="btn" onclick="SidebarApp.copyHealthReport()">📋 Копіювати звіт</button>
         </div>
 
-        <div class="health-scroll-container" style="max-height:320px;">
+        <div class="health-report-sections">
           ${renderHealthGroup('Критичні проблеми', '✕', groups.critical, 'Критичних проблем не знайдено')}
           ${renderHealthGroup('Попередження', '⚠', groups.warnings, 'Попереджень немає')}
           ${renderHealthGroup('PSEUDO / compatibility layer', '🧩', groups.pseudo, 'Нейтральний compatibility layer не виявлено')}

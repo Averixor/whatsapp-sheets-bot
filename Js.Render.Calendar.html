@@ -1,107 +1,476 @@
 <script>
-  // Js.Render fragment
+  // Js.Render fragment — mobile calendar (Рік / Місяць / Тиждень / День)
 
-  // CALENDAR
-  // =========================
+  var CALENDAR_MONTH_NAMES_UK = [
+    "Січень",
+    "Лютий",
+    "Березень",
+    "Квітень",
+    "Травень",
+    "Червень",
+    "Липень",
+    "Серпень",
+    "Вересень",
+    "Жовтень",
+    "Листопад",
+    "Грудень",
+  ];
+
+  var CALENDAR_WEEKDAY_SHORT_UK = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "НД"];
+
+  var CALENDAR_VIEW_MODES = ["year", "month", "week", "day"];
+
+  var CALENDAR_DAY_BG_PRESETS = [
+    "https://picsum.photos/seed/wasb-cal-a/900/560",
+    "https://picsum.photos/seed/wasb-cal-b/900/560",
+    "https://picsum.photos/seed/wasb-cal-c/900/560",
+    "https://picsum.photos/seed/wasb-cal-d/900/560",
+    "https://picsum.photos/seed/wasb-cal-e/900/560",
+    "https://picsum.photos/seed/wasb-cal-f/900/560",
+  ];
+
+  var CALENDAR_WEEKDAY_NAMES_UK = [
+    "Неділя",
+    "Понеділок",
+    "Вівторок",
+    "Середа",
+    "Четвер",
+    "П'ятниця",
+    "Субота",
+  ];
+
+  function ensureCalendarState_(action) {
+    if (
+      !STATE.currentCalendarDate ||
+      isNaN(STATE.currentCalendarDate.getTime())
+    ) {
+      STATE.currentCalendarDate = new Date();
+    }
+    if (!STATE.calendarViewMode) STATE.calendarViewMode = "month";
+    if (action) STATE.calendarSummaryAction = action;
+    if (!STATE.calendarSummaryAction) STATE.calendarSummaryAction = "daySummary";
+  }
+
+  function getCalendarAction_() {
+    return STATE.calendarSummaryAction || "daySummary";
+  }
+
+  function parseCalendarDateStr_(dateStr) {
+    const raw = String(dateStr || "").trim();
+    const match = raw.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    if (!match) return null;
+
+    const day = Number(match[1]);
+    const month = Number(match[2]) - 1;
+    const year = Number(match[3]);
+    const date = new Date(year, month, day);
+
+    if (
+      date.getFullYear() !== year ||
+      date.getMonth() !== month ||
+      date.getDate() !== day
+    ) {
+      return null;
+    }
+
+    return date;
+  }
+
+  function formatCalendarDateStr_(date) {
+    const d = date instanceof Date ? date : new Date();
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    return `${day}.${month}.${d.getFullYear()}`;
+  }
+
+  function getSelectedCalendarDate_() {
+    const parsed = parseCalendarDateStr_(STATE.selectedDate);
+    if (parsed) return parsed;
+    return new Date(STATE.currentCalendarDate.getTime());
+  }
+
+  function syncCalendarAnchor_(date) {
+    STATE.currentCalendarDate = new Date(date.getTime());
+    STATE.selectedDate = formatCalendarDateStr_(date);
+  }
+
+  function getWeekStartMonday_(date) {
+    const d = new Date(date.getTime());
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  function isSameCalendarDay_(a, b) {
+    return (
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate()
+    );
+  }
+
+  function isWeekendCellIndex_(index) {
+    return index === 5 || index === 6;
+  }
+
+  function getCalendarDayBgStyle_(date) {
+    const seed =
+      date.getFullYear() * 372 + date.getMonth() * 31 + date.getDate();
+    const url =
+      CALENDAR_DAY_BG_PRESETS[seed % CALENDAR_DAY_BG_PRESETS.length] || "";
+    const safeUrl = escapeAttr(url);
+    return `background-image:linear-gradient(180deg,rgba(2,6,23,.72),rgba(2,6,23,.88)),url('${safeUrl}');`;
+  }
 
   function showCalendar(action) {
+    ensureCalendarState_(action);
+    STATE.calendarViewMode = "month";
+
+    if (!STATE.selectedDate) {
+      syncCalendarAnchor_(STATE.currentCalendarDate);
+    }
+
     showStandardResult(
       action === "daySummary" ? "Зведення дня" : "Детальне зведення",
     );
     renderCalendar(action);
   }
 
+  function setCalendarViewMode(mode, action) {
+    const nextMode =
+      CALENDAR_VIEW_MODES.indexOf(mode) >= 0 ? mode : "month";
+    STATE.calendarViewMode = nextMode;
+    renderCalendar(action || getCalendarAction_());
+  }
+
   function renderCalendar(action) {
-    const safeAction = escapeJsString(action || "");
-    const year = STATE.currentCalendarDate.getFullYear();
-    const month = STATE.currentCalendarDate.getMonth();
-    const today = new Date();
+    action = action || getCalendarAction_();
+    ensureCalendarState_(action);
 
-    const monthNames = [
-      "Січень",
-      "Лютий",
-      "Березень",
-      "Квітень",
-      "Травень",
-      "Червень",
-      "Липень",
-      "Серпень",
-      "Вересень",
-      "Жовтень",
-      "Листопад",
-      "Грудень",
-    ];
+    const mode = STATE.calendarViewMode || "month";
+    let body = "";
 
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+    if (mode === "year") body = renderCalendarYearView_(action);
+    else if (mode === "week") body = renderCalendarWeekView_(action);
+    else if (mode === "day") body = renderCalendarDayView_(action);
+    else body = renderCalendarMonthView_(action);
 
-    let html = `
-      <div class="calendar-container">
-        <div class="calendar-header">
-          <div class="calendar-month-year">${monthNames[month]} ${year}</div>
-          <div class="calendar-nav">
-            <button class="calendar-nav-btn" onclick="SidebarApp.changeMonth(-1, '${safeAction}')">↢</button>
-            <button class="calendar-nav-btn" onclick="SidebarApp.changeMonth(1, '${safeAction}')">↣</button>
+    setHtml("resultContent", renderCalendarShell_(action, body, mode));
+  }
+
+  function renderCalendarShell_(action, bodyHtml, activeMode) {
+    const safeAction = escapeJsString(action || getCalendarAction_());
+    const summaryLabel =
+      action === "daySummary" ? "Отримати зведення" : "Детальне зведення";
+    const navLabels = {
+      year: "Рік",
+      month: "Місяць",
+      week: "Тиждень",
+      day: "День",
+    };
+
+    const navHtml = CALENDAR_VIEW_MODES.map(function (mode) {
+      const active = mode === activeMode ? " active" : "";
+      return `<button type="button" class="cal-mode-nav__btn${active}" onclick="SidebarApp.setCalendarViewMode('${mode}', '${safeAction}')">${navLabels[mode]}</button>`;
+    }).join("");
+
+    return `
+      <div class="cal-screen">
+        <div class="cal-screen__body">
+          ${bodyHtml}
+          <div class="cal-actions">
+            <button class="result-link cal-actions__btn" type="button" onclick="SidebarApp.processSelectedDate('${safeAction}')" ${!STATE.selectedDate ? "disabled" : ""}>
+              ${summaryLabel}
+            </button>
           </div>
         </div>
-
-        <div class="calendar-weekdays">
-          <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Нд</div>
-        </div>
-
-        <div class="calendar-days">
+        <nav class="cal-mode-nav" aria-label="Режим календаря">${navHtml}</nav>
+      </div>
     `;
+  }
 
-    for (let i = 0; i < startOffset; i++) {
-      html += '<div class="calendar-day empty"></div>';
+  function renderCalendarMonthView_(action) {
+    const safeAction = escapeJsString(action);
+    const anchor = getSelectedCalendarDate_();
+    const year = anchor.getFullYear();
+    const month = anchor.getMonth();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+    let cellsHtml = "";
+
+    for (let i = startOffset - 1; i >= 0; i--) {
+      const day = daysInPrevMonth - i;
+      const date = new Date(year, month - 1, day);
+      cellsHtml += renderCalendarMonthDayCell_(date, month - 1, today, safeAction, true);
     }
 
     for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = `${String(day).padStart(2, "0")}.${String(month + 1).padStart(2, "0")}.${year}`;
-      const isToday =
-        day === today.getDate() &&
-        month === today.getMonth() &&
-        year === today.getFullYear();
-      const isSelected = STATE.selectedDate === dateStr;
-
-      html += `
-        <div class="calendar-day ${isToday ? "today" : ""} ${isSelected ? "selected" : ""}" onclick="SidebarApp.selectDate('${escapeJsString(dateStr)}', '${safeAction}')">
-          ${day}
-        </div>
-      `;
+      const date = new Date(year, month, day);
+      cellsHtml += renderCalendarMonthDayCell_(date, month, today, safeAction, false);
     }
 
     const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
-
+    let nextDay = 1;
     for (let i = startOffset + daysInMonth; i < totalCells; i++) {
-      html += '<div class="calendar-day empty"></div>';
+      const date = new Date(year, month + 1, nextDay);
+      cellsHtml += renderCalendarMonthDayCell_(date, month + 1, today, safeAction, true);
+      nextDay++;
     }
 
-    html += `
-        </div>
+    const weekdaysHtml = CALENDAR_WEEKDAY_SHORT_UK.map(function (label, index) {
+      const weekendClass = isWeekendCellIndex_(index) ? " weekend" : "";
+      return `<div class="cal-weekday${weekendClass}">${label}</div>`;
+    }).join("");
 
-        <div class="calendar-actions">
-          <button class="result-link" onclick="SidebarApp.processSelectedDate('${safeAction}')" ${!STATE.selectedDate ? "disabled" : ""}>
-            ${action === "daySummary" ? "Отримати зведення" : "Детальне зведення"}
-          </button>
+    return `
+      <div class="cal-panel cal-panel--month">
+        <div class="cal-panel__header">
+          <div class="cal-panel__title">${escapeHtml(CALENDAR_MONTH_NAMES_UK[month])} ${year}</div>
+          <div class="cal-panel__nav">
+            <button type="button" class="cal-nav-btn" onclick="SidebarApp.changeMonth(-1, '${safeAction}')" aria-label="Попередній місяць">‹</button>
+            <button type="button" class="cal-nav-btn" onclick="SidebarApp.changeMonth(1, '${safeAction}')" aria-label="Наступний місяць">›</button>
+          </div>
         </div>
+        <div class="cal-weekdays">${weekdaysHtml}</div>
+        <div class="cal-month-grid">${cellsHtml}</div>
       </div>
     `;
+  }
 
-    setHtml("resultContent", html);
+  function renderCalendarMonthDayCell_(date, visibleMonth, today, safeAction, isOtherMonth) {
+    const dateStr = formatCalendarDateStr_(date);
+    const isToday = isSameCalendarDay_(date, today);
+    const isSelected = STATE.selectedDate === dateStr;
+    const dayIndex = (date.getDay() + 6) % 7;
+    const classes = ["cal-day"];
+
+    if (isOtherMonth || date.getMonth() !== visibleMonth) classes.push("other-month");
+    if (isWeekendCellIndex_(dayIndex)) classes.push("weekend");
+    if (isToday) classes.push("today");
+    if (isSelected) classes.push("selected");
+
+    return `
+      <button type="button" class="${classes.join(" ")}" onclick="SidebarApp.selectDate('${escapeJsString(dateStr)}', '${safeAction}')">
+        <span class="cal-day__num">${date.getDate()}</span>
+      </button>
+    `;
+  }
+
+  function renderCalendarYearView_(action) {
+    const safeAction = escapeJsString(action);
+    const anchor = getSelectedCalendarDate_();
+    const year = anchor.getFullYear();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const monthsHtml = CALENDAR_MONTH_NAMES_UK.map(function (name, monthIndex) {
+      return renderCalendarMiniMonth_(year, monthIndex, today, safeAction, name);
+    }).join("");
+
+    return `
+      <div class="cal-panel cal-panel--year">
+        <div class="cal-panel__header">
+          <div class="cal-panel__title">${year}</div>
+          <div class="cal-panel__nav">
+            <button type="button" class="cal-nav-btn" onclick="SidebarApp.changeCalendarYear(-1, '${safeAction}')" aria-label="Попередній рік">‹</button>
+            <button type="button" class="cal-nav-btn" onclick="SidebarApp.changeCalendarYear(1, '${safeAction}')" aria-label="Наступний рік">›</button>
+          </div>
+        </div>
+        <div class="cal-year-grid">${monthsHtml}</div>
+      </div>
+    `;
+  }
+
+  function renderCalendarMiniMonth_(year, month, today, safeAction, monthName) {
+    const firstDay = new Date(year, month, 1).getDay();
+    const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    let daysHtml = "";
+
+    for (let i = 0; i < startOffset; i++) {
+      daysHtml += '<span class="cal-mini-day cal-mini-day--empty"></span>';
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month, day);
+      const dateStr = formatCalendarDateStr_(date);
+      const dayIndex = (date.getDay() + 6) % 7;
+      const classes = ["cal-mini-day"];
+
+      if (isWeekendCellIndex_(dayIndex)) classes.push("weekend");
+      if (isSameCalendarDay_(date, today)) classes.push("today");
+      if (STATE.selectedDate === dateStr) classes.push("selected");
+
+      daysHtml += `<button type="button" class="${classes.join(" ")}" onclick="SidebarApp.selectCalendarDay('${escapeJsString(dateStr)}', '${safeAction}')">${day}</button>`;
+    }
+
+    return `
+      <div class="cal-mini-month">
+        <button type="button" class="cal-mini-month__title" onclick="SidebarApp.selectCalendarMonth(${month}, '${safeAction}')">${escapeHtml(monthName)}</button>
+        <div class="cal-mini-month__grid">${daysHtml}</div>
+      </div>
+    `;
+  }
+
+  function renderCalendarWeekView_(action) {
+    const safeAction = escapeJsString(action);
+    const selected = getSelectedCalendarDate_();
+    const weekStart = getWeekStartMonday_(selected);
+    const today = new Date();
+    const now = new Date();
+    const isCurrentWeek = isSameCalendarDay_(getWeekStartMonday_(today), weekStart);
+
+    let stripHtml = "";
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(weekStart.getTime());
+      date.setDate(weekStart.getDate() + i);
+      const dateStr = formatCalendarDateStr_(date);
+      const classes = ["cal-week-strip__day"];
+
+      if (isWeekendCellIndex_(i)) classes.push("weekend");
+      if (isSameCalendarDay_(date, today)) classes.push("today");
+      if (STATE.selectedDate === dateStr) classes.push("selected");
+
+      stripHtml += `
+        <button type="button" class="${classes.join(" ")}" onclick="SidebarApp.selectDate('${escapeJsString(dateStr)}', '${safeAction}')">
+          <span class="cal-week-strip__wd">${CALENDAR_WEEKDAY_SHORT_UK[i]}</span>
+          <span class="cal-week-strip__num">${date.getDate()}</span>
+        </button>
+      `;
+    }
+
+    const hours = [];
+    for (let h = 6; h <= 22; h++) hours.push(h);
+
+    const slotRows = hours
+      .map(function (hour) {
+        const label = `${String(hour).padStart(2, "0")}:00`;
+        return `<div class="cal-time-row"><span class="cal-time-row__label">${label}</span><div class="cal-time-row__slot"></div></div>`;
+      })
+      .join("");
+
+    let nowLineHtml = "";
+    if (isCurrentWeek && isSameCalendarDay_(selected, today)) {
+      const minutes = now.getHours() * 60 + now.getMinutes();
+      const start = 6 * 60;
+      const end = 22 * 60 + 59;
+      const pct = Math.max(0, Math.min(100, ((minutes - start) / (end - start)) * 100));
+      nowLineHtml = `<div class="cal-now-line" style="top:${pct}%;"></div>`;
+    }
+
+    return `
+      <div class="cal-panel cal-panel--week">
+        <div class="cal-panel__header">
+          <div class="cal-panel__title">Тиждень ${formatCalendarDateStr_(weekStart).slice(0, 5)} – ${formatCalendarDateStr_(new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6)).slice(0, 5)}</div>
+          <div class="cal-panel__nav">
+            <button type="button" class="cal-nav-btn" onclick="SidebarApp.navigateCalendarWeek(-1, '${safeAction}')" aria-label="Попередній тиждень">‹</button>
+            <button type="button" class="cal-nav-btn" onclick="SidebarApp.navigateCalendarWeek(1, '${safeAction}')" aria-label="Наступний тиждень">›</button>
+          </div>
+        </div>
+        <div class="cal-week-strip">${stripHtml}</div>
+        <div class="cal-time-grid">
+          ${slotRows}
+          ${nowLineHtml}
+        </div>
+        <div class="cal-empty-note">На сьогодні подій немає</div>
+      </div>
+    `;
+  }
+
+  function renderCalendarDayView_(action) {
+    const safeAction = escapeJsString(action);
+    const selected = getSelectedCalendarDate_();
+    const dateStr = formatCalendarDateStr_(selected);
+    const weekdayName = CALENDAR_WEEKDAY_NAMES_UK[selected.getDay()];
+    const bgStyle = getCalendarDayBgStyle_(selected);
+
+    return `
+      <div class="cal-panel cal-panel--day">
+        <div class="cal-panel__header">
+          <div class="cal-panel__title">День</div>
+          <div class="cal-panel__nav">
+            <button type="button" class="cal-nav-btn" onclick="SidebarApp.navigateCalendarDay(-1, '${safeAction}')" aria-label="Попередній день">‹</button>
+            <button type="button" class="cal-nav-btn" onclick="SidebarApp.navigateCalendarDay(1, '${safeAction}')" aria-label="Наступний день">›</button>
+          </div>
+        </div>
+        <div class="cal-day-hero" style="${bgStyle}">
+          <div class="cal-day-hero__overlay">
+            <div class="cal-day-hero__date">${escapeHtml(String(selected.getDate()))}</div>
+            <div class="cal-day-hero__meta">
+              <span>${escapeHtml(CALENDAR_MONTH_NAMES_UK[selected.getMonth()])} ${selected.getFullYear()}</span>
+              <span>${escapeHtml(weekdayName)}</span>
+            </div>
+          </div>
+        </div>
+        <div class="cal-day-events">
+          <div class="cal-day-events__title">Події</div>
+          <div class="cal-day-events__empty">На цей день подій, відпусток і днів народження не знайдено</div>
+        </div>
+        <button type="button" class="cal-day-select-btn" onclick="SidebarApp.selectDate('${escapeJsString(dateStr)}', '${safeAction}')">
+          Обрано: ${escapeHtml(dateStr)}
+        </button>
+      </div>
+    `;
   }
 
   function changeMonth(delta, action) {
-    STATE.currentCalendarDate.setMonth(
-      STATE.currentCalendarDate.getMonth() + delta,
-    );
-    renderCalendar(action);
+    const anchor = getSelectedCalendarDate_();
+    anchor.setMonth(anchor.getMonth() + delta);
+    syncCalendarAnchor_(anchor);
+    renderCalendar(action || getCalendarAction_());
+  }
+
+  function changeCalendarYear(delta, action) {
+    const anchor = getSelectedCalendarDate_();
+    anchor.setFullYear(anchor.getFullYear() + delta);
+    syncCalendarAnchor_(anchor);
+    renderCalendar(action || getCalendarAction_());
+  }
+
+  function navigateCalendarWeek(delta, action) {
+    const anchor = getSelectedCalendarDate_();
+    anchor.setDate(anchor.getDate() + delta * 7);
+    syncCalendarAnchor_(anchor);
+    renderCalendar(action || getCalendarAction_());
+  }
+
+  function navigateCalendarDay(delta, action) {
+    const anchor = getSelectedCalendarDate_();
+    anchor.setDate(anchor.getDate() + delta);
+    syncCalendarAnchor_(anchor);
+    renderCalendar(action || getCalendarAction_());
+  }
+
+  function selectCalendarMonth(month, action) {
+    const anchor = getSelectedCalendarDate_();
+    anchor.setMonth(Number(month));
+    anchor.setDate(1);
+    syncCalendarAnchor_(anchor);
+    STATE.calendarViewMode = "month";
+    renderCalendar(action || getCalendarAction_());
+  }
+
+  function selectCalendarDay(dateStr, action) {
+    const parsed = parseCalendarDateStr_(dateStr);
+    if (!parsed) return;
+    syncCalendarAnchor_(parsed);
+    STATE.calendarViewMode = "month";
+    renderCalendar(action || getCalendarAction_());
   }
 
   function selectDate(dateStr, action) {
-    STATE.selectedDate = dateStr;
-    renderCalendar(action);
+    const parsed = parseCalendarDateStr_(dateStr);
+    if (!parsed) return;
+    syncCalendarAnchor_(parsed);
+    renderCalendar(action || getCalendarAction_());
     logToConsole(`Обрано дату: ${formatDateForDisplay(dateStr)}`, "info");
   }
 
