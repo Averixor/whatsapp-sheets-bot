@@ -1,16 +1,3 @@
-#!/usr/bin/env node
-/**
- * Opt-in: merge live apiStage7DebugAccess() descriptor into access-debug-baseline.json.
- * Does NOT run in default CI. Does NOT invent descriptor data.
- *
- * Capture on canary (Apps Script editor):
- *   apiStage7DebugAccess() → copy data.result (or full response) to a JSON file.
- *
- * Merge into baseline:
- *   ACCESS_DESCRIPTOR_JSON=path/to/capture.json node scripts/bootstrap-access-baseline.mjs
- *
- * Optional: FORCE_BOOTSTRAP=1 to overwrite an existing non-null descriptor.
- */
 import fs from 'node:fs';
 import path from 'node:path';
 import { loadContract, repoRoot } from './lib/load-contract.mjs';
