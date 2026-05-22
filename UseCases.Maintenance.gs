@@ -396,7 +396,13 @@ var UseCasesMaintenance_ = (function () {
         if (String(input.type || "") === "postCreateMonth" && input.month) {
           validateMonthSwitch_(input.month);
         }
-      
+      },
+      execute: function (input) {
+        return executeMaintenanceScenario_(input);
+      },
+    });
+  }
+
   return {
     checkVacationsAndBirthdays: checkVacationsAndBirthdays,
     runReconciliation: runReconciliation,
