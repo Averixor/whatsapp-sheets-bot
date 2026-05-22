@@ -29,7 +29,11 @@ var POLICY_CHECKS_CONFIG_ = {
 
   STRICT_PROTECTED_SHEETS_MODE: false,
 
-  REQUIRED_MAINTENANCE_ACTIONS: ["repair", "protections", "triggers"],
+  REQUIRED_MAINTENANCE_ACTIONS: [
+    "repair", 
+    "protections", 
+    "triggers"
+  ],
 
   ROLES_WITH_ACTIONS: [
     "viewer",
@@ -920,7 +924,12 @@ function runAccessPolicyChecks(options) {
       report,
       "maintenance actions contract covers elevated roles",
       function () {
-        var elevated = ["maintainer", "admin", "sysadmin", "owner"];
+        var elevated = [
+          "maintainer", 
+          "admin", 
+          "sysadmin", 
+          "owner"
+        ];
         var output = {};
 
         for (var i = 0; i < elevated.length; i++) {

@@ -19,7 +19,9 @@ WASB is a spreadsheet-bound Google Apps Script application.
   - `Js.Core.html`
   - `Js.State.html`
   - `Js.Api.html`
-  - `Js.Render.Panel.html`, `Js.Render.Calendar.html`, `Js.Render.Results.html`
+  - `Js.Render.Panel.html`
+  - `Js.Render.Calendar.html`
+  - `Js.Render.Results.html`
   - `Js.Diagnostics.html`
   - `Js.Helpers.html`
   - `Js.Security.html`

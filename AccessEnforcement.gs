@@ -612,43 +612,26 @@ var AccessEnforcement_ =
       add("Код причини", _securityReasonLabel_(info.reasonCode));
       add("Причина", info.reasonMessage);
 
-      // Дані заявки на ключ доступу. Вони мають бути видимі адміністратору в листі,
-      // а не губитися всередині JSON/ALERTS_LOG.
       add("ПІБ", displayName);
       add("Прізвище", info.surname || info.lastName || info.familyName);
       add("Імʼя", info.firstName || info.first_name || info.name);
       add("Телефон", info.phone);
       add("Email", info.email);
-      add(
-        "Позивний",
-        info.enteredCallsign || info.callsign || info.personCallsign,
-      );
+      add("Позивний", info.enteredCallsign || info.callsign || info.personCallsign);
       add("Бажаний канал звʼязку", preferredContactLabel);
-      add(
-        "Telegram username",
-        info.telegramUsername || info.telegram || info.tgUsername,
-      );
+      add("Telegram username", info.telegramUsername || info.telegram || info.tgUsername);
       add("Signal", info.signal || info.signalPhone);
       add("Статус заявки", info.registrationStatus || info.registration_status);
 
-      add(
-        "Тип ідентифікатора",
-        info.identifierType === "phone" ? "телефон" : info.identifierType,
-      );
+      add("Тип ідентифікатора", info.identifierType === "phone" ? "телефон" : info.identifierType);
       add("Ідентифікатор", info.identifierValue);
       add("Введений позивний", info.enteredCallsign);
       add("Спроба №", info.attemptNumber);
       add("Залишилось спроб", info.remainingAttempts);
-      add(
-        "Заблоковано",
-        info.blocked === true ? "так" : info.blocked === false ? "ні" : "",
-      );
+      add("Заблоковано", info.blocked === true ? "так" : info.blocked === false ? "ні" : "");
       add("Блокування, хв", info.blockDurationMinutes);
       add("Час входу", info.enteredAtText);
-      add(
-        "Точка входу",
-        String(info.loginPointText || "").replace(/^Точка входу:\s*/i, ""),
-      );
+      add("Точка входу", String(info.loginPointText || "").replace(/^Точка входу:\s*/i, ""));
 
       return lines.length
         ? lines.join("\n")

@@ -1,19 +1,3 @@
-/**
- * AuditTrail.gs — hardened audit/logging helper for stage 7.
- *
- * Призначення:
- * - структурований audit-log у лист AUDIT_LOG
- * - одиночний і batch запис
- * - compact legacy log через LogsRepository_
- * - зворотна сумісність через ensureAuditTrailSheet_()
- *
- * Принципи:
- * - м'яка деградація, якщо optional helper-и відсутні
- * - безпечна серіалізація
- * - lock для write-path
- * - мінімально агресивний repair header row
- */
-
 const Stage7AuditTrail_ = (function () {
   const DEFAULT_AUDIT_LOG_SHEET = 'AUDIT_LOG';
   const DEFAULT_HEADER_ROW = 1;
