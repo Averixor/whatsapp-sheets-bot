@@ -44,8 +44,8 @@
     setHtml(
       "resultContent",
       `
-      <div class="result-screen month-switcher-screen">
-        <p class="result-screen-hint">Виберіть місяць, на який потрібно перемкнути активний бот.</p>
+      <div class="result-screen month-switcher-card">
+        <div class="month-switcher-hint">Виберіть місяць, на який потрібно перемкнути активний бот.</div>
         <div class="month-switcher-badge">Активний місяць: ${escapeHtml(STATE.currentMonth || "—")}</div>
 
         <label class="month-switcher-field" for="monthSelect">
@@ -55,7 +55,7 @@
           </span>
         </label>
 
-        <div class="result-screen-actions month-switcher-actions">
+        <div class="month-switcher-actions">
           <button type="button" class="result-link" onclick="SidebarApp.switchToSelectedMonth()">Перемкнути</button>
           <button type="button" class="result-link result-link--secondary" onclick="SidebarApp.showMenu()">Скасувати</button>
         </div>

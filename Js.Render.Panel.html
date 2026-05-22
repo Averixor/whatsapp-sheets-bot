@@ -783,12 +783,15 @@
       case "summary":
         setText("resultTitle", "Зведення дня");
         html = `
-          <div class="result-screen summary-screen">
-            <div class="result-screen-actions">
+          <div class="result-item">
+            <div class="result-label">Зведення дня</div>
+
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 12px 0;">
               <button class="btn btn-primary" onclick="SidebarApp.sendDaySummaryToCommander()">Командиру</button>
               <button class="btn" onclick="SidebarApp.copyResultText(SidebarApp.STATE.lastSummaryText)">Копіювати</button>
             </div>
-            <div class="result-screen-pre">
+
+            <div class="result-message" style="white-space: pre-wrap;">
               ${escapeHtml(data.summary || "")
                 .split("\n")
                 .join("<br>")}
@@ -801,13 +804,17 @@
       case "detailedActionable":
         setText("resultTitle", "Детальне зведення");
         html = `
-          <div class="result-screen summary-screen">
-            <div class="result-screen-meta">Дата: <b>${escapeHtml(data.date || "")}</b> · Осіб: <b>${data.peopleCount || 0}</b></div>
-            <div class="result-screen-actions">
+          <div class="result-item">
+            <div class="result-label">Детальне зведення за ${escapeHtml(data.date || "")}</div>
+
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 12px 0;">
               <button class="btn btn-primary" onclick="SidebarApp.sendDetailedToCommander()">Командиру</button>
               <button class="btn" onclick="SidebarApp.copyResultText(SidebarApp.STATE.lastDetailedText)">Копіювати</button>
             </div>
-            <div class="result-screen-pre">
+
+            <div class="result-value">Осіб: <b>${data.peopleCount || 0}</b></div>
+
+            <div class="result-message" style="white-space: pre-wrap; margin-top:12px;">
               ${escapeHtml(data.summary || "")
                 .split("\n")
                 .join("<br>")}

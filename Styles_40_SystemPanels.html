@@ -1,37 +1,20 @@
 /* CALENDAR */
   .calendar-container {
     width: 100%;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: var(--space-sm);
+    box-sizing: border-box;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
     margin-bottom: var(--space-sm);
-    backdrop-filter: blur(8px);
-    box-shadow: var(--shadow-sm);
-    transition: var(--transition);
+    backdrop-filter: none;
+    box-shadow: none;
+    transition: none;
   }
 
   .calendar-container:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md), var(--shadow-glow);
-  }
-
-  .result-screen .calendar-container,
-  .result-content > .result-screen .calendar-container {
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-    backdrop-filter: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  .result-screen .calendar-container:hover,
-  .result-content > .result-screen .calendar-container:hover {
     transform: none;
     box-shadow: none;
-    border-color: transparent;
   }
 
   .calendar-header {

@@ -72,17 +72,19 @@
       const showHashButtons = !!access.currentKeyHashFull && !!access.isAdmin;
 
       return `
-      <div class="result-screen access-debug-screen">
-        <div class="result-screen-actions">
-          <button class="btn btn-primary" type="button" onclick="SidebarApp.copyResultText('${escapeJsString(reportText)}')">Копіювати звіт</button>
-          <button class="btn" type="button" onclick="copyAccessDebugFullReport()">Копіювати все</button>
-          <button class="btn" type="button" onclick="copyAccessDebugTechDetails()">Копіювати тех. деталі</button>
-          ${access.selfBindRequired && access.canSelfBind ? '<button class="btn" type="button" onclick="openAccessLoginFlow(&quot;login&quot;)">Увійти</button> <button type="button" class="btn btn-primary" style="min-width:auto; padding:6px 10px;" onclick="openAccessLoginFlow(&quot;request&quot;)">Отримати ключ доступу</button>' : ""}
-          ${showHashButtons ? '<button class="btn" type="button" id="accessDebugToggleHashBtn" onclick="toggleAccessDebugHash()">Показати повний hash</button>' : ""}
-          ${showHashButtons ? '<button class="btn" type="button" id="accessDebugCopyHashBtn" onclick="copyAccessDebugHash()">Копіювати повний hash</button>' : ""}
-        </div>
+      <div class="result-item">
+        <div class="result-label">Перевірка доступу</div>
+        <div class="result-value">
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+            <button class="btn btn-primary" type="button" onclick="SidebarApp.copyResultText('${escapeJsString(reportText)}')">Копіювати звіт</button>
+            <button class="btn" type="button" onclick="copyAccessDebugFullReport()">Копіювати все</button>
+            <button class="btn" type="button" onclick="copyAccessDebugTechDetails()">Копіювати тех. деталі</button>
+            ${access.selfBindRequired && access.canSelfBind ? '<button class="btn" type="button" onclick="openAccessLoginFlow(&quot;login&quot;)">Увійти</button> <button type="button" class="btn btn-primary" style="min-width:auto; padding:6px 10px;" onclick="openAccessLoginFlow(&quot;request&quot;)">Отримати ключ доступу</button>' : ""}
+            ${showHashButtons ? '<button class="btn" type="button" id="accessDebugToggleHashBtn" onclick="toggleAccessDebugHash()">Показати повний hash</button>' : ""}
+            ${showHashButtons ? '<button class="btn" type="button" id="accessDebugCopyHashBtn" onclick="copyAccessDebugHash()">Копіювати повний hash</button>' : ""}
+          </div>
 
-        <div class="result-screen-body" style="display:grid; gap:10px;">
+          <div style="display:grid; gap:10px;">
             <div style="padding:10px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-glass);">
               <div style="font-size:0.78rem; color:var(--text-secondary);">Поточний режим</div>
               <div style="font-size:1rem; font-weight:700; margin-top:4px;">${escapeHtml(roleLabel)}</div>
@@ -147,6 +149,7 @@
               </div>
               <pre style="margin-top:10px; white-space:pre-wrap; word-break:break-word; font-size:0.78rem; color:var(--text-secondary);">${escapeHtml(JSON.stringify(access.raw || access || {}, null, 2))}</pre>
             </details>
+          </div>
         </div>
       </div>
     `;

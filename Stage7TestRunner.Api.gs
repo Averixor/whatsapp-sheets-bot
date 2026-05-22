@@ -1,96 +1,7 @@
 /**
  * Stage7TestRunner.Api.gs — global entrypoints for menus, triggers, and UI alerts.
  */
-
-var STAGE7_TEST_RUNNER_MIN_ROLE_ = "admin";
-
-function _stage7TestRunnerCanUseUi_() {
-  try {
-    if (
-      typeof AccessControl_ !== "object" ||
-      !AccessControl_ ||
-      typeof AccessControl_.describe !== "function"
-    ) {
-      return false;
-    }
-    var descriptor = AccessControl_.describe();
-    var order =
-      AccessControl_.ROLE_ORDER ||
-      Object.freeze({
-        guest: 0,
-        viewer: 1,
-        operator: 2,
-        maintainer: 3,
-        admin: 4,
-        sysadmin: 5,
-        owner: 6,
-      });
-    var current = order[String(descriptor.role || "guest").toLowerCase()] || 0;
-    var required =
-      order[String(STAGE7_TEST_RUNNER_MIN_ROLE_ || "admin").toLowerCase()] ||
-      4;
-    return descriptor.enabled !== false && current >= required;
-  } catch (error) {
-    Logger.log(
-      "[WASB Test Runner] Access check failed: " +
-        (error && error.message ? error.message : error),
-    );
-    return false;
-  }
-}
-
-function _stage7TestRunnerShowAccessDenied_(actionLabel, error) {
-  var detail =
-    error && error.message
-      ? String(error.message)
-      : "Недостатньо прав для цієї дії.";
-  var text =
-    "WASB Test Runner\n\n" +
-    detail +
-    "\n\nПотрібна роль: Admin або вище.\n" +
-    "Дія: " +
-    String(actionLabel || "тести проєкту");
-
-  try {
-    SpreadsheetApp.getUi().alert(text);
-  } catch (uiError) {
-    Logger.log(text);
-  }
-}
-
-function _stage7TestRunnerAssertAdmin_(actionLabel) {
-  try {
-    if (
-      typeof AccessControl_ === "object" &&
-      AccessControl_ &&
-      typeof AccessControl_.assertRoleAtLeast === "function"
-    ) {
-      AccessControl_.assertRoleAtLeast(
-        STAGE7_TEST_RUNNER_MIN_ROLE_,
-        actionLabel || "WASB Test Runner",
-      );
-      return true;
-    }
-  } catch (error) {
-    _stage7TestRunnerShowAccessDenied_(actionLabel, error);
-    return false;
-  }
-
-  if (!_stage7TestRunnerCanUseUi_()) {
-    _stage7TestRunnerShowAccessDenied_(
-      actionLabel,
-      new Error("Недостатньо прав для цієї дії."),
-    );
-    return false;
-  }
-
-  return true;
-}
-
 function runProjectTestChunk(options) {
-  if (!_stage7TestRunnerAssertAdmin_("run project test chunk")) {
-    return null;
-  }
   return Stage7TestRunner.runProjectTestChunk(
     Object.assign(
       {
@@ -111,9 +22,6 @@ function runStage7ProjectTestChunk(options) {
 }
 
 function runAllProjectTests(options) {
-  if (!_stage7TestRunnerAssertAdmin_("run all project tests")) {
-    return null;
-  }
   return Stage7TestRunner.runAllProjectTests(
     Object.assign(
       {
@@ -132,9 +40,6 @@ function runAllTests(options) {
 }
 
 function runStage7AllProjectTests() {
-  if (!_stage7TestRunnerAssertAdmin_("run all project tests")) {
-    return null;
-  }
   var startedAt = new Date();
   var tz =
     typeof Session !== "undefined" && Session.getScriptTimeZone
@@ -267,9 +172,6 @@ function runStage7TestsAll() {
 }
 
 function runStage7TestsFast() {
-  if (!_stage7TestRunnerAssertAdmin_("run fast tests")) {
-    return null;
-  }
   var report = Stage7TestRunner.runFast({
     writeToSheet: true,
     writeToLogger: true,
@@ -280,9 +182,6 @@ function runStage7TestsFast() {
 }
 
 function runStage7DiagnosticsOnly() {
-  if (!_stage7TestRunnerAssertAdmin_("run diagnostics tests")) {
-    return null;
-  }
   var report = Stage7TestRunner.runDiagnosticsOnly({
     writeToSheet: true,
     writeToLogger: true,
@@ -293,9 +192,6 @@ function runStage7DiagnosticsOnly() {
 }
 
 function runStage7SmokeOnly() {
-  if (!_stage7TestRunnerAssertAdmin_("run smoke tests")) {
-    return null;
-  }
   var report = Stage7TestRunner.runSmokeOnly({
     writeToSheet: true,
     writeToLogger: true,
@@ -306,9 +202,6 @@ function runStage7SmokeOnly() {
 }
 
 function runStage7HealthOnly() {
-  if (!_stage7TestRunnerAssertAdmin_("run health tests")) {
-    return null;
-  }
   var report = Stage7TestRunner.runHealthOnly({
     writeToSheet: true,
     writeToLogger: true,
@@ -319,9 +212,6 @@ function runStage7HealthOnly() {
 }
 
 function runStage7AccessOnly() {
-  if (!_stage7TestRunnerAssertAdmin_("run access tests")) {
-    return null;
-  }
   var report = Stage7TestRunner.runAccessOnly({
     writeToSheet: true,
     writeToLogger: true,
@@ -332,9 +222,6 @@ function runStage7AccessOnly() {
 }
 
 function runStage7DomainOnly() {
-  if (!_stage7TestRunnerAssertAdmin_("run domain tests")) {
-    return null;
-  }
   var report = Stage7TestRunner.runDomainOnly({
     writeToSheet: true,
     writeToLogger: true,
@@ -345,16 +232,10 @@ function runStage7DomainOnly() {
 }
 
 function showStage7TestReport() {
-  if (!_stage7TestRunnerAssertAdmin_("show test report")) {
-    return null;
-  }
   return Stage7TestRunner.showDialog();
 }
 
 function resetStage7TestResultsSheet() {
-  if (!_stage7TestRunnerAssertAdmin_("reset test results sheet")) {
-    return null;
-  }
   var result = Stage7TestRunner.resetResultsSheet();
 
   try {
@@ -369,16 +250,10 @@ function resetStage7TestResultsSheet() {
 }
 
 function stage7TestRunnerOnOpen() {
-  if (!_stage7TestRunnerCanUseUi_()) {
-    return { ok: false, menu: "WASB Tests", skipped: "access-denied" };
-  }
   return Stage7TestRunner.addMenu();
 }
 
 function installStage7TestRunner() {
-  if (!_stage7TestRunnerAssertAdmin_("install test runner menu trigger")) {
-    return { ok: false, installed: false, reason: "access-denied" };
-  }
   return Stage7TestRunner.installOpenTrigger();
 }
 

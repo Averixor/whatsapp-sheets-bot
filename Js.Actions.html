@@ -22,108 +22,103 @@
   // =========================
 
   async function showRequestsForm() {
-  showStandardResult("📝 Заявка");
-  setText("resultTitle", "Заявки");
-
-  setHtml(
-    "resultContent",
-    `
-      <div class="result-screen requests-form-screen">
-        <div class="result-screen-title">Нова заявка</div>
-        <div class="result-screen-body">
-          <p class="result-screen-hint">Завантажую список проєктів...</p>
-        </div>
-      </div>
-    `,
-  );
-
-  showLoading();
-
-  try {
-    const res = await runServerMethod_(
-      "apiGetActiveProjects",
-      [],
-      "Js.Actions.showRequestsForm",
-    );
-
-    if (!res?.success) {
-      throw new Error(res?.error || "Не вдалося отримати проєкти");
-    }
-
-    const projects = Array.isArray(res?.data?.result?.projects)
-      ? res.data.result.projects
-      : [];
+    showStandardResult("📝 Заявка");
+    setText("resultTitle", "Заявки");
 
     setHtml(
       "resultContent",
       `
-        <div class="result-screen requests-form-screen">
+        <div class="result-screen requests-form">
           <div class="result-screen-title">Нова заявка</div>
-          <div class="result-screen-body requests-form">
-            <label for="reqProject" class="requests-form__label">
-              Проєкт *
-            </label>
-            <select id="reqProject" class="input requests-form__control">
-              <option value="">— Обери проєкт —</option>
-            </select>
-
-            <label for="reqTitle" class="requests-form__label">
-              Тема *
-            </label>
-            <input
-              id="reqTitle"
-              class="input requests-form__control"
-              type="text"
-              maxlength="140"
-              placeholder="Коротко про суть"
-            />
-
-            <label for="reqDetails" class="requests-form__label">
-              Опис *
-            </label>
-            <textarea
-              id="reqDetails"
-              class="input requests-form__control requests-form__textarea"
-              rows="8"
-              maxlength="3000"
-              placeholder="Що саме потрібно зробити / що не працює / посилання / приклади"
-            ></textarea>
-          </div>
-
-          <div class="result-screen-actions">
-            <button
-              class="btn btn-primary"
-              type="button"
-              onclick="SidebarApp.submitRequestForm()"
-            >
-              Зберегти
-            </button>
-            <button class="btn" type="button" onclick="SidebarApp.showMenu()">
-              Назад
-            </button>
+          <div style="color:var(--muted-color);font-size:13px;line-height:1.45;">
+            Завантажую список проєктів...
           </div>
         </div>
       `,
     );
 
-    const select = $id("reqProject");
-    if (select) {
-      projects.forEach((project) => {
-        const option = document.createElement("option");
-        option.value = String(project?.id ?? "");
-        option.textContent = String(project?.name ?? "");
-        select.appendChild(option);
-      });
-    }
+    showLoading();
+    try {
+      const res = await runServerMethod_(
+        "apiGetActiveProjects",
+        [],
+        "Js.Actions.showRequestsForm",
+      );
+      if (!res?.success) {
+        throw new Error(res?.error || "Не вдалося отримати проєкти");
+      }
 
-    logToConsole(`✓ Проєкти завантажено: ${projects.length}`, "success");
-  } catch (e) {
-    logToConsole(`✕ Заявки: ${normalizeError(e)}`, "error");
-    displayInResult("error", { error: normalizeError(e) });
-  } finally {
-    hideLoading();
+      const projects = Array.isArray(res?.data?.result?.projects)
+        ? res.data.result.projects
+        : [];
+
+      setHtml(
+        "resultContent",
+        `
+          <div class="result-screen requests-form">
+            <div class="result-screen-title">Нова заявка</div>
+
+            <label for="reqProject" style="display:block;margin:10px 0 6px;font-weight:700;color:var(--text-color);">
+              Проєкт *
+            </label>
+            <select
+              id="reqProject"
+              class="input"
+              style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.16);"
+            >
+              <option value="">— Обери проєкт —</option>
+            </select>
+
+            <label for="reqTitle" style="display:block;margin:12px 0 6px;font-weight:700;color:var(--text-color);">
+              Тема *
+            </label>
+            <input
+              id="reqTitle"
+              class="input"
+              type="text"
+              maxlength="140"
+              style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.16);"
+              placeholder="Коротко про суть"
+            />
+
+            <label for="reqDetails" style="display:block;margin:12px 0 6px;font-weight:700;color:var(--text-color);">
+              Опис *
+            </label>
+            <textarea
+              id="reqDetails"
+              class="input"
+              rows="8"
+              maxlength="3000"
+              style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.16);resize:vertical;min-height:150px;"
+              placeholder="Що саме потрібно зробити / що не працює / посилання / приклади"
+            ></textarea>
+
+            <div class="result-screen-actions">
+              <button class="btn btn-primary" type="button" onclick="SidebarApp.submitRequestForm()">Зберегти</button>
+              <button class="btn" type="button" onclick="SidebarApp.showMenu()">Назад</button>
+            </div>
+          </div>
+        `,
+      );
+
+      const select = $id("reqProject");
+      if (select) {
+        projects.forEach((project) => {
+          const option = document.createElement("option");
+          option.value = String(project?.id ?? "");
+          option.textContent = String(project?.name ?? "");
+          select.appendChild(option);
+        });
+      }
+
+      logToConsole(`✓ Проєкти завантажено: ${projects.length}`, "success");
+    } catch (e) {
+      logToConsole(`✕ Заявки: ${normalizeError(e)}`, "error");
+      displayInResult("error", { error: normalizeError(e) });
+    } finally {
+      hideLoading();
+    }
   }
-}
 
   async function submitRequestForm() {
     const projectId = String($id("reqProject")?.value || "").trim();
