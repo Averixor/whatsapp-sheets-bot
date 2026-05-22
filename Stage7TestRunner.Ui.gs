@@ -4,6 +4,13 @@
 
 function stage7TestRunnerAttachUi_(ctx) {
   ctx.showDialog = function(report) {
+    if (
+      typeof _stage7TestRunnerAssertAdmin_ === "function" &&
+      !_stage7TestRunnerAssertAdmin_("show test runner dialog")
+    ) {
+      return null;
+    }
+
     if (!report) {
       report = ctx.runFast({
         writeToSheet: true,
@@ -24,6 +31,13 @@ function stage7TestRunnerAttachUi_(ctx) {
   }
 
   ctx.addMenu = function() {
+    if (
+      typeof _stage7TestRunnerCanUseUi_ === "function" &&
+      !_stage7TestRunnerCanUseUi_()
+    ) {
+      return { ok: false, menu: "WASB Tests", skipped: "access-denied" };
+    }
+
     SpreadsheetApp.getUi()
       .createMenu("WASB Tests")
       .addItem("Усі тести проєкту", "runStage7AllProjectTests")

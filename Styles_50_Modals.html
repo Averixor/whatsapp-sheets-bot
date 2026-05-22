@@ -106,19 +106,20 @@
     text-align: center;
   }
 
-  .loading-card {
+  .loading-card,
+  .loading-screen {
     width: min(300px, calc(100vw - 36px));
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 12px;
-    min-height: 148px;
-    padding: 22px 20px;
-    border-radius: var(--radius-lg);
-    background: rgba(15, 23, 42, 0.78);
-    border: 1px solid rgba(148, 163, 184, 0.18);
-    box-shadow: var(--shadow-lg), 0 0 26px rgba(14, 165, 233, 0.18);
+    min-height: 0;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
     text-align: center;
   }
 
@@ -145,7 +146,8 @@
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
   }
 
-  .loading-overlay.is-transition .loading-card {
+  .loading-overlay.is-transition .loading-card,
+  .loading-overlay.is-transition .loading-screen {
     animation: loadingPulseIn 0.18s ease;
   }
 

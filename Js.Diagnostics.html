@@ -27,32 +27,29 @@
 
   function renderHealthCheckModeSwitcher_() {
     return `
-      <div class="result-item">
-        <div class="result-value">
-          <div class="mode-toggle">
-            <button
-              id="healthModeQuick"
-              type="button"
-              class="mode-toggle-btn ${STATE.healthCheckMode === 'quick' ? 'active' : ''}"
-              onclick="SidebarApp.setHealthCheckMode('quick')"
-            >
-              Швидка
-            </button>
-            <button
-              id="healthModeFull"
-              type="button"
-              class="mode-toggle-btn ${STATE.healthCheckMode === 'full' ? 'active' : ''}"
-              onclick="SidebarApp.setHealthCheckMode('full')"
-            >
-              Повна
-            </button>
-          </div>
-
-          <div class="health-mode-note">
-            ${STATE.healthCheckMode === 'full'
-              ? 'Повна діагностика разом із compatibility / legacy.'
-              : 'Швидка перевірка без legacy.'}
-          </div>
+      <div class="result-screen-body">
+        <div class="mode-toggle">
+          <button
+            id="healthModeQuick"
+            type="button"
+            class="mode-toggle-btn ${STATE.healthCheckMode === 'quick' ? 'active' : ''}"
+            onclick="SidebarApp.setHealthCheckMode('quick')"
+          >
+            Швидка
+          </button>
+          <button
+            id="healthModeFull"
+            type="button"
+            class="mode-toggle-btn ${STATE.healthCheckMode === 'full' ? 'active' : ''}"
+            onclick="SidebarApp.setHealthCheckMode('full')"
+          >
+            Повна
+          </button>
+        </div>
+        <div class="health-mode-note">
+          ${STATE.healthCheckMode === 'full'
+            ? 'Повна діагностика разом із compatibility / legacy.'
+            : 'Швидка перевірка без legacy.'}
         </div>
       </div>
     `;
@@ -62,19 +59,13 @@
     showStandardResult(`${getHealthCheckModeLabel_()} перевірка`);
 
     setHtml('resultContent', `
-      ${renderHealthCheckModeSwitcher_()}
-
-      <div class="result-item">
-        <div class="result-label">Запуск перевірки</div>
-        <div class="result-value" style="display:flex; gap:8px; flex-wrap:wrap;">
+      <div class="result-screen health-check-screen">
+        ${renderHealthCheckModeSwitcher_()}
+        <div class="result-screen-actions">
           <button class="btn btn-primary" onclick="SidebarApp.runHealthCheck()">🩺 Перевірити</button>
           <button class="btn" onclick="SidebarApp.copyHealthReport()">📋 Копіювати звіт</button>
         </div>
-      </div>
-
-      <div class="result-item">
-        <div class="result-label">Поточний режим</div>
-        <div class="result-value">${escapeHtml(getHealthCheckModeLabel_())}</div>
+        <p class="result-screen-meta">Поточний режим: ${escapeHtml(getHealthCheckModeLabel_())}</p>
       </div>
     `);
   }
@@ -101,11 +92,9 @@
     showStandardResult(`${getHealthCheckModeLabel_()} перевірка`);
 
     setHtml('resultContent', `
-      ${renderHealthCheckModeSwitcher_()}
-
-      <div class="result-item">
-        <div class="result-label">Перевірка системи</div>
-        <div class="result-value">⏳ Виконую перевірку (${escapeHtml(getHealthCheckModeLabel_())})...</div>
+      <div class="result-screen health-check-screen">
+        ${renderHealthCheckModeSwitcher_()}
+        <p class="result-screen-hint">⏳ Виконую перевірку (${escapeHtml(getHealthCheckModeLabel_())})...</p>
       </div>
     `);
 
@@ -115,13 +104,14 @@
       slowModeShown = true;
 
       setHtml('resultContent', `
-        ${renderHealthCheckModeSwitcher_()}
-
-        <div class="health-wrap">
-          <div class="health-item warn sev-medium">
-            <div class="health-title">⏳ Перевірка ще виконується</div>
-            <div class="health-details">
-              Сервер відповідає довше звичайного. Це не помилка — просто діагностика важка.
+        <div class="result-screen health-check-screen">
+          ${renderHealthCheckModeSwitcher_()}
+          <div class="health-wrap">
+            <div class="health-item warn sev-medium">
+              <div class="health-title">⏳ Перевірка ще виконується</div>
+              <div class="health-details">
+                Сервер відповідає довше звичайного. Це не помилка — просто діагностика важка.
+              </div>
             </div>
           </div>
         </div>
@@ -159,12 +149,13 @@
       clearTimeout(slowTimerId);
 
       setHtml('resultContent', `
-        ${renderHealthCheckModeSwitcher_()}
-
-        <div class="health-wrap">
-          <div class="health-item bad sev-critical">
-            <div class="health-title">✕ Помилка перевірки</div>
-            <div class="health-details">${escapeHtml(normalizeError(error))}</div>
+        <div class="result-screen health-check-screen">
+          ${renderHealthCheckModeSwitcher_()}
+          <div class="health-wrap">
+            <div class="health-item bad sev-critical">
+              <div class="health-title">✕ Помилка перевірки</div>
+              <div class="health-details">${escapeHtml(normalizeError(error))}</div>
+            </div>
           </div>
         </div>
       `);
@@ -193,14 +184,16 @@
       const knownTotal = Number(total || 0);
       const pct = knownTotal > 0 ? Math.min(100, Math.round((Number(currentOffset || 0) / knownTotal) * 100)) : 0;
       setHtml('resultContent', `
-        <div class="health-wrap">
-          <div class="health-item warn sev-medium">
-            <div class="health-title">⏳ Пакетний запуск тестів</div>
-            <div class="health-details">
-              ${escapeHtml(label || 'Виконую тести частинами, щоб не впертися у ліміт Google Apps Script.')}<br>
-              Прогрес: ${escapeHtml(String(currentOffset || 0))}${knownTotal ? ' / ' + escapeHtml(String(knownTotal)) : ''} · ${escapeHtml(String(pct))}%
-              <div style="height:7px; margin-top:8px; border-radius:999px; background:rgba(148,163,184,.25); overflow:hidden;">
-                <div style="height:7px; width:${pct}%; background:var(--google-blue);"></div>
+        <div class="result-screen project-tests-screen">
+          <div class="health-wrap">
+            <div class="health-item warn sev-medium">
+              <div class="health-title">⏳ Пакетний запуск тестів</div>
+              <div class="health-details">
+                ${escapeHtml(label || 'Виконую тести частинами, щоб не впертися у ліміт Google Apps Script.')}<br>
+                Прогрес: ${escapeHtml(String(currentOffset || 0))}${knownTotal ? ' / ' + escapeHtml(String(knownTotal)) : ''} · ${escapeHtml(String(pct))}%
+                <div style="height:7px; margin-top:8px; border-radius:999px; background:rgba(148,163,184,.25); overflow:hidden;">
+                  <div style="height:7px; width:${pct}%; background:var(--google-blue);"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -303,13 +296,15 @@
       }
 
       setHtml('resultContent', `
-        <div class="health-wrap">
-          <div class="health-item bad sev-critical">
-            <div class="health-title">✕ Помилка запуску тестів</div>
-            <div class="health-details">${escapeHtml(normalizeError(error))}</div>
+        <div class="result-screen project-tests-screen">
+          <div class="health-wrap">
+            <div class="health-item bad sev-critical">
+              <div class="health-title">✕ Помилка запуску тестів</div>
+              <div class="health-details">${escapeHtml(normalizeError(error))}</div>
+            </div>
           </div>
+          ${partial ? renderProjectTestReport(partial, true) : ''}
         </div>
-        ${partial ? renderProjectTestReport(partial) : ''}
       `);
       showToast('✕ Помилка запуску тестів');
       logToConsole(`✕ All Project Tests: ${normalizeError(error)}`, 'error');
@@ -363,7 +358,7 @@
     };
   }
 
-  function renderProjectTestReport(report) {
+  function renderProjectTestReport(report, embedded) {
     if (!report || !Array.isArray(report.checks)) {
       return '<div class="health-item warn">✕ Порожній звіт тестів</div>';
     }
@@ -379,40 +374,45 @@
     const total = Number(counts.total || checks.length || 0);
     const hasProblems = failed > 0 || warnings > 0;
 
+    const screenOpen = embedded ? '' : '<div class="result-screen project-tests-screen">';
+    const screenClose = embedded ? '' : '</div>';
+
     return `
-      <div class="compact-health-report">
-        <div style="font-weight:600; margin-bottom:6px; padding:6px 8px; background:${hasProblems ? 'var(--warning-color)' : 'var(--success-color)'}20; border-radius:6px;">
-          <span style="color:${hasProblems ? 'var(--warning-color)' : 'var(--success-color)'};">${hasProblems ? '⚠' : '✓'}</span>
-          ${hasProblems ? 'Є проблеми у тестах' : 'Критичні тести пройдено'}
-          <span style="float:right; font-size:0.65rem;">${total} запусків</span>
-        </div>
+      ${screenOpen}
+        <div class="compact-health-report">
+          <div style="font-weight:600; margin-bottom:6px; padding:6px 8px; background:${hasProblems ? 'var(--warning-color)' : 'var(--success-color)'}20; border-radius:6px;">
+            <span style="color:${hasProblems ? 'var(--warning-color)' : 'var(--success-color)'};">${hasProblems ? '⚠' : '✓'}</span>
+            ${hasProblems ? 'Є проблеми у тестах' : 'Критичні тести пройдено'}
+            <span style="float:right; font-size:0.65rem;">${total} запусків</span>
+          </div>
 
-        <div style="font-size:0.65rem; color:var(--text-secondary); margin-bottom:8px;">
-          ${report.startedAt ? escapeHtml(new Date(report.startedAt).toLocaleString('uk-UA')) : ''}
-          ${report.durationMs ? ` · ${escapeHtml(String(report.durationMs))} ms` : ''}
-          ${report.runId ? ` · ${escapeHtml(report.runId)}` : ''}
-        </div>
+          <div style="font-size:0.65rem; color:var(--text-secondary); margin-bottom:8px;">
+            ${report.startedAt ? escapeHtml(new Date(report.startedAt).toLocaleString('uk-UA')) : ''}
+            ${report.durationMs ? ` · ${escapeHtml(String(report.durationMs))} ms` : ''}
+            ${report.runId ? ` · ${escapeHtml(report.runId)}` : ''}
+          </div>
 
-        <div style="font-size:0.68rem; margin-bottom:8px; display:flex; gap:8px; flex-wrap:wrap;">
-          <span style="padding:2px 8px; border-radius:999px; background:rgba(34,197,94,.12); color:var(--success-color);">✓ PASS: ${passed}</span>
-          <span style="padding:2px 8px; border-radius:999px; background:rgba(239,68,68,.12); color:var(--error-color);">✕ FAIL: ${failed}</span>
-          <span style="padding:2px 8px; border-radius:999px; background:rgba(245,158,11,.12); color:var(--warning-color);">⚠ WARN: ${warnings}</span>
-          <span style="padding:2px 8px; border-radius:999px; background:rgba(59,130,246,.12); color:var(--google-blue);">SKIP: ${skipped}</span>
-          <span style="padding:2px 8px; border-radius:999px; background:rgba(59,130,246,.12); color:var(--google-blue);">DISC: ${discovered}</span>
-        </div>
+          <div style="font-size:0.68rem; margin-bottom:8px; display:flex; gap:8px; flex-wrap:wrap;">
+            <span style="padding:2px 8px; border-radius:999px; background:rgba(34,197,94,.12); color:var(--success-color);">✓ PASS: ${passed}</span>
+            <span style="padding:2px 8px; border-radius:999px; background:rgba(239,68,68,.12); color:var(--error-color);">✕ FAIL: ${failed}</span>
+            <span style="padding:2px 8px; border-radius:999px; background:rgba(245,158,11,.12); color:var(--warning-color);">⚠ WARN: ${warnings}</span>
+            <span style="padding:2px 8px; border-radius:999px; background:rgba(59,130,246,.12); color:var(--google-blue);">SKIP: ${skipped}</span>
+            <span style="padding:2px 8px; border-radius:999px; background:rgba(59,130,246,.12); color:var(--google-blue);">DISC: ${discovered}</span>
+          </div>
 
-        <div class="result-item" style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="btn btn-primary" onclick="SidebarApp.runAllProjectTests()">⟲ Запустити всі тести ще раз</button>
-          <button class="btn" onclick="SidebarApp.copyProjectTestReport()">📋 Копіювати звіт</button>
-        </div>
+          <div class="result-screen-actions">
+            <button class="btn btn-primary" onclick="SidebarApp.runAllProjectTests()">⟲ Запустити всі тести ще раз</button>
+            <button class="btn" onclick="SidebarApp.copyProjectTestReport()">📋 Копіювати звіт</button>
+          </div>
 
-        <div class="health-scroll-container" style="max-height:360px;">
-          ${renderHealthGroup('Провалені тести', '✕', groups.critical, 'Провалених тестів немає')}
-          ${renderHealthGroup('Попередження', '⚠', groups.warnings, 'Попереджень немає')}
-          ${renderHealthGroup('Пропущені / compatibility', 'SKIP', groups.pseudo, 'Пропущених перевірок немає')}
-          ${renderHealthGroup('Успішні тести', '✓', groups.ok, 'Успішних тестів немає')}
+          <div class="health-scroll-container" style="max-height:360px;">
+            ${renderHealthGroup('Провалені тести', '✕', groups.critical, 'Провалених тестів немає')}
+            ${renderHealthGroup('Попередження', '⚠', groups.warnings, 'Попереджень немає')}
+            ${renderHealthGroup('Пропущені / compatibility', 'SKIP', groups.pseudo, 'Пропущених перевірок немає')}
+            ${renderHealthGroup('Успішні тести', '✓', groups.ok, 'Успішних тестів немає')}
+          </div>
         </div>
-      </div>
+      ${screenClose}
     `;
   }
 
@@ -681,8 +681,10 @@
   function renderHealthReport(report) {
     if (!report || !report.checks) {
       return `
-        ${renderHealthCheckModeSwitcher_()}
-        <div class="health-item warn">✕ Порожній звіт</div>
+        <div class="result-screen health-check-screen">
+          ${renderHealthCheckModeSwitcher_()}
+          <div class="health-item warn">✕ Порожній звіт</div>
+        </div>
       `;
     }
 
@@ -699,44 +701,46 @@
     const statusColor = hasRealProblems ? 'var(--warning-color)' : 'var(--success-color)';
 
     return `
-      ${renderHealthCheckModeSwitcher_()}
+      <div class="result-screen health-check-screen">
+        ${renderHealthCheckModeSwitcher_()}
 
-      <div class="compact-health-report">
-        <div style="font-weight:600; margin-bottom:6px; padding:6px 8px; background:${statusColor}20; border-radius:6px;">
-          <span style="color:${statusColor};">${statusIcon}</span>
-          ${hasRealProblems ? 'Є проблеми' : 'Все добре'}
-          <span style="float:right; font-size:0.65rem;">${checks.length} перевірок</span>
-        </div>
+        <div class="compact-health-report">
+          <div style="font-weight:600; margin-bottom:6px; padding:6px 8px; background:${statusColor}20; border-radius:6px;">
+            <span style="color:${statusColor};">${statusIcon}</span>
+            ${hasRealProblems ? 'Є проблеми' : 'Все добре'}
+            <span style="float:right; font-size:0.65rem;">${checks.length} перевірок</span>
+          </div>
 
-        <div style="font-size:0.65rem; color:var(--text-secondary); margin-bottom:8px;">
-          ${report.ts ? escapeHtml(new Date(report.ts).toLocaleString('uk-UA')) : ''}
-        </div>
+          <div style="font-size:0.65rem; color:var(--text-secondary); margin-bottom:8px;">
+            ${report.ts ? escapeHtml(new Date(report.ts).toLocaleString('uk-UA')) : ''}
+          </div>
 
-        <div style="font-size:0.68rem; margin-bottom:8px; display:flex; gap:8px; flex-wrap:wrap;">
-          <span style="padding:2px 8px; border-radius:999px; background:rgba(34,197,94,.12); color:var(--success-color);">
-            ✓ OK: ${okCount}
-          </span>
-          <span style="padding:2px 8px; border-radius:999px; background:rgba(239,68,68,.12); color:var(--error-color);">
-            ✕ Критичні: ${criticalCount}
-          </span>
-          <span style="padding:2px 8px; border-radius:999px; background:rgba(245,158,11,.12); color:var(--warning-color);">
-            ⚠ Попередження: ${warningCount}
-          </span>
-          <span style="padding:2px 8px; border-radius:999px; background:rgba(59,130,246,.12); color:var(--google-blue);">
-            🧩 PSEUDO: ${pseudoCount}
-          </span>
-        </div>
+          <div style="font-size:0.68rem; margin-bottom:8px; display:flex; gap:8px; flex-wrap:wrap;">
+            <span style="padding:2px 8px; border-radius:999px; background:rgba(34,197,94,.12); color:var(--success-color);">
+              ✓ OK: ${okCount}
+            </span>
+            <span style="padding:2px 8px; border-radius:999px; background:rgba(239,68,68,.12); color:var(--error-color);">
+              ✕ Критичні: ${criticalCount}
+            </span>
+            <span style="padding:2px 8px; border-radius:999px; background:rgba(245,158,11,.12); color:var(--warning-color);">
+              ⚠ Попередження: ${warningCount}
+            </span>
+            <span style="padding:2px 8px; border-radius:999px; background:rgba(59,130,246,.12); color:var(--google-blue);">
+              🧩 PSEUDO: ${pseudoCount}
+            </span>
+          </div>
 
-        <div class="result-item" style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="btn btn-primary" onclick="SidebarApp.runHealthCheck()">⟲ Перевірити ще раз</button>
-          <button class="btn" onclick="SidebarApp.copyHealthReport()">📋 Копіювати звіт</button>
-        </div>
+          <div class="result-screen-actions">
+            <button class="btn btn-primary" onclick="SidebarApp.runHealthCheck()">⟲ Перевірити ще раз</button>
+            <button class="btn" onclick="SidebarApp.copyHealthReport()">📋 Копіювати звіт</button>
+          </div>
 
-        <div class="health-scroll-container" style="max-height:320px;">
-          ${renderHealthGroup('Критичні проблеми', '✕', groups.critical, 'Критичних проблем не знайдено')}
-          ${renderHealthGroup('Попередження', '⚠', groups.warnings, 'Попереджень немає')}
-          ${renderHealthGroup('PSEUDO / compatibility layer', '🧩', groups.pseudo, 'Нейтральний compatibility layer не виявлено')}
-          ${renderHealthGroup('Успішні перевірки', '✓', groups.ok, 'Успішних перевірок немає')}
+          <div class="health-scroll-container" style="max-height:320px;">
+            ${renderHealthGroup('Критичні проблеми', '✕', groups.critical, 'Критичних проблем не знайдено')}
+            ${renderHealthGroup('Попередження', '⚠', groups.warnings, 'Попереджень немає')}
+            ${renderHealthGroup('PSEUDO / compatibility layer', '🧩', groups.pseudo, 'Нейтральний compatibility layer не виявлено')}
+            ${renderHealthGroup('Успішні перевірки', '✓', groups.ok, 'Успішних перевірок немає')}
+          </div>
         </div>
       </div>
     `;

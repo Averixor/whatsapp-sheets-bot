@@ -548,6 +548,79 @@
     border-color: rgba(14, 165, 233, 0.4);
   }
 
+  .result-content:has(> .result-screen) {
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .result-content:has(> .result-screen):hover {
+    transform: none;
+    box-shadow: var(--shadow-sm);
+    border-color: var(--border-color);
+  }
+
+  .result-screen {
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+  }
+
+  .result-screen-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--whatsapp-green);
+    margin: 0;
+    line-height: 1.35;
+  }
+
+  .result-screen-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .result-screen-body {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .result-screen-meta {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.45;
+  }
+
+  .result-screen-hint {
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+    line-height: 1.45;
+    margin: 0;
+  }
+
+  .result-screen-pre {
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    padding: var(--space-sm);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--text-primary);
+    max-height: min(52vh, 420px);
+    overflow: auto;
+  }
+
   .result-item {
     padding: var(--space-sm) 0;
     border-bottom: 1px solid var(--border-color);
@@ -679,11 +752,36 @@
     line-height: 1.45;
   }
 
+  .requests-form-screen .requests-form__label {
+    display: block;
+    margin: 12px 0 6px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .requests-form-screen .requests-form__label:first-of-type {
+    margin-top: 0;
+  }
+
+  .requests-form-screen .requests-form__control {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+  }
+
+  .requests-form-screen .requests-form__textarea {
+    resize: vertical;
+    min-height: 150px;
+  }
+
+  .month-switcher-screen,
   .month-switcher-card {
     display: flex;
     flex-direction: column;
     gap: 14px;
-    padding: 4px 0;
+    padding: 0;
   }
 
   .month-switcher-hint {
@@ -775,10 +873,6 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-  }
-
-  .month-switcher-card .result-item {
-    padding-top: 0;
   }
 
   .result-message {

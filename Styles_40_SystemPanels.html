@@ -16,6 +16,24 @@
     box-shadow: var(--shadow-md), var(--shadow-glow);
   }
 
+  .result-screen .calendar-container,
+  .result-content > .result-screen .calendar-container {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .result-screen .calendar-container:hover,
+  .result-content > .result-screen .calendar-container:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: transparent;
+  }
+
   .calendar-header {
     display: flex;
     justify-content: space-between;

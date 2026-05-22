@@ -37,6 +37,7 @@
     const startOffset = firstDay === 0 ? 6 : firstDay - 1;
 
     let html = `
+      <div class="result-screen calendar-screen">
       <div class="calendar-container">
         <div class="calendar-header">
           <div class="calendar-month-year">${monthNames[month]} ${year}</div>
@@ -86,6 +87,7 @@
             ${action === "daySummary" ? "Отримати зведення" : "Детальне зведення"}
           </button>
         </div>
+      </div>
       </div>
     `;
 
