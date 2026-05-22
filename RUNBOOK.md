@@ -339,24 +339,15 @@ Every **3 months** or after major production change (owner + backup):
 
 If parity review is **overdue > 90 days**, block merge of `rollback-required` PRs until refresh (see `docs/refactor/entropy-review-checklist.md`).
 
-## 16. Legacy aliases sunset plan (P2.c audit)
+## 16. Legacy aliases (removed)
 
-Compatibility aliases are **intentionally retained**. They are centralized so the project does not scatter the same `apiStage4*` / `apiGet*` names across unrelated files.
+`LegacyApiAliases.gs`, `LegacyMaintenanceAliases.gs`, and `Stage7LegacyFunctionShims.gs` were **removed**. Canonical surface:
 
-### Centralized compatibility map (audit)
+- Application / maintenance: `apiStage7*` in `Stage7ServerApi.gs` / `Stage7MaintenanceApi.gs`
+- Sidebar `google.script.run` entry points: `SidebarServer.gs` (`getMonthsList`, `generateSendPanelSidebar`, …)
+- Removed-global inventory: `DeprecatedRegistry.gs` → `findPresentLegacyApiGlobals_()`, `getRemovedLegacyApiNames_()`
 
-| Group                                      | Files                                                                                                                                   | Purpose                                                                                                                                       | Removal risk                                                                      | Recommendation                                                                                     |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Stage4 / Stage5 maintenance → Stage7       | `LegacyMaintenanceAliases.gs`, `DeprecatedRegistry.gs` (`STAGE7_MAINTENANCE_WRAPPER_MAP_`)                                              | Forwards `apiStage4*` / `apiStage5*` and non-staged maintenance (`apiClearCache`, `apiHealthCheck`, …) to **`apiStage7*`**                    | **High** if external scripts, triggers, or manual editor runs still use old names | **KEEP** until all manual/external callers are migrated and documented replacements exist          |
-| Legacy non-staged + Stage4 application API | `LegacyApiAliases.gs`                                                                                                                   | Thin wrappers: `apiGetMonthsList`, `apiGetSidebarData`, … and `apiStage4GetMonthsList`, … → Stage7 application routes                         | **Medium**                                                                        | **DEPRECATE_DOC_ONLY** in docs; remove only after HTML/sidebar and any clients use canonical names |
-| Global sidebar-style shims                 | `Stage7LegacyFunctionShims.gs`                                                                                                          | Registers legacy globals on `globalThis` when missing (`getDaySummaryByDate`, `generateSendPanelSidebar`, `markMultipleAsSentFromSidebar`, …) | **High** while any caller still uses those global function names                  | **KEEP** unless proven unused by UI, tests, and `google.script.run` graph                          |
-| Registry and sunset metadata               | `DeprecatedRegistry.gs`                                                                                                                 | **`STAGE7_COMPATIBILITY_MAP_`**, maintenance list, **`getDeprecatedRegistry_()`**, **`getCompatibilitySunsetReport_()`**                      | **Low** for individual entries; **High** if the whole registry is dropped         | **KEEP** registry; use it to mark when an alias becomes **removable**                              |
-| Global dependency aliases                  | `Stage7GlobalDependencyAliases.gs`                                                                                                      | Lazy properties: `WorkflowOrchestrator`, `SelectionActionService` (and underscore exposure) for diagnostics / historical code                 | **Medium**                                                                        | **KEEP**; avoids `var` redeclaration and supports dependency checks                                |
-| Diagnostics (historical / structural)      | `Diagnostics.Stage7.Historical.gs` (plus `Diagnostics.Stage7.Core.gs`, `Diagnostics.Stage7.Baseline.gs` for related Stage7 diagnostics) | Structural checks (bundle metadata, canonical API map, routing), helper-wrapper parity (e.g. `escapeHtml_` vs `HtmlUtils_.escapeHtml`)        | **Low**                                                                           | **KEEP**; they guard the sunset process                                                            |
-
-Stage4/legacy aliases are intentionally retained as a compatibility layer.
-
-Do **not** remove aliases until **all** of the following are true:
+Do **not** reintroduce `apiStage4*` / `apiGet*` globals. Before adding any alias, verify **all** of the following:
 
 1. No HTML/sidebar/client call references the alias.
 2. `node scripts/audit-function-graph.mjs` reports **`MISSING: none`** after the removal.

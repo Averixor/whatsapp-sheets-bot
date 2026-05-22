@@ -1205,7 +1205,6 @@ function _ensureTemporaryAccessPasswordForRow_(sh, rowNumber) {
     sh.getRange(rowNumber, tempSaltCol).getValue() || "",
   ).trim();
 
-  // If plain, hash and salt already exist, the password was already issued.
   if (existingPlain && existingHash && existingSalt) {
     return false;
   }

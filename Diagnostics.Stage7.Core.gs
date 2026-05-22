@@ -1,46 +1,20 @@
 function _stage7PushCheck_(checks, name, status, details, recommendation) {
-  let normalizedStatus = _diagNormalizeStatus_(status || "OK");
+  var normalizedStatus = _diagNormalizeStatus_(status || "OK");
 
-  const lowerName = String(name || "").toLowerCase();
-  const lowerDetails = String(details || "").toLowerCase();
-
-  const pseudoLike =
-    normalizedStatus === "PSEUDO" ||
-    lowerName.indexOf("deprecated ") === 0 ||
-    lowerName.indexOf("compatibility ") === 0 ||
-    lowerName.indexOf("wrapper source ") === 0 ||
-    lowerName.indexOf("ui-ban marker ") === 0 ||
-    lowerDetails.indexOf("compatibility-only") !== -1 ||
-    lowerDetails.indexOf("замінити на ") !== -1 ||
-    lowerDetails.indexOf("compatibility wrappers intentionally remain") !== -1;
-
-  if (pseudoLike && normalizedStatus === "OK") {
-    normalizedStatus = "PSEUDO";
-  }
-
-  let severity = "INFO";
+  var severity = "INFO";
   if (normalizedStatus === "FAIL") severity = "CRITICAL";
   else if (normalizedStatus === "WARN") severity = "WARN";
 
-  let uiGroup = "ok";
-
-  if (
-    normalizedStatus === "FAIL" ||
-    (normalizedStatus === "WARN" && severity === "CRITICAL")
-  ) {
-    uiGroup = "critical";
-  } else if (normalizedStatus === "WARN") {
-    uiGroup = "warnings";
-  } else if (normalizedStatus === "PSEUDO") {
-    uiGroup = "pseudo";
-  }
+  var uiGroup = "ok";
+  if (normalizedStatus === "FAIL") uiGroup = "critical";
+  else if (normalizedStatus === "WARN") uiGroup = "warnings";
 
   checks.push({
     name: name,
     title: name,
     status: normalizedStatus,
     ok: normalizedStatus === "OK",
-    pseudo: normalizedStatus === "PSEUDO",
+    pseudo: false,
     severity: severity,
     uiGroup: uiGroup,
     details: details || "",
@@ -275,9 +249,9 @@ function _diagNormalizeStatus_(status) {
   if (normalized === "ERROR") return "FAIL";
   if (normalized === "CRITICAL") return "FAIL";
   if (normalized === "SUCCESS") return "OK";
-  if (normalized === "COMPAT") return "PSEUDO";
-  if (normalized === "LEGACY-COMPAT") return "PSEUDO";
-  if (normalized === "PSEUDO-COMPAT") return "PSEUDO";
+  if (normalized === "COMPAT") return "WARN";
+  if (normalized === "LEGACY-COMPAT") return "WARN";
+  if (normalized === "PSEUDO" || normalized === "PSEUDO-COMPAT") return "WARN";
   return normalized;
 }
 
@@ -290,53 +264,19 @@ function _diagResolveSeverity_(status, rawSeverity) {
   return "INFO";
 }
 
-function _diagIsPseudoLikeCheck_(check) {
-  var explicitStatus = String((check && check.status) || "").toUpperCase();
-  if (
-    explicitStatus === "PSEUDO" ||
-    explicitStatus === "COMPAT" ||
-    explicitStatus === "LEGACY-COMPAT" ||
-    explicitStatus === "PSEUDO-COMPAT"
-  ) {
-    return true;
-  }
-
-  var title = String(
-    (check && (check.title || check.name)) || "",
-  ).toLowerCase();
-  var details = String(
-    (check && (check.details || check.message)) || "",
-  ).toLowerCase();
-
-  return (
-    title.indexOf("deprecated ") === 0 ||
-    title.indexOf("compatibility ") === 0 ||
-    title.indexOf("wrapper source ") === 0 ||
-    title.indexOf("ui-ban marker ") === 0 ||
-    details.indexOf("compatibility-only") !== -1 ||
-    details.indexOf("замінити на ") !== -1 ||
-    details.indexOf("compatibility wrappers intentionally remain") !== -1
-  );
-}
-
 function _diagResolveUiGroup_(check) {
   var explicit = String((check && check.uiGroup) || "").toLowerCase();
   if (
     explicit === "critical" ||
     explicit === "warnings" ||
-    explicit === "pseudo" ||
-    explicit === "compatibility" ||
     explicit === "ok"
   ) {
-    return explicit === "compatibility" ? "pseudo" : explicit;
+    return explicit;
   }
 
   var status = _diagNormalizeStatus_(check && check.status);
-  var looksPseudo = _diagIsPseudoLikeCheck_(check);
-
   if (status === "FAIL") return "critical";
   if (status === "WARN") return "warnings";
-  if (status === "PSEUDO" || (looksPseudo && status === "OK")) return "pseudo";
   return "ok";
 }
 
@@ -358,9 +298,6 @@ function _diagNormalizeCheck_(check, titlePrefix) {
     message: details,
   });
   var status = _diagNormalizeStatus_(rawCheck.status);
-  if (_diagIsPseudoLikeCheck_(rawCheck) && status === "OK") {
-    status = "PSEUDO";
-  }
 
   var howTo = String(
     (check && (check.howTo || check.recommendation)) || "",
@@ -372,7 +309,7 @@ function _diagNormalizeCheck_(check, titlePrefix) {
     title: title,
     status: status,
     ok: status === "OK",
-    pseudo: status === "PSEUDO",
+    pseudo: false,
     severity: severity,
     uiGroup: _diagResolveUiGroup_(
       Object.assign({}, rawCheck, { status: status }),
@@ -450,7 +387,6 @@ function _diagBuildCounts_(checks) {
     var uiGroup = normalized.uiGroup || "ok";
 
     if (status === "OK") counts.ok += 1;
-    else if (status === "PSEUDO") counts.pseudo += 1;
     else if (status === "WARN") counts.warnings += 1;
     else if (status === "FAIL") counts.failures += 1;
 
@@ -506,16 +442,12 @@ function _diagBuildReport_(checks, mode, summaryPrefix) {
       counts.failures === 0
         ? (summaryPrefix || _releaseStageLabel_()) +
           ". Warnings: " +
-          counts.warnings +
-          ", pseudo: " +
-          counts.pseudo
+          counts.warnings
         : (summaryPrefix || _releaseStageLabel_()) +
           ". Failures: " +
           counts.failures +
           ", warnings: " +
-          counts.warnings +
-          ", pseudo: " +
-          counts.pseudo,
+          counts.warnings,
     ts: new Date().toISOString(),
   };
 }
@@ -673,17 +605,18 @@ function _diagBuildStage7CoreChecks_(options) {
     "cleanup=" + hasRetentionCleanup,
     "Додайте окремий maintenance flow для lifecycle retention cleanup",
   );
+  var presentLegacy =
+    typeof findPresentLegacyApiGlobals_ === "function"
+      ? findPresentLegacyApiGlobals_()
+      : [];
   _stage7PushCheck_(
     checks,
-    "Stage7 compatibility facade declared",
-    _stage7HasFn_("apiStage4ClearCache") &&
-      _stage7HasFn_("apiStage4HealthCheck")
-      ? "OK"
-      : "WARN",
-    "wrappers preserved=" +
-      (_stage7HasFn_("apiStage4ClearCache") &&
-        _stage7HasFn_("apiStage4HealthCheck")),
-    "Compatibility wrappers можуть лишатися лише для зовнішніх історичних викликів",
+    "Legacy API surface removed",
+    presentLegacy.length === 0 ? "OK" : "FAIL",
+    presentLegacy.length
+      ? "present=" + presentLegacy.join(", ")
+      : "canonical-only",
+    "Видаліть apiStage4* / apiGet* alias layers з проєкту",
   );
 
   ["OPS_LOG", "ACTIVE_OPERATIONS", "CHECKPOINTS"].forEach(function (name) {
@@ -792,21 +725,21 @@ function _diagAppendPendingRepairsCheck_(checks) {
 
 function _diagAppendCompatibilitySplitCheck_(checks) {
   try {
-    var sunset =
-      typeof getCompatibilitySunsetReport_ === "function"
-        ? getCompatibilitySunsetReport_()
-        : { total: 0, counts: {} };
+    var present =
+      typeof findPresentLegacyApiGlobals_ === "function"
+        ? findPresentLegacyApiGlobals_()
+        : [];
     _stage7PushCheck_(
       checks,
-      "Compatibility split report (informational)",
-      "PSEUDO",
-      "retained=" + (sunset.total || 0),
-      "Обгортки сумісності навмисно залишаються до явного плану завершення підтримки",
+      "Legacy API inventory",
+      present.length === 0 ? "OK" : "FAIL",
+      present.length ? present.join(", ") : "removed-legacy inventory clean",
+      "Перевірте DeprecatedRegistry.gs / deploy manifest",
     );
   } catch (e) {
     _stage7PushCheck_(
       checks,
-      "Compatibility split report (informational)",
+      "Legacy API inventory",
       "WARN",
       e && e.message ? e.message : String(e),
       "Перевірте DeprecatedRegistry.gs",

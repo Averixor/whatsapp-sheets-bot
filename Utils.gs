@@ -10,27 +10,6 @@ function _todayStr_() {
   return DateUtils_.todayStr();
 }
 
-/** @deprecated Використовуйте DateUtils_.parseUaDate() */
-
-function _parseUaDate_(dateStr) {
-  return DateUtils_.parseUaDate(dateStr);
-}
-
-/** @deprecated Використовуйте DateUtils_.normalizeDate() */
-
-function normalizeDate_(value, displayValue) {
-  return DateUtils_.normalizeDate(value, displayValue);
-}
-
-/** @deprecated Використовуйте DateUtils_.parseDateAny() */
-
-function _parseDate_(value) {
-  if (typeof _veParseDate_ === "function") {
-    return _veParseDate_(value);
-  }
-  return DateUtils_.parseDateAny(value);
-}
-
 function _vacationWordToNumber_(word) {
   if (typeof _veVacationWordToNumber_ === "function") {
     return _veVacationWordToNumber_(word);

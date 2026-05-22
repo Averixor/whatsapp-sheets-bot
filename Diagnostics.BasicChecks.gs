@@ -63,21 +63,20 @@ function checkFiles() {
 
   try {
     const requiredFunctions = [
-      { name: 'getDaySummaryByDate', required: true },
-      { name: 'getDetailedDaySummaryByDate', required: true },
+      { name: 'apiBuildDaySummary', required: true },
+      { name: 'apiBuildDetailedSummary', required: true },
       { name: 'runVacationEngine_', required: true },
       { name: 'getTemplateText_', required: true },
       { name: 'getPersonCardData', required: true },
       { name: '_buildPersonCardData_', required: true },
       { name: 'healthCheck', required: true },
       { name: 'setupVacationTrigger', required: true },
-      { name: 'generateSendPanelSidebar', required: true },
-      { name: 'markMultipleAsSentFromSidebar', required: true },
+      { name: 'apiGenerateSendPanelForDate', required: true },
+      { name: 'apiMarkPanelRowsAsSent', required: true },
       { name: 'loadPhonesMap_', required: true },
       { name: 'loadDictMap_', required: true },
       { name: 'buildPayloadForCell_', required: true },
       { name: 'findTodayColumn_', required: true },
-      { name: 'normalizeDate_', required: true },
       { name: 'buildMessage_', required: true },
       { name: 'trimToEncoded_', required: true }
     ];
@@ -253,22 +252,22 @@ function testFunctions() {
     }
 
     try {
-      const d = _parseUaDate_('12.03.2026');
+      const d = DateUtils_.parseUaDate('12.03.2026');
       _pushCheck_(report, {
         type: 'test_function',
-        name: '_parseUaDate_',
+        name: 'DateUtils_.parseUaDate',
         status: d instanceof Date ? 'OK' : 'ERROR',
         message: d instanceof Date
-          ? '✓ _parseUaDate_() працює'
-          : '✕ _parseUaDate_() не змогла розібрати дату'
+          ? '✓ DateUtils_.parseUaDate() працює'
+          : '✕ DateUtils_.parseUaDate() не змогла розібрати дату'
       });
 
     } catch (e) {
       _pushCheck_(report, {
         type: 'test_function',
-        name: '_parseUaDate_',
+        name: 'DateUtils_.parseUaDate',
         status: 'ERROR',
-        message: '✕ _parseUaDate_(): ' + _safeErr_(e)
+        message: '✕ DateUtils_.parseUaDate(): ' + _safeErr_(e)
       });
     }
 

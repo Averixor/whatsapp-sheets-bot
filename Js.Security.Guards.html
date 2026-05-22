@@ -1,0 +1,84 @@
+<script>
+  // Js.Security.Guards — sidebar action RBAC guards.
+    function getActionRequiredRole_(actionName) {
+      const map = {
+        daySummary: "operator",
+        detailedDay: "operator",
+        generatePanel: "maintainer",
+        sendUnsent: "maintainer",
+        createNextMonth: "maintainer",
+        switchMonth: "maintainer",
+        vacationReminder: "maintainer",
+        birthdayCheck: "maintainer",
+        debugPhones: "maintainer",
+        healthCheck: "maintainer",
+        runAllProjectTests: "admin",
+        pendingRepairs: "maintainer",
+        operationDetails: "maintainer",
+        runRepair: "sysadmin",
+        clearLog: "admin",
+        clearCache: "sysadmin",
+        clearPhoneCache: "sysadmin",
+        restartBot: "sysadmin",
+        applyProtections: "sysadmin",
+        setupTrigger: "sysadmin",
+        cleanupTriggers: "sysadmin",
+      };
+      return map[actionName] || "";
+    }
+
+    async function assertActionAccess_(actionName) {
+      const required = getActionRequiredRole_(actionName);
+      if (!required || hasRoleAtLeast_(required)) return true;
+
+      showToast("Недостатньо прав для дії: " + getActionName(actionName));
+      logToConsole(
+        "Недостатньо прав для дії " +
+          getActionName(actionName) +
+          ". Потрібна роль: " +
+          getAccessRoleLabel_(required),
+        "warning",
+      );
+
+      Promise.resolve(
+        reportAccessViolation_("sidebarActionUiDenied", {
+          source: "sidebar-menu",
+          requestedAction: String(actionName || ""),
+          requiredRole: required,
+          currentRole: String((STATE.access && STATE.access.role) || "guest"),
+        }),
+      ).catch(function () {});
+
+      return false;
+    }
+
+    function assertAdminAction_(actionName) {
+      const required = getActionRequiredRole_(actionName) || "admin";
+      if (hasRoleAtLeast_(required)) return true;
+
+      Promise.resolve(
+        reportAccessViolation_("sidebarActionUiDenied", {
+          source: "sidebar-legacy-guard",
+          requestedAction: String(actionName || ""),
+          requiredRole: required,
+          currentRole: String((STATE.access && STATE.access.role) || "guest"),
+        }),
+      ).catch(function (error) {
+        logToConsole(
+          "Не вдалося зафіксувати порушення доступу: " + normalizeError(error),
+          "error",
+        );
+      });
+
+      const message = "Недостатньо прав для дії: " + getActionName(actionName);
+      showToast(message);
+      logToConsole(
+        "✕ Недостатньо прав для дії " +
+          getActionName(actionName) +
+          ". Потрібна роль: " +
+          getAccessRoleLabel_(required),
+        "warning",
+      );
+      throw new Error(message);
+    }
+</script>

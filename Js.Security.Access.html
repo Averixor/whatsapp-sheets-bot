@@ -1,0 +1,238 @@
+<script>
+  // Js.Security.Access — descriptor normalization and role checks.
+    function normalizeAccessForUi_(raw) {
+      raw = raw || {};
+
+      const identity = raw.identity || {};
+      const access = raw.access || {};
+      const policy = raw.policy || {};
+      const audit = raw.audit || {};
+      const lockout = raw.lockout || raw.lockoutState || {};
+      const login = raw.login || {};
+      const reasonObj =
+        raw.reason && typeof raw.reason === "object" ? raw.reason : null;
+
+      const reasonMessage = reasonObj
+        ? safeString_(reasonObj.message)
+        : safeString_(raw.reasonString || raw.reasonLegacy || raw.reason);
+
+      const reasonCode = reasonObj ? safeString_(reasonObj.code) : "";
+
+      const currentKeyHashFull = safeString_(
+        identity.currentKeyHashFull || raw.currentKeyHashFull || "",
+      );
+      const currentKeyHashMasked = safeString_(
+        identity.currentKeyHashMasked ||
+          raw.currentKeyHashMasked ||
+          login.currentKeyHashMasked ||
+          maskHash_(currentKeyHashFull),
+      );
+
+      const registered =
+        raw.registered !== undefined ? !!raw.registered : !!access.registered;
+      const keyAvailable =
+        login.keyAvailable !== undefined
+          ? !!login.keyAvailable
+          : !!(raw.keyAvailable || currentKeyHashFull || currentKeyHashMasked);
+
+      return {
+        raw: raw,
+        role: safeString_(raw.role || access.role || "guest").toLowerCase(),
+        enabled: raw.enabled !== undefined ? !!raw.enabled : !!access.enabled,
+        knownUser:
+          raw.knownUser !== undefined ? !!raw.knownUser : !!access.knownUser,
+        registered: registered,
+        readOnly:
+          raw.readOnly !== undefined ? !!raw.readOnly : !!access.readOnly,
+        isAdmin: raw.isAdmin !== undefined ? !!raw.isAdmin : !!access.isAdmin,
+        isOperator:
+          raw.isOperator !== undefined ? !!raw.isOperator : !!access.isOperator,
+        isMaintainer:
+          raw.isMaintainer !== undefined
+            ? !!raw.isMaintainer
+            : !!access.isMaintainer,
+        email: safeString_(raw.email || identity.email),
+        displayName: safeString_(raw.displayName || identity.displayName),
+        personCallsign: safeString_(
+          raw.personCallsign || identity.personCallsign,
+        ),
+        note: safeString_(raw.note || identity.note),
+        source: safeString_(raw.source || audit.source || raw.matchSource),
+        matchedBy: safeString_(raw.matchedBy || audit.matchedBy),
+        lastSeenAt: safeString_(raw.lastSeenAt || audit.lastSeenAt),
+        lastRotatedAt: safeString_(raw.lastRotatedAt || audit.lastRotatedAt),
+        failedAttempts: safeNumber_(
+          raw.failedAttempts != null
+            ? raw.failedAttempts
+            : audit.failedAttempts,
+          0,
+        ),
+        mode: safeString_(raw.mode || policy.mode),
+        strictUserKeyMode:
+          raw.strictUserKeyMode !== undefined
+            ? !!raw.strictUserKeyMode
+            : !!policy.strictUserKeyMode,
+        migrationModeEnabled:
+          raw.migrationModeEnabled !== undefined
+            ? !!raw.migrationModeEnabled
+            : !!policy.migrationModeEnabled,
+        userKeyModeEnabled:
+          raw.strictUserKeyMode !== undefined
+            ? !!raw.strictUserKeyMode
+            : !!policy.strictUserKeyMode,
+        reason: { code: reasonCode, message: reasonMessage },
+        reasonString: reasonMessage,
+        lockout: {
+          locked: !!lockout.locked,
+          disabledByAdmin: !!lockout.disabledByAdmin,
+          remainingMs: safeNumber_(lockout.remainingMs, 0),
+          remainingMinutes: safeNumber_(lockout.remainingMinutes, 0),
+          nextEscalationLevel: safeNumber_(lockout.nextEscalationLevel, 0),
+          lastAppliedLevel: safeNumber_(lockout.lastAppliedLevel, 0),
+          lastReason: safeString_(lockout.lastReason),
+        },
+        rotationState: safeString_(raw.rotationState) || "unknown",
+        allowedActions: Array.isArray(raw.allowedActions)
+          ? raw.allowedActions.slice()
+          : [],
+        currentKey: "",
+        keyAvailable: keyAvailable,
+        currentKeyHashFull: currentKeyHashFull,
+        currentKeyHashMasked: currentKeyHashMasked,
+        supportEmail: safeString_(login.supportEmail || raw.supportEmail),
+        supportCallsign: safeString_(
+          login.supportCallsign || raw.supportCallsign || "ШАХТАР",
+        ),
+        selfBindRequired:
+          login.selfBindRequired !== undefined
+            ? !!login.selfBindRequired
+            : keyAvailable && !registered,
+        canSelfBind:
+          login.canSelfBind !== undefined
+            ? !!login.canSelfBind
+            : keyAvailable && !registered,
+        loginLockout: {
+          locked: !!(login.lockout || raw.loginLockout || {}).locked,
+          remainingMinutes: safeNumber_(
+            (login.lockout || raw.loginLockout || {}).remainingMinutes,
+            0,
+          ),
+          attempts: safeNumber_(
+            (login.lockout || raw.loginLockout || {}).attempts,
+            0,
+          ),
+          maxAttempts: safeNumber_(
+            (login.lockout || raw.loginLockout || {}).maxAttempts,
+            0,
+          ),
+        },
+      };
+    }
+
+    function isAdminRole() {
+      return !!(STATE.access && STATE.access.isAdmin);
+    }
+
+    function getAccessRoleLabel_(role) {
+      const map = {
+        guest: "Гість",
+        viewer: "Спостерігач",
+        operator: "Оператор",
+        maintainer: "Редактор",
+        admin: "Адмін",
+        sysadmin: "Сисадмін",
+        owner: "Власник",
+      };
+      return map[safeString_(role || "guest").toLowerCase()] || "Гість";
+    }
+
+    function getAccessRoleRank_(role) {
+      const order = {
+        guest: 0,
+        viewer: 1,
+        operator: 2,
+        maintainer: 3,
+        admin: 4,
+        sysadmin: 5,
+        owner: 6,
+      };
+      return order[safeString_(role || "guest").toLowerCase()] || 0;
+    }
+
+    function hasRoleAtLeast_(roleName) {
+      const access = STATE.access || {};
+      return (
+        getAccessRoleRank_(access.role) >= getAccessRoleRank_(roleName) &&
+        access.enabled !== false
+      );
+    }
+
+    function hasDaySummaryAccess_() {
+      return hasRoleAtLeast_("operator");
+    }
+    function hasDetailedSummaryAccess_() {
+      return hasRoleAtLeast_("operator");
+    }
+    function hasWorkingAccess_() {
+      return hasRoleAtLeast_("maintainer");
+    }
+    function hasMaintainerAccess_() {
+      return hasRoleAtLeast_("maintainer");
+    }
+
+    function getViewerOwnCallsign_() {
+      const access = STATE.access || {};
+      return safeString_(access.personCallsign);
+    }
+
+    function canOpenPersonCardClient_(callsign) {
+      const access = STATE.access || {};
+      const role = safeString_(access.role || "guest").toLowerCase();
+      const target = safeString_(callsign).toUpperCase();
+      const own = getViewerOwnCallsign_().toUpperCase();
+      if (!target) return false;
+      if (access.isOperator || access.isAdmin) return true;
+      if (role !== "viewer") return false;
+      return !!own && own === target;
+    }
+
+    async function reportAccessViolation_(actionName, details) {
+      try {
+        if (
+          !window.MaintenanceApi ||
+          typeof MaintenanceApi.reportAccessViolation !== "function"
+        )
+          return;
+        await MaintenanceApi.reportAccessViolation(
+          actionName || "",
+          details || {},
+        );
+      } catch (error) {
+        logToConsole(
+          "✕ Не вдалося зафіксувати порушення доступу: " +
+            normalizeError(error),
+          "error",
+        );
+      }
+    }
+
+    function updateRestrictedUi_() {
+      const access = STATE.access || {};
+      document.querySelectorAll("[data-role-min]").forEach(function (el) {
+        const required = el.getAttribute("data-role-min") || "guest";
+        if (el.classList && el.classList.contains("header-tool-btn")) return;
+        el.style.display = hasRoleAtLeast_(required) ? "" : "none";
+      });
+
+      const detailedBtn = $id("btnDetailedSummary");
+      if (detailedBtn) {
+        const allowed = hasDetailedSummaryAccess_();
+        detailedBtn.classList.toggle("is-disabled", !allowed);
+        detailedBtn.classList.toggle("is-restricted", !allowed);
+        detailedBtn.setAttribute("aria-disabled", allowed ? "false" : "true");
+        detailedBtn.title = allowed
+          ? "Детальне зведення за день"
+          : "Недоступно для ролі " + getAccessRoleLabel_(access.role);
+      }
+    }
+</script>

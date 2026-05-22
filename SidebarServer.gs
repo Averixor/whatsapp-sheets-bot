@@ -1,10 +1,9 @@
-/************ БОКОВА ПАНЕЛЬ / COMPATIBILITY LAYER ************/
+/************ БОКОВА ПАНЕЛЬ / SIDEBAR ENTRY POINTS ************/
 /**
- * Політика final baseline compatibility layer:
- * - тут не додається нова предметна логіка;
- * - файл виконує роль sidebar host / compatibility layer;
- * - активний client bootstrap: Sidebar.html + includeTemplate('JavaScript');
- * - legacy wrappers залишаються thin aliases і фіксуються в DeprecatedRegistry.gs.
+ * Sidebar host for google.script.run:
+ * - no new domain logic here;
+ * - thin delegates to apiStage7* / apiGenerateSendPanelForDate;
+ * - client bootstrap: Sidebar.html + includeTemplate('JavaScript').
  */
 
 function showSidebar() {
@@ -135,50 +134,4 @@ function testCommanderPhone() {
   } catch (e) {
     ui.alert('✕ Помилка', String(e && e.message ? e.message : e), ui.ButtonSet.OK);
   }
-}
-
-// ==================== THIN COMPATIBILITY WRAPPERS ====================
-
-function getMonthsList() {
-  return apiStage7GetMonthsList();
-}
-
-function getSidebarData(dateStr) {
-  return apiStage7GetSidebarData(dateStr || _todayStr_());
-}
-
-function generateSendPanelSidebar(options) {
-  return apiGenerateSendPanelForDate(options || {});
-}
-
-function getSendPanelSidebarData() {
-  return apiStage7GetSendPanelData();
-}
-
-function getDaySummaryByDate(dateStr) {
-  return apiBuildDaySummary(dateStr || _todayStr_());
-}
-
-function getDetailedDaySummaryByDate(dateStr) {
-  return apiBuildDetailedSummary(dateStr || _todayStr_());
-}
-
-function checkVacationsAndNotifySidebar(dateStr) {
-  return apiCheckVacationsAndBirthdays(dateStr || _todayStr_());
-}
-
-function createNextMonthSheetSidebar() {
-  return apiStage7CreateNextMonth({ switchToNewMonth: true });
-}
-
-function switchBotToMonthSidebar(monthSheetName) {
-  return apiStage7SwitchBotToMonth(monthSheetName || '');
-}
-
-function markMultipleAsSentFromSidebar(rowNumbers, opts) {
-  return apiMarkPanelRowsAsSent(rowNumbers, opts || {});
-}
-
-function markMultipleAsUnsentFromSidebar(rowNumbers, opts) {
-  return apiMarkPanelRowsAsUnsent(rowNumbers, opts || {});
 }

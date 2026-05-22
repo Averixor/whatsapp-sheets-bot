@@ -94,18 +94,16 @@ function runStage3HealthCheck_(options) {
   });
 
   [
-    "apiGetMonthsList",
-    "apiGetSidebarData",
-    "apiGenerateSendPanel",
-    "apiGetSendPanelData",
-    "apiMarkSendPanelRowsAsSent",
-    "apiGetDaySummary",
-    "apiGetDetailedDaySummary",
-    "apiCheckVacations",
-    "apiGetBirthdays",
-    "apiGetPersonCardData",
-    "apiHealthCheck",
-    "apiRunRegressionTests",
+    "apiStage7GetMonthsList",
+    "apiStage7GetSidebarData",
+    "apiGenerateSendPanelForDate",
+    "apiStage7GetSendPanelData",
+    "apiMarkPanelRowsAsSent",
+    "apiBuildDaySummary",
+    "apiBuildDetailedSummary",
+    "apiCheckVacationsAndBirthdays",
+    "apiStage7HealthCheck",
+    "apiRunStage7RegressionTests",
   ].forEach(function (fnName) {
     _stage7PushCheck_(
       checks,
@@ -114,15 +112,29 @@ function runStage3HealthCheck_(options) {
       _stage7HasFn_(fnName) ? "Публічний API доступний" : "Метод не знайдено",
       _stage7HasFn_(fnName)
         ? ""
-        : "Stage 7 wrappers intentionally removed in final clean baseline",
+        : "Перевірте Stage7ServerApi.gs / Stage7MaintenanceApi.gs",
     );
   });
 
+  const presentLegacy =
+    typeof findPresentLegacyApiGlobals_ === "function"
+      ? findPresentLegacyApiGlobals_()
+      : [];
+  _stage7PushCheck_(
+    checks,
+    "Legacy API globals removed",
+    presentLegacy.length === 0 ? "OK" : "FAIL",
+    presentLegacy.length
+      ? "Залишились: " + presentLegacy.join(", ")
+      : "canonical-only surface",
+    "Видаліть Legacy alias layers з проєкту Apps Script",
+  );
+
   try {
     const contractChecks = [
-      apiGetMonthsList(),
-      apiGetSendPanelData(),
-      apiGetBirthdays(_todayStr_()),
+      apiStage7GetMonthsList(),
+      apiStage7GetSendPanelData(),
+      apiCheckVacationsAndBirthdays(_todayStr_()),
     ];
 
     contractChecks.forEach(function (result, idx) {
@@ -155,17 +167,6 @@ function runStage3HealthCheck_(options) {
       "Перевірте public API",
     );
   }
-
-  const deprecated = getDeprecatedRegistry_();
-  deprecated.forEach(function (item) {
-    _stage7PushCheck_(
-      checks,
-      `Deprecated ${item.name}`,
-      "PSEUDO",
-      `Compatibility-only alias retained intentionally; canonical: ${item.replacement}`,
-      item.reason || "",
-    );
-  });
 
   const failures = checks.filter(function (item) {
     return item.status === "FAIL";
@@ -527,7 +528,7 @@ function runStage5MetadataConsistencyCheck_() {
   _stage7PushCheck_(
     checks,
     "Compatibility policy marker",
-    meta.compatibilityPolicyMarker === "stage7-compatible" ? "OK" : "WARN",
+    meta.compatibilityPolicyMarker === "stage7-canonical-only" ? "OK" : "WARN",
     `compatibilityPolicyMarker=${meta.compatibilityPolicyMarker || "n/a"}`,
     "Зафіксуйте Stage 7 compatibility marker",
   );
@@ -553,15 +554,14 @@ function runStage5MetadataConsistencyCheck_() {
   );
   _stage7PushCheck_(
     checks,
-    "Compatibility maintenance facade",
-    maintenancePolicy &&
-      maintenancePolicy.compatibilityFile === "LegacyMaintenanceAliases.gs"
+    "No legacy maintenance facade",
+    !maintenancePolicy || !maintenancePolicy.compatibilityFile
       ? "OK"
-      : "WARN",
+      : "FAIL",
     maintenancePolicy && maintenancePolicy.compatibilityFile
       ? maintenancePolicy.compatibilityFile
-      : "Не задано",
-    "Явно позначте compatibility facade",
+      : "canonical-only",
+    "Приберіть LegacyMaintenanceAliases.gs з policy/metadata",
   );
 
   const clientRuntimePolicy = (meta && meta.clientRuntimePolicy) || {};
@@ -671,19 +671,18 @@ function runStage5MetadataConsistencyCheck_() {
   const helperOk =
     typeof HtmlUtils_ === "object" &&
     typeof HtmlUtils_.escapeHtml === "function" &&
-    typeof escapeHtml_ === "function" &&
-    typeof _escapeHtml_ === "function" &&
-    escapeHtml_("<b>") === HtmlUtils_.escapeHtml("<b>") &&
-    _escapeHtml_("<b>") === HtmlUtils_.escapeHtml("<b>");
+    typeof escapeHtml_ !== "function" &&
+    typeof _escapeHtml_ !== "function" &&
+    HtmlUtils_.escapeHtml("<b>") === "&lt;b&gt;";
 
   _stage7PushCheck_(
     checks,
     "Canonical HTML helper",
     helperOk ? "OK" : "FAIL",
     helperOk
-      ? "HtmlUtils_.escapeHtml() є source-of-truth, wrappers узгоджені"
-      : "Helper-layer розсинхронізований",
-    helperOk ? "" : "Перевірте HtmlUtils.gs / DeprecatedRegistry.gs",
+      ? "HtmlUtils_.escapeHtml() — єдиний canonical path; legacy alias відсутні"
+      : "Потрібен HtmlUtils_.escapeHtml без escapeHtml_ / _escapeHtml_",
+    helperOk ? "" : "Перевірте HtmlUtils.gs — приберіть global escapeHtml_ wrappers",
   );
 
   return checks;

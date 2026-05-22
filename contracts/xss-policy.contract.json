@@ -23,7 +23,16 @@
     "Js.Diagnostics.html",
     "Js.Actions.html",
     "Js.Helpers.html",
-    "Js.Security.html"
+    "Js.Security.Boot.html",
+    "Js.Security.Util.html",
+    "Js.Security.Access.html",
+    "Js.Security.Debug.html",
+    "Js.Security.Login.html",
+    "Js.Security.DebugView.html",
+    "Js.Security.Policy.html",
+    "Js.Security.Guards.html",
+    "Js.Security.Forms.html",
+    "Js.Security.Exports.html"
   ],
   "patterns": [
     "^escapeHtml\\s*\\(",

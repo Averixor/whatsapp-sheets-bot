@@ -380,65 +380,50 @@ function runStage4ScenarioTests(options) {
     });
   });
 
-  _runContractTest_(report, "apiRunMaintenanceScenario", function () {
-    return apiRunMaintenanceScenario({ type: "healthCheck", shallow: true });
+  _runContractTest_(report, "apiRunStage7MaintenanceScenario", function () {
+    return apiRunStage7MaintenanceScenario({
+      type: "healthCheck",
+      shallow: true,
+    });
   });
 
   _smokePush_(
     report,
     "jobs api contract suite",
     function () {
-      [apiListStage4Jobs(), apiInstallStage4Jobs()].forEach(
-        function (result, idx) {
-          _assertStage4Meta_(result, "jobs#" + (idx + 1));
-        },
-      );
+      [apiListStage7Jobs(), apiInstallStage7Jobs()].forEach(function (
+        result,
+        idx,
+      ) {
+        _assertStage4Meta_(result, "jobs#" + (idx + 1));
+      });
       _assertUnifiedContract_(
-        apiRunStage4Job(STAGE7_CONFIG.JOBS.SCHEDULED_HEALTHCHECK, {
+        apiRunStage7Job(STAGE7_CONFIG.JOBS.SCHEDULED_HEALTHCHECK, {
           dryRun: true,
         }),
-        "apiRunStage4Job",
+        "apiRunStage7Job",
       );
       return "jobs-contracts-ok";
     },
     { skipOnError: true },
   );
 
-  _smokePush_(report, "compatibility registry sanity", function () {
+  _smokePush_(report, "legacy api surface removed", function () {
+    const present =
+      typeof findPresentLegacyApiGlobals_ === "function"
+        ? findPresentLegacyApiGlobals_()
+        : [];
+    _smokeAssert_(
+      present.length === 0,
+      "Legacy globals still present: " + present.join(", "),
+    );
     const registry = getStage4CompatibilityMap_();
     _smokeAssert_(
-      Array.isArray(registry) && registry.length >= 10,
-      "Compatibility registry надто малий",
+      Array.isArray(registry) && registry.length === 0,
+      "Compatibility registry must be empty",
     );
-    registry.forEach(function (item) {
-      _smokeAssert_(
-        !!item.name && !!item.replacement,
-        "Compatibility record пошкоджений",
-      );
-    });
-    return `compat=${registry.length}`;
+    return "legacy-removed";
   });
-
-  _smokePush_(
-    report,
-    "compatibility wrappers lead to canonical api",
-    function () {
-      getStage4CompatibilityMap_()
-        .filter(function (item) {
-          return !!item.verifySourceToken;
-        })
-        .forEach(function (item) {
-          const resolved = _smokeResolveFn_(item.name);
-          if (typeof resolved !== "function") return;
-          const src = String(resolved);
-          _smokeAssert_(
-            src.indexOf(item.verifySourceToken) !== -1,
-            `${item.name} не веде до ${item.verifySourceToken}`,
-          );
-        });
-      return "wrapper-sources-ok";
-    },
-  );
 
   _smokePush_(report, "canonical helper consistency", function () {
     _smokeAssert_(
@@ -447,12 +432,12 @@ function runStage4ScenarioTests(options) {
       "HtmlUtils_.escapeHtml відсутній",
     );
     _smokeAssert_(
-      escapeHtml_("<x>") === HtmlUtils_.escapeHtml("<x>"),
-      "escapeHtml_() не узгоджений",
+      HtmlUtils_.escapeHtml("<x>") === "&lt;x&gt;",
+      "HtmlUtils_.escapeHtml не екранує",
     );
     _smokeAssert_(
-      _escapeHtml_("<x>") === HtmlUtils_.escapeHtml("<x>"),
-      "_escapeHtml_() не узгоджений",
+      typeof escapeHtml_ !== "function" && typeof _escapeHtml_ !== "function",
+      "deprecated escapeHtml_ / _escapeHtml_ ще присутні",
     );
     return "helper-ok";
   });
@@ -1287,14 +1272,20 @@ function runRegressionTestSuiteFull_(options) {
   _smokePush_(report, "compatibility sunset report", function () {
     const sunset = getCompatibilitySunsetReport_();
     _smokeAssert_(
-      typeof sunset.total === "number",
-      "getCompatibilitySunsetReport_() не повернув total",
+      typeof sunset.presentLegacyApis === "number",
+      "getCompatibilitySunsetReport_() не повернув presentLegacyApis",
     );
     _smokeAssert_(
-      typeof sunset.counts === "object",
-      "getCompatibilitySunsetReport_() не повернув counts",
+      sunset.presentLegacyApis === 0,
+      "Legacy API globals still deployed: " +
+        (sunset.presentLegacyApiNames || []).join(", "),
     );
-    return `total=${sunset.total}`;
+    _smokeAssert_(
+      (sunset.presentHelpers || 0) === 0,
+      "Deprecated helper globals: " +
+        (sunset.presentHelperNames || []).join(", "),
+    );
+    return "legacy-clean";
   });
 
   _smokePush_(report, "hardening domain test suite", function () {

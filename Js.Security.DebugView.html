@@ -1,0 +1,157 @@
+<script>
+  // Js.Security.DebugView — render access debug panel HTML.
+    function buildAccessTechDetailsText_(access) {
+      const normalized = normalizeAccessForUi_(access || {});
+      const raw = (access && (access.raw || access)) || {};
+      const lines = [
+        "Технічні деталі:",
+        "Стан: " + (normalized.reasonString || "Немає"),
+        "Код стану: " + (normalized.reasonCode || "немає"),
+        "Примітка: " + (normalized.note || ""),
+        "Свій позивний: " + (normalized.personCallsign || ""),
+        "last_seen_at: " + (normalized.lastSeenAt || "Немає"),
+        "last_rotated_at: " + (normalized.lastRotatedAt || "Немає"),
+        "Стан ротації: " + (normalized.rotationState || "Невідомо"),
+        "",
+        "RAW JSON:",
+        JSON.stringify(raw, null, 2),
+      ];
+      return lines.join("\n");
+    }
+
+    function buildAccessCombinedReportText_(access) {
+      const report = String(
+        buildAccessDebugReportText_(access || {}) || "",
+      ).trim();
+      const tech = String(
+        buildAccessTechDetailsText_(access || {}) || "",
+      ).trim();
+      if (!report) return tech;
+      if (!tech) return report;
+      return report + "\n\n" + tech;
+    }
+
+    function copyAccessDebugTechDetails() {
+      copyResultText(buildAccessTechDetailsText_(STATE.access || {}));
+    }
+
+    function copyAccessDebugFullReport() {
+      copyResultText(buildAccessCombinedReportText_(STATE.access || {}));
+    }
+
+    function renderAccessDebugResult_(accessRaw) {
+      const access = normalizeAccessForUi_(accessRaw);
+      const state = ensureAccessDebugState_();
+      state.hashVisible = false;
+
+      const roleLabel = getAccessRoleLabel_(access.role);
+      const sourceLabel = getAccessSourceLabel_(access.source);
+      const email = access.email || "Не вдалося визначити";
+      const maskedHash = access.currentKeyHashMasked || "Не вдалося визначити";
+      const fullHashAvailable = access.currentKeyHashFull ? "Так" : "Ні";
+      const registeredLabel = boolLabel_(access.registered);
+      const keyModeLabel = getRotationModeLabel_(access);
+      const keyAvailableLabel = boolLabel_(access.keyAvailable);
+      const adminLabel = permissionLabel_(access.isAdmin);
+      const operatorLabel = permissionLabel_(access.isOperator);
+      const reason = getAccessReasonDisplay_(access);
+      const reasonCode = safeString_(
+        (access.reason && access.reason.code) || "",
+      );
+      const note = safeString_(access.note) || "Немає";
+      const personCallsign = access.personCallsign || "Немає";
+      const displayName = access.displayName || "Немає";
+      const lastSeenAt = access.lastSeenAt || "Немає";
+      const lastRotatedAt = access.lastRotatedAt || "Немає";
+      const rotationState = access.rotationState || "Невідомо";
+      const allowedActions = getAllowedActionsText_(access);
+      const explanation = buildAccessDebugExplanation_(access);
+      const advice = buildAccessDebugAdvice_(access);
+      const reportText = buildAccessDebugReportText_(access);
+      const supportEmail = "ШАХТАР";
+      const showHashButtons = !!access.currentKeyHashFull && !!access.isAdmin;
+
+      return `
+      <div class="result-item">
+        <div class="result-label">Перевірка доступу</div>
+        <div class="result-value">
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+            <button class="btn btn-primary" type="button" onclick="SidebarApp.copyResultText('${escapeJsString(reportText)}')">Копіювати звіт</button>
+            <button class="btn" type="button" onclick="copyAccessDebugFullReport()">Копіювати все</button>
+            <button class="btn" type="button" onclick="copyAccessDebugTechDetails()">Копіювати тех. деталі</button>
+            ${access.selfBindRequired && access.canSelfBind ? '<button class="btn" type="button" onclick="openAccessLoginFlow(&quot;login&quot;)">Увійти</button> <button type="button" class="btn btn-primary" style="min-width:auto; padding:6px 10px;" onclick="openAccessLoginFlow(&quot;request&quot;)">Отримати ключ доступу</button>' : ""}
+            ${showHashButtons ? '<button class="btn" type="button" id="accessDebugToggleHashBtn" onclick="toggleAccessDebugHash()">Показати повний hash</button>' : ""}
+            ${showHashButtons ? '<button class="btn" type="button" id="accessDebugCopyHashBtn" onclick="copyAccessDebugHash()">Копіювати повний hash</button>' : ""}
+          </div>
+
+          <div style="display:grid; gap:10px;">
+            <div style="padding:10px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-glass);">
+              <div style="font-size:0.78rem; color:var(--text-secondary);">Поточний режим</div>
+              <div style="font-size:1rem; font-weight:700; margin-top:4px;">${escapeHtml(roleLabel)}</div>
+            </div>
+
+            <div style="padding:10px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-glass);">
+              <div style="font-size:0.78rem; color:var(--text-secondary);">Ідентифікація користувача</div>
+              <div style="margin-top:6px; line-height:1.5;">
+                <div><b>Режим:</b> ${escapeHtml(keyModeLabel)}</div>
+                <div><b>Ключ доступний:</b> ${escapeHtml(keyAvailableLabel)}</div>
+                <div><b>Ключ зареєстровано:</b> ${escapeHtml(registeredLabel)}</div>
+                <div><b>Маска hash:</b> <span id="accessDebugMaskedHashValue">${escapeHtml(maskedHash)}</span></div>
+                <div><b>Повний hash доступний:</b> ${escapeHtml(fullHashAvailable)}</div>
+                ${showHashButtons ? '<div id="accessDebugHashBlock" style="display:none; margin-top:6px; word-break:break-all;"><b>Поточний повний hash:</b><div id="accessDebugHashValue" style="margin-top:6px; font-family:monospace; font-size:0.82rem;"></div></div>' : ""}
+                <div><b>Email (довідково):</b> ${escapeHtml(email)}</div>
+                <div><b>Display name:</b> ${escapeHtml(displayName)}</div>
+                <div><b>Джерело доступу:</b> ${escapeHtml(sourceLabel)}</div>
+                <div><b>Контакт для допомоги:</b> ${escapeHtml(supportEmail)}</div>
+              </div>
+            </div>
+
+            <div style="padding:10px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-glass);">
+              <div style="font-size:0.78rem; color:var(--text-secondary);">Що дозволено</div>
+              <div style="margin-top:6px; line-height:1.5;">
+                <div><b>Робочі дії:</b> ${escapeHtml(operatorLabel)}</div>
+                <div><b>Небезпечні системні дії:</b> ${escapeHtml(adminLabel)}</div>
+                <div><b>Дозволені дії:</b> ${escapeHtml(allowedActions)}</div>
+              </div>
+            </div>
+
+            <div style="padding:10px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-glass);">
+              <div style="font-size:0.78rem; color:var(--text-secondary);">Що це означає</div>
+              <div style="margin-top:6px; line-height:1.55;">${escapeHtml(explanation)}</div>
+            </div>
+
+            <div style="padding:10px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-glass);">
+              <div style="font-size:0.78rem; color:var(--text-secondary);">Що робити далі</div>
+              <div style="margin-top:6px; line-height:1.55;">${escapeHtml(advice)}</div>
+            </div>
+
+            <div style="padding:10px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-glass);">
+              <div style="font-size:0.78rem; color:var(--text-secondary);">Як працює вхід тепер</div>
+              <div style="margin-top:6px; line-height:1.55;">
+                <div>1. Система сама визначає поточний ключ користувача.</div>
+                <div>2. Якщо ключ ще не прив’язано, користувач натискає <b>Отримати ключ доступу</b> і заповнює анкету.</div>
+                <div>3. Роль на клієнті не вибирається і не показується — її бере сервер із ACCESS.</div>
+                <div>4. Після перевірки адміністратор підтверджує заявку і користувач отримує ключ.</div>
+                <div>5. Після отримання ключа користувач вводить ключ, логін і пароль для завершення реєстрації.</div>
+              </div>
+            </div>
+
+            <details style="padding:10px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-glass);">
+              <summary style="cursor:pointer; font-weight:700;">Технічні деталі</summary>
+              <div style="margin-top:8px; line-height:1.5;">
+                <div><b>Стан:</b> ${escapeHtml(reason)}</div>
+                <div><b>Код стану:</b> ${escapeHtml(reasonCode || "немає")}</div>
+                <div><b>Примітка:</b> ${escapeHtml(note)}</div>
+                <div><b>Свій позивний:</b> ${escapeHtml(personCallsign)}</div>
+                <div><b>last_seen_at:</b> ${escapeHtml(lastSeenAt)}</div>
+                <div><b>last_rotated_at:</b> ${escapeHtml(lastRotatedAt)}</div>
+                <div><b>Стан ротації:</b> ${escapeHtml(rotationState)}</div>
+              </div>
+              <pre style="margin-top:10px; white-space:pre-wrap; word-break:break-word; font-size:0.78rem; color:var(--text-secondary);">${escapeHtml(JSON.stringify(access.raw || access || {}, null, 2))}</pre>
+            </details>
+          </div>
+        </div>
+      </div>
+    `;
+    }
+</script>

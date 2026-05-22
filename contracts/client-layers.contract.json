@@ -14,7 +14,22 @@
     },
     {
       "id": "features",
-      "files": ["Js.Diagnostics", "Js.Security", "Js.Helpers", "Js.Events", "Js.Actions"],
+      "files": [
+        "Js.Diagnostics",
+        "Js.Security.Boot",
+        "Js.Security.Util",
+        "Js.Security.Access",
+        "Js.Security.Debug",
+        "Js.Security.Login",
+        "Js.Security.DebugView",
+        "Js.Security.Policy",
+        "Js.Security.Guards",
+        "Js.Security.Forms",
+        "Js.Security.Exports",
+        "Js.Helpers",
+        "Js.Events",
+        "Js.Actions"
+      ],
       "allowedDependsOn": ["core", "render"]
     }
   ],

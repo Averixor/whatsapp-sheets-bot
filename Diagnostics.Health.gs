@@ -366,14 +366,14 @@ function healthCheck() {
       "loadPhonesIndex_",
       "findPhone_",
       "loadPhonesMap_",
-      "generateSendPanelSidebar",
-      "getSendPanelSidebarData",
-      "markMultipleAsSentFromSidebar",
+      "apiGenerateSendPanelForDate",
+      "apiStage7GetSendPanelData",
+      "apiMarkPanelRowsAsSent",
       "getBirthdaysSidebar",
       "getPersonCardData",
       "openPersonCalendar",
       "openPersonCardByCallsignAndDate",
-      "_parseDate_",
+      "_veParseDate_",
       "_vacationWordToNumber_",
       "setupVacationTrigger",
       "cleanupDuplicateTriggers",
@@ -424,7 +424,10 @@ function healthCheck() {
     "Helper-функції відпусток",
     "CRITICAL",
     function () {
-      const hasParse = _fnExists_("_parseDate_");
+      const hasParse =
+        (typeof DateUtils_ === "object" &&
+          typeof DateUtils_.parseDateAny === "function") ||
+        _fnExists_("_veParseDate_");
       const hasVacMap = _fnExists_("_vacationWordToNumber_");
 
       return {
@@ -433,7 +436,7 @@ function healthCheck() {
         howTo:
           hasParse && hasVacMap
             ? ""
-            : "Додайте thin-wrapper helper-и в Utils.gs",
+            : "Перевірте DateUtils.gs / VacationEngine.gs",
       };
     },
   );
@@ -505,21 +508,26 @@ function healthCheck() {
     },
   );
 
-  _runHealthCheckItem_(report, "Deprecated alias layer", "WARN", function () {
-    const hasParseAlias = _fnExists_("_parseDate_");
-    const hasEscapeAlias = _fnExists_("escapeHtml_");
+  _runHealthCheckItem_(report, "Legacy API surface removed", "WARN", function () {
+    const presentLegacy =
+      typeof findPresentLegacyApiGlobals_ === "function"
+        ? findPresentLegacyApiGlobals_()
+        : [];
+    const helperAliases =
+      typeof findPresentLegacyHelperGlobals_ === "function"
+        ? findPresentLegacyHelperGlobals_()
+        : [];
+    const all = presentLegacy.concat(helperAliases);
 
     return {
-      status: hasParseAlias && hasEscapeAlias ? "PSEUDO" : "WARN",
-      severity: hasParseAlias && hasEscapeAlias ? "INFO" : "WARN",
-      details:
-        hasParseAlias && hasEscapeAlias
-          ? `Compatibility-only alias layer retained intentionally: parseAlias=✓, escapeAlias=✓`
-          : `parseAlias=${hasParseAlias ? "✓" : "✕"}, escapeAlias=${hasEscapeAlias ? "✓" : "✕"}`,
-      howTo:
-        hasParseAlias && hasEscapeAlias
-          ? "Нейтральний сумісний шар; не є canonical-path"
-          : "Поверніть thin-wrapper сумісності для старих викликів",
+      status: all.length ? "WARN" : "OK",
+      severity: "WARN",
+      details: all.length
+        ? "Залишились: " + all.join(", ")
+        : "Canonical-only API + DateUtils_/HtmlUtils_",
+      howTo: all.length
+        ? "Приберіть Legacy*.gs та deprecated helper wrappers"
+        : "",
     };
   });
 

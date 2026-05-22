@@ -2,7 +2,7 @@
  * Stage7ServerApi.gs — canonical Stage 7 application API.
  *
  * Stage 7 is the only canonical application surface in this baseline.
- * Historical Stage 4 aliases live in LegacyApiAliases.gs.
+ * Legacy Stage 4 aliases removed; sidebar entry points live in SidebarServer.gs.
  */
 
 function _stage7FastContext_(scenario) {

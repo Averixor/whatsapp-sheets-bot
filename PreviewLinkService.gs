@@ -5,7 +5,7 @@
 
 const PreviewLinkService_ = (function() {
   function escapeHtmlLocal(value) {
-    return escapeHtml_(value);
+    return HtmlUtils_.escapeHtml(value);
   }
 
   function safeWaLink(url) {

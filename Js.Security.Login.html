@@ -1,0 +1,353 @@
+<script>
+  // Js.Security.Login — login modal and identifier+callsign flow.
+    function ensureAccessLoginState_() {
+      if (!STATE.accessLogin) {
+        STATE.accessLogin = { loading: false, modalOpen: false };
+      }
+      return STATE.accessLogin;
+    }
+
+    function ensureTelegramUsernameField_() {
+      const modal = document.getElementById("accessLoginModal");
+      if (!modal) return;
+
+      if (document.getElementById("accessRequestTelegramUsername")) return;
+
+      const selects = Array.from(modal.querySelectorAll("select"));
+      const channelSelect = selects.find(function (select) {
+        const text = Array.from(select.options || [])
+          .map(function (opt) {
+            return String(opt.textContent || opt.value || "").toLowerCase();
+          })
+          .join(" ");
+        return (
+          text.indexOf("telegram") !== -1 || text.indexOf("телеграм") !== -1
+        );
+      });
+
+      if (!channelSelect) return;
+
+      const channelField =
+        channelSelect.closest(".access-login-modal__field") ||
+        channelSelect.parentElement;
+      if (!channelField) return;
+
+      const wrap = document.createElement("div");
+      wrap.className =
+        "access-login-modal__field access-login-modal__telegram-field is-hidden";
+      wrap.innerHTML = [
+        '<label class="access-login-modal__label" for="accessRequestTelegramUsername">Telegram username</label>',
+        '<input id="accessRequestTelegramUsername" class="access-login-modal__input" type="text" autocomplete="username" placeholder="@username">',
+      ].join("");
+
+      channelField.insertAdjacentElement("afterend", wrap);
+
+      function updateTelegramField() {
+        const selected = String(
+          channelSelect.value ||
+            channelSelect.options[channelSelect.selectedIndex]?.textContent ||
+            "",
+        ).toLowerCase();
+        const isTelegram =
+          selected.indexOf("telegram") !== -1 ||
+          selected.indexOf("телеграм") !== -1;
+        wrap.classList.toggle("is-hidden", !isTelegram);
+        if (!isTelegram) {
+          const input = document.getElementById(
+            "accessRequestTelegramUsername",
+          );
+          if (input) input.value = "";
+        }
+      }
+
+      channelSelect.addEventListener("change", updateTelegramField);
+      updateTelegramField();
+    }
+
+    function ensureAccessLoginModal_() {
+      let modal = document.getElementById("accessLoginModal");
+      if (modal) return modal;
+
+      modal = document.createElement("div");
+      modal.id = "accessLoginModal";
+      modal.className = "access-login-modal";
+      modal.innerHTML = [
+        '<div id="accessLoginModalBackdrop" class="access-login-modal__backdrop"></div>',
+        '<div class="access-login-modal__dialog" style="max-height:82vh; overflow-y:auto;">',
+        '  <div class="access-login-modal__header">',
+        "    <div>",
+        '      <div class="access-login-modal__title">Доступ до системи</div>',
+        '      <div class="access-login-modal__subtext">Отримайте ключ доступу або зареєструйте вже отриманий ключ</div>',
+        "    </div>",
+        '    <button type="button" id="btnCloseAccessLoginModal" class="access-login-modal__close">Вихід</button>',
+        "  </div>",
+        '  <div class="access-login-modal__content" style="max-height:70vh; overflow-y:auto; padding-right:4px;">',
+        '    <div id="accessLoginModalMessage" class="access-login-modal__message"></div>',
+        '    <div id="accessLoginModalLoading" class="access-login-modal__loading" style="display:none;">',
+        '      <div class="access-login-modal__spinner" aria-hidden="true"></div>',
+        '      <div id="accessLoginModalLoadingText" class="access-login-modal__loading-text">Підтверджую вхід...</div>',
+        '      <div class="access-login-modal__loading-subtext">Зачекайте, будь ласка. Іде перевірка даних, часу та точки входу.</div>',
+        "    </div>",
+        '    <div id="accessLoginModalBody" class="access-login-modal__body is-form">',
+        '      <div id="accessKeyRequestForm">',
+        '        <label class="access-login-modal__field"><span class="access-login-modal__label">Телефон</span><input id="accessRequestPhoneInput" class="access-login-modal__input" type="text" autocomplete="tel" placeholder="+380..."></label>',
+        '        <label class="access-login-modal__field"><span class="access-login-modal__label">Email</span><input id="accessRequestEmailInput" class="access-login-modal__input" type="email" autocomplete="email" placeholder="name@example.com"></label>',
+        '        <label class="access-login-modal__field"><span class="access-login-modal__label">Позивний</span><input id="accessRequestCallsignInput" class="access-login-modal__input access-login-modal__input--callsign" type="text" autocomplete="off" placeholder="Ваш позивний"></label>',
+        '        <label class="access-login-modal__field"><span class="access-login-modal__label">Прізвище</span><input id="accessRequestSurnameInput" class="access-login-modal__input" type="text" autocomplete="family-name" placeholder="Прізвище"></label>',
+        '        <label class="access-login-modal__field"><span class="access-login-modal__label">Імʼя</span><input id="accessRequestFirstNameInput" class="access-login-modal__input" type="text" autocomplete="given-name" placeholder="Імʼя"></label>',
+        '        <label class="access-login-modal__field"><span class="access-login-modal__label">Куди зручно отримати ключ</span><select id="accessRequestPreferredContactInput" class="access-login-modal__input"><option value="email">Email</option><option value="whatsapp">WhatsApp</option><option value="signal">Signal</option><option value="telegram">Telegram</option></select></label>',
+        '        <div class="access-login-modal__actions" style="display:grid; gap:8px;">',
+        '          <button type="button" id="accessKeyRequestSubmitBtn" class="access-login-modal__submit">Отримати ключ доступу</button>',
+        '          <button type="button" id="accessLoginModeHaveKeyBtn" class="access-login-modal__submit" style="display:none;">Я вже маю ключ</button>',
+        "        </div>",
+        "      </div>",
+        '      <div id="accessHaveKeyForm" style="display:none;">',
+        '        <label class="access-login-modal__field"><span class="access-login-modal__label">Ключ доступу</span><input id="accessHaveKeyInput" class="access-login-modal__input" type="text" autocomplete="off" placeholder="Вставте отриманий ключ"></label>',
+        '        <label class="access-login-modal__field"><span class="access-login-modal__label">Логін</span><input id="accessHaveLoginInput" class="access-login-modal__input" type="text" autocomplete="username" placeholder="Створіть логін"></label>',
+        '        <label class="access-login-modal__field"><span class="access-login-modal__label">Пароль</span><input id="accessHavePasswordInput" class="access-login-modal__input" type="password" autocomplete="new-password" placeholder="Створіть пароль"></label>',
+        '        <label class="access-login-modal__field"><span class="access-login-modal__label">Повторіть пароль</span><input id="accessHavePassword2Input" class="access-login-modal__input" type="password" autocomplete="new-password" placeholder="Повторіть пароль"></label>',
+        '        <div class="access-login-modal__actions"><button type="button" id="accessHaveKeySubmitBtn" class="access-login-modal__submit">Зареєструвати доступ</button></div>',
+        "      </div>",
+        "  </div>",
+        "</div>",
+      ].join("");
+
+      document.body.appendChild(modal);
+
+      ensureTelegramUsernameField_();
+      const backdrop = document.getElementById("accessLoginModalBackdrop");
+      const closeBtn = document.getElementById("btnCloseAccessLoginModal");
+      const submitBtn = document.getElementById("accessLoginSubmitBtn");
+
+      if (backdrop) backdrop.addEventListener("click", closeAccessLoginModal);
+      if (closeBtn) closeBtn.addEventListener("click", closeAccessLoginModal);
+      const haveKeyModeBtn = document.getElementById(
+        "accessLoginModeHaveKeyBtn",
+      );
+      const requestSubmitBtn = document.getElementById(
+        "accessKeyRequestSubmitBtn",
+      );
+      const haveKeySubmitBtn = document.getElementById(
+        "accessHaveKeySubmitBtn",
+      );
+      if (haveKeyModeBtn)
+        haveKeyModeBtn.addEventListener("click", function () {
+          setAccessLoginMode_("haveKey");
+        });
+      if (requestSubmitBtn)
+        requestSubmitBtn.addEventListener("click", submitAccessKeyRequestForm_);
+      if (haveKeySubmitBtn)
+        haveKeySubmitBtn.addEventListener(
+          "click",
+          submitHaveKeyRegistrationForm_,
+        );
+      if (submitBtn)
+        submitBtn.addEventListener("click", submitAccessLoginForm_);
+
+      window.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+          const state = ensureAccessLoginState_();
+          if (state.modalOpen) closeAccessLoginModal();
+        }
+      });
+
+      return modal;
+    }
+
+    function setAccessLoginModalMessage_(message, isError) {
+      const box = document.getElementById("accessLoginModalMessage");
+      if (!box) return;
+      const text = safeString_(message);
+      box.style.display = text ? "block" : "none";
+      box.style.color = isError
+        ? "var(--danger-color, #f87171)"
+        : "var(--text-secondary, #9ca3af)";
+      box.textContent = text;
+    }
+
+    function setAccessLoginLoading_(loading) {
+      var isLoading = !!loading;
+
+      var identifierInputEl =
+        document.getElementById("identifierInput") ||
+        document.getElementById("accessIdentifierInput") ||
+        document.getElementById("accessLoginIdentifier") ||
+        document.getElementById("accessLoginInput") ||
+        document.querySelector('[name="identifier"]') ||
+        document.querySelector('[name="login"]') ||
+        document.querySelector("[data-access-identifier]") ||
+        document.querySelector("[data-login-input]");
+
+      var passwordInputEl =
+        document.getElementById("passwordInput") ||
+        document.getElementById("accessPasswordInput") ||
+        document.getElementById("accessLoginPassword") ||
+        document.querySelector('[name="password"]') ||
+        document.querySelector("[data-access-password]") ||
+        document.querySelector("[data-password-input]");
+
+      var keyInputEl =
+        document.getElementById("accessKeyInput") ||
+        document.getElementById("userKeyInput") ||
+        document.querySelector('[name="userKey"]') ||
+        document.querySelector('[name="accessKey"]') ||
+        document.querySelector("[data-access-key]");
+
+      var repeatPasswordInputEl =
+        document.getElementById("repeatPasswordInput") ||
+        document.getElementById("passwordRepeatInput") ||
+        document.getElementById("accessRepeatPassword") ||
+        document.querySelector('[name="repeatPassword"]') ||
+        document.querySelector('[name="passwordRepeat"]') ||
+        document.querySelector("[data-repeat-password-input]");
+
+      [
+        identifierInputEl,
+        passwordInputEl,
+        keyInputEl,
+        repeatPasswordInputEl,
+      ].forEach(function (el) {
+        if (el) {
+          el.disabled = isLoading;
+          el.setAttribute("aria-busy", isLoading ? "true" : "false");
+        }
+      });
+
+      Array.prototype.slice
+        .call(
+          document.querySelectorAll(
+            "[data-access-login-submit], " +
+              "[data-access-registration-submit], " +
+              "[data-register-submit], " +
+              ".access-login-submit, " +
+              ".access-registration-submit",
+          ),
+        )
+        .forEach(function (btn) {
+          if (btn) {
+            btn.disabled = isLoading;
+            btn.setAttribute("aria-busy", isLoading ? "true" : "false");
+          }
+        });
+    }
+
+    function closeAccessLoginModal() {
+      const modal = document.getElementById("accessLoginModal");
+      const state = ensureAccessLoginState_();
+      if (state.loading) return;
+      state.modalOpen = false;
+      state.loading = false;
+      if (modal) modal.style.display = "none";
+    }
+
+    function openAccessLoginFlow(mode) {
+      const access = normalizeAccessForUi_(STATE.access || {});
+      const state = ensureAccessLoginState_();
+
+      if (!access.keyAvailable) {
+        showToast("Спочатку треба визначити ключ користувача");
+        return;
+      }
+
+      if (access.loginLockout && access.loginLockout.locked) {
+        const lockMessage =
+          "Вхід тимчасово заблоковано на " +
+          safeNumber_(access.loginLockout.remainingMinutes, 0) +
+          " хв. " +
+          getSupportHelpText_() +
+          ".";
+        showToast(lockMessage);
+        return;
+      }
+
+      if (!access.selfBindRequired && !access.canSelfBind) {
+        showToast("Вхід уже підтверджено");
+        return;
+      }
+
+      const modal = ensureAccessLoginModal_();
+      if (typeof hideToast === "function") hideToast();
+      modal.style.display = "block";
+      state.modalOpen = true;
+      setAccessLoginLoading_(false, "Підтверджую вхід...");
+      setAccessLoginModalMessage_(
+        "Заповніть заявку на отримання ключа доступу або введіть уже отриманий ключ.",
+        false,
+      );
+      setAccessLoginMode_(mode === "haveKey" ? "haveKey" : "request");
+    }
+
+    async function submitAccessLoginForm_() {
+      const state = ensureAccessLoginState_();
+      if (state.loading) return;
+      const identifier = safeString_(identifierInput && identifierInput.value);
+      const callsign = safeString_(
+        callsignInput && callsignInput.value,
+      ).toUpperCase();
+
+      if (!identifier) {
+        setAccessLoginModalMessage_("Введіть email або телефон.", true);
+        return;
+      }
+
+      if (!callsign) {
+        setAccessLoginModalMessage_("Введіть свій позивний.", true);
+        if (callsignInput) callsignInput.focus();
+        return;
+      }
+
+      setAccessLoginModalMessage_("", false);
+      setAccessLoginLoading_(true, "Підтверджую вхід...");
+
+      try {
+        const loginMeta = await buildLoginMeta_();
+        const result = await MaintenanceApi.loginByIdentifierAndCallsign({
+          identifier: identifier,
+          callsign: callsign,
+          loginMeta: loginMeta,
+        });
+        const data = result && result.data ? result.data : {};
+
+        if (!result || !result.success) {
+          const message =
+            (result && (result.error || result.message)) ||
+            "Не вдалося виконати вхід";
+          setAccessLoginLoading_(false, "Підтверджую вхід...");
+          setAccessLoginModalMessage_(message, true);
+          if (typeof hideToast === "function") hideToast();
+          await loadAccessDescriptor();
+          if (callsignInput) {
+            callsignInput.disabled = false;
+            callsignInput.focus();
+            callsignInput.select();
+          }
+          if (identifierInput) identifierInput.disabled = false;
+          return;
+        }
+
+        STATE.access = normalizeAccessForUi_(data.descriptor || {});
+        setAccessLoginLoading_(false, "Підтверджую вхід...");
+        closeAccessLoginModal();
+        applyAccessPolicyUI();
+        showToast(data.message || "Вхід виконано: " + callsign);
+        logToConsole(
+          "✓ Вхід підтверджено для позивного " +
+            callsign +
+            ". " +
+            (loginMeta.enteredAtText || ""),
+          "success",
+        );
+      } catch (error) {
+        const message = normalizeError(error);
+        setAccessLoginLoading_(false, "Підтверджую вхід...");
+        setAccessLoginModalMessage_(message, true);
+        if (typeof hideToast === "function") hideToast();
+        if (callsignInput) {
+          callsignInput.disabled = false;
+          callsignInput.focus();
+          callsignInput.select();
+        }
+        if (identifierInput) identifierInput.disabled = false;
+      }
+    }
+</script>

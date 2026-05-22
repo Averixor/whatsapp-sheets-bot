@@ -1,8 +1,7 @@
 /**
  * Stage7MaintenanceApi.gs — canonical maintenance / admin / diagnostics API for the Stage 7 baseline.
  *
- * Historical Stage 4 / Stage 5 aliases live in LegacyMaintenanceAliases.gs.
- * Compatibility wrappers live in LegacyMaintenanceAliases.gs.
+ * Legacy Stage 4 / Stage 5 maintenance aliases removed from the project.
  */
 
 function _stage7BuildMaintenanceResponse_(

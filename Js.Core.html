@@ -235,7 +235,7 @@
   }
 
   /** Flip on canary, then production — PR3 transport rollout. */
-  var USE_NEW_API_PATH = false;
+  var USE_NEW_API_PATH = true;
 
   function _traceId_() {
     return "c-" + Date.now() + "-" + Math.floor(Math.random() * 10000);

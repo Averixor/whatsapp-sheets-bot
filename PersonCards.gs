@@ -7,7 +7,7 @@ const PERSON_BR_DAYS_COL = 6;
 const PERSON_FML_COL = 7;
 
 function _personCardSafeHtml_(value) {
-  return escapeHtml_(value);
+  return HtmlUtils_.escapeHtml(value);
 }
 
 function _personCardJsString_(value) {

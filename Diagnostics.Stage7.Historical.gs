@@ -102,19 +102,18 @@ function runStage41ProjectConsistencyCheck_() {
   const helperOk =
     typeof HtmlUtils_ === "object" &&
     typeof HtmlUtils_.escapeHtml === "function" &&
-    typeof escapeHtml_ === "function" &&
-    typeof _escapeHtml_ === "function" &&
-    escapeHtml_("<b>") === HtmlUtils_.escapeHtml("<b>") &&
-    _escapeHtml_("<b>") === HtmlUtils_.escapeHtml("<b>");
+    typeof escapeHtml_ !== "function" &&
+    typeof _escapeHtml_ !== "function" &&
+    HtmlUtils_.escapeHtml("<b>") === "&lt;b&gt;";
 
   _stage7PushCheck_(
     checks,
     "Canonical HTML helper",
     helperOk ? "OK" : "FAIL",
     helperOk
-      ? "HtmlUtils_.escapeHtml() є source-of-truth, wrappers узгоджені"
-      : "Helper-layer розсинхронізований",
-    helperOk ? "" : "Перевірте HtmlUtils.gs / DeprecatedRegistry.gs",
+      ? "HtmlUtils_.escapeHtml() — єдиний canonical path; legacy alias відсутні"
+      : "Потрібен HtmlUtils_.escapeHtml без escapeHtml_ / _escapeHtml_",
+    helperOk ? "" : "Перевірте HtmlUtils.gs — приберіть global escapeHtml_ wrappers",
   );
 
   return checks;
@@ -177,11 +176,19 @@ function runHistoricalStructuralDiagnosticsInternal_(options) {
 
   ["application", "maintenance", "compatibility"].forEach(function (kind) {
     const list = apiMap && Array.isArray(apiMap[kind]) ? apiMap[kind] : [];
+    const expectEmpty = kind === "compatibility";
+    const mapOk = expectEmpty ? list.length === 0 : list.length > 0;
     _stage7PushCheck_(
       checks,
       `Canonical API map ${kind}`,
-      list.length ? "OK" : "FAIL",
-      list.length ? `entrypoints=${list.length}` : "Список порожній",
+      mapOk ? "OK" : "FAIL",
+      expectEmpty
+        ? list.length
+          ? "legacy compatibility entries still listed"
+          : "compatibility map retired"
+        : list.length
+          ? `entrypoints=${list.length}`
+          : "Список порожній",
       "Оновіть ProjectMetadata.gs",
     );
 
@@ -249,56 +256,42 @@ function runHistoricalCompatibilityDiagnosticsInternal_(options) {
     typeof getStage4CompatibilityMap_ === "function"
       ? getStage4CompatibilityMap_()
       : [];
+  const presentLegacy =
+    typeof findPresentLegacyApiGlobals_ === "function"
+      ? findPresentLegacyApiGlobals_()
+      : [];
 
   _stage7PushCheck_(
     checks,
-    "Compatibility registry",
-    registry.length ? "PSEUDO" : "FAIL",
-    registry.length ? `entries=${registry.length}` : "Реєстр порожній",
-    "Оновіть DeprecatedRegistry.gs",
+    "Compatibility registry empty",
+    registry.length === 0 ? "OK" : "FAIL",
+    "entries=" + registry.length,
+    "DeprecatedRegistry не повинен містити активні compatibility wrappers",
   );
 
-  registry.forEach(function (item) {
-    const exists = _stage7HasFn_(item.name);
+  _stage7PushCheck_(
+    checks,
+    "Legacy API globals absent",
+    presentLegacy.length === 0 ? "OK" : "FAIL",
+    presentLegacy.length
+      ? "present=" + presentLegacy.join(", ")
+      : "canonical-only",
+    "Deploy без LegacyApiAliases / LegacyMaintenanceAliases",
+  );
+
+  [
+    "apiStage7GetMonthsList",
+    "apiStage7GetSidebarData",
+    "apiGenerateSendPanelForDate",
+    "apiStage7GetSendPanelData",
+  ].forEach(function (name) {
     _stage7PushCheck_(
       checks,
-      `Compatibility function ${item.name}`,
-      exists ? "PSEUDO" : "FAIL",
-      exists
-        ? `${item.scope || "unknown scope"} -> ${item.replacement || ""}`
-        : "Функцію не знайдено",
-      exists
-        ? "Нейтральний compatibility-only alias; не canonical-path"
-        : "Перевірте DeprecatedRegistry.gs / відповідний файл",
+      "Canonical public API " + name,
+      _stage7HasFn_(name) ? "OK" : "FAIL",
+      _stage7HasFn_(name) ? "Stage7ServerApi.gs" : "Не знайдено",
+      "Відновіть canonical API у Stage7ServerApi.gs",
     );
-
-    if (!exists || !item.verifySourceToken) return;
-    try {
-      const fn = _global_()[item.name];
-      const src = typeof fn === "function" ? String(fn) : "";
-      const sourceOk = src.indexOf(item.verifySourceToken) !== -1;
-      _stage7PushCheck_(
-        checks,
-        `Wrapper source ${item.name}`,
-        sourceOk ? "PSEUDO" : "WARN",
-        sourceOk
-          ? `source -> ${item.verifySourceToken}`
-          : "Wrapper source не вказує на canonical replacement",
-        "Перевірте, що wrapper лишається thin alias без нової бізнес-логіки",
-      );
-    } catch (e) {
-      warnings.push(e && e.message ? e.message : String(e));
-    }
-
-    if (item.uiAllowed === false && item.scope === "SidebarServer.gs") {
-      _stage7PushCheck_(
-        checks,
-        `UI-ban marker ${item.name}`,
-        item.status === "compatibility-only" ? "PSEUDO" : "WARN",
-        `uiAllowed=${item.uiAllowed}, status=${item.status}`,
-        "Compatibility wrapper не повинен повертатися як canonical UI route",
-      );
-    }
   });
 
   return {

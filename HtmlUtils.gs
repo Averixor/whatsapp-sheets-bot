@@ -405,9 +405,3 @@
   };
 
 })(typeof globalThis !== 'undefined' ? globalThis : this);
-
-function escapeHtml_(text) {
-  return HtmlUtils_.escapeHtml(text);
-}
-
-var _escapeHtml_ = escapeHtml_;

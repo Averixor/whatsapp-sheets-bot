@@ -9,7 +9,7 @@
       "removalCondition": "bridge telemetry gsRun count = 0 for 14 consecutive days on prod",
       "rollbackPlan": "set USE_NEW_API_PATH=false; redeploy previous deployment ID",
       "sourceFile": "Js.Core.html",
-      "defaultValue": false
+      "defaultValue": true
     }
   }
 }

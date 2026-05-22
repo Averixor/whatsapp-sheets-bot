@@ -1,0 +1,178 @@
+<script>
+  // Js.Security.Util — formatting, clipboard, login metadata helpers.
+    function safeString_(value) {
+      return String(value == null ? "" : value).trim();
+    }
+
+    function safeNumber_(value, fallback) {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : fallback || 0;
+    }
+
+    function getSupportHelpText_() {
+      return "Зверніться за допомогою до ШАХТАРЯ";
+    }
+
+    function maskHash_(value) {
+      const hash = safeString_(value);
+      if (!hash) return "";
+      if (hash.length <= 10) return hash;
+      return hash.slice(0, 6) + "…" + hash.slice(-4);
+    }
+
+    function fallbackCopyText_(text) {
+      const value = safeString_(text);
+      if (!value) return false;
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = value;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.left = "-99999px";
+        ta.style.top = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        return !!ok;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    async function copyText_(text) {
+      const value = safeString_(text);
+      if (!value) return false;
+      if (
+        navigator.clipboard &&
+        typeof navigator.clipboard.writeText === "function"
+      ) {
+        try {
+          await navigator.clipboard.writeText(value);
+          return true;
+        } catch (_) {}
+      }
+      return fallbackCopyText_(value);
+    }
+
+    function boolLabel_(value) {
+      return value ? "Так" : "Ні";
+    }
+
+    function permissionLabel_(value) {
+      return value ? "Дозволено" : "Заблоковано";
+    }
+
+    function pad2_(n) {
+      return String(n).padStart(2, "0");
+    }
+
+    function getUaWeekdayShort_(date) {
+      const days = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"];
+      return days[date.getDay()] || "";
+    }
+
+    function getUaMonthShort_(date) {
+      const months = [
+        "січ.",
+        "лют.",
+        "бер.",
+        "квіт.",
+        "трав.",
+        "черв.",
+        "лип.",
+        "серп.",
+        "вер.",
+        "жовт.",
+        "лист.",
+        "груд.",
+      ];
+      return months[date.getMonth()] || "";
+    }
+
+    function getUtcOffsetText_(date) {
+      const offsetMin = -date.getTimezoneOffset();
+      const sign = offsetMin >= 0 ? "+" : "-";
+      const abs = Math.abs(offsetMin);
+      const hh = pad2_(Math.floor(abs / 60));
+      const mm = pad2_(abs % 60);
+      return "UTC" + sign + hh + ":" + mm;
+    }
+
+    function formatLoginDateTime_(date) {
+      const d = date instanceof Date ? date : new Date(date);
+      return [
+        getUaWeekdayShort_(d) + ",",
+        pad2_(d.getDate()),
+        getUaMonthShort_(d),
+        d.getFullYear() + ",",
+        pad2_(d.getHours()) +
+          ":" +
+          pad2_(d.getMinutes()) +
+          ":" +
+          pad2_(d.getSeconds()),
+        "(" + getUtcOffsetText_(d) + ")",
+      ].join(" ");
+    }
+
+    function getLoginGeoPoint_() {
+      return new Promise(function (resolve) {
+        if (!navigator.geolocation) {
+          resolve({
+            ok: false,
+            text: "GPS недоступна",
+            coords: null,
+            reason: "geolocation-not-supported",
+          });
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          function (position) {
+            const lat = Number(position.coords.latitude);
+            const lng = Number(position.coords.longitude);
+            const acc = Number(position.coords.accuracy || 0);
+            resolve({
+              ok: true,
+              text: lat.toFixed(6) + ", " + lng.toFixed(6),
+              coords: { lat: lat, lng: lng, accuracy: acc },
+              reason: "",
+            });
+          },
+          
+          function (error) {
+            const code =
+              error && typeof error.code === "number" ? error.code : 0;
+            let reason = "geolocation-error";
+            if (code === 1) reason = "permission-denied";
+            else if (code === 2) reason = "position-unavailable";
+            else if (code === 3) reason = "timeout";
+
+            resolve({
+              ok: false,
+              text: "GPS недоступна",
+              coords: null,
+              reason: reason,
+            });
+          },
+          { enableHighAccuracy: true, timeout: 7000, maximumAge: 0 },
+        );
+      });
+    }
+
+    async function buildLoginMeta_() {
+      const now = new Date();
+      const geo = await getLoginGeoPoint_();
+      return {
+        enteredAtIso: now.toISOString(),
+        enteredAtText: formatLoginDateTime_(now),
+        utcOffset: getUtcOffsetText_(now),
+        geo: geo,
+        loginPointText:
+          geo && geo.ok
+            ? "Точка входу: " + geo.text
+            : "Точка входу: GPS недоступна",
+      };
+    }
+</script>
