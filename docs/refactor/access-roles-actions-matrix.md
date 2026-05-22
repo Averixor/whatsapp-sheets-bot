@@ -4,12 +4,19 @@ Matrix for Phase 2 AccessControl migration. Role hierarchy from `AccessControl.C
 
 | Role | generate panel | mark sent | calendar | person card | summaries | maintenance | admin debug |
 |------|----------------|-----------|----------|-------------|-----------|-------------|-------------|
+
 | guest | deny | deny | read* | deny | deny | deny | deny |
+
 | viewer | deny | deny | own card* | own* | deny | deny | deny |
-| operator | allow* | allow* | allow | allow* | allow* | limited | deny |
+
+| operator | allow | allow* | allow | allow* | allow* | limited | deny |
+
 | maintainer | allow | allow | allow | allow | allow | extended | limited |
+
 | admin | allow | allow | allow | allow | allow | allow | allow |
+
 | sysadmin | allow | allow | allow | allow | allow | full | allow |
+
 | owner | allow | allow | allow | allow | allow | allow | allow |
 
 \*Subject to date/sheet scope and `AccessEnforcement_` rules.
