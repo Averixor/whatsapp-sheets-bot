@@ -17,6 +17,6 @@
     "@google/clasp": "^3.3.0"
   },
   "dependencies": {
-    "uuid": "^11.1.1"
+    "uuid": "^14.0.0"
   }
 }
