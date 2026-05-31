@@ -105,6 +105,14 @@ Role order:
 
 - full access
 
+### system (trigger-only actor)
+
+- not an ACCESS-sheet role assigned to humans
+- used for managed time-based jobs when `Stage7Triggers_.runJob(..., { trigger: true })`
+- requires the full system context bundle (`allowSystem`, `isSystemTrigger`, `actorRole: system`, `source` / `accessSource` trigger markers)
+- security logs label this actor as **Система** with identification **system_trigger**
+- partial or spoofed system flags are denied (same as guest for guarded actions)
+
 ## 5. Server-side enforcement rule
 
 UI visibility is not a security boundary.
@@ -117,6 +125,9 @@ This repository applies server-side checks to at least:
 - send-panel and send actions
 - maintenance/admin/sysadmin operations
 - repair and lifecycle-maintenance actions
+- leave/birthday checks (`assertCanRunLeaveBirthdayCheck`) for UI/API callers
+
+Scheduled jobs use the **system trigger context** (see role **system** above) instead of impersonating `guest`. Spreadsheet audit triggers remain actor-audit paths: they resolve the editor from the event and may intentionally log a security event for unauthorized protected-sheet changes.
 
 ## 6. Lockouts and failure handling
 

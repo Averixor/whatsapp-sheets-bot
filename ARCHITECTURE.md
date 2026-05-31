@@ -167,6 +167,30 @@ This bundle applies server-side checks to:
 - maintenance/admin/sysadmin actions
 - repair and lifecycle maintenance actions
 
+### System trigger context (headless jobs)
+
+Scheduled jobs run **without** a sidebar UI session. They must **not** fall through user-key resolution as `guest`.
+
+Managed jobs (`Triggers.gs` → `Stage7Triggers_.runJob`) attach an explicit system context when `trigger: true`:
+
+- `actorRole: "system"`, `role: "system"`
+- `allowSystem: true`, `isSystemTrigger: true`
+- `source: "trigger"`, `accessSource: "system_trigger"`
+- `identityStatus: "system_trigger"`
+
+Canonical builder: `AccessEnforcement_.buildSystemTriggerAccessDescriptor(payload)`.
+Validator: `AccessEnforcement_.isSystemTriggerContext(descriptor)`.
+
+User-initiated actions still resolve through `AccessControl_.describe()` and the normal RBAC guards (`assertCanOpenPersonCard`, `assertCanUseSendPanel`, etc.).
+
+Jobs that call user-guarded use cases pass the system descriptor explicitly. Example: `checkVacationsAndBirthdays` uses `assertCanRunLeaveBirthdayCheck`, which allows **admin**, **sysadmin**, **owner**, or a **full** system trigger context — not operator/maintainer/guest.
+
+Maintenance jobs routed through `runMaintenanceScenario` (`healthCheck`, `cleanupCaches`, `cleanupLifecycleRetention`, …) do not use user RBAC guards; they rely on the system job path and `WASB_SPREADSHEET_ID` for headless spreadsheet binding.
+
+Manual job launch from the GAS editor (`apiRunStage7Job` with `trigger: false`) **does not** inherit system context; it runs under the maintainer/sysadmin session that invoked the API.
+
+Spreadsheet audit handlers (`stage7SecurityAuditOnEdit`, `stage7SecurityAuditOnChange`) are also installed by `Triggers.gs`, but they do **not** use the system actor to bypass checks. They resolve the editor from the Apps Script event and log suspicious protected-sheet edits or structural changes when the actor is not allowed.
+
 ## 7. Data and service sheets
 
 Main operational sheets typically include:

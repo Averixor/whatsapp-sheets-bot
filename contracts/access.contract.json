@@ -50,6 +50,16 @@
     "knownUser": "boolean",
     "registered": "boolean"
   },
+  "systemTriggerDescriptorSchema": {
+    "role": "system",
+    "actorRole": "system",
+    "allowSystem": true,
+    "isSystemTrigger": true,
+    "source": "trigger",
+    "accessSource": "system_trigger",
+    "identityStatus": "system_trigger",
+    "note": "system is a trigger-only actor, not an ACCESS-sheet human role"
+  },
   "maintenanceEnvelopeRef": "envelope.contract.json",
   "invariants": [
     {

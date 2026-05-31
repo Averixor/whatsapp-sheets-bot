@@ -147,6 +147,20 @@ const Stage7Triggers_ = (function() {
     };
   }
 
+  function _applySystemTriggerContext_(options) {
+    const opts = Object.assign(
+      { trigger: true, initiator: "trigger", source: "trigger" },
+      options || {},
+    );
+    if (opts.trigger) {
+      opts.accessSource = opts.accessSource || "system_trigger";
+      opts.actorRole = opts.actorRole || "system";
+      opts.allowSystem = opts.allowSystem !== false;
+      opts.isSystemTrigger = true;
+    }
+    return opts;
+  }
+
   function _getRuntimeDescriptor(options) {
     const opts = options || {};
     if (opts.userDescriptor && typeof opts.userDescriptor === 'object') {
@@ -169,7 +183,7 @@ const Stage7Triggers_ = (function() {
   }
 
   function _buildRuntimeContext(registryItem, options) {
-    const opts = Object.assign({ trigger: true, initiator: 'trigger', source: 'trigger' }, options || {});
+    const opts = _applySystemTriggerContext_(options);
     const descriptor = _getRuntimeDescriptor(opts);
     const source = opts.source || (opts.trigger ? 'trigger' : 'manual');
     return {
@@ -197,7 +211,7 @@ const Stage7Triggers_ = (function() {
   }
 
   function _executeJob(registryItem, options) {
-    const opts = Object.assign({ trigger: true, initiator: 'trigger', source: 'trigger' }, options || {});
+    const opts = _applySystemTriggerContext_(options);
     switch (registryItem.jobName) {
       case _cfg().JOBS.DAILY_VACATIONS_AND_BIRTHDAYS:
         return Stage7UseCases_.checkVacationsAndBirthdays(Object.assign({}, opts, { date: _todayStr_() }));
@@ -229,7 +243,7 @@ const Stage7Triggers_ = (function() {
       throw new Error(`Stage7 job "${jobName}" не знайдено`);
     }
 
-    const opts = Object.assign({ trigger: true, initiator: 'trigger', source: 'trigger' }, options || {});
+    const opts = _applySystemTriggerContext_(options || {});
 
     if (!stage7GetFeatureFlag_('jobRuntime', true)) {
       return _executeJob(registryItem, opts);
@@ -249,27 +263,38 @@ const Stage7Triggers_ = (function() {
 })();
 
 function stage7JobDailyVacationsAndBirthdays() {
-  return Stage7Triggers_.runJob(STAGE7_CONFIG.JOBS.DAILY_VACATIONS_AND_BIRTHDAYS, { trigger: true, initiator: 'trigger', source: 'trigger' });
+  return Stage7Triggers_.runJob(
+    STAGE7_CONFIG.JOBS.DAILY_VACATIONS_AND_BIRTHDAYS,
+    { trigger: true },
+  );
 }
 
 function stage7JobScheduledReconciliation() {
-  return Stage7Triggers_.runJob(STAGE7_CONFIG.JOBS.SCHEDULED_RECONCILIATION, { trigger: true, initiator: 'trigger', source: 'trigger' });
+  return Stage7Triggers_.runJob(STAGE7_CONFIG.JOBS.SCHEDULED_RECONCILIATION, {
+    trigger: true,
+  });
 }
 
 function stage7JobScheduledHealthCheck() {
-  return Stage7Triggers_.runJob(STAGE7_CONFIG.JOBS.SCHEDULED_HEALTHCHECK, { trigger: true, initiator: 'trigger', source: 'trigger' });
+  return Stage7Triggers_.runJob(STAGE7_CONFIG.JOBS.SCHEDULED_HEALTHCHECK, {
+    trigger: true,
+  });
 }
 
 function stage7JobCleanupCaches() {
-  return Stage7Triggers_.runJob(STAGE7_CONFIG.JOBS.CLEANUP_CACHES, { trigger: true, initiator: 'trigger', source: 'trigger' });
+  return Stage7Triggers_.runJob(STAGE7_CONFIG.JOBS.CLEANUP_CACHES, {
+    trigger: true,
+  });
 }
-
 
 function stage7JobDetectStaleOperations() {
-  return Stage7Triggers_.runJob(STAGE7_CONFIG.JOBS.STALE_OPERATION_DETECTOR, { trigger: true, initiator: 'trigger', source: 'trigger' });
+  return Stage7Triggers_.runJob(STAGE7_CONFIG.JOBS.STALE_OPERATION_DETECTOR, {
+    trigger: true,
+  });
 }
 
-
 function stage7JobLifecycleRetentionCleanup() {
-  return Stage7Triggers_.runJob(STAGE7_CONFIG.JOBS.LIFECYCLE_RETENTION_CLEANUP, { trigger: true, initiator: 'trigger', source: 'trigger' });
+  return Stage7Triggers_.runJob(STAGE7_CONFIG.JOBS.LIFECYCLE_RETENTION_CLEANUP, {
+    trigger: true,
+  });
 }

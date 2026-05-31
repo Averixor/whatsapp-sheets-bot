@@ -2,6 +2,8 @@
 
 Matrix for Phase 2 AccessControl migration. Role hierarchy from `AccessControl.Core.gs` (`ROLE_ORDER`).
 
+`system` is not an ACCESS role for humans. It is a trigger-only actor accepted only by dedicated server guards such as `assertCanRunLeaveBirthdayCheck` when the full system trigger descriptor is present.
+
 | Role | generate panel | mark sent | calendar | person card | summaries | maintenance | admin debug |
 |------|----------------|-----------|----------|-------------|-----------|-------------|-------------|
 

@@ -29,6 +29,7 @@ var AccessEnforcement_ =
       admin: "Адмін",
       sysadmin: "Сисадмін",
       owner: "Власник",
+      system: "Система",
     };
 
     var HIGH_PRIVILEGE_ROLES = ["sysadmin", "owner"];
@@ -316,6 +317,7 @@ var AccessEnforcement_ =
 
     function _identityStatusLabel_(value) {
       var normalized = _trimmedString_(value, "").toLowerCase();
+      if (normalized === "system_trigger") return "system_trigger";
       if (normalized === "resolved") return "встановлено";
       if (normalized === "unregistered") return "не зареєстровано";
       if (normalized === "unavailable") return "недоступно";
@@ -496,7 +498,7 @@ var AccessEnforcement_ =
     function _securityReasonLabel_(code) {
       var map = {
         "access.registration.requested":
-          "Користувач подав заявку на отримання ключа доступу",
+          "Користувач подав заявку на ключ доступу",
         "access.self_bind.identifier_mismatch":
           "Невідповідність ідентифікатора при спробі самостійної привʼязки доступу",
         "access.self_bind.identifier_not_found":
@@ -516,6 +518,7 @@ var AccessEnforcement_ =
       var value = _safeString_(source || "", "").trim();
       if (!value || value === "unknown") return "невідомий";
       if (value === "access-key-request") return "заявка на ключ доступу";
+      if (value === "system_trigger") return "trigger";
       return value;
     }
 
@@ -982,6 +985,88 @@ var AccessEnforcement_ =
       );
     }
 
+    function buildSystemTriggerAccessDescriptor(payload) {
+      var input = payload && typeof payload === "object" ? payload : {};
+      var actorRole = _trimmedString_(
+        input.actorRole || input.initiatorRole || "",
+        "",
+      ).toLowerCase();
+
+      if (
+        input.isSystemTrigger !== true ||
+        input.allowSystem !== true ||
+        actorRole !== "system"
+      ) {
+        return null;
+      }
+
+      return {
+        role: "system",
+        actorRole: "system",
+        allowSystem: true,
+        isSystemTrigger: true,
+        enabled: true,
+        knownUser: true,
+        registered: true,
+        source: "trigger",
+        accessSource: _trimmedString_(
+          input.accessSource || input.source || "system_trigger",
+          "system_trigger",
+        ),
+        identityStatus: "system_trigger",
+        displayName: "system-trigger",
+        email: "",
+        phone: "",
+        personCallsign: "",
+        currentKeyHashMasked: "",
+      };
+    }
+
+    function _isSystemTriggerContext_(descriptor) {
+      var access = descriptor || {};
+      var source = _trimmedString_(access.source || access.accessSource, "")
+        .toLowerCase();
+      var actorRole = _trimmedString_(
+        access.actorRole || access.initiatorRole || access.role,
+        "",
+      ).toLowerCase();
+
+      return !!(
+        access.allowSystem === true &&
+        access.isSystemTrigger === true &&
+        actorRole === "system" &&
+        (source === "trigger" || source === "system_trigger")
+      );
+    }
+
+    function canRunLeaveBirthdayCheck(descriptor) {
+      var access = descriptor || _descriptor_();
+      if (access.enabled === false) return false;
+      if (_isSystemTriggerContext_(access)) return true;
+      return (
+        _trimmedString_(access.role, "guest").toLowerCase() === "admin" ||
+        _roleAtLeast_(access.role, "sysadmin")
+      );
+    }
+
+    function assertCanRunLeaveBirthdayCheck(details, descriptorOpt) {
+      var descriptor = descriptorOpt || _descriptor_();
+      if (canRunLeaveBirthdayCheck(descriptor)) return descriptor;
+
+      reportViolation(
+        "checkVacationsAndBirthdays",
+        Object.assign(
+          { violation: "leave-birthday-check-access" },
+          _isObject_(details) ? details : {},
+        ),
+        descriptor,
+      );
+
+      throw new Error(
+        "Недостатньо прав для перевірки відпусток і днів народження.",
+      );
+    }
+
     function assertCanUseWorkingActions(actionName, details, descriptorOpt) {
       var descriptor = descriptorOpt || _descriptor_();
       if (canUseWorkingActions(descriptor)) return descriptor;
@@ -1126,6 +1211,10 @@ var AccessEnforcement_ =
       assertCanUseDetailedSummary: assertCanUseDetailedSummary,
       canUseWorkingActions: canUseWorkingActions,
       assertCanUseWorkingActions: assertCanUseWorkingActions,
+      canRunLeaveBirthdayCheck: canRunLeaveBirthdayCheck,
+      assertCanRunLeaveBirthdayCheck: assertCanRunLeaveBirthdayCheck,
+      buildSystemTriggerAccessDescriptor: buildSystemTriggerAccessDescriptor,
+      isSystemTriggerContext: _isSystemTriggerContext_,
       canUseSendPanel: canUseSendPanel,
       assertCanUseSendPanel: assertCanUseSendPanel,
       describeEditActorByEmail: describeEditActorByEmail,

@@ -3,6 +3,16 @@
  */
 
 var UseCasesMaintenance_ = (function () {
+  function buildLeaveBirthdayAccessDescriptor_(payload) {
+    if (
+      typeof AccessEnforcement_ === "object" &&
+      AccessEnforcement_.buildSystemTriggerAccessDescriptor
+    ) {
+      return AccessEnforcement_.buildSystemTriggerAccessDescriptor(payload);
+    }
+    return null;
+  }
+
   function checkVacationsAndBirthdays(options) {
     const payload =
       typeof options === "string"
@@ -17,11 +27,11 @@ var UseCasesMaintenance_ = (function () {
         const info = validateDatePayload_(input, "date");
         if (
           typeof AccessEnforcement_ === "object" &&
-          AccessEnforcement_.assertCanUseWorkingActions
+          AccessEnforcement_.assertCanRunLeaveBirthdayCheck
         ) {
-          AccessEnforcement_.assertCanUseWorkingActions(
-            "checkVacationsAndBirthdays",
+          AccessEnforcement_.assertCanRunLeaveBirthdayCheck(
             { requestedDate: info.payload.dateStr || info.payload.date || "" },
+            buildLeaveBirthdayAccessDescriptor_(info.payload),
           );
         }
         return { payload: info.payload, warnings: [] };
@@ -262,9 +272,402 @@ var UseCasesMaintenance_ = (function () {
         if (String(input.type || "") === "postCreateMonth" && input.month) {
           validateMonthSwitch_(input.month);
         }
+        return { payload: input, warnings: [] };
       },
-      execute: function (input) {
-        return executeMaintenanceScenario_(input);
+      execute: function (input, beforeState, plan, context) {
+        switch (String(input.type || "quick")) {
+          case "cleanupCaches":
+            clearCacheCore_();
+            try {
+              resetTemplatesCache_();
+            } catch (_) {}
+            try {
+              CacheService.getScriptCache().removeAll([
+                cacheKeyPhones_(),
+                cacheKeyPhonesIndex_(),
+                cacheKeyPhonesProfiles_(),
+                "PHONES_PROFILES_v4",
+              ]);
+            } catch (_) {}
+            return {
+              success: true,
+              message: "Кеші очищено",
+              result: { cleaned: true, type: "cleanupCaches" },
+              changes: [{ type: "cleanupCaches" }],
+              affectedSheets: [],
+              affectedEntities: [],
+              appliedChangesCount: 1,
+              skippedChangesCount: 0,
+              partial: false,
+            };
+
+          case "clearLog": {
+            const response = normalizeServerResponse_(
+              LogsRepository_.clear(),
+              "clearLog",
+              {},
+            );
+            const result = Object.assign(
+              { type: "clearLog" },
+              response.data || {},
+            );
+            const cleared = !!result.cleared;
+            const clearedSheets = stage7AsArray_(result.clearedSheets);
+            return {
+              success: response.success !== false,
+              message:
+                response.message ||
+                (cleared ? "Логи очищено" : "Жоден лог-аркуш не знайдено"),
+              result: result,
+              changes: cleared
+                ? [{ type: "clearLog", sheets: clearedSheets }]
+                : [],
+              affectedSheets: clearedSheets,
+              affectedEntities: [],
+              appliedChangesCount: clearedSheets.length,
+              skippedChangesCount: cleared ? 0 : 1,
+              warnings: response.warnings || [],
+            };
+          }
+
+          case "clearPhoneCache": {
+            const keys = [
+              cacheKeyPhones_(),
+              cacheKeyPhonesIndex_(),
+              cacheKeyPhonesProfiles_(),
+              "PHONES_PROFILES_v4",
+            ];
+            CacheService.getScriptCache().removeAll(keys);
+            return {
+              success: true,
+              message: "Кеш телефонів очищено",
+              result: {
+                cleaned: true,
+                type: "clearPhoneCache",
+                keys: keys,
+              },
+              changes: [{ type: "clearPhoneCache", keys: keys }],
+              affectedSheets: [],
+              affectedEntities: [],
+              appliedChangesCount: 1,
+              skippedChangesCount: 0,
+              partial: false,
+            };
+          }
+
+          case "restartBot": {
+            const month = resolveRestartBotMonth_();
+            const restartReport = clearRestartBotTransientState_({
+              excludeOperationId:
+                context && context.operationId ? context.operationId : "",
+            });
+            setBotMonthSheetName_(month);
+            highlightActiveMonthTab_(month);
+            try {
+              const sh = getWasbSpreadsheet_().getSheetByName(month);
+              if (sh) sh.activate();
+            } catch (_) {}
+            return {
+              success: true,
+              message: "Бота повністю перезапущено",
+              result: Object.assign(
+                {
+                  type: "restartBot",
+                  restarted: true,
+                  month: month,
+                  restartedAt: stage7NowIso_(),
+                },
+                restartReport,
+              ),
+              changes: [
+                {
+                  type: "restartBot",
+                  month: month,
+                  runtimeActiveCleared: Number(
+                    restartReport.runtimeActiveCleared || 0,
+                  ),
+                  safetyActiveCleared: Number(
+                    restartReport.safetyActiveCleared || 0,
+                  ),
+                  blockingKeysCleared: Number(
+                    restartReport.blockingKeysCleared || 0,
+                  ),
+                  stage7ActiveCleared: Number(
+                    restartReport.stage7ActiveCleared || 0,
+                  ),
+                },
+              ],
+              affectedSheets: month ? [month] : [],
+              affectedEntities: [],
+              appliedChangesCount:
+                1 +
+                Number(restartReport.runtimeActiveCleared || 0) +
+                Number(restartReport.safetyActiveCleared || 0) +
+                Number(restartReport.blockingKeysCleared || 0) +
+                Number(restartReport.stage7ActiveCleared || 0),
+              skippedChangesCount: 0,
+              partial: false,
+            };
+          }
+
+          case "setupVacationTriggers": {
+            const setup = setupVacationTrigger();
+            return {
+              success: setup.success !== false,
+              message:
+                setup.message ||
+                (setup.success === false
+                  ? "Не вдалося налаштувати тригери"
+                  : "Тригери налаштовано"),
+              result: Object.assign(
+                { type: "setupVacationTriggers" },
+                setup || {},
+              ),
+              changes: [
+                {
+                  type: "setupVacationTriggers",
+                  removed: Number((setup && setup.removed) || 0),
+                },
+              ],
+              affectedSheets: [],
+              affectedEntities: [],
+              appliedChangesCount: 1,
+              skippedChangesCount: Number((setup && setup.removed) || 0),
+              warnings:
+                setup && setup.success === false
+                  ? [String(setup.error || "Помилка setupVacationTriggers")]
+                  : [],
+            };
+          }
+
+          case "cleanupDuplicateTriggers": {
+            const cleanup = cleanupDuplicateTriggers(input.functionName || "");
+            const success =
+              cleanup && cleanup.ok !== false && cleanup.success !== false;
+            return {
+              success: success,
+              message: success
+                ? Number(cleanup.removed || 0)
+                  ? "Дублі тригерів очищено"
+                  : "Дублі тригерів не знайдено"
+                : "Не вдалося очистити дублікати тригерів",
+              result: Object.assign(
+                { type: "cleanupDuplicateTriggers" },
+                cleanup || {},
+              ),
+              changes: Number((cleanup && cleanup.removed) || 0)
+                ? [
+                    {
+                      type: "cleanupDuplicateTriggers",
+                      removed: Number(cleanup.removed || 0),
+                    },
+                  ]
+                : [],
+              affectedSheets: [],
+              affectedEntities: [],
+              appliedChangesCount: Number((cleanup && cleanup.removed) || 0),
+              skippedChangesCount: Math.max(
+                Number((cleanup && cleanup.found) || 0) -
+                  Number((cleanup && cleanup.removed) || 0),
+                0,
+              ),
+              warnings: success
+                ? []
+                : [
+                    String(
+                      (cleanup && cleanup.error) ||
+                        "Помилка cleanupDuplicateTriggers",
+                    ),
+                  ],
+            };
+          }
+
+          case "debugPhones": {
+            const debug = debugPhones();
+            const success = debug && debug.success !== false;
+            return {
+              success: success,
+              message: success
+                ? "Діагностику PHONES виконано"
+                : "Діагностика PHONES завершилась з помилкою",
+              result: Object.assign({ type: "debugPhones" }, debug || {}),
+              changes: [],
+              affectedSheets: [CONFIG.PHONES_SHEET],
+              affectedEntities: [],
+              appliedChangesCount: 0,
+              skippedChangesCount: 0,
+              warnings: success
+                ? []
+                : [String((debug && debug.error) || "Помилка debugPhones")],
+            };
+          }
+
+          case "cleanupLifecycleRetention": {
+            const cleanup =
+              typeof OperationRepository_ === "object"
+                ? OperationRepository_.runRetentionCleanup()
+                : {
+                    archived: 0,
+                    removedActiveStale: 0,
+                    archivedCheckpoints: 0,
+                  };
+            var alertsCleanup = null;
+            if (typeof clearOldAlerts === "function") {
+              try {
+                alertsCleanup = clearOldAlerts(
+                  Number(appGetCore("ALERTS_RETENTION_DAYS", 30)) || 30,
+                );
+              } catch (alertsErr) {
+                alertsCleanup = {
+                  success: false,
+                  error:
+                    alertsErr && alertsErr.message
+                      ? alertsErr.message
+                      : String(alertsErr),
+                };
+              }
+            }
+            return {
+              success: true,
+              message: "Lifecycle retention cleanup виконано",
+              result: Object.assign(
+                { type: "cleanupLifecycleRetention" },
+                cleanup || {},
+                {
+                  alertsCleanup: alertsCleanup,
+                },
+              ),
+              changes: [
+                {
+                  type: "cleanupLifecycleRetention",
+                  archived: Number((cleanup && cleanup.archived) || 0),
+                  archivedCheckpoints: Number(
+                    (cleanup && cleanup.archivedCheckpoints) || 0,
+                  ),
+                  removedActiveStale: Number(
+                    (cleanup && cleanup.removedActiveStale) || 0,
+                  ),
+                },
+              ],
+              affectedSheets: ["OPS_LOG", "ACTIVE_OPERATIONS", "CHECKPOINTS"],
+              affectedEntities: [],
+              appliedChangesCount:
+                Number((cleanup && cleanup.archived) || 0) +
+                Number((cleanup && cleanup.archivedCheckpoints) || 0) +
+                Number((cleanup && cleanup.removedActiveStale) || 0),
+              skippedChangesCount: 0,
+              partial: false,
+            };
+          }
+
+          case "postCreateMonth":
+            if (input.month) validateMonthSwitch_(input.month);
+            return {
+              success: true,
+              message: "Post-create-month перевірку виконано",
+              result: {
+                month: input.month || getBotMonthSheetName_(),
+                health: runFullDiagnostics_({ mode: "full" }),
+              },
+              changes: [],
+              affectedSheets: [input.month || getBotMonthSheetName_()],
+              affectedEntities: [],
+              appliedChangesCount: 0,
+              skippedChangesCount: 0,
+              partial: false,
+            };
+
+          case "healthCheck": {
+            const diagnosticsMode = input.mode
+              ? String(input.mode).toLowerCase()
+              : input.shallow
+                ? "quick"
+                : "full";
+            const diagnosticsReport =
+              diagnosticsMode === "quick"
+                ? runQuickDiagnostics_({
+                    mode: "quick",
+                    shallow: true,
+                    includeStage3Base: false,
+                    includeCompatibilityLayer: false,
+                    includeReconciliationPreview: false,
+                  })
+                : runFullDiagnostics_({
+                    mode: diagnosticsMode,
+                    shallow: !!input.shallow,
+                    includeReconciliationPreview:
+                      input.includeReconciliationPreview,
+                  });
+            return {
+              success: true,
+              message:
+                diagnosticsMode === "quick"
+                  ? "Quick health check виконано"
+                  : "Health check виконано",
+              result: diagnosticsReport,
+              changes: [],
+              affectedSheets: [],
+              affectedEntities: [],
+              appliedChangesCount: 0,
+              skippedChangesCount: 0,
+              partial: false,
+            };
+          }
+
+          default:
+            return {
+              success: true,
+              message: "Quick maintenance виконано",
+              result: {
+                health: runFullDiagnostics_({ mode: "full" }),
+              },
+              changes: [],
+              affectedSheets: [],
+              affectedEntities: [],
+              appliedChangesCount: 0,
+              skippedChangesCount: 0,
+              partial: false,
+            };
+        }
+      },
+      sync: function (input) {
+        switch (String(input.type || "quick")) {
+          case "cleanupCaches":
+            return {
+              invalidateCaches: [
+                "sidebar",
+                "summary",
+                "sendPanel",
+                "templates",
+              ],
+            };
+
+          case "clearPhoneCache":
+            return {
+              invalidateCaches: ["sidebar", "summary"],
+            };
+
+          case "restartBot":
+            return {
+              refresh: ["currentMonth", "monthsList", "panel"],
+              invalidateCaches: [
+                "sidebar",
+                "summary",
+                "sendPanel",
+                "templates",
+              ],
+              currentMonth: resolveRestartBotMonth_(),
+            };
+
+          case "clearLog":
+          case "setupVacationTriggers":
+          case "cleanupDuplicateTriggers":
+          case "debugPhones":
+          case "healthCheck":
+          case "postCreateMonth":
+          default:
+            return {};
+        }
       },
     });
   }

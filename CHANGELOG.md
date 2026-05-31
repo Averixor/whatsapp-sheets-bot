@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-05-31 — system trigger access + maintenance job restore
+
+- **`AccessEnforcement.gs`**: shared `buildSystemTriggerAccessDescriptor`, exported `isSystemTriggerContext`; `assertCanRunLeaveBirthdayCheck` allows admin/sysadmin/owner or full system trigger context
+- **`Triggers.gs`**: centralized `_applySystemTriggerContext_()` for all managed time-based jobs
+- **`UseCases.Maintenance.gs`**: restored `runMaintenanceScenario` execute/sync (fixes broken `executeMaintenanceScenario_` reference that blocked health/cache/retention trigger jobs)
+- **`ARCHITECTURE.md`**, **`SECURITY.md`**, **`RUNBOOK.md`**: documented system actor, managed trigger registry, and troubleshooting for headless guest false positives
+
 ## 2026-05-21 — documentation aligned with codebase
 
 - expanded **`ACCESS`** schema docs to match `SHEET_HEADERS` in `AccessControl.Core.gs` (32 columns, `registration_status` values)

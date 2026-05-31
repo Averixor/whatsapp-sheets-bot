@@ -651,6 +651,104 @@ function runAccessPolicyChecks(options) {
 
     _pushPolicyCheck_(
       report,
+      "leave birthday check requires admin or system trigger",
+      function () {
+        _requireObject_(AccessEnforcement_, "AccessEnforcement_");
+
+        if (typeof AccessEnforcement_.canRunLeaveBirthdayCheck !== "function") {
+          throw new Error(
+            "AccessEnforcement_.canRunLeaveBirthdayCheck is not available",
+          );
+        }
+
+        var operator = {
+          role: "operator",
+          enabled: true,
+          registered: true,
+        };
+        var maintainer = {
+          role: "maintainer",
+          enabled: true,
+          registered: true,
+        };
+        var admin = {
+          role: "admin",
+          enabled: true,
+          registered: true,
+        };
+        var systemTrigger = {
+          role: "system",
+          actorRole: "system",
+          allowSystem: true,
+          isSystemTrigger: true,
+          enabled: true,
+          source: "trigger",
+          identityStatus: "system_trigger",
+        };
+        var partialSystem = Object.assign({}, systemTrigger, {
+          isSystemTrigger: false,
+        });
+
+        if (AccessEnforcement_.canRunLeaveBirthdayCheck(operator)) {
+          throw new Error("Operator leave/birthday check should be denied");
+        }
+
+        if (AccessEnforcement_.canRunLeaveBirthdayCheck(maintainer)) {
+          throw new Error("Maintainer leave/birthday check should be denied");
+        }
+
+        if (!AccessEnforcement_.canRunLeaveBirthdayCheck(admin)) {
+          throw new Error("Admin leave/birthday check should be allowed");
+        }
+
+        if (!AccessEnforcement_.canRunLeaveBirthdayCheck(systemTrigger)) {
+          throw new Error("System trigger leave/birthday check should be allowed");
+        }
+
+        if (AccessEnforcement_.canRunLeaveBirthdayCheck(partialSystem)) {
+          throw new Error("Partial system context should be denied");
+        }
+
+        if (
+          typeof AccessEnforcement_.buildSystemTriggerAccessDescriptor !==
+          "function"
+        ) {
+          throw new Error(
+            "AccessEnforcement_.buildSystemTriggerAccessDescriptor is not available",
+          );
+        }
+
+        var built = AccessEnforcement_.buildSystemTriggerAccessDescriptor({
+          isSystemTrigger: true,
+          allowSystem: true,
+          actorRole: "system",
+          accessSource: "system_trigger",
+        });
+        if (
+          !built ||
+          !AccessEnforcement_.canRunLeaveBirthdayCheck(built)
+        ) {
+          throw new Error(
+            "Built system trigger descriptor should allow leave/birthday check",
+          );
+        }
+
+        if (
+          AccessEnforcement_.buildSystemTriggerAccessDescriptor({
+            isSystemTrigger: true,
+            allowSystem: false,
+            actorRole: "system",
+          })
+        ) {
+          throw new Error("Partial system payload should not build descriptor");
+        }
+
+        return "leave-birthday-guard-ok";
+      },
+    );
+
+    _pushPolicyCheck_(
+      report,
       "guest stays locked out of cards and send panel",
       function () {
         _requireObject_(AccessEnforcement_, "AccessEnforcement_");

@@ -147,6 +147,29 @@ After migration:
 - `ALERTS_LOG`, `AUDIT_LOG`, `JOB_RUNTIME_LOG`, `OPS_LOG`, `ACTIVE_OPERATIONS`, `CHECKPOINTS` exist
 - protections are applied to the expected sheets
 - quick health check is green
+- managed triggers installed: `apiInstallStage7Jobs()` (or verify in Apps Script → Triggers)
+- **`WASB_SPREADSHEET_ID`** set before relying on headless trigger runs
+
+### Managed trigger jobs (Stage 7)
+
+Installed by `Stage7Triggers_.installManagedTriggers()` (`Triggers.gs`):
+
+| Handler | Schedule | Purpose |
+| ------- | -------- | ------- |
+| `stage7JobLifecycleRetentionCleanup` | daily 04:00 | OPS/ACTIVE/CHECKPOINTS/LOG/AUDIT retention |
+| `stage7JobCleanupCaches` | daily 05:00 | cache cleanup |
+| `stage7JobScheduledHealthCheck` | daily 06:00 | shallow health diagnostics |
+| `stage7JobScheduledReconciliation` | daily 07:00 | reconciliation report (`dryRun`) |
+| `stage7JobDailyVacationsAndBirthdays` | daily 08:00 | vacation/birthday engine |
+| `stage7JobDetectStaleOperations` | every 15 min | stale lifecycle operations |
+| `stage7SecurityAuditOnEdit` | on edit | protected sheet edit audit |
+| `stage7SecurityAuditOnChange` | on change | structural change audit |
+
+Time-based handlers run with **system trigger context** (`actorRole: system`, not user `guest`). After deploy, run one handler manually from the GAS editor (e.g. `stage7JobScheduledHealthCheck()`) and confirm **no** spurious `WASB SECURITY ATTENTION` alerts for blocked guest access.
+
+Spreadsheet audit handlers are different: `stage7SecurityAuditOnEdit` and `stage7SecurityAuditOnChange` inspect the editor from the event and may intentionally write `WASB SECURITY ATTENTION` for unauthorized protected-sheet edits or structural changes. They do not use the system actor as an access bypass.
+
+Manual replay from maintenance API: `apiRunStage7Job(jobName, { trigger: false })` — requires **sysadmin** session; does **not** use system context.
 
 ### Sidebar checks
 
@@ -156,6 +179,19 @@ After migration:
 - login errors do not block the form itself
 
 ## 9. Troubleshooting cheatsheet
+
+### Scheduled job fires `WASB SECURITY ATTENTION` as guest
+
+Symptom: time-based trigger (e.g. daily vacations) logs access violation with role **Гість** / identification **недоступно**.
+
+Check:
+
+- job is launched via `stage7Job*` handler or `Stage7Triggers_.runJob(..., { trigger: true })`, not a raw use-case call without system context
+- payload includes `allowSystem: true`, `isSystemTrigger: true`, `actorRole: "system"`
+- guarded use cases (e.g. `checkVacationsAndBirthdays`) receive descriptor from `AccessEnforcement_.buildSystemTriggerAccessDescriptor`
+- **`WASB_SPREADSHEET_ID`** is set for headless runs
+
+Fix path: redeploy `Triggers.gs`, `AccessEnforcement.gs`, `UseCases.Maintenance.gs`; re-run `stage7JobDailyVacationsAndBirthdays()` from the GAS editor.
 
 ### User is seen as guest but should not be
 
