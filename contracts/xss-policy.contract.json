@@ -152,6 +152,53 @@
       }
     ]
   },
+  "reviewedStandaloneSinks": {
+    "reviewedAt": "2026-05-31",
+    "changeReason": "P2 standalone HtmlService/innerHTML sinks reviewed outside the active sidebar targetFiles bundle",
+    "requireCoverage": true,
+    "files": [
+      {
+        "path": "SidebarServer.gs",
+        "rationale": "HtmlService sidebar shell only; dynamic content comes from reviewed Sidebar/JavaScript/Styles includes"
+      },
+      {
+        "path": "Summaries.gs",
+        "rationale": "Modal output built from server summary renderer; no client-side user interpolation sink"
+      },
+      {
+        "path": "PersonCards.gs",
+        "rationale": "Person-card HtmlService host and PersonCalendar template loader; data is injected through template variables"
+      },
+      {
+        "path": "PersonCalendar.html",
+        "rationale": "Standalone calendar grid uses numeric day/month/year values generated locally"
+      },
+      {
+        "path": "Stage7TestRunner.Ui.gs",
+        "rationale": "Test-runner modal output is generated from internal test report HTML"
+      },
+      {
+        "path": "MonthSheets.gs",
+        "rationale": "Month switcher dialog uses static markup and controlled month sheet names"
+      },
+      {
+        "path": "SendPanel.gs",
+        "rationale": "Standalone WhatsApp sender dialog escapes row data before innerHTML insertion"
+      },
+      {
+        "path": "DialogTemplates.gs",
+        "rationale": "Dialog template markup is static shell content"
+      },
+      {
+        "path": "Code.gs",
+        "rationale": "GAS include/template helpers load repository files by local filename only"
+      },
+      {
+        "path": "MonthlyReport.gs",
+        "rationale": "Monthly report HTML uses local esc() for dynamic sheet/person/status values"
+      }
+    ]
+  },
   "preferredSinks": {
     "policy": "New template-literal interpolations should call a sanitizer sink directly; avoid adding new patterns to patterns[] unless migrating legacy code.",
     "requireSinkForNewPatterns": true,
@@ -165,6 +212,7 @@
     "esc"
   ],
   "targetFiles": [
+    "Js.Core.html",
     "Js.Render.Panel.html",
     "Js.Render.Calendar.html",
     "Js.Render.Results.html",

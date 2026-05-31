@@ -17,7 +17,8 @@
       "name": "apiStage7BindCurrentKeyToCallsign",
       "file": "Stage7MaintenanceApi.gs",
       "reason": "callsign-only bind never worked; use loginByIdentifierAndCallsign",
-      "replacement": "apiStage7LoginByIdentifierAndCallsign"
+      "replacement": "apiStage7LoginByIdentifierAndCallsign",
+      "removed": true
     }
   ],
   "endpoints": [
@@ -62,7 +63,6 @@
       "file": "Stage7MaintenanceApi.gs",
       "bucket": "maintenance",
       "rolePolicy": { "guestAllowed": false, "minRole": "sysadmin" },
-      "clientMethods": ["MaintenanceApi.reportAccessViolation"],
       "visibility": "sysadmin_only",
       "serverGuard": "_stage7HasRoleAtLeastSilent_(\"sysadmin\")"
     },

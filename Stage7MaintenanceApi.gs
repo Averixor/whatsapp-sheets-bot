@@ -306,19 +306,6 @@ function apiStage7LoginByIdentifierAndCallsign(
   );
 }
 
-function apiStage7BindCurrentKeyToCallsign(_callsign) {
-  return _stage7BuildMaintenanceResponse_(
-    false,
-    "Endpoint deprecated. Use apiStage7LoginByIdentifierAndCallsign with email/phone + callsign.",
-    {
-      success: false,
-      code: "access.self_bind.deprecated_endpoint",
-    },
-    "stage7BindCurrentKeyToCallsign",
-    ["Deprecated endpoint"],
-  );
-}
-
 function apiStage7ApplyProtections(options) {
   _stage7AssertRole_("sysadmin", "apply spreadsheet protections");
 

@@ -251,9 +251,7 @@
     reportClientAccessSignal: async (actionName, details = {}) =>
       adaptStage4UtilityResponse(
         await Api.run('apiStage7ReportClientAccessSignal', actionName || '', details || {}),
-      ),
-    reportAccessViolation: async (actionName, details = {}) =>
-      adaptStage4UtilityResponse(await Api.run('apiStage7ReportAccessViolation', actionName || '', details || {}))
+      )
   };
 
   var SidebarApi = {

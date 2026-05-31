@@ -155,12 +155,26 @@ function main() {
     if (clientText.includes(`Api.run('${deprecated.name}'`)) {
       errors.push(`${deprecated.name} is deprecated but still referenced in ${contract.clientApiFile}`);
     }
-    if (!functionExistsInFile(deprecated.file, deprecated.name)) {
+    if (deprecated.removed === true) {
+      if (functionExistsInFile(deprecated.file, deprecated.name)) {
+        errors.push(`${deprecated.name} is marked removed but still exists in ${deprecated.file}`);
+      }
+    } else if (!functionExistsInFile(deprecated.file, deprecated.name)) {
       errors.push(`${deprecated.name} deprecated stub missing in ${deprecated.file}`);
     }
   }
 
   const policy = contract.clientSignalPolicy || {};
+  if (policy.forbiddenPublicEndpoint) {
+    const singleQuoted = `Api.run('${policy.forbiddenPublicEndpoint}'`;
+    const doubleQuoted = `Api.run("${policy.forbiddenPublicEndpoint}"`;
+    if (clientText.includes(singleQuoted) || clientText.includes(doubleQuoted)) {
+      errors.push(
+        `${policy.forbiddenPublicEndpoint} must not be reachable through ${contract.clientApiFile}; use ${policy.publicEndpoint}`,
+      );
+    }
+  }
+
   if (policy.uiReporterFile && policy.uiReporterFunction) {
     const uiText = read(policy.uiReporterFile);
     const fnBodyStart = uiText.indexOf(`function ${policy.uiReporterFunction}`);

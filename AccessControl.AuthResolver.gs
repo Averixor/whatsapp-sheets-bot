@@ -881,13 +881,6 @@ function loginByIdentifierAndCallsign(
   }
 }
 
-/**
- * @deprecated Use loginByIdentifierAndCallsign with email/phone + callsign.
- */
-function bindCurrentKeyToCallsign(callsign) {
-  return loginByIdentifierAndCallsign("", callsign || "");
-}
-
 // ==================== ПУБЛІЧНА ВІДПОВІДЬ (RESPONSE BUILDER) ====================
 
 /**

@@ -18,6 +18,21 @@ const sinkNamePattern = preferredSinks.sinkNamePattern
   ? new RegExp(preferredSinks.sinkNamePattern)
   : null;
 const sanitizerSinks = xssPolicy.sanitizerSinks || [];
+const REVIEWED_STANDALONE = xssPolicy.reviewedStandaloneSinks || {};
+
+function walk(dir, exts, out = []) {
+  for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (ent.name === 'node_modules' || ent.name === '.git') continue;
+    const p = path.join(dir, ent.name);
+    if (ent.isDirectory()) walk(p, exts, out);
+    else if (exts.some((ext) => ent.name.endsWith(ext))) out.push(p);
+  }
+  return out;
+}
+
+function rel(p) {
+  return path.relative(repoRoot, p).replace(/\\/g, '/');
+}
 
 function verifyReviewedAllowlist() {
   const errors = [];
@@ -51,6 +66,57 @@ function verifyReviewedAllowlist() {
       }
     });
   }
+
+  return errors;
+}
+
+function verifyReviewedStandaloneSinks() {
+  const errors = [];
+  if (!REVIEWED_STANDALONE.requireCoverage) return errors;
+
+  if (!REVIEWED_STANDALONE.reviewedAt) {
+    errors.push('reviewedStandaloneSinks.reviewedAt is required');
+  }
+
+  const targetSet = new Set(TARGET_FILES);
+  const entries = Array.isArray(REVIEWED_STANDALONE.files)
+    ? REVIEWED_STANDALONE.files
+    : [];
+  const reviewed = new Map();
+  entries.forEach((entry) => {
+    const file = String(entry?.path || '').trim();
+    if (!file) {
+      errors.push('reviewedStandaloneSinks file entry missing path');
+      return;
+    }
+    if (reviewed.has(file)) errors.push(`duplicate reviewed standalone file: ${file}`);
+    reviewed.set(file, entry);
+    if (!String(entry?.rationale || '').trim()) {
+      errors.push(`reviewed standalone file missing rationale: ${file}`);
+    }
+    if (!fs.existsSync(path.join(repoRoot, file))) {
+      errors.push(`reviewed standalone file does not exist: ${file}`);
+    }
+  });
+
+  const sinkRe =
+    /innerHTML\s*=|insertAdjacentHTML\s*\(|HtmlService\.createHtmlOutput|HtmlService\.createTemplateFromFile|HtmlService\.createHtmlOutputFromFile|(?:let|var|const)\s+html\s*=\s*`/;
+  const sinkFiles = walk(repoRoot, ['.gs', '.html'])
+    .map(rel)
+    .filter((file) => !targetSet.has(file))
+    .filter((file) => sinkRe.test(fs.readFileSync(path.join(repoRoot, file), 'utf8')));
+
+  sinkFiles.forEach((file) => {
+    if (!reviewed.has(file)) {
+      errors.push(`standalone HTML sink missing reviewedStandaloneSinks entry: ${file}`);
+    }
+  });
+
+  reviewed.forEach((_entry, file) => {
+    if (!sinkFiles.includes(file)) {
+      errors.push(`reviewedStandaloneSinks entry no longer has a detected sink: ${file}`);
+    }
+  });
 
   return errors;
 }
@@ -145,9 +211,11 @@ function warnOnNewPatternsWithoutSink() {
 
 function main() {
   const allowlistErrors = verifyReviewedAllowlist();
-  if (allowlistErrors.length) {
-    console.error('audit-client-xss: FAIL (reviewedAllowlist)');
-    allowlistErrors.forEach((e) => console.error(`  - ${e}`));
+  const standaloneErrors = verifyReviewedStandaloneSinks();
+  const reviewErrors = allowlistErrors.concat(standaloneErrors);
+  if (reviewErrors.length) {
+    console.error('audit-client-xss: FAIL (review governance)');
+    reviewErrors.forEach((e) => console.error(`  - ${e}`));
     process.exit(1);
   }
 

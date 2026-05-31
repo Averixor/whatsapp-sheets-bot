@@ -1364,7 +1364,7 @@ function runAccessPolicyChecks(options) {
 
     _pushPolicyCheck_(
       report,
-      "bindCurrentKeyToCallsign removed from public AccessControl API",
+      "bindCurrentKeyToCallsign removed from public APIs",
       function () {
         if (
           typeof AccessControl_ !== "object" ||
@@ -1378,7 +1378,15 @@ function runAccessPolicyChecks(options) {
             "AccessControl_.bindCurrentKeyToCallsign should not be exported",
           );
         }
-        return { exported: false };
+        if (typeof apiStage7BindCurrentKeyToCallsign === "function") {
+          throw new Error(
+            "apiStage7BindCurrentKeyToCallsign should be removed",
+          );
+        }
+        if (typeof bindCurrentKeyToCallsign === "function") {
+          throw new Error("bindCurrentKeyToCallsign helper should be removed");
+        }
+        return { exported: false, endpointPresent: false };
       },
     );
   } finally {
