@@ -428,10 +428,9 @@ function apiCheckVacationsAndBirthdays(dateStr) {
   const info = validateDatePayload_({ date: dateStr || _todayStr_() }, "date");
   if (
     typeof AccessEnforcement_ === "object" &&
-    AccessEnforcement_.assertCanUseWorkingActions
+    AccessEnforcement_.assertCanRunLeaveBirthdayCheck
   ) {
-    AccessEnforcement_.assertCanUseWorkingActions(
-      "checkVacationsAndBirthdays",
+    AccessEnforcement_.assertCanRunLeaveBirthdayCheck(
       { requestedDate: info.payload.dateStr || info.payload.date || "" },
     );
   }
