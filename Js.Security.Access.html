@@ -200,16 +200,16 @@
       try {
         if (
           !window.MaintenanceApi ||
-          typeof MaintenanceApi.reportAccessViolation !== "function"
+          typeof MaintenanceApi.reportClientAccessSignal !== "function"
         )
           return;
-        await MaintenanceApi.reportAccessViolation(
+        await MaintenanceApi.reportClientAccessSignal(
           actionName || "",
           details || {},
         );
       } catch (error) {
         logToConsole(
-          "✕ Не вдалося зафіксувати порушення доступу: " +
+          "✕ Не вдалося зафіксувати сигнал доступу UI: " +
             normalizeError(error),
           "error",
         );

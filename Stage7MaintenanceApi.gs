@@ -186,7 +186,44 @@ function apiStage7DebugAccess() {
   );
 }
 
+function _stage7HasRoleAtLeastSilent_(requiredRole) {
+  if (typeof AccessControl_ !== "object" || !AccessControl_.describe) {
+    return false;
+  }
+  var descriptor = AccessControl_.describe({ includeSensitiveDebug: false });
+  if (!descriptor || descriptor.enabled === false) return false;
+  var current = String(descriptor.role || "guest").toLowerCase();
+  var required = String(requiredRole || "admin").toLowerCase();
+  if (typeof normalizeRole_ === "function") {
+    current = normalizeRole_(current);
+    required = normalizeRole_(required);
+  }
+  var order =
+    typeof ROLE_ORDER === "object" && ROLE_ORDER
+      ? ROLE_ORDER
+      : {
+          guest: 0,
+          viewer: 1,
+          operator: 2,
+          maintainer: 3,
+          admin: 4,
+          sysadmin: 5,
+          owner: 6,
+        };
+  return (order[current] || 0) >= (order[required] || 0);
+}
+
 function apiStage7ReportAccessViolation(actionName, details) {
+  if (!_stage7HasRoleAtLeastSilent_("sysadmin")) {
+    return _stage7BuildMaintenanceResponse_(
+      false,
+      "access_denied",
+      { success: false, code: "access_denied" },
+      "stage7ReportAccessViolation",
+      ["access_denied"],
+    );
+  }
+
   const result =
     typeof AccessEnforcement_ === "object" && AccessEnforcement_.reportViolation
       ? AccessEnforcement_.reportViolation(actionName || "", details || {})

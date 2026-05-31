@@ -57,7 +57,9 @@ Recommended final verification:
 
 - `login`, `password_hash`, `password_salt`, `preferred_contact`, `surname`, `first_name`
 - `request_user_key_hash`, `request_created_at`
-- `temporary_password_*`, `approved_by`, `approved_at`, `activated_at`, `telegram_username`
+- `temporary_password_*` (hash/salt/expiry/used; plain column legacy and cleared on normalize), `approved_by`, `approved_at`, `activated_at`, `telegram_username`
+
+Temporary registration codes (`WASB-…`) are shown **once** in the sidebar when the user submits a key request. Only hash + salt are written to `ACCESS`. To scrub legacy plaintext from existing rows, run **`apiStage7NormalizeAccessSheetFormatting()`** with migration plain lookup disabled.
 
 See **`README.md`** for the full column list.
 
@@ -297,6 +299,7 @@ Canonical resolver (**`DataAccess.gs`**):
 | **`WASB_SPREADSHEET_ID`** | Target spreadsheet for headless runs (triggers, executions without open UI). Required when no container spreadsheet context exists. |
 | **`WASB_OWNER_EMAIL`** | Owner email for security notifications that may include the full user key. Quick health warns if unset. |
 | **`WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`** | Emergency email bridge during migration only. Keep disabled (`false` / unset) in normal operation. |
+| **`WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP`** | Legacy plaintext temp-password column lookup during migration only. Keep disabled in normal operation; run `apiStage7NormalizeAccessSheetFormatting()` to clear `temporary_password_plain`. |
 
 If **`WASB_SPREADSHEET_ID`** is unset, the code falls back to **`SpreadsheetApp.getActiveSpreadsheet()`** when the script is bound and a spreadsheet context exists.
 

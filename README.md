@@ -55,6 +55,7 @@ Or: `npm run ci` then commit/push/clasp as needed.
   - **`WASB_SPREADSHEET_ID`** — headless/triggers (see `RUNBOOK.md` §14)
   - **`WASB_OWNER_EMAIL`** — security mail with full user key for owner
   - **`WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`** — off in normal operation
+  - **`WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP`** — legacy plaintext temp-password lookup during migration only; off in normal operation
 - After **PHONES** / birthday changes: run **`apiStage7ClearPhoneCache()`** in the GAS editor, then reload the sidebar.
 
 Full workflow, release checklist, and post-deploy checks: **`CONTRIBUTING.md`** and **`RUNBOOK.md`**.
@@ -137,7 +138,8 @@ Historical/audit materials beyond the above are kept outside the compact import 
 
 - `login`, `password_hash`, `password_salt`, `preferred_contact`, `surname`, `first_name`
 - `request_user_key_hash`, `request_created_at`
-- `temporary_password_plain`, `temporary_password_hash`, `temporary_password_salt`, `temporary_password_expires_at`, `temporary_password_used_at`
+- `temporary_password_hash`, `temporary_password_salt`, `temporary_password_expires_at`, `temporary_password_used_at`
+- `temporary_password_plain` — legacy column; not populated in normal operation (hash-only storage; plaintext shown once at request time)
 - `approved_by`, `approved_at`, `activated_at`, `telegram_username`
 
 Notes:

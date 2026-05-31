@@ -129,6 +129,21 @@ This repository applies server-side checks to at least:
 
 Scheduled jobs use the **system trigger context** (see role **system** above) instead of impersonating `guest`. Spreadsheet audit triggers remain actor-audit paths: they resolve the editor from the event and may intentionally log a security event for unauthorized protected-sheet changes.
 
+### Client UI access signals
+
+Sidebar/client code must **not** call `apiStage7ReportAccessViolation` directly.
+
+Use **`apiStage7ReportClientAccessSignal`** instead:
+
+- allowlisted UI-only actions (`sidebarActionUiDenied`, `openPersonCardUiDenied`, `personnelListUiDenied`)
+- details are sanitized/truncated server-side
+- no owner/security email is sent for client self-reports
+- per-session debounce + hourly cap via script cache
+
+`apiStage7ReportAccessViolation` remains **sysadmin-only** for manual maintenance. Server-side flows (`stage7ReportAccessViolation`, access-key request alerts) keep the full violation path.
+
+Access API surface is governed by `contracts/access-api.contract.json` and `npm run ci` (`verify-access-api-governance.mjs`).
+
 ## 6. Lockouts and failure handling
 
 ### ACCESS-level fields
@@ -136,6 +151,18 @@ Scheduled jobs use the **system trigger context** (see role **system** above) in
 - `failed_attempts`
 - `locked_until_ms`
 - `registration_status` — must be **`active`** with valid credentials for full access after approval/self-bind
+
+### Temporary registration passwords
+
+When a user submits an access-key request, the server generates a one-time `WASB-…` code:
+
+- the **plaintext is returned once** in the API/UI response at generation time
+- `ACCESS` stores only **`temporary_password_hash`**, **`temporary_password_salt`**, and expiry/usage metadata
+- the `temporary_password_plain` column is **legacy** and must stay empty in normal operation
+
+Verification always uses hash + salt. Plaintext column lookup is gated behind a migration-only script property:
+
+- `WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP = true` — enable only during a short migration window for rows that still have legacy plaintext; disable again after `apiStage7NormalizeAccessSheetFormatting()` clears the column
 
 ### Self-bind login protection
 
@@ -185,6 +212,7 @@ Rules:
 | `WASB_SPREADSHEET_ID` | Spreadsheet binding for headless/trigger runs |
 | `WASB_OWNER_EMAIL` | Owner email for privileged security notifications |
 | `WASB_ACCESS_MIGRATION_EMAIL_BRIDGE` | Emergency email bridge; off in normal operation |
+| `WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP` | Legacy plaintext temp-password lookup during migration only; off in normal operation |
 
 Never commit real spreadsheet IDs or owner emails into the repository.
 

@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "metadataSource": "ProjectMetadata.gs",
+  "metadataField": "PROJECT_STAGE7_CANONICAL_API_MAP_",
+  "clientApiFile": "Js.Api.html",
+  "endpoints": [
+    {
+      "name": "apiStage7GetAccessDescriptorLite",
+      "file": "Stage7ServerApi.gs",
+      "bucket": "application",
+      "clientMethods": ["Stage7Api.getAccessDescriptorLite"]
+    },
+    {
+      "name": "apiStage7BootstrapSidebar",
+      "file": "Stage7ServerApi.gs",
+      "bucket": "application",
+      "clientMethods": ["Stage7Api.bootstrapSidebar"]
+    },
+    {
+      "name": "apiStage7ReportClientAccessSignal",
+      "file": "Stage7ServerApi.gs",
+      "bucket": "application",
+      "clientMethods": ["MaintenanceApi.reportClientAccessSignal"],
+      "visibility": "public_client"
+    },
+    {
+      "name": "apiStage7GetAccessDescriptor",
+      "file": "Stage7MaintenanceApi.gs",
+      "bucket": "maintenance",
+      "clientMethods": ["MaintenanceApi.getAccessDescriptor"]
+    },
+    {
+      "name": "apiStage7DebugAccess",
+      "file": "Stage7MaintenanceApi.gs",
+      "bucket": "maintenance",
+      "clientMethods": ["MaintenanceApi.debugAccess"]
+    },
+    {
+      "name": "apiStage7ReportAccessViolation",
+      "file": "Stage7MaintenanceApi.gs",
+      "bucket": "maintenance",
+      "clientMethods": ["MaintenanceApi.reportAccessViolation"],
+      "visibility": "sysadmin_only"
+    },
+    {
+      "name": "apiStage7ListBindableCallsigns",
+      "file": "Stage7MaintenanceApi.gs",
+      "bucket": "maintenance",
+      "clientMethods": ["MaintenanceApi.listBindableCallsigns"]
+    },
+    {
+      "name": "apiStage7LoginByIdentifierAndCallsign",
+      "file": "Stage7MaintenanceApi.gs",
+      "bucket": "maintenance",
+      "clientMethods": ["MaintenanceApi.loginByIdentifierAndCallsign"]
+    },
+    {
+      "name": "apiStage7BindCurrentKeyToCallsign",
+      "file": "Stage7MaintenanceApi.gs",
+      "bucket": "maintenance",
+      "clientMethods": ["MaintenanceApi.bindCurrentKeyToCallsign"]
+    },
+    {
+      "name": "apiStage7SubmitAccessKeyRequest",
+      "file": "Stage7MaintenanceApi.gs",
+      "bucket": "maintenance",
+      "clientMethods": [
+        "Stage7Api.submitAccessKeyRequest",
+        "MaintenanceApi.submitAccessKeyRequest"
+      ]
+    },
+    {
+      "name": "apiStage7RegisterAccessWithTemporaryPassword",
+      "file": "Stage7MaintenanceApi.gs",
+      "bucket": "maintenance",
+      "clientMethods": [
+        "Stage7Api.registerAccessWithTemporaryPassword",
+        "MaintenanceApi.registerAccessWithTemporaryPassword"
+      ]
+    },
+    {
+      "name": "apiStage7NormalizeAccessSheetFormatting",
+      "file": "AccessControl.SheetRepository.gs",
+      "bucket": "maintenance"
+    },
+    {
+      "name": "apiStage7BootstrapAccessSheet",
+      "file": "Stage7MaintenanceApi.gs",
+      "bucket": "maintenance",
+      "clientMethods": ["MaintenanceApi.bootstrapAccessSheet"]
+    }
+  ],
+  "clientSignalPolicy": {
+    "publicEndpoint": "apiStage7ReportClientAccessSignal",
+    "forbiddenPublicEndpoint": "apiStage7ReportAccessViolation",
+    "uiReporterFile": "Js.Security.Access.html",
+    "uiReporterFunction": "reportAccessViolation_",
+    "requiredApiRun": "apiStage7ReportClientAccessSignal"
+  }
+}

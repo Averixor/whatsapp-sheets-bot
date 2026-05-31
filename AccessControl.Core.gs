@@ -21,6 +21,8 @@ let _policyCache = null;
 // Script properties keys
 const LOCKOUT_PROP_PREFIX = "WASB_ACCESS_LOCKOUT_V1__";
 const MIGRATION_EMAIL_BRIDGE_PROP = "WASB_ACCESS_MIGRATION_EMAIL_BRIDGE";
+const ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP_PROP =
+  "WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP";
 const SELF_BIND_LOGIN_PROP_PREFIX = "WASB_ACCESS_SELF_BIND_LOGIN_V1__";
 
 // Lockout configuration
@@ -452,6 +454,49 @@ function getAccessTemporaryPasswordExpiresAt_(hours) {
     ACCESS_TEMP_PASSWORD_TTL_HOURS;
   var date = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
   return formatAccessDateTime_(date);
+}
+
+function isAccessTempPasswordPlainLookupEnabled_() {
+  try {
+    return (
+      String(
+        PropertiesService.getScriptProperties().getProperty(
+          ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP_PROP,
+        ) || "",
+      ).toLowerCase() === "true"
+    );
+  } catch (_) {
+    return false;
+  }
+}
+
+function sanitizeAccessSecretFieldUpdates_(updates) {
+  var out =
+    updates && typeof updates === "object" ? Object.assign({}, updates) : {};
+  if (
+    !Object.prototype.hasOwnProperty.call(out, "temporary_password_plain")
+  ) {
+    return out;
+  }
+
+  var plain = String(out.temporary_password_plain || "").trim();
+  if (!plain) {
+    out.temporary_password_plain = "";
+    return out;
+  }
+
+  if (isAccessTempPasswordPlainLookupEnabled_()) {
+    return out;
+  }
+
+  delete out.temporary_password_plain;
+  return out;
+}
+
+function resolveAccessTemporaryPasswordPlainForPersist_(value) {
+  var plain = String(value || "").trim();
+  if (!plain) return "";
+  return isAccessTempPasswordPlainLookupEnabled_() ? plain : "";
 }
 
 // ==================== SELF-BIND LOGIN STATE ====================

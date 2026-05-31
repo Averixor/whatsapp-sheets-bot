@@ -1247,7 +1247,7 @@ function submitAccessKeyRequest(payload) {
 
       request_created_at: nowText,
 
-      temporary_password_plain: temporaryPasswordPlain,
+      temporary_password_plain: "",
       temporary_password_hash: temporaryPasswordHash,
       temporary_password_salt: temporaryPasswordSalt,
       temporary_password_expires_at: temporaryPasswordExpiresAt,
@@ -1319,11 +1319,14 @@ function submitAccessKeyRequest(payload) {
     return {
       success: true,
       code: "access.registration.requested",
-      message: "Заявку надіслано. Очікуйте підтвердження адміністратора.",
+      message:
+        "Заявку надіслано. Збережіть тимчасовий код доступу — він показується один раз.",
       currentKeyHashMasked: maskSensitiveValue_(currentKeyHash),
       registrationStatus: "pending_review",
       accessSheetRow:
         savedEntry && savedEntry.sheetRow ? savedEntry.sheetRow : "",
+      temporaryPassword: temporaryPasswordPlain,
+      temporaryPasswordShowOnce: true,
       temporaryPasswordExpiresAt: temporaryPasswordExpiresAt,
     };
   } finally {
@@ -1335,9 +1338,15 @@ function _findAccessEntryByTemporaryPassword_(entries, temporaryPassword) {
   const tempPlain = String(temporaryPassword || "").trim();
   if (!tempPlain || !/^WASB-/i.test(tempPlain)) return null;
   const list = Array.isArray(entries) ? entries : [];
+  const allowPlainLookup =
+    typeof isAccessTempPasswordPlainLookupEnabled_ === "function" &&
+    isAccessTempPasswordPlainLookupEnabled_();
   for (let i = 0; i < list.length; i++) {
     const row = list[i];
-    if (String(row.temporaryPasswordPlain || "").trim() === tempPlain) {
+    if (
+      allowPlainLookup &&
+      String(row.temporaryPasswordPlain || "").trim() === tempPlain
+    ) {
       return row;
     }
     if (

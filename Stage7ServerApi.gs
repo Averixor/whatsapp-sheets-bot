@@ -484,3 +484,32 @@ function apiStage7CreateNextMonth(options) {
 function apiRunReconciliation(options) {
   return Stage7UseCases_.runReconciliation(options || {});
 }
+
+function apiStage7ReportClientAccessSignal(actionName, details) {
+  const result =
+    typeof AccessEnforcement_ === "object" &&
+    AccessEnforcement_.reportClientAccessSignal
+      ? AccessEnforcement_.reportClientAccessSignal(
+          actionName || "",
+          details || {},
+        )
+      : {
+          success: false,
+          blocked: true,
+          message: "AccessEnforcement_ недоступний",
+          emailSent: false,
+          alertLogged: false,
+        };
+
+  return _stage7FastResponse_(
+    "reportClientAccessSignal",
+    result.message || "Client access signal processed",
+    result,
+    [],
+    {
+      affectedSheets: [appGetCore("ALERTS_LOG_SHEET", "ALERTS_LOG")].filter(
+        Boolean,
+      ),
+    },
+  );
+}

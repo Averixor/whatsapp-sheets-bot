@@ -34,6 +34,28 @@ var AccessEnforcement_ =
 
     var HIGH_PRIVILEGE_ROLES = ["sysadmin", "owner"];
 
+    var CLIENT_ACCESS_SIGNAL_ACTIONS = {
+      sidebarActionUiDenied: true,
+      openPersonCardUiDenied: true,
+      personnelListUiDenied: true,
+    };
+
+    var CLIENT_SIGNAL_ALLOWED_DETAIL_KEYS = [
+      "source",
+      "requestedAction",
+      "requiredRole",
+      "currentRole",
+      "callsign",
+      "violation",
+      "surface",
+    ];
+
+    var CLIENT_SIGNAL_MAX_FIELD_LEN = 120;
+    var CLIENT_SIGNAL_MAX_JSON_LEN = 500;
+    var CLIENT_SIGNAL_DEBOUNCE_SEC = 60;
+    var CLIENT_SIGNAL_HOURLY_MAX = 12;
+    var CLIENT_SIGNAL_RATE_PREFIX = "STAGE7:CLIENT_SIGNAL:";
+
     // ==================== ДОПОМІЖНІ ФУНКЦІЇ ====================
 
     function _global_() {
@@ -641,6 +663,139 @@ var AccessEnforcement_ =
         : _safeStringify_(info || {}, 9000);
     }
 
+    // ==================== CLIENT UI ACCESS SIGNALS ====================
+
+    function _truncateClientSignalField_(value) {
+      var text = _trimmedString_(value, "");
+      if (text.length <= CLIENT_SIGNAL_MAX_FIELD_LEN) return text;
+      return text.slice(0, CLIENT_SIGNAL_MAX_FIELD_LEN);
+    }
+
+    function sanitizeClientSignalDetails(details) {
+      var input = _isObject_(details) ? details : {};
+      var out = {};
+      var i;
+      for (i = 0; i < CLIENT_SIGNAL_ALLOWED_DETAIL_KEYS.length; i++) {
+        var key = CLIENT_SIGNAL_ALLOWED_DETAIL_KEYS[i];
+        if (!Object.prototype.hasOwnProperty.call(input, key)) continue;
+        var raw = input[key];
+        if (raw === null || typeof raw === "undefined") continue;
+        if (typeof raw === "object") continue;
+        out[key] = _truncateClientSignalField_(raw);
+      }
+
+      try {
+        var json = JSON.stringify(out);
+        while (json.length > CLIENT_SIGNAL_MAX_JSON_LEN) {
+          var keys = Object.keys(out);
+          if (!keys.length) break;
+          delete out[keys[keys.length - 1]];
+          json = JSON.stringify(out);
+        }
+      } catch (_) {}
+
+      return out;
+    }
+
+    function _clientSignalActorKey_(descriptor) {
+      var identity =
+        descriptor && descriptor.identity ? descriptor.identity : {};
+      return (
+        _trimmedString_(
+          descriptor.currentKeyHashMasked ||
+            identity.currentKeyHashMasked ||
+            descriptor.email ||
+            identity.email ||
+            "",
+          "",
+        ) || "guest"
+      );
+    }
+
+    function _checkClientSignalRateLimit_(action, actorKey) {
+      try {
+        var cache = CacheService.getScriptCache();
+        var debounceKey =
+          CLIENT_SIGNAL_RATE_PREFIX + "db:" + action + ":" + actorKey;
+        if (cache.get(debounceKey)) {
+          return { blocked: true, reason: "debounced" };
+        }
+        cache.put(debounceKey, "1", CLIENT_SIGNAL_DEBOUNCE_SEC);
+
+        var hourKey = CLIENT_SIGNAL_RATE_PREFIX + "hr:" + actorKey;
+        var count = Number(cache.get(hourKey) || "0") || 0;
+        if (count >= CLIENT_SIGNAL_HOURLY_MAX) {
+          return { blocked: true, reason: "hourly_cap" };
+        }
+        cache.put(hourKey, String(count + 1), 3600);
+        return { blocked: false };
+      } catch (_) {
+        return { blocked: false };
+      }
+    }
+
+    function reportClientAccessSignal(actionName, details) {
+      var action = _trimmedString_(actionName, "");
+      if (!CLIENT_ACCESS_SIGNAL_ACTIONS[action]) {
+        return {
+          success: false,
+          blocked: true,
+          message: "Client access signal action is not allowlisted",
+          emailSent: false,
+          alertLogged: false,
+        };
+      }
+
+      var descriptor = _descriptor_();
+      var actorKey = _clientSignalActorKey_(descriptor);
+      var rate = _checkClientSignalRateLimit_(action, actorKey);
+      if (rate.blocked) {
+        return {
+          success: true,
+          blocked: true,
+          suppressed: true,
+          message:
+            rate.reason === "hourly_cap"
+              ? "Client access signal hourly cap reached"
+              : "Client access signal debounced",
+          emailSent: false,
+          alertLogged: false,
+        };
+      }
+
+      var sanitized = sanitizeClientSignalDetails(details);
+      var role = _trimmedString_(descriptor.role, "guest").toLowerCase() || "guest";
+
+      _appendAlert_({
+        timestamp: new Date(),
+        type: "client_access_signal",
+        severity: "info",
+        action: action,
+        outcome: "logged",
+        role: role,
+        displayName: descriptor.displayName || "",
+        userKey: descriptor.currentKeyHashMasked || "",
+        message: "Client UI access signal: " + action,
+        details: {
+          action: action,
+          role: role,
+          sanitized: sanitized,
+        },
+      });
+
+      return {
+        success: true,
+        blocked: false,
+        message: "Client access signal recorded",
+        emailSent: false,
+        alertLogged: true,
+        data: {
+          action: action,
+          sanitized: sanitized,
+        },
+      };
+    }
+
     // ==================== ОСНОВНА ФУНКЦІЯ ПОВІДОМЛЕННЯ ====================
 
     function reportViolation(actionName, details, descriptorOpt) {
@@ -1198,6 +1353,8 @@ var AccessEnforcement_ =
 
     return {
       reportViolation: reportViolation,
+      reportClientAccessSignal: reportClientAccessSignal,
+      sanitizeClientSignalDetails: sanitizeClientSignalDetails,
       canViewSidebarPersonnel: canViewSidebarPersonnel,
       assertCanViewSidebarPersonnel: assertCanViewSidebarPersonnel,
       shouldRedactSidebarPersonnelSensitiveFields:

@@ -1046,6 +1046,158 @@ function runAccessPolicyChecks(options) {
         return output;
       },
     );
+
+    _pushPolicyCheck_(
+      report,
+      "ACCESS temp password plain lookup disabled by default",
+      function () {
+        if (typeof isAccessTempPasswordPlainLookupEnabled_ !== "function") {
+          throw new Error("isAccessTempPasswordPlainLookupEnabled_ missing");
+        }
+        if (isAccessTempPasswordPlainLookupEnabled_()) {
+          throw new Error(
+            "Plain lookup is enabled via script property; disable for production checks",
+          );
+        }
+        return { plainLookupEnabled: false };
+      },
+    );
+
+    _pushPolicyCheck_(
+      report,
+      "ACCESS temp password plain is not persisted without migration flag",
+      function () {
+        if (typeof sanitizeAccessSecretFieldUpdates_ !== "function") {
+          throw new Error("sanitizeAccessSecretFieldUpdates_ missing");
+        }
+        if (typeof resolveAccessTemporaryPasswordPlainForPersist_ !== "function") {
+          throw new Error("resolveAccessTemporaryPasswordPlainForPersist_ missing");
+        }
+
+        var sanitized = sanitizeAccessSecretFieldUpdates_({
+          temporary_password_plain: "WASB-TEST-PLAIN",
+          temporary_password_hash: "hash",
+        });
+        if (
+          Object.prototype.hasOwnProperty.call(
+            sanitized,
+            "temporary_password_plain",
+          )
+        ) {
+          throw new Error("sanitizeAccessSecretFieldUpdates_ kept plain text");
+        }
+
+        var persisted = resolveAccessTemporaryPasswordPlainForPersist_(
+          "WASB-TEST-PLAIN",
+        );
+        if (persisted) {
+          throw new Error(
+            "resolveAccessTemporaryPasswordPlainForPersist_ returned plain text",
+          );
+        }
+
+        return {
+          sanitizedKeys: Object.keys(sanitized).sort(),
+          persistedLength: String(persisted || "").length,
+        };
+      },
+    );
+
+    _pushPolicyCheck_(
+      report,
+      "client access signal is allowlisted sanitized and rate limited",
+      function () {
+        _requireObject_(AccessEnforcement_, "AccessEnforcement_");
+
+        if (typeof AccessEnforcement_.reportClientAccessSignal !== "function") {
+          throw new Error(
+            "AccessEnforcement_.reportClientAccessSignal is not available",
+          );
+        }
+        if (typeof AccessEnforcement_.sanitizeClientSignalDetails !== "function") {
+          throw new Error(
+            "AccessEnforcement_.sanitizeClientSignalDetails is not available",
+          );
+        }
+
+        var mailCalls = 0;
+        var savedMail = null;
+        try {
+          if (typeof MailApp !== "undefined" && MailApp && MailApp.sendEmail) {
+            savedMail = MailApp.sendEmail;
+            MailApp.sendEmail = function () {
+              mailCalls++;
+            };
+          }
+        } catch (_) {}
+
+        var sanitized = AccessEnforcement_.sanitizeClientSignalDetails({
+          email: "x@test.com",
+          payload: { nested: true },
+          foo: "x".repeat(1000),
+          source: "sidebar",
+          callsign: "TEST",
+        });
+
+        if (Object.prototype.hasOwnProperty.call(sanitized, "email")) {
+          throw new Error("sanitizeClientSignalDetails kept email");
+        }
+        if (Object.prototype.hasOwnProperty.call(sanitized, "payload")) {
+          throw new Error("sanitizeClientSignalDetails kept payload");
+        }
+        if (Object.prototype.hasOwnProperty.call(sanitized, "foo")) {
+          throw new Error("sanitizeClientSignalDetails kept unknown key foo");
+        }
+        if (String(sanitized.callsign || "").length > 120) {
+          throw new Error("sanitizeClientSignalDetails did not truncate callsign");
+        }
+
+        var blocked = AccessEnforcement_.reportClientAccessSignal(
+          "notAllowlistedAction",
+          { source: "policy-check" },
+        );
+        if (!blocked || blocked.blocked !== true) {
+          throw new Error("non-allowlisted client signal was not blocked");
+        }
+
+        var ok = AccessEnforcement_.reportClientAccessSignal(
+          "sidebarActionUiDenied",
+          {
+            email: "x@test.com",
+            payload: { nested: true },
+            foo: "x".repeat(1000),
+            source: "policy-check",
+            requestedAction: "test",
+          },
+        );
+        if (!ok || ok.success !== true) {
+          throw new Error("allowlisted client signal failed");
+        }
+        if (ok.emailSent === true) {
+          throw new Error("client signal must not send email");
+        }
+        if (mailCalls > 0) {
+          throw new Error("client signal triggered MailApp.sendEmail");
+        }
+        if (
+          !ok.data ||
+          !ok.data.sanitized ||
+          Object.prototype.hasOwnProperty.call(ok.data.sanitized, "email")
+        ) {
+          throw new Error("client signal result kept unsanitized email");
+        }
+
+        if (savedMail) {
+          MailApp.sendEmail = savedMail;
+        }
+
+        return {
+          sanitizedKeys: Object.keys(sanitized).sort(),
+          alertLogged: ok.alertLogged === true,
+          mailCalls: mailCalls,
+        };
+      },
+    );
   } finally {
     _restoreSideEffectsForPolicyChecks_(originals);
   }

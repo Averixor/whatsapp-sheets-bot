@@ -732,9 +732,11 @@ function _rowToEntry_(row, rowNumber, headerMap) {
     firstName: normalizeHumanName_(read("first_name")),
     requestUserKeyHash: normalizeStoredHash_(read("request_user_key_hash")),
     requestCreatedAt: String(read("request_created_at") || ""),
-    temporaryPasswordPlain: String(
-      read("temporary_password_plain") || "",
-    ).trim(),
+    temporaryPasswordPlain:
+      typeof isAccessTempPasswordPlainLookupEnabled_ === "function" &&
+      isAccessTempPasswordPlainLookupEnabled_()
+        ? String(read("temporary_password_plain") || "").trim()
+        : "",
     temporaryPasswordHash: String(read("temporary_password_hash") || "").trim(),
     temporaryPasswordSalt: String(read("temporary_password_salt") || "").trim(),
     temporaryPasswordExpiresAt: String(
@@ -904,9 +906,13 @@ function _entryToHeaderUpdates_(entry) {
   if (e.request_created_at !== undefined)
     updates.request_created_at = e.request_created_at;
   if (e.temporaryPasswordPlain !== undefined)
-    updates.temporary_password_plain = e.temporaryPasswordPlain;
+    updates.temporary_password_plain = resolveAccessTemporaryPasswordPlainForPersist_(
+      e.temporaryPasswordPlain,
+    );
   if (e.temporary_password_plain !== undefined)
-    updates.temporary_password_plain = e.temporary_password_plain;
+    updates.temporary_password_plain = resolveAccessTemporaryPasswordPlainForPersist_(
+      e.temporary_password_plain,
+    );
   if (e.temporaryPasswordHash !== undefined)
     updates.temporary_password_hash = e.temporaryPasswordHash;
   if (e.temporary_password_hash !== undefined)
@@ -968,7 +974,10 @@ function _updateEntryFields_(sheetRow, updates) {
   var current = _getEntryBySheetRow_(sheetRow);
   if (!current) return null;
   var mapped = Object.assign({}, current);
-  updates = updates || {};
+  updates =
+    typeof sanitizeAccessSecretFieldUpdates_ === "function"
+      ? sanitizeAccessSecretFieldUpdates_(updates || {})
+      : updates || {};
 
   function has(p) {
     return Object.prototype.hasOwnProperty.call(updates, p);
@@ -1041,9 +1050,9 @@ function _updateEntryFields_(sheetRow, updates) {
   if (has("request_created_at"))
     mapped.requestCreatedAt = String(updates.request_created_at || "");
   if (has("temporary_password_plain"))
-    mapped.temporaryPasswordPlain = String(
-      updates.temporary_password_plain || "",
-    ).trim();
+    mapped.temporaryPasswordPlain = resolveAccessTemporaryPasswordPlainForPersist_(
+      updates.temporary_password_plain,
+    );
   if (has("temporary_password_hash"))
     mapped.temporaryPasswordHash = String(
       updates.temporary_password_hash || "",
@@ -1186,7 +1195,7 @@ function _ensureTemporaryAccessPasswordForRow_(sh, rowNumber) {
     "час використання тимчасового пароля",
   ]);
 
-  if (!tempPlainCol || !tempHashCol || !tempSaltCol || !tempExpiresCol) {
+  if (!tempHashCol || !tempSaltCol || !tempExpiresCol) {
     return false;
   }
 
@@ -1195,9 +1204,6 @@ function _ensureTemporaryAccessPasswordForRow_(sh, rowNumber) {
     : "";
   if (usedAt) return false;
 
-  var existingPlain = String(
-    sh.getRange(rowNumber, tempPlainCol).getValue() || "",
-  ).trim();
   var existingHash = String(
     sh.getRange(rowNumber, tempHashCol).getValue() || "",
   ).trim();
@@ -1205,7 +1211,19 @@ function _ensureTemporaryAccessPasswordForRow_(sh, rowNumber) {
     sh.getRange(rowNumber, tempSaltCol).getValue() || "",
   ).trim();
 
-  if (existingPlain && existingHash && existingSalt) {
+  if (existingHash && existingSalt) {
+    if (
+      tempPlainCol &&
+      typeof isAccessTempPasswordPlainLookupEnabled_ === "function" &&
+      !isAccessTempPasswordPlainLookupEnabled_()
+    ) {
+      var legacyPlain = String(
+        sh.getRange(rowNumber, tempPlainCol).getValue() || "",
+      ).trim();
+      if (legacyPlain) {
+        sh.getRange(rowNumber, tempPlainCol).setValue("");
+      }
+    }
     return false;
   }
 
@@ -1281,10 +1299,14 @@ function _ensureTemporaryAccessPasswordForRow_(sh, rowNumber) {
           "yyyy-MM-dd HH:mm:ss",
         );
 
-  sh.getRange(rowNumber, tempPlainCol).setValue(plain);
   sh.getRange(rowNumber, tempHashCol).setValue(hash);
   sh.getRange(rowNumber, tempSaltCol).setValue(salt);
   sh.getRange(rowNumber, tempExpiresCol).setValue(expiresAt);
+  if (tempPlainCol) {
+    sh.getRange(rowNumber, tempPlainCol).setValue(
+      resolveAccessTemporaryPasswordPlainForPersist_(plain),
+    );
+  }
 
   return true;
 }
@@ -1342,6 +1364,10 @@ function apiStage7NormalizeAccessSheetFormatting() {
   ].filter(Boolean);
 
   var changedRows = 0;
+  var plainCol = col([
+    "temporary_password_plain",
+    "тимчасовий пароль (текст)",
+  ]);
 
   dateCols.forEach(function (dateCol) {
     sh.getRange(2, dateCol, Math.max(lastRow - 1, 1), 1).setNumberFormat("@");
@@ -1374,6 +1400,20 @@ function apiStage7NormalizeAccessSheetFormatting() {
     });
 
     if (rowChanged) changedRows++;
+  }
+
+  if (
+    plainCol &&
+    typeof isAccessTempPasswordPlainLookupEnabled_ === "function" &&
+    !isAccessTempPasswordPlainLookupEnabled_()
+  ) {
+    for (var plainRow = 2; plainRow <= lastRow; plainRow++) {
+      var plainCell = sh.getRange(plainRow, plainCol);
+      if (String(plainCell.getValue() || "").trim()) {
+        plainCell.setValue("");
+        changedRows++;
+      }
+    }
   }
 
   _invalidateAccessCaches_();

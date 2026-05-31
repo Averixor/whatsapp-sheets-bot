@@ -46,6 +46,9 @@ const PROJECT_CANONICAL_LAYERS_ = Object.freeze({
 
 const PROJECT_STAGE7_CANONICAL_API_MAP_ = Object.freeze({
   application: Object.freeze([
+    "apiStage7GetAccessDescriptorLite",
+    "apiStage7BootstrapSidebar",
+    "apiStage7ReportClientAccessSignal",
     "apiStage7GetMonthsList",
     "apiStage7GetSidebarData",
     "apiGenerateSendPanelForDate",
@@ -87,6 +90,14 @@ const PROJECT_STAGE7_CANONICAL_API_MAP_ = Object.freeze({
     "apiStage7RunRepair",
     "apiStage7RunLifecycleRetentionCleanup",
     "apiStage7GetAccessDescriptor",
+    "apiStage7DebugAccess",
+    "apiStage7ReportAccessViolation",
+    "apiStage7ListBindableCallsigns",
+    "apiStage7LoginByIdentifierAndCallsign",
+    "apiStage7BindCurrentKeyToCallsign",
+    "apiStage7SubmitAccessKeyRequest",
+    "apiStage7RegisterAccessWithTemporaryPassword",
+    "apiStage7NormalizeAccessSheetFormatting",
     "apiStage7ApplyProtections",
     "apiStage7BootstrapRuntimeAndAlertsSheets",
     "apiStage7BootstrapAccessSheet",

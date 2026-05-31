@@ -249,6 +249,10 @@
     loginByIdentifierAndCallsign: async (payload = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7LoginByIdentifierAndCallsign', payload || {})),
     applyProtections: async (options = {}) => adaptStage4UtilityResponse(await Api.run('apiStage7ApplyProtections', options)),
     bootstrapAccessSheet: async () => adaptStage4UtilityResponse(await Api.run('apiStage7BootstrapAccessSheet')),
+    reportClientAccessSignal: async (actionName, details = {}) =>
+      adaptStage4UtilityResponse(
+        await Api.run('apiStage7ReportClientAccessSignal', actionName || '', details || {}),
+      ),
     reportAccessViolation: async (actionName, details = {}) =>
       adaptStage4UtilityResponse(await Api.run('apiStage7ReportAccessViolation', actionName || '', details || {}))
   };

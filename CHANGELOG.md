@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-05-29 — ACCESS temp password hash-only storage
+
+- **`AccessControl.Core.gs`**: `WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP` migration flag; `sanitizeAccessSecretFieldUpdates_` / `resolveAccessTemporaryPasswordPlainForPersist_` strip plaintext unless flag is on
+- **`AccessControl.AuthResolver.gs`**: key request persists hash/salt only; returns plaintext once in response (`temporaryPasswordShowOnce`)
+- **`AccessControl.SheetRepository.gs`**: hash-only writes in `_ensureTemporaryAccessPasswordForRow_`; normalize scrubs legacy `temporary_password_plain` when migration flag is off
+- **`Js.Security.Forms.html`**: show one-time temp code in login modal after key request
+- **`AccessPolicyChecks.gs`**: asserts plain lookup off by default and plaintext not persisted
+- **`AccessEnforcement.gs`**, **`Stage7ServerApi.gs`**: safe `apiStage7ReportClientAccessSignal`; `apiStage7ReportAccessViolation` sysadmin-only
+- **`contracts/access-api.contract.json`**, **`scripts/verify-access-api-governance.mjs`**: CI governance for access API surface
+- **`SECURITY.md`**, **`README.md`**, **`RUNBOOK.md`**: documented hash-only policy and migration flag
+
 ## 2026-05-31 — system trigger access + maintenance job restore
 
 - **`AccessEnforcement.gs`**: shared `buildSystemTriggerAccessDescriptor`, exported `isSystemTriggerContext`; `assertCanRunLeaveBirthdayCheck` allows admin/sysadmin/owner or full system trigger context

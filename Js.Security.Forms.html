@@ -79,11 +79,28 @@
           );
           return;
         }
-        setAccessLoginModalMessage_(
-          (result && result.message) ||
-            "Заявку надіслано. Очікуйте ключ доступу.",
-          false,
+        const temporaryPassword = safeString_(
+          (result && result.temporaryPassword) ||
+            (result && result.data && result.data.temporaryPassword),
         );
+        const expiresAt = safeString_(
+          (result && result.temporaryPasswordExpiresAt) ||
+            (result && result.data && result.data.temporaryPasswordExpiresAt),
+        );
+        if (temporaryPassword) {
+          setAccessLoginModalMessage_(
+            "Заявку надіслано. Збережіть тимчасовий код доступу — він показується один раз:\n" +
+              temporaryPassword +
+              (expiresAt ? "\nДіє до: " + expiresAt : ""),
+            false,
+          );
+        } else {
+          setAccessLoginModalMessage_(
+            (result && result.message) ||
+              "Заявку надіслано. Очікуйте підтвердження адміністратора.",
+            false,
+          );
+        }
         accessKeyRequestLastSentAt_ = Date.now();
         localStorage.setItem(
           "wasb_access_key_request_last_sent_at",
@@ -99,7 +116,11 @@
           requestBtn.textContent = "Заявку вже надіслано";
         }
 
-        showToast("Заявку на отримання ключа надіслано");
+        showToast(
+          temporaryPassword
+            ? "Заявку надіслано. Збережіть тимчасовий код — він більше не показується."
+            : "Заявку на отримання ключа надіслано",
+        );
       } catch (error) {
         setAccessLoginModalMessage_(
           error && error.message ? error.message : String(error),
