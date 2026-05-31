@@ -34,7 +34,34 @@ This project cannot be "run" locally in the traditional sense. There is no dev s
 ### Testing
 
 - **Local (automated):** `npm run ci` — all static checks pass without credentials.
-- **Remote (manual):** After `clasp push`, run GAS-side entrypoints in the Apps Script editor (e.g. `apiRunStage7RegressionTests()`, `apiStage7QuickHealthCheck()`). These require a configured Google Spreadsheet with the ACCESS sheet populated.
+- **Remote (automated after push):** `npm run gas:smoke` — runs `apiRunProductionSmokeChecks` in Google Apps Script via `clasp run` (requires Apps Script API, `clasp login`, and `executionApi.access: ANYONE` in `appsscript.json`).
+- **Remote (manual):** Apps Script editor entrypoints such as `apiRunStage7RegressionTests()` when deeper regression is needed.
+
+### Production runtime smoke
+
+After local CI and deploy:
+
+```bash
+fish_add_path $HOME/.local/node-v24.16.0/bin   # if Node 22 is default
+npm run ci
+clasp push
+npm run gas:smoke
+```
+
+Or one command: `npm run deploy:prod`
+
+**Expectations** (`apiRunProductionSmokeChecks` result):
+
+- `ok === true`
+- `checks.migrationFlag !== 'true'` (null/empty is OK)
+- `checks.clientSignal` — envelope `success: true`; inner result: `emailSent: false`, `alertLogged: true` (typically at `data.result`)
+
+**If `clasp run` fails with permission/API errors:**
+
+1. Enable **Google Apps Script API** in [Google Cloud Console](https://console.cloud.google.com/) for the clasp OAuth project.
+2. Run `clasp login` and confirm `.clasp.json` scriptId matches the target project.
+3. Confirm `appsscript.json` contains `"executionApi": { "access": "ANYONE" }`.
+4. Re-run `clasp push`, then create or refresh an **API executable** deployment if the Apps Script UI prompts for it.
 
 ### Key gotchas
 

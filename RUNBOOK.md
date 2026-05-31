@@ -277,10 +277,48 @@ There is **no** Apps Script deployment in CI (`clasp` is local only). See `.gith
 5. **`clasp status`** then **`clasp push`** — GitHub alone does not update the bound script project.
 6. In Apps Script → **Project settings → Script properties**: ensure **`WASB_SPREADSHEET_ID`** is set if you rely on triggers/headless runs (use your production spreadsheet ID).
 7. Reload the spreadsheet UI; close and reopen the sidebar.
-8. Run smoke / policy checks when appropriate (see §13).
+8. Run smoke when appropriate (see §13 — `npm run gas:smoke` or manual editor checks).
 9. If **PHONES** or birthday/ДН logic changed: run **`apiStage7ClearPhoneCache()`**, then re-check a person card.
 
-## 13. Post-deploy checks (manual GAS functions)
+## 13. Post-deploy checks
+
+### Production runtime smoke (automated via clasp)
+
+After `clasp push`, run remote GAS smoke from the repo root (Node 24 + `clasp login`):
+
+```bash
+npm run gas:smoke
+```
+
+Entrypoint: **`apiRunProductionSmokeChecks`** in `GasRuntimeSmoke.gs` (bundled with `clasp push`).
+
+Full deploy flow:
+
+```bash
+npm run deploy:prod
+```
+
+(`npm run ci` → `clasp push` → `npm run gas:smoke`)
+
+**Expectations:**
+
+| Field | Expected |
+| ----- | -------- |
+| `ok` | `true` |
+| `checks.migrationFlag` | not `'true'` (null/empty OK) |
+| `checks.clientSignal.success` | `true` |
+| `checks.clientSignal.data.result.emailSent` | `false` |
+| `checks.clientSignal.data.result.alertLogged` | `true` |
+| `checks.accessPolicy.ok` | `true` (or `OK_WITH_SKIPS` status without FAIL) |
+
+**Troubleshooting `clasp run`:**
+
+- Enable **Apps Script API** for the Google account / Cloud project used by clasp.
+- `clasp login` — refresh OAuth if expired.
+- `appsscript.json` must include `"executionApi": { "access": "ANYONE" }`.
+- Run `clasp push` before smoke; create/update **API executable** deployment if required by the script project.
+
+### Manual GAS functions (editor)
 
 Run from the Apps Script editor when relevant after a deploy or config change:
 

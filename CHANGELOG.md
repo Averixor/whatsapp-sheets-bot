@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-05-29 — Remote GAS runtime smoke (clasp run)
+
+- **`GasRuntimeSmoke.gs`**: `apiRunProductionSmokeChecks()` — policy, normalize, client signal, health, migration flag
+- **`appsscript.json`**: `executionApi.access: ANYONE` for remote execution
+- **`package.json`**: `gas:smoke`, `deploy:prod`
+- **`AGENTS.md`**, **`RUNBOOK.md`**: production runtime smoke flow and expectations
+
 ## 2026-05-29 — P2 Node/scopes/XSS governance
 
 - **`.nvmrc`**, **`package.json` `engines.node`**, **`scripts/verify-node-version.mjs`**: Node 24 precheck (`npm run precheck`) before CI

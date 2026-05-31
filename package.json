@@ -12,6 +12,8 @@
     "ci:client": "node scripts/verify-client-includes.mjs && node scripts/verify-client-js.mjs && node scripts/verify-client-deps.mjs",
     "ci:gas": "node scripts/ci-gas-sanity.mjs",
     "audit:functions": "node scripts/audit-function-graph.mjs",
+    "gas:smoke": "clasp run apiRunProductionSmokeChecks",
+    "deploy:prod": "npm run ci && clasp push && npm run gas:smoke",
     "gas status": "clasp status",
     "gas pull": "clasp pull",
     "gas push": "clasp push",
