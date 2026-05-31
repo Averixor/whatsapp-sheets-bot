@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-05-29 — P2 Node/scopes/XSS governance
+
+- **`.nvmrc`**, **`package.json` `engines.node`**, **`scripts/verify-node-version.mjs`**: Node 24 precheck (`npm run precheck`) before CI
+- **`contracts/oauth-scopes.contract.json`**, **`scripts/verify-oauth-scopes.mjs`**: OAuth scope audit; removed unused `documents` + full `drive` from **`appsscript.json`**
+- **`contracts/xss-policy.contract.json` v2**: explicit `reviewedAllowlist` groups with full SAFE_EXPR coverage
+
 ## 2026-05-29 — ACCESS temp password hash-only storage
 
 - **`AccessControl.Core.gs`**: `WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP` migration flag; `sanitizeAccessSecretFieldUpdates_` / `resolveAccessTemporaryPasswordPlainForPersist_` strip plaintext unless flag is on

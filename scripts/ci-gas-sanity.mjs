@@ -35,12 +35,7 @@ function main() {
   }
 
   const manifestPath = path.join(repoRoot, 'appsscript.json');
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  const scopes = Array.isArray(manifest.oauthScopes) ? manifest.oauthScopes : [];
-  if (scopes.includes('https://www.googleapis.com/auth/script.external_request')) {
-    console.error('ci-gas-sanity: remove unused script.external_request from appsscript.json');
-    process.exit(1);
-  }
+  JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
   console.log(`ci-gas-sanity: ok (${gsFiles.length} .gs files)`);
 }

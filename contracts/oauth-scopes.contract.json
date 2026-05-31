@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "manifestFile": "appsscript.json",
+  "reviewedAt": "2026-05-29",
+  "changeReason": "P2 OAuth scope audit — remove unused Drive full + Documents scopes",
+  "forbiddenScopes": [
+    "https://www.googleapis.com/auth/script.external_request"
+  ],
+  "requiredScopes": [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive.file",
+    "https://www.googleapis.com/auth/script.container.ui",
+    "https://www.googleapis.com/auth/script.send_mail",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/script.scriptapp"
+  ],
+  "scopeCatalog": [
+    {
+      "url": "https://www.googleapis.com/auth/spreadsheets",
+      "status": "required",
+      "rationale": "SpreadsheetApp read/write for bound spreadsheet and monthly sheets",
+      "gasApis": ["SpreadsheetApp"]
+    },
+    {
+      "url": "https://www.googleapis.com/auth/drive.file",
+      "status": "required",
+      "rationale": "Per-file Drive access for the container spreadsheet created/opened by the app",
+      "gasApis": []
+    },
+    {
+      "url": "https://www.googleapis.com/auth/script.container.ui",
+      "status": "required",
+      "rationale": "HtmlService sidebar, dialogs, and person-card UI",
+      "gasApis": ["HtmlService"]
+    },
+    {
+      "url": "https://www.googleapis.com/auth/script.send_mail",
+      "status": "required",
+      "rationale": "MailApp security notifications on access violations (best-effort)",
+      "gasApis": ["MailApp"]
+    },
+    {
+      "url": "https://www.googleapis.com/auth/userinfo.email",
+      "status": "required",
+      "rationale": "Session.getActiveUser/getEffectiveUser email for ACCESS identity and audit",
+      "gasApis": ["Session"]
+    },
+    {
+      "url": "https://www.googleapis.com/auth/script.scriptapp",
+      "status": "required",
+      "rationale": "ScriptApp managed triggers, properties, and project metadata",
+      "gasApis": ["ScriptApp", "PropertiesService", "CacheService", "LockService"]
+    },
+    {
+      "url": "https://www.googleapis.com/auth/documents",
+      "status": "removed",
+      "rationale": "No DocumentApp usage in server code (grep audit 2026-05-29)",
+      "gasApis": []
+    },
+    {
+      "url": "https://www.googleapis.com/auth/drive",
+      "status": "removed",
+      "rationale": "No DriveApp usage; drive.file is sufficient for container-bound access",
+      "gasApis": []
+    }
+  ]
+}

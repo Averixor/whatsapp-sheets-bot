@@ -19,6 +19,42 @@ const sinkNamePattern = preferredSinks.sinkNamePattern
   : null;
 const sanitizerSinks = xssPolicy.sanitizerSinks || [];
 
+function verifyReviewedAllowlist() {
+  const errors = [];
+  const review = xssPolicy.reviewedAllowlist || {};
+  const patterns = xssPolicy.patterns || [];
+  const groups = Array.isArray(review.groups) ? review.groups : [];
+
+  if (!review.reviewedAt) {
+    errors.push('reviewedAllowlist.reviewedAt is required');
+  }
+
+  const covered = new Set();
+  groups.forEach((group) => {
+    (group.patterns || []).forEach((pattern) => {
+      if (covered.has(pattern)) {
+        errors.push(`duplicate reviewed pattern: ${pattern}`);
+      }
+      covered.add(pattern);
+    });
+  });
+
+  if (review.requireFullCoverage) {
+    patterns.forEach((pattern) => {
+      if (!covered.has(pattern)) {
+        errors.push(`pattern missing from reviewedAllowlist groups: ${pattern}`);
+      }
+    });
+    covered.forEach((pattern) => {
+      if (!patterns.includes(pattern)) {
+        errors.push(`reviewedAllowlist references unknown pattern: ${pattern}`);
+      }
+    });
+  }
+
+  return errors;
+}
+
 function stripScript(html) {
   const match = html.match(/<script\b[^>]*>([\s\S]*?)<\/script>/i);
   return match ? match[1] : html;
@@ -108,6 +144,13 @@ function warnOnNewPatternsWithoutSink() {
 }
 
 function main() {
+  const allowlistErrors = verifyReviewedAllowlist();
+  if (allowlistErrors.length) {
+    console.error('audit-client-xss: FAIL (reviewedAllowlist)');
+    allowlistErrors.forEach((e) => console.error(`  - ${e}`));
+    process.exit(1);
+  }
+
   warnOnNewPatternsWithoutSink();
 
   if (patternCount > maxPatterns) {
@@ -130,7 +173,9 @@ function main() {
     });
     process.exit(1);
   }
-  console.log(`audit-client-xss: OK (${TARGET_FILES.length} files, ${patternCount} safe patterns)`);
+  console.log(
+    `audit-client-xss: OK (${TARGET_FILES.length} files, ${patternCount} safe patterns, reviewed ${xssPolicy.reviewedAllowlist?.reviewedAt || 'n/a'})`,
+  );
 }
 
 main();

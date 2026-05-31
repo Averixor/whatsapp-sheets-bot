@@ -12,13 +12,20 @@ WASB is a Google Apps Script (GAS) bundle bound to a Google Spreadsheet. There i
 npm run ci
 ```
 
-This runs all static analysis scripts (GAS sanity, function graph audit, client verification, XSS audit, envelope compat, usecase facade, snapshot governance, bridge flags, jsconfig verification). All checks are Node.js-based and do not require any Google credentials or network access.
+This runs all static analysis scripts (GAS sanity, function graph audit, client verification, XSS audit, envelope compat, usecase facade, snapshot governance, bridge flags, access API governance, OAuth scopes, jsconfig verification). All checks are Node.js-based and do not require any Google credentials or network access.
 
 Individual subscripts: `npm run ci:gas`, `npm run ci:client`, `npm run audit:functions`.
 
 ### Node.js version
 
-CI requires **Node.js 24** (matching `.github/workflows/ci.yml`). The `/exec-daemon/node` binary (Node 22) takes precedence in PATH by default. The update script installs Node 24 via nvm and prepends it to PATH. If running commands manually, ensure `$NVM_DIR/versions/node/v24.16.0/bin` is first in PATH, or source nvm and run `nvm use 24`.
+CI requires **Node.js 24** (matching `.github/workflows/ci.yml` and `.nvmrc`). `npm run ci` runs `npm run precheck` first (`scripts/verify-node-version.mjs`).
+
+```bash
+nvm use    # reads .nvmrc (24)
+npm run ci
+```
+
+The `/exec-daemon/node` binary (Node 22) takes precedence in PATH by default. If running commands manually, ensure `$NVM_DIR/versions/node/v24.16.0/bin` is first in PATH, or source nvm and run `nvm use 24`.
 
 ### No local application runtime
 

@@ -216,6 +216,21 @@ Rules:
 
 Never commit real spreadsheet IDs or owner emails into the repository.
 
+### GAS OAuth scopes
+
+Canonical allowlist: `contracts/oauth-scopes.contract.json` (CI: `verify-oauth-scopes.mjs`).
+
+| Scope | Purpose |
+| ----- | ------- |
+| `spreadsheets` | SpreadsheetApp |
+| `drive.file` | Container spreadsheet (per-file Drive) |
+| `script.container.ui` | HtmlService sidebar/dialogs |
+| `script.send_mail` | MailApp security notifications |
+| `userinfo.email` | Session user email for ACCESS/audit |
+| `script.scriptapp` | Triggers, properties, locks |
+
+Removed after codebase audit (2026-05-29): full `drive`, `documents` — no `DriveApp` / `DocumentApp` usage. Never re-add `script.external_request` without explicit review.
+
 ## 10. Alerts, audit, and notifications
 
 Violations and security-relevant events are written on a best-effort basis to:

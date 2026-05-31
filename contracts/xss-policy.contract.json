@@ -1,9 +1,157 @@
 {
-  "version": 1,
+  "version": 2,
   "maxSafeExprPatterns": 100,
   "warnThreshold": 95,
   "legacyPatternCount": 93,
   "migrationNotes": "Prefer routing new HTML through sanitizerSinks (escapeHtml, escapeAttr, escapeJsString, esc) instead of expanding SAFE_EXPR. Legacy patterns remain allowed until sink migration completes.",
+  "reviewedAllowlist": {
+    "reviewedAt": "2026-05-29",
+    "changeReason": "P2 explicit reviewed allowlist groups for SAFE_EXPR governance",
+    "requireFullCoverage": true,
+    "groups": [
+      {
+        "id": "sanitizer-sinks",
+        "rationale": "Explicit HTML/attr/JS escape helpers",
+        "patterns": [
+          "^escapeHtml\\s*\\(",
+          "^escapeHtmlMultiline\\s*\\(",
+          "^esc\\s*\\(",
+          "^escapeAttr\\s*\\(",
+          "^escapeJsString\\s*\\(",
+          "^escJs\\s*\\("
+        ]
+      },
+      {
+        "id": "render-helpers",
+        "rationale": "Server-side render helpers that return pre-escaped HTML fragments",
+        "patterns": [
+          "^renderMultilineUiReportText_\\s*\\(",
+          "^renderHealthGroup\\s*\\(",
+          "^renderHealthReport\\s*\\(",
+          "^renderProjectTestReport\\s*\\(",
+          "^renderHealthCheckModeSwitcher_\\s*\\(",
+          "^renderPendingRepairsTable_\\s*\\(",
+          "^renderVacationAlerts\\s*\\(",
+          "^renderBirthdayResult\\s*\\(",
+          "^renderSupplementaryBlocks\\s*\\(",
+          "^renderAccessDebugResult_\\s*\\(",
+          "^renderCheckItemCompact\\s*\\(",
+          "^items\\.map\\s*\\(\\s*renderCheckItemCompact\\s*\\)",
+          "^preview\\.map\\s*\\(",
+          "^getHealthCheckModeLabel_\\s*\\(",
+          "^getHealthCheckModeLabel_\\s*\\(\\)",
+          "^renderHealthCheckModeSwitcher_\\s*\\(\\)"
+        ]
+      },
+      {
+        "id": "formatters",
+        "rationale": "Formatting helpers returning escaped text or numeric labels",
+        "patterns": [
+          "^normalizeError\\s*\\(",
+          "^translateLifecycle",
+          "^formatOperationDate\\s*\\(",
+          "^formatPhone\\s*\\(",
+          "^formatBirthday",
+          "^monthNames\\s*\\["
+        ]
+      },
+      {
+        "id": "numeric-coercions",
+        "rationale": "Non-HTML numeric or length coercions",
+        "patterns": [
+          "^Number\\s*\\(",
+          "^String\\s*\\(\\s*pct\\s*\\)",
+          "^String\\s*\\(\\s*currentOffset",
+          "^String\\s*\\(\\s*knownTotal",
+          "^String\\s*\\(\\s*chunkNo",
+          "^\\w+\\.length\\b"
+        ]
+      },
+      {
+        "id": "escaped-collections",
+        "rationale": "Arrays mapped through escapeHtml",
+        "patterns": [
+          "^\\w+\\.map\\s*\\(\\s*escapeHtml\\s*\\)",
+          "^protectedSheets\\.map\\s*\\(\\s*escapeHtml\\s*\\)",
+          "^warnings\\.map\\s*\\(\\s*escapeHtml\\s*\\)"
+        ]
+      },
+      {
+        "id": "structured-data",
+        "rationale": "Known-safe structured counters and report metadata",
+        "patterns": [
+          "^stats\\.",
+          "^result\\?\\.",
+          "^result\\.",
+          "^data\\.(peopleCount|length)\\b",
+          "^data\\.(commanderMessages|birthdayMessages|today|tomorrow)\\.length\\b",
+          "^groups\\.",
+          "^checks\\.length",
+          "^report\\.(ts|startedAt|durationMs|runId)",
+          "^new Date\\s*\\(",
+          "^parts\\.join",
+          "^JSON\\.stringify\\s*\\(\\s*access"
+        ]
+      },
+      {
+        "id": "allowlisted-scalars",
+        "rationale": "Reviewed scalar identifiers used only for counts, CSS tokens, or UI flags",
+        "patterns": [
+          "^(okCount|criticalCount|warningCount|pseudoCount|failed|warnings|passed|skipped|discovered|total|pct|day|year|month|index|icon|statusColor|chunkNo|currentOffset|knownTotal|options|currentVacHtml|nextVacHtml|waButton|rowsHtml|cachedHtml|partial|safeAction|safeDateStr)\\b",
+          "^(isSent|isReady|isToday|isSelected|isBlocked)\\s*\\?",
+          "^!(STATE|result)",
+          "^STATE\\.selectedDate",
+          "^action\\s*===",
+          "^sentItems\\.length",
+          "^readyItems\\.length",
+          "^blockedItems\\.length",
+          "^STATE\\.healthCheckMode\\s*===",
+          "^hasRealProblems\\s*\\?",
+          "^hasProblems\\s*\\?",
+          "^statusMessage$",
+          "^message$",
+          "^html\\s*\\+",
+          "^html\\s*\\+=",
+          "^rowsHtml$",
+          "^cachedHtml$",
+          "^partial\\s*\\?",
+          "^itemStyle$",
+          "^fmlStyle$",
+          "^btnStyle$",
+          "^item\\.role\\s*\\?",
+          "^item\\.birthday\\s*\\?",
+          "^item\\.link\\s*\\?",
+          "^row\\.link\\s*\\?",
+          "^person\\.phone\\s*\\?",
+          "^person\\.link\\s*\\?",
+          "^showHashButtons\\s*\\?",
+          "^access\\.selfBindRequired",
+          "^warnings\\.length\\s*\\?",
+          "^protectedSheets\\.length\\s*\\?",
+          "^sentItems\\.length\\s*>",
+          "^readyItems\\.length\\s*>",
+          "^data\\.mode\\s*===",
+          "^details\\s*\\?",
+          "^recommendation\\s*\\?",
+          "^noteLabel\\b",
+          "^cssClass\\b",
+          "^isPseudo\\b",
+          "^title\\b",
+          "^emptyText\\b",
+          "^status\\b",
+          "^icon\\b"
+        ]
+      },
+      {
+        "id": "static-literals",
+        "rationale": "Static string/number literals without dynamic user input",
+        "patterns": [
+          "^['\"]",
+          "^\\d+(\\.\\d+)?$"
+        ]
+      }
+    ]
+  },
   "preferredSinks": {
     "policy": "New template-literal interpolations should call a sanitizer sink directly; avoid adding new patterns to patterns[] unless migrating legacy code.",
     "requireSinkForNewPatterns": true,
