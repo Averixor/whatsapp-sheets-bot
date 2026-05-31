@@ -9,6 +9,7 @@
 - **`AccessPolicyChecks.gs`**: asserts plain lookup off by default and plaintext not persisted
 - **`AccessEnforcement.gs`**, **`Stage7ServerApi.gs`**: safe `apiStage7ReportClientAccessSignal`; `apiStage7ReportAccessViolation` sysadmin-only
 - **`contracts/access-api.contract.json`**, **`scripts/verify-access-api-governance.mjs`**: CI governance for access API surface
+- **`ProjectMetadata.gs`**: `PROJECT_STAGE7_ACCESS_API_ROLE_POLICY_`; deprecated `apiStage7BindCurrentKeyToCallsign` removed from canonical map
 - **`SECURITY.md`**, **`README.md`**, **`RUNBOOK.md`**: documented hash-only policy and migration flag
 
 ## 2026-05-31 — system trigger access + maintenance job restore

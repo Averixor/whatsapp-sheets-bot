@@ -882,7 +882,7 @@ function loginByIdentifierAndCallsign(
 }
 
 /**
- * Скорочений варіант - прив'язка тільки за позивним
+ * @deprecated Use loginByIdentifierAndCallsign with email/phone + callsign.
  */
 function bindCurrentKeyToCallsign(callsign) {
   return loginByIdentifierAndCallsign("", callsign || "");

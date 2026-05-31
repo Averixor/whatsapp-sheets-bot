@@ -47,6 +47,55 @@ var POLICY_CHECKS_CONFIG_ = {
   SCRIPT_PROPERTY_ALLOW_TESTS: "WASB_ALLOW_POLICY_TESTS",
 };
 
+/**
+ * Evaluate whether a role may call an access API endpoint per ProjectMetadata policy.
+ * @param {string} endpointName
+ * @param {string} role
+ * @returns {boolean}
+ */
+function isAccessApiEndpointAllowedForRole_(endpointName, role) {
+  var policyMap =
+    typeof getAccessApiEndpointRolePolicy_ === "function"
+      ? getAccessApiEndpointRolePolicy_()
+      : null;
+  if (!policyMap || typeof policyMap !== "object") return false;
+
+  var policy = policyMap[String(endpointName || "").trim()];
+  if (!policy || typeof policy !== "object") return false;
+
+  var normalizedRole = String(role || "guest").toLowerCase();
+  if (typeof normalizeRole_ === "function") {
+    normalizedRole = normalizeRole_(normalizedRole);
+  }
+
+  var roleOrder =
+    typeof ROLE_ORDER === "object" && ROLE_ORDER
+      ? ROLE_ORDER
+      : {
+          guest: 0,
+          viewer: 1,
+          operator: 2,
+          maintainer: 3,
+          admin: 4,
+          sysadmin: 5,
+          owner: 6,
+        };
+
+  if (policy.guestAllowed === true && normalizedRole === "guest") {
+    return true;
+  }
+
+  if (policy.minRole) {
+    var minRole = String(policy.minRole || "").toLowerCase();
+    if (typeof normalizeRole_ === "function") {
+      minRole = normalizeRole_(minRole);
+    }
+    return (roleOrder[normalizedRole] || 0) >= (roleOrder[minRole] || 0);
+  }
+
+  return policy.guestAllowed === true;
+}
+
 if (typeof Object.freeze === "function") {
   Object.freeze(POLICY_CHECKS_CONFIG_.EXPECTED_PROTECTED_SHEETS);
   Object.freeze(POLICY_CHECKS_CONFIG_.REQUIRED_MAINTENANCE_ACTIONS);
@@ -1196,6 +1245,140 @@ function runAccessPolicyChecks(options) {
           alertLogged: ok.alertLogged === true,
           mailCalls: mailCalls,
         };
+      },
+    );
+
+    _pushPolicyCheck_(
+      report,
+      "access api role policy map is available",
+      function () {
+        if (typeof getAccessApiEndpointRolePolicy_ !== "function") {
+          throw new Error("getAccessApiEndpointRolePolicy_ is not available");
+        }
+        var policyMap = getAccessApiEndpointRolePolicy_();
+        var required = [
+          "apiStage7SubmitAccessKeyRequest",
+          "apiStage7RegisterAccessWithTemporaryPassword",
+          "apiStage7LoginByIdentifierAndCallsign",
+          "apiStage7ListBindableCallsigns",
+          "apiStage7ReportAccessViolation",
+          "apiStage7ReportClientAccessSignal",
+        ];
+        for (var i = 0; i < required.length; i++) {
+          if (!policyMap[required[i]]) {
+            throw new Error("missing role policy for " + required[i]);
+          }
+        }
+        return { policyCount: Object.keys(policyMap).length };
+      },
+    );
+
+    _pushPolicyCheck_(
+      report,
+      "guest allowed access api endpoints",
+      function () {
+        var allowed = [
+          "apiStage7SubmitAccessKeyRequest",
+          "apiStage7RegisterAccessWithTemporaryPassword",
+          "apiStage7LoginByIdentifierAndCallsign",
+          "apiStage7ListBindableCallsigns",
+          "apiStage7ReportClientAccessSignal",
+          "apiStage7GetAccessDescriptorLite",
+          "apiStage7BootstrapSidebar",
+        ];
+        for (var i = 0; i < allowed.length; i++) {
+          if (!isAccessApiEndpointAllowedForRole_(allowed[i], "guest")) {
+            throw new Error("guest should be allowed: " + allowed[i]);
+          }
+        }
+        return { guestAllowedCount: allowed.length };
+      },
+    );
+
+    _pushPolicyCheck_(
+      report,
+      "guest denied access api endpoints",
+      function () {
+        var denied = [
+          "apiStage7ReportAccessViolation",
+          "apiStage7BootstrapAccessSheet",
+          "apiStage7NormalizeAccessSheetFormatting",
+          "apiStage7ApplyProtections",
+        ];
+        for (var i = 0; i < denied.length; i++) {
+          if (isAccessApiEndpointAllowedForRole_(denied[i], "guest")) {
+            throw new Error("guest should be denied: " + denied[i]);
+          }
+        }
+        return { guestDeniedCount: denied.length };
+      },
+    );
+
+    _pushPolicyCheck_(
+      report,
+      "viewer operator admin inherit guest-allowed access api endpoints",
+      function () {
+        var allowed = [
+          "apiStage7SubmitAccessKeyRequest",
+          "apiStage7LoginByIdentifierAndCallsign",
+          "apiStage7ListBindableCallsigns",
+          "apiStage7ReportClientAccessSignal",
+        ];
+        var roles = ["viewer", "operator", "admin"];
+        for (var r = 0; r < roles.length; r++) {
+          for (var i = 0; i < allowed.length; i++) {
+            if (!isAccessApiEndpointAllowedForRole_(allowed[i], roles[r])) {
+              throw new Error(
+                roles[r] + " should be allowed: " + allowed[i],
+              );
+            }
+          }
+        }
+        return { roles: roles, endpointCount: allowed.length };
+      },
+    );
+
+    _pushPolicyCheck_(
+      report,
+      "sysadmin allowed on report access violation endpoint",
+      function () {
+        if (
+          !isAccessApiEndpointAllowedForRole_(
+            "apiStage7ReportAccessViolation",
+            "sysadmin",
+          )
+        ) {
+          throw new Error("sysadmin should be allowed reportAccessViolation");
+        }
+        if (
+          isAccessApiEndpointAllowedForRole_(
+            "apiStage7ReportAccessViolation",
+            "admin",
+          )
+        ) {
+          throw new Error("admin should be denied reportAccessViolation");
+        }
+        return { sysadminAllowed: true, adminDenied: true };
+      },
+    );
+
+    _pushPolicyCheck_(
+      report,
+      "bindCurrentKeyToCallsign removed from public AccessControl API",
+      function () {
+        if (
+          typeof AccessControl_ !== "object" ||
+          !AccessControl_ ||
+          Object.prototype.hasOwnProperty.call(
+            AccessControl_,
+            "bindCurrentKeyToCallsign",
+          )
+        ) {
+          throw new Error(
+            "AccessControl_.bindCurrentKeyToCallsign should not be exported",
+          );
+        }
+        return { exported: false };
       },
     );
   } finally {

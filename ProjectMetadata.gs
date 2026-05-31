@@ -94,7 +94,6 @@ const PROJECT_STAGE7_CANONICAL_API_MAP_ = Object.freeze({
     "apiStage7ReportAccessViolation",
     "apiStage7ListBindableCallsigns",
     "apiStage7LoginByIdentifierAndCallsign",
-    "apiStage7BindCurrentKeyToCallsign",
     "apiStage7SubmitAccessKeyRequest",
     "apiStage7RegisterAccessWithTemporaryPassword",
     "apiStage7NormalizeAccessSheetFormatting",
@@ -104,6 +103,52 @@ const PROJECT_STAGE7_CANONICAL_API_MAP_ = Object.freeze({
   ]),
 
   compatibility: Object.freeze([]),
+});
+
+const PROJECT_STAGE7_ACCESS_API_ROLE_POLICY_ = Object.freeze({
+  apiStage7GetAccessDescriptorLite: Object.freeze({
+    guestAllowed: true,
+  }),
+  apiStage7BootstrapSidebar: Object.freeze({
+    guestAllowed: true,
+  }),
+  apiStage7ReportClientAccessSignal: Object.freeze({
+    guestAllowed: true,
+  }),
+  apiStage7GetAccessDescriptor: Object.freeze({
+    guestAllowed: true,
+  }),
+  apiStage7DebugAccess: Object.freeze({
+    guestAllowed: true,
+  }),
+  apiStage7ListBindableCallsigns: Object.freeze({
+    guestAllowed: true,
+  }),
+  apiStage7LoginByIdentifierAndCallsign: Object.freeze({
+    guestAllowed: true,
+  }),
+  apiStage7SubmitAccessKeyRequest: Object.freeze({
+    guestAllowed: true,
+  }),
+  apiStage7RegisterAccessWithTemporaryPassword: Object.freeze({
+    guestAllowed: true,
+  }),
+  apiStage7ReportAccessViolation: Object.freeze({
+    guestAllowed: false,
+    minRole: "sysadmin",
+  }),
+  apiStage7NormalizeAccessSheetFormatting: Object.freeze({
+    guestAllowed: false,
+    minRole: "admin",
+  }),
+  apiStage7BootstrapAccessSheet: Object.freeze({
+    guestAllowed: false,
+    minRole: "admin",
+  }),
+  apiStage7ApplyProtections: Object.freeze({
+    guestAllowed: false,
+    minRole: "sysadmin",
+  }),
 });
 
 const PROJECT_STAGE7_PUBLIC_API_MAP_ = Object.freeze({
@@ -592,6 +637,10 @@ function getMaintenancePolicy_() {
 
 function getCanonicalApiMap_() {
   return _projectMetaDeepCopy_(PROJECT_STAGE7_CANONICAL_API_MAP_);
+}
+
+function getAccessApiEndpointRolePolicy_() {
+  return _projectMetaDeepCopy_(PROJECT_STAGE7_ACCESS_API_ROLE_POLICY_);
 }
 
 function getPublicApiMap_() {

@@ -1316,6 +1316,41 @@ function _ensureTemporaryAccessPasswordForRow_(sh, rowNumber) {
 // ---------------------------------------------------------------------------
 
 function apiStage7NormalizeAccessSheetFormatting() {
+  if (typeof AccessControl_ === "object" && AccessControl_.describe) {
+    var accessDescriptor = AccessControl_.describe({
+      includeSensitiveDebug: false,
+    });
+    var accessRole = String(
+      (accessDescriptor && accessDescriptor.role) || "guest",
+    ).toLowerCase();
+    if (typeof normalizeRole_ === "function") {
+      accessRole = normalizeRole_(accessRole);
+    }
+    var roleOrder =
+      typeof ROLE_ORDER === "object" && ROLE_ORDER
+        ? ROLE_ORDER
+        : {
+            guest: 0,
+            viewer: 1,
+            operator: 2,
+            maintainer: 3,
+            admin: 4,
+            sysadmin: 5,
+            owner: 6,
+          };
+    if (
+      !accessDescriptor ||
+      accessDescriptor.enabled === false ||
+      (roleOrder[accessRole] || 0) < (roleOrder.admin || 4)
+    ) {
+      return {
+        success: false,
+        code: "access_denied",
+        message: "access_denied",
+      };
+    }
+  }
+
   var sh = _getSheet_(false);
   if (!sh) {
     return { success: false, message: "ACCESS sheet not found" };

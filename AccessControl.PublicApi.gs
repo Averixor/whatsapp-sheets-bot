@@ -874,7 +874,6 @@ var AccessControl_ = Object.freeze({
   describe: describe,
   assertRoleAtLeast: assertRoleAtLeast,
   listBindableCallsigns: listBindableCallsigns,
-  bindCurrentKeyToCallsign: bindCurrentKeyToCallsign,
   submitAccessKeyRequest: submitAccessKeyRequest,
   loginByIdentifierAndCallsign: loginByIdentifierAndCallsign,
   registerAccessWithTemporaryPassword: registerAccessWithTemporaryPassword,

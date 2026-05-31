@@ -1,25 +1,45 @@
 {
-  "version": 1,
+  "version": 2,
   "metadataSource": "ProjectMetadata.gs",
   "metadataField": "PROJECT_STAGE7_CANONICAL_API_MAP_",
+  "rolePolicyField": "PROJECT_STAGE7_ACCESS_API_ROLE_POLICY_",
   "clientApiFile": "Js.Api.html",
+  "requiredGovernanceEndpoints": [
+    "apiStage7SubmitAccessKeyRequest",
+    "apiStage7RegisterAccessWithTemporaryPassword",
+    "apiStage7LoginByIdentifierAndCallsign",
+    "apiStage7ListBindableCallsigns",
+    "apiStage7ReportAccessViolation",
+    "apiStage7ReportClientAccessSignal"
+  ],
+  "deprecatedEndpoints": [
+    {
+      "name": "apiStage7BindCurrentKeyToCallsign",
+      "file": "Stage7MaintenanceApi.gs",
+      "reason": "callsign-only bind never worked; use loginByIdentifierAndCallsign",
+      "replacement": "apiStage7LoginByIdentifierAndCallsign"
+    }
+  ],
   "endpoints": [
     {
       "name": "apiStage7GetAccessDescriptorLite",
       "file": "Stage7ServerApi.gs",
       "bucket": "application",
+      "rolePolicy": { "guestAllowed": true },
       "clientMethods": ["Stage7Api.getAccessDescriptorLite"]
     },
     {
       "name": "apiStage7BootstrapSidebar",
       "file": "Stage7ServerApi.gs",
       "bucket": "application",
+      "rolePolicy": { "guestAllowed": true },
       "clientMethods": ["Stage7Api.bootstrapSidebar"]
     },
     {
       "name": "apiStage7ReportClientAccessSignal",
       "file": "Stage7ServerApi.gs",
       "bucket": "application",
+      "rolePolicy": { "guestAllowed": true },
       "clientMethods": ["MaintenanceApi.reportClientAccessSignal"],
       "visibility": "public_client"
     },
@@ -27,43 +47,44 @@
       "name": "apiStage7GetAccessDescriptor",
       "file": "Stage7MaintenanceApi.gs",
       "bucket": "maintenance",
+      "rolePolicy": { "guestAllowed": true },
       "clientMethods": ["MaintenanceApi.getAccessDescriptor"]
     },
     {
       "name": "apiStage7DebugAccess",
       "file": "Stage7MaintenanceApi.gs",
       "bucket": "maintenance",
+      "rolePolicy": { "guestAllowed": true },
       "clientMethods": ["MaintenanceApi.debugAccess"]
     },
     {
       "name": "apiStage7ReportAccessViolation",
       "file": "Stage7MaintenanceApi.gs",
       "bucket": "maintenance",
+      "rolePolicy": { "guestAllowed": false, "minRole": "sysadmin" },
       "clientMethods": ["MaintenanceApi.reportAccessViolation"],
-      "visibility": "sysadmin_only"
+      "visibility": "sysadmin_only",
+      "serverGuard": "_stage7HasRoleAtLeastSilent_(\"sysadmin\")"
     },
     {
       "name": "apiStage7ListBindableCallsigns",
       "file": "Stage7MaintenanceApi.gs",
       "bucket": "maintenance",
+      "rolePolicy": { "guestAllowed": true },
       "clientMethods": ["MaintenanceApi.listBindableCallsigns"]
     },
     {
       "name": "apiStage7LoginByIdentifierAndCallsign",
       "file": "Stage7MaintenanceApi.gs",
       "bucket": "maintenance",
+      "rolePolicy": { "guestAllowed": true },
       "clientMethods": ["MaintenanceApi.loginByIdentifierAndCallsign"]
-    },
-    {
-      "name": "apiStage7BindCurrentKeyToCallsign",
-      "file": "Stage7MaintenanceApi.gs",
-      "bucket": "maintenance",
-      "clientMethods": ["MaintenanceApi.bindCurrentKeyToCallsign"]
     },
     {
       "name": "apiStage7SubmitAccessKeyRequest",
       "file": "Stage7MaintenanceApi.gs",
       "bucket": "maintenance",
+      "rolePolicy": { "guestAllowed": true },
       "clientMethods": [
         "Stage7Api.submitAccessKeyRequest",
         "MaintenanceApi.submitAccessKeyRequest"
@@ -73,6 +94,7 @@
       "name": "apiStage7RegisterAccessWithTemporaryPassword",
       "file": "Stage7MaintenanceApi.gs",
       "bucket": "maintenance",
+      "rolePolicy": { "guestAllowed": true },
       "clientMethods": [
         "Stage7Api.registerAccessWithTemporaryPassword",
         "MaintenanceApi.registerAccessWithTemporaryPassword"
@@ -81,13 +103,24 @@
     {
       "name": "apiStage7NormalizeAccessSheetFormatting",
       "file": "AccessControl.SheetRepository.gs",
-      "bucket": "maintenance"
+      "bucket": "maintenance",
+      "rolePolicy": { "guestAllowed": false, "minRole": "admin" },
+      "serverGuard": "roleOrder.admin"
     },
     {
       "name": "apiStage7BootstrapAccessSheet",
       "file": "Stage7MaintenanceApi.gs",
       "bucket": "maintenance",
-      "clientMethods": ["MaintenanceApi.bootstrapAccessSheet"]
+      "rolePolicy": { "guestAllowed": false, "minRole": "admin" },
+      "clientMethods": ["MaintenanceApi.bootstrapAccessSheet"],
+      "serverGuard": "_stage7AssertRole_(\"admin\""
+    },
+    {
+      "name": "apiStage7ApplyProtections",
+      "file": "Stage7MaintenanceApi.gs",
+      "bucket": "maintenance",
+      "rolePolicy": { "guestAllowed": false, "minRole": "sysadmin" },
+      "serverGuard": "_stage7AssertRole_(\"sysadmin\""
     }
   ],
   "clientSignalPolicy": {
@@ -96,5 +129,23 @@
     "uiReporterFile": "Js.Security.Access.html",
     "uiReporterFunction": "reportAccessViolation_",
     "requiredApiRun": "apiStage7ReportClientAccessSignal"
+  },
+  "rolePolicyTests": {
+    "guestAllowed": [
+      "apiStage7SubmitAccessKeyRequest",
+      "apiStage7RegisterAccessWithTemporaryPassword",
+      "apiStage7LoginByIdentifierAndCallsign",
+      "apiStage7ListBindableCallsigns",
+      "apiStage7ReportClientAccessSignal",
+      "apiStage7GetAccessDescriptorLite",
+      "apiStage7BootstrapSidebar"
+    ],
+    "guestDenied": [
+      "apiStage7ReportAccessViolation",
+      "apiStage7BootstrapAccessSheet",
+      "apiStage7NormalizeAccessSheetFormatting",
+      "apiStage7ApplyProtections"
+    ],
+    "rolesInheritGuestAllowed": ["viewer", "operator", "admin"]
   }
 }

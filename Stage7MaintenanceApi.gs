@@ -306,29 +306,16 @@ function apiStage7LoginByIdentifierAndCallsign(
   );
 }
 
-function apiStage7BindCurrentKeyToCallsign(callsign) {
-  const result =
-    typeof AccessControl_ === "object" &&
-    AccessControl_.bindCurrentKeyToCallsign
-      ? AccessControl_.bindCurrentKeyToCallsign(callsign || "")
-      : {
-          success: false,
-          message: "AccessControl_ недоступний",
-          code: "access.self_bind.unavailable",
-        };
-
+function apiStage7BindCurrentKeyToCallsign(_callsign) {
   return _stage7BuildMaintenanceResponse_(
-    result.success !== false,
-    result.message ||
-      (result.success ? "Вхід виконано" : "Не вдалося виконати вхід"),
-    result,
+    false,
+    "Endpoint deprecated. Use apiStage7LoginByIdentifierAndCallsign with email/phone + callsign.",
+    {
+      success: false,
+      code: "access.self_bind.deprecated_endpoint",
+    },
     "stage7BindCurrentKeyToCallsign",
-    result.success
-      ? []
-      : [
-          _stage7NormalizeWarningText_(result.message) ||
-            "Не вдалося прив’язати ключ до позивного",
-        ],
+    ["Deprecated endpoint"],
   );
 }
 
