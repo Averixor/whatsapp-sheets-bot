@@ -1,0 +1,34 @@
+{
+  "version": "0.2",
+  "language": "en,uk",
+  "words": [
+    "Appscript",
+    "Callsign",
+    "callsign",
+    "callsigns",
+    "clasp",
+    "HtmlService",
+    "initiatorCallsign",
+    "maintainer",
+    "personnel",
+    "PERSONNEL",
+    "SpreadsheetApp",
+    "sysadmin",
+    "unshift",
+    "Wasb",
+    "WASB",
+    "whatsapp",
+    "Дієвий",
+    "Тимчасовий",
+    "Переведений",
+    "Вибув",
+    "позивний",
+    "ПІБ"
+  ],
+  "ignorePaths": [
+    "node_modules/**",
+    ".git/**",
+    "package-lock.json",
+    "contracts/**"
+  ]
+}
