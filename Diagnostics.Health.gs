@@ -122,7 +122,7 @@ function healthCheck() {
           warnings.length ? "; " + warnings.join("; ") : ""
         }`,
         howTo: duplicateActiveCallsigns
-          ? "Виправте дублікати позивних серед Дієвий/Тимчасовий у PERSONNEL"
+          ? "Виправте дублікати позивних серед Дієвий/Тимчасовий/Відрядження у PERSONNEL"
           : activeRows.length
             ? ""
             : "Заповніть PERSONNEL (Callsign + FML, Status=Дієвий або порожньо)",

@@ -7,8 +7,9 @@
  *   - ID (Армія+): optional data field, NOT a stable system key
  *   - Position: organizational slot, NOT a person key
  *
- * Status column (UA only in sheet): Дієвий | Тимчасовий | Переведений | Вибув
- * (empty = Дієвий). Internal canonical: Active | Temp | Transferred | Removed.
+ * Status column (UA only in sheet): Дієвий | Тимчасовий | Відрядження | Вибув
+ * (empty = Дієвий). Runtime active: first three; inactive: Вибув only.
+ * Legacy EN on read: Active→Дієвий, Temp→Тимчасовий, Removed/Transferred→Вибув.
  */
 
 var PERSONNEL_SHEET_NAME =
@@ -52,32 +53,40 @@ var PERSONNEL_REQUIRED_HEADER_KEYS = [
 var PERSONNEL_OPTIONAL_HEADER_KEYS = ["ID", "Unit"];
 
 /** Значення в аркуші PERSONNEL (українською, без змішування з EN). */
-var PERSONNEL_ACTIVE_STATUSES_ = ["Дієвий", "Тимчасовий"];
+var PERSONNEL_ACTIVE_STATUSES_ = ["Дієвий", "Тимчасовий", "Відрядження"];
 
-var PERSONNEL_INACTIVE_STATUSES_ = ["Переведений", "Вибув"];
+var PERSONNEL_INACTIVE_STATUSES_ = ["Вибув"];
 
-var PERSONNEL_STATUS_SHEET_VALUES_ = PERSONNEL_ACTIVE_STATUSES_.concat(
-  PERSONNEL_INACTIVE_STATUSES_,
-);
+var PERSONNEL_STATUS_SHEET_VALUES_ = [
+  "Дієвий",
+  "Тимчасовий",
+  "Відрядження",
+  "Вибув",
+];
 
 var PERSONNEL_DEFAULT_STATUS_UA_ = "Дієвий";
 
-/** Legacy EN / synonyms → canonical UA label. */
+/** Legacy EN / synonyms / typos → canonical UA label. */
 var PERSONNEL_STATUS_LEGACY_TO_UA_ = {
   active: "Дієвий",
   aktiv: "Дієвий",
   активний: "Дієвий",
   активна: "Дієвий",
   дієвий: "Дієвий",
+  діевий: "Дієвий",
   дієв: "Дієвий",
   temp: "Тимчасовий",
   temporary: "Тимчасовий",
   тимчасовий: "Тимчасовий",
   тимчасово: "Тимчасовий",
-  transferred: "Переведений",
-  transfered: "Переведений",
-  переведений: "Переведений",
-  переведено: "Переведений",
+  відрядження: "Відрядження",
+  vidriadzhennia: "Відрядження",
+  deployment: "Відрядження",
+  assignment: "Відрядження",
+  transferred: "Вибув",
+  transfered: "Вибув",
+  переведений: "Вибув",
+  переведено: "Вибув",
   removed: "Вибув",
   deleted: "Вибув",
   inactive: "Вибув",
@@ -91,7 +100,7 @@ var PERSONNEL_STATUS_LEGACY_TO_UA_ = {
 var PERSONNEL_STATUS_UA_TO_CANONICAL_ = {
   Дієвий: "Active",
   Тимчасовий: "Temp",
-  Переведений: "Transferred",
+  Відрядження: "Assignment",
   Вибув: "Removed",
 };
 
@@ -200,7 +209,7 @@ function applyPersonnelStatusColumnValidation_(sh) {
     .requireValueInList(getPersonnelStatusListValues_(), true)
     .setAllowInvalid(false)
     .setHelpText(
-      "Дієвий | Тимчасовий | Переведений | Вибув. Порожньо = Дієвий (у коді).",
+      "Дієвий | Тимчасовий | Відрядження | Вибув. Порожньо = Дієвий (у коді).",
     )
     .build();
 
@@ -457,12 +466,12 @@ function getPersonnelWarnings_() {
   return (_personnelState_().warnings || []).slice();
 }
 
-/** Усі рядки PERSONNEL (включно з Transferred/Removed). */
+/** Усі рядки PERSONNEL (включно з Вибув). */
 function getPersonnelRows_() {
   return _personnelGetLoaded_().slice();
 }
 
-/** Лише Active / Temp (для графіка, телефонів, карток, списків). */
+/** Лише Дієвий / Тимчасовий / Відрядження (для графіка, телефонів, карток, списків). */
 function getPersonnelActiveRows_() {
   return getPersonnelRows_().filter(function (row) {
     return row && row.active === true;
@@ -546,6 +555,57 @@ function getPersonnelCallsignsList_() {
     .sort(function (a, b) {
       return String(a).localeCompare(String(b), "uk");
     });
+}
+
+/**
+ * Список для UI «Особовий склад»: активні з PERSONNEL + позивні з поточного
+ * місячного графіка (поки PERSONNEL не заповнений повністю).
+ */
+function getPersonnelCallsignsListForUi_() {
+  var seen = Object.create(null);
+  var list = [];
+
+  function addCallsign(callsign) {
+    var label = String(callsign || "").trim();
+    if (!label) return;
+    var key =
+      typeof _normCallsignKey_ === "function"
+        ? _normCallsignKey_(label)
+        : label.toUpperCase();
+    if (seen[key]) return;
+    seen[key] = label;
+    list.push(label);
+  }
+
+  getPersonnelCallsignsList_().forEach(addCallsign);
+
+  try {
+    if (
+      typeof PersonsRepository_ === "object" &&
+      PersonsRepository_ &&
+      typeof PersonsRepository_.getMonthlyRows === "function"
+    ) {
+      var sheet =
+        typeof getBotSheet_ === "function" ? getBotSheet_() : null;
+      PersonsRepository_.getMonthlyRows(sheet).forEach(function (row) {
+        addCallsign(row && row.callsign);
+      });
+    }
+  } catch (monthlyErr) {
+    try {
+      Logger.log(
+        "[PersonnelRepository] getPersonnelCallsignsListForUi_ monthly: " +
+          (monthlyErr && monthlyErr.message
+            ? monthlyErr.message
+            : monthlyErr),
+      );
+    } catch (_) {}
+  }
+
+  list.sort(function (a, b) {
+    return String(a).localeCompare(String(b), "uk");
+  });
+  return list;
 }
 
 function personnelRecordToPhoneIndexItem_(record) {
@@ -683,6 +743,7 @@ var PersonnelRepository_ = PersonnelRepository_ || {
   getMapById: getPersonnelMapById_,
   getMapByCallsign: getPersonnelMapByCallsign_,
   getCallsignsList: getPersonnelCallsignsList_,
+  getCallsignsListForUi: getPersonnelCallsignsListForUi_,
   invalidateCache: invalidatePersonnelCache_,
   isAvailable: isPersonnelSheetAvailable_,
   getWarnings: getPersonnelWarnings_,

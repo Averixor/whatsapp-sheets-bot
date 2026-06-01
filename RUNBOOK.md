@@ -254,6 +254,7 @@ Local equivalent: **`npm run ci`** (or `wcheck` if configured).
 
 | Script | Purpose |
 |--------|---------|
+
 | `ci-gas-sanity.mjs` | Syntax check all `.gs` files |
 | `audit-function-graph.mjs` | Bound entrypoint refs vs definitions |
 | `verify-client-includes.mjs` | `JavaScript.html` include order |
@@ -341,8 +342,8 @@ Column order may vary; code reads by **header names**, not column index.
 ### One-time / migration in the spreadsheet
 
 1. Add column **`Status`** if missing (or run **`apiStage7BootstrapRuntimeAndAlertsSheets`** / self-heal to seed headers on empty `PERSONNEL`).
-2. For everyone on duty: leave **`Status` empty** or set **`Дієвий`** (both count as active; **`Тимчасовий`** also stays in runtime lists). Do **not** mix EN/UA in the same column.
-3. For departed personnel: set **`Вибув`** or **`Переведений`** — do not delete the row immediately unless you prefer a hard delete.
+2. For everyone on duty: leave **`Status` empty** or set **`Дієвий`** (both count as active). **`Тимчасовий`** and **`Відрядження`** also stay in runtime lists. Do **not** mix EN/UA in the same column.
+3. For departed personnel (including transferred out of the unit): set **`Вибув`** — do not delete the row immediately unless you prefer a hard delete. Do **not** use **`Переведений`** (legacy values map to **`Вибув`** on read).
 
 **Data validation (dropdown):** apply to the **whole** Status column from row 2, e.g. `PERSONNEL!M2:M`, not a single cell like `M10`. After deploy, run **`applyPersonnelStatusColumnValidation()`** in the Apps Script editor, or **`ensureSystemSheetByName_('PERSONNEL')`** / bootstrap self-heal to apply the list automatically.
 
@@ -390,6 +391,7 @@ Operational detail: **`loadPhonesIndex_()`** builds from **PERSONNEL** (active r
 See **`docs/refactor/operational-stewardship.md`** for owner/backup roles, monthly checklist, handoff, and emergency exceptions.
 
 | Item | Location |
+
 |------|----------|
 | Owner / backup | `docs/refactor/operational-stewardship.md` — update on handoff |
 | **Contracts (G1)** | `contracts/` — envelope, facade, access, bridge-flags, xss-policy, client-includes |

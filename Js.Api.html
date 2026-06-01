@@ -19,6 +19,24 @@
       };
     },
 
+    async listPersonnelCallsigns() {
+      const response = await Api.run('apiStage7ListPersonnelCallsigns');
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success,
+        message: response?.message || '',
+        error: response?.error || null,
+        callsigns: Array.isArray(result.callsigns) ? result.callsigns : [],
+        count: Number(result.count || 0),
+        warnings: Array.isArray(result.warnings)
+          ? result.warnings
+          : Array.isArray(response?.warnings)
+            ? response.warnings
+            : [],
+        raw: response,
+      };
+    },
+
     async bootstrapSidebar() {
       const response = await Api.run('apiStage7BootstrapSidebar');
       const result = unwrapStage4Result(response) || {};

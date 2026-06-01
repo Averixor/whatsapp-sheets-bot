@@ -68,7 +68,7 @@ Or one command: `npm run deploy:prod`
 - Monthly schedule row key: **Callsign**; personal fields from `PERSONNEL` by Callsign (fallback **FML**).
 - **ID** (Армія+) is optional data, not a required system key.
 - **Position** is not a person key.
-- **Status** (UA only in sheet): `Дієвий` | `Тимчасовий` | `Переведений` | `Вибув` (empty = `Дієвий`). EN legacy values are mapped on read only.
+- **Status** (UA only in sheet): `Дієвий` | `Тимчасовий` | `Відрядження` | `Вибув` (empty = `Дієвий`). Active runtime: first three; `Вибув` excluded. Legacy EN mapped on read only.
 - Final headers: `ID | FML | … | Unit | Status` — see `RUNBOOK.md` §15a.
 - After deploy or PERSONNEL edits: run **`apiStage7ClearPhoneCache()`** in GAS (mandatory).
 - See `.cursor/rules/personnel-data-keys.mdc`.

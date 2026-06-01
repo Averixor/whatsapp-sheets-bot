@@ -881,15 +881,31 @@
       renderGrid(filteredCallsigns);
     }
 
-    btnOpen.addEventListener("click", () => {
+    async function refreshPersonnelCallsignsFromServer_() {
+      if (
+        typeof Stage7Api !== "object" ||
+        !Stage7Api ||
+        typeof Stage7Api.listPersonnelCallsigns !== "function"
+      ) {
+        return getPersonnelCallsigns_();
+      }
+      try {
+        const res = await Stage7Api.listPersonnelCallsigns();
+        if (res?.success && Array.isArray(res.callsigns) && res.callsigns.length) {
+          applyPersonnelCallsignsFromServer_(res.callsigns);
+          return res.callsigns;
+        }
+      } catch (_) {}
+      return typeof getPersonnelCallsigns_ === "function"
+        ? getPersonnelCallsigns_()
+        : PERSONNEL_CALLSIGNS;
+    }
+
+    btnOpen.addEventListener("click", async () => {
       searchInput.value = "";
-      const sourceOpen =
-        typeof getPersonnelCallsigns_ === "function"
-          ? getPersonnelCallsigns_()
-          : PERSONNEL_CALLSIGNS;
-      filteredCallsigns = [...sourceOpen];
-      renderGrid(filteredCallsigns);
       openModal();
+      filteredCallsigns = await refreshPersonnelCallsignsFromServer_();
+      renderGrid(filteredCallsigns);
     });
 
     btnClose.addEventListener("click", closeModal);

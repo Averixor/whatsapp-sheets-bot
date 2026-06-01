@@ -170,7 +170,9 @@ function apiStage7BootstrapSidebar() {
   var personnelCallsigns = [];
   var personnelWarnings = [];
   try {
-    if (typeof getPersonnelCallsignsList_ === "function") {
+    if (typeof getPersonnelCallsignsListForUi_ === "function") {
+      personnelCallsigns = getPersonnelCallsignsListForUi_();
+    } else if (typeof getPersonnelCallsignsList_ === "function") {
       personnelCallsigns = getPersonnelCallsignsList_();
     }
     if (typeof getPersonnelWarnings_ === "function") {
@@ -206,9 +208,11 @@ function apiStage7ListPersonnelCallsigns() {
   var sheetWarnings = [];
   try {
     callsigns =
-      typeof getPersonnelCallsignsList_ === "function"
-        ? getPersonnelCallsignsList_()
-        : [];
+      typeof getPersonnelCallsignsListForUi_ === "function"
+        ? getPersonnelCallsignsListForUi_()
+        : typeof getPersonnelCallsignsList_ === "function"
+          ? getPersonnelCallsignsList_()
+          : [];
     sheetWarnings =
       typeof getPersonnelWarnings_ === "function"
         ? getPersonnelWarnings_()
