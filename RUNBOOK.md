@@ -253,8 +253,8 @@ The repository runs CI automatically on **`push`** and **`pull_request`** to **`
 Local equivalent: **`npm run ci`** (or `wcheck` if configured).
 
 | Script | Purpose |
-|--------|---------|
 
+|--------|---------|
 | `ci-gas-sanity.mjs` | Syntax check all `.gs` files |
 | `audit-function-graph.mjs` | Bound entrypoint refs vs definitions |
 | `verify-client-includes.mjs` | `JavaScript.html` include order |
@@ -430,6 +430,7 @@ Do **not** commit production spreadsheet IDs to source; record the canary ID onl
 Run on canary before merging `requires-canary` PRs:
 
 | Flow | API / action |
+
 |------|----------------|
 | Generate panel | `generateSendPanelForDate` |
 | Calendar load | `loadCalendarDay` |
@@ -444,6 +445,7 @@ Gate: canary smoke **PASS** before merge of runtime-critical PRs.
 Every **3 months** or after major production change (owner + backup):
 
 | Check | Action |
+
 |-------|--------|
 | Schema drift | Compare `SheetSchemas` / ACCESS columns canary vs production |
 | New edge cases | Add synthetic rows from production incidents (anonymized) |
