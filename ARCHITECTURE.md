@@ -196,7 +196,7 @@ Spreadsheet audit handlers (`stage7SecurityAuditOnEdit`, `stage7SecurityAuditOnC
 Main operational sheets typically include:
 
 - month sheets (`01`..`12`) — schedule codes only (позивний + графік по датах)
-- `PERSONNEL` — **canonical** personal data (header-based via `PersonnelRepository.gs`). **Schedule key: Callsign** (monthly sheets). **Lookup: Callsign → FML**. `ID` = optional Армія+ (not a system key). `Position` = org slot, not person key. `Status`: Active | Transferred | Removed | Temp (inactive excluded from runtime maps).
+- `PERSONNEL` — **canonical** personal data (header-based via `PersonnelRepository.gs`). **Schedule key: Callsign** (monthly sheets). **Lookup: Callsign → FML**. `ID` = optional Армія+ (not a system key). `Position` = org slot, not person key. `Status` in sheet: **Дієвий / Тимчасовий / Переведений / Вибув** (inactive excluded from runtime maps).
 - `PHONES` — legacy fallback when `PERSONNEL` is empty/unavailable (`loadPhonesIndex_` prefers `PERSONNEL`)
 - `DICT`
 - `DICT_SUM`

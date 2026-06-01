@@ -553,6 +553,23 @@ function _applyAccessCheckboxes_(sheet) {
   }
 }
 
+function _applyPersonnelStatusValidation_(sheet) {
+  if (!sheet) return;
+  if (
+    _sshTrimmedString_(sheet.getName(), "") !==
+    _sshConfigValue_("PERSONNEL_SHEET", "PERSONNEL")
+  ) {
+    return;
+  }
+  try {
+    if (typeof applyPersonnelStatusColumnValidation_ === "function") {
+      applyPersonnelStatusColumnValidation_(sheet);
+    }
+  } catch (e) {
+    _sshLog_("PERSONNEL Status validation", e);
+  }
+}
+
 function _applySendPanelHeaderRowFormatting_(sheet, headerRow, lastCol) {
   if (!sheet) return;
   if (_sshTrimmedString_(sheet.getName(), '') !== _sshConfigValue_('SEND_PANEL_SHEET', 'SEND_PANEL')) return;
@@ -664,6 +681,7 @@ function ensureSystemSheetByName_(sheetName) {
   _applyBasicSystemSheetStandards_(sheet, spec.headerRow, spec.lastCol);
   _applyAccessCheckboxes_(sheet);
   _applySendPanelHeaderRowFormatting_(sheet, spec.headerRow, spec.lastCol);
+  _applyPersonnelStatusValidation_(sheet);
 
   return {
     name: record.name,

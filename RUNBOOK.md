@@ -341,8 +341,10 @@ Column order may vary; code reads by **header names**, not column index.
 ### One-time / migration in the spreadsheet
 
 1. Add column **`Status`** if missing (or run **`apiStage7BootstrapRuntimeAndAlertsSheets`** / self-heal to seed headers on empty `PERSONNEL`).
-2. For everyone on duty: leave **`Status` empty** or set **`Active`** (both count as active; **`Temp`** also stays in runtime lists).
-3. For departed personnel: set **`Removed`** or **`Transferred`** — do not delete the row immediately unless you prefer a hard delete.
+2. For everyone on duty: leave **`Status` empty** or set **`Дієвий`** (both count as active; **`Тимчасовий`** also stays in runtime lists). Do **not** mix EN/UA in the same column.
+3. For departed personnel: set **`Вибув`** or **`Переведений`** — do not delete the row immediately unless you prefer a hard delete.
+
+**Data validation (dropdown):** apply to the **whole** Status column from row 2, e.g. `PERSONNEL!M2:M`, not a single cell like `M10`. After deploy, run **`applyPersonnelStatusColumnValidation()`** in the Apps Script editor, or **`ensureSystemSheetByName_('PERSONNEL')`** / bootstrap self-heal to apply the list automatically.
 
 **`ID`** (Армія+) may stay empty or temporary; it is not required for cards, schedule, phones, or birthdays.
 

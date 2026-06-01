@@ -7,7 +7,8 @@
  *   - ID (Армія+): optional data field, NOT a stable system key
  *   - Position: organizational slot, NOT a person key
  *
- * Status column: Active | Transferred | Removed | Temp (empty = Active)
+ * Status column (UA only in sheet): Дієвий | Тимчасовий | Переведений | Вибув
+ * (empty = Дієвий). Internal canonical: Active | Temp | Transferred | Removed.
  */
 
 var PERSONNEL_SHEET_NAME =
@@ -50,20 +51,48 @@ var PERSONNEL_REQUIRED_HEADER_KEYS = [
 /** ID and Unit columns recommended; ID values may be blank. */
 var PERSONNEL_OPTIONAL_HEADER_KEYS = ["ID", "Unit"];
 
-var PERSONNEL_DEFAULT_STATUS_ = "Active";
+/** Значення в аркуші PERSONNEL (українською, без змішування з EN). */
+var PERSONNEL_ACTIVE_STATUSES_ = ["Дієвий", "Тимчасовий"];
 
-var PERSONNEL_INACTIVE_STATUS_KEYS_ = {
-  transferred: true,
-  removed: true,
-  deleted: true,
-  inactive: true,
-  archived: true,
-  переведено: true,
-  переведений: true,
-  видалено: true,
-  видалений: true,
-  вибув: true,
-  вибувший: true,
+var PERSONNEL_INACTIVE_STATUSES_ = ["Переведений", "Вибув"];
+
+var PERSONNEL_STATUS_SHEET_VALUES_ = PERSONNEL_ACTIVE_STATUSES_.concat(
+  PERSONNEL_INACTIVE_STATUSES_,
+);
+
+var PERSONNEL_DEFAULT_STATUS_UA_ = "Дієвий";
+
+/** Legacy EN / synonyms → canonical UA label. */
+var PERSONNEL_STATUS_LEGACY_TO_UA_ = {
+  active: "Дієвий",
+  aktiv: "Дієвий",
+  активний: "Дієвий",
+  активна: "Дієвий",
+  дієвий: "Дієвий",
+  дієв: "Дієвий",
+  temp: "Тимчасовий",
+  temporary: "Тимчасовий",
+  тимчасовий: "Тимчасовий",
+  тимчасово: "Тимчасовий",
+  transferred: "Переведений",
+  transfered: "Переведений",
+  переведений: "Переведений",
+  переведено: "Переведений",
+  removed: "Вибув",
+  deleted: "Вибув",
+  inactive: "Вибув",
+  archived: "Вибув",
+  вибув: "Вибув",
+  вибувший: "Вибув",
+  видалено: "Вибув",
+  видалений: "Вибув",
+};
+
+var PERSONNEL_STATUS_UA_TO_CANONICAL_ = {
+  Дієвий: "Active",
+  Тимчасовий: "Temp",
+  Переведений: "Transferred",
+  Вибув: "Removed",
 };
 
 function _personnelGlobal_() {
@@ -96,41 +125,101 @@ function invalidatePersonnelCache_() {
   state.warnings = [];
 }
 
+function _personnelNormalizeStatusKey_(raw) {
+  return String(raw || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[’'`"ʼ]/g, "")
+    .replace(/\s+/g, " ");
+}
+
 function normalizePersonnelStatus_(raw) {
   var text = String(raw || "").trim();
-  if (!text) return PERSONNEL_DEFAULT_STATUS_;
-  var lower = text.toLowerCase();
-  if (lower === "active" || lower === "активний" || lower === "активна") {
-    return "Active";
+  if (!text) return PERSONNEL_DEFAULT_STATUS_UA_;
+
+  var key = _personnelNormalizeStatusKey_(text);
+  if (PERSONNEL_STATUS_LEGACY_TO_UA_[key]) {
+    return PERSONNEL_STATUS_LEGACY_TO_UA_[key];
   }
-  if (lower === "temp" || lower === "тимчасовий" || lower === "тимчасово") {
-    return "Temp";
+
+  var i;
+  for (i = 0; i < PERSONNEL_STATUS_SHEET_VALUES_.length; i++) {
+    if (
+      _personnelNormalizeStatusKey_(PERSONNEL_STATUS_SHEET_VALUES_[i]) === key
+    ) {
+      return PERSONNEL_STATUS_SHEET_VALUES_[i];
+    }
   }
-  if (
-    lower === "transferred" ||
-    lower === "переведено" ||
-    lower === "переведений"
-  ) {
-    return "Transferred";
-  }
-  if (
-    lower === "removed" ||
-    lower === "видалено" ||
-    lower === "видалений" ||
-    lower === "вибув"
-  ) {
-    return "Removed";
-  }
-  return text.charAt(0).toUpperCase() + text.slice(1);
+
+  return text;
+}
+
+function getPersonnelStatusCanonical_(statusUa) {
+  var ua = normalizePersonnelStatus_(statusUa);
+  return PERSONNEL_STATUS_UA_TO_CANONICAL_[ua] || "Active";
 }
 
 function isPersonnelStatusActive_(status) {
-  var normalized = normalizePersonnelStatus_(status);
-  var key = String(normalized || "")
-    .trim()
-    .toLowerCase();
-  if (!key || key === "active" || key === "temp") return true;
-  return !PERSONNEL_INACTIVE_STATUS_KEYS_[key];
+  var ua = normalizePersonnelStatus_(status);
+  return PERSONNEL_ACTIVE_STATUSES_.indexOf(ua) !== -1;
+}
+
+function getPersonnelStatusListValues_() {
+  return PERSONNEL_STATUS_SHEET_VALUES_.slice();
+}
+
+/**
+ * Dropdown для всієї колонки Status (рядки 2…maxRows), не однієї клітинки.
+ */
+function applyPersonnelStatusColumnValidation_(sh) {
+  if (!sh) {
+    return { applied: false, reason: "no sheet" };
+  }
+
+  var lastCol = Math.max(sh.getLastColumn(), 1);
+  var headers = sh.getRange(1, 1, 1, lastCol).getDisplayValues()[0];
+  var colIndex;
+  try {
+    colIndex = _personnelBuildHeaderColIndex_(headers);
+  } catch (e) {
+    return {
+      applied: false,
+      reason: e && e.message ? e.message : String(e),
+    };
+  }
+
+  if (colIndex.Status < 0) {
+    return { applied: false, reason: "Status column missing" };
+  }
+
+  var statusCol = colIndex.Status + 1;
+  var maxRows = Math.max(Number(sh.getMaxRows()) || 0, 500);
+  if (maxRows < 2) maxRows = 500;
+
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(getPersonnelStatusListValues_(), true)
+    .setAllowInvalid(false)
+    .setHelpText(
+      "Дієвий | Тимчасовий | Переведений | Вибув. Порожньо = Дієвий (у коді).",
+    )
+    .build();
+
+  sh.getRange(2, statusCol, maxRows - 1, 1).setDataValidation(rule);
+
+  return {
+    applied: true,
+    column: statusCol,
+    rows: maxRows - 1,
+    values: getPersonnelStatusListValues_(),
+  };
+}
+
+function applyPersonnelStatusColumnValidation() {
+  var sh = _personnelGetSheet_(false);
+  if (!sh) {
+    throw new Error('Аркуш "' + _personnelSheetName_() + '" не знайдено');
+  }
+  return applyPersonnelStatusColumnValidation_(sh);
 }
 
 function _personnelNormalizeHeaderCell_(value) {
@@ -258,6 +347,7 @@ function _personnelRowToRecord_(row, sheetRow, col) {
       ? String(_personnelReadCell_(row, col.Status) || "").trim()
       : "";
   var status = normalizePersonnelStatus_(statusRaw);
+  var statusCanonical = getPersonnelStatusCanonical_(status);
   var active = isPersonnelStatusActive_(status);
 
   if (!fml && !callsign) {
@@ -281,6 +371,7 @@ function _personnelRowToRecord_(row, sheetRow, col) {
     oshs: String(_personnelReadCell_(row, col.OSH_4) || "").trim(),
     unit: unit,
     status: status,
+    statusCanonical: statusCanonical,
     active: active,
     rank: String(_personnelReadCell_(row, col.Title) || "").trim(),
     sheetRow: sheetRow,
@@ -599,5 +690,9 @@ var PersonnelRepository_ = PersonnelRepository_ || {
   resolveForLookup: resolvePersonnelForLookup_,
   buildPhonesIndex: buildPhonesIndexFromPersonnel_,
   normalizeStatus: normalizePersonnelStatus_,
+  getStatusCanonical: getPersonnelStatusCanonical_,
   isStatusActive: isPersonnelStatusActive_,
+  activeStatuses: PERSONNEL_ACTIVE_STATUSES_,
+  inactiveStatuses: PERSONNEL_INACTIVE_STATUSES_,
+  applyStatusValidation: applyPersonnelStatusColumnValidation,
 };

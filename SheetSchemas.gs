@@ -192,7 +192,7 @@ function _ssBuildPersonnelSchema_() {
       'ID', 'FML', 'Birthday', 'Age', 'Days_until_birthday',
       'Phone', '2_Phone', 'Callsign', 'Title', 'Position', 'OSH_4', 'Unit', 'Status'
     ],
-    notes: 'Єдине джерело даних людини. Місячний графік: Callsign. Status фільтрує Active/Temp vs Removed/Transferred.'
+    notes: 'Єдине джерело даних людини. Місячний графік: Callsign. Status (UA): Дієвий|Тимчасовий vs Переведений|Вибув.'
   });
 }
 

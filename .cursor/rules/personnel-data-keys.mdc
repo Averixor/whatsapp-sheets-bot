@@ -1,5 +1,5 @@
 ---
-description: PERSONNEL keys — Callsign/FML, optional ID Армія+, Status column
+description: PERSONNEL keys — Callsign/FML, optional ID Армія+, Status UA
 globs: "**/*.{gs,html,md,mjs}"
 alwaysApply: true
 ---
@@ -10,27 +10,43 @@ alwaysApply: true
 
 | Колонка | Роль |
 |--------|------|
-| **ID** | ID Армія+ — **додаткове поле**, не стабільний технічний ключ. Може бути порожнім, тимчасовим, заміненим на постійний, очищеним при вибутті. |
+| **ID** | ID Армія+ — **додаткове поле**, не стабільний технічний ключ. |
 | **FML** | Людина (ПІБ). Практичний ключ разом із Callsign. |
 | **Callsign** | Робочий позивний. **Основний ключ для місячного графіка** і lookup у PERSONNEL. |
-| **Position** | Посада / місце в структурі — **не ключ людини** (посада може залишитись, людина змінитись). |
-| **Status** | `Active`, `Transferred`, `Removed`, `Temp` (порожньо = Active). Неактивні не беруть участь у графіку, телефонах, картках, списках. |
+| **Position** | Посада / місце в структурі — **не ключ людини**. |
+| **Status** | Лише **українські** значення в аркуші (не змішувати з EN). |
 | **Unit** | Підрозділ (опційно). |
 
 Фінальний рядок заголовків: `ID | FML | Birthday | Age | Days_until_birthday | Phone | 2_Phone | Callsign | Title | Position | OSH_4 | Unit | Status`
 
-Після `clasp push` і змін у PERSONNEL: **`apiStage7ClearPhoneCache()`**.
+## Status (українською в таблиці)
+
+| В аркуші | Canonical (внутрішньо в коді) | Runtime |
+|----------|----------------------------------|---------|
+| **Дієвий** (або порожньо) | Active | так |
+| **Тимчасовий** | Temp | так |
+| **Переведений** | Transferred | ні |
+| **Вибув** | Removed | ні |
+
+```javascript
+// PersonnelRepository.gs
+PERSONNEL_ACTIVE_STATUSES_   // ['Дієвий', 'Тимчасовий']
+PERSONNEL_INACTIVE_STATUSES_ // ['Переведений', 'Вибув']
+```
+
+Legacy EN (`Active`, `Removed`, …) при читанні мапиться на UA; у нових рядках писати **тільки UA**.
+
+Перевірка даних: на всю колонку `Status` від рядка 2 (`PERSONNEL!M2:M` або аналог за заголовком), не на одну клітинку. `applyPersonnelStatusColumnValidation()` / self-heal.
 
 ## Правила для коду
 
-1. **Не вимагати ID** для карток, графіка, телефонів, днів народження, «Особового складу», SEND_PANEL.
-2. **Не використовувати Position як ключ** людини — тільки як відображуване поле.
-3. **Місячні листи**: ідентифікатор рядка графіка — **Callsign**; персональні дані — з PERSONNEL по Callsign.
-4. **Lookup у PERSONNEL**: `Callsign` (active) → fallback `FML` (active) → опційно `ID` лише як підказка, не як єдиний ключ.
-5. **Дубль Callsign серед активних** (`Active`/`Temp`) — помилка health-check / warning, не тихий overwrite.
-6. Читання PERSONNEL — **тільки за назвами заголовків**, без `row[0]`, `row[7]`, фіксованих індексів колонок.
-7. `getPersonnelMapByCallsign_`, `getPersonnelCallsignsList_`, `buildPhonesIndexFromPersonnel_` — лише **активні** рядки.
+1. **Не вимагати ID** для карток, графіка, телефонів, ДН, «Особового складу».
+2. **Не використовувати Position як ключ** людини.
+3. **Місячні листи**: Callsign + графік; персональні дані з PERSONNEL по Callsign → fallback FML.
+4. **Дубль Callsign серед Дієвий/Тимчасовий** — health FAIL.
+5. Читання PERSONNEL — **тільки за назвами заголовків**.
+6. Після `clasp push` / змін PERSONNEL: **`apiStage7ClearPhoneCache()`**.
 
 ## Референс
 
-- `PersonnelRepository.gs` — `resolvePersonnelForLookup_`, `getPersonnelActiveRows_`, `normalizePersonnelStatus_`
+- `PersonnelRepository.gs` — `normalizePersonnelStatus_`, `getPersonnelActiveRows_`, `applyPersonnelStatusColumnValidation_`
