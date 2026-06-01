@@ -1,7 +1,75 @@
 /************ ЗВЕДЕННЯ ДНЯ — ПРОСТЕ ************/
 
+/** Рядки місячного графіка з кодом і позивним на обрану дату (джерело для «ОС»). */
+function getMonthlyScheduleEntriesForColumn_(sheet, col) {
+  const ref = sheet.getRange(CONFIG.CODE_RANGE_A1);
+  const startRow = ref.getRow();
+  const numRows = ref.getNumRows();
+  const callsignCol = Number(CONFIG.CALLSIGN_COL) || 2;
+  const codes = sheet
+    .getRange(startRow, col, numRows, 1)
+    .getDisplayValues()
+    .flat();
+  const callsigns = sheet
+    .getRange(startRow, callsignCol, numRows, 1)
+    .getDisplayValues()
+    .flat();
+  const entries = [];
+  for (let i = 0; i < codes.length; i++) {
+    const code = String(codes[i] || "").trim();
+    const rowCallsign = String(callsigns[i] || "").trim();
+    if (code && rowCallsign) {
+      entries.push({ rowIndex: startRow + i, code, callsign: rowCallsign });
+    }
+  }
+  return entries;
+}
+
+/** Рядки місячного графіка з кодом і позивним на обрану дату (джерело для «ОС»). */
+function countMonthlyScheduleRowsForColumn_(sheet, col) {
+  const count = getMonthlyScheduleEntriesForColumn_(sheet, col).length;
+  return count;
+}
+
+/**
+ * ПІБ для зведення: активний PERSONNEL → будь-який Status → колонка FML на листі → позивний.
+ * Наявність у графіку на дату не залежить від Status у PERSONNEL.
+ */
+function resolveSummaryPersonFml_(sheet, rowIndex, rowCallsign, personnelByCallsignAny) {
+  const callsign = String(rowCallsign || "").trim();
+  if (!callsign) return "";
+
+  if (typeof resolvePersonnelForLookup_ === "function") {
+    try {
+      const personnel = resolvePersonnelForLookup_(callsign, "", "");
+      if (personnel && personnel.fml) return String(personnel.fml).trim();
+    } catch (_) {}
+  }
+
+  const key =
+    typeof _normCallsignKey_ === "function"
+      ? _normCallsignKey_(callsign)
+      : callsign.toUpperCase();
+  const byCall =
+    personnelByCallsignAny && personnelByCallsignAny[key]
+      ? personnelByCallsignAny[key]
+      : typeof getPersonnelByCallsignAnyStatus_ === "function"
+        ? getPersonnelByCallsignAnyStatus_(callsign)
+        : null;
+  if (byCall && byCall.fml) return String(byCall.fml).trim();
+
+  const fmlCol = Number(CONFIG.FML_COL) || 7;
+  try {
+    const fmlFromSheet = String(
+      sheet.getRange(rowIndex, fmlCol).getDisplayValue() || "",
+    ).trim();
+    if (fmlFromSheet) return fmlFromSheet;
+  } catch (_) {}
+
+  return callsign;
+}
+
 function buildDaySummaryForColumn_(sheet, col) {
-  const codeRef = sheet.getRange(CONFIG.CODE_RANGE_A1);
   const dateCell = sheet.getRange(Number(CONFIG.DATE_ROW) || 1, col);
   const reportDate = DateUtils_.normalizeDate(
     dateCell.getValue(),
@@ -9,22 +77,13 @@ function buildDaySummaryForColumn_(sheet, col) {
   );
   const shortDate = reportDate.slice(0, 5);
 
-  const codes = sheet
-    .getRange(codeRef.getRow(), col, codeRef.getNumRows(), 1)
-    .getDisplayValues()
-    .flat()
-    .map((v) => String(v || "").trim())
-    .filter(Boolean);
-
+  const entries = getMonthlyScheduleEntriesForColumn_(sheet, col);
   const freq = {};
-  codes.forEach((code) => {
-    freq[code] = (freq[code] || 0) + 1;
+  entries.forEach((entry) => {
+    freq[entry.code] = (freq[entry.code] || 0) + 1;
   });
 
-  const total =
-    typeof getPersonnelRows_ === "function"
-      ? getPersonnelRows_().length
-      : 0;
+  const total = entries.length;
 
   const lines = [`${FULL_NAMES["ОС"] || "Особовий склад"} — ${total}`];
 
@@ -69,43 +128,28 @@ function buildDaySummaryForColumn_(sheet, col) {
 /************ ДЕТАЛЬНЕ ЗВЕДЕННЯ ************/
 
 function collectPeopleDetailed_(sheet, col) {
-  const ref = sheet.getRange(CONFIG.CODE_RANGE_A1);
-  const codes = sheet
-    .getRange(ref.getRow(), col, ref.getNumRows(), 1)
-    .getDisplayValues()
-    .flat();
-  const callsignCol = Number(CONFIG.CALLSIGN_COL) || 2;
-  const callsigns = sheet
-    .getRange(ref.getRow(), callsignCol, ref.getNumRows(), 1)
-    .getDisplayValues()
-    .flat();
+  const entries = getMonthlyScheduleEntriesForColumn_(sheet, col);
+  const personnelByCallsignAny =
+    typeof getPersonnelMapByCallsignAll_ === "function"
+      ? getPersonnelMapByCallsignAll_()
+      : null;
 
   const people = [],
     seen = new Set();
-  for (let i = 0; i < codes.length; i++) {
-    const code = String(codes[i] || "").trim();
-    const rowCallsign = String(callsigns[i] || "").trim();
-    if (!code || !rowCallsign) continue;
-
-    let fml = "";
-    if (typeof resolvePersonnelForLookup_ === "function") {
-      try {
-        const personnel = resolvePersonnelForLookup_(rowCallsign, "", "");
-        if (personnel && personnel.fml) fml = String(personnel.fml).trim();
-      } catch (_) {}
-    }
-    if (!fml && typeof getPersonnelByCallsign_ === "function") {
-      try {
-        const p = getPersonnelByCallsign_(rowCallsign);
-        if (p && p.fml) fml = String(p.fml).trim();
-      } catch (_) {}
-    }
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+    const fml = resolveSummaryPersonFml_(
+      sheet,
+      entry.rowIndex,
+      entry.callsign,
+      personnelByCallsignAny,
+    );
     if (!fml) continue;
     const surname = fml.split(" ")[0];
-    const key = surname + "|" + code;
+    const key = surname + "|" + entry.code;
     if (seen.has(key)) continue;
     seen.add(key);
-    people.push({ code, fullName: fml, surname });
+    people.push({ code: entry.code, fullName: fml, surname });
   }
   return people;
 }

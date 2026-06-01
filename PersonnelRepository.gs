@@ -521,6 +521,33 @@ function getPersonnelByCallsign_(callsign) {
   return getPersonnelMapByCallsign_()[key] || null;
 }
 
+/** Карта всіх рядків PERSONNEL з позивним (будь-який Status) — для зведень за графіком. */
+function getPersonnelMapByCallsignAll_() {
+  var map = Object.create(null);
+  getPersonnelRows_().forEach(function (row) {
+    var callsign = String(row.callsign || "").trim();
+    if (!callsign) return;
+    var key =
+      typeof _normCallsignKey_ === "function"
+        ? _normCallsignKey_(callsign)
+        : callsign.toUpperCase();
+    map[key] = row;
+  });
+  return map;
+}
+
+/** Lookup за позивним без фільтра Status (зведення, відображення ПІБ). */
+function getPersonnelByCallsignAnyStatus_(callsign) {
+  var key =
+    typeof _normCallsignKey_ === "function"
+      ? _normCallsignKey_(callsign)
+      : String(callsign || "")
+          .trim()
+          .toUpperCase();
+  if (!key) return null;
+  return getPersonnelMapByCallsignAll_()[key] || null;
+}
+
 function getPersonnelByFml_(fml, options) {
   var opts = options || {};
   var activeOnly = opts.activeOnly !== false;
@@ -739,9 +766,11 @@ var PersonnelRepository_ = PersonnelRepository_ || {
   getActiveRows: getPersonnelActiveRows_,
   getById: getPersonnelById_,
   getByCallsign: getPersonnelByCallsign_,
+  getByCallsignAnyStatus: getPersonnelByCallsignAnyStatus_,
   getByFml: getPersonnelByFml_,
   getMapById: getPersonnelMapById_,
   getMapByCallsign: getPersonnelMapByCallsign_,
+  getMapByCallsignAll: getPersonnelMapByCallsignAll_,
   getCallsignsList: getPersonnelCallsignsList_,
   getCallsignsListForUi: getPersonnelCallsignsListForUi_,
   invalidateCache: invalidatePersonnelCache_,
