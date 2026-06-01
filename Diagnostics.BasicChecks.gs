@@ -9,7 +9,8 @@ function checkSheets() {
 
     const requiredSheets = [
       { name: CONFIG.TARGET_SHEET || '02', required: true },
-      { name: CONFIG.PHONES_SHEET || 'PHONES', required: true },
+      { name: CONFIG.PERSONNEL_SHEET || 'PERSONNEL', required: true },
+      { name: CONFIG.PHONES_SHEET || 'PHONES', required: false },
       { name: CONFIG.DICT_SHEET || 'DICT', required: true },
       { name: CONFIG.DICT_SUM_SHEET || 'DICT_SUM', required: true },
       { name: CONFIG.LOG_SHEET || 'LOG', required: false },

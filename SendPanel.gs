@@ -380,15 +380,17 @@ function rebuildSendPanelCore_() {
   const start = ref.getRow();
   const num = ref.getNumRows();
   const codes = source.getRange(start, col, num, 1).getDisplayValues();
-  const fmls = source.getRange(start, CONFIG.FML_COL, num, 1).getDisplayValues();
+  const callsignCol = Number(CONFIG.CALLSIGN_COL) || 2;
+  const callsigns = source.getRange(start, callsignCol, num, 1).getDisplayValues();
 
   for (let i = 0; i < num; i++) {
     const code = String(codes[i][0] || '').trim();
-    const fml = String(fmls[i][0] || '').trim();
-    if (!code || !fml) continue;
+    const rowCallsign = String(callsigns[i][0] || '').trim();
+    if (!code || !rowCallsign) continue;
 
     try {
       const payload = buildPayloadForCell_(source, start + i, col, phones, dict);
+      if (!payload.fml) continue;
       const key = makeSendPanelKey_(payload.fml, payload.phone, payload.code);
       const sentToday = sentMap[key] === true;
 
@@ -408,8 +410,13 @@ function rebuildSendPanelCore_() {
       ]);
 
     } catch (e) {
+      var fallbackFml = "";
+      try {
+        var p = resolvePersonnelForLookup_(rowCallsign, "", "");
+        if (p && p.fml) fallbackFml = p.fml;
+      } catch (_) {}
       rows.push([
-        fml,
+        fallbackFml,
         '',
         code,
         '',

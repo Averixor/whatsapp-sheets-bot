@@ -63,6 +63,16 @@ Or one command: `npm run deploy:prod`
 3. Confirm `appsscript.json` contains `"executionApi": { "access": "ANYONE" }`.
 4. Re-run `clasp push`, then create or refresh an **API executable** deployment if the Apps Script UI prompts for it.
 
+### PERSONNEL keys (do not regress)
+
+- Monthly schedule row key: **Callsign**; personal fields from `PERSONNEL` by Callsign (fallback **FML**).
+- **ID** (Армія+) is optional data, not a required system key.
+- **Position** is not a person key.
+- **Status** column: Active / Transferred / Removed / Temp — runtime uses active rows only; duplicate active Callsign = health FAIL.
+- Final headers: `ID | FML | … | Unit | Status` — see `RUNBOOK.md` §15a.
+- After deploy or PERSONNEL edits: run **`apiStage7ClearPhoneCache()`** in GAS (mandatory).
+- See `.cursor/rules/personnel-data-keys.mdc`.
+
 ### Key gotchas
 
 - The `&&` chain in `npm run ci` may fail under restricted `cmd.exe` on Windows; use individual `node scripts/...` commands as fallback.

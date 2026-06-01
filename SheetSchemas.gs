@@ -155,20 +155,44 @@ function _ssBuildMonthlySchema_() {
     dataEndRow: matrix.endRow,
     matrix: matrix,
     fields: _ssFreeze_({
-      phone:    _ssFreeze_({ col: 1, type: 'string', required: false, allowBlank: true,  label: 'Phone' }),
+      phone:    _ssFreeze_({ col: 1, type: 'string', required: false, allowBlank: true,  label: 'Phone (legacy display only)' }),
       callsign: _ssFreeze_({ col: 2, type: 'string', required: true,  allowBlank: false, label: 'Callsign' }),
-      position: _ssFreeze_({ col: 3, type: 'string', required: false, allowBlank: true,  label: 'Position' }),
-      oshs:     _ssFreeze_({ col: 4, type: 'string', required: false, allowBlank: true,  label: 'OSHS' }),
-      rank:     _ssFreeze_({ col: 5, type: 'string', required: false, allowBlank: true,  label: 'Rank' }),
+      position: _ssFreeze_({ col: 3, type: 'string', required: false, allowBlank: true,  label: 'Position (legacy display only)' }),
+      oshs:     _ssFreeze_({ col: 4, type: 'string', required: false, allowBlank: true,  label: 'OSHS (legacy display only)' }),
+      rank:     _ssFreeze_({ col: 5, type: 'string', required: false, allowBlank: true,  label: 'Rank (legacy display only)' }),
       brDays:   _ssFreeze_({ col: 6, type: 'number|string', required: false, allowBlank: true, label: 'BRDays' }),
-      fml:      _ssFreeze_({ col: 7, type: 'string', required: true,  allowBlank: false, label: 'FML' })
+      fml:      _ssFreeze_({ col: 7, type: 'string', required: false, allowBlank: true,  label: 'FML (legacy display only)' })
     }),
 
-    keyFields: ['callsign', 'fml'],
-    requiredFields: ['callsign', 'fml'],
-    nullableFields: ['phone', 'position', 'oshs', 'rank', 'brDays'],
-    searchableFields: ['callsign', 'fml'],
-    notes: 'Канонічне джерело щоденних кодів і статусів для sidebar/SEND_PANEL/зведень.'
+    keyFields: ['callsign'],
+    requiredFields: ['callsign'],
+    nullableFields: ['phone', 'position', 'oshs', 'rank', 'brDays', 'fml'],
+    searchableFields: ['callsign'],
+    notes: 'Робочий графік: ідентифікатор/позивний рядка, БР і щоденні коди. Персональні дані читаються з PERSONNEL.'
+  });
+}
+
+function _ssBuildPersonnelSchema_() {
+  return _ssFreeze_({
+    key: 'personnel',
+    legacyKey: 'PERSONNEL',
+    type: 'table',
+    title: 'PERSONNEL',
+    name: _ssTrimmedString_(_ssConfigValue_('PERSONNEL_SHEET', 'PERSONNEL'), 'PERSONNEL'),
+    headerRow: 1,
+    dataStartRow: 2,
+    required: true,
+    headerBased: true,
+    requiredHeaders: [
+      'FML', 'Birthday', 'Age', 'Days_until_birthday',
+      'Phone', '2_Phone', 'Callsign', 'Title', 'Position', 'OSH_4', 'Status'
+    ],
+    optionalHeaders: ['ID', 'Unit'],
+    canonicalHeaderOrder: [
+      'ID', 'FML', 'Birthday', 'Age', 'Days_until_birthday',
+      'Phone', '2_Phone', 'Callsign', 'Title', 'Position', 'OSH_4', 'Unit', 'Status'
+    ],
+    notes: 'Єдине джерело даних людини. Місячний графік: Callsign. Status фільтрує Active/Temp vs Removed/Transferred.'
   });
 }
 
@@ -360,6 +384,7 @@ function _ssBuildLogSchema_() {
 function _ssBuildSchemas_() {
   return _ssFreeze_({
     monthly: _ssBuildMonthlySchema_(),
+    personnel: _ssBuildPersonnelSchema_(),
     phones: _ssBuildPhonesSchema_(),
     dict: _ssBuildDictSchema_(),
     dictSum: _ssBuildDictSumSchema_(),
@@ -375,6 +400,8 @@ function _canonicalSchemaMap_() {
   return {
     MONTHLY: SHEET_SCHEMAS.monthly,
     monthly: SHEET_SCHEMAS.monthly,
+    PERSONNEL: SHEET_SCHEMAS.personnel,
+    personnel: SHEET_SCHEMAS.personnel,
     PHONES: SHEET_SCHEMAS.phones,
     phones: SHEET_SCHEMAS.phones,
     DICT: SHEET_SCHEMAS.dict,
@@ -393,7 +420,7 @@ function _canonicalSchemaMap_() {
 }
 
 function getRequiredSchemaKeys_() {
-  return ['monthly', 'phones', 'dict', 'dictSum', 'sendPanel', 'vacations', 'log'];
+  return ['monthly', 'personnel', 'phones', 'dict', 'dictSum', 'sendPanel', 'vacations', 'log'];
 }
 
 function _toLegacySchema_(canonical, explicitSheetName) {

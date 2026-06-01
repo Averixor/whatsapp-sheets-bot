@@ -352,6 +352,27 @@ function _sshBuildRegistry_() {
     },
 
     {
+      name: _sshConfigValue_('PERSONNEL_SHEET', 'PERSONNEL'),
+      schemaKey: 'personnel',
+      headers: [
+        'ID',
+        'FML',
+        'Birthday',
+        'Age',
+        'Days_until_birthday',
+        'Phone',
+        '2_Phone',
+        'Callsign',
+        'Title',
+        'Position',
+        'OSH_4',
+        'Unit',
+        'Status'
+      ],
+      minRows: 2
+    },
+
+    {
       name: _sshConfigValue_('PHONES_SHEET', 'PHONES'),
       schemaKey: 'phones',
       headers: [

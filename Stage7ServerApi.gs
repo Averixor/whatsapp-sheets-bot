@@ -167,6 +167,26 @@ function apiStage7BootstrapSidebar() {
     warnings.push(String(descriptor.reason.message));
   }
 
+  var personnelCallsigns = [];
+  var personnelWarnings = [];
+  try {
+    if (typeof getPersonnelCallsignsList_ === "function") {
+      personnelCallsigns = getPersonnelCallsignsList_();
+    }
+    if (typeof getPersonnelWarnings_ === "function") {
+      personnelWarnings = getPersonnelWarnings_();
+    }
+  } catch (personnelErr) {
+    warnings.push(
+      personnelErr && personnelErr.message
+        ? String(personnelErr.message)
+        : String(personnelErr),
+    );
+  }
+  personnelWarnings.forEach(function (w) {
+    warnings.push(String(w));
+  });
+
   return _stage7FastResponse_(
     "bootstrapSidebar",
     "Базові дані сайдбару завантажено",
@@ -174,9 +194,47 @@ function apiStage7BootstrapSidebar() {
       access: descriptor,
       months: months,
       current: current,
+      personnelCallsigns: personnelCallsigns,
     },
     warnings,
-    { affectedSheets: months },
+    { affectedSheets: months.concat([CONFIG.PERSONNEL_SHEET || "PERSONNEL"]) },
+  );
+}
+
+function apiStage7ListPersonnelCallsigns() {
+  var callsigns = [];
+  var sheetWarnings = [];
+  try {
+    callsigns =
+      typeof getPersonnelCallsignsList_ === "function"
+        ? getPersonnelCallsignsList_()
+        : [];
+    sheetWarnings =
+      typeof getPersonnelWarnings_ === "function"
+        ? getPersonnelWarnings_()
+        : [];
+  } catch (e) {
+    return _stage7FastResponse_(
+      "listPersonnelCallsigns",
+      "Не вдалося прочитати PERSONNEL",
+      { callsigns: [], count: 0, warnings: [] },
+      [e && e.message ? e.message : String(e)],
+      { affectedSheets: [CONFIG.PERSONNEL_SHEET || "PERSONNEL"] },
+    );
+  }
+
+  return _stage7FastResponse_(
+    "listPersonnelCallsigns",
+    callsigns.length
+      ? "Список позивних з PERSONNEL отримано"
+      : "PERSONNEL порожній або без позивних",
+    {
+      callsigns: callsigns,
+      count: callsigns.length,
+      warnings: sheetWarnings,
+    },
+    sheetWarnings,
+    { affectedSheets: [CONFIG.PERSONNEL_SHEET || "PERSONNEL"] },
   );
 }
 

@@ -122,7 +122,12 @@ function loadPhonesProfiles_() {
         parsed.byFml &&
         parsed.byNorm &&
         parsed.byRole &&
-        parsed.byCallsign
+        parsed.byCallsign &&
+        (!(
+          typeof isPersonnelSheetAvailable_ === "function" &&
+          isPersonnelSheetAvailable_()
+        ) ||
+          parsed.source === "PERSONNEL")
       ) {
         return parsed;
       }
@@ -137,6 +142,7 @@ function loadPhonesProfiles_() {
     byRole: {},
     items: Array.isArray(index.items) ? index.items.slice() : [],
     versionMarker: "stage7-phones-profiles-v6",
+    source: index.source || "",
   };
 
   (index.items || []).forEach(function (item) {
@@ -300,6 +306,11 @@ function _getPhoneByFml_(fml) {
 function _getCallsignByFml_(fml) {
   if (!fml) return "";
   try {
+    if (typeof getPersonnelByFml_ === "function") {
+      const person = getPersonnelByFml_(fml);
+      if (person && person.callsign) return String(person.callsign).trim();
+    }
+
     const ss = getWasbSpreadsheet_();
     const phonesSheet = ss.getSheetByName(CONFIG.PHONES_SHEET);
     if (!phonesSheet || phonesSheet.getLastRow() < 2) return "";
@@ -461,6 +472,9 @@ function clearLogSheet() {
 
 function clearPhoneCache() {
   try {
+    if (typeof invalidatePersonnelCache_ === "function") {
+      invalidatePersonnelCache_();
+    }
     CacheService.getScriptCache().removeAll([
       cacheKeyPhones_(),
       cacheKeyPhonesIndex_(),

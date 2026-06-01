@@ -40,7 +40,7 @@ function runStage3HealthCheck_(options) {
     );
   });
 
-  ["PHONES", "DICT", "DICT_SUM", "SEND_PANEL", "VACATIONS", "LOG"].forEach(
+  ["PERSONNEL", "PHONES", "DICT", "DICT_SUM", "SEND_PANEL", "VACATIONS", "LOG"].forEach(
     function (key) {
       try {
         const schema = SheetSchemas_.get(key);

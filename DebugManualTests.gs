@@ -144,17 +144,25 @@ function debugSendPanelBuildRawForDateManual() {
   var num = ref.getNumRows();
 
   var codes = source.getRange(start, ctx.col, num, 1).getDisplayValues();
-  var fmls = source.getRange(start, CONFIG.FML_COL, num, 1).getDisplayValues();
+  var callsignCol = Number(CONFIG.CALLSIGN_COL) || 2;
+  var callsigns = source.getRange(start, callsignCol, num, 1).getDisplayValues();
 
   var sourceRows = [];
   for (var i = 0; i < num; i++) {
     var code = String(codes[i][0] || '').trim();
-    var fml = String(fmls[i][0] || '').trim();
+    var callsign = String(callsigns[i][0] || '').trim();
+    var person = null;
+    try {
+      person = callsign && typeof resolvePersonnelForLookup_ === 'function'
+        ? resolvePersonnelForLookup_(callsign, '', '')
+        : null;
+    } catch (_) {}
 
-    if (code || fml) {
+    if (code || callsign) {
       sourceRows.push({
         row: start + i,
-        fml: fml,
+        callsign: callsign,
+        fml: person && person.fml ? person.fml : '',
         code: code
       });
     }
@@ -185,7 +193,7 @@ function debugSendPanelBuildRawForDateManual() {
       codeRange: CONFIG.CODE_RANGE_A1,
       startRow: start,
       rowCount: num,
-      fmlCol: CONFIG.FML_COL
+      callsignCol: callsignCol
     },
     sourceRowsCount: sourceRows.length,
     sourceRowsFirst20: sourceRows.slice(0, 20),

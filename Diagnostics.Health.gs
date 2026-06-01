@@ -96,18 +96,36 @@ function healthCheck() {
 
   _runHealthCheckItem_(
     report,
-    "CONFIG.OS_FML_RANGE_A1",
+    "PERSONNEL",
     "CRITICAL",
     function () {
-      const a1 = CONFIG.OS_FML_RANGE_A1 || CONFIG.OS_FML_RANGE;
+      const activeRows =
+        typeof getPersonnelActiveRows_ === "function"
+          ? getPersonnelActiveRows_()
+          : typeof getPersonnelRows_ === "function"
+            ? getPersonnelRows_()
+            : [];
+      const warnings =
+        typeof getPersonnelWarnings_ === "function"
+          ? getPersonnelWarnings_()
+          : [];
+      const duplicateActiveCallsigns = warnings.some(function (w) {
+        return String(w || "").indexOf("дубль активного позивного") !== -1;
+      });
       return {
-        status: a1 ? "OK" : "FAIL",
-        details: a1
-          ? `Використовується діапазон: ${a1}`
-          : "OS_FML_RANGE_A1 / OS_FML_RANGE не задано",
-        howTo: a1
-          ? ""
-          : 'Додайте в CONFIG поле OS_FML_RANGE_A1, наприклад "G2:G40"',
+        status: duplicateActiveCallsigns
+          ? "FAIL"
+          : activeRows.length
+            ? "OK"
+            : "WARN",
+        details: `Активних у PERSONNEL: ${activeRows.length}${
+          warnings.length ? "; " + warnings.join("; ") : ""
+        }`,
+        howTo: duplicateActiveCallsigns
+          ? "Виправте дублікати позивних серед Active/Temp у PERSONNEL"
+          : activeRows.length
+            ? ""
+            : "Заповніть PERSONNEL (Callsign + FML, Status=Active)",
       };
     },
   );

@@ -1,11 +1,3 @@
-const PERSON_PHONE_COL = 1;
-const PERSON_CALLSIGN_COL = 2;
-const PERSON_POSITION_COL = 3;
-const PERSON_OSHS_COL = 4;
-const PERSON_RANK_COL = 5;
-const PERSON_BR_DAYS_COL = 6;
-const PERSON_FML_COL = 7;
-
 function _personCardSafeHtml_(value) {
   return HtmlUtils_.escapeHtml(value);
 }
@@ -39,7 +31,10 @@ function _findRowByCallsign_(sheet, callsign) {
   const ref = sheet.getRange(CONFIG.CODE_RANGE_A1);
   const startRow = ref.getRow();
   const numRows = ref.getNumRows();
-  const values = sheet.getRange(startRow, PERSON_CALLSIGN_COL, numRows, 1).getValues();
+  const schema = SheetSchemas_.get("MONTHLY");
+  const values = sheet
+    .getRange(startRow, schema.columns.callsign, numRows, 1)
+    .getValues();
   const key = _normCallsignKey_(callsign);
   for (let i = 0; i < values.length; i++) {
     const v = _normCallsignKey_(values[i][0]);

@@ -24,6 +24,21 @@ function _stage7ShimFindHeaderCol_(headers, names, fallbackIndex) {
 }
 
 function loadPhonesIndex_() {
+  if (typeof isPersonnelSheetAvailable_ === "function" && isPersonnelSheetAvailable_()) {
+    try {
+      return buildPhonesIndexFromPersonnel_();
+    } catch (personnelErr) {
+      try {
+        Logger.log(
+          "[loadPhonesIndex_] PERSONNEL fallback to PHONES: " +
+            (personnelErr && personnelErr.message
+              ? personnelErr.message
+              : personnelErr),
+        );
+      } catch (_) {}
+    }
+  }
+
   var ss = getWasbSpreadsheet_();
   var sheetName =
     typeof CONFIG !== "undefined" && CONFIG && CONFIG.PHONES_SHEET
@@ -39,6 +54,7 @@ function loadPhonesIndex_() {
     byPhone: {},
     items: [],
     versionMarker: "stage7-phones-index-compat-v2",
+    source: "PHONES",
   };
 
   if (!sheet || sheet.getLastRow() < 2) {
@@ -575,16 +591,22 @@ function buildPayloadForCell_(
     row = Number(rowArg);
     col = Number(colArg);
 
-    var fmlCol = Number(cfg_("FML_COL", cfg_("FIO_COL", 7))) || 7;
     var callsignCol = Number(cfg_("CALLSIGN_COL", 2)) || 2;
+    var idCol = Number(cfg_("ID_COL", 0)) || 0;
     var brCol = Number(cfg_("BR_COL", 6)) || 6;
     var dateRow = Number(cfg_("DATE_ROW", 1)) || 1;
 
-    var fmlFromSheet = clean_(sheet.getRange(row, fmlCol).getDisplayValue());
+    var idFromSheet = "";
     var callsignFromSheet = "";
     var codeFromSheet = clean_(sheet.getRange(row, col).getDisplayValue());
     var brRaw = "";
     var brDays = 0;
+
+    if (idCol > 0) {
+      try {
+        idFromSheet = clean_(sheet.getRange(row, idCol).getDisplayValue());
+      } catch (_) {}
+    }
 
     try {
       callsignFromSheet = clean_(
@@ -605,8 +627,9 @@ function buildPayloadForCell_(
       row: row,
       col: col,
       cell: a1FromRowColCompat_(row, col),
-      fml: fmlFromSheet,
-      name: fmlFromSheet,
+      id: idFromSheet,
+      fml: "",
+      name: "",
       callsign: callsignFromSheet,
       code: codeFromSheet,
       status: codeFromSheet,
@@ -632,6 +655,27 @@ function buildPayloadForCell_(
   );
   var callsign = clean_(input.callsign || input.callSign || input.nick || "");
   var role = clean_(input.role || "");
+
+  if (typeof resolvePersonnelForLookup_ === "function") {
+    try {
+      var personnelRecord = resolvePersonnelForLookup_(
+        callsign,
+        fml,
+        input.id || "",
+      );
+      if (personnelRecord) {
+        if (personnelRecord.fml) fml = clean_(personnelRecord.fml);
+        if (personnelRecord.callsign) {
+          callsign = clean_(personnelRecord.callsign);
+          role = callsign;
+        }
+        if (personnelRecord.id) input.id = personnelRecord.id;
+        if (!input.phone && personnelRecord.phone) {
+          input.phone = personnelRecord.phone;
+        }
+      }
+    } catch (_) {}
+  }
 
   var phone = "";
   if (input.phone) {

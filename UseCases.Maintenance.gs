@@ -331,6 +331,9 @@ var UseCasesMaintenance_ = (function () {
           }
 
           case "clearPhoneCache": {
+            if (typeof invalidatePersonnelCache_ === "function") {
+              invalidatePersonnelCache_();
+            }
             const keys = [
               cacheKeyPhones_(),
               cacheKeyPhonesIndex_(),

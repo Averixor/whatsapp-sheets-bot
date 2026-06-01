@@ -278,7 +278,7 @@ There is **no** Apps Script deployment in CI (`clasp` is local only). See `.gith
 6. In Apps Script → **Project settings → Script properties**: ensure **`WASB_SPREADSHEET_ID`** is set if you rely on triggers/headless runs (use your production spreadsheet ID).
 7. Reload the spreadsheet UI; close and reopen the sidebar.
 8. Run smoke when appropriate (see §13 — `npm run gas:smoke` or manual editor checks).
-9. If **PHONES** or birthday/ДН logic changed: run **`apiStage7ClearPhoneCache()`**, then re-check a person card.
+9. After **`PERSONNEL`** structure or data changes (see §15a): run **`apiStage7ClearPhoneCache()`**, then re-check a person card and personnel modal.
 
 ## 13. Post-deploy checks
 
@@ -326,7 +326,37 @@ Run from the Apps Script editor when relevant after a deploy or config change:
 - `apiStage7DebugAccess()` — access debug payload
 - `runAccessPolicyChecks()` — access policy assertions
 - `runSmokeTests()` — smoke bundle
-- `apiStage7ClearPhoneCache()` — invalidate phone/profile caches after **PHONES** or related code changes
+- `apiStage7ClearPhoneCache()` — invalidate phone/profile/PERSONNEL caches (required after **PERSONNEL** or **PHONES** edits)
+
+## 15a. PERSONNEL sheet (canonical people data)
+
+**Rule:** monthly sheet = **Callsign + schedule**; **PERSONNEL** = all person fields; **Status** = activity filter.
+
+### Final header row (row 1)
+
+`ID | FML | Birthday | Age | Days_until_birthday | Phone | 2_Phone | Callsign | Title | Position | OSH_4 | Unit | Status`
+
+Column order may vary; code reads by **header names**, not column index.
+
+### One-time / migration in the spreadsheet
+
+1. Add column **`Status`** if missing (or run **`apiStage7BootstrapRuntimeAndAlertsSheets`** / self-heal to seed headers on empty `PERSONNEL`).
+2. For everyone on duty: leave **`Status` empty** or set **`Active`** (both count as active; **`Temp`** also stays in runtime lists).
+3. For departed personnel: set **`Removed`** or **`Transferred`** — do not delete the row immediately unless you prefer a hard delete.
+
+**`ID`** (Армія+) may stay empty or temporary; it is not required for cards, schedule, phones, or birthdays.
+
+### After `clasp push` (mandatory)
+
+In Apps Script editor (or maintenance menu):
+
+```text
+apiStage7ClearPhoneCache()
+```
+
+Then reload the spreadsheet and reopen the sidebar. Verify one **person card**, **personnel modal** (callsign list), and **SEND_PANEL** row.
+
+Optional: `npm run gas:smoke` or `apiStage7QuickHealthCheck()` — health fails on duplicate **active** Callsign values.
 
 ## 14. Script properties
 
@@ -347,9 +377,11 @@ Do **not** hardcode production spreadsheet IDs in source files; use Script prope
 
 ## 15. PHONES cache and birthday (ДН)
 
-After editing the **PHONES** sheet structure, cached phone/profile data under the hood may be stale. Run **`apiStage7ClearPhoneCache()`**, then reopen the sidebar and verify person cards (**ДН** / phone) against the sheet.
+Runtime prefers **`PERSONNEL`** for phones/profiles when the sheet has data; **PHONES** remains a legacy fallback.
 
-Operational detail: canonical **PHONES** schema includes **`birthday`** as column 4; index loaders match headers and fallback where applicable (`Stage7PhoneDictPayloadShims.gs`).
+After editing **PERSONNEL**, **PHONES**, or birthday logic, run **`apiStage7ClearPhoneCache()`**, then reopen the sidebar and verify person cards (**ДН** / phone).
+
+Operational detail: **`loadPhonesIndex_()`** builds from **PERSONNEL** (active rows) when available (`PersonnelRepository.gs`); otherwise from **PHONES** headers (`Stage7PhoneDictPayloadShims.gs`).
 
 ## 19. Operational stewardship (refactor doctrine)
 

@@ -52,13 +52,19 @@ const SendPanelFastPaths_ = (function() {
     const ctx = PersonsRepository_.getDateContext(safeDate);
     const source = ctx.sheet;
     const ref = source.getRange(CONFIG.CODE_RANGE_A1);
+    const monthlySchema = SheetSchemas_.get('MONTHLY');
     const startRow = ref.getRow();
     const rowCount = ref.getNumRows();
     const dateCol = ctx.col;
 
     const codeValues = source.getRange(startRow, dateCol, rowCount, 1).getDisplayValues();
-    const fmlValues = source.getRange(startRow, CONFIG.FML_COL, rowCount, 1).getDisplayValues();
-    const brValues = source.getRange(startRow, 6, rowCount, 1).getDisplayValues();
+    const callsignCol = Number(CONFIG.CALLSIGN_COL) || 2;
+    const callsignValues = source
+      .getRange(startRow, callsignCol, rowCount, 1)
+      .getDisplayValues();
+    const brValues = source
+      .getRange(startRow, monthlySchema.columns.brDays, rowCount, 1)
+      .getDisplayValues();
 
     const phonesIndex = DictionaryRepository_.getPhonesIndex();
     const dictMap = DictionaryRepository_.getDictMap();
@@ -66,12 +72,30 @@ const SendPanelFastPaths_ = (function() {
 
     for (var i = 0; i < rowCount; i++) {
       var code = String(codeValues[i] && codeValues[i][0] || '').trim();
-      var fmlRaw = String(fmlValues[i] && fmlValues[i][0] || '').trim();
-      if (!code || !fmlRaw) continue;
+      var rowCallsign = String(
+        callsignValues[i] && callsignValues[i][0] || '',
+      ).trim();
+      if (!code || !rowCallsign) continue;
 
       try {
+        var personnelRow = null;
+        try {
+          personnelRow = resolvePersonnelForLookup_(rowCallsign, "", "");
+        } catch (_) {}
+        var fmlRaw =
+          personnelRow && personnelRow.fml
+            ? String(personnelRow.fml).trim()
+            : "";
+        if (!fmlRaw) continue;
+
         var fmlNorm = normalizeFML_(fmlRaw);
-        var phone = findPhone_({ fml: fmlRaw, fmlNorm: fmlNorm }, { index: phonesIndex }) || '';
+        var phone =
+          (personnelRow && personnelRow.phone) ||
+          findPhone_(
+            { fml: fmlRaw, fmlNorm: fmlNorm, callsign: rowCallsign },
+            { index: phonesIndex },
+          ) ||
+          "";
         var phoneDigits = phone ? String(phone).replace(/[^\d+]/g, '') : '';
         var waPhone = phoneDigits ? (phoneDigits.charAt(0) === '+' ? phoneDigits : '+' + phoneDigits) : '';
 

@@ -782,8 +782,12 @@
         .toUpperCase()
         .replace(/\s+/g, " ");
 
-    let filteredCallsigns = Array.isArray(PERSONNEL_CALLSIGNS)
-      ? [...PERSONNEL_CALLSIGNS]
+    const personnelSource =
+      typeof getPersonnelCallsigns_ === "function"
+        ? getPersonnelCallsigns_()
+        : PERSONNEL_CALLSIGNS;
+    let filteredCallsigns = Array.isArray(personnelSource)
+      ? [...personnelSource]
       : [];
 
     btnOpen.setAttribute("aria-expanded", "false");
@@ -866,18 +870,24 @@
     function filterGrid(query) {
       const q = normalizeText(query);
 
+      const source =
+        typeof getPersonnelCallsigns_ === "function"
+          ? getPersonnelCallsigns_()
+          : PERSONNEL_CALLSIGNS;
       filteredCallsigns = !q
-        ? [...PERSONNEL_CALLSIGNS]
-        : PERSONNEL_CALLSIGNS.filter((callsign) =>
-            normalizeText(callsign).includes(q),
-          );
+        ? [...source]
+        : source.filter((callsign) => normalizeText(callsign).includes(q));
 
       renderGrid(filteredCallsigns);
     }
 
     btnOpen.addEventListener("click", () => {
       searchInput.value = "";
-      filteredCallsigns = [...PERSONNEL_CALLSIGNS];
+      const sourceOpen =
+        typeof getPersonnelCallsigns_ === "function"
+          ? getPersonnelCallsigns_()
+          : PERSONNEL_CALLSIGNS;
+      filteredCallsigns = [...sourceOpen];
       renderGrid(filteredCallsigns);
       openModal();
     });
@@ -899,7 +909,11 @@
   }
 
   function registerLegacyPersonnelButtons() {
-    PERSONNEL_CALLSIGNS.forEach((callsign) => {
+    const legacySource =
+      typeof getPersonnelCallsigns_ === "function"
+        ? getPersonnelCallsigns_()
+        : PERSONNEL_CALLSIGNS;
+    legacySource.forEach((callsign) => {
       window[`btn_${callsign}`] = () => openPersonCardByCallsign_(callsign);
     });
   }

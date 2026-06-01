@@ -21,17 +21,10 @@ function buildDaySummaryForColumn_(sheet, col) {
     freq[code] = (freq[code] || 0) + 1;
   });
 
-  const osRangeA1 = CONFIG.OS_FML_RANGE_A1 || CONFIG.OS_FML_RANGE;
-  if (!osRangeA1) {
-    throw new Error("У CONFIG не задано OS_FML_RANGE_A1");
-  }
-
-  const total = sheet
-    .getRange(osRangeA1)
-    .getDisplayValues()
-    .flat()
-    .map((v) => normalizeFML_(v))
-    .filter(Boolean).length;
+  const total =
+    typeof getPersonnelRows_ === "function"
+      ? getPersonnelRows_().length
+      : 0;
 
   const lines = [`${FULL_NAMES["ОС"] || "Особовий склад"} — ${total}`];
 
@@ -81,8 +74,9 @@ function collectPeopleDetailed_(sheet, col) {
     .getRange(ref.getRow(), col, ref.getNumRows(), 1)
     .getDisplayValues()
     .flat();
-  const fmls = sheet
-    .getRange(ref.getRow(), CONFIG.FML_COL, ref.getNumRows(), 1)
+  const callsignCol = Number(CONFIG.CALLSIGN_COL) || 2;
+  const callsigns = sheet
+    .getRange(ref.getRow(), callsignCol, ref.getNumRows(), 1)
     .getDisplayValues()
     .flat();
 
@@ -90,8 +84,23 @@ function collectPeopleDetailed_(sheet, col) {
     seen = new Set();
   for (let i = 0; i < codes.length; i++) {
     const code = String(codes[i] || "").trim();
-    const fml = String(fmls[i] || "").trim();
-    if (!code || !fml) continue;
+    const rowCallsign = String(callsigns[i] || "").trim();
+    if (!code || !rowCallsign) continue;
+
+    let fml = "";
+    if (typeof resolvePersonnelForLookup_ === "function") {
+      try {
+        const personnel = resolvePersonnelForLookup_(rowCallsign, "", "");
+        if (personnel && personnel.fml) fml = String(personnel.fml).trim();
+      } catch (_) {}
+    }
+    if (!fml && typeof getPersonnelByCallsign_ === "function") {
+      try {
+        const p = getPersonnelByCallsign_(rowCallsign);
+        if (p && p.fml) fml = String(p.fml).trim();
+      } catch (_) {}
+    }
+    if (!fml) continue;
     const surname = fml.split(" ")[0];
     const key = surname + "|" + code;
     if (seen.has(key)) continue;

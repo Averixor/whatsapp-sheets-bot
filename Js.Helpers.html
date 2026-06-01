@@ -129,6 +129,9 @@
           STATE.currentMonth = boot.current;
           updateMonthBadge(STATE.currentMonth);
         }
+        if (Array.isArray(boot.personnelCallsigns)) {
+          applyPersonnelCallsignsFromServer_(boot.personnelCallsigns);
+        }
       } else {
         await loadAccessDescriptor();
 

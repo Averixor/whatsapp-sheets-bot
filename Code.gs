@@ -3,6 +3,7 @@ const CONFIG = {
   // Основні налаштування аркушів
   TARGET_SHEET: "04",
   PHONES_SHEET: "PHONES",
+  PERSONNEL_SHEET: "PERSONNEL",
   DICT_SHEET: "DICT",
   DICT_SUM_SHEET: "DICT_SUM",
   LOG_SHEET: "LOG",

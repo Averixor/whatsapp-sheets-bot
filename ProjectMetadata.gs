@@ -48,6 +48,7 @@ const PROJECT_STAGE7_CANONICAL_API_MAP_ = Object.freeze({
   application: Object.freeze([
     "apiStage7GetAccessDescriptorLite",
     "apiStage7BootstrapSidebar",
+    "apiStage7ListPersonnelCallsigns",
     "apiStage7ReportClientAccessSignal",
     "apiStage7GetMonthsList",
     "apiStage7GetSidebarData",
@@ -494,6 +495,7 @@ const PROJECT_BUNDLE_FILE_INDEX_ = Object.freeze([
   "OperationSafety.gs",
   "PersonCalendar.html",
   "PersonCards.gs",
+  "PersonnelRepository.gs",
   "PersonsRepository.gs",
   "PreviewLinkService.gs",
   "ProjectMetadata.gs",

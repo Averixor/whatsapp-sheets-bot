@@ -19,17 +19,22 @@
   var PANEL_ERROR_PREFIX = '✕';
   var WA_SENDER_TARGET = 'WA_SENDER_WINDOW';
 
-  var PERSONNEL_CALLSIGNS = Object.freeze([
-    'ШАХТАР', 'ГРАФ', 
-    'СОВА', 'ДОК', 
-    'ГУГЛ', 'СОНЕЧКО', 
-    'ТУРИСТ', 'МАЛИЙ', 
-    'КамАЗ', 'МОНЯ', 
-    'ВАМПИР', 'МАЙОР', 
-    'СТУДЕНТ', 'КОВАЛЬ', 
-    'ПІКА', 'ЦАР', 
-    'КАБАН', 'ФЛЕШ',
-  ]);
+  /** Позивні з аркуша PERSONNEL (заповнюється при bootstrap сайдбару). */
+  var PERSONNEL_CALLSIGNS = [];
+
+  function applyPersonnelCallsignsFromServer_(list) {
+    PERSONNEL_CALLSIGNS.length = 0;
+    if (!Array.isArray(list)) return PERSONNEL_CALLSIGNS;
+    list.forEach(function (item) {
+      var cs = String(item || "").trim();
+      if (cs) PERSONNEL_CALLSIGNS.push(cs);
+    });
+    return PERSONNEL_CALLSIGNS;
+  }
+
+  function getPersonnelCallsigns_() {
+    return PERSONNEL_CALLSIGNS;
+  }
 
   // =========================
   // STATE

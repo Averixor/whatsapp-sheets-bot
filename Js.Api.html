@@ -30,6 +30,9 @@
         access: result.access || null,
         months: Array.isArray(result.months) ? result.months : [],
         current: result.current || '',
+        personnelCallsigns: Array.isArray(result.personnelCallsigns)
+          ? result.personnelCallsigns
+          : [],
         warnings: Array.isArray(response?.warnings) ? response.warnings : [],
         context: response?.context || null,
         meta: unwrapStage4Meta(response),
