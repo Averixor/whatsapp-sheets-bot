@@ -184,10 +184,10 @@ function _ssBuildPersonnelSchema_() {
     required: true,
     headerBased: true,
     requiredHeaders: [
-      'FML', 'Birthday', 'Age', 'Days_until_birthday',
-      'Phone', '2_Phone', 'Callsign', 'Title', 'Position', 'OSH_4', 'Status'
+      'FML', 'Birthday', 'Phone', '2_Phone', 'Callsign',
+      'Title', 'Position', 'OSH_4', 'Status'
     ],
-    optionalHeaders: ['ID', 'Unit'],
+    optionalHeaders: ['ID', 'Age', 'Days_until_birthday', 'Unit'],
     canonicalHeaderOrder: [
       'ID', 'FML', 'Birthday', 'Age', 'Days_until_birthday',
       'Phone', '2_Phone', 'Callsign', 'Title', 'Position', 'OSH_4', 'Unit', 'Status'
@@ -483,6 +483,7 @@ var SheetSchemas_ = (function() {
   function getAll() {
     return {
       MONTHLY: getMonthlySheetSchema_(_ssBotMonthSheetName_()),
+      PERSONNEL: _toLegacySchema_(SHEET_SCHEMAS.personnel),
       PHONES: _toLegacySchema_(SHEET_SCHEMAS.phones),
       DICT: _toLegacySchema_(SHEET_SCHEMAS.dict),
       DICT_SUM: _toLegacySchema_(SHEET_SCHEMAS.dictSum),
@@ -527,6 +528,10 @@ function getSchemaFieldColumn_(schemaOrKey, fieldName) {
 
 function getSchemaLastColumn_(schemaOrKey) {
   var schema = typeof schemaOrKey === 'string' ? getSheetSchema_(schemaOrKey) : schemaOrKey;
+  if (schema && schema.headerBased && Array.isArray(schema.canonicalHeaderOrder) && schema.canonicalHeaderOrder.length) {
+    return schema.canonicalHeaderOrder.length;
+  }
+
   var fieldNames = getSchemaFieldNames_(schema);
 
   if (!fieldNames.length) return 1;
@@ -547,6 +552,54 @@ function getSchemaSheetName_(schemaOrKey, options) {
   }
 
   return _ssTrimmedString_(schema.name, '');
+}
+
+function _ssCanonicalHeaderKey_(value) {
+  var text = _ssTrimmedString_(value, '');
+  if (!text) return '';
+
+  var lower = text
+    .toLowerCase()
+    .replace(/[’'`"ʼ]/g, '')
+    .replace(/\s+/g, ' ');
+
+  var aliases = {
+    id: 'ID',
+    fml: 'FML',
+    full_name: 'FML',
+    fullname: 'FML',
+    'піб': 'FML',
+    birthday: 'Birthday',
+    'день народження': 'Birthday',
+    age: 'Age',
+    'вік': 'Age',
+    days_until_birthday: 'Days_until_birthday',
+    'days until birthday': 'Days_until_birthday',
+    phone: 'Phone',
+    'телефон': 'Phone',
+    '2_phone': '2_Phone',
+    '2 phone': '2_Phone',
+    'телефон 2': '2_Phone',
+    callsign: 'Callsign',
+    'позивний': 'Callsign',
+    title: 'Title',
+    'звання': 'Title',
+    position: 'Position',
+    'посада': 'Position',
+    osh_4: 'OSH_4',
+    'ошс 4': 'OSH_4',
+    oshs: 'OSH_4',
+    unit: 'Unit',
+    'підрозділ': 'Unit',
+    status: 'Status',
+    'статус': 'Status'
+  };
+
+  if (aliases[lower]) return aliases[lower];
+  if (text === '2_Phone' || text === '2 Phone') return '2_Phone';
+  if (text === 'Days_until_birthday') return 'Days_until_birthday';
+  if (text === 'OSH_4') return 'OSH_4';
+  return text;
 }
 
 function validateSheetHeadersBySchema_(sheet, schemaOrKey) {
@@ -579,6 +632,34 @@ function validateSheetHeadersBySchema_(sheet, schemaOrKey) {
       report.ok = false;
       report.mismatches.push(e && e.message ? e.message : String(e));
     }
+
+    return report;
+  }
+
+  if (schema.headerBased) {
+    var headerBasedRow = _ssParseNumber_(schema.headerRow, 1);
+    var headerBasedLastCol = Math.max(Number(sheet.getLastColumn()) || 0, getSchemaLastColumn_(schema));
+    var headerBasedHeaders = headerBasedLastCol > 0 ? sheet.getRange(headerBasedRow, 1, 1, headerBasedLastCol).getDisplayValues()[0] : [];
+    var seenHeaders = {};
+
+    headerBasedHeaders.forEach(function(header) {
+      var canonical = _ssCanonicalHeaderKey_(header);
+      if (!canonical) return;
+      if (seenHeaders[canonical] === undefined) seenHeaders[canonical] = header;
+    });
+
+    (schema.requiredHeaders || []).forEach(function(headerName) {
+      if (seenHeaders[headerName] === undefined) {
+        report.ok = false;
+        report.missing.push(headerName);
+      }
+    });
+
+    (schema.optionalHeaders || []).forEach(function(headerName) {
+      if (seenHeaders[headerName] === undefined) {
+        report.warnings.push('Опційний header відсутній або не розпізнаний: ' + headerName);
+      }
+    });
 
     return report;
   }

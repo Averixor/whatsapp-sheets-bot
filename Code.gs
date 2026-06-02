@@ -1,7 +1,7 @@
 /************ КОНФІГУРАЦІЯ ************/
 const CONFIG = {
   // Основні налаштування аркушів
-  TARGET_SHEET: "04",
+  TARGET_SHEET: "06",
   PHONES_SHEET: "PHONES",
   PERSONNEL_SHEET: "PERSONNEL",
   DICT_SHEET: "DICT",
@@ -125,9 +125,13 @@ function displayNameForCode_(code) {
 function getBotMonthSheetName_() {
   const props = PropertiesService.getDocumentProperties();
   const p = props.getProperty(CONFIG.BOT_MONTH_PROP_KEY);
-  const name = p && String(p).trim() ? String(p).trim() : CONFIG.TARGET_SHEET;
   const ss = getWasbSpreadsheet_();
-  return ss.getSheetByName(name) ? name : CONFIG.TARGET_SHEET;
+  const currentMonth = String(new Date().getMonth() + 1).padStart(2, "0");
+  const fallback = ss.getSheetByName(currentMonth)
+    ? currentMonth
+    : CONFIG.TARGET_SHEET;
+  const name = p && String(p).trim() ? String(p).trim() : fallback;
+  return ss.getSheetByName(name) ? name : fallback;
 }
 
 function setBotMonthSheetName_(name) {

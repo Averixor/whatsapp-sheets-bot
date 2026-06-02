@@ -17,7 +17,7 @@ var PERSONNEL_SHEET_NAME =
     ? CONFIG.PERSONNEL_SHEET
     : "PERSONNEL";
 
-/** Sheet must have these header columns (ID is optional). */
+/** Sheet must have these header columns (ID and computed birthday helpers are optional). */
 /** Canonical header order (values in ID may be empty). */
 var PERSONNEL_CANONICAL_HEADER_ORDER_ = [
   "ID",
@@ -38,8 +38,6 @@ var PERSONNEL_CANONICAL_HEADER_ORDER_ = [
 var PERSONNEL_REQUIRED_HEADER_KEYS = [
   "FML",
   "Birthday",
-  "Age",
-  "Days_until_birthday",
   "Phone",
   "2_Phone",
   "Callsign",
@@ -49,8 +47,13 @@ var PERSONNEL_REQUIRED_HEADER_KEYS = [
   "Status",
 ];
 
-/** ID and Unit columns recommended; ID values may be blank. */
-var PERSONNEL_OPTIONAL_HEADER_KEYS = ["ID", "Unit"];
+/** ID, Unit, and computed birthday helper columns are recommended but not required. */
+var PERSONNEL_OPTIONAL_HEADER_KEYS = [
+  "ID",
+  "Age",
+  "Days_until_birthday",
+  "Unit",
+];
 
 /** Значення в аркуші PERSONNEL (українською, без змішування з EN). */
 var PERSONNEL_ACTIVE_STATUSES_ = ["Дієвий", "Тимчасовий", "Відрядження"];

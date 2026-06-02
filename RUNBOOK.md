@@ -338,6 +338,8 @@ Run from the Apps Script editor when relevant after a deploy or config change:
 `ID | FML | Birthday | Age | Days_until_birthday | Phone | 2_Phone | Callsign | Title | Position | OSH_4 | Unit | Status`
 
 Column order may vary; code reads by **header names**, not column index.
+Required headers: `FML`, `Birthday`, `Phone`, `2_Phone`, `Callsign`, `Title`, `Position`, `OSH_4`, `Status`.
+`ID`, `Age`, `Days_until_birthday`, and `Unit` are recommended but optional; `Age` / `Days_until_birthday` may be computed helper columns.
 
 ### One-time / migration in the spreadsheet
 
