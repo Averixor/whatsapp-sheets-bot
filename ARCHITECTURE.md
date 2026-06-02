@@ -241,11 +241,11 @@ The sidebar (`Sidebar.html` + `Styles_01_Themes.html` + `Js.Theme.html`) support
 
 | Preference | Behaviour |
 |------------|-----------|
-| `system` | Resolved via `prefers-color-scheme` (tracks OS / browser; closest match when Google Sheets is dark) |
+| `system` | UI label **Як система** — resolved via `prefers-color-scheme` (browser/OS; not guaranteed to match Sheets or Dark Reader) |
 | `light` | Force light palette |
-| `dark` | Force dark palette |
+| `dark` | Force dark palette (also the **default** when `localStorage` has no prior choice) |
 
-The **resolved** palette is applied as `document.documentElement.dataset.theme = "light" | "dark"`. Semantic CSS variables (`--wasb-bg`, `--wasb-surface`, `--wasb-card`, `--wasb-text`, …) map to legacy `--bg-*` / `--text-*` aliases so existing styles keep working. Google Sheets does not expose spreadsheet theme to HtmlService; manual override is required when extensions (e.g. Dark Reader) invert the iframe differently from the grid.
+The **resolved** palette is applied as `document.documentElement.dataset.theme = "light" | "dark"`. A short hint under the header switcher tells users to pick **Темна** manually when the spreadsheet is darkened by an extension. Semantic CSS variables (`--wasb-bg`, `--wasb-surface`, `--wasb-card`, `--wasb-text`, …) map to legacy `--bg-*` / `--text-*` aliases so existing styles keep working.
 
 ## 9. Diagnostics and tests
 

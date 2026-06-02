@@ -1,6 +1,7 @@
 <script>
   var WASB_THEME_STORAGE_KEY = "wasb.sidebar.theme";
   var WASB_THEME_LEGACY_KEY = "wasb-sidebar-theme";
+  var WASB_THEME_DEFAULT_PREF = "dark";
   var WASB_THEME_PREFS = ["system", "light", "dark"];
   var WASB_THEME_RESOLVED = ["light", "dark"];
 
@@ -18,15 +19,18 @@
     },
 
     _readStoredPref_: function () {
-      var pref = "system";
+      var pref = WASB_THEME_DEFAULT_PREF;
       try {
-        pref =
-          localStorage.getItem(WASB_THEME_STORAGE_KEY) ||
-          localStorage.getItem(WASB_THEME_LEGACY_KEY) ||
-          "system";
+        if (localStorage.getItem(WASB_THEME_STORAGE_KEY)) {
+          pref = localStorage.getItem(WASB_THEME_STORAGE_KEY);
+        } else if (localStorage.getItem(WASB_THEME_LEGACY_KEY)) {
+          pref = localStorage.getItem(WASB_THEME_LEGACY_KEY);
+        }
       } catch (_) {}
       if (pref === "auto") pref = "system";
-      return WASB_THEME_PREFS.indexOf(pref) === -1 ? "system" : pref;
+      return WASB_THEME_PREFS.indexOf(pref) === -1
+        ? WASB_THEME_DEFAULT_PREF
+        : pref;
     },
 
     getPref: function () {

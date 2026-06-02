@@ -121,7 +121,11 @@
     const url =
       CALENDAR_DAY_BG_PRESETS[seed % CALENDAR_DAY_BG_PRESETS.length] || "";
     const safeUrl = escapeAttr(url);
-    return `background-image:linear-gradient(180deg,rgba(2,6,23,.72),rgba(2,6,23,.88)),url('${safeUrl}');`;
+    const overlay =
+      document.documentElement.dataset.theme === "light"
+        ? "rgba(248,249,250,.78),rgba(232,234,237,.88)"
+        : "rgba(2,6,23,.72),rgba(2,6,23,.88)";
+    return `background-image:linear-gradient(180deg,${overlay}),url('${safeUrl}');`;
   }
 
   function showCalendar(action) {

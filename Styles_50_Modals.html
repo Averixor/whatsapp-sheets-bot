@@ -223,9 +223,7 @@
     gap: 12px;
     padding: 14px 16px;
     border-bottom: 1px solid var(--border-color);
-    background: linear-gradient(180deg,
-        rgba(255, 255, 255, 0.02) 0%,
-        rgba(255, 255, 255, 0) 100%);
+    background: var(--surface-shine);
   }
 
   .personnel-modal__title-wrap {
@@ -326,9 +324,7 @@
     padding: 10px 12px;
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    background: linear-gradient(180deg,
-        rgba(255, 255, 255, 0.025) 0%,
-        rgba(255, 255, 255, 0.01) 100%);
+    background: var(--wasb-card);
     color: var(--text-primary);
     cursor: pointer;
     transition: 0.18s ease;
@@ -364,9 +360,7 @@
   .personnel-card.is-locked:hover {
     transform: none;
     border-color: var(--border-color);
-    background: linear-gradient(180deg,
-        rgba(255, 255, 255, 0.025) 0%,
-        rgba(255, 255, 255, 0.01) 100%);
+    background: var(--wasb-card);
     color: var(--text-secondary);
     box-shadow: none;
   }
@@ -411,7 +405,7 @@
     justify-content: space-between;
     gap: 12px;
     padding: 16px 18px;
-    border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.12));
+    border-bottom: 1px solid var(--wasb-border);
   }
 
   .access-login-modal__title {

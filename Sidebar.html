@@ -12,16 +12,18 @@
       (function () {
         var PREF_KEY = "wasb.sidebar.theme";
         var LEGACY_KEY = "wasb-sidebar-theme";
-        var pref = "system";
+        var DEFAULT_PREF = "dark";
+        var pref = DEFAULT_PREF;
         try {
-          pref =
-            localStorage.getItem(PREF_KEY) ||
-            localStorage.getItem(LEGACY_KEY) ||
-            "system";
+          if (localStorage.getItem(PREF_KEY)) {
+            pref = localStorage.getItem(PREF_KEY);
+          } else if (localStorage.getItem(LEGACY_KEY)) {
+            pref = localStorage.getItem(LEGACY_KEY);
+          }
         } catch (_) {}
         if (pref === "auto") pref = "system";
         if (pref !== "system" && pref !== "light" && pref !== "dark") {
-          pref = "system";
+          pref = DEFAULT_PREF;
         }
         var resolved = pref;
         if (pref === "system") {
@@ -57,17 +59,19 @@
       }
 
       .header-tool-btn {
-        background: transparent;
-        border: none;
+        background: var(--header-control-bg);
+        border: 1px solid var(--header-control-border);
+        color: inherit;
         cursor: pointer;
-        padding: 8px;
+        padding: 0;
         border-radius: 50%;
         transition: background-color 0.2s;
       }
 
       .header-tool-btn:hover,
       .header-tool-btn:focus-visible {
-        background-color: var(--header-tool-hover, rgba(0, 0, 0, 0.05));
+        background-color: var(--header-control-hover-bg);
+        border-color: var(--header-control-hover-border);
       }
 
       .logo.header-logo {
@@ -132,39 +136,46 @@
             <span class="status-text">Завантаження...</span>
           </div>
         </div>
-        <div
-          class="theme-switcher"
-          id="themeSwitcher"
-          role="radiogroup"
-          aria-label="Тема оформлення"
-        >
-          <button
-            type="button"
-            class="theme-switcher__btn"
-            data-theme-pref="system"
-            role="radio"
-            aria-checked="true"
+        <div class="theme-switcher-wrap">
+          <div
+            class="theme-switcher"
+            id="themeSwitcher"
+            role="radiogroup"
+            aria-label="Тема оформлення"
+            aria-describedby="themeSwitcherHint"
           >
-            Системна
-          </button>
-          <button
-            type="button"
-            class="theme-switcher__btn"
-            data-theme-pref="light"
-            role="radio"
-            aria-checked="false"
-          >
-            Світла
-          </button>
-          <button
-            type="button"
-            class="theme-switcher__btn"
-            data-theme-pref="dark"
-            role="radio"
-            aria-checked="false"
-          >
-            Темна
-          </button>
+            <button
+              type="button"
+              class="theme-switcher__btn"
+              data-theme-pref="system"
+              role="radio"
+              aria-checked="false"
+            >
+              Як система
+            </button>
+            <button
+              type="button"
+              class="theme-switcher__btn"
+              data-theme-pref="light"
+              role="radio"
+              aria-checked="false"
+            >
+              Світла
+            </button>
+            <button
+              type="button"
+              class="theme-switcher__btn"
+              data-theme-pref="dark"
+              role="radio"
+              aria-checked="false"
+            >
+              Темна
+            </button>
+          </div>
+          <p class="theme-switcher__hint" id="themeSwitcherHint">
+            «Як система» бере тему браузера. Якщо таблиця затемнена розширенням,
+            оберіть «Темна» вручну.
+          </p>
         </div>
       </header>
 

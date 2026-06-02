@@ -72,8 +72,8 @@
   }
 
   .header {
-    background: linear-gradient(145deg, var(--whatsapp-teal), var(--whatsapp-teal-dark));
-    color: var(--text-on-accent);
+    background: var(--header-bg);
+    color: var(--header-text);
     padding: var(--space-sm) var(--space-md);
     box-shadow: var(--shadow-sm);
     flex-shrink: 0;
@@ -111,8 +111,8 @@
     width: 34px;
     height: 34px;
     border-radius: 9999px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--header-control-border);
+    background: var(--header-control-bg);
     color: inherit;
     cursor: pointer;
     transition: var(--transition);
@@ -121,14 +121,14 @@
 
   .header-tool-btn:hover,
   .header-tool-btn:focus-visible {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.34);
+    background: var(--header-control-hover-bg);
+    border-color: var(--header-control-hover-border);
     box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
     outline: none;
   }
 
   .status-badge {
-    background: rgba(255, 255, 255, 0.12);
+    background: var(--header-control-bg);
     backdrop-filter: blur(8px);
     padding: 5px 12px;
     border-radius: var(--radius-xl);
@@ -136,13 +136,13 @@
     display: flex;
     align-items: center;
     gap: var(--space-xs);
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    border: 1px solid var(--header-control-border);
     white-space: nowrap;
     transition: var(--transition);
   }
 
   .status-badge:hover {
-    background: rgba(255, 255, 255, 0.22);
+    background: var(--header-control-hover-bg);
     transform: translateY(-1px);
   }
 

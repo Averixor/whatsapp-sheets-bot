@@ -52,6 +52,16 @@
     --scrollbar-thumb: #bdc1c6;
     --scrollbar-track: #f1f3f4;
     --overlay-backdrop: rgba(32, 33, 36, 0.45);
+    --header-bg: linear-gradient(180deg, #ffffff 0%, #f1f3f4 100%);
+    --header-text: var(--wasb-text);
+    --header-control-bg: rgba(60, 64, 67, 0.05);
+    --header-control-border: rgba(60, 64, 67, 0.16);
+    --header-control-hover-bg: rgba(14, 165, 233, 0.1);
+    --header-control-hover-border: rgba(14, 165, 233, 0.32);
+    --header-control-active-bg: rgba(14, 165, 233, 0.16);
+    --header-control-active-border: rgba(14, 165, 233, 0.42);
+    --header-control-text: var(--wasb-text);
+    --header-hint-text: var(--wasb-text-secondary);
     --header-tool-hover: rgba(0, 0, 0, 0.06);
     --shadow-sm: 0 1px 2px rgba(60, 64, 67, 0.12), 0 1px 3px rgba(60, 64, 67, 0.08);
     --shadow-md: 0 4px 8px rgba(60, 64, 67, 0.12), 0 2px 4px rgba(60, 64, 67, 0.08);
@@ -86,6 +96,8 @@
     --log-warning: #a16207;
     --log-info: #1d4ed8;
     --cal-weekend: #b45309;
+    --surface-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0) 100%);
+    --cal-hero-overlay: rgba(248, 249, 250, 0.78), rgba(232, 234, 237, 0.88);
   }
 
   html[data-theme="dark"] {
@@ -140,6 +152,16 @@
     --scrollbar-thumb: #475569;
     --scrollbar-track: #111827;
     --overlay-backdrop: rgba(2, 6, 23, 0.64);
+    --header-bg: linear-gradient(145deg, #0f172a 0%, #020617 100%);
+    --header-text: #ffffff;
+    --header-control-bg: rgba(255, 255, 255, 0.1);
+    --header-control-border: rgba(255, 255, 255, 0.22);
+    --header-control-hover-bg: rgba(255, 255, 255, 0.18);
+    --header-control-hover-border: rgba(255, 255, 255, 0.34);
+    --header-control-active-bg: rgba(14, 165, 233, 0.32);
+    --header-control-active-border: rgba(14, 165, 233, 0.58);
+    --header-control-text: rgba(255, 255, 255, 0.92);
+    --header-hint-text: rgba(255, 255, 255, 0.82);
     --header-tool-hover: rgba(255, 255, 255, 0.12);
     --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
     --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.25);
@@ -174,22 +196,38 @@
     --log-warning: #fde047;
     --log-info: #93c5fd;
     --cal-weekend: #fbbf24;
+    --surface-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0) 100%);
+    --cal-hero-overlay: rgba(2, 6, 23, 0.72), rgba(2, 6, 23, 0.88);
   }
 
   /* Theme preference switcher (header) */
+  .theme-switcher-wrap {
+    padding: 0 var(--space-md) var(--space-sm);
+  }
+
   .theme-switcher {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 4px;
-    padding: 0 var(--space-md) var(--space-sm);
+    padding: 0;
+  }
+
+  .theme-switcher__hint {
+    margin: 6px 0 0;
+    padding: 0 2px;
+    color: var(--header-hint-text);
+    font-size: 0.68rem;
+    line-height: 1.35;
+    font-weight: 500;
+    text-wrap: balance;
   }
 
   .theme-switcher__btn {
     appearance: none;
     -webkit-appearance: none;
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--header-control-border);
+    background: var(--header-control-bg);
+    color: var(--header-control-text);
     border-radius: 999px;
     min-height: 28px;
     padding: 4px 6px;
@@ -204,20 +242,42 @@
 
   .theme-switcher__btn:hover,
   .theme-switcher__btn:focus-visible {
-    background: rgba(255, 255, 255, 0.18);
-    border-color: rgba(255, 255, 255, 0.34);
+    background: var(--header-control-hover-bg);
+    border-color: var(--header-control-hover-border);
     outline: none;
   }
 
   .theme-switcher__btn.is-active {
-    background: rgba(255, 255, 255, 0.28);
-    border-color: rgba(255, 255, 255, 0.5);
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+    background: var(--header-control-active-bg);
+    border-color: var(--header-control-active-border);
+    box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.08);
+  }
+
+  html[data-theme="light"] .sidebar-container .input,
+  html[data-theme="light"] .sidebar-container select,
+  html[data-theme="light"] .sidebar-container textarea,
+  html[data-theme="dark"] .sidebar-container .input,
+  html[data-theme="dark"] .sidebar-container select,
+  html[data-theme="dark"] .sidebar-container textarea {
+    background: var(--wasb-input-bg);
+    color: var(--wasb-text);
+    border-color: var(--wasb-border);
+  }
+
+  html[data-theme="light"] .sidebar-container .input::placeholder,
+  html[data-theme="light"] .sidebar-container textarea::placeholder,
+  html[data-theme="dark"] .sidebar-container .input::placeholder,
+  html[data-theme="dark"] .sidebar-container textarea::placeholder {
+    color: var(--wasb-text-muted);
   }
 
   @media (max-width: 520px) {
     .theme-switcher__btn {
       font-size: 0.66rem;
       padding: 4px 4px;
+    }
+
+    .theme-switcher__hint {
+      font-size: 0.64rem;
     }
   }
