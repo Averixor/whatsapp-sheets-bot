@@ -335,7 +335,24 @@ function _ssBuildVacationsSchema_() {
     }),
 
     headerAliases: _ssFreeze_({
-      fml: ['FML', 'FullName', 'ПІБ'], startDate: ['StartDate', 'Start date', 'Початок', 'Початок включно'], endDate: ['EndDate', 'End date', 'Кінець', 'Кінець включно'], vacationNo: ['VacationNo', 'Vacation number', 'Номер'], active: ['Active', 'Активна'], notify: ['Notify', 'Сповістити']
+      fml: ['FML', 'FullName', 'ПІБ'],
+      startDate: [
+        'StartDate',
+        'Start date',
+        'Початок',
+        'Початок включно',
+        'Початок відпустки включно'
+      ],
+      endDate: [
+        'EndDate',
+        'End date',
+        'Кінець',
+        'Кінець включно',
+        'Кінець відпустки включно'
+      ],
+      vacationNo: ['VacationNo', 'Vacation number', 'Номер'],
+      active: ['Active', 'Активна'],
+      notify: ['Notify', 'Сповістити', 'Сповіщення']
     }),
 
     keyFields: ['fml', 'startDate', 'endDate'],

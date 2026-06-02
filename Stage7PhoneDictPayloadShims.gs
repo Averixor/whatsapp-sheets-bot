@@ -132,6 +132,10 @@ function loadPhonesIndex_() {
 
     if (!fml && !phone && !callsign && !role) return;
 
+    // PHONES часто містить рядки-роздільники (наприклад, "Відділення ...") без телефону/позивного/ролі.
+    // Їх не потрібно індексувати.
+    if (!phone && !callsign && !role) return;
+
     var item = {
       row: idx + 2,
       fml: fml,
