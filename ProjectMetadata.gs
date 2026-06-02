@@ -406,6 +406,7 @@ const PROJECT_CLIENT_RUNTIME_POLICY_ = Object.freeze({
   policyMarker: "stage7-sidebar-runtime",
   activeRuntimeChain: Object.freeze([
     "Js.Core.html",
+    "Js.Theme.html",
     "Js.State.html",
     "Js.Api.html",
     "Js.Render.Panel.html",
@@ -467,6 +468,7 @@ const PROJECT_BUNDLE_FILE_INDEX_ = Object.freeze([
   "Js.Actions.html",
   "Js.Api.html",
   "Js.Core.html",
+  "Js.Theme.html",
   "Js.Diagnostics.html",
   "Js.Events.html",
   "Js.Helpers.html",
@@ -538,6 +540,7 @@ const PROJECT_BUNDLE_FILE_INDEX_ = Object.freeze([
   "Stage7TestRunner.SendPanel.gs",
   "Stage7TestRunner.Summaries.gs",
   "Styles.html",
+  "Styles_01_Themes.html",
   "Styles_00_Base.html",
   "Styles_30_Personnel.html",
   "Styles_40_SystemPanels.html",

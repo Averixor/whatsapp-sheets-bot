@@ -235,6 +235,18 @@ Protected / service sheets include:
 - send-panel data should be loaded when needed, not preloaded blindly
 - UI role hints must stay aligned with server policy
 
+### Sidebar theme (client-only)
+
+The sidebar (`Sidebar.html` + `Styles_01_Themes.html` + `Js.Theme.html`) supports three **preference** modes stored in browser `localStorage` (`wasb.sidebar.theme`):
+
+| Preference | Behaviour |
+|------------|-----------|
+| `system` | Resolved via `prefers-color-scheme` (tracks OS / browser; closest match when Google Sheets is dark) |
+| `light` | Force light palette |
+| `dark` | Force dark palette |
+
+The **resolved** palette is applied as `document.documentElement.dataset.theme = "light" | "dark"`. Semantic CSS variables (`--wasb-bg`, `--wasb-surface`, `--wasb-card`, `--wasb-text`, …) map to legacy `--bg-*` / `--text-*` aliases so existing styles keep working. Google Sheets does not expose spreadsheet theme to HtmlService; manual override is required when extensions (e.g. Dark Reader) invert the iframe differently from the grid.
+
 ## 9. Diagnostics and tests
 
 Main validation tools:

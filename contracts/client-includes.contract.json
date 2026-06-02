@@ -3,6 +3,7 @@
   "loaderFile": "JavaScript.html",
   "expected": [
     "Js.Core",
+    "Js.Theme",
     "Js.State",
     "Js.Api",
     "Js.Render.Panel",

@@ -179,6 +179,7 @@ Manual replay from maintenance API: `apiRunStage7Job(jobName, { trigger: false }
 - the sidebar opens without implicit heavy diagnostics
 - send-panel data loads when requested
 - login errors do not block the form itself
+- **Theme switcher** (header): **Системна** / **Світла** / **Темна** — preference stored in `localStorage` key `wasb.sidebar.theme` (`system` \| `light` \| `dark`); resolved theme on `<html data-theme="light|dark">`. After `clasp push`, close and reopen the sidebar to verify persistence and system-mode sync with OS dark/light.
 
 ## 9. Troubleshooting cheatsheet
 

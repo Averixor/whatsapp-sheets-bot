@@ -4,7 +4,7 @@
   "layers": [
     {
       "id": "core",
-      "files": ["Js.Core", "Js.State", "Js.Api"],
+      "files": ["Js.Core", "Js.Theme", "Js.State", "Js.Api"],
       "allowedDependsOn": []
     },
     {

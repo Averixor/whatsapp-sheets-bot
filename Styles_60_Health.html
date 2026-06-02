@@ -50,7 +50,7 @@
     color: var(--text-muted);
     padding: 2px 8px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--health-chip-bg);
   }
 
   .health-group-body {
@@ -69,23 +69,23 @@
   }
 
   .health-item.ok {
-    border-color: rgba(34, 197, 94, 0.6);
-    background: rgba(34, 197, 94, 0.12);
+    border-color: var(--wasb-success);
+    background: var(--success-soft-bg);
   }
 
   .health-item.warn {
-    border-color: rgba(245, 158, 11, 0.8);
-    background: rgba(245, 158, 11, 0.12);
+    border-color: var(--wasb-warning);
+    background: var(--warning-soft-bg);
   }
 
   .health-item.bad {
-    border-color: rgba(239, 68, 68, 0.8);
-    background: rgba(239, 68, 68, 0.12);
+    border-color: var(--wasb-danger);
+    background: var(--danger-soft-bg);
   }
 
   .health-item.pseudo {
-    border-color: rgba(59, 130, 246, 0.55);
-    background: rgba(59, 130, 246, 0.1);
+    border-color: var(--accent-soft-border);
+    background: var(--accent-soft-bg);
   }
 
   .health-title {
@@ -115,7 +115,7 @@
   .how-to-box {
     margin-top: var(--space-xs);
     padding: var(--space-xs);
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--health-chip-bg);
     border-left: 3px solid var(--error-color);
     font-size: 0.9em;
     white-space: pre-line;

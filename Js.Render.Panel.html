@@ -128,11 +128,10 @@
       const isBlocked = !isReady && !isSent;
 
       const statusColor = isSent
-        ? "#9C27B0"
+        ? "var(--sent-color)"
         : isReady
           ? "var(--success-color)"
           : "var(--error-color)";
-
       const actionText = isSent ? "✔" : isReady ? "✓" : "✘";
 
       html += `
@@ -148,7 +147,7 @@
               </div>
             </div>
             <div>
-              <span style="font-size:0.7rem; padding:2px 6px; background:${statusColor}20; border-radius:4px;">
+              <span style="font-size:0.7rem; padding:2px 6px; background:${isSent ? "var(--accent-soft-bg)" : isReady ? "var(--success-soft-bg)" : "var(--danger-soft-bg)"}; color:${statusColor}; border-radius:4px;">
                 ${escapeHtml(actionText)}
               </span>
             </div>
@@ -164,7 +163,7 @@
             <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
               ${isReady ? `<button type="button" class="result-link" onclick="SidebarApp.sendOneFromPanel(${index})" title="Відкрити чат і зафіксувати відправку для цього рядка" style="font-size:0.7rem; padding:4px 8px; border:none;">Надіслати</button>` : ""}
               ${isSent ? `<button type="button" class="result-link" onclick="SidebarApp.rejectSendFromPanel(${index})" title="Повернути цей рядок у стан не відправлено" style="font-size:0.7rem; padding:4px 8px; border:none;">Повернути</button>` : ""}
-              <a href="${escapeAttr(item.link)}" target="WA_SENDER_WINDOW" rel="noopener noreferrer" title="Відкрити чат без автоматичної фіксації" style="font-size:0.7rem; color:#888; text-decoration:underline;">(відкрити)</a>
+              <a href="${escapeAttr(item.link)}" target="WA_SENDER_WINDOW" rel="noopener noreferrer" title="Відкрити чат без автоматичної фіксації" style="font-size:0.7rem; color:var(--link-muted); text-decoration:underline;">(відкрити)</a>
             </div>`
               : ""
           }

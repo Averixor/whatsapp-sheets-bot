@@ -1,0 +1,136 @@
+<script>
+  var WASB_THEME_STORAGE_KEY = "wasb.sidebar.theme";
+  var WASB_THEME_LEGACY_KEY = "wasb-sidebar-theme";
+  var WASB_THEME_PREFS = ["system", "light", "dark"];
+  var WASB_THEME_RESOLVED = ["light", "dark"];
+
+  var ThemeManager = {
+    _media: null,
+    _mediaListenerBound: false,
+
+    _getMedia_: function () {
+      try {
+        if (typeof window.matchMedia !== "function") return null;
+        return window.matchMedia("(prefers-color-scheme: dark)");
+      } catch (_) {
+        return null;
+      }
+    },
+
+    _readStoredPref_: function () {
+      var pref = "system";
+      try {
+        pref =
+          localStorage.getItem(WASB_THEME_STORAGE_KEY) ||
+          localStorage.getItem(WASB_THEME_LEGACY_KEY) ||
+          "system";
+      } catch (_) {}
+      if (pref === "auto") pref = "system";
+      return WASB_THEME_PREFS.indexOf(pref) === -1 ? "system" : pref;
+    },
+
+    getPref: function () {
+      return this._readStoredPref_();
+    },
+
+    resolveTheme: function (pref) {
+      var mode = pref || this.getPref();
+      if (mode === "light") return "light";
+      if (mode === "dark") return "dark";
+      try {
+        var media = this._media || this._getMedia_();
+        return media && media.matches ? "dark" : "light";
+      } catch (_) {
+        return "light";
+      }
+    },
+
+    getResolvedTheme: function () {
+      return this.resolveTheme(this.getPref());
+    },
+
+    apply: function (pref) {
+      var next =
+        WASB_THEME_PREFS.indexOf(pref) === -1 ? "system" : pref;
+      var resolved = this.resolveTheme(next);
+      var root = document.documentElement;
+
+      root.dataset.theme = resolved;
+      root.dataset.themePref = next;
+      root.style.colorScheme = resolved;
+
+      try {
+        localStorage.setItem(WASB_THEME_STORAGE_KEY, next);
+        localStorage.removeItem(WASB_THEME_LEGACY_KEY);
+      } catch (_) {}
+
+      this._updateSwitcherUi();
+      return { pref: next, resolved: resolved };
+    },
+
+    setPref: function (pref) {
+      return this.apply(pref);
+    },
+
+    init: function () {
+      this._media = this._getMedia_();
+      this.apply(this.getPref());
+      this._bindSwitcher();
+
+      if (this._media && !this._mediaListenerBound) {
+        var onSystemThemeChange = function () {
+          if (ThemeManager.getPref() === "system") {
+            ThemeManager.apply("system");
+          }
+        };
+        if (typeof this._media.addEventListener === "function") {
+          this._media.addEventListener("change", onSystemThemeChange);
+          this._mediaListenerBound = true;
+        } else if (typeof this._media.addListener === "function") {
+          this._media.addListener(onSystemThemeChange);
+          this._mediaListenerBound = true;
+        }
+      }
+    },
+
+    _bindSwitcher: function () {
+      var group = document.getElementById("themeSwitcher");
+      if (!group || group.__wasbThemeBound) return;
+      group.__wasbThemeBound = true;
+
+      group.querySelectorAll("[data-theme-pref]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var pref = String(btn.getAttribute("data-theme-pref") || "").trim();
+          ThemeManager.setPref(pref);
+        });
+      });
+    },
+
+    _updateSwitcherUi: function () {
+      var pref = this.getPref();
+      var group = document.getElementById("themeSwitcher");
+      if (!group) return;
+
+      group.querySelectorAll("[data-theme-pref]").forEach(function (btn) {
+        var btnPref = String(btn.getAttribute("data-theme-pref") || "").trim();
+        var active = btnPref === pref;
+        btn.classList.toggle("is-active", active);
+        btn.setAttribute("aria-checked", active ? "true" : "false");
+      });
+    },
+  };
+
+  function initThemeManager_() {
+    if (typeof ThemeManager !== "undefined") ThemeManager.init();
+  }
+
+  function wasbApplyThemeEarly_() {
+    if (typeof ThemeManager === "undefined") return;
+    var pref = ThemeManager._readStoredPref_();
+    var resolved = ThemeManager.resolveTheme(pref);
+    var root = document.documentElement;
+    root.dataset.theme = resolved;
+    root.dataset.themePref = pref;
+    root.style.colorScheme = resolved;
+  }
+</script>

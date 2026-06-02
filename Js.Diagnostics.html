@@ -199,7 +199,7 @@
             <div class="health-details">
               ${escapeHtml(label || 'Виконую тести частинами, щоб не впертися у ліміт Google Apps Script.')}<br>
               Прогрес: ${escapeHtml(String(currentOffset || 0))}${knownTotal ? ' / ' + escapeHtml(String(knownTotal)) : ''} · ${escapeHtml(String(pct))}%
-              <div style="height:7px; margin-top:8px; border-radius:999px; background:rgba(148,163,184,.25); overflow:hidden;">
+              <div style="height:7px; margin-top:8px; border-radius:999px; background:var(--health-chip-bg); overflow:hidden;">
                 <div style="height:7px; width:${pct}%; background:var(--google-blue);"></div>
               </div>
             </div>
@@ -378,10 +378,13 @@
     const discovered = Number(counts.discovered || 0);
     const total = Number(counts.total || checks.length || 0);
     const hasProblems = failed > 0 || warnings > 0;
+    const summaryBg = hasProblems
+      ? 'var(--warning-soft-bg)'
+      : 'var(--success-soft-bg)';
 
     return `
       <div class="compact-health-report">
-        <div style="font-weight:600; margin-bottom:6px; padding:6px 8px; background:${hasProblems ? 'var(--warning-color)' : 'var(--success-color)'}20; border-radius:6px;">
+        <div style="font-weight:600; margin-bottom:6px; padding:6px 8px; background:${summaryBg}; border-radius:6px;">
           <span style="color:${hasProblems ? 'var(--warning-color)' : 'var(--success-color)'};">${hasProblems ? '⚠' : '✓'}</span>
           ${hasProblems ? 'Є проблеми у тестах' : 'Критичні тести пройдено'}
           <span style="float:right; font-size:0.65rem;">${total} запусків</span>
@@ -394,11 +397,11 @@
         </div>
 
         <div style="font-size:0.68rem; margin-bottom:8px; display:flex; gap:8px; flex-wrap:wrap;">
-          <span style="padding:2px 8px; border-radius:999px; background:rgba(34,197,94,.12); color:var(--success-color);">✓ PASS: ${passed}</span>
-          <span style="padding:2px 8px; border-radius:999px; background:rgba(239,68,68,.12); color:var(--error-color);">✕ FAIL: ${failed}</span>
-          <span style="padding:2px 8px; border-radius:999px; background:rgba(245,158,11,.12); color:var(--warning-color);">⚠ WARN: ${warnings}</span>
-          <span style="padding:2px 8px; border-radius:999px; background:rgba(59,130,246,.12); color:var(--google-blue);">SKIP: ${skipped}</span>
-          <span style="padding:2px 8px; border-radius:999px; background:rgba(59,130,246,.12); color:var(--google-blue);">DISC: ${discovered}</span>
+          <span style="padding:2px 8px; border-radius:999px; background:var(--success-soft-bg); color:var(--success-color);">✓ PASS: ${passed}</span>
+          <span style="padding:2px 8px; border-radius:999px; background:var(--danger-soft-bg); color:var(--error-color);">✕ FAIL: ${failed}</span>
+          <span style="padding:2px 8px; border-radius:999px; background:var(--warning-soft-bg); color:var(--warning-color);">⚠ WARN: ${warnings}</span>
+          <span style="padding:2px 8px; border-radius:999px; background:var(--info-soft-bg); color:var(--info-soft-text);">SKIP: ${skipped}</span>
+          <span style="padding:2px 8px; border-radius:999px; background:var(--info-soft-bg); color:var(--info-soft-text);">DISC: ${discovered}</span>
         </div>
 
         <div class="result-item" style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -697,12 +700,13 @@
     const hasRealProblems = criticalCount > 0 || warningCount > 0;
     const statusIcon = hasRealProblems ? '⚠' : '✓';
     const statusColor = hasRealProblems ? 'var(--warning-color)' : 'var(--success-color)';
+    const statusBg = hasRealProblems ? 'var(--warning-soft-bg)' : 'var(--success-soft-bg)';
 
     return `
       ${renderHealthCheckModeSwitcher_()}
 
       <div class="compact-health-report">
-        <div style="font-weight:600; margin-bottom:6px; padding:6px 8px; background:${statusColor}20; border-radius:6px;">
+        <div style="font-weight:600; margin-bottom:6px; padding:6px 8px; background:${statusBg}; border-radius:6px;">
           <span style="color:${statusColor};">${statusIcon}</span>
           ${hasRealProblems ? 'Є проблеми' : 'Все добре'}
           <span style="float:right; font-size:0.65rem;">${checks.length} перевірок</span>
@@ -713,16 +717,16 @@
         </div>
 
         <div style="font-size:0.68rem; margin-bottom:8px; display:flex; gap:8px; flex-wrap:wrap;">
-          <span style="padding:2px 8px; border-radius:999px; background:rgba(34,197,94,.12); color:var(--success-color);">
+          <span style="padding:2px 8px; border-radius:999px; background:var(--success-soft-bg); color:var(--success-color);">
             ✓ OK: ${okCount}
           </span>
-          <span style="padding:2px 8px; border-radius:999px; background:rgba(239,68,68,.12); color:var(--error-color);">
+          <span style="padding:2px 8px; border-radius:999px; background:var(--danger-soft-bg); color:var(--error-color);">
             ✕ Критичні: ${criticalCount}
           </span>
-          <span style="padding:2px 8px; border-radius:999px; background:rgba(245,158,11,.12); color:var(--warning-color);">
+          <span style="padding:2px 8px; border-radius:999px; background:var(--warning-soft-bg); color:var(--warning-color);">
             ⚠ Попередження: ${warningCount}
           </span>
-          <span style="padding:2px 8px; border-radius:999px; background:rgba(59,130,246,.12); color:var(--google-blue);">
+          <span style="padding:2px 8px; border-radius:999px; background:var(--info-soft-bg); color:var(--info-soft-text);">
             🧩 PSEUDO: ${pseudoCount}
           </span>
         </div>

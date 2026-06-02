@@ -5,7 +5,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.8);
+    background: var(--modal-backdrop);
     display: none;
     align-items: center;
     justify-content: center;
@@ -16,7 +16,7 @@
   .modal-content {
     background: var(--bg-glass);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(71, 85, 105, 0.6);
+    border: 1px solid var(--border-strong);
     border-radius: var(--radius-md);
     width: 90%;
     max-width: 400px;
@@ -80,7 +80,7 @@
 
   .modal-btn-confirm {
     background: linear-gradient(135deg, var(--whatsapp-teal), var(--whatsapp-teal-dark));
-    color: white;
+    color: var(--text-on-accent);
     box-shadow: 0 3px 10px rgba(14, 165, 233, 0.3);
   }
 
@@ -93,13 +93,13 @@
   .loading-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(2, 6, 23, 0.64);
+    background: var(--overlay-backdrop);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #fff;
+    color: var(--text-primary);
     z-index: 10000;
     animation: loadingFadeIn 0.16s ease;
     padding: 20px;
@@ -196,7 +196,7 @@
   .personnel-modal__backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(2, 6, 23, 0.72);
+    background: var(--overlay-backdrop);
     backdrop-filter: blur(4px);
     animation: personnelFadeIn 0.18s ease;
   }
@@ -352,7 +352,7 @@
   .personnel-card:active {
     transform: translateY(0);
     background: var(--bg-selected);
-    color: #ffffff;
+    color: var(--text-on-accent);
   }
 
   .personnel-card.is-locked {
@@ -390,16 +390,16 @@
   .access-login-modal__backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.55);
+    background: var(--modal-backdrop);
   }
 
   .access-login-modal__dialog {
     position: relative;
     max-width: 420px;
     margin: 36px auto;
-    background: var(--surface-color, #111827);
-    color: var(--text-primary, #fff);
-    border: 1px solid var(--border-color, rgba(255,255,255,0.12));
+    background: var(--wasb-surface);
+    color: var(--wasb-text);
+    border: 1px solid var(--wasb-border);
     border-radius: 16px;
     box-shadow: 0 18px 48px rgba(0,0,0,0.35);
     overflow: hidden;
@@ -421,7 +421,7 @@
 
   .access-login-modal__subtext {
     font-size: 0.82rem;
-    color: var(--text-secondary, #9ca3af);
+    color: var(--text-secondary);
     margin-top: 4px;
   }
 
@@ -429,10 +429,10 @@
     min-width: 96px;
     height: 38px;
     padding: 0 14px;
-    border: 1px solid var(--border-color, rgba(255,255,255,0.12));
+    border: 1px solid var(--border-color);
     border-radius: 12px;
-    background: var(--bg-secondary, rgba(255,255,255,0.04));
-    color: var(--text-primary, #fff);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
     font-weight: 700;
     display: inline-flex;
     align-items: center;
@@ -443,8 +443,8 @@
   }
 
   .access-login-modal__close:hover {
-    background: var(--bg-hover, rgba(255,255,255,0.08));
-    border-color: var(--border-strong, rgba(255,255,255,0.2));
+    background: var(--bg-hover);
+    border-color: var(--border-strong);
   }
 
   .access-login-modal__close.is-disabled,
@@ -463,7 +463,7 @@
     margin-bottom: 12px;
     font-size: 0.9rem;
     line-height: 1.5;
-    color: var(--text-secondary, #9ca3af);
+    color: var(--text-secondary);
   }
 
   .access-login-modal__loading {
@@ -486,7 +486,7 @@
   }
 
   .access-login-modal__loading-text {
-    color: var(--text-primary, #fff);
+    color: var(--text-primary);
     font-size: 1rem;
     font-weight: 800;
     line-height: 1.3;
@@ -494,7 +494,7 @@
 
   .access-login-modal__loading-subtext {
     max-width: 280px;
-    color: var(--text-secondary, #9ca3af);
+    color: var(--text-secondary);
     font-size: 0.86rem;
     line-height: 1.5;
   }
@@ -519,7 +519,7 @@
   }
 
   .access-login-modal__label {
-    color: var(--text-secondary, #9ca3af);
+    color: var(--text-secondary);
     font-size: 0.84rem;
     line-height: 1.35;
   }
@@ -529,21 +529,21 @@
     min-height: 46px;
     padding: 12px 14px;
     border-radius: 14px;
-    border: 1px solid var(--border-color, rgba(255,255,255,0.12));
-    background: rgba(15, 23, 42, 0.88);
-    color: var(--text-primary, #fff);
+    border: 1px solid var(--border-color);
+    background: var(--wasb-bg);
+    color: var(--wasb-text);
     font: inherit;
     transition: 0.18s ease;
     box-sizing: border-box;
   }
 
   .access-login-modal__input::placeholder {
-    color: var(--text-muted, #94a3b8);
+    color: var(--text-muted);
   }
 
   .access-login-modal__input:focus {
     outline: none;
-    border-color: var(--whatsapp-teal, #0ea5e9);
+    border-color: var(--whatsapp-teal);
     box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.16);
   }
 
@@ -565,9 +565,9 @@
     width: 100%;
     padding: 12px 14px;
     border-radius: 14px;
-    border: 1px solid rgba(14, 165, 233, 0.28);
-    background: linear-gradient(135deg, rgba(14, 165, 233, 0.22), rgba(37, 99, 235, 0.22));
-    color: var(--text-primary, #fff);
+    border: 1px solid var(--accent-soft-border);
+    background: var(--accent-soft-bg);
+    color: var(--text-primary);
     font-weight: 800;
     display: inline-flex;
     align-items: center;
@@ -579,7 +579,7 @@
   }
 
   .access-login-modal__submit:hover {
-    border-color: var(--whatsapp-teal, #0ea5e9);
+    border-color: var(--whatsapp-teal);
     transform: translateY(-1px);
     box-shadow: 0 10px 24px rgba(14, 165, 233, 0.18);
   }
@@ -593,7 +593,7 @@
   .access-login-modal__empty {
     padding: 14px 10px;
     text-align: center;
-    color: var(--text-secondary, #9ca3af);
+    color: var(--text-secondary);
     font-size: 0.9rem;
   }
   /* ACCESS REQUEST FORM — tighter label/input pairing */
@@ -650,4 +650,3 @@
       transform: translate(-50%, -50%) scale(1);
     }
   }
-

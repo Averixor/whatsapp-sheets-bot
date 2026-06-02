@@ -7,6 +7,37 @@
       name="description"
       content="Панель керування WASB (WhatsApp-Sheets-Bot)."
     />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      (function () {
+        var PREF_KEY = "wasb.sidebar.theme";
+        var LEGACY_KEY = "wasb-sidebar-theme";
+        var pref = "system";
+        try {
+          pref =
+            localStorage.getItem(PREF_KEY) ||
+            localStorage.getItem(LEGACY_KEY) ||
+            "system";
+        } catch (_) {}
+        if (pref === "auto") pref = "system";
+        if (pref !== "system" && pref !== "light" && pref !== "dark") {
+          pref = "system";
+        }
+        var resolved = pref;
+        if (pref === "system") {
+          try {
+            resolved = window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+          } catch (_) {
+            resolved = "light";
+          }
+        }
+        document.documentElement.dataset.theme = resolved;
+        document.documentElement.dataset.themePref = pref;
+        document.documentElement.style.colorScheme = resolved;
+      })();
+    </script>
     <?!= includeTemplate('Styles'); ?>
     <base target="_top" />
     <style>
@@ -36,7 +67,7 @@
 
       .header-tool-btn:hover,
       .header-tool-btn:focus-visible {
-        background-color: rgba(0, 0, 0, 0.05);
+        background-color: var(--header-tool-hover, rgba(0, 0, 0, 0.05));
       }
 
       .logo.header-logo {
@@ -100,6 +131,40 @@
             <span class="status-dot" aria-hidden="true"></span>
             <span class="status-text">Завантаження...</span>
           </div>
+        </div>
+        <div
+          class="theme-switcher"
+          id="themeSwitcher"
+          role="radiogroup"
+          aria-label="Тема оформлення"
+        >
+          <button
+            type="button"
+            class="theme-switcher__btn"
+            data-theme-pref="system"
+            role="radio"
+            aria-checked="true"
+          >
+            Системна
+          </button>
+          <button
+            type="button"
+            class="theme-switcher__btn"
+            data-theme-pref="light"
+            role="radio"
+            aria-checked="false"
+          >
+            Світла
+          </button>
+          <button
+            type="button"
+            class="theme-switcher__btn"
+            data-theme-pref="dark"
+            role="radio"
+            aria-checked="false"
+          >
+            Темна
+          </button>
         </div>
       </header>
 

@@ -7,32 +7,10 @@
     --google-gray: #64748b;
     --google-light-gray: #1e293b;
 
-    --bg-primary: #0f172a;
-    --bg-secondary: #111827;
-    --bg-card: rgba(17, 24, 39, 0.92);
-    --bg-hover: rgba(30, 41, 59, 0.94);
-    --bg-selected: var(--whatsapp-teal);
-    --bg-glass: rgba(17, 24, 39, 0.55);
-
-    --text-primary: #f1f5f9;
-    --text-secondary: #cbd5e1;
-    --text-muted: #94a3b8;
-
-    --border-color: #334155;
-    --border-strong: #475569;
-
-    --success-color: #22c55e;
-    --error-color: #ef4444;
-    --warning-color: #f59e0b;
+    --success-color: var(--wasb-success, #22c55e);
+    --error-color: var(--wasb-danger, #ef4444);
+    --warning-color: var(--wasb-warning, #f59e0b);
     --info-color: var(--google-blue);
-
-    --console-bg: #0f172a;
-    --console-text: #e2e8f0;
-
-    --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-    --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.25);
-    --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
-    --shadow-glow: 0 0 18px rgba(14, 165, 233, 0.35);
 
     --transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 
@@ -60,7 +38,7 @@
 
   body {
     font-family: var(--font-sans);
-    background: linear-gradient(135deg, #0f172a 0%, #020617 100%);
+    background: var(--body-gradient);
     color: var(--text-primary);
     height: 100vh;
     overflow: hidden;
@@ -94,8 +72,8 @@
   }
 
   .header {
-    background: linear-gradient(145deg, #0ea5e9, #0369a1);
-    color: white;
+    background: linear-gradient(145deg, var(--whatsapp-teal), var(--whatsapp-teal-dark));
+    color: var(--text-on-accent);
     padding: var(--space-sm) var(--space-md);
     box-shadow: var(--shadow-sm);
     flex-shrink: 0;
@@ -205,7 +183,7 @@
     background: var(--bg-secondary);
     padding: var(--space-sm);
     scrollbar-width: thin;
-    scrollbar-color: #475569 #111827;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
   }
 
   .main-content::-webkit-scrollbar {
@@ -217,12 +195,12 @@
   }
 
   .main-content::-webkit-scrollbar-thumb {
-    background: #475569;
+    background: var(--scrollbar-thumb);
     border-radius: 10px;
   }
 
   .main-content::-webkit-scrollbar-thumb:hover {
-    background: #64748b;
+    background: var(--border-strong);
   }
 
   .menu-section,
@@ -305,7 +283,7 @@
   .menu-item.accent {
     background: linear-gradient(135deg, var(--whatsapp-teal), var(--whatsapp-teal-dark));
     border: none;
-    color: white;
+    color: var(--text-on-accent);
     box-shadow: var(--shadow-md), var(--shadow-glow);
   }
 
@@ -330,7 +308,7 @@
   }
 
   .menu-item.accent .menu-text {
-    color: white;
+    color: var(--text-on-accent);
   }
 
   .menu-divider {
@@ -362,7 +340,7 @@
   /* ЗВИЧАЙНІ КНОПКИ */
   .btn,
   .system-item {
-    background: var(--bg-secondary);
+    background: var(--wasb-btn-bg, var(--bg-secondary));
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     padding: var(--space-sm) var(--space-xs);
@@ -402,7 +380,7 @@
   .btn-primary {
     background: linear-gradient(135deg, var(--whatsapp-teal), var(--whatsapp-teal-dark));
     border-color: transparent;
-    color: white;
+    color: var(--text-on-accent);
     box-shadow: 0 3px 10px rgba(14, 165, 233, 0.3);
   }
 
@@ -424,7 +402,7 @@
     padding: var(--space-sm);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(10, 18, 34, 0.96));
+    background: var(--bg-access-banner);
     box-shadow: var(--shadow-sm);
   }
 
@@ -450,9 +428,9 @@
     min-height: 28px;
     padding: 4px 10px;
     border-radius: 999px;
-    border: 1px solid rgba(14, 165, 233, 0.3);
-    background: rgba(14, 165, 233, 0.14);
-    color: #dbeafe;
+    border: 1px solid var(--info-soft-border);
+    background: var(--info-soft-bg);
+    color: var(--info-soft-text);
     font-size: 0.78rem;
     font-weight: 600;
     text-align: center;
@@ -460,7 +438,7 @@
   }
 
   .access-banner__text {
-    color: #46b6ff;
+    color: var(--access-banner-accent);
     font-size: 16px;
     font-weight: 700;
     line-height: 1.25;
@@ -470,22 +448,22 @@
 
   .access-banner.is-viewer .access-banner__badge,
   .access-banner.is-safe-mode .access-banner__badge {
-    border-color: rgba(245, 158, 11, 0.28);
-    background: rgba(245, 158, 11, 0.16);
-    color: #fde68a;
+    border-color: var(--warning-soft-border);
+    background: var(--warning-soft-bg);
+    color: var(--warning-soft-text);
   }
 
   .access-banner.is-operator .access-banner__badge {
-    border-color: rgba(59, 130, 246, 0.28);
-    background: rgba(59, 130, 246, 0.16);
-    color: #bfdbfe;
+    border-color: var(--info-soft-border);
+    background: var(--info-soft-bg);
+    color: var(--info-soft-text);
   }
 
   .access-banner.is-admin .access-banner__badge,
   .access-banner.is-sysadmin .access-banner__badge {
-    border-color: rgba(16, 185, 129, 0.28);
-    background: rgba(16, 185, 129, 0.16);
-    color: #bbf7d0;
+    border-color: var(--success-soft-border);
+    background: var(--success-soft-bg);
+    color: var(--success-soft-text);
   }
 
   .result-header {
@@ -606,7 +584,7 @@
   .result-link {
     display: inline-block;
     background: linear-gradient(135deg, var(--whatsapp-teal), var(--whatsapp-teal-dark));
-    color: white;
+    color: var(--text-on-accent);
     padding: var(--space-xs) var(--space-sm);
     border-radius: var(--radius-xl);
     text-decoration: none;
@@ -652,8 +630,8 @@
     padding: 6px;
     border-radius: 18px;
     border: 1px solid var(--border-color);
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.96));
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 6px 18px rgba(0, 0, 0, 0.22);
+    background: var(--bg-input);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 6px 18px rgba(0, 0, 0, 0.12);
   }
 
   .mode-toggle-btn {
@@ -685,14 +663,14 @@
   }
 
   .mode-toggle-btn.active {
-    color: #ffffff;
+    color: var(--text-on-accent);
     background: linear-gradient(135deg, var(--whatsapp-teal), var(--whatsapp-teal-dark));
     border-color: transparent;
     box-shadow: 0 8px 18px rgba(14, 165, 233, 0.35);
   }
 
   .mode-toggle-btn.active:hover {
-    color: #ffffff;
+    color: var(--text-on-accent);
     background: linear-gradient(135deg, var(--whatsapp-teal), var(--whatsapp-teal-dark));
   }
 
@@ -766,10 +744,10 @@
     border: 1px solid var(--border-color);
     border-radius: 14px;
     padding: 12px 40px 12px 14px;
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.96));
+    background: var(--bg-input);
     color: var(--text-primary);
     font: inherit;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 4px 12px rgba(0, 0, 0, 0.12);
     transition: var(--transition);
     cursor: pointer;
   }
