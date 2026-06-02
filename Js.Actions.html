@@ -962,7 +962,6 @@
       status: "starting",
     };
     registerGlobalRuntimeEvents_();
-    initThemeManager_();
     await initSidebar();
     updateSendUnsentButtonState();
     initPersonnelModal();
@@ -1033,16 +1032,6 @@
     setHealthCheckMode,
     debugAccess: function () {
       return handleMenuAction("debugAccess");
-    },
-    cycleTheme: function () {
-      if (typeof ThemeManager === "undefined") return "system";
-      var order = ["system", "light", "dark"];
-      var idx = order.indexOf(ThemeManager.getPref());
-      return ThemeManager.setPref(order[(idx + 1) % order.length]).pref;
-    },
-    setThemePref: function (pref) {
-      if (typeof ThemeManager !== "undefined") return ThemeManager.setPref(pref);
-      return { pref: "system", resolved: "light" };
     },
 
     sendDaySummaryToCommander,

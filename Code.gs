@@ -217,7 +217,6 @@ function getClientRuntimeContract_() {
     runtimeStatus: "canonical-modular-runtime",
     runtimeModules: [
       "Js.Core.html",
-      "Js.Theme.html",
       "Js.State.html",
       "Js.Api.html",
       "Js.Render.Panel.html",

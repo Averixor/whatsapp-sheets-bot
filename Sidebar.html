@@ -8,42 +8,6 @@
       name="description"
       content="Панель керування WASB (WhatsApp-Sheets-Bot)."
     >
-    <meta name="color-scheme" content="dark" id="wasbColorSchemeMeta">
-    <meta name="darkreader-lock" content="">
-    <script>
-      (function () {
-        var PREF_KEY = "wasb.sidebar.theme";
-        var LEGACY_KEY = "wasb-sidebar-theme";
-        var DEFAULT_PREF = "dark";
-        var pref = DEFAULT_PREF;
-        try {
-          if (localStorage.getItem(PREF_KEY)) {
-            pref = localStorage.getItem(PREF_KEY);
-          } else if (localStorage.getItem(LEGACY_KEY)) {
-            pref = localStorage.getItem(LEGACY_KEY);
-          }
-        } catch (_) {}
-        if (pref === "auto") pref = "system";
-        if (pref !== "system" && pref !== "light" && pref !== "dark") {
-          pref = DEFAULT_PREF;
-        }
-        var resolved = pref;
-        if (pref === "system") {
-          try {
-            resolved = window.matchMedia("(prefers-color-scheme: dark)").matches
-              ? "dark"
-              : "light";
-          } catch (_) {
-            resolved = "light";
-          }
-        }
-        document.documentElement.setAttribute("data-wasb-theme", resolved);
-        document.documentElement.setAttribute("data-wasb-theme-pref", pref);
-        document.documentElement.style.colorScheme = resolved;
-        var meta = document.getElementById("wasbColorSchemeMeta");
-        if (meta) meta.setAttribute("content", resolved);
-      })();
-    </script>
     <?!= includeTemplate('Styles'); ?>
     <base target="_top">
     <style>
@@ -63,19 +27,17 @@
       }
 
       .header-tool-btn {
-        background: var(--header-control-bg);
-        border: 1px solid var(--header-control-border);
-        color: inherit;
+        background: transparent;
+        border: none;
         cursor: pointer;
-        padding: 0;
+        padding: 8px;
         border-radius: 50%;
         transition: background-color 0.2s;
       }
 
       .header-tool-btn:hover,
       .header-tool-btn:focus-visible {
-        background-color: var(--header-control-hover-bg);
-        border-color: var(--header-control-hover-border);
+        background-color: rgba(0, 0, 0, 0.05);
       }
 
       .logo.header-logo {
@@ -138,47 +100,6 @@
             <span class="status-dot" aria-hidden="true"></span>
             <span class="status-text">Завантаження...</span>
           </div>
-        </div>
-        <div class="theme-switcher-wrap">
-          <div
-            class="theme-switcher"
-            id="themeSwitcher"
-            role="radiogroup"
-            aria-label="Тема оформлення"
-            aria-describedby="themeSwitcherHint"
-          >
-            <input
-              type="radio"
-              class="theme-switcher__input"
-              name="wasbThemePref"
-              id="themePrefSystem"
-              value="system"
-              data-wasb-theme-pref="system"
-            >
-            <label class="theme-switcher__btn" for="themePrefSystem">Як система</label>
-            <input
-              type="radio"
-              class="theme-switcher__input"
-              name="wasbThemePref"
-              id="themePrefLight"
-              value="light"
-              data-wasb-theme-pref="light"
-            >
-            <label class="theme-switcher__btn" for="themePrefLight">Світла</label>
-            <input
-              type="radio"
-              class="theme-switcher__input"
-              name="wasbThemePref"
-              id="themePrefDark"
-              value="dark"
-              data-wasb-theme-pref="dark"
-            >
-            <label class="theme-switcher__btn" for="themePrefDark">Темна</label>
-          </div>
-          <p class="theme-switcher__hint" id="themeSwitcherHint">
-            «Як система» бере тему браузера. Якщо таблиця затемнена розширенням,
-            оберіть «Темна» вручну.
-          </p>
         </div>
       </header>
 

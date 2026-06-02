@@ -7,10 +7,82 @@
     --google-gray: #64748b;
     --google-light-gray: #1e293b;
 
-    --success-color: var(--wasb-success, #22c55e);
-    --error-color: var(--wasb-danger, #ef4444);
-    --warning-color: var(--wasb-warning, #f59e0b);
+    --bg-primary: #0f172a;
+    --bg-secondary: #111827;
+    --bg-card: rgba(17, 24, 39, 0.92);
+    --bg-hover: rgba(30, 41, 59, 0.94);
+    --bg-selected: var(--whatsapp-teal);
+    --bg-glass: rgba(17, 24, 39, 0.55);
+    --bg-panel-muted: rgba(15, 23, 42, 0.55);
+    --bg-input: linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(17, 24, 39, 0.96) 100%);
+    --bg-access-banner: linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(10, 18, 34, 0.96) 100%);
+
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --text-on-accent: #ffffff;
+
+    --border-color: #334155;
+    --border-strong: #475569;
+    --border-soft: rgba(51, 65, 85, 0.65);
+
+    --success-color: #22c55e;
+    --error-color: #ef4444;
+    --danger-color: #ef4444;
+    --warning-color: #f59e0b;
     --info-color: var(--google-blue);
+
+    --console-bg: #0f172a;
+    --console-text: #e2e8f0;
+    --console-border: #1e293b;
+    --console-content-bg: #020617;
+    --console-btn-hover: #1e293b;
+    --console-muted: #64748b;
+
+    --body-gradient: linear-gradient(135deg, #0f172a 0%, #020617 100%);
+    --scrollbar-thumb: #475569;
+    --scrollbar-track: #111827;
+    --overlay-backdrop: rgba(2, 6, 23, 0.64);
+    --header-bg: linear-gradient(145deg, #0f172a 0%, #020617 100%);
+    --header-text: #ffffff;
+    --header-control-bg: rgba(255, 255, 255, 0.1);
+    --header-control-border: rgba(255, 255, 255, 0.22);
+    --header-control-hover-bg: rgba(255, 255, 255, 0.18);
+    --header-control-hover-border: rgba(255, 255, 255, 0.34);
+    --access-banner-accent: #46b6ff;
+    --cal-day-bg: rgba(30, 41, 59, 0.72);
+    --cal-day-border: rgba(51, 65, 85, 0.65);
+    --cal-fade-gradient: linear-gradient(180deg, rgba(17, 24, 39, 0) 0%, rgba(17, 24, 39, 0.96) 28%, var(--bg-secondary) 100%);
+    --cal-weekend: #fbbf24;
+    --health-chip-bg: rgba(255, 255, 255, 0.06);
+    --modal-backdrop: rgba(0, 0, 0, 0.72);
+    --accent-soft-bg: rgba(14, 165, 233, 0.12);
+    --accent-soft-border: rgba(14, 165, 233, 0.35);
+    --danger-soft-bg: rgba(239, 68, 68, 0.12);
+    --danger-soft-border: rgba(239, 68, 68, 0.35);
+    --warning-soft-bg: rgba(245, 158, 11, 0.12);
+    --warning-soft-border: rgba(245, 158, 11, 0.38);
+    --warning-soft-text: #fde68a;
+    --success-soft-bg: rgba(34, 197, 94, 0.12);
+    --success-soft-border: rgba(34, 197, 94, 0.38);
+    --success-soft-text: #86efac;
+    --info-soft-bg: rgba(59, 130, 246, 0.14);
+    --info-soft-border: rgba(59, 130, 246, 0.38);
+    --info-soft-text: #93c5fd;
+    --toast-bg: rgba(15, 23, 42, 0.96);
+    --toast-text: #ffffff;
+    --link-muted: #94a3b8;
+    --sent-color: #d8b4fe;
+    --log-success: #86efac;
+    --log-error: #fca5a5;
+    --log-warning: #fde047;
+    --log-info: #93c5fd;
+    --surface-shine: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0) 100%);
+
+    --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.25);
+    --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+    --shadow-glow: 0 0 18px rgba(14, 165, 233, 0.35);
 
     --transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 
@@ -340,7 +412,7 @@
   /* ЗВИЧАЙНІ КНОПКИ */
   .btn,
   .system-item {
-    background: var(--wasb-btn-bg, var(--bg-secondary));
+    background: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     padding: var(--space-sm) var(--space-xs);
