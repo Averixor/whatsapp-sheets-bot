@@ -1,7 +1,7 @@
-/* WASB sidebar themes — resolved palette on html[data-theme="light"|"dark"] */
+/* WASB sidebar themes — resolved palette on html[data-wasb-theme="light"|"dark"] */
 
-  html[data-theme="light"] {
-    color-scheme: light;
+  html[data-wasb-theme="light"] {
+    color-scheme: light only;
 
     --wasb-bg: #ffffff;
     --wasb-surface: #f8f9fa;
@@ -100,8 +100,8 @@
     --cal-hero-overlay: rgba(248, 249, 250, 0.78), rgba(232, 234, 237, 0.88);
   }
 
-  html[data-theme="dark"] {
-    color-scheme: dark;
+  html[data-wasb-theme="dark"] {
+    color-scheme: dark only;
 
     --wasb-bg: #0f172a;
     --wasb-surface: #111827;
@@ -222,6 +222,18 @@
     text-wrap: balance;
   }
 
+  .theme-switcher__input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
   .theme-switcher__btn {
     appearance: none;
     -webkit-appearance: none;
@@ -253,21 +265,21 @@
     box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.08);
   }
 
-  html[data-theme="light"] .sidebar-container .input,
-  html[data-theme="light"] .sidebar-container select,
-  html[data-theme="light"] .sidebar-container textarea,
-  html[data-theme="dark"] .sidebar-container .input,
-  html[data-theme="dark"] .sidebar-container select,
-  html[data-theme="dark"] .sidebar-container textarea {
+  html[data-wasb-theme="light"] .sidebar-container .input,
+  html[data-wasb-theme="light"] .sidebar-container select,
+  html[data-wasb-theme="light"] .sidebar-container textarea,
+  html[data-wasb-theme="dark"] .sidebar-container .input,
+  html[data-wasb-theme="dark"] .sidebar-container select,
+  html[data-wasb-theme="dark"] .sidebar-container textarea {
     background: var(--wasb-input-bg);
     color: var(--wasb-text);
     border-color: var(--wasb-border);
   }
 
-  html[data-theme="light"] .sidebar-container .input::placeholder,
-  html[data-theme="light"] .sidebar-container textarea::placeholder,
-  html[data-theme="dark"] .sidebar-container .input::placeholder,
-  html[data-theme="dark"] .sidebar-container textarea::placeholder {
+  html[data-wasb-theme="light"] .sidebar-container .input::placeholder,
+  html[data-wasb-theme="light"] .sidebar-container textarea::placeholder,
+  html[data-wasb-theme="dark"] .sidebar-container .input::placeholder,
+  html[data-wasb-theme="dark"] .sidebar-container textarea::placeholder {
     color: var(--wasb-text-muted);
   }
 
@@ -280,4 +292,16 @@
     .theme-switcher__hint {
       font-size: 0.64rem;
     }
+  }
+
+  /* Undo Dark Reader inversion inside sidebar when extension still applies filter */
+  html[data-wasb-dr-active="true"] .sidebar-container {
+    filter: invert(1) hue-rotate(180deg);
+  }
+
+  html[data-wasb-dr-active="true"] .sidebar-container .menu-icon,
+  html[data-wasb-dr-active="true"] .sidebar-container .whatsapp-icon,
+  html[data-wasb-dr-active="true"] .sidebar-container .console-toggle-icon,
+  html[data-wasb-dr-active="true"] .sidebar-container img {
+    filter: invert(1) hue-rotate(180deg);
   }

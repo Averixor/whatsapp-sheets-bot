@@ -3,11 +3,13 @@
   var WASB_THEME_LEGACY_KEY = "wasb-sidebar-theme";
   var WASB_THEME_DEFAULT_PREF = "dark";
   var WASB_THEME_PREFS = ["system", "light", "dark"];
-  var WASB_THEME_RESOLVED = ["light", "dark"];
+  var WASB_THEME_ATTR = "data-wasb-theme";
+  var WASB_THEME_PREF_ATTR = "data-wasb-theme-pref";
 
   var ThemeManager = {
     _media: null,
     _mediaListenerBound: false,
+    _drObserver: null,
 
     _getMedia_: function () {
       try {
@@ -53,21 +55,59 @@
       return this.resolveTheme(this.getPref());
     },
 
+    _syncDomTheme_: function (resolved, pref) {
+      var root = document.documentElement;
+      root.setAttribute(WASB_THEME_ATTR, resolved);
+      root.setAttribute(WASB_THEME_PREF_ATTR, pref);
+      root.style.colorScheme = resolved;
+
+      var meta = document.getElementById("wasbColorSchemeMeta");
+      if (meta) {
+        meta.setAttribute("content", resolved);
+      }
+    },
+
+    _detectDarkReader_: function () {
+      var root = document.documentElement;
+      var active =
+        root.hasAttribute("data-darkreader-mode") ||
+        root.hasAttribute("data-darkreader-scheme") ||
+        !!document.querySelector('meta[name="darkreader"]') ||
+        !!document.querySelector("style.darkreader");
+      root.setAttribute("data-wasb-dr-active", active ? "true" : "false");
+      return active;
+    },
+
+    _watchDarkReader_: function () {
+      if (this._drObserver || typeof MutationObserver !== "function") return;
+      var self = this;
+      this._drObserver = new MutationObserver(function () {
+        self._detectDarkReader_();
+      });
+      this._drObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: [
+          "data-darkreader-mode",
+          "data-darkreader-scheme",
+          "data-wasb-theme",
+        ],
+        childList: true,
+        subtree: true,
+      });
+    },
+
     apply: function (pref) {
       var next =
         WASB_THEME_PREFS.indexOf(pref) === -1 ? "system" : pref;
       var resolved = this.resolveTheme(next);
-      var root = document.documentElement;
-
-      root.dataset.theme = resolved;
-      root.dataset.themePref = next;
-      root.style.colorScheme = resolved;
+      this._syncDomTheme_(resolved, next);
 
       try {
         localStorage.setItem(WASB_THEME_STORAGE_KEY, next);
         localStorage.removeItem(WASB_THEME_LEGACY_KEY);
       } catch (_) {}
 
+      this._detectDarkReader_();
       this._updateSwitcherUi();
       return { pref: next, resolved: resolved };
     },
@@ -80,6 +120,8 @@
       this._media = this._getMedia_();
       this.apply(this.getPref());
       this._bindSwitcher();
+      this._detectDarkReader_();
+      this._watchDarkReader_();
 
       if (this._media && !this._mediaListenerBound) {
         var onSystemThemeChange = function () {
@@ -102,9 +144,12 @@
       if (!group || group.__wasbThemeBound) return;
       group.__wasbThemeBound = true;
 
-      group.querySelectorAll("[data-theme-pref]").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-          var pref = String(btn.getAttribute("data-theme-pref") || "").trim();
+      group.querySelectorAll("input[data-wasb-theme-pref]").forEach(function (input) {
+        input.addEventListener("change", function () {
+          if (!input.checked) return;
+          var pref = String(
+            input.getAttribute("data-wasb-theme-pref") || "",
+          ).trim();
           ThemeManager.setPref(pref);
         });
       });
@@ -115,26 +160,21 @@
       var group = document.getElementById("themeSwitcher");
       if (!group) return;
 
-      group.querySelectorAll("[data-theme-pref]").forEach(function (btn) {
-        var btnPref = String(btn.getAttribute("data-theme-pref") || "").trim();
-        var active = btnPref === pref;
-        btn.classList.toggle("is-active", active);
-        btn.setAttribute("aria-checked", active ? "true" : "false");
+      group.querySelectorAll("input[data-wasb-theme-pref]").forEach(function (input) {
+        var inputPref = String(
+          input.getAttribute("data-wasb-theme-pref") || "",
+        ).trim();
+        var active = inputPref === pref;
+        input.checked = active;
+        var label = input.id
+          ? group.querySelector('label[for="' + input.id + '"]')
+          : null;
+        if (label) label.classList.toggle("is-active", active);
       });
     },
   };
 
   function initThemeManager_() {
     if (typeof ThemeManager !== "undefined") ThemeManager.init();
-  }
-
-  function wasbApplyThemeEarly_() {
-    if (typeof ThemeManager === "undefined") return;
-    var pref = ThemeManager._readStoredPref_();
-    var resolved = ThemeManager.resolveTheme(pref);
-    var root = document.documentElement;
-    root.dataset.theme = resolved;
-    root.dataset.themePref = pref;
-    root.style.colorScheme = resolved;
   }
 </script>

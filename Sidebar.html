@@ -1,13 +1,15 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="uk-UA">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WASB</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta
       name="description"
       content="Панель керування WASB (WhatsApp-Sheets-Bot)."
-    />
-    <meta name="color-scheme" content="light dark" />
+    >
+    <meta name="color-scheme" content="dark" id="wasbColorSchemeMeta">
+    <meta name="darkreader-lock" content="">
     <script>
       (function () {
         var PREF_KEY = "wasb.sidebar.theme";
@@ -35,13 +37,15 @@
             resolved = "light";
           }
         }
-        document.documentElement.dataset.theme = resolved;
-        document.documentElement.dataset.themePref = pref;
+        document.documentElement.setAttribute("data-wasb-theme", resolved);
+        document.documentElement.setAttribute("data-wasb-theme-pref", pref);
         document.documentElement.style.colorScheme = resolved;
+        var meta = document.getElementById("wasbColorSchemeMeta");
+        if (meta) meta.setAttribute("content", resolved);
       })();
     </script>
     <?!= includeTemplate('Styles'); ?>
-    <base target="_top" />
+    <base target="_top">
     <style>
       .header-content {
         position: relative;
@@ -112,9 +116,8 @@
             </button>
             <button
               type="button"
-              class="header-tool-btn"
+              class="header-tool-btn wasb-is-hidden"
               id="btnHeaderLogin"
-              style="display: none"
               onclick="
                 if (typeof openAccessLoginFlow === 'function')
                   openAccessLoginFlow('login');
@@ -144,33 +147,33 @@
             aria-label="Тема оформлення"
             aria-describedby="themeSwitcherHint"
           >
-            <button
-              type="button"
-              class="theme-switcher__btn"
-              data-theme-pref="system"
-              role="radio"
-              aria-checked="false"
+            <input
+              type="radio"
+              class="theme-switcher__input"
+              name="wasbThemePref"
+              id="themePrefSystem"
+              value="system"
+              data-wasb-theme-pref="system"
             >
-              Як система
-            </button>
-            <button
-              type="button"
-              class="theme-switcher__btn"
-              data-theme-pref="light"
-              role="radio"
-              aria-checked="false"
+            <label class="theme-switcher__btn" for="themePrefSystem">Як система</label>
+            <input
+              type="radio"
+              class="theme-switcher__input"
+              name="wasbThemePref"
+              id="themePrefLight"
+              value="light"
+              data-wasb-theme-pref="light"
             >
-              Світла
-            </button>
-            <button
-              type="button"
-              class="theme-switcher__btn"
-              data-theme-pref="dark"
-              role="radio"
-              aria-checked="false"
+            <label class="theme-switcher__btn" for="themePrefLight">Світла</label>
+            <input
+              type="radio"
+              class="theme-switcher__input"
+              name="wasbThemePref"
+              id="themePrefDark"
+              value="dark"
+              data-wasb-theme-pref="dark"
             >
-              Темна
-            </button>
+            <label class="theme-switcher__btn" for="themePrefDark">Темна</label>
           </div>
           <p class="theme-switcher__hint" id="themeSwitcherHint">
             «Як система» бере тему браузера. Якщо таблиця затемнена розширенням,
@@ -182,8 +185,7 @@
       <main class="main-content" id="mainContent">
         <div
           id="accessBanner"
-          class="access-banner"
-          style="display: none"
+          class="access-banner wasb-is-hidden"
           aria-live="polite"
           aria-atomic="true"
         >
@@ -212,7 +214,7 @@
 
             <button
               id="sendUnsentBtn"
-              class="btn btn"
+              class="btn"
               data-role-min="maintainer"
               type="button"
               onclick="SidebarApp.handleMenuAction('sendUnsent')"
@@ -246,7 +248,7 @@
               <span class="menu-text">Зведення дня</span>
             </button>
 
-            <div class="personnel-launch-wrap" style="grid-column: span 2">
+            <div class="personnel-launch-wrap wasb-u-grid-span-2">
               <button
                 id="btnOpenPersonnelModal"
                 class="btn personnel-launch-btn"
@@ -321,141 +323,120 @@
             </button>
 
             <div
-              class="menu-divider"
-              style="grid-column: span 2"
+              class="menu-divider wasb-u-grid-span-2"
               aria-hidden="true"
             ></div>
 
             <div
-              class="health-actions"
+              class="health-actions wasb-u-grid-span-2 wasb-is-hidden"
               data-role-min="maintainer"
-              style="grid-column: span 2; display: none"
             >
-              <div
-                style="
-                  display: grid;
-                  grid-template-columns: 1fr 1fr;
-                  gap: 6px;
-                  margin-bottom: 8px;
-                "
-              >
+              <div class="health-actions-grid">
                 <button
-                  class="btn btn-secondary"
+                  class="btn btn-secondary health-actions-btn health-actions-btn--wide"
                   data-role-min="maintainer"
                   type="button"
                   onclick="SidebarApp.showPendingRepairs()"
-                  style="padding: 6px; font-size: 0.72rem; grid-column: span 2"
                 >
                   🛠 Потребують виправлення
                 </button>
 
                 <button
-                  class="btn btn-secondary"
+                  class="btn btn-secondary health-actions-btn health-actions-btn--wide"
                   data-role-min="sysadmin"
                   type="button"
                   onclick="SidebarApp.handleMenuAction('applyProtections')"
-                  style="padding: 6px; font-size: 0.72rem; grid-column: span 2"
                 >
                   🛡 Захистити службові листи
                 </button>
 
                 <button
-                  class="btn btn-secondary"
+                  class="btn btn-secondary health-actions-btn"
                   data-role-min="maintainer"
                   type="button"
                   onclick="SidebarApp.runHealthCheck()"
-                  style="padding: 6px; font-size: 0.72rem"
                 >
                   🩺 Перевірка системи
                 </button>
 
                 <button
                   id="btnRunAllProjectTests"
-                  class="btn btn-secondary"
+                  class="btn btn-secondary health-actions-btn"
                   data-role-min="admin"
                   type="button"
                   onclick="SidebarApp.runAllProjectTests()"
-                  style="padding: 6px; font-size: 0.72rem"
                 >
                   🧪 Всі тести проєкту
                 </button>
 
                 <button
-                  class="btn btn-secondary"
+                  class="btn btn-secondary health-actions-btn"
                   data-role-min="sysadmin"
                   type="button"
                   onclick="SidebarApp.handleMenuAction('restartBot')"
-                  style="padding: 6px; font-size: 0.72rem"
                 >
                   ♻ Перезапуск бота
                 </button>
 
                 <button
-                  class="btn btn-secondary"
+                  class="btn btn-secondary health-actions-btn"
                   data-role-min="sysadmin"
                   type="button"
                   onclick="SidebarApp.handleMenuAction('clearCache')"
-                  style="padding: 6px; font-size: 0.72rem"
                 >
                   🧹 Очистити кеш
                 </button>
 
                 <button
-                  class="btn btn-secondary"
+                  class="btn btn-secondary health-actions-btn"
                   data-role-min="admin"
                   type="button"
                   onclick="SidebarApp.handleMenuAction('clearLog')"
-                  style="padding: 6px; font-size: 0.72rem"
                 >
                   🗑 Очистити лог
                 </button>
 
                 <button
-                  class="btn btn-secondary"
+                  class="btn btn-secondary health-actions-btn"
                   data-role-min="sysadmin"
                   type="button"
                   onclick="SidebarApp.clearPhoneCache()"
-                  style="padding: 6px; font-size: 0.72rem"
                 >
                   🧹 Очистити кеш тел.
                 </button>
 
                 <button
-                  class="btn btn-secondary"
+                  class="btn btn-secondary health-actions-btn"
                   data-role-min="maintainer"
                   type="button"
                   onclick="SidebarApp.debugPhones()"
-                  style="padding: 6px; font-size: 0.72rem"
                 >
                   📞 Діагностика тел.
                 </button>
 
                 <button
-                  class="btn btn-secondary"
+                  class="btn btn-secondary health-actions-btn"
                   data-role-min="sysadmin"
                   type="button"
                   onclick="SidebarApp.cleanupTriggers()"
-                  style="padding: 6px; font-size: 0.72rem"
                 >
                   🎏 Перевірка дублів тригерів
                 </button>
 
                 <button
-                  class="btn btn-secondary"
+                  class="btn btn-secondary health-actions-btn"
                   data-role-min="sysadmin"
                   type="button"
                   onclick="SidebarApp.setupTrigger()"
-                  style="padding: 6px; font-size: 0.72rem"
                 >
                   ⏰ Створити тригер
                 </button>
 
                 <button
-                  class="btn btn-secondary"
+                  class="btn btn-secondary health-actions-btn"
                   data-role-min="maintainer"
                   type="button"
                   onclick="SidebarApp.copyHealthReport()"
-                  style="padding: 6px; font-size: 0.72rem"
                 >
                   📋 Копія звіту
                 </button>
@@ -486,7 +467,7 @@
             id="resultContent"
             aria-live="polite"
           ></div>
-          <div id="personCardContainer" style="display: none"></div>
+          <div id="personCardContainer" class="wasb-is-hidden"></div>
         </section>
       </main>
 
@@ -580,9 +561,8 @@
       </section>
 
       <div
-        class="loading-overlay"
+        class="loading-overlay wasb-is-hidden"
         id="loadingOverlay"
-        style="display: none"
         aria-live="assertive"
         aria-busy="true"
       >
@@ -636,17 +616,17 @@
               class="personnel-search"
               type="text"
               placeholder="Пошук позивного..."
-              aria-label="Пошук за позивним"
               aria-describedby="personnelModalCount"
               autocomplete="off"
-            />
+            >
           </div>
           <div class="personnel-modal__body">
-            <div
+            <h3 class="sr-only" id="personnelGridTitle">Список особового складу</h3>
+            <section
               class="personnel-grid"
               id="personnelGrid"
-              aria-label="Список особового складу"
-            ></div>
+              aria-labelledby="personnelGridTitle"
+            ></section>
             <div
               class="personnel-empty hidden"
               id="personnelEmptyState"

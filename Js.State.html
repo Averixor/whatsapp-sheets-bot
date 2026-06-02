@@ -386,13 +386,11 @@
   }
 
   function hidePersonCard() {
-    const el = $id('personCardContainer');
-    if (el) el.style.display = 'none';
+    hide('personCardContainer');
   }
 
   function showPersonCardContainer() {
-    const el = $id('personCardContainer');
-    if (el) el.style.display = 'block';
+    show('personCardContainer', 'block');
   }
 
   function hideToast() {

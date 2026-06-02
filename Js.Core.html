@@ -97,12 +97,16 @@
 
   function show(id, display = 'block') {
     const el = $id(id);
-    if (el) el.style.display = display;
+    if (!el) return;
+    el.classList.remove('wasb-is-hidden');
+    el.style.display = display;
   }
 
   function hide(id) {
     const el = $id(id);
-    if (el) el.style.display = 'none';
+    if (!el) return;
+    el.classList.add('wasb-is-hidden');
+    el.style.removeProperty('display');
   }
 
   // =========================

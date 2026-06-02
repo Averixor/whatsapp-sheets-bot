@@ -245,7 +245,7 @@ The sidebar (`Sidebar.html` + `Styles_01_Themes.html` + `Js.Theme.html`) support
 | `light` | Force light palette |
 | `dark` | Force dark palette (also the **default** when `localStorage` has no prior choice) |
 
-The **resolved** palette is applied as `document.documentElement.dataset.theme = "light" | "dark"`. A short hint under the header switcher tells users to pick **Темна** manually when the spreadsheet is darkened by an extension. Semantic CSS variables (`--wasb-bg`, `--wasb-surface`, `--wasb-card`, `--wasb-text`, …) map to legacy `--bg-*` / `--text-*` aliases so existing styles keep working.
+The **resolved** palette is applied as `document.documentElement.setAttribute("data-wasb-theme", "light" | "dark")` (not `data-theme`, which Google Sheets / extensions may overwrite). A short hint under the header switcher tells users to pick **Темна** manually when the spreadsheet is darkened by an extension. Semantic CSS variables (`--wasb-bg`, `--wasb-surface`, `--wasb-card`, `--wasb-text`, …) map to legacy `--bg-*` / `--text-*` aliases so existing styles keep working.
 
 ## 9. Diagnostics and tests
 

@@ -221,7 +221,7 @@
       document.querySelectorAll("[data-role-min]").forEach(function (el) {
         const required = el.getAttribute("data-role-min") || "guest";
         if (el.classList && el.classList.contains("header-tool-btn")) return;
-        el.style.display = hasRoleAtLeast_(required) ? "" : "none";
+        el.classList.toggle("wasb-is-hidden", !hasRoleAtLeast_(required));
       });
 
       const detailedBtn = $id("btnDetailedSummary");

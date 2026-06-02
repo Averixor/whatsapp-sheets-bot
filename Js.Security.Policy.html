@@ -8,7 +8,7 @@
       var show =
         !locked && access && access.selfBindRequired && access.canSelfBind;
 
-      btn.style.display = show ? "" : "none";
+      btn.classList.toggle("wasb-is-hidden", !show);
       btn.disabled = !!locked;
       btn.title = locked
         ? "Вхід тимчасово заблоковано"
@@ -35,7 +35,7 @@
         return;
       }
 
-      banner.style.display = "block";
+      banner.classList.remove("wasb-is-hidden");
       banner.classList.remove(
         "is-guest",
         "is-viewer",
