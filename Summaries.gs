@@ -2,10 +2,10 @@
 
 /** Рядки місячного графіка з кодом і позивним на обрану дату (джерело для «ОС»). */
 function getMonthlyScheduleEntriesForColumn_(sheet, col) {
-  const ref = sheet.getRange(CONFIG.CODE_RANGE_A1);
+  const ref = sheet.getRange(getMonthlyCodeRangeA1ForSheet_(sheet));
   const startRow = ref.getRow();
   const numRows = ref.getNumRows();
-  const callsignCol = Number(CONFIG.CALLSIGN_COL) || 2;
+  const callsignCol = getMonthlyCallsignColForSheet_(sheet);
   const codes = sheet
     .getRange(startRow, col, numRows, 1)
     .getDisplayValues()
@@ -58,13 +58,26 @@ function resolveSummaryPersonFml_(sheet, rowIndex, rowCallsign, personnelByCalls
         : null;
   if (byCall && byCall.fml) return String(byCall.fml).trim();
 
-  const fmlCol = Number(CONFIG.FML_COL) || 7;
+  let fmlCol = 0;
   try {
-    const fmlFromSheet = String(
-      sheet.getRange(rowIndex, fmlCol).getDisplayValue() || "",
-    ).trim();
-    if (fmlFromSheet) return fmlFromSheet;
-  } catch (_) {}
+    if (typeof getMonthlyFmlColForSheet_ === "function") {
+      fmlCol = Number(getMonthlyFmlColForSheet_(sheet)) || 0;
+    } else {
+      const schema = SheetSchemas_.get(sheet.getName());
+      fmlCol = Number(schema && schema.columns && schema.columns.fml) || 0;
+    }
+  } catch (_) {
+    fmlCol = Number(CONFIG.FML_COL) || 7;
+  }
+
+  if (fmlCol > 0) {
+    try {
+      const fmlFromSheet = String(
+        sheet.getRange(rowIndex, fmlCol).getDisplayValue() || "",
+      ).trim();
+      if (fmlFromSheet) return fmlFromSheet;
+    } catch (_) {}
+  }
 
   return callsign;
 }
@@ -286,9 +299,10 @@ function createDetailedDaySummary() {
     const botName = getBotMonthSheetName_();
     if (sheet.getName() !== botName) throw new Error(`Тільки "${botName}"`);
     const col = sheet.getActiveRange().getColumn();
-    const ref = sheet.getRange(CONFIG.CODE_RANGE_A1);
+    const codeRangeA1 = getMonthlyCodeRangeA1ForSheet_(sheet);
+    const ref = sheet.getRange(codeRangeA1);
     if (col < ref.getColumn() || col > ref.getLastColumn())
-      throw new Error(`Стовпець поза ${CONFIG.CODE_RANGE_A1}`);
+      throw new Error(`Стовпець поза ${codeRangeA1}`);
     const dateCell = sheet.getRange(Number(CONFIG.DATE_ROW) || 1, col);
     const date = DateUtils_.normalizeDate(
       dateCell.getValue(),
@@ -311,9 +325,10 @@ function sendDetailedSummaryToCommander() {
     const botName = getBotMonthSheetName_();
     if (sheet.getName() !== botName) throw new Error(`Тільки "${botName}"`);
     const col = sheet.getActiveRange().getColumn();
-    const ref = sheet.getRange(CONFIG.CODE_RANGE_A1);
+    const codeRangeA1 = getMonthlyCodeRangeA1ForSheet_(sheet);
+    const ref = sheet.getRange(codeRangeA1);
     if (col < ref.getColumn() || col > ref.getLastColumn())
-      throw new Error(`Стовпець поза ${CONFIG.CODE_RANGE_A1}`);
+      throw new Error(`Стовпець поза ${codeRangeA1}`);
     const dateCell = sheet.getRange(Number(CONFIG.DATE_ROW) || 1, col);
     const date = DateUtils_.normalizeDate(
       dateCell.getValue(),

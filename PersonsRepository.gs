@@ -75,7 +75,7 @@ var PersonsRepository_ = PersonsRepository_ || (function () {
    */
   function getMonthlyRows(sheet) {
     const sh = sheet || getBotSheet_();
-    const schema = SheetSchemas_.get("MONTHLY");
+    const schema = SheetSchemas_.get(sh.getName());
     const matrix = schema.matrix;
     const rowCount = matrix.endRow - matrix.startRow + 1;
     const width = Math.max(schema.columns.callsign, schema.columns.brDays);
@@ -241,13 +241,13 @@ var PersonsRepository_ = PersonsRepository_ || (function () {
 
   function getSidebarPersonnel(dateStr) {
     const ctx = getDateContext(dateStr);
-    const ref = ctx.sheet.getRange(CONFIG.CODE_RANGE_A1);
+    const ref = ctx.sheet.getRange(getMonthlyCodeRangeA1ForSheet_(ctx.sheet));
     const startRow = ref.getRow();
     const numRows = ref.getNumRows();
     const codes = ctx.sheet
       .getRange(startRow, ctx.col, numRows, 1)
       .getDisplayValues();
-    const callsignCol = Number(CONFIG.CALLSIGN_COL) || 2;
+    const callsignCol = getMonthlyCallsignColForSheet_(ctx.sheet);
     const callsigns = ctx.sheet
       .getRange(startRow, callsignCol, numRows, 1)
       .getDisplayValues();
@@ -317,7 +317,7 @@ var PersonsRepository_ = PersonsRepository_ || (function () {
 
   function getAvailableDates(sheet) {
     const sh = sheet || getBotSheet_();
-    const matrix = SheetSchemas_.get("MONTHLY").matrix;
+    const matrix = SheetSchemas_.get(sh.getName()).matrix;
     const width = matrix.endCol - matrix.startCol + 1;
     const values = sh
       .getRange(Number(CONFIG.DATE_ROW) || 1, matrix.startCol, 1, width)

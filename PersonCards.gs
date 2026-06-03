@@ -28,10 +28,10 @@ function _getPrevMonthSheetByDateStr_(dateStr) {
 }
 
 function _findRowByCallsign_(sheet, callsign) {
-  const ref = sheet.getRange(CONFIG.CODE_RANGE_A1);
+  const ref = sheet.getRange(getMonthlyCodeRangeA1ForSheet_(sheet));
   const startRow = ref.getRow();
   const numRows = ref.getNumRows();
-  const schema = SheetSchemas_.get("MONTHLY");
+  const schema = SheetSchemas_.get(sheet.getName());
   const values = sheet
     .getRange(startRow, schema.columns.callsign, numRows, 1)
     .getValues();
@@ -63,7 +63,7 @@ function getVacationInfoByFml_(fml, dateStr) {
 function getPersonGroupForDate_(sheet, row, dateStr) {
   const col = findTodayColumn_(sheet, dateStr);
   if (col === -1) return '—';
-  const codeRef = sheet.getRange(CONFIG.CODE_RANGE_A1);
+  const codeRef = sheet.getRange(getMonthlyCodeRangeA1ForSheet_(sheet));
   if (row < codeRef.getRow() || row > codeRef.getLastRow()) return '—';
   const code = String(sheet.getRange(row, col).getDisplayValue() || '').trim();
   if (!code) return '—';

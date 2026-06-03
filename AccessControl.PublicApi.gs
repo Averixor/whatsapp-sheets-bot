@@ -435,9 +435,16 @@ function runAccessDiagnostics() {
   if (sh) {
     firstRow = sh.getRange(1, 1, 1, SHEET_HEADERS.length).getValues()[0];
     canonical = true;
+    var accessDisplayLabels =
+      typeof _getAccessHeaderDisplayLabels_ === 'function'
+        ? _getAccessHeaderDisplayLabels_()
+        : {};
 
     for (i = 0; i < SHEET_HEADERS.length; i++) {
-      if (firstRow[i] !== SHEET_HEADERS[i]) {
+      if (
+        firstRow[i] !== SHEET_HEADERS[i] &&
+        firstRow[i] !== (accessDisplayLabels[SHEET_HEADERS[i]] || '')
+      ) {
         canonical = false;
         break;
       }

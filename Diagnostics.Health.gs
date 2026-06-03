@@ -302,7 +302,7 @@ function healthCheck() {
     return {
       status: rows > 0 ? "OK" : "FAIL",
       details: `Рядків з даними: ${rows}`,
-      howTo: rows > 0 ? "" : "Заповніть PHONES: A=ПІБ, B=Телефон, C=Позивний",
+      howTo: rows > 0 ? "" : "Заповніть PHONES: A=Callsign, B=Phone, C=Phone 2",
     };
   });
 
@@ -356,7 +356,7 @@ function healthCheck() {
         : `Позивний "${CONFIG.COMMANDER_ROLE}" не знайдено в PHONES`,
       howTo: phone
         ? ""
-        : `У PHONES в колонці C має бути позивний "${CONFIG.COMMANDER_ROLE}"`,
+        : `У PHONES в колонці A має бути позивний "${CONFIG.COMMANDER_ROLE}"`,
     };
   });
 

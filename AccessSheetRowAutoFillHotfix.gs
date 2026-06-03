@@ -158,22 +158,26 @@ function wasbRepairAccessSheetRowsHotfix() {
   var selfBindCol = wasbAccessFindColHotfix_(headers, [
     'дозволена самостійна привʼязка',
     'дозволена самостійна прив’язка',
-    'self_bind_allowed'
+    'self_bind_allowed',
+    'self_bind'
   ]);
 
   var currentHashCol = wasbAccessFindColHotfix_(headers, [
     'хеш поточного ключа',
-    'user_key_current_hash'
+    'user_key_current_hash',
+    'curr_hash'
   ]);
 
   var requestHashCol = wasbAccessFindColHotfix_(headers, [
     'хеш ключа із запиту',
-    'request_user_key_hash'
+    'request_user_key_hash',
+    'req_hash'
   ]);
 
   var statusCol = wasbAccessFindColHotfix_(headers, [
     'статус реєстрації',
-    'registration_status'
+    'registration_status',
+    'reg_status'
   ]);
 
   var approvedByCol = wasbAccessFindColHotfix_(headers, [

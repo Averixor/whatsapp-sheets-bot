@@ -73,18 +73,23 @@ function loadPhonesIndex_() {
 
   var fmlCol = _stage7ShimFindHeaderCol_(
     headers,
-    ["піб", "фио", "fml", "name"],
-    0,
+    ["піб", "фио", "fml", "fullname", "full name"],
+    -1,
   );
   var phoneCol = _stage7ShimFindHeaderCol_(
     headers,
     ["тел", "phone", "номер"],
     1,
   );
+  var phone2Col = _stage7ShimFindHeaderCol_(
+    headers,
+    ["phone 2", "2 phone", "2_phone", "телефон 2"],
+    -1,
+  );
   var callsignCol = _stage7ShimFindHeaderCol_(
     headers,
-    ["позив", "callsign", "роль", "role"],
-    2,
+    ["позив", "callsign"],
+    0,
   );
   var roleCol = _stage7ShimFindHeaderCol_(
     headers,
@@ -109,10 +114,16 @@ function loadPhonesIndex_() {
   rows.forEach(function (row, idx) {
     var fml = fmlCol >= 0 ? String(row[fmlCol] || "").trim() : "";
     var rawPhone = phoneCol >= 0 ? row[phoneCol] : "";
+    var rawPhone2 = phone2Col >= 0 ? row[phone2Col] : "";
     var phone =
       typeof normalizePhone_ === "function"
         ? normalizePhone_(rawPhone)
         : String(rawPhone || "").trim();
+    var phone2 =
+      typeof normalizePhone_ === "function"
+        ? normalizePhone_(rawPhone2)
+        : String(rawPhone2 || "").trim();
+    if (!phone && phone2) phone = phone2;
     var callsign =
       callsignCol >= 0 ? String(row[callsignCol] || "").trim() : "";
     var role = roleCol >= 0 ? String(row[roleCol] || "").trim() : callsign;
@@ -143,6 +154,8 @@ function loadPhonesIndex_() {
       callsign: callsign,
       role: role,
       rawPhone: String(rawPhone || "").trim(),
+      phone2: phone2,
+      rawPhone2: String(rawPhone2 || "").trim(),
       birthday: birthday,
     };
 
@@ -181,6 +194,7 @@ function loadPhonesIndex_() {
     if (callsignKey) out.byCallsign[callsignKey] = item;
     if (roleKey) out.byRole[roleKey] = item;
     if (phone) out.byPhone[phone] = item;
+    if (phone2) out.byPhone[phone2] = item;
   });
 
   return out;
@@ -598,10 +612,36 @@ function buildPayloadForCell_(
     var callsignCol = Number(cfg_("CALLSIGN_COL", 2)) || 2;
     var idCol = Number(cfg_("ID_COL", 0)) || 0;
     var brCol = Number(cfg_("BR_COL", 6)) || 6;
+    var fmlCol = Number(cfg_("FML_COL", 7)) || 0;
     var dateRow = Number(cfg_("DATE_ROW", 1)) || 1;
+
+    try {
+      var monthlySchema =
+        typeof SheetSchemas_ !== "undefined" && SheetSchemas_
+          ? SheetSchemas_.get(sheet.getName())
+          : null;
+      if (monthlySchema && monthlySchema.columns) {
+        callsignCol = Number(monthlySchema.columns.callsign) || callsignCol;
+        brCol = Number(monthlySchema.columns.brDays) || brCol;
+        fmlCol = Number(monthlySchema.columns.fml) || 0;
+      }
+    } catch (_) {
+      try {
+        if (typeof getMonthlyCallsignColForSheet_ === "function") {
+          callsignCol = getMonthlyCallsignColForSheet_(sheet);
+        }
+        if (typeof getMonthlyBrDaysColForSheet_ === "function") {
+          brCol = getMonthlyBrDaysColForSheet_(sheet);
+        }
+        if (typeof getMonthlyFmlColForSheet_ === "function") {
+          fmlCol = getMonthlyFmlColForSheet_(sheet);
+        }
+      } catch (__) {}
+    }
 
     var idFromSheet = "";
     var callsignFromSheet = "";
+    var fmlFromSheet = "";
     var codeFromSheet = clean_(sheet.getRange(row, col).getDisplayValue());
     var brRaw = "";
     var brDays = 0;
@@ -618,6 +658,12 @@ function buildPayloadForCell_(
       );
     } catch (_) {}
 
+    if (fmlCol > 0) {
+      try {
+        fmlFromSheet = clean_(sheet.getRange(row, fmlCol).getDisplayValue());
+      } catch (_) {}
+    }
+
     try {
       brRaw = clean_(sheet.getRange(row, brCol).getDisplayValue());
       brDays = brRaw ? Number(String(brRaw).replace(",", ".")) || 0 : 0;
@@ -632,8 +678,8 @@ function buildPayloadForCell_(
       col: col,
       cell: a1FromRowColCompat_(row, col),
       id: idFromSheet,
-      fml: "",
-      name: "",
+      fml: fmlFromSheet,
+      name: fmlFromSheet,
       callsign: callsignFromSheet,
       code: codeFromSheet,
       status: codeFromSheet,

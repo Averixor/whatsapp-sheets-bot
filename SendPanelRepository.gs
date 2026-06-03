@@ -116,11 +116,11 @@ const SendPanelRepository_ = (function() {
     const source = ctx.sheet;
     const phones = DictionaryRepository_.getPhonesIndex();
     const dict = DictionaryRepository_.getDictMap();
-    const ref = source.getRange(CONFIG.CODE_RANGE_A1);
+    const ref = source.getRange(getMonthlyCodeRangeA1ForSheet_(source));
     const start = ref.getRow();
     const num = ref.getNumRows();
     const codes = source.getRange(start, ctx.col, num, 1).getDisplayValues();
-    const callsignCol = Number(CONFIG.CALLSIGN_COL) || 2;
+    const callsignCol = getMonthlyCallsignColForSheet_(source);
     const callsigns = source
       .getRange(start, callsignCol, num, 1)
       .getDisplayValues();

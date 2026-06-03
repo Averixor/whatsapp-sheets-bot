@@ -18,24 +18,32 @@ function wasbNormalizeAllSheetHeadersToEnglish() {
   
   function schemaHeaders(key) {
     var schema = SheetSchemas_.get(key), fields = schema.fields || {}, max = 0;
+    if (schema.headerBased && Array.isArray(schema.canonicalHeaderOrder)) {
+      return schema.canonicalHeaderOrder.map(function(header) {
+        if (header === 'Days_until_birthday') return 'Days Until Birthday';
+        if (header === '2_Phone') return 'Phone 2';
+        if (header === 'OSH_4') return 'OSH 4';
+        return header;
+      });
+    }
     Object.keys(fields).forEach(function(k){ var c = Number(fields[k].col)||0; if (c > max) max = c; });
     var h = new Array(max); for (var i=0;i<max;i++) h[i]='';
     Object.keys(fields).forEach(function(k){ var f = fields[k], c = Number(f.col)||0; if (c > 0) h[c-1] = String(f.label || k); });
     return h;
   }
   var access = ss.getSheetByName(typeof ACCESS_SHEET !== 'undefined' ? ACCESS_SHEET : 'ACCESS');
-  if (access) run('ACCESS', function(){ var changed = setHeaders(access, 1, SHEET_HEADERS.slice()); try { _applyRoleValidation_(access); _applyEmailValidation_(access); _applyEnabledValidation_(access); _applySelfBindAllowedValidation_(access); _applyRegistrationStatusValidation_(access); } catch (e) { report.errors.push({ sheet: 'ACCESS', error: 'validation: ' + e.message }); } return changed; });
+  if (access) run('ACCESS', function(){ var labels = typeof _getAccessHeaderDisplayLabels_ === 'function' ? _getAccessHeaderDisplayLabels_() : {}; var changed = setHeaders(access, 1, SHEET_HEADERS.map(function(header){ return labels[header] || header; })); try { _applyRoleValidation_(access); _applyEmailValidation_(access); _applyEnabledValidation_(access); _applySelfBindAllowedValidation_(access); _applyRegistrationStatusValidation_(access); } catch (e) { report.errors.push({ sheet: 'ACCESS', error: 'validation: ' + e.message }); } return changed; });
   [
     ['PHONES', (CONFIG && CONFIG.PHONES_SHEET) || 'PHONES', 1], ['DICT', (CONFIG && CONFIG.DICT_SHEET) || 'DICT', 1], ['DICT_SUM', (CONFIG && CONFIG.DICT_SUM_SHEET) || 'DICT_SUM', 1],
     ['VACATIONS', (typeof VACATION_ENGINE_CONFIG !== 'undefined' && VACATION_ENGINE_CONFIG.VACATIONS_SHEET) || 'VACATIONS', 1], ['LOG', (CONFIG && CONFIG.LOG_SHEET) || 'LOG', 1], ['SEND_PANEL', (CONFIG && CONFIG.SEND_PANEL_SHEET) || 'SEND_PANEL', (CONFIG && CONFIG.SEND_PANEL_HEADER_ROW) || 2]
   ].forEach(function(x){ var sh = ss.getSheetByName(x[1]); if (sh) run(x[1], function(){ return setHeaders(sh, x[2], schemaHeaders(x[0])); }); });
   var fixed = {
     TEMPLATES:[
-      'key',
-      'text',
-      'enabled',
-      'tag_hint',
-      'note'
+      'KEY',
+      'TEXT',
+      'ENABLED',
+      'TAGS HINTS',
+      'NOTE'
     ], 
     ALERTS_LOG:[
       'Timestamp',
@@ -71,7 +79,8 @@ function wasbNormalizeAllSheetHeadersToEnglish() {
       'ChangesJson',
       'DiagnosticsJson',
       'Message',
-      'Error'
+      'Error',
+      'Context'
     ],
     OPS_LOG:[
       'TimestampStarted',
@@ -171,7 +180,7 @@ function wasbNormalizeAllSheetHeadersToEnglish() {
     ]
   };
   Object.keys(fixed).forEach(function(n){ var sh = ss.getSheetByName(n); if (sh) run(n, function(){ return setHeaders(sh, 1, fixed[n]); }); });
-  ss.getSheets().forEach(function(sh){ if (/^\d{2}$/.test(sh.getName())) run(sh.getName(), function(){ return setHeaders(sh, 1, ['Phone','Callsign','Position','OSHS','Rank','BRDays','FML']); }); });
+  ss.getSheets().forEach(function(sh){ if (/^\d{2}$/.test(sh.getName())) run(sh.getName(), function(){ var layout = typeof detectMonthlyLayoutFromSheet_ === 'function' ? detectMonthlyLayoutFromSheet_(sh) : null; return layout && layout.layout === 'compact' ? setHeaders(sh, 1, ['BRDays','Callsign']) : setHeaders(sh, 1, ['Phone','Callsign','Position','OSHS','Rank','BRDays','FML']); }); });
   return report;
 }
 function apiStage7NormalizeAllSheetHeadersToEnglish() {

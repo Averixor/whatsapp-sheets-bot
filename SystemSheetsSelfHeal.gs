@@ -92,6 +92,16 @@ function _sshUniqueStrings_(items) {
   return out;
 }
 
+function _sshDisplayHeaderForCanonical_(header) {
+  var text = _sshTrimmedString_(header, '');
+  var labels = {
+    Days_until_birthday: 'Days Until Birthday',
+    '2_Phone': 'Phone 2',
+    OSH_4: 'OSH 4'
+  };
+  return labels[text] || text;
+}
+
 function _sshGetSpreadsheet_() {
   var ss = null;
   try {
@@ -157,20 +167,38 @@ function _sshBuildRegistry_() {
       name: _sshConfigValue_('ACCESS_SHEET', 'ACCESS'),
       schemaKey: null,
       headers: [
-        'email',
-        'phone',
-        'role',
-        'enabled',
-        'note',
-        'display_name',
-        'person_callsign',
-        'self_bind_allowed',
-        'user_key_current_hash',
-        'user_key_prev_hash',
-        'last_seen_at',
-        'last_rotated_at',
-        'failed_attempts',
-        'locked_until_ms'
+        'Email',
+        'Phone',
+        'Role',
+        'Enabled',
+        'Note',
+        'Display_name',
+        'Callsign',
+        'Self_bind',
+        'Curr_hash',
+        'Prev_hash',
+        'Last_seen',
+        'Last_rotated',
+        'Failed',
+        'Locked_until',
+        'Login',
+        'Pass_hash',
+        'Pass_salt',
+        'Reg_status',
+        'Contact',
+        'Surname',
+        'First_name',
+        'Req_hash',
+        'Req_created',
+        'Temp_pass',
+        'Temp_hash',
+        'Temp_salt',
+        'Temp_expires',
+        'Temp_used',
+        'Approved_by',
+        'Approved_at',
+        'Activated_at',
+        'Telegram'
       ],
       minRows: 2
     },
@@ -199,11 +227,11 @@ function _sshBuildRegistry_() {
       name: _sshConfigValue_('TEMPLATES_SHEET', 'TEMPLATES'),
       schemaKey: null,
       headers: [
-        'key',
-        'text',
-        'enabled',
-        'tag_hint',
-        'note'
+        'KEY',
+        'TEXT',
+        'ENABLED',
+        'TAGS HINTS',
+        'NOTE'
       ],
       minRows: 2
     },
@@ -231,7 +259,8 @@ function _sshBuildRegistry_() {
         'ChangesJson',
         'DiagnosticsJson',
         'Message',
-        'Error'
+        'Error',
+        'Context'
       ],
       minRows: 2
     },
@@ -359,13 +388,14 @@ function _sshBuildRegistry_() {
         'FML',
         'Birthday',
         'Age',
-        'Days_until_birthday',
+        'Days Until Birthday',
         'Phone',
-        '2_Phone',
+        'Phone 2',
         'Callsign',
-        'Title',
+        'TEMPLATE',
+        'Rank',
         'Position',
-        'OSH_4',
+        'OSH 4',
         'Unit',
         'Status'
       ],
@@ -376,11 +406,9 @@ function _sshBuildRegistry_() {
       name: _sshConfigValue_('PHONES_SHEET', 'PHONES'),
       schemaKey: 'phones',
       headers: [
-        'FML',
+        'Callsign',
         'Phone',
-        'Role',
-        'Birthday',
-        'Phone2'
+        'Phone 2'
       ],
       minRows: 2
     },
@@ -390,12 +418,11 @@ function _sshBuildRegistry_() {
       schemaKey: 'vacations',
       headers: [
         'FML',
-        'StartDate',
-        'EndDate',
-        'VacationNo',
+        'Start date',
+        'End Date',
+        'Vacation №',
         'Active',
-        'Notify',
-        'Note'
+        'Notify'
       ],
       minRows: 2
     },
@@ -405,9 +432,8 @@ function _sshBuildRegistry_() {
       schemaKey: 'dictSum',
       headers: [
         'Code',
-        'Label',
-        'SortOrder',
-        'ShowZero'
+        'Name',
+        'Queue'
       ],
       minRows: 2
     },
@@ -417,9 +443,9 @@ function _sshBuildRegistry_() {
       schemaKey: 'dict',
       headers: [
         'Code',
-        'Service',
-        'Place',
-        'Tasks'
+        'Service Type',
+        'Location',
+        'Task'
       ],
       minRows: 2
     },
@@ -465,6 +491,15 @@ function _systemSheetRecordByName_(name) {
 }
 
 function _buildHeadersFromSchema_(schema) {
+  if (
+    schema &&
+    schema.headerBased &&
+    Array.isArray(schema.canonicalHeaderOrder) &&
+    schema.canonicalHeaderOrder.length
+  ) {
+    return schema.canonicalHeaderOrder.map(_sshDisplayHeaderForCanonical_);
+  }
+
   var fields = (schema && schema.fields) || {};
   var names = Object.keys(fields);
   var maxCol = 0;

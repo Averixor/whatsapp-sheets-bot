@@ -16,7 +16,7 @@ const SelectionActionService_ = (function() {
       sheet: sheet,
       range: range,
       botName: botName,
-      codeRange: sheet.getRange(CONFIG.CODE_RANGE_A1)
+      codeRange: sheet.getRange(getMonthlyCodeRangeA1ForSheet_(sheet))
     };
   }
 
@@ -54,7 +54,7 @@ const SelectionActionService_ = (function() {
     const errors = [];
     const phones = loadPhonesIndex_();
     const dict = loadDictMap_();
-    const codeRange = source.getRange(CONFIG.CODE_RANGE_A1);
+    const codeRange = source.getRange(getMonthlyCodeRangeA1ForSheet_(source));
 
     list.forEach(function(range) {
       if (!range || !rangesIntersect_(range, codeRange)) return;
@@ -188,7 +188,9 @@ const SelectionActionService_ = (function() {
     const ctx = _getContext();
     if (!ctx.range) throw new Error('Виділіть область');
     if (!rangesIntersect_(ctx.range, ctx.codeRange)) {
-      throw new Error(`Область повинна перетинати ${CONFIG.CODE_RANGE_A1}`);
+      throw new Error(
+        `Область повинна перетинати ${getMonthlyCodeRangeA1ForSheet_(ctx.sheet)}`,
+      );
     }
 
     const res = collectPayloads_(ctx.sheet, [ctx.range]);
@@ -243,7 +245,9 @@ const SelectionActionService_ = (function() {
     const ctx = _getContext();
     const col = opts.col || (ctx.range ? ctx.range.getColumn() : ctx.codeRange.getColumn());
     if (col < ctx.codeRange.getColumn() || col > ctx.codeRange.getLastColumn()) {
-      throw new Error(`Стовпець поза ${CONFIG.CODE_RANGE_A1}`);
+      throw new Error(
+        `Стовпець поза ${getMonthlyCodeRangeA1ForSheet_(ctx.sheet)}`,
+      );
     }
 
     const dateStr = opts.date || _getDateForActiveColumn(ctx.sheet, col);
@@ -279,7 +283,7 @@ const SelectionActionService_ = (function() {
       commanderRole: CONFIG.COMMANDER_ROLE,
       commanderPhonePresent: !!commanderPhone,
       commanderPhoneMasked: commanderPhone ? String(commanderPhone).replace(/.(?=.{4})/g, '•') : '',
-      codeRange: CONFIG.CODE_RANGE_A1
+      codeRange: getMonthlyCodeRangeA1ForSheet_(ctx.sheet)
     };
   }
 

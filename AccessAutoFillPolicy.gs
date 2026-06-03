@@ -303,6 +303,7 @@ function wasbAccessHeaderAliases_() {
     ],
     display_name: [
       "display_name", 
+      "display name",
       "імʼя, що відображається", 
       "ім’я, що відображається", 
       "ім'я, що відображається", 
@@ -318,6 +319,7 @@ function wasbAccessHeaderAliases_() {
     ],
     self_bind_allowed: [
       "self_bind_allowed",
+      "self_bind",
       "дозволена самостійна привʼязка",
       "дозволена самостійна прив’язка",
       "дозволена самостійна прив'язка",
@@ -330,6 +332,7 @@ function wasbAccessHeaderAliases_() {
     ],
     registration_status: [
       "registration_status", 
+      "reg_status",
       "статус реєстрації", 
       "статус_реєстрації"
     ],

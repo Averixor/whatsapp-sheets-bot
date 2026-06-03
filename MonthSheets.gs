@@ -1,7 +1,7 @@
 /************ МІСЯЧНІ АРКУШІ ************/
 
 function _inferMonthYearFromSheet_(sheet) {
-  const ref = sheet.getRange(CONFIG.CODE_RANGE_A1);
+  const ref = sheet.getRange(getMonthlyCodeRangeA1ForSheet_(sheet));
   const row = Number(CONFIG.DATE_ROW) || 1;
   const startCol = ref.getColumn();
   const endCol = ref.getLastColumn();
@@ -25,7 +25,7 @@ function _inferMonthYearFromSheet_(sheet) {
 }
 
 function _setMonthDatesRow_(sheet, month, year) {
-  const ref = sheet.getRange(CONFIG.CODE_RANGE_A1);
+  const ref = sheet.getRange(getMonthlyCodeRangeA1ForSheet_(sheet));
   const row = Number(CONFIG.DATE_ROW) || 1;
   const startCol = ref.getColumn();
   const width = ref.getLastColumn() - startCol + 1;
@@ -70,7 +70,7 @@ function createNextMonthSheet() {
     const targetYear = (targetMonth < srcMY.month) ? (srcMY.year + 1) : srcMY.year;
 
     _setMonthDatesRow_(newSheet, targetMonth, targetYear);
-    newSheet.getRange(CONFIG.CODE_RANGE_A1).clearContent();
+    newSheet.getRange(getMonthlyCodeRangeA1ForSheet_(newSheet)).clearContent();
 
     applyGlobalSheetStandards_();
     newSheet.activate();

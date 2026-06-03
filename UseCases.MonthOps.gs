@@ -36,7 +36,7 @@ function _stage7CreateNextMonthCore_(payload) {
   const targetYear = targetMonth < srcMY.month ? srcMY.year + 1 : srcMY.year;
 
   _setMonthDatesRow_(newSheet, targetMonth, targetYear);
-  newSheet.getRange(CONFIG.CODE_RANGE_A1).clearContent();
+  newSheet.getRange(getMonthlyCodeRangeA1ForSheet_(newSheet)).clearContent();
 
   try {
     applyGlobalSheetStandards_();

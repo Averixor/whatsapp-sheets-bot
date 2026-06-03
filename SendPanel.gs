@@ -370,7 +370,7 @@ function rebuildSendPanelCore_() {
   const dict = loadDictMap_();
   const sentMap = readSendPanelStateMap_(today);
 
-  const ref = source.getRange(CONFIG.CODE_RANGE_A1);
+  const ref = source.getRange(getMonthlyCodeRangeA1ForSheet_(source));
   const col = findTodayColumn_(source, today);
   if (col === -1) {
     throw new Error(`Колонка ${today} не знайдена в аркуші "${source.getName()}"`);
@@ -380,7 +380,7 @@ function rebuildSendPanelCore_() {
   const start = ref.getRow();
   const num = ref.getNumRows();
   const codes = source.getRange(start, col, num, 1).getDisplayValues();
-  const callsignCol = Number(CONFIG.CALLSIGN_COL) || 2;
+  const callsignCol = getMonthlyCallsignColForSheet_(source);
   const callsigns = source.getRange(start, callsignCol, num, 1).getDisplayValues();
 
   for (let i = 0; i < num; i++) {

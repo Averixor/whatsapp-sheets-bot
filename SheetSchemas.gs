@@ -130,6 +130,323 @@ function _monthlyMatrix_() {
   return _parseA1RangeRef_(_ssConfigValue_('CODE_RANGE_A1', 'H2:AL40'));
 }
 
+function _columnNumberToLetter_(colNumber) {
+  var n = Number(colNumber) || 0;
+  if (n < 1) return 'A';
+  var letters = '';
+  while (n > 0) {
+    var rem = (n - 1) % 26;
+    letters = String.fromCharCode(65 + rem) + letters;
+    n = Math.floor((n - 1) / 26);
+  }
+  return letters;
+}
+
+function _looksLikeMonthlyDateHeader_(value) {
+  if (value instanceof Date && !isNaN(value.getTime())) return true;
+  var s = String(value || '').trim();
+  if (!s) return false;
+  if (/^\d{4,5}(\.\d+)?$/.test(s)) return true;
+  if (/^\d{1,2}[.\-/]\d{1,2}([.\-/]\d{2,4})?$/.test(s)) return true;
+  return false;
+}
+
+function _monthlyLayoutHeaderNorm_(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[’'`"ʼ]/g, '')
+    .replace(/\s+/g, ' ');
+}
+
+function _monthlyDataEndRowFromSheet_(sheet, fallbackRow, markerCols) {
+  var configuredDataEndRow = _ssParseNumber_(
+    (typeof MONTHLY_CONFIG !== 'undefined' &&
+      MONTHLY_CONFIG &&
+      MONTHLY_CONFIG.LAST_DATA_ROW) ||
+      _ssConfigValue_('LAST_DATA_ROW', fallbackRow || 44),
+    fallbackRow || 44,
+  );
+  var sheetLastRow = 0;
+  try {
+    sheetLastRow = Number(sheet.getLastRow()) || 0;
+  } catch (e) {}
+
+  var scanLastRow = Math.min(
+    Math.max(sheetLastRow, configuredDataEndRow, 2),
+    1000,
+  );
+  var cols = Array.isArray(markerCols) && markerCols.length ? markerCols : [2];
+  var lastDataRow = 0;
+
+  for (var i = 0; i < cols.length; i++) {
+    var col = Number(cols[i]) || 0;
+    if (col < 1 || scanLastRow < 2) continue;
+    try {
+      var values = sheet.getRange(2, col, scanLastRow - 1, 1).getDisplayValues();
+      for (var r = values.length - 1; r >= 0; r--) {
+        if (_ssTrimmedString_(values[r][0], '')) {
+          lastDataRow = Math.max(lastDataRow, r + 2);
+          break;
+        }
+      }
+    } catch (e) {}
+  }
+
+  return lastDataRow >= 2 ? lastDataRow : Math.max(2, configuredDataEndRow);
+}
+
+function _monthlyLastDateColFromRow_(rowValues, firstDateCol) {
+  var lastDateCol = firstDateCol;
+  for (var c = firstDateCol - 1; c < rowValues.length; c++) {
+    if (_looksLikeMonthlyDateHeader_(rowValues[c])) {
+      lastDateCol = c + 1;
+      continue;
+    }
+    if (lastDateCol >= firstDateCol) break;
+  }
+  return lastDateCol;
+}
+
+function _monthlyCodeRangeA1_(firstDateCol, lastDateCol, dataEndRow) {
+  return (
+    _columnNumberToLetter_(firstDateCol) +
+    '2:' +
+    _columnNumberToLetter_(lastDateCol) +
+    dataEndRow
+  );
+}
+
+/**
+ * Визначає геометрію місячного листа з шапки (еталон 1.xlsx):
+ * - standard (02–05): ТЕЛЕФОН у A, дати з H
+ * - compact (06): Позивний у B, БР у A, дати з C
+ */
+function detectMonthlyLayoutFromSheet_(sheet) {
+  if (!sheet || typeof sheet.getRange !== 'function') return null;
+
+  var dateRow = _ssParseNumber_(_ssConfigValue_('DATE_ROW', 1), 1);
+  var lastCol = Math.max(Number(sheet.getLastColumn()) || 0, 1);
+  var row1 = sheet.getRange(dateRow, 1, 1, lastCol).getDisplayValues()[0] || [];
+
+  var colA = _monthlyLayoutHeaderNorm_(row1[0]);
+  var colB = _monthlyLayoutHeaderNorm_(row1[1]);
+  var isPhoneHeaderA =
+    colA.indexOf('тел') !== -1 || colA.indexOf('phone') !== -1;
+  var isCallsignB =
+    colB.indexOf('позивн') !== -1 || colB === 'callsign';
+  var dataEndRow = _monthlyDataEndRowFromSheet_(sheet, 44, [2]);
+  var firstDateCol = 3;
+  var cIsDate = _looksLikeMonthlyDateHeader_(row1[firstDateCol - 1]);
+
+  if (isCallsignB && cIsDate && !isPhoneHeaderA) {
+    var compactLastDateCol = _monthlyLastDateColFromRow_(row1, firstDateCol);
+    var compactRangeA1 = _monthlyCodeRangeA1_(
+      firstDateCol,
+      compactLastDateCol,
+      dataEndRow,
+    );
+
+    return {
+      layout: 'compact',
+      codeRangeA1: compactRangeA1,
+      matrix: _parseA1RangeRef_(compactRangeA1),
+      fields: {
+        phone: 0,
+        callsign: 2,
+        position: 0,
+        oshs: 0,
+        rank: 0,
+        brDays: 1,
+        fml: 0,
+      },
+    };
+  }
+
+  firstDateCol = 8;
+  var hIsDate = _looksLikeMonthlyDateHeader_(row1[firstDateCol - 1]);
+  if (!isPhoneHeaderA || !isCallsignB || !hIsDate) return null;
+
+  var standardLastDateCol = _monthlyLastDateColFromRow_(row1, firstDateCol);
+  var standardRangeA1 = _monthlyCodeRangeA1_(
+    firstDateCol,
+    standardLastDateCol,
+    dataEndRow,
+  );
+
+  return {
+    layout: 'standard',
+    codeRangeA1: standardRangeA1,
+    matrix: _parseA1RangeRef_(standardRangeA1),
+    fields: {
+      phone: 1,
+      callsign: 2,
+      position: 3,
+      oshs: 4,
+      rank: 5,
+      brDays: 6,
+      fml: 7,
+    },
+  };
+}
+
+function _applyMonthlyLayoutToSchema_(baseSchema, layout) {
+  if (!layout || !baseSchema) return baseSchema;
+
+  var fields = _ssFreeze_({
+    phone: _ssFreeze_({
+      col: layout.fields.phone || 0,
+      type: 'string',
+      required: false,
+      allowBlank: true,
+      label: 'Phone (legacy display only)',
+    }),
+    callsign: _ssFreeze_({
+      col: layout.fields.callsign,
+      type: 'string',
+      required: true,
+      allowBlank: false,
+      label: 'Callsign',
+    }),
+    position: _ssFreeze_({
+      col: layout.fields.position || 0,
+      type: 'string',
+      required: false,
+      allowBlank: true,
+      label: 'Position (legacy display only)',
+    }),
+    oshs: _ssFreeze_({
+      col: layout.fields.oshs || 0,
+      type: 'string',
+      required: false,
+      allowBlank: true,
+      label: 'OSHS (legacy display only)',
+    }),
+    rank: _ssFreeze_({
+      col: layout.fields.rank || 0,
+      type: 'string',
+      required: false,
+      allowBlank: true,
+      label: 'Rank (legacy display only)',
+    }),
+    brDays: _ssFreeze_({
+      col: layout.fields.brDays,
+      type: 'number|string',
+      required: false,
+      allowBlank: true,
+      label: 'BRDays',
+    }),
+    fml: _ssFreeze_({
+      col: layout.fields.fml || 0,
+      type: 'string',
+      required: false,
+      allowBlank: true,
+      label: 'FML (legacy display only)',
+    }),
+  });
+
+  var cols = {};
+  for (var f in fields) {
+    if (Object.prototype.hasOwnProperty.call(fields, f)) {
+      cols[f] = fields[f].col;
+    }
+  }
+
+  return Object.assign({}, baseSchema, {
+    layout: layout.layout,
+    codeRangeA1: layout.codeRangeA1,
+    matrix: layout.matrix,
+    dataStartRow: layout.matrix.startRow,
+    dataEndRow: layout.matrix.endRow,
+    fields: fields,
+    columns: cols,
+    notes:
+      (baseSchema.notes || '') +
+      (layout.layout === 'compact'
+        ? ' Compact monthly layout (callsign B, BR A, dates from C).'
+        : ' Standard monthly layout (dates from H).'),
+  });
+}
+
+function getMonthlyCodeRangeA1ForSheet_(sheet) {
+  var sheetName =
+    sheet && typeof sheet.getName === 'function' ? sheet.getName() : '';
+  try {
+    if (sheet && typeof sheet.getRange === 'function') {
+      var directLayout = detectMonthlyLayoutFromSheet_(sheet);
+      if (directLayout && directLayout.codeRangeA1) {
+        return directLayout.codeRangeA1;
+      }
+    }
+    var schema = getMonthlySheetSchema_(sheetName);
+    if (schema && schema.codeRangeA1) return schema.codeRangeA1;
+  } catch (e) {}
+  return String(
+    (typeof CONFIG !== 'undefined' && CONFIG && CONFIG.CODE_RANGE_A1) ||
+      'H2:AL40',
+  ).trim();
+}
+
+function getMonthlyCallsignColForSheet_(sheet) {
+  var sheetName =
+    sheet && typeof sheet.getName === 'function' ? sheet.getName() : '';
+  try {
+    if (sheet && typeof sheet.getRange === 'function') {
+      var directLayout = detectMonthlyLayoutFromSheet_(sheet);
+      if (directLayout && directLayout.fields && directLayout.fields.callsign) {
+        return Number(directLayout.fields.callsign) || 2;
+      }
+    }
+    var schema = getMonthlySheetSchema_(sheetName);
+    if (schema && schema.columns && schema.columns.callsign) {
+      return Number(schema.columns.callsign) || 2;
+    }
+  } catch (e) {}
+  return Number(
+    (typeof CONFIG !== 'undefined' && CONFIG && CONFIG.CALLSIGN_COL) || 2,
+  );
+}
+
+function getMonthlyBrDaysColForSheet_(sheet) {
+  var sheetName =
+    sheet && typeof sheet.getName === 'function' ? sheet.getName() : '';
+  try {
+    if (sheet && typeof sheet.getRange === 'function') {
+      var directLayout = detectMonthlyLayoutFromSheet_(sheet);
+      if (directLayout && directLayout.fields && directLayout.fields.brDays) {
+        return Number(directLayout.fields.brDays) || 6;
+      }
+    }
+    var schema = getMonthlySheetSchema_(sheetName);
+    if (schema && schema.columns && schema.columns.brDays) {
+      return Number(schema.columns.brDays) || 6;
+    }
+  } catch (e) {}
+  return Number(
+    (typeof CONFIG !== 'undefined' && CONFIG && CONFIG.BR_COL) || 6,
+  );
+}
+
+function getMonthlyFmlColForSheet_(sheet) {
+  var sheetName =
+    sheet && typeof sheet.getName === 'function' ? sheet.getName() : '';
+  try {
+    if (sheet && typeof sheet.getRange === 'function') {
+      var directLayout = detectMonthlyLayoutFromSheet_(sheet);
+      if (directLayout && directLayout.fields) {
+        return Number(directLayout.fields.fml) || 0;
+      }
+    }
+    var schema = getMonthlySheetSchema_(sheetName);
+    if (schema && schema.columns) {
+      return Number(schema.columns.fml) || 0;
+    }
+  } catch (e) {}
+  return Number(
+    (typeof CONFIG !== 'undefined' && CONFIG && CONFIG.FML_COL) || 7,
+  );
+}
+
 function _vacationSheetName_() {
   return _ssTrimmedString_(_ssVacationConfigValue_('VACATIONS_SHEET', 'VACATIONS'), 'VACATIONS');
 }
@@ -150,7 +467,7 @@ function _ssBuildMonthlySchema_() {
     headerRow: dateRow,
     dateRow: dateRow,
     codeRangeA1: codeRangeA1,
-    osFmlRangeA1: _ssTrimmedString_(_ssConfigValue_('OS_FML_RANGE', 'G2:G40'), 'G2:G40'),
+    osFmlRangeA1: _ssTrimmedString_(_ssConfigValue_('OS_FML_RANGE_A1', 'G2:G40'), 'G2:G40'),
     dataStartRow: matrix.startRow,
     dataEndRow: matrix.endRow,
     matrix: matrix,
@@ -184,15 +501,18 @@ function _ssBuildPersonnelSchema_() {
     required: true,
     headerBased: true,
     requiredHeaders: [
-      'FML', 'Birthday', 'Phone', '2_Phone', 'Callsign',
-      'Title', 'Position', 'OSH_4', 'Status'
+      'FML', 'Birthday', 'Phone', 'Callsign', 'Position', 'OSH_4', 'Status'
     ],
-    optionalHeaders: ['ID', 'Age', 'Days_until_birthday', 'Unit'],
+    optionalHeaders: [
+      'ID', 'Age', 'Days_until_birthday', 'Unit',
+      '2_Phone', 'Title', 'Rank', 'TEMPLATE'
+    ],
     canonicalHeaderOrder: [
       'ID', 'FML', 'Birthday', 'Age', 'Days_until_birthday',
-      'Phone', '2_Phone', 'Callsign', 'Title', 'Position', 'OSH_4', 'Unit', 'Status'
+      'Phone', '2_Phone', 'Callsign', 'TEMPLATE', 'Rank', 'Position',
+      'OSH_4', 'Unit', 'Status'
     ],
-    notes: 'Єдине джерело даних людини. Місячний графік: Callsign. Status (UA): Дієвий|Тимчасовий|Відрядження vs Вибув.'
+    notes: 'Єдине джерело даних людини. Місячний графік: Callsign. Status: канон або значення з книги (В наявності, Відпустка, …).'
   });
 }
 
@@ -207,23 +527,25 @@ function _ssBuildPhonesSchema_() {
     dataStartRow: 2,
     required: true,
     fields: _ssFreeze_({
-      fml:      _ssFreeze_({ col: 1, type: 'string', required: true,  allowBlank: false, label: 'FML' }),
+      callsign: _ssFreeze_({ col: 1, type: 'string', required: true,  allowBlank: false, label: 'Callsign' }),
       phone:    _ssFreeze_({ col: 2, type: 'string', required: false, allowBlank: true,  label: 'Phone' }),
-      role:     _ssFreeze_({ col: 3, type: 'string', required: false, allowBlank: true,  label: 'Role' }),
-      birthday: _ssFreeze_({ col: 4, type: 'date|string', required: false, allowBlank: true, label: 'Birthday' })
+      phone2:   _ssFreeze_({ col: 3, type: 'string', required: false, allowBlank: true,  label: 'Phone 2' }),
+      role:     _ssFreeze_({ col: 1, type: 'string', required: false, allowBlank: true,  label: 'Callsign' })
     }),
 
     headerAliases: _ssFreeze_({
       fml: ['FML', 'FullName', 'ПІБ'],
       phone: ['Phone', 'Телефон'],
-      role: ['Role', 'Роль', 'Позивний'],
+      phone2: ['Phone 2', '2 Phone', '2_Phone', 'Телефон 2'],
+      callsign: ['Callsign', 'Позивний'],
+      role: ['Role', 'Роль', 'Позивний', 'Callsign'],
       birthday: ['Birthday', 'День народження']
     }),
 
-    keyFields: ['fml', 'role'],
-    requiredFields: ['fml'],
-    nullableFields: ['phone', 'role', 'birthday'],
-    searchableFields: ['fml', 'role', 'phone']
+    keyFields: ['callsign', 'role'],
+    requiredFields: ['callsign'],
+    nullableFields: ['phone', 'phone2', 'role'],
+    searchableFields: ['callsign', 'role', 'phone']
   });
 }
 
@@ -239,13 +561,16 @@ function _ssBuildDictSchema_() {
     required: true,
     fields: _ssFreeze_({
       code:    _ssFreeze_({ col: 1, type: 'string', required: true,  allowBlank: false, label: 'Code' }),
-      service: _ssFreeze_({ col: 2, type: 'string', required: false, allowBlank: true,  label: 'Service' }),
-      place:   _ssFreeze_({ col: 3, type: 'string', required: false, allowBlank: true,  label: 'Place' }),
-      tasks:   _ssFreeze_({ col: 4, type: 'string', required: false, allowBlank: true,  label: 'Tasks' })
+      service: _ssFreeze_({ col: 2, type: 'string', required: false, allowBlank: true,  label: 'Service Type' }),
+      place:   _ssFreeze_({ col: 3, type: 'string', required: false, allowBlank: true,  label: 'Location' }),
+      tasks:   _ssFreeze_({ col: 4, type: 'string', required: false, allowBlank: true,  label: 'Task' })
     }),
 
     headerAliases: _ssFreeze_({
-      code: ['Code', 'Код'], service: ['Service', 'Служба', 'Вид служби'], place: ['Place', 'Місце'], tasks: ['Tasks', 'Завдання']
+      code: ['Code', 'Код'],
+      service: ['Service Type', 'Service', 'Служба', 'Вид служби'],
+      place: ['Location', 'Place', 'Місце'],
+      tasks: ['Task', 'Tasks', 'Завдання']
     }),
 
     keyFields: ['code'],
@@ -267,18 +592,19 @@ function _ssBuildDictSumSchema_() {
     required: true,
     fields: _ssFreeze_({
       code:     _ssFreeze_({ col: 1, type: 'string', required: true,  allowBlank: false, label: 'Code' }),
-      label:    _ssFreeze_({ col: 2, type: 'string', required: false, allowBlank: true,  label: 'Label' }),
-      order:    _ssFreeze_({ col: 3, type: 'number|string', required: true, allowBlank: false, label: 'SortOrder' }),
-      showZero: _ssFreeze_({ col: 4, type: 'boolean|string', required: false, allowBlank: true, label: 'ShowZero' })
+      label:    _ssFreeze_({ col: 2, type: 'string', required: false, allowBlank: true,  label: 'Name' }),
+      order:    _ssFreeze_({ col: 3, type: 'number|string', required: true, allowBlank: false, label: 'Queue' })
     }),
 
     headerAliases: _ssFreeze_({
-      code: ['Code', 'Код'], label: ['Label', 'Назва'], order: ['SortOrder', 'Order', 'Порядок'], showZero: ['ShowZero', 'Show zero', 'Показувати 0']
+      code: ['Code', 'Код'],
+      label: ['Label', 'Назва', 'Name'],
+      order: ['Queue', 'SortOrder', 'Order', 'Порядок']
     }),
 
     keyFields: ['code'],
     requiredFields: ['code', 'order'],
-    nullableFields: ['label', 'showZero'],
+    nullableFields: ['label'],
     searchableFields: ['code', 'label']
   });
 }
@@ -327,9 +653,9 @@ function _ssBuildVacationsSchema_() {
     required: false,
     fields: _ssFreeze_({
       fml:        _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('NAME_COL', 1), 1), type: 'string', required: true,  allowBlank: false, label: 'FML' }),
-      startDate:  _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('START_COL', 2), 2), type: 'date|string', required: true, allowBlank: false, label: 'StartDate' }),
-      endDate:    _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('END_COL', 3), 3), type: 'date|string', required: true, allowBlank: false, label: 'EndDate' }),
-      vacationNo: _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('NUM_COL', 4), 4), type: 'string', required: false, allowBlank: true, label: 'VacationNo' }),
+      startDate:  _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('START_COL', 2), 2), type: 'date|string', required: true, allowBlank: false, label: 'Start date' }),
+      endDate:    _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('END_COL', 3), 3), type: 'date|string', required: true, allowBlank: false, label: 'End Date' }),
+      vacationNo: _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('NUM_COL', 4), 4), type: 'string', required: false, allowBlank: true, label: 'Vacation №' }),
       active:     _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('ACTIVE_COL', 5), 5), type: 'boolean|string', required: false, allowBlank: true, label: 'Active' }),
       notify:     _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('NOTIFY_COL', 6), 6), type: 'boolean|string', required: false, allowBlank: true, label: 'Notify' })
     }),
@@ -345,12 +671,13 @@ function _ssBuildVacationsSchema_() {
       ],
       endDate: [
         'EndDate',
+        'End Date',
         'End date',
         'Кінець',
         'Кінець включно',
         'Кінець відпустки включно'
       ],
-      vacationNo: ['VacationNo', 'Vacation number', 'Номер'],
+      vacationNo: ['Vacation №', 'VacationNo', 'Vacation number', 'Номер'],
       active: ['Active', 'Активна'],
       notify: ['Notify', 'Сповістити', 'Сповіщення']
     }),
@@ -469,7 +796,20 @@ function _toLegacySchema_(canonical, explicitSheetName) {
 }
 
 function getMonthlySheetSchema_(sheetName) {
-  return _toLegacySchema_(SHEET_SCHEMAS.monthly, _ssTrimmedString_(sheetName, '') || _ssBotMonthSheetName_());
+  var name = _ssTrimmedString_(sheetName, '') || _ssBotMonthSheetName_();
+  var base = _toLegacySchema_(SHEET_SCHEMAS.monthly, name);
+
+  try {
+    var ss =
+      typeof getWasbSpreadsheet_ === 'function' ? getWasbSpreadsheet_() : null;
+    var sh = ss && name ? ss.getSheetByName(name) : null;
+    var layout = sh ? detectMonthlyLayoutFromSheet_(sh) : null;
+    if (layout) {
+      return _applyMonthlyLayoutToSchema_(base, layout);
+    }
+  } catch (e) {}
+
+  return base;
 }
 
 var SheetSchemas_ = (function() {
@@ -481,6 +821,10 @@ var SheetSchemas_ = (function() {
 
     if (/^\d{2}$/.test(key)) {
       return getMonthlySheetSchema_(key);
+    }
+
+    if (key.toUpperCase() === 'MONTHLY') {
+      return getMonthlySheetSchema_(_ssBotMonthSheetName_());
     }
 
     var map = _canonicalSchemaMap_();
@@ -601,9 +945,13 @@ function _ssCanonicalHeaderKey_(value) {
     'позивний': 'Callsign',
     title: 'Title',
     'звання': 'Title',
+    rank: 'Rank',
+    template: 'TEMPLATE',
+    'phone 2': '2_Phone',
     position: 'Position',
     'посада': 'Position',
     osh_4: 'OSH_4',
+    'osh 4': 'OSH_4',
     'ошс 4': 'OSH_4',
     oshs: 'OSH_4',
     unit: 'Unit',

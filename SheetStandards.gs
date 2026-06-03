@@ -160,7 +160,16 @@ function applyFreezeStandardsToSheet_(sheet) {
     sheet.setFrozenRows(1);
 
     if (_sheetStandardsIsMonthlySheet_(sheetName)) {
-      sheet.setFrozenColumns(Math.min(7, Math.max(maxCols, 0)));
+      var frozenMonthlyColumns = 7;
+      try {
+        var schema = typeof SheetSchemas_ !== 'undefined' && SheetSchemas_
+          ? SheetSchemas_.get(sheetName)
+          : null;
+        if (schema && schema.matrix && Number(schema.matrix.startCol) > 1) {
+          frozenMonthlyColumns = Number(schema.matrix.startCol) - 1;
+        }
+      } catch (e) {}
+      sheet.setFrozenColumns(Math.min(frozenMonthlyColumns, Math.max(maxCols, 0)));
     } else if (_sheetStandardsIsSendPanelSheet_(sheetName)) {
       sheet.setFrozenColumns(0);
     }
@@ -200,7 +209,10 @@ function findTodayColumn_(sheet, todayStr) {
 
   var timeZone = _sheetStandardsGetTimeZone_();
   var resolvedToday = String(todayStr || Utilities.formatDate(new Date(), timeZone, 'dd.MM.yyyy')).trim();
-  var codeRangeA1 = _sheetStandardsGetCodeRangeA1_();
+  var codeRangeA1 =
+    typeof getMonthlyCodeRangeA1ForSheet_ === "function"
+      ? getMonthlyCodeRangeA1ForSheet_(sheet)
+      : _sheetStandardsGetCodeRangeA1_();
   var dateRow = _sheetStandardsGetDateRow_();
 
   var codeRef = _sheetStandardsSafeGetRange_(sheet, codeRangeA1);

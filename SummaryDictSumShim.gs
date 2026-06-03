@@ -4,8 +4,9 @@
  * Reads summary group rules from DICT_SUM and returns:
  * [{ code, label, order, showZero }]
  *
- * Expected DICT_SUM headers:
- * Code | Label | Order | ShowZero
+ * Expected DICT_SUM headers in 1.xlsx:
+ * Code | Name | Queue
+ * Legacy Label/Order/ShowZero headers are still accepted.
  */
 function readDictSum_() {
   const defaults = getDefaultDictSumRules_();
@@ -42,6 +43,7 @@ function readDictSum_() {
         "порядок",
         "sort",
         "sort_order",
+        "queue",
       ]),
       showZero: findDictSumColumn_(headers, [
         "showzero",

@@ -51,14 +51,14 @@ const SendPanelFastPaths_ = (function() {
     const safeDate = _normalizeDate_(dateStr);
     const ctx = PersonsRepository_.getDateContext(safeDate);
     const source = ctx.sheet;
-    const ref = source.getRange(CONFIG.CODE_RANGE_A1);
-    const monthlySchema = SheetSchemas_.get('MONTHLY');
+    const ref = source.getRange(getMonthlyCodeRangeA1ForSheet_(source));
+    const monthlySchema = SheetSchemas_.get(source.getName());
     const startRow = ref.getRow();
     const rowCount = ref.getNumRows();
     const dateCol = ctx.col;
 
     const codeValues = source.getRange(startRow, dateCol, rowCount, 1).getDisplayValues();
-    const callsignCol = Number(CONFIG.CALLSIGN_COL) || 2;
+    const callsignCol = getMonthlyCallsignColForSheet_(source);
     const callsignValues = source
       .getRange(startRow, callsignCol, rowCount, 1)
       .getDisplayValues();

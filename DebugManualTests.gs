@@ -139,12 +139,13 @@ function debugSendPanelBuildRawForDateManual() {
 
   var ctx = PersonsRepository_.getDateContext(dateStr);
   var source = ctx.sheet;
-  var ref = source.getRange(CONFIG.CODE_RANGE_A1);
+  var codeRangeA1 = getMonthlyCodeRangeA1ForSheet_(source);
+  var ref = source.getRange(codeRangeA1);
   var start = ref.getRow();
   var num = ref.getNumRows();
 
   var codes = source.getRange(start, ctx.col, num, 1).getDisplayValues();
-  var callsignCol = Number(CONFIG.CALLSIGN_COL) || 2;
+  var callsignCol = getMonthlyCallsignColForSheet_(source);
   var callsigns = source.getRange(start, callsignCol, num, 1).getDisplayValues();
 
   var sourceRows = [];
@@ -190,7 +191,7 @@ function debugSendPanelBuildRawForDateManual() {
       sheet: source.getName(),
       dateStr: ctx.dateStr,
       col: ctx.col,
-      codeRange: CONFIG.CODE_RANGE_A1,
+      codeRange: codeRangeA1,
       startRow: start,
       rowCount: num,
       callsignCol: callsignCol

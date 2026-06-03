@@ -7,8 +7,9 @@
  *   - ID (Армія+): optional data field, NOT a stable system key
  *   - Position: organizational slot, NOT a person key
  *
- * Status column (UA only in sheet): Дієвий | Тимчасовий | Відрядження | Вибув
- * (empty = Дієвий). Runtime active: first three; inactive: Вибув only.
+ * Status (UA): канон Дієвий|Тимчасовий|Відрядження|Вибув або значення з книги
+ * (В наявності, Відпустка, Гусачівка, Відкомандерований).
+ * Active runtime records: усе, крім Вибув.
  * Legacy EN on read: Active→Дієвий, Temp→Тимчасовий, Removed/Transferred→Вибув.
  */
 
@@ -28,7 +29,8 @@ var PERSONNEL_CANONICAL_HEADER_ORDER_ = [
   "Phone",
   "2_Phone",
   "Callsign",
-  "Title",
+  "TEMPLATE",
+  "Rank",
   "Position",
   "OSH_4",
   "Unit",
@@ -39,24 +41,34 @@ var PERSONNEL_REQUIRED_HEADER_KEYS = [
   "FML",
   "Birthday",
   "Phone",
-  "2_Phone",
   "Callsign",
-  "Title",
   "Position",
   "OSH_4",
   "Status",
 ];
 
-/** ID, Unit, and computed birthday helper columns are recommended but not required. */
+/** ID, Unit, Rank/Title, 2_Phone, TEMPLATE, computed birthday helpers — optional. */
 var PERSONNEL_OPTIONAL_HEADER_KEYS = [
   "ID",
   "Age",
   "Days_until_birthday",
   "Unit",
+  "2_Phone",
+  "Title",
+  "Rank",
+  "TEMPLATE",
 ];
 
 /** Значення в аркуші PERSONNEL (українською, без змішування з EN). */
-var PERSONNEL_ACTIVE_STATUSES_ = ["Дієвий", "Тимчасовий", "Відрядження"];
+var PERSONNEL_ACTIVE_STATUSES_ = [
+  "Дієвий",
+  "Тимчасовий",
+  "Відрядження",
+  "В наявності",
+  "Відпустка",
+  "Гусачівка",
+  "Відкомандерований",
+];
 
 var PERSONNEL_INACTIVE_STATUSES_ = ["Вибув"];
 
@@ -65,6 +77,10 @@ var PERSONNEL_STATUS_SHEET_VALUES_ = [
   "Тимчасовий",
   "Відрядження",
   "Вибув",
+  "В наявності",
+  "Відпустка",
+  "Гусачівка",
+  "Відкомандерований",
 ];
 
 var PERSONNEL_DEFAULT_STATUS_UA_ = "Дієвий";
@@ -98,6 +114,14 @@ var PERSONNEL_STATUS_LEGACY_TO_UA_ = {
   вибувший: "Вибув",
   видалено: "Вибув",
   видалений: "Вибув",
+  "в наявності": "В наявності",
+  наявності: "В наявності",
+  відпустка: "Відпустка",
+  vacation: "Відпустка",
+  гусачівка: "Гусачівка",
+  гусачі: "Гусачівка",
+  відкомандерований: "Відкомандерований",
+  відкомандирований: "Відкомандерований",
 };
 
 var PERSONNEL_STATUS_UA_TO_CANONICAL_ = {
@@ -105,6 +129,10 @@ var PERSONNEL_STATUS_UA_TO_CANONICAL_ = {
   Тимчасовий: "Temp",
   Відрядження: "Assignment",
   Вибув: "Removed",
+  "В наявності": "Active",
+  Відпустка: "Vacation",
+  Гусачівка: "Away",
+  Відкомандерований: "Detached",
 };
 
 function _personnelGlobal_() {
@@ -212,7 +240,7 @@ function applyPersonnelStatusColumnValidation_(sh) {
     .requireValueInList(getPersonnelStatusListValues_(), true)
     .setAllowInvalid(false)
     .setHelpText(
-      "Дієвий | Тимчасовий | Відрядження | Вибув. Порожньо = Дієвий (у коді).",
+      "Статус з книги. Порожньо = Дієвий; активні записи — усе, крім Вибув.",
     )
     .build();
 
@@ -264,14 +292,18 @@ function _personnelCanonicalHeaderKey_(rawHeader) {
     телефон: "Phone",
     "2_phone": "2_Phone",
     "2 phone": "2_Phone",
+    "phone 2": "2_Phone",
     "телефон 2": "2_Phone",
     callsign: "Callsign",
     позивний: "Callsign",
+    template: "TEMPLATE",
     title: "Title",
     звання: "Title",
+    rank: "Rank",
     position: "Position",
     посада: "Position",
     osh_4: "OSH_4",
+    "osh 4": "OSH_4",
     "ошс 4": "OSH_4",
     oshs: "OSH_4",
     unit: "Unit",
@@ -326,6 +358,10 @@ function _personnelBuildHeaderColIndex_(headersRow) {
     if (col[key] === undefined) missing.push(key);
   });
 
+  if (col.Title === undefined && col.Rank === undefined) {
+    missing.push("Title|Rank");
+  }
+
   if (missing.length) {
     throw new Error(
       'Аркуш "' +
@@ -338,6 +374,9 @@ function _personnelBuildHeaderColIndex_(headersRow) {
   PERSONNEL_OPTIONAL_HEADER_KEYS.forEach(function (key) {
     if (col[key] === undefined) col[key] = -1;
   });
+
+  if (col["2_Phone"] === undefined) col["2_Phone"] = -1;
+  if (col.TEMPLATE === undefined) col.TEMPLATE = -1;
 
   return col;
 }
@@ -378,14 +417,26 @@ function _personnelRowToRecord_(row, sheetRow, col) {
     phone: String(_personnelReadCell_(row, col.Phone) || "").trim(),
     phone2: String(_personnelReadCell_(row, col["2_Phone"]) || "").trim(),
     callsign: callsign,
-    title: String(_personnelReadCell_(row, col.Title) || "").trim(),
+    template:
+      col.TEMPLATE >= 0
+        ? String(_personnelReadCell_(row, col.TEMPLATE) || "").trim()
+        : "",
+    title: String(
+      (col.Title >= 0 ? _personnelReadCell_(row, col.Title) : "") ||
+        (col.Rank >= 0 ? _personnelReadCell_(row, col.Rank) : "") ||
+        "",
+    ).trim(),
     position: String(_personnelReadCell_(row, col.Position) || "").trim(),
     oshs: String(_personnelReadCell_(row, col.OSH_4) || "").trim(),
     unit: unit,
     status: status,
     statusCanonical: statusCanonical,
     active: active,
-    rank: String(_personnelReadCell_(row, col.Title) || "").trim(),
+    rank: String(
+      (col.Rank >= 0 ? _personnelReadCell_(row, col.Rank) : "") ||
+        (col.Title >= 0 ? _personnelReadCell_(row, col.Title) : "") ||
+        "",
+    ).trim(),
     sheetRow: sheetRow,
   };
 
