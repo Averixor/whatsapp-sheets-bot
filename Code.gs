@@ -10,12 +10,13 @@ const CONFIG = {
   SEND_PANEL_SHEET: "SEND_PANEL",
 
   // Координати даних
-  PHONE_COL: 1,
-  FML_COL: 7,
+  PHONE_COL: 0,
+  FML_COL: 0,
+  BR_COL: 1,
   DATE_ROW: 1,
   CALLSIGN_COL: 2,
-  CODE_RANGE_A1: "H2:AL40",
-  OS_FML_RANGE_A1: "G2:G40",
+  CODE_RANGE_A1: "C2:AF44",
+  OS_FML_RANGE_A1: "",
 
   // Технічні параметри
   TZ: Session.getScriptTimeZone(),
