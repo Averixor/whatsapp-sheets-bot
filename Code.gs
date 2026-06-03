@@ -15,7 +15,7 @@ const CONFIG = {
   BR_COL: 1,
   DATE_ROW: 1,
   CALLSIGN_COL: 2,
-  CODE_RANGE_A1: "C2:AF44",
+  CODE_RANGE_A1: "C2:AF30",
   OS_FML_RANGE_A1: "",
 
   // Технічні параметри
@@ -47,7 +47,7 @@ const MONTHLY_CONFIG = {
   DATE_ROW: CONFIG.DATE_ROW,
   FML_COL: CONFIG.FML_COL,
   FIRST_DATA_ROW: 2,
-  LAST_DATA_ROW: 44,
+  LAST_DATA_ROW: 30,
   CLEAR_RANGES: [CONFIG.CODE_RANGE_A1],
   MONTH_NAMES: {
     "01": "Січень",

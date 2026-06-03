@@ -159,7 +159,7 @@ function _monthlyLayoutHeaderNorm_(value) {
     .replace(/\s+/g, ' ');
 }
 
-function _monthlyDataEndRowFromSheet_(sheet, fallbackRow, markerCols) {
+function _monthlyDataEndRowFromSheet_(sheet, fallbackRow, markerCols, requireAllMarkers) {
   var configuredDataEndRow = _ssParseNumber_(
     (typeof MONTHLY_CONFIG !== 'undefined' &&
       MONTHLY_CONFIG &&
@@ -177,23 +177,34 @@ function _monthlyDataEndRowFromSheet_(sheet, fallbackRow, markerCols) {
     1000,
   );
   var cols = Array.isArray(markerCols) && markerCols.length ? markerCols : [2];
-  var lastDataRow = 0;
-
+  var columnsValues = [];
   for (var i = 0; i < cols.length; i++) {
     var col = Number(cols[i]) || 0;
-    if (col < 1 || scanLastRow < 2) continue;
+    if (col < 1 || scanLastRow < 2) {
+      columnsValues.push([]);
+      continue;
+    }
     try {
-      var values = sheet.getRange(2, col, scanLastRow - 1, 1).getDisplayValues();
-      for (var r = values.length - 1; r >= 0; r--) {
-        if (_ssTrimmedString_(values[r][0], '')) {
-          lastDataRow = Math.max(lastDataRow, r + 2);
-          break;
-        }
-      }
-    } catch (e) {}
+      columnsValues.push(
+        sheet.getRange(2, col, scanLastRow - 1, 1).getDisplayValues(),
+      );
+    } catch (e) {
+      columnsValues.push([]);
+    }
   }
 
-  return lastDataRow >= 2 ? lastDataRow : Math.max(2, configuredDataEndRow);
+  for (var r = scanLastRow - 2; r >= 0; r--) {
+    var filled = 0;
+    for (var c = 0; c < columnsValues.length; c++) {
+      if (_ssTrimmedString_((columnsValues[c][r] || [])[0], '')) filled++;
+    }
+
+    if (requireAllMarkers ? filled === columnsValues.length : filled > 0) {
+      return r + 2;
+    }
+  }
+
+  return Math.max(2, configuredDataEndRow);
 }
 
 function _monthlyLastDateColFromRow_(rowValues, firstDateCol) {
@@ -235,16 +246,21 @@ function detectMonthlyLayoutFromSheet_(sheet) {
     colA.indexOf('тел') !== -1 || colA.indexOf('phone') !== -1;
   var isCallsignB =
     colB.indexOf('позивн') !== -1 || colB === 'callsign';
-  var dataEndRow = _monthlyDataEndRowFromSheet_(sheet, 44, [2]);
   var firstDateCol = 3;
   var cIsDate = _looksLikeMonthlyDateHeader_(row1[firstDateCol - 1]);
 
   if (isCallsignB && cIsDate && !isPhoneHeaderA) {
+    var compactDataEndRow = _monthlyDataEndRowFromSheet_(
+      sheet,
+      30,
+      [1, 2],
+      true,
+    );
     var compactLastDateCol = _monthlyLastDateColFromRow_(row1, firstDateCol);
     var compactRangeA1 = _monthlyCodeRangeA1_(
       firstDateCol,
       compactLastDateCol,
-      dataEndRow,
+      compactDataEndRow,
     );
 
     return {
@@ -267,11 +283,12 @@ function detectMonthlyLayoutFromSheet_(sheet) {
   var hIsDate = _looksLikeMonthlyDateHeader_(row1[firstDateCol - 1]);
   if (!isPhoneHeaderA || !isCallsignB || !hIsDate) return null;
 
+  var standardDataEndRow = _monthlyDataEndRowFromSheet_(sheet, 44, [2], false);
   var standardLastDateCol = _monthlyLastDateColFromRow_(row1, firstDateCol);
   var standardRangeA1 = _monthlyCodeRangeA1_(
     firstDateCol,
     standardLastDateCol,
-    dataEndRow,
+    standardDataEndRow,
   );
 
   return {
