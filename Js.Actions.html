@@ -267,6 +267,19 @@
   // COMMANDER SEND
   // =========================
 
+  function getSelectedCommanderRecipient_() {
+    const el = document.getElementById("commanderRecipientSelect");
+    const fromSelect = el ? String(el.value || "").trim() : "";
+    return fromSelect || String(STATE.commanderRole || "").trim();
+  }
+
+  function setCommanderRecipient(value) {
+    STATE.commanderRole = String(value || "").trim();
+    try {
+      localStorage.setItem("wasb.commanderRole", STATE.commanderRole);
+    } catch (_) {}
+  }
+
   async function sendDetailedToCommander() {
     if (!STATE.lastDetailedDate || !STATE.lastDetailedText) {
       showToast("✕ Спочатку створи детальне зведення");
@@ -278,7 +291,11 @@
     try {
       const result = await runServerMethod_(
         "sendDetailedToCommanderSidebar",
-        [STATE.lastDetailedDate, STATE.lastDetailedText],
+        [
+          STATE.lastDetailedDate,
+          STATE.lastDetailedText,
+          getSelectedCommanderRecipient_(),
+        ],
         "Js.Actions.sendDetailedToCommander",
       );
 
@@ -306,7 +323,11 @@
     try {
       const result = await runServerMethod_(
         "sendDaySummaryToCommanderSidebar",
-        [STATE.lastSummaryDate, STATE.lastSummaryText],
+        [
+          STATE.lastSummaryDate,
+          STATE.lastSummaryText,
+          getSelectedCommanderRecipient_(),
+        ],
         "Js.Actions.sendDaySummaryToCommander",
       );
 
@@ -1052,6 +1073,7 @@
 
     sendDaySummaryToCommander,
     sendDetailedToCommander,
+    setCommanderRecipient,
     sendVacationMessage,
     sendBirthdayMessage,
     openBirthdayWA,

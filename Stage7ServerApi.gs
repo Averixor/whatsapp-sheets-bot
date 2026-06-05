@@ -189,6 +189,24 @@ function apiStage7BootstrapSidebar() {
     warnings.push(String(w));
   });
 
+  var commanderRole = String(
+    typeof CONFIG !== "undefined" && CONFIG && CONFIG.COMMANDER_ROLE
+      ? CONFIG.COMMANDER_ROLE
+      : "ГРАФ",
+  ).trim();
+  var commanderRecipients = [];
+  try {
+    if (typeof getCommanderRecipientOptions_ === "function") {
+      commanderRecipients = getCommanderRecipientOptions_();
+    }
+  } catch (commanderErr) {
+    warnings.push(
+      commanderErr && commanderErr.message
+        ? String(commanderErr.message)
+        : String(commanderErr),
+    );
+  }
+
   return _stage7FastResponse_(
     "bootstrapSidebar",
     "Базові дані сайдбару завантажено",
@@ -197,6 +215,8 @@ function apiStage7BootstrapSidebar() {
       months: months,
       current: current,
       personnelCallsigns: personnelCallsigns,
+      commanderRole: commanderRole,
+      commanderRecipients: commanderRecipients,
     },
     warnings,
     { affectedSheets: months.concat([CONFIG.PERSONNEL_SHEET || "PERSONNEL"]) },

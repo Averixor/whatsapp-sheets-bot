@@ -94,6 +94,53 @@
     $id("sendingProgress")?.remove();
   }
 
+  function applyCommanderRecipientFromBootstrap_(boot) {
+    var payload = boot || {};
+    var recipients = Array.isArray(payload.commanderRecipients)
+      ? payload.commanderRecipients.slice()
+      : [];
+    var defaultRole = String(payload.commanderRole || "").trim();
+
+    if (defaultRole && recipients.indexOf(defaultRole) === -1) {
+      recipients.unshift(defaultRole);
+    }
+
+    STATE.commanderRecipients = recipients;
+
+    var stored = "";
+    try {
+      stored = String(localStorage.getItem("wasb.commanderRole") || "").trim();
+    } catch (_) {}
+
+    var pick = stored;
+    if (!pick || recipients.indexOf(pick) === -1) {
+      pick = defaultRole || recipients[0] || "";
+    }
+
+    if (pick) {
+      STATE.commanderRole = pick;
+      try {
+        localStorage.setItem("wasb.commanderRole", pick);
+      } catch (_) {}
+    }
+  }
+
+  function ensureCommanderRecipientFallback_() {
+    var fallback = String(STATE.commanderRole || "").trim() || "ГРАФ";
+    if (
+      !Array.isArray(STATE.commanderRecipients) ||
+      !STATE.commanderRecipients.length
+    ) {
+      STATE.commanderRecipients = [fallback];
+    }
+    if (!STATE.commanderRole) {
+      STATE.commanderRole = fallback;
+      try {
+        localStorage.setItem("wasb.commanderRole", fallback);
+      } catch (_) {}
+    }
+  }
+
   // =========================
   // INIT
   // =========================
@@ -142,6 +189,7 @@
         if (Array.isArray(boot.personnelCallsigns)) {
           applyPersonnelCallsignsFromServer_(boot.personnelCallsigns);
         }
+        applyCommanderRecipientFromBootstrap_(boot);
       } else {
         try {
           await withPromiseTimeout_(
@@ -184,6 +232,7 @@
         }
       }
 
+      ensureCommanderRecipientFallback_();
       logToConsole("✓ Панель готова до роботи", "success");
     } catch (error) {
       showFatalSidebarError(error);

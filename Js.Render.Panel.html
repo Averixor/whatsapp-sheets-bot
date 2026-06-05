@@ -766,6 +766,47 @@
     return html;
   }
 
+  function renderCommanderRecipientControls_() {
+    var list = Array.isArray(STATE.commanderRecipients)
+      ? STATE.commanderRecipients.slice()
+      : [];
+    var selected = String(STATE.commanderRole || "").trim();
+
+    if (selected && list.indexOf(selected) === -1) {
+      list.unshift(selected);
+    }
+    if (!selected && list.length) {
+      selected = list[0];
+    }
+
+    var options = list.length
+      ? list
+          .map(function (cs) {
+            var safe = escapeHtml(cs);
+            var isSelected = cs === selected ? " selected" : "";
+            return (
+              '<option value="' +
+              escapeAttr(cs) +
+              '"' +
+              isSelected +
+              ">" +
+              safe +
+              "</option>"
+            );
+          })
+          .join("")
+      : '<option value="">—</option>';
+
+    return (
+      '<div class="commander-recipient-wrap" style="display:flex; flex-direction:column; gap:6px; margin:10px 0 8px 0;">' +
+      '<label for="commanderRecipientSelect" class="result-label" style="margin:0;">Кому відправити</label>' +
+      '<select id="commanderRecipientSelect" class="commander-recipient-select" onchange="SidebarApp.setCommanderRecipient(this.value)">' +
+      options +
+      "</select>" +
+      "</div>"
+    );
+  }
+
   // =========================
   // RESULT RENDERING
   // =========================
@@ -784,6 +825,7 @@
         html = `
           <div class="result-item">
             <div class="result-label">Зведення дня</div>
+            ${renderCommanderRecipientControls_()}
 
             <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 12px 0;">
               <button class="btn btn-primary" onclick="SidebarApp.sendDaySummaryToCommander()">Командиру</button>
@@ -805,6 +847,7 @@
         html = `
           <div class="result-item">
             <div class="result-label">Детальне зведення за ${escapeHtml(data.date || "")}</div>
+            ${renderCommanderRecipientControls_()}
 
             <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 12px 0;">
               <button class="btn btn-primary" onclick="SidebarApp.sendDetailedToCommander()">Командиру</button>

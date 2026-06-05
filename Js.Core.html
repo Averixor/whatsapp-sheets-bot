@@ -72,7 +72,15 @@
     panelRefreshInProgress: false,
     lastNonEmptyPanelData: [],
     lastPanelDataUpdatedAt: 0,
-    access: { role: 'guest', isAdmin: false, knownUser: false, reason: 'Завантаження режиму доступу…', source: '' }
+    access: { role: 'guest', isAdmin: false, knownUser: false, reason: 'Завантаження режиму доступу…', source: '' },
+    commanderRole: (function () {
+      try {
+        return String(localStorage.getItem('wasb.commanderRole') || '').trim();
+      } catch (_) {
+        return '';
+      }
+    })(),
+    commanderRecipients: []
   };
 
   // =========================

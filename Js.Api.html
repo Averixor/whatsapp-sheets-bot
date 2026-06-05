@@ -51,6 +51,10 @@
         personnelCallsigns: Array.isArray(result.personnelCallsigns)
           ? result.personnelCallsigns
           : [],
+        commanderRole: String(result.commanderRole || '').trim(),
+        commanderRecipients: Array.isArray(result.commanderRecipients)
+          ? result.commanderRecipients
+          : [],
         warnings: Array.isArray(response?.warnings) ? response.warnings : [],
         context: response?.context || null,
         meta: unwrapStage4Meta(response),

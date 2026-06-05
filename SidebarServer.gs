@@ -13,7 +13,59 @@ function showSidebar() {
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
-function sendDaySummaryToCommanderSidebar(dateStr, summaryText) {
+function _resolveCommanderRoleForSidebar_(commanderRole) {
+  var selected = String(commanderRole || '').trim();
+  if (selected) return selected;
+  return String(
+    typeof CONFIG !== 'undefined' && CONFIG && CONFIG.COMMANDER_ROLE
+      ? CONFIG.COMMANDER_ROLE
+      : 'ГРАФ',
+  ).trim();
+}
+
+function getCommanderRecipientOptions_() {
+  var defaultRole = _resolveCommanderRoleForSidebar_('');
+  var seen = Object.create(null);
+  var out = [];
+
+  function add(value) {
+    var key = String(value || '').trim();
+    if (!key || seen[key]) return;
+    seen[key] = true;
+    out.push(key);
+  }
+
+  add(defaultRole);
+
+  try {
+    var index =
+      typeof loadPhonesIndex_ === 'function' ? loadPhonesIndex_() : null;
+    if (index && Array.isArray(index.items)) {
+      index.items.forEach(function (item) {
+        var cs = String(
+          (item && (item.callsign || item.role)) || '',
+        ).trim();
+        if (cs && item.phone) add(cs);
+      });
+    }
+  } catch (_) {}
+
+  try {
+    var list =
+      typeof getPersonnelCallsignsListForUi_ === 'function'
+        ? getPersonnelCallsignsListForUi_()
+        : typeof getPersonnelCallsignsList_ === 'function'
+          ? getPersonnelCallsignsList_()
+          : [];
+    if (Array.isArray(list)) {
+      list.forEach(add);
+    }
+  } catch (_) {}
+
+  return out;
+}
+
+function sendDaySummaryToCommanderSidebar(dateStr, summaryText, commanderRole) {
   try {
     if (typeof AccessEnforcement_ === 'object' && AccessEnforcement_.assertCanUseWorkingActions) {
       AccessEnforcement_.assertCanUseWorkingActions('sendDaySummaryToCommanderSidebar', { requestedDate: dateStr || '' });
@@ -22,9 +74,10 @@ function sendDaySummaryToCommanderSidebar(dateStr, summaryText) {
       throw new Error('Немає тексту зведення');
     }
 
-    const phone = findPhone_({ role: CONFIG.COMMANDER_ROLE });
+    var selectedRole = _resolveCommanderRoleForSidebar_(commanderRole);
+    const phone = findPhone_({ role: selectedRole });
     if (!phone) {
-      throw new Error(`Телефон для ролі "${CONFIG.COMMANDER_ROLE}" не знайдено в PHONES`);
+      throw new Error(`Телефон для ролі "${selectedRole}" не знайдено в PHONES`);
     }
 
     const safe = trimToEncoded_(summaryText, CONFIG.MAX_WA_TEXT);
@@ -35,20 +88,24 @@ function sendDaySummaryToCommanderSidebar(dateStr, summaryText) {
       reportDateStr: dateStr || '',
       sheet: 'COMMANDER',
       cell: 'SUMMARY',
-      fml: `Командир (${CONFIG.COMMANDER_ROLE})`,
+      fml: `Командир (${selectedRole})`,
       phone: phone,
       code: 'SUMMARY',
       message: String(summaryText).substring(0, 100) + '...',
       link: link
     }]);
 
-    return okResponse_({ link: link }, 'Зведення для командира підготовлено', { function: 'sendDaySummaryToCommanderSidebar' });
+    return okResponse_(
+      { link: link, commanderRole: selectedRole },
+      'Зведення для командира підготовлено',
+      { function: 'sendDaySummaryToCommanderSidebar' },
+    );
   } catch (e) {
     return errorResponse_(e, { function: 'sendDaySummaryToCommanderSidebar' });
   }
 }
 
-function sendDetailedToCommanderSidebar(dateStr, detailedText) {
+function sendDetailedToCommanderSidebar(dateStr, detailedText, commanderRole) {
   try {
     if (typeof AccessEnforcement_ === 'object' && AccessEnforcement_.assertCanUseDetailedSummary) {
       AccessEnforcement_.assertCanUseDetailedSummary(dateStr || '');
@@ -57,9 +114,10 @@ function sendDetailedToCommanderSidebar(dateStr, detailedText) {
       throw new Error('Немає тексту детального зведення');
     }
 
-    const phone = findPhone_({ role: CONFIG.COMMANDER_ROLE });
+    var selectedRole = _resolveCommanderRoleForSidebar_(commanderRole);
+    const phone = findPhone_({ role: selectedRole });
     if (!phone) {
-      throw new Error(`Телефон для ролі "${CONFIG.COMMANDER_ROLE}" не знайдено в PHONES`);
+      throw new Error(`Телефон для ролі "${selectedRole}" не знайдено в PHONES`);
     }
 
     const safe = trimToEncoded_(detailedText, CONFIG.MAX_WA_TEXT);
@@ -70,14 +128,18 @@ function sendDetailedToCommanderSidebar(dateStr, detailedText) {
       reportDateStr: dateStr || '',
       sheet: 'COMMANDER',
       cell: 'DETAILED',
-      fml: `Командир (${CONFIG.COMMANDER_ROLE})`,
+      fml: `Командир (${selectedRole})`,
       phone: phone,
       code: 'DETAILED',
       message: String(detailedText).substring(0, 100) + '...',
       link: link
     }]);
 
-    return okResponse_({ link: link }, 'Детальне зведення для командира підготовлено', { function: 'sendDetailedToCommanderSidebar' });
+    return okResponse_(
+      { link: link, commanderRole: selectedRole },
+      'Детальне зведення для командира підготовлено',
+      { function: 'sendDetailedToCommanderSidebar' },
+    );
   } catch (e) {
     return errorResponse_(e, { function: 'sendDetailedToCommanderSidebar' });
   }
