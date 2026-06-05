@@ -798,9 +798,9 @@
       : '<option value="">—</option>';
 
     return (
-      '<div class="commander-recipient-wrap" style="display:flex; flex-direction:column; gap:6px; margin:10px 0 8px 0;">' +
-      '<label for="commanderRecipientSelect" class="result-label" style="margin:0;">Кому відправити</label>' +
-      '<select id="commanderRecipientSelect" class="commander-recipient-select" onchange="SidebarApp.setCommanderRecipient(this.value)">' +
+      '<div class="commander-recipient">' +
+      '<label class="commander-recipient__label" for="commanderRecipientSelect">Отримувач:</label>' +
+      '<select id="commanderRecipientSelect" class="commander-recipient__select" onchange="SidebarApp.setCommanderRecipient(this.value)">' +
       options +
       "</select>" +
       "</div>"
