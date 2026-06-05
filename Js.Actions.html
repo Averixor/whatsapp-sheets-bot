@@ -957,25 +957,41 @@
   // =========================
 
   async function onSidebarLoad() {
+    var startedAt = new Date().toISOString();
     window.__WASB_BOOTSTRAP_STATE__ = {
-      startedAt: new Date().toISOString(),
+      startedAt: startedAt,
       status: "starting",
     };
-    registerGlobalRuntimeEvents_();
-    await initSidebar();
-    updateSendUnsentButtonState();
-    initPersonnelModal();
-    registerLegacyPersonnelButtons();
-    window.addEventListener("beforeunload", stopSending);
-    window.__WASB_BOOTSTRAP_STATE__ = {
-      startedAt:
-        (window.__WASB_BOOTSTRAP_STATE__ &&
-          window.__WASB_BOOTSTRAP_STATE__.startedAt) ||
-        new Date().toISOString(),
-      finishedAt: new Date().toISOString(),
-      status: "ready",
-      policyMarker: CLIENT_RUNTIME_POLICY.policyMarker,
-    };
+
+    try {
+      registerGlobalRuntimeEvents_();
+      await initSidebar();
+      updateSendUnsentButtonState();
+      initPersonnelModal();
+      registerLegacyPersonnelButtons();
+      window.addEventListener("beforeunload", stopSending);
+      window.__WASB_BOOTSTRAP_STATE__ = {
+        startedAt: startedAt,
+        finishedAt: new Date().toISOString(),
+        status: "ready",
+        policyMarker: CLIENT_RUNTIME_POLICY.policyMarker,
+      };
+    } catch (err) {
+      try {
+        showFatalSidebarError(err);
+      } catch (_) {}
+      try {
+        stopSidebarBootTimeout();
+        hideLoading();
+      } catch (_) {}
+      window.__WASB_BOOTSTRAP_STATE__ = {
+        startedAt: startedAt,
+        finishedAt: new Date().toISOString(),
+        status: "error",
+        error: normalizeError(err),
+        policyMarker: CLIENT_RUNTIME_POLICY.policyMarker,
+      };
+    }
   }
 
   window.addEventListener("load", onSidebarLoad);

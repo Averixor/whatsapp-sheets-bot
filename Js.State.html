@@ -477,6 +477,56 @@
     showResult(title);
   }
 
+  var SIDEBAR_BOOT_TIMEOUT_MS = 20000;
+  var SIDEBAR_API_TIMEOUT_MS = 15000;
+  var __wasbSidebarBootTimeoutId = null;
+  var __wasbSidebarBootGeneration = 0;
+
+  function startSidebarBootTimeout(ms) {
+    stopSidebarBootTimeout();
+    var timeoutMs = Math.max(5000, Number(ms) || SIDEBAR_BOOT_TIMEOUT_MS);
+    var generation = ++__wasbSidebarBootGeneration;
+
+    __wasbSidebarBootTimeoutId = setTimeout(function () {
+      if (generation !== __wasbSidebarBootGeneration) return;
+      try {
+        console.error("[WASB] sidebar bootstrap timeout");
+      } catch (_) {}
+      try {
+        showFatalSidebarError(
+          new Error(
+            "Sidebar не завантажився за " +
+              Math.round(timeoutMs / 1000) +
+              " секунд",
+          ),
+        );
+      } catch (_) {}
+      try {
+        hideLoading();
+      } catch (_) {}
+    }, timeoutMs);
+  }
+
+  function stopSidebarBootTimeout() {
+    __wasbSidebarBootGeneration += 1;
+    if (__wasbSidebarBootTimeoutId) {
+      clearTimeout(__wasbSidebarBootTimeoutId);
+      __wasbSidebarBootTimeoutId = null;
+    }
+  }
+
+  function showFatalSidebarError(error) {
+    var message = normalizeError(error);
+    try {
+      logToConsole("[WASB] " + message, "error");
+    } catch (_) {}
+    try {
+      if (typeof showToast === "function") {
+        showToast("Помилка завантаження панелі: " + message);
+      }
+    } catch (_) {}
+  }
+
   function setLoadingOverlayText(message) {
     const loadingTextEl = document.querySelector('#loadingOverlay .loading-text');
     if (!loadingTextEl) return;

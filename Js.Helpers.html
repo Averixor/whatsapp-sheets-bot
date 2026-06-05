@@ -99,7 +99,8 @@
   // =========================
   
   async function initSidebar() {
-    showLoading();
+    startSidebarBootTimeout(SIDEBAR_BOOT_TIMEOUT_MS);
+    showLoading("Завантаження...");
     hidePersonCard();
 
     try {
@@ -116,8 +117,17 @@
 
       let boot = null;
       try {
-        boot = await Stage7Api.bootstrapSidebar();
-      } catch (_) {}
+        boot = await withPromiseTimeout_(
+          Stage7Api.bootstrapSidebar(),
+          SIDEBAR_API_TIMEOUT_MS,
+          "bootstrapSidebar",
+        );
+      } catch (bootErr) {
+        logToConsole(
+          `⚠ bootstrapSidebar: ${normalizeError(bootErr)}`,
+          "warn",
+        );
+      }
 
       if (boot?.success) {
         STATE.access = normalizeAccessForUi_(boot.access || {});
@@ -133,24 +143,50 @@
           applyPersonnelCallsignsFromServer_(boot.personnelCallsigns);
         }
       } else {
-        await loadAccessDescriptor();
+        try {
+          await withPromiseTimeout_(
+            loadAccessDescriptor(),
+            SIDEBAR_API_TIMEOUT_MS,
+            "loadAccessDescriptor",
+          );
+        } catch (accessErr) {
+          logToConsole(
+            `⚠ loadAccessDescriptor: ${normalizeError(accessErr)}`,
+            "warn",
+          );
+          STATE.access = normalizeAccessForUi_({
+            role: "guest",
+            isAdmin: false,
+            knownUser: false,
+            reasonString: normalizeError(accessErr),
+          });
+          if (typeof applyAccessPolicyUI === "function") applyAccessPolicyUI();
+        }
 
-        const data = await Stage7Api.getMonths();
+        try {
+          const data = await withPromiseTimeout_(
+            Stage7Api.getMonths(),
+            SIDEBAR_API_TIMEOUT_MS,
+            "getMonths",
+          );
 
-        if (data?.months) STATE.monthsList = data.months;
+          if (data?.months) STATE.monthsList = data.months;
 
-        if (data?.current) {
-          STATE.currentMonth = data.current;
-          updateMonthBadge(STATE.currentMonth);
+          if (data?.current) {
+            STATE.currentMonth = data.current;
+            updateMonthBadge(STATE.currentMonth);
+          }
+        } catch (monthsErr) {
+          logToConsole(
+            `⚠ getMonths: ${normalizeError(monthsErr)}`,
+            "warn",
+          );
         }
       }
 
       logToConsole("✓ Панель готова до роботи", "success");
     } catch (error) {
-      logToConsole(
-        `✕ Помилка ініціалізації: ${normalizeError(error)}`,
-        "error",
-      );
+      showFatalSidebarError(error);
       try {
         STATE.access =
           typeof normalizeAccessForUi_ === "function"
@@ -169,6 +205,7 @@
         if (typeof applyAccessPolicyUI === "function") applyAccessPolicyUI();
       } catch (_) {}
     } finally {
+      stopSidebarBootTimeout();
       hideLoading();
       finalizeSidebarMonthStatus_();
     }
