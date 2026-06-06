@@ -592,12 +592,52 @@
     color: var(--success-soft-text);
   }
 
-  .result-header {
-    margin-bottom: var(--space-sm);
+  .wasb-sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    padding: 10px 12px;
+    margin: calc(-1 * var(--space-sm)) calc(-1 * var(--space-sm)) 12px;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .wasb-sticky-header .back-btn,
+  .wasb-sticky-header .back-button,
+  .wasb-sticky-header button.back-btn {
+    flex: 0 0 auto;
+  }
+
+  .wasb-sticky-header .screen-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    color: var(--whatsapp-green);
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .result-header {
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex-wrap: nowrap;
+  }
+
+  .screen-content {
+    width: 100%;
+    min-width: 0;
   }
 
   .back-button {
@@ -626,7 +666,8 @@
     font-size: 1rem;
   }
 
-  .result-header h2 {
+  .result-header h2,
+  .result-header .screen-title {
     color: var(--whatsapp-green);
     font-size: 1rem;
     font-weight: 500;
