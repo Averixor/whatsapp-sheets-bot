@@ -71,7 +71,7 @@ const ProjectRequests_ = (function () {
       sh.getRange(1, 1, 1, colCount).setValues([
         ["id", "проєкт", "активний", "email менеджера"],
       ]);
-      sh.getRange(2, 1, 2, colCount).setValues([
+      sh.getRange(2, 1, 1, colCount).setValues([
         [
           "example-id",
           "Приклад: заміни на реальну назву",
@@ -97,7 +97,8 @@ const ProjectRequests_ = (function () {
   }
 
   function readProjects_(ss) {
-    const sh = ensureProjectsSheet_(ss);
+    const sh = ss.getSheetByName(PROJECTS_SHEET_NAME);
+    if (!sh) return [];
     const lastRow = sh.getLastRow();
     const lastCol = sh.getLastColumn();
     if (lastRow < 2 || lastCol < 1) return [];
@@ -178,7 +179,7 @@ const ProjectRequests_ = (function () {
         ],
       ]);
       const tplTs = new Date(2000, 0, 1);
-      sh.getRange(2, 1, 2, colCount).setValues([
+      sh.getRange(2, 1, 1, colCount).setValues([
         [
           tplTs,
           "",
@@ -276,11 +277,12 @@ function apiGetActiveProjects() {
   try {
     const ss = getWasbSpreadsheet_();
     const wasMissing = !ss.getSheetByName("Проєкти");
-    if (wasMissing) ProjectRequests_.ensureProjectsSheet_(ss);
     const projects = ProjectRequests_.readProjects_(ss);
     return okResponse_(
-      { projects, createdProjectsSheet: wasMissing },
-      wasMissing ? 'Створено аркуш "Проєкти". Заповни його і повтори.' : "OK",
+      { projects, projectsSheetMissing: wasMissing },
+      wasMissing
+        ? 'Аркуш "Проєкти" відсутній. Попросіть адміністратора виконати repair.'
+        : "OK",
       {
         function: "apiGetActiveProjects",
       },
@@ -301,6 +303,7 @@ function apiGetActiveProjects() {
 function apiSubmitRequest(payload) {
   const started = Date.now();
   try {
+    _stage7AssertRole_("viewer", "submit project request");
     const size = ProjectRequests_.assertPayloadSize_(payload);
     const data = payload && typeof payload === "object" ? payload : {};
     const projectId = ProjectRequests_.normalizeText_(data.projectId, 80);
@@ -325,7 +328,12 @@ function apiSubmitRequest(payload) {
     }
 
     const ss = getWasbSpreadsheet_();
-    const sheet = ProjectRequests_.ensureRequestsSheet_(ss);
+    const sheet = ss.getSheetByName("Заявки");
+    if (!sheet) {
+      throw new Error(
+        'Аркуш "Заявки" відсутній. Попросіть адміністратора виконати repair.',
+      );
+    }
 
     const dedupeKey = ProjectRequests_.computeDedupeKey_(
       userEmail,

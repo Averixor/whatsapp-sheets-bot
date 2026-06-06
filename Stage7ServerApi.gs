@@ -93,40 +93,41 @@ function apiStage7GetAccessDescriptorLite() {
   );
 }
 
-/**
- * Гарантує наявність optional бізнес-аркушів «Дані» / «Проєкти» / «Заявки»: вставляє аркуші,
- * якщо їх немає, і лише для повністю порожніх аркушів заповнює заголовки, шаблонний рядок і базове оформлення
- * (див. `MonthlyReport_.ensureDataSheet_`, `ProjectRequests_.ensureProjectsSheet_`, `ensureRequestsSheet_`).
- * Без падіння UI: недостатні права або помилки — ігноруємо (`Logger` при наявності).
- */
-function _ensureOptionalBusinessSheetsQuiet_() {
-  try {
-    var ss = getWasbSpreadsheet_();
-    if (
-      typeof ProjectRequests_ !== "undefined" &&
-      ProjectRequests_ &&
-      typeof ProjectRequests_.ensureProjectsSheet_ === "function"
-    ) {
-      ProjectRequests_.ensureProjectsSheet_(ss);
-      ProjectRequests_.ensureRequestsSheet_(ss);
-    }
-    if (
-      typeof MonthlyReport_ !== "undefined" &&
-      MonthlyReport_ &&
-      typeof MonthlyReport_.ensureDataSheet_ === "function"
-    ) {
-      MonthlyReport_.ensureDataSheet_(ss);
-    }
-  } catch (_e) {
+function _repairOptionalBusinessSheets_() {
+  var ss = getWasbSpreadsheet_();
+  var results = [];
+  var warnings = [];
+
+  function ensureOne_(name, ensureFn) {
     try {
-      if (typeof Logger !== "undefined" && Logger.log) {
-        Logger.log(
-          "_ensureOptionalBusinessSheetsQuiet_: " +
-            String(_e && _e.message ? _e.message : _e),
-        );
-      }
-    } catch (_) {}
+      var sheet = ensureFn();
+      results.push({
+        name: name,
+        success: true,
+        sheet: sheet && sheet.getName ? sheet.getName() : name,
+      });
+    } catch (e) {
+      var message = e && e.message ? e.message : String(e);
+      results.push({ name: name, success: false, error: message });
+      warnings.push(name + ": " + message);
+    }
   }
+
+  ensureOne_("Проєкти", function () {
+    return ProjectRequests_.ensureProjectsSheet_(ss);
+  });
+  ensureOne_("Заявки", function () {
+    return ProjectRequests_.ensureRequestsSheet_(ss);
+  });
+  ensureOne_("Дані", function () {
+    return MonthlyReport_.ensureDataSheet_(ss);
+  });
+
+  return {
+    success: warnings.length === 0,
+    sheets: results,
+    warnings: warnings,
+  };
 }
 
 function apiStage7BootstrapSidebar() {
@@ -141,8 +142,6 @@ function apiStage7BootstrapSidebar() {
           knownUser: false,
           reasonString: "AccessControl_ недоступний",
         };
-
-  _ensureOptionalBusinessSheetsQuiet_();
 
   const ss = getWasbSpreadsheet_();
   const months = ss
@@ -217,6 +216,9 @@ function apiStage7BootstrapSidebar() {
       personnelCallsigns: personnelCallsigns,
       commanderRole: commanderRole,
       commanderRecipients: commanderRecipients,
+      businessSheets: ["Дані", "Проєкти", "Заявки"].map(function (name) {
+        return { name: name, exists: !!ss.getSheetByName(name) };
+      }),
     },
     warnings,
     { affectedSheets: months.concat([CONFIG.PERSONNEL_SHEET || "PERSONNEL"]) },

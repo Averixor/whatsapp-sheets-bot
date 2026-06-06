@@ -577,10 +577,10 @@ function _ssBuildDictSchema_() {
     dataStartRow: 2,
     required: true,
     fields: _ssFreeze_({
-      code:    _ssFreeze_({ col: 1, type: 'string', required: true,  allowBlank: false, label: 'Code' }),
-      service: _ssFreeze_({ col: 2, type: 'string', required: false, allowBlank: true,  label: 'Service Type' }),
-      place:   _ssFreeze_({ col: 3, type: 'string', required: false, allowBlank: true,  label: 'Location' }),
-      tasks:   _ssFreeze_({ col: 4, type: 'string', required: false, allowBlank: true,  label: 'Task' })
+      code:    _ssFreeze_({ col: 1, type: 'string', required: true,  allowBlank: false, label: 'Код' }),
+      service: _ssFreeze_({ col: 2, type: 'string', required: false, allowBlank: true,  label: 'Вид служби' }),
+      place:   _ssFreeze_({ col: 3, type: 'string', required: false, allowBlank: true,  label: 'Місце' }),
+      tasks:   _ssFreeze_({ col: 4, type: 'string', required: false, allowBlank: true,  label: 'Завдання' })
     }),
 
     headerAliases: _ssFreeze_({
@@ -608,9 +608,9 @@ function _ssBuildDictSumSchema_() {
     dataStartRow: 2,
     required: true,
     fields: _ssFreeze_({
-      code:     _ssFreeze_({ col: 1, type: 'string', required: true,  allowBlank: false, label: 'Code' }),
-      label:    _ssFreeze_({ col: 2, type: 'string', required: false, allowBlank: true,  label: 'Name' }),
-      order:    _ssFreeze_({ col: 3, type: 'number|string', required: true, allowBlank: false, label: 'Queue' })
+      code:     _ssFreeze_({ col: 1, type: 'string', required: true,  allowBlank: false, label: 'Код' }),
+      label:    _ssFreeze_({ col: 2, type: 'string', required: false, allowBlank: true,  label: 'Назва' }),
+      order:    _ssFreeze_({ col: 3, type: 'number|string', required: true, allowBlank: false, label: 'Порядок' })
     }),
 
     headerAliases: _ssFreeze_({
@@ -671,7 +671,7 @@ function _ssBuildVacationsSchema_() {
     fields: _ssFreeze_({
       fml:        _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('NAME_COL', 1), 1), type: 'string', required: true,  allowBlank: false, label: 'FML' }),
       startDate:  _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('START_COL', 2), 2), type: 'date|string', required: true, allowBlank: false, label: 'Start date' }),
-      endDate:    _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('END_COL', 3), 3), type: 'date|string', required: true, allowBlank: false, label: 'End Date' }),
+      endDate:    _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('END_COL', 3), 3), type: 'date|string', required: true, allowBlank: false, label: 'End date' }),
       vacationNo: _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('NUM_COL', 4), 4), type: 'string', required: false, allowBlank: true, label: 'Vacation №' }),
       active:     _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('ACTIVE_COL', 5), 5), type: 'boolean|string', required: false, allowBlank: true, label: 'Active' }),
       notify:     _ssFreeze_({ col: _ssParseNumber_(_ssVacationConfigValue_('NOTIFY_COL', 6), 6), type: 'boolean|string', required: false, allowBlank: true, label: 'Notify' })

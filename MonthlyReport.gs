@@ -97,7 +97,7 @@ const MonthlyReport_ = (function () {
       ];
 
       sh.getRange(1, 1, 1, colCount).setValues([hdr]);
-      sh.getRange(2, 1, 2, colCount).setValues([dataRow]);
+      sh.getRange(2, 1, 1, colCount).setValues([dataRow]);
       sh.getRange(2, colCount).setWrap(true);
 
       try {
@@ -113,7 +113,7 @@ const MonthlyReport_ = (function () {
         sh.autoResizeColumns(1, colCount);
       } catch (_) {}
       try {
-        sh.getRange(2, 1, 2, 1).setNumberFormat("dd.mm.yyyy");
+        sh.getRange(2, 1, 1, 1).setNumberFormat("dd.mm.yyyy");
       } catch (_) {}
     }
 

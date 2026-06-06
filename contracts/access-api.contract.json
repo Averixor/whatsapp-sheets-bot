@@ -10,7 +10,11 @@
     "apiStage7LoginByIdentifierAndCallsign",
     "apiStage7ListBindableCallsigns",
     "apiStage7ReportAccessViolation",
-    "apiStage7ReportClientAccessSignal"
+    "apiStage7ReportClientAccessSignal",
+    "apiGetActiveProjects",
+    "apiSubmitRequest",
+    "apiStage7RepairSystemSheets",
+    "apiStage7NormalizeAllSheetHeadersToEnglish"
   ],
   "deprecatedEndpoints": [
     {
@@ -34,7 +38,26 @@
       "file": "Stage7ServerApi.gs",
       "bucket": "application",
       "rolePolicy": { "guestAllowed": true },
-      "clientMethods": ["Stage7Api.bootstrapSidebar"]
+      "clientMethods": ["Stage7Api.bootstrapSidebar"],
+      "forbiddenServerMarkers": [
+        "_repairOptionalBusinessSheets_",
+        "_ensureOptionalBusinessSheetsQuiet_",
+        "ensureAllSystemSheets_"
+      ]
+    },
+    {
+      "name": "apiGetActiveProjects",
+      "file": "ProjectRequests.gs",
+      "bucket": "application",
+      "rolePolicy": { "guestAllowed": true },
+      "forbiddenServerMarkers": ["ensureProjectsSheet_", "insertSheet"]
+    },
+    {
+      "name": "apiSubmitRequest",
+      "file": "ProjectRequests.gs",
+      "bucket": "application",
+      "rolePolicy": { "guestAllowed": false, "minRole": "viewer" },
+      "serverGuard": "_stage7AssertRole_(\"viewer\""
     },
     {
       "name": "apiStage7ReportClientAccessSignal",
@@ -121,6 +144,27 @@
       "bucket": "maintenance",
       "rolePolicy": { "guestAllowed": false, "minRole": "sysadmin" },
       "serverGuard": "_stage7AssertRole_(\"sysadmin\""
+    },
+    {
+      "name": "apiStage7RepairSystemSheets",
+      "file": "Stage7MaintenanceApi.gs",
+      "bucket": "maintenance",
+      "rolePolicy": { "guestAllowed": false, "minRole": "admin" },
+      "serverGuard": "_stage7AssertRole_(\"admin\""
+    },
+    {
+      "name": "apiStage7NormalizeAllSheetHeadersToEnglish",
+      "file": "SheetHeadersEnglishMigration.gs",
+      "bucket": "maintenance",
+      "rolePolicy": { "guestAllowed": false, "minRole": "sysadmin" },
+      "serverGuard": "_stage7AssertRole_(\"sysadmin\"",
+      "guardedFunctions": [
+        {
+          "file": "SheetHeadersEnglishMigration.gs",
+          "name": "wasbNormalizeAllSheetHeadersToEnglish",
+          "serverGuard": "_stage7AssertRole_(\"sysadmin\""
+        }
+      ]
     }
   ],
   "clientSignalPolicy": {
@@ -138,13 +182,17 @@
       "apiStage7ListBindableCallsigns",
       "apiStage7ReportClientAccessSignal",
       "apiStage7GetAccessDescriptorLite",
-      "apiStage7BootstrapSidebar"
+      "apiStage7BootstrapSidebar",
+      "apiGetActiveProjects"
     ],
     "guestDenied": [
       "apiStage7ReportAccessViolation",
       "apiStage7BootstrapAccessSheet",
       "apiStage7NormalizeAccessSheetFormatting",
-      "apiStage7ApplyProtections"
+      "apiStage7ApplyProtections",
+      "apiSubmitRequest",
+      "apiStage7RepairSystemSheets",
+      "apiStage7NormalizeAllSheetHeadersToEnglish"
     ],
     "rolesInheritGuestAllowed": ["viewer", "operator", "admin"]
   }

@@ -1,7 +1,7 @@
 /**
  * Templates.gs — шаблонизатор + доступ к листу TEMPLATES + универсальная сборка WA-ссылки
  *
- * Лист TEMPLATES: A=KEY, B=TEXT, C=ENABLED(checkbox), D=TAGS HINTS, E=NOTE
+ * Лист TEMPLATES: A=KEY, B=TEXT, C=ENABLED(checkbox), D=TAGS_HINT, E=NOTE
  */
 
 const TEMPLATES_SHEET_NAME = 'TEMPLATES';

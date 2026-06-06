@@ -141,6 +141,24 @@ function main() {
       }
     }
 
+    for (const marker of endpoint.forbiddenServerMarkers || []) {
+      const body = extractFunctionBody(file, name);
+      if (body.includes(marker)) {
+        errors.push(`${name} contains forbidden server marker: ${marker}`);
+      }
+    }
+
+    for (const guarded of endpoint.guardedFunctions || []) {
+      const guardedBody = extractFunctionBody(guarded.file, guarded.name);
+      if (!guardedBody) {
+        errors.push(`${name} guarded function missing: ${guarded.name}`);
+      } else if (!guardedBody.includes(guarded.serverGuard)) {
+        errors.push(
+          `${name} guarded function ${guarded.name} missing server guard marker: ${guarded.serverGuard}`,
+        );
+      }
+    }
+
     for (const clientMethod of endpoint.clientMethods || []) {
       if (!clientMethodUsesApiRun(clientText, clientMethod, name)) {
         errors.push(`${clientMethod} must Api.run('${name}') in ${contract.clientApiFile}`);

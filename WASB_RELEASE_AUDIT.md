@@ -3,8 +3,8 @@
 **Проєкт:** whatsapp-sheets-bot / WASB
 **Версія:** Stage 7.1 (maintenance baseline)
 **Платформа:** Google Apps Script V8 + Google Sheets + HtmlService
-**Дата оновлення статусу:** 2026-05-17
-**Стан репозиторію:** `main`, CI зелений (95 `.gs`, 1045 defs, 86 bound refs, 0 missing) — перевірено `node scripts/audit-function-graph.mjs`
+**Дата оновлення статусу:** 2026-06-06
+**Стан репозиторію:** `main`, локальні security-hardening зміни не закомічені; CI зелений (112 `.gs`, 1052 defs, 81 bound refs, 0 missing)
 
 ---
 
@@ -31,9 +31,9 @@
 
 | Метрика           | Значення                                                          |
 | ----------------- | ----------------------------------------------------------------- |
-| `.gs` файлів      | 95                                                                |
-| Top-level функцій | ~1045                                                             |
-| Bound entrypoints | 86 (0 missing)                                                    |
+| `.gs` файлів      | 112                                                               |
+| Top-level функцій | 1052                                                              |
+| Bound entrypoints | 81 (0 missing)                                                    |
 | Найбільші модулі  | `Stage7TestRunner`, `UseCases`, `SmokeTests`, `AccessEnforcement` |
 | `SheetSchemas.gs` | ~597 рядків (після revert випадкового mass-format)                |
 
@@ -72,7 +72,11 @@ Resolver: `DataAccess.gs` → `openById` або container spreadsheet.
 - Ролі: `guest` … `owner`, server-side enforcement (`AccessEnforcement.gs`)
 - Self-bind: email/phone + callsign, lockout
 - Redaction: `SecurityRedaction.gs`
-- Execution API: `MYSELF`
+- Execution API: `ANYONE`; доступ обмежується обов'язковими server-side role guards усередині API-функцій
+- Guest bootstrap/read API не створюють і не відновлюють аркуші
+- `apiStage7RepairSystemSheets()` — `admin` або вище
+- `apiStage7NormalizeAllSheetHeadersToEnglish()` — `sysadmin` або `owner`
+- `apiSubmitRequest()` — автентифікований користувач із роллю `viewer` або вище
 - Bootstrap-owner: **вимкнено** після налаштування ACCESS
 
 ---
@@ -93,12 +97,11 @@ Resolver: `DataAccess.gs` → `openById` або container spreadsheet.
 - `audit-function-graph.mjs` ✅
 - pre-prod checklist у GitHub Step Summary
 
-**GAS (production validation — PASS):**
+**GAS (production validation — BLOCKED):**
 
-- Project test pack 36/36
-- `apiStage7DebugAccess()` — PASS
-- Regression / access / Stage7 diagnostics — PASS
-- `apiStage7ApplyProtections({ dryRun: false })` — OK
+- `npx clasp push` — PASS, 144 файли pushed 2026-06-06
+- `npm run gas:smoke` — BLOCKED: поточна clasp-авторизація не має дозволу виконати script function
+- Потрібен одноразовий ручний запуск `apiRunProductionSmokeChecks()` власником у Apps Script UI
 
 ---
 
@@ -132,27 +135,27 @@ Resolver: `DataAccess.gs` → `openById` або container spreadsheet.
 
 ## 11. Оцінка готовності до production
 
-| Критерій             | Оцінка     | Коментар                                                               |
-| -------------------- | ---------- | ---------------------------------------------------------------------- |
-| Архітектура          | **8/10**   | Чіткі шари, Stage7 API                                                 |
-| Безпека              | **8.5/10** | RBAC + user key + server enforcement                                   |
-| Код / Git            | **9/10**   | CI зелений, робоче дерево clean, `main` синхронізований                |
-| Деплой GAS           | **9/10**   | `clasp push` виконано, 115 файлів pushed                               |
-| Production config    | **OK**     | `WASB_SPREADSHEET_ID`, `WASB_OWNER_EMAIL`, bridge off                  |
-| ACCESS / RBAC        | **OK**     | owner/admin активний, strict user key mode, lockout off                |
-| Операційна валідація | **PASS**   | project test pack 36/36, regression/access/stage7 diagnostics OK       |
-| Protections          | **OK**     | 9/9 службових листів захищено                                          |
-| Envelope dryRun      | **FIXED**  | `data.result.dryRun`, `data.meta.dryRun`, top-level `dryRun` узгоджені |
+| Критерій             | Оцінка      | Коментар                                                               |
+| -------------------- | ----------- | ---------------------------------------------------------------------- |
+| Архітектура          | **8/10**    | Чіткі шари, Stage7 API                                                 |
+| Безпека              | **8.5/10**  | RBAC + user key + server enforcement                                   |
+| Код / Git            | **PENDING** | CI зелений; локальні зміни не закомічені, GitHub `main` не оновлений   |
+| Деплой GAS           | **9/10**    | `clasp push` виконано, 144 файли pushed                                |
+| Production config    | **OK**      | `WASB_SPREADSHEET_ID`, `WASB_OWNER_EMAIL`, bridge off                  |
+| ACCESS / RBAC        | **OK**      | owner/admin активний, strict user key mode, lockout off                |
+| Операційна валідація | **BLOCKED** | Локальні перевірки PASS; production smoke заблокований авторизацією    |
+| Protections          | **OK**      | 9/9 службових листів захищено                                          |
+| Envelope dryRun      | **FIXED**   | `data.result.dryRun`, `data.meta.dryRun`, top-level `dryRun` узгоджені |
 
-### Загалом: **production release CLOSED**
+### Загалом: **HOTFIX DEPLOYED / SMOKE BLOCKED**
 
-Код, GitHub, GAS, ACCESS, diagnostics, protections і envelope-response узгоджені.
+Локальний security-hardening код і GAS узгоджені. Production release ще не закритий: потрібні успішний production smoke, commit локальних змін і push у GitHub `main`.
 
 ---
 
-## 12. Pre-prod checklist — виконано
+## 12. Pre-prod checklist — closure pending
 
-Усі колишні BLOCKER-пункти закриті:
+Локальні security-hardening і deploy-пункти виконані:
 
 - [x] `WASB_SPREADSHEET_ID` у Script Properties
 - [x] `WASB_OWNER_EMAIL` у Script Properties
@@ -165,24 +168,28 @@ Resolver: `DataAccess.gs` → `openById` або container spreadsheet.
 - [x] `apiRunStage7RegressionTests()` / project test pack — PASS
 - [x] `apiStage7ApplyProtections({ dryRun: true })` — переглянуто
 - [x] `apiStage7ApplyProtections({ dryRun: false })` — застосовано
-- [x] GAS синхронізовано з Git після revert `SheetSchemas` + envelope fix
+- [x] GAS синхронізовано з локальним security-hardening кодом
 - [x] `npm run ci` локально — PASS
+- [ ] Власник один раз вручну запускає `apiRunProductionSmokeChecks()` в Apps Script UI
+- [ ] `npm run gas:smoke` — зараз заблоковано дозволом Apps Script
+- [ ] Локальні зміни закомічено
+- [ ] Commit запушено в GitHub `main`
 
 ---
 
 ## 13. Фінальний статус релізу
 
 ```text
-WASB production release — CLOSED
-Git working tree — CLEAN
-GitHub main — UP TO DATE
+WASB production release — HOTFIX DEPLOYED, SMOKE BLOCKED
+Git working tree — LOCAL CHANGES
+GitHub main — NOT UPDATED
 GAS — PUSHED
 CI local — PASS
 Function graph audit — PASS
-Project test pack — PASS
-Access diagnostics — PASS
-Protections apply — OK
-dryRun/meta mismatch — FIXED
+Workbook regression 06 — PASS, personnel=29
+Access API governance — PASS, 17/17 policies
+Production smoke — BLOCKED BY APPS SCRIPT AUTHORIZATION
+Final verdict — NOT CLOSED YET
 ```
 
 ### Підтверджено
@@ -200,9 +207,36 @@ data.meta.dryRun: false
 top-level dryRun: false
 ```
 
-### Вердикт: **GO / CLOSED**
+### Вердикт: **NOT CLOSED YET**
 
-Реліз production завершено. Пункти з розділу 9 — post-release backlog, не блокери.
+Local code security-hardening виконано. Локальний CI зелений. Workbook regression для компактного листа `06` підтверджує правильний підрахунок: 29 осіб, footer-рядки не рахуються. GAS код завантажено через `npx clasp push`.
+
+Production release не можна закрити як `CLOSED`, доки:
+
+1. Власник один раз вручну не запустить `apiRunProductionSmokeChecks()` в Apps Script UI.
+2. `npm run gas:smoke` не пройде успішно.
+3. Локальні зміни не будуть закомічені й запушені в GitHub `main`.
+
+Після ручного запуску smoke в Apps Script:
+
+```bash
+cd ~/git/whatsapp-sheets-bot
+
+npm run gas:smoke
+npm run ci
+git diff --check
+git status
+```
+
+Якщо все зелене:
+
+```bash
+git add .
+git commit -m "7.1-security-hardening"
+git push origin main
+```
+
+Тільки після цього фінальний статус можна змінити на `WASB production release — CLOSED`.
 
 ### Пост-релізні задачі
 
