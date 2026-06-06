@@ -51,6 +51,10 @@
         personnelCallsigns: Array.isArray(result.personnelCallsigns)
           ? result.personnelCallsigns
           : [],
+        commanderRole: String(result.commanderRole || '').trim(),
+        commanderRecipients: Array.isArray(result.commanderRecipients)
+          ? result.commanderRecipients
+          : [],
         warnings: Array.isArray(response?.warnings) ? response.warnings : [],
         context: response?.context || null,
         meta: unwrapStage4Meta(response),
@@ -176,8 +180,12 @@
       }, result || {});
     },
 
-    async checkVacationsAndBirthdays(dateStr = '') {
-      const response = await Api.run('apiCheckVacationsAndBirthdays', dateStr || '');
+    async checkVacationsAndBirthdays(dateOrOptions = '') {
+      const options =
+        dateOrOptions && typeof dateOrOptions === 'object'
+          ? Object.assign({}, dateOrOptions)
+          : { date: dateOrOptions || '' };
+      const response = await Api.run('apiCheckVacationsAndBirthdays', options);
       const result = unwrapStage4Result(response) || {};
       return {
         success: !!response?.success,

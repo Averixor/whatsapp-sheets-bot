@@ -429,6 +429,66 @@ function findPhone_(query, options) {
   return "";
 }
 
+function resolveMessageRecipient_(options) {
+  var input =
+    options && typeof options === "object" ? Object.assign({}, options) : {};
+  var override =
+    input.recipientOverride && typeof input.recipientOverride === "object"
+      ? input.recipientOverride
+      : {};
+  var explicitPhone = String(
+    override.phone || input.recipientPhone || input.phone || "",
+  ).trim();
+  var selected = String(
+    override.callsign ||
+      override.role ||
+      input.recipientCallsign ||
+      input.recipientRole ||
+      input.commanderRole ||
+      "",
+  ).trim();
+  var fallbackRole = String(
+    input.fallbackRole ||
+      (typeof CONFIG !== "undefined" && CONFIG && CONFIG.COMMANDER_ROLE
+        ? CONFIG.COMMANDER_ROLE
+        : "ГРАФ"),
+  ).trim();
+  var phone = "";
+  var source = "";
+
+  if (explicitPhone) {
+    phone =
+      typeof normalizePhone_ === "function"
+        ? normalizePhone_(explicitPhone)
+        : String(explicitPhone).replace(/\D/g, "");
+    if (!phone) {
+      throw new Error("Некоректний номер отримувача.");
+    }
+    source = "override_phone";
+  } else {
+    var lookup = selected || fallbackRole;
+    phone =
+      typeof findPhone_ === "function"
+        ? findPhone_({ callsign: lookup, role: lookup, fml: lookup })
+        : "";
+    if (!phone) {
+      throw new Error(
+        'Телефон для отримувача "' + String(lookup || "—") + '" не знайдено.',
+      );
+    }
+    selected = lookup;
+    source = selected === fallbackRole ? "commander_fallback" : "selected";
+  }
+
+  return {
+    mode: String(input.recipientMode || (explicitPhone ? "manual" : "selected")),
+    phone: phone,
+    callsign: selected,
+    role: selected,
+    source: source,
+  };
+}
+
 function loadDictMap_() {
   var ss = getWasbSpreadsheet_();
   var sheetName =
@@ -819,11 +879,7 @@ function buildPayloadForCell_(
 
   var link = "";
   if (phone) {
-    link =
-      "https://wa.me/" +
-      String(phone).replace(/[^\d]/g, "") +
-      "?text=" +
-      encodeURIComponent(safeMessage);
+    link = buildWhatsAppWebLink_(phone, safeMessage);
   }
 
   return {

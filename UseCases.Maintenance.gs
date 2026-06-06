@@ -39,8 +39,8 @@ var UseCasesMaintenance_ = (function () {
       execute: function (input) {
         const targetDate =
           DateUtils_.parseUaDate(input.dateStr || input.date) || new Date();
-        const vacations = runVacationEngine_(targetDate) || {};
-        const birthdays = runBirthdayEngine_(targetDate) || {};
+        const vacations = runVacationEngine_(targetDate, input) || {};
+        const birthdays = runBirthdayEngine_(targetDate, input) || {};
         return {
           success: true,
           message: "Перевірку відпусток виконано",

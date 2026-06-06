@@ -72,7 +72,15 @@
     panelRefreshInProgress: false,
     lastNonEmptyPanelData: [],
     lastPanelDataUpdatedAt: 0,
-    access: { role: 'guest', isAdmin: false, knownUser: false, reason: 'Завантаження режиму доступу…', source: '' }
+    access: { role: 'guest', isAdmin: false, knownUser: false, reason: 'Завантаження режиму доступу…', source: '' },
+    commanderRole: (function () {
+      try {
+        return String(localStorage.getItem('wasb.commanderRole') || '').trim();
+      } catch (_) {
+        return '';
+      }
+    })(),
+    commanderRecipients: []
   };
 
   // =========================
@@ -112,7 +120,7 @@
   // =========================
   // COMMON HELPERS
   // =========================
-  
+
   function escapeHtml(value) {
     if (value === null || value === undefined) return '';
     return String(value)
@@ -319,6 +327,41 @@
     var args = Array.prototype.slice.call(arguments, 1);
     return _apiTransport_(fnName, args, "gsRun-bridge");
   };
+
+  function withPromiseTimeout_(promise, ms, label) {
+    var timeoutMs = Math.max(1000, Number(ms) || 15000);
+    var name = String(label || "operation");
+    return new Promise(function (resolve, reject) {
+      var settled = false;
+      var timer = setTimeout(function () {
+        if (settled) return;
+        settled = true;
+        reject(
+          new Error(
+            name +
+              " не відповів за " +
+              Math.round(timeoutMs / 1000) +
+              " с",
+          ),
+        );
+      }, timeoutMs);
+
+      Promise.resolve(promise).then(
+        function (value) {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          resolve(value);
+        },
+        function (err) {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          reject(err);
+        },
+      );
+    });
+  }
 
   var Api = {
     run(method, ...args) {

@@ -134,7 +134,7 @@ const SelectionActionService_ = (function() {
     }
 
     const digits = String(phone || first.phone || '').replace(/[^\d]/g, '');
-    const link = digits ? 'https://wa.me/' + digits + '?text=' + encodeURIComponent(message) : '';
+    const link = digits ? buildWhatsAppWebLink_(digits, message) : '';
 
     return [Object.assign({}, first, {
       phone: phone || first.phone || '',
@@ -251,11 +251,17 @@ const SelectionActionService_ = (function() {
     }
 
     const dateStr = opts.date || _getDateForActiveColumn(ctx.sheet, col);
-    return SummaryService_.buildCommanderPreview(dateStr);
+    return SummaryService_.buildCommanderPreview(
+      Object.assign({}, opts, { date: dateStr }),
+    );
   }
 
   function prepareCommanderSummaryLink(options) {
-    return SummaryService_.buildCommanderLink((prepareCommanderSummaryPreview(options || {})).date);
+    const opts = options || {};
+    const prepared = prepareCommanderSummaryPreview(opts);
+    return SummaryService_.buildCommanderLink(
+      Object.assign({}, opts, { date: prepared.date }),
+    );
   }
 
   function logPayloads(payloads) {

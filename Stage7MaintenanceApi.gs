@@ -68,12 +68,17 @@ function _stage7BuildMaintenanceResponse_(
 }
 
 function _stage7AssertRole_(requiredRole, actionLabel) {
-  return typeof AccessControl_ === "object"
-    ? AccessControl_.assertRoleAtLeast(
-        requiredRole || "admin",
-        actionLabel || "maintenance action",
-      )
-    : { role: requiredRole || "admin", source: "fallback" };
+  if (
+    typeof AccessControl_ !== "object" ||
+    !AccessControl_ ||
+    typeof AccessControl_.assertRoleAtLeast !== "function"
+  ) {
+    throw new Error("AccessControl_ недоступний: доступ заборонено");
+  }
+  return AccessControl_.assertRoleAtLeast(
+    requiredRole || "admin",
+    actionLabel || "maintenance action",
+  );
 }
 
 function _stage7AssertAdminAccess_(actionLabel) {
@@ -143,6 +148,56 @@ function apiStage7BootstrapAccessSheet() {
         ]
       : [],
     { affectedSheets: [appGetCore("ACCESS_SHEET", "ACCESS")] },
+  );
+}
+
+function apiStage7RepairSystemSheets() {
+  _stage7AssertRole_("admin", "repair system sheets");
+
+  const systemSheets =
+    typeof ensureAllSystemSheets_ === "function" ? ensureAllSystemSheets_() : [];
+  const businessSheets =
+    typeof _repairOptionalBusinessSheets_ === "function"
+      ? _repairOptionalBusinessSheets_()
+      : {
+          success: false,
+          sheets: [],
+          warnings: ["_repairOptionalBusinessSheets_ недоступна"],
+        };
+  const warnings = [];
+
+  systemSheets.forEach(function (item) {
+    if (item && item.error) {
+      warnings.push(String(item.name || "system sheet") + ": " + item.error);
+    }
+  });
+  (businessSheets.warnings || []).forEach(function (warning) {
+    warnings.push(String(warning));
+  });
+
+  const affectedSheets = systemSheets
+    .map(function (item) {
+      return item && item.name ? String(item.name) : "";
+    })
+    .concat(
+      (businessSheets.sheets || []).map(function (item) {
+        return item && item.name ? String(item.name) : "";
+      }),
+    )
+    .filter(Boolean);
+
+  return _stage7BuildMaintenanceResponse_(
+    warnings.length === 0 && businessSheets.success !== false,
+    warnings.length
+      ? "Відновлення аркушів завершено з попередженнями"
+      : "Системні та бізнес-аркуші перевірено",
+    {
+      systemSheets: systemSheets,
+      businessSheets: businessSheets,
+    },
+    "stage7RepairSystemSheets",
+    warnings,
+    { affectedSheets: affectedSheets },
   );
 }
 

@@ -371,9 +371,9 @@
           id="resultSection"
           aria-labelledby="resultTitle"
         >
-          <div class="result-header">
+          <div class="wasb-sticky-header result-header">
             <button
-              class="back-button"
+              class="back-button back-btn"
               type="button"
               onclick="SidebarApp.showMenu()"
               title="Повернутися до меню"
@@ -381,14 +381,17 @@
               <span class="back-icon" aria-hidden="true">↩</span>
               <span>Назад</span>
             </button>
-            <h2 id="resultTitle">Результат</h2>
+            <h2 id="resultTitle" class="screen-title">Результат</h2>
           </div>
           <div
-            class="result-content"
+            class="screen-content result-content"
             id="resultContent"
             aria-live="polite"
           ></div>
-          <div id="personCardContainer" class="wasb-is-hidden"></div>
+          <div
+            id="personCardContainer"
+            class="screen-content wasb-is-hidden"
+          ></div>
         </section>
       </main>
 
@@ -488,7 +491,7 @@
         aria-busy="true"
       >
         <div class="loading-card" role="status" aria-live="assertive">
-          <div class="spinner" aria-hidden="true"></div>
+          <div class="wasb-spinner" aria-hidden="true"></div>
           <div class="loading-text">Завантаження...</div>
         </div>
       </div>

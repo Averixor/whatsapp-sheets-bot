@@ -48,6 +48,8 @@ const PROJECT_STAGE7_CANONICAL_API_MAP_ = Object.freeze({
   application: Object.freeze([
     "apiStage7GetAccessDescriptorLite",
     "apiStage7BootstrapSidebar",
+    "apiGetActiveProjects",
+    "apiSubmitRequest",
     "apiStage7ListPersonnelCallsigns",
     "apiStage7ReportClientAccessSignal",
     "apiStage7GetMonthsList",
@@ -99,6 +101,8 @@ const PROJECT_STAGE7_CANONICAL_API_MAP_ = Object.freeze({
     "apiStage7RegisterAccessWithTemporaryPassword",
     "apiStage7NormalizeAccessSheetFormatting",
     "apiStage7ApplyProtections",
+    "apiStage7RepairSystemSheets",
+    "apiStage7NormalizeAllSheetHeadersToEnglish",
     "apiStage7BootstrapRuntimeAndAlertsSheets",
     "apiStage7BootstrapAccessSheet",
   ]),
@@ -112,6 +116,13 @@ const PROJECT_STAGE7_ACCESS_API_ROLE_POLICY_ = Object.freeze({
   }),
   apiStage7BootstrapSidebar: Object.freeze({
     guestAllowed: true,
+  }),
+  apiGetActiveProjects: Object.freeze({
+    guestAllowed: true,
+  }),
+  apiSubmitRequest: Object.freeze({
+    guestAllowed: false,
+    minRole: "viewer",
   }),
   apiStage7ReportClientAccessSignal: Object.freeze({
     guestAllowed: true,
@@ -147,6 +158,14 @@ const PROJECT_STAGE7_ACCESS_API_ROLE_POLICY_ = Object.freeze({
     minRole: "admin",
   }),
   apiStage7ApplyProtections: Object.freeze({
+    guestAllowed: false,
+    minRole: "sysadmin",
+  }),
+  apiStage7RepairSystemSheets: Object.freeze({
+    guestAllowed: false,
+    minRole: "admin",
+  }),
+  apiStage7NormalizeAllSheetHeadersToEnglish: Object.freeze({
     guestAllowed: false,
     minRole: "sysadmin",
   }),

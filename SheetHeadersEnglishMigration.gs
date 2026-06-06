@@ -1,5 +1,6 @@
 /** SheetHeadersEnglishMigration.gs — one-shot migration of existing workbook headers to English. */
 function wasbNormalizeAllSheetHeadersToEnglish() {
+  _stage7AssertRole_("sysadmin", "normalize all sheet headers to English");
   var ss = getWasbSpreadsheet_();
   var report = { ok: true, changedSheets: [], skippedSheets: [], errors: [] };
   function setHeaders(sheet, row, headers) {
@@ -184,6 +185,7 @@ function wasbNormalizeAllSheetHeadersToEnglish() {
   return report;
 }
 function apiStage7NormalizeAllSheetHeadersToEnglish() {
+  _stage7AssertRole_("sysadmin", "normalize all sheet headers to English");
   var result = wasbNormalizeAllSheetHeadersToEnglish();
   return { success: result.ok !== false, message: result.ok !== false ? 'All known sheet headers normalized to English' : 'Header normalization finished with errors', result: result, warnings: result.errors || [] };
 }

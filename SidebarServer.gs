@@ -13,73 +13,169 @@ function showSidebar() {
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
-function sendDaySummaryToCommanderSidebar(dateStr, summaryText) {
+function _resolveCommanderRoleForSidebar_(commanderRole) {
+  var selected = String(commanderRole || '').trim();
+  if (selected) return selected;
+  return String(
+    typeof CONFIG !== 'undefined' && CONFIG && CONFIG.COMMANDER_ROLE
+      ? CONFIG.COMMANDER_ROLE
+      : 'ГРАФ',
+  ).trim();
+}
+
+function _requireSidebarAccessGuard_(guardName, args) {
+  if (
+    typeof AccessEnforcement_ !== 'object' ||
+    !AccessEnforcement_ ||
+    typeof AccessEnforcement_[guardName] !== 'function'
+  ) {
+    throw new Error('Access guard unavailable: ' + guardName);
+  }
+  return AccessEnforcement_[guardName].apply(AccessEnforcement_, args || []);
+}
+
+function getCommanderRecipientOptions_() {
+  var defaultRole = _resolveCommanderRoleForSidebar_('');
+  var seen = Object.create(null);
+  var out = [];
+
+  function add(value) {
+    var key = String(value || '').trim();
+    if (!key || seen[key]) return;
+    seen[key] = true;
+    out.push(key);
+  }
+
+  add(defaultRole);
+
   try {
-    if (typeof AccessEnforcement_ === 'object' && AccessEnforcement_.assertCanUseWorkingActions) {
-      AccessEnforcement_.assertCanUseWorkingActions('sendDaySummaryToCommanderSidebar', { requestedDate: dateStr || '' });
+    var index =
+      typeof loadPhonesIndex_ === 'function' ? loadPhonesIndex_() : null;
+    if (index && Array.isArray(index.items)) {
+      index.items.forEach(function (item) {
+        var cs = String(
+          (item && (item.callsign || item.role)) || '',
+        ).trim();
+        if (cs && item.phone) add(cs);
+      });
     }
+  } catch (_) {}
+
+  try {
+    var list =
+      typeof getPersonnelCallsignsListForUi_ === 'function'
+        ? getPersonnelCallsignsListForUi_()
+        : typeof getPersonnelCallsignsList_ === 'function'
+          ? getPersonnelCallsignsList_()
+          : [];
+    if (Array.isArray(list)) {
+      list.forEach(add);
+    }
+  } catch (_) {}
+
+  return out;
+}
+
+function sendDaySummaryToCommanderSidebar(dateStr, summaryText, commanderRole) {
+  try {
+    _requireSidebarAccessGuard_('assertCanUseWorkingActions', [
+      'sendDaySummaryToCommanderSidebar',
+      { requestedDate: dateStr || '' },
+    ]);
     if (!summaryText) {
       throw new Error('Немає тексту зведення');
     }
 
-    const phone = findPhone_({ role: CONFIG.COMMANDER_ROLE });
-    if (!phone) {
-      throw new Error(`Телефон для ролі "${CONFIG.COMMANDER_ROLE}" не знайдено в PHONES`);
-    }
+    var recipient = resolveMessageRecipient_({ recipientRole: commanderRole });
+    var selectedRole = recipient.role;
+    const phone = recipient.phone;
 
     const safe = trimToEncoded_(summaryText, CONFIG.MAX_WA_TEXT);
-    const link = `https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(safe)}`;
+    const link = buildWhatsAppWebLink_(phone, safe);
 
     writeLogsBatch_([{
       timestamp: new Date(),
       reportDateStr: dateStr || '',
       sheet: 'COMMANDER',
       cell: 'SUMMARY',
-      fml: `Командир (${CONFIG.COMMANDER_ROLE})`,
+      fml: `Командир (${selectedRole})`,
       phone: phone,
       code: 'SUMMARY',
       message: String(summaryText).substring(0, 100) + '...',
       link: link
     }]);
 
-    return okResponse_({ link: link }, 'Зведення для командира підготовлено', { function: 'sendDaySummaryToCommanderSidebar' });
+    return okResponse_(
+      { link: link, commanderRole: selectedRole, recipient: recipient },
+      'Зведення для командира підготовлено',
+      { function: 'sendDaySummaryToCommanderSidebar' },
+    );
   } catch (e) {
     return errorResponse_(e, { function: 'sendDaySummaryToCommanderSidebar' });
   }
 }
 
-function sendDetailedToCommanderSidebar(dateStr, detailedText) {
+function sendDetailedToCommanderSidebar(dateStr, detailedText, commanderRole) {
   try {
-    if (typeof AccessEnforcement_ === 'object' && AccessEnforcement_.assertCanUseDetailedSummary) {
-      AccessEnforcement_.assertCanUseDetailedSummary(dateStr || '');
-    }
+    _requireSidebarAccessGuard_('assertCanUseDetailedSummary', [dateStr || '']);
     if (!detailedText) {
       throw new Error('Немає тексту детального зведення');
     }
 
-    const phone = findPhone_({ role: CONFIG.COMMANDER_ROLE });
-    if (!phone) {
-      throw new Error(`Телефон для ролі "${CONFIG.COMMANDER_ROLE}" не знайдено в PHONES`);
-    }
+    var recipient = resolveMessageRecipient_({ recipientRole: commanderRole });
+    var selectedRole = recipient.role;
+    const phone = recipient.phone;
 
     const safe = trimToEncoded_(detailedText, CONFIG.MAX_WA_TEXT);
-    const link = `https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(safe)}`;
+    const link = buildWhatsAppWebLink_(phone, safe);
 
     writeLogsBatch_([{
       timestamp: new Date(),
       reportDateStr: dateStr || '',
       sheet: 'COMMANDER',
       cell: 'DETAILED',
-      fml: `Командир (${CONFIG.COMMANDER_ROLE})`,
+      fml: `Командир (${selectedRole})`,
       phone: phone,
       code: 'DETAILED',
       message: String(detailedText).substring(0, 100) + '...',
       link: link
     }]);
 
-    return okResponse_({ link: link }, 'Детальне зведення для командира підготовлено', { function: 'sendDetailedToCommanderSidebar' });
+    return okResponse_(
+      { link: link, commanderRole: selectedRole, recipient: recipient },
+      'Детальне зведення для командира підготовлено',
+      { function: 'sendDetailedToCommanderSidebar' },
+    );
   } catch (e) {
     return errorResponse_(e, { function: 'sendDetailedToCommanderSidebar' });
+  }
+}
+
+function prepareMessageToRecipientSidebar(message, recipientOptions) {
+  try {
+    _requireSidebarAccessGuard_('assertCanUseWorkingActions', [
+      'prepareMessageToRecipientSidebar',
+      {
+        recipientMode: String(
+          (recipientOptions && recipientOptions.recipientMode) || '',
+        ),
+      },
+    ]);
+    if (!String(message || '').trim()) {
+      throw new Error('Немає тексту повідомлення');
+    }
+
+    var recipient = resolveMessageRecipient_(recipientOptions || {});
+    var safe = trimToEncoded_(message, CONFIG.MAX_WA_TEXT);
+    var link = buildWhatsAppWebLink_(recipient.phone, safe);
+
+    return okResponse_(
+      { link: link, recipient: recipient },
+      'Повідомлення для отримувача підготовлено',
+      { function: 'prepareMessageToRecipientSidebar' },
+    );
+  } catch (e) {
+    return errorResponse_(e, { function: 'prepareMessageToRecipientSidebar' });
   }
 }
 

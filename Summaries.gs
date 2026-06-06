@@ -338,14 +338,15 @@ function sendDetailedSummaryToCommander() {
     const people = collectPeopleDetailed_(sheet, col);
     const text = formatDetailedSummary_(date, people);
 
-    const phone = findPhone_({ role: CONFIG.COMMANDER_ROLE });
+    const recipient = resolveMessageRecipient_({});
+    const phone = recipient.phone;
     if (!phone) {
       const ui = SpreadsheetApp.getUi();
       ui.alert(
         "✕ Телефон не знайдено",
-        `Для ролі "${CONFIG.COMMANDER_ROLE}" не знайдено телефону.\n\n` +
+        `Для ролі "${recipient.role || CONFIG.COMMANDER_ROLE}" не знайдено телефону.\n\n` +
           `Перевірте:\n` +
-          `1. В аркуші PHONES є запис з роллю "${CONFIG.COMMANDER_ROLE}" в колонці C\n` +
+          `1. В аркуші PHONES є запис з роллю "${recipient.role || CONFIG.COMMANDER_ROLE}" в колонці C\n` +
           `2. В колонці B вказано номер телефону\n` +
           `3. Після додавання даних очистіть кеш`,
         ui.ButtonSet.OK,
@@ -356,7 +357,7 @@ function sendDetailedSummaryToCommander() {
     const safe = trimToEncoded_(text, CONFIG.MAX_WA_TEXT);
     DialogPresenter_.showLinkDialog({
       title: "📊 Детальне → командиру",
-      url: `https://wa.me/${phone.replace("+", "")}?text=${encodeURIComponent(safe)}`,
+      url: buildWhatsAppWebLink_(phone, safe),
       description: "Натисніть, щоб відкрити WhatsApp",
     });
   } catch (e) {

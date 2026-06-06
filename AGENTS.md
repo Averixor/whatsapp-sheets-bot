@@ -44,11 +44,11 @@ After local CI and deploy:
 ```bash
 fish_add_path $HOME/.local/node-v24.16.0/bin   # if Node 22 is default
 npm run ci
-clasp push
+npx clasp push
 npm run gas:smoke
 ```
 
-Or one command: `npm run deploy:prod`
+Or one command: `npm run deploy:prod` (uses `npx clasp` from `package.json`).
 
 **Expectations** (`apiRunProductionSmokeChecks` result):
 
@@ -76,5 +76,6 @@ Or one command: `npm run deploy:prod`
 ### Key gotchas
 
 - The `&&` chain in `npm run ci` may fail under restricted `cmd.exe` on Windows; use individual `node scripts/...` commands as fallback.
-- `clasp push` requires prior `clasp login` and a `.clasp.json` (not committed to the repo for security).
+- `npx clasp push` / `npm run gas push` requires prior `clasp login` and a `.clasp.json` (not committed to the repo for security). Prefer `npx clasp` over a global `clasp` so the version matches `package-lock.json` (`@google/clasp@3.3.0`).
+- **Do not run** `npm audit fix --force` — it toggles `@google/clasp` between 2.x and 3.x without fixing transitive `uuid` advisories and can introduce a **high** clasp CVE on older versions.
 - Script properties (`WASB_SPREADSHEET_ID`, `WASB_OWNER_EMAIL`) must be set in GAS Project Settings for headless/trigger execution.

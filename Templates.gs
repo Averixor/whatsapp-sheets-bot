@@ -1,7 +1,7 @@
 /**
  * Templates.gs — шаблонизатор + доступ к листу TEMPLATES + универсальная сборка WA-ссылки
  *
- * Лист TEMPLATES: A=KEY, B=TEXT, C=ENABLED(checkbox), D=TAGS HINTS, E=NOTE
+ * Лист TEMPLATES: A=KEY, B=TEXT, C=ENABLED(checkbox), D=TAGS_HINT, E=NOTE
  */
 
 const TEMPLATES_SHEET_NAME = 'TEMPLATES';
@@ -119,7 +119,7 @@ function getTemplateText_(templateKey) {
 }
 
 /**
- * Универсальный “чистый код”: берём текст из TEMPLATES и строим wa.me ссылку.
+ * Универсальный “чистый код”: берём текст из TEMPLATES и строим WhatsApp Web ссылку.
  * Возвращает link или null (если шаблон выключен/пустой/нет телефона).
  */
 function notifyWithTemplate_(templateKey, data, targetPhone) {
@@ -151,7 +151,7 @@ function notifyWithTemplate_(templateKey, data, targetPhone) {
       ? trimToEncoded_(message, CONFIG.MAX_WA_TEXT)
       : message;
 
-  return `https://wa.me/${digits}?text=${encodeURIComponent(String(safeMsg))}`;
+  return buildWhatsAppWebLink_(digits, String(safeMsg));
 }
 
 /** Сброс кеша шаблонов (удобно после правок в TEMPLATES) */
@@ -181,7 +181,7 @@ function testNotifyWithTemplate_() {
   console.log('KEY:', key);
   console.log('LINK:', link);
 
-  if (link && link.includes('wa.me/') && link.includes('text=')) {
+  if (link && link.includes('web.whatsapp.com/send') && link.includes('text=')) {
     console.log('✓ OK: WA link built');
   } else {
     console.error('✕ FAIL: WA link not built');

@@ -10,14 +10,11 @@ const PreviewLinkService_ = (function() {
 
   function safeWaLink(url) {
     const u = String(url || '').trim();
-    return /^https?:\/\/wa\.me\//i.test(u) ? u : '#';
+    return /^(https?:\/\/(wa\.me\/|web\.whatsapp\.com\/send))/i.test(u) ? u : '#';
   }
 
   function buildWaLink(phone, text) {
-    const cleanedPhone = String(phone || '').replace(/\D/g, '');
-    if (!cleanedPhone) return '';
-    const body = trimToEncoded_(String(text || ''), CONFIG.MAX_WA_TEXT);
-    return 'https://wa.me/' + cleanedPhone + '?text=' + encodeURIComponent(body);
+    return buildWhatsAppWebLink_(phone, text);
   }
 
   function buildSinglePreview(payload, options) {

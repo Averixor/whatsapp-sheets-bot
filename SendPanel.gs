@@ -520,7 +520,7 @@ function sendAllFromSendPanel() {
     if (status !== getSendPanelReadyStatus_()) continue;
 
     const url = extractHyperlinkUrl_(formulas[i]);
-    if (url && url.startsWith('https://wa.me/')) {
+    if (url && (url.startsWith('https://web.whatsapp.com/send') || url.startsWith('https://wa.me/'))) {
       items.push({
         url: url,
         row: CONFIG.SEND_PANEL_DATA_START_ROW + i,

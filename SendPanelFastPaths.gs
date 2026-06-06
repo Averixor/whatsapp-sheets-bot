@@ -116,7 +116,7 @@ const SendPanelFastPaths_ = (function() {
         });
         var safeMessage = trimToEncoded_(msg, CONFIG.MAX_WA_TEXT);
         var formattedPhone = waPhone && waPhone.charAt(0) === '+' ? ("'" + waPhone) : String(waPhone || '').trim();
-        var link = waPhone ? ('https://wa.me/' + waPhone.replace('+', '') + '?text=' + encodeURIComponent(safeMessage)) : '';
+        var link = waPhone ? buildWhatsAppWebLink_(waPhone, safeMessage) : '';
         var status = deriveSendPanelStatusFromInputs_(fmlRaw, formattedPhone, code, tasks);
 
         rows.push([

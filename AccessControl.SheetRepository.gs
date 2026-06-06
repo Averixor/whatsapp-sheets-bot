@@ -271,10 +271,8 @@ function _applyAccessHeaderDisplayLabels_(sh) {
   var expectedHeaders = _getExpectedHeaders_();
   if (!expectedHeaders.length) return;
 
-  var labels = _getAccessHeaderDisplayLabels_();
-
   var values = expectedHeaders.map(function (header) {
-    return labels[header] || header;
+    return header;
   });
 
   var headerRange = sh.getRange(1, 1, 1, expectedHeaders.length);

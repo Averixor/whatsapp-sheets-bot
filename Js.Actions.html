@@ -95,7 +95,6 @@
 
             <div class="result-screen-actions">
               <button class="btn btn-primary" type="button" onclick="SidebarApp.submitRequestForm()">Зберегти</button>
-              <button class="btn" type="button" onclick="SidebarApp.showMenu()">Назад</button>
             </div>
           </div>
         `,
@@ -267,28 +266,89 @@
   // COMMANDER SEND
   // =========================
 
+  function getSelectedCommanderRecipient_() {
+    const el = document.getElementById("commanderRecipientSelect");
+    const fromSelect = el ? String(el.value || "").trim() : "";
+    return fromSelect || String(STATE.commanderRole || "").trim();
+  }
+
+  function setCommanderRecipient(value) {
+    STATE.commanderRole = String(value || "").trim();
+    try {
+      localStorage.setItem("wasb.commanderRole", STATE.commanderRole);
+    } catch (_) {}
+  }
+
+  function extractCommanderLink_(result) {
+    return String(
+      result?.link ||
+        result?.data?.link ||
+        result?.data?.result?.link ||
+        result?.result?.link ||
+        result?.raw?.data?.link ||
+        result?.raw?.data?.result?.link ||
+        "",
+    ).trim();
+  }
+
+  function openPreparedCommanderLink_(popup, link) {
+    if (!link) {
+      showToast("✕ Посилання WhatsApp не отримано від сервера");
+      try {
+        if (popup && !popup.closed) popup.close();
+      } catch (_) {}
+      return false;
+    }
+
+    if (STATE.DIAG_TEST_MODE) return true;
+
+    try {
+      if (popup && !popup.closed) {
+        popup.location.href = link;
+        return true;
+      }
+    } catch (_) {}
+
+    openLinkSafe(link);
+    return true;
+  }
+
   async function sendDetailedToCommander() {
     if (!STATE.lastDetailedDate || !STATE.lastDetailedText) {
       showToast("✕ Спочатку створи детальне зведення");
       return;
     }
 
+    const popup = STATE.DIAG_TEST_MODE
+      ? null
+      : window.open("about:blank", "WA_COMMANDER_WINDOW");
     showLoading();
 
     try {
       const result = await runServerMethod_(
         "sendDetailedToCommanderSidebar",
-        [STATE.lastDetailedDate, STATE.lastDetailedText],
+        [
+          STATE.lastDetailedDate,
+          STATE.lastDetailedText,
+          getSelectedCommanderRecipient_(),
+        ],
         "Js.Actions.sendDetailedToCommander",
       );
 
       if (result?.success) {
-        if (!STATE.DIAG_TEST_MODE) openLinkSafe(result.link);
+        const link = extractCommanderLink_(result);
+        openPreparedCommanderLink_(popup, link);
         showToast("✓ Відправлено командиру");
       } else {
+        try {
+          if (popup && !popup.closed) popup.close();
+        } catch (_) {}
         showToast("✕ " + (result?.error || "Помилка"));
       }
     } catch (error) {
+      try {
+        if (popup && !popup.closed) popup.close();
+      } catch (_) {}
       showToast("✕ " + normalizeError(error));
     } finally {
       hideLoading();
@@ -301,22 +361,36 @@
       return;
     }
 
+    const popup = STATE.DIAG_TEST_MODE
+      ? null
+      : window.open("about:blank", "WA_COMMANDER_WINDOW");
     showLoading();
 
     try {
       const result = await runServerMethod_(
         "sendDaySummaryToCommanderSidebar",
-        [STATE.lastSummaryDate, STATE.lastSummaryText],
+        [
+          STATE.lastSummaryDate,
+          STATE.lastSummaryText,
+          getSelectedCommanderRecipient_(),
+        ],
         "Js.Actions.sendDaySummaryToCommander",
       );
 
       if (result?.success) {
-        if (!STATE.DIAG_TEST_MODE) openLinkSafe(result.link);
+        const link = extractCommanderLink_(result);
+        openPreparedCommanderLink_(popup, link);
         showToast("✓ Відправлено командиру");
       } else {
+        try {
+          if (popup && !popup.closed) popup.close();
+        } catch (_) {}
         showToast("✕ " + (result?.error || "Помилка"));
       }
     } catch (error) {
+      try {
+        if (popup && !popup.closed) popup.close();
+      } catch (_) {}
       showToast("✕ " + normalizeError(error));
     } finally {
       hideLoading();
@@ -330,7 +404,8 @@
   function displayBirthdayResult(result) {
     const contentEl = $id("resultContent");
     if (!contentEl) return;
-    contentEl.innerHTML = renderBirthdayResult(result);
+    contentEl.innerHTML =
+      renderCommanderRecipientControls_() + renderBirthdayResult(result);
   }
 
   function formatYearsUa(age) {
@@ -403,11 +478,7 @@
               <div class="birthday-card__note">
                 ${esc(formatBirthdayCardNote(row.daysUntil, "commander"))}
               </div>
-              ${
-                row.link
-                  ? `<button class="birthday-card__btn birthday-card__btn--blue" onclick="SidebarApp.sendBirthdayMessage('${escapeJsString(row.link)}')">Відправити</button>`
-                  : `<div class="birthday-card__empty">Немає посилання</div>`
-              }
+              ${renderSelectedRecipientSendButton_(row?.message, "birthday-card__btn birthday-card__btn--blue")}
             </div>
           `;
         });
@@ -543,6 +614,49 @@
 
     if (!STATE.DIAG_TEST_MODE) openLinkSafe(link);
     logToConsole("📱 WhatsApp відкрито", "success");
+  }
+
+  async function sendMessageToSelectedRecipient(message) {
+    const safeMessage = String(message || "").trim();
+    if (!safeMessage) {
+      showToast("✕ Немає тексту повідомлення");
+      return;
+    }
+
+    const popup = STATE.DIAG_TEST_MODE
+      ? null
+      : window.open("about:blank", "WA_RECIPIENT_WINDOW");
+    showLoading();
+
+    try {
+      const result = await runServerMethod_(
+        "prepareMessageToRecipientSidebar",
+        [
+          safeMessage,
+          {
+            recipientMode: "selected",
+            recipientRole: getSelectedCommanderRecipient_(),
+          },
+        ],
+        "Js.Actions.sendMessageToSelectedRecipient",
+      );
+      const link = extractCommanderLink_(result);
+      if (result?.success && openPreparedCommanderLink_(popup, link)) {
+        showToast("✓ Повідомлення підготовлено");
+      } else {
+        try {
+          if (popup && !popup.closed) popup.close();
+        } catch (_) {}
+        showToast("✕ " + (result?.error || "Не вдалося підготувати повідомлення"));
+      }
+    } catch (error) {
+      try {
+        if (popup && !popup.closed) popup.close();
+      } catch (_) {}
+      showToast("✕ " + normalizeError(error));
+    } finally {
+      hideLoading();
+    }
   }
 
   // =========================
@@ -957,25 +1071,41 @@
   // =========================
 
   async function onSidebarLoad() {
+    var startedAt = new Date().toISOString();
     window.__WASB_BOOTSTRAP_STATE__ = {
-      startedAt: new Date().toISOString(),
+      startedAt: startedAt,
       status: "starting",
     };
-    registerGlobalRuntimeEvents_();
-    await initSidebar();
-    updateSendUnsentButtonState();
-    initPersonnelModal();
-    registerLegacyPersonnelButtons();
-    window.addEventListener("beforeunload", stopSending);
-    window.__WASB_BOOTSTRAP_STATE__ = {
-      startedAt:
-        (window.__WASB_BOOTSTRAP_STATE__ &&
-          window.__WASB_BOOTSTRAP_STATE__.startedAt) ||
-        new Date().toISOString(),
-      finishedAt: new Date().toISOString(),
-      status: "ready",
-      policyMarker: CLIENT_RUNTIME_POLICY.policyMarker,
-    };
+
+    try {
+      registerGlobalRuntimeEvents_();
+      await initSidebar();
+      updateSendUnsentButtonState();
+      initPersonnelModal();
+      registerLegacyPersonnelButtons();
+      window.addEventListener("beforeunload", stopSending);
+      window.__WASB_BOOTSTRAP_STATE__ = {
+        startedAt: startedAt,
+        finishedAt: new Date().toISOString(),
+        status: "ready",
+        policyMarker: CLIENT_RUNTIME_POLICY.policyMarker,
+      };
+    } catch (err) {
+      try {
+        showFatalSidebarError(err);
+      } catch (_) {}
+      try {
+        stopSidebarBootTimeout();
+        hideLoading();
+      } catch (_) {}
+      window.__WASB_BOOTSTRAP_STATE__ = {
+        startedAt: startedAt,
+        finishedAt: new Date().toISOString(),
+        status: "error",
+        error: normalizeError(err),
+        policyMarker: CLIENT_RUNTIME_POLICY.policyMarker,
+      };
+    }
   }
 
   window.addEventListener("load", onSidebarLoad);
@@ -1036,8 +1166,10 @@
 
     sendDaySummaryToCommander,
     sendDetailedToCommander,
+    setCommanderRecipient,
     sendVacationMessage,
     sendBirthdayMessage,
+    sendMessageToSelectedRecipient,
     openBirthdayWA,
 
     copyResultText,
