@@ -26,6 +26,36 @@ function runStage6ADomainTests_(options) {
     warnings: []
   };
 
+  function makeDomainFakeSheet_(rows) {
+    return {
+      getName: function() {
+        return '06';
+      },
+      getLastColumn: function() {
+        return (rows[0] || []).length;
+      },
+      getLastRow: function() {
+        return rows.length;
+      },
+      getRange: function(row, col, numRows, numCols) {
+        return {
+          getDisplayValues: function() {
+            const out = [];
+            for (let r = 0; r < numRows; r++) {
+              const sourceRow = rows[row - 1 + r] || [];
+              const outRow = [];
+              for (let c = 0; c < numCols; c++) {
+                outRow.push(sourceRow[col - 1 + c] || '');
+              }
+              out.push(outRow);
+            }
+            return out;
+          }
+        };
+      }
+    };
+  }
+
   // Templates
   _domainPush_(report, 'templates.renderTemplate basic substitution', function() {
     const out = renderTemplate_('Привіт, {name}!', { name: 'Сергій' });
@@ -226,6 +256,37 @@ function runStage6ADomainTests_(options) {
     }
     _domainAssert_(thrown, 'normalizeDate повинен кидати помилку на не існуючу дату');
     return 'throws-ok';
+  });
+
+  // Monthly layout detection
+  _domainPush_(report, 'sheetSchema.monthly compact layout detection', function() {
+    const sheet = makeDomainFakeSheet_([
+      ['БР', 'Callsign', '01.06', '02.06', ''],
+      ['5', 'Роланд', 'БР', 'КП', ''],
+      ['3', 'Сокіл', 'КП', '', ''],
+      ['', '', '', '', '']
+    ]);
+    const layout = detectMonthlyLayoutFromSheet_(sheet);
+    _domainAssert_(layout && layout.layout === 'compact', 'Compact monthly layout не визначено');
+    _domainAssert_(layout.codeRangeA1 === 'C2:D3', 'Compact codeRangeA1 має бути C2:D3');
+    _domainAssert_(getMonthlyCallsignColForSheet_(sheet) === 2, 'Compact Callsign має бути у колонці B');
+    _domainAssert_(getMonthlyBrDaysColForSheet_(sheet) === 1, 'Compact BR days має бути у колонці A');
+    return layout.codeRangeA1;
+  });
+
+  _domainPush_(report, 'sheetSchema.monthly standard layout detection', function() {
+    const sheet = makeDomainFakeSheet_([
+      ['Телефон', 'Позивний', 'Посада', 'ОШС', 'Звання', 'БРДні', 'ПІБ', '01.06', '02.06', ''],
+      ['+380661111111', 'Роланд', 'Стрілець', '1', 'с-т', '5', 'Петренко', 'БР', 'КП', ''],
+      ['+380662222222', 'Сокіл', 'Водій', '2', 'с-т', '3', 'Іванов', 'КП', '', ''],
+      ['', '', '', '', '', '', '', '', '', '']
+    ]);
+    const layout = detectMonthlyLayoutFromSheet_(sheet);
+    _domainAssert_(layout && layout.layout === 'standard', 'Standard monthly layout не визначено');
+    _domainAssert_(layout.codeRangeA1 === 'H2:I3', 'Standard codeRangeA1 має бути H2:I3');
+    _domainAssert_(getMonthlyCallsignColForSheet_(sheet) === 2, 'Standard Callsign має бути у колонці B');
+    _domainAssert_(getMonthlyBrDaysColForSheet_(sheet) === 6, 'Standard BR days має бути у колонці F');
+    return layout.codeRangeA1;
   });
 
   _domainPush_(report, 'vacation status window logic', function() {
