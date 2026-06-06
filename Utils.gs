@@ -48,6 +48,30 @@ function _normFml_(s) {
     .replace(/[’'`"ʼ]/g, "'");
 }
 
+/** WhatsApp Web deep link for sidebar/browser (avoids wa.me → xdg-open on Linux). */
+function buildWhatsAppWebLink_(phone, text) {
+  var cleanedPhone = String(phone || "").replace(/\D/g, "");
+  if (!cleanedPhone) return "";
+
+  var safeMessage = String(text || "");
+  if (typeof trimToEncoded_ === "function") {
+    try {
+      var maxLen =
+        typeof CONFIG !== "undefined" && CONFIG && CONFIG.MAX_WA_TEXT
+          ? CONFIG.MAX_WA_TEXT
+          : 3800;
+      safeMessage = trimToEncoded_(safeMessage, maxLen);
+    } catch (_) {}
+  }
+
+  return (
+    "https://web.whatsapp.com/send?phone=" +
+    cleanedPhone +
+    "&text=" +
+    encodeURIComponent(safeMessage)
+  );
+}
+
 function _normFmlForProfiles_(s) {
   return _normFml_(s);
 }

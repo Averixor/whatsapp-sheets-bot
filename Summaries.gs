@@ -356,7 +356,7 @@ function sendDetailedSummaryToCommander() {
     const safe = trimToEncoded_(text, CONFIG.MAX_WA_TEXT);
     DialogPresenter_.showLinkDialog({
       title: "📊 Детальне → командиру",
-      url: `https://wa.me/${phone.replace("+", "")}?text=${encodeURIComponent(safe)}`,
+      url: buildWhatsAppWebLink_(phone, safe),
       description: "Натисніть, щоб відкрити WhatsApp",
     });
   } catch (e) {

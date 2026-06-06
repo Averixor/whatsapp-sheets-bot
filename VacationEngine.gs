@@ -323,23 +323,7 @@ function _veRandomTemplateOrFallback_(keys, data, fallbackText) {
 }
 
 function _veWaLink_(phone, message) {
-  const cleanedPhone = String(phone || '').replace(/\D/g, '');
-
-  if (!cleanedPhone) return '';
-
-  const maxLen = (
-    typeof CONFIG !== 'undefined' &&
-    CONFIG &&
-    CONFIG.MAX_WA_TEXT
-  )
-    ? CONFIG.MAX_WA_TEXT
-    : 3800;
-
-  const safeMessage = typeof trimToEncoded_ === 'function'
-    ? trimToEncoded_(String(message || ''), maxLen)
-    : String(message || '');
-
-  return 'https://wa.me/' + cleanedPhone + '?text=' + encodeURIComponent(safeMessage);
+  return buildWhatsAppWebLink_(phone, message);
 }
 
 function _veCommanderPhone_() {

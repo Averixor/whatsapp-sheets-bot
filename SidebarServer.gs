@@ -81,7 +81,7 @@ function sendDaySummaryToCommanderSidebar(dateStr, summaryText, commanderRole) {
     }
 
     const safe = trimToEncoded_(summaryText, CONFIG.MAX_WA_TEXT);
-    const link = `https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(safe)}`;
+    const link = buildWhatsAppWebLink_(phone, safe);
 
     writeLogsBatch_([{
       timestamp: new Date(),
@@ -121,7 +121,7 @@ function sendDetailedToCommanderSidebar(dateStr, detailedText, commanderRole) {
     }
 
     const safe = trimToEncoded_(detailedText, CONFIG.MAX_WA_TEXT);
-    const link = `https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(safe)}`;
+    const link = buildWhatsAppWebLink_(phone, safe);
 
     writeLogsBatch_([{
       timestamp: new Date(),

@@ -819,11 +819,7 @@ function buildPayloadForCell_(
 
   var link = "";
   if (phone) {
-    link =
-      "https://wa.me/" +
-      String(phone).replace(/[^\d]/g, "") +
-      "?text=" +
-      encodeURIComponent(safeMessage);
+    link = buildWhatsAppWebLink_(phone, safeMessage);
   }
 
   return {

@@ -892,7 +892,7 @@ function runAccessPolicyChecks(options) {
             {
               fml: "Test",
               phone: "+380501234567",
-              link: "https://wa.me/380501234567",
+              link: "https://web.whatsapp.com/send?phone=380501234567",
               message: "secret",
               code: "БР",
               service: "svc",

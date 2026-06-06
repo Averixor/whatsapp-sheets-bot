@@ -134,7 +134,7 @@ const SelectionActionService_ = (function() {
     }
 
     const digits = String(phone || first.phone || '').replace(/[^\d]/g, '');
-    const link = digits ? 'https://wa.me/' + digits + '?text=' + encodeURIComponent(message) : '';
+    const link = digits ? buildWhatsAppWebLink_(digits, message) : '';
 
     return [Object.assign({}, first, {
       phone: phone || first.phone || '',
