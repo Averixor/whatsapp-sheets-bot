@@ -28,6 +28,7 @@ Final verdict — NOT CLOSED YET
 
 | Пункт | Статус |
 |-------|--------|
+
 | Dark theme select/options contrast | **FIXED** |
 | Recipient routing (commander / birthday / vacation flows) | **FIXED** |
 | Sticky back header for sidebar result screens | **FIXED** (`5cd9181`) |
@@ -40,6 +41,7 @@ Final verdict — NOT CLOSED YET
 
 | Перевірка | Результат |
 |-----------|-----------|
+
 | `npm run ci` (локально + GitHub Actions) | PASS — 15 скриптів |
 | Function graph audit | 81 bound refs, 0 missing, 1057 defs |
 | Workbook contract `06` | `C2:AF30`, personnel=29 |
@@ -73,6 +75,7 @@ Final verdict — NOT CLOSED YET
 
 | Блокер | Причина | Обхід |
 |--------|---------|-------|
+
 | `npm run gas:smoke` | clasp не має дозволу на Execution API | Власник один раз запускає `apiRunProductionSmokeChecks()` в Apps Script UI |
 
 ---
@@ -132,4 +135,3 @@ Final verdict — CLOSED
 2. Розбити великі модулі: `SmokeTests.gs`, `AccessEnforcement.gs`, `AccessControl.AuthResolver.gs`.
 3. Видалити bridge flag `USE_NEW_API_PATH` до 2026-09-30.
 4. Міграція `innerHTML` → sanitizer sinks.
-5. Дані в книзі: Callsign `ВАМПИР`→`ВАМПІР`, `МАЛОЙ`→`МАЛИЙ`; потім `apiStage7ClearPhoneCache()`.
