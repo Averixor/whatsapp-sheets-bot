@@ -53,7 +53,7 @@
 
       const roleLabel = getAccessRoleLabel_(access.role);
       const parts = [
-        "<span>Режим доступу : " + escapeHtml(roleLabel) + "</span>",
+        "<span>Статус : " + escapeHtml(roleLabel) + "</span>",
       ];
       if (access.loginLockout && access.loginLockout.locked) {
         parts.push(
