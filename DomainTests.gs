@@ -16,6 +16,197 @@ function _domainPush_(report, name, fn) {
   }
 }
 
+function _domainAssertEqual_(actual, expected, message) {
+  _domainAssert_(actual === expected, (message || 'Unexpected value') + ': expected "' + expected + '", got "' + actual + '"');
+}
+
+function _domainMakeFakeSheet_(name, values) {
+  const matrix = values || [];
+
+  function readCell_(row, col) {
+    const rowValues = matrix[row - 1] || [];
+    return rowValues[col - 1] === undefined ? '' : rowValues[col - 1];
+  }
+
+  function buildRange_(startRow, startCol, numRows, numCols) {
+    const rows = Math.max(Number(numRows) || 1, 1);
+    const cols = Math.max(Number(numCols) || 1, 1);
+    const out = [];
+    for (let r = 0; r < rows; r++) {
+      const row = [];
+      for (let c = 0; c < cols; c++) {
+        row.push(readCell_(startRow + r, startCol + c));
+      }
+      out.push(row);
+    }
+    return out;
+  }
+
+  function cloneValues_(rangeValues) {
+    return rangeValues.map(function(row) {
+      return row.slice();
+    });
+  }
+
+  return {
+    getName: function() {
+      return name || 'TEST';
+    },
+    getLastColumn: function() {
+      return matrix.reduce(function(max, row) {
+        return Math.max(max, (row || []).length);
+      }, 0);
+    },
+    getLastRow: function() {
+      return matrix.length;
+    },
+    getRange: function(row, col, numRows, numCols) {
+      let startRow = Number(row) || 1;
+      let startCol = Number(col) || 1;
+      let rows = Number(numRows) || 1;
+      let cols = Number(numCols) || 1;
+
+      if (typeof row === 'string' && typeof _parseA1RangeRef_ === 'function') {
+        const ref = _parseA1RangeRef_(row);
+        startRow = ref.startRow;
+        startCol = ref.startCol;
+        rows = ref.endRow - ref.startRow + 1;
+        cols = ref.endCol - ref.startCol + 1;
+      }
+
+      const rangeValues = buildRange_(startRow, startCol, rows, cols);
+      return {
+        getDisplayValues: function() {
+          return cloneValues_(rangeValues);
+        },
+        getValues: function() {
+          return cloneValues_(rangeValues);
+        },
+        getDisplayValue: function() {
+          return String(rangeValues[0] && rangeValues[0][0] !== undefined ? rangeValues[0][0] : '');
+        },
+        getValue: function() {
+          return rangeValues[0] && rangeValues[0][0] !== undefined ? rangeValues[0][0] : '';
+        },
+        getNumRows: function() {
+          return rows;
+        },
+        getNumColumns: function() {
+          return cols;
+        }
+      };
+    }
+  };
+}
+
+function _runPersonnelRepositoryDomainTests_(report) {
+  _domainPush_(report, 'personnel.status normalization canonical and legacy', function() {
+    [
+      ['', 'Дієвий'],
+      [null, 'Дієвий'],
+      [' Діевий ', 'Дієвий'],
+      ['Active', 'Дієвий'],
+      ['Temp', 'Тимчасовий'],
+      ['Відрядження', 'Відрядження'],
+      ['Removed', 'Вибув'],
+      ['Transferred', 'Вибув']
+    ].forEach(function(pair) {
+      _domainAssertEqual_(normalizePersonnelStatus_(pair[0]), pair[1], 'normalizePersonnelStatus_ mismatch');
+    });
+
+    _domainAssert_(isPersonnelStatusActive_('') === true, 'Порожній Status має бути активним Дієвий');
+    _domainAssert_(isPersonnelStatusActive_('Temp') === true, 'Legacy Temp має бути активним');
+    _domainAssert_(isPersonnelStatusActive_('Removed') === false, 'Legacy Removed має бути неактивним');
+    _domainAssertEqual_(getPersonnelStatusCanonical_('Вибув'), 'Removed', 'Вибув canonical');
+    return 'legacy-statuses-ok';
+  });
+
+  _domainPush_(report, 'personnel.header aliases optional ID and rank fallback', function() {
+    const headers = [
+      'ПІБ',
+      'День народження',
+      'Телефон',
+      'Позивний',
+      'Rank',
+      'Посада',
+      'ОШС 4',
+      'Статус'
+    ];
+    const col = _personnelBuildHeaderColIndex_(headers);
+    _domainAssertEqual_(col.FML, 0, 'FML alias');
+    _domainAssertEqual_(col.Birthday, 1, 'Birthday alias');
+    _domainAssertEqual_(col.Callsign, 3, 'Callsign alias');
+    _domainAssertEqual_(col.Rank, 4, 'Rank column');
+    _domainAssertEqual_(col.Title, -1, 'Title optional');
+    _domainAssertEqual_(col.ID, -1, 'ID optional');
+    _domainAssertEqual_(col['2_Phone'], -1, '2_Phone optional');
+
+    const record = _personnelRowToRecord_(
+      ['Петренко Іван', '17.03.1990', '+380661111111', 'Роланд', 'солдат', 'стрілець', '4', 'Removed'],
+      2,
+      col
+    );
+    _domainAssertEqual_(record.id, '', 'ID must remain optional');
+    _domainAssertEqual_(record.fml, 'Петренко Іван', 'FML mapping');
+    _domainAssertEqual_(record.callsign, 'Роланд', 'Callsign mapping');
+    _domainAssertEqual_(record.title, 'солдат', 'Rank fallback to title');
+    _domainAssertEqual_(record.rank, 'солдат', 'Rank mirror');
+    _domainAssertEqual_(record.position, 'стрілець', 'Position mapping');
+    _domainAssertEqual_(record.status, 'Вибув', 'Status normalization in record');
+    _domainAssert_(record.active === false, 'Removed/Вибув record must be inactive');
+    return 'header-alias-record-ok';
+  });
+}
+
+function _runMonthlyLayoutDomainTests_(report) {
+  _domainPush_(report, 'monthly.layout detects standard sheet geometry', function() {
+    const sheet = _domainMakeFakeSheet_('06', [
+      ['Телефон', 'Позивний', 'Посада', 'OSH', 'Звання', 'БР', 'ПІБ', '01.06.2026', '02.06.2026', '03.06.2026', 'Коментар'],
+      ['+380661111111', 'АЛЬФА', 'стрілець', '4', 'солдат', '1', 'Петренко', 'БР', '', '', ''],
+      ['', 'БРАВО', '', '', '', '2', '', '', 'КП', '', ''],
+      ['', '', '', '', '', '', '', '', '', '', ''],
+      ['', 'ЧАРЛІ', '', '', '', '3', '', '', '', 'ВП', ''],
+      ['', '', '', '', '', '', '', '', '', '', '']
+    ]);
+    const layout = detectMonthlyLayoutFromSheet_(sheet);
+    _domainAssert_(layout !== null, 'Standard layout не визначено');
+    _domainAssertEqual_(layout.layout, 'standard', 'Standard layout type');
+    _domainAssertEqual_(layout.codeRangeA1, 'H2:J5', 'Standard codeRangeA1');
+    _domainAssertEqual_(layout.fields.callsign, 2, 'Standard callsign col');
+    _domainAssertEqual_(layout.fields.brDays, 6, 'Standard BR col');
+    _domainAssertEqual_(layout.fields.fml, 7, 'Standard FML col');
+    return layout.codeRangeA1;
+  });
+
+  _domainPush_(report, 'monthly.layout detects compact sheet geometry', function() {
+    const sheet = _domainMakeFakeSheet_('06', [
+      ['БР', 'Позивний', '01.06.2026', '02.06.2026', 'Нотатки'],
+      ['1', 'АЛЬФА', 'БР', '', ''],
+      ['2', 'БРАВО', '', 'КП', ''],
+      ['', '', '', '', '']
+    ]);
+    const layout = detectMonthlyLayoutFromSheet_(sheet);
+    _domainAssert_(layout !== null, 'Compact layout не визначено');
+    _domainAssertEqual_(layout.layout, 'compact', 'Compact layout type');
+    _domainAssertEqual_(layout.codeRangeA1, 'C2:D3', 'Compact codeRangeA1');
+    _domainAssertEqual_(layout.fields.phone, 0, 'Compact has no phone col');
+    _domainAssertEqual_(layout.fields.brDays, 1, 'Compact BR col');
+    _domainAssertEqual_(layout.fields.callsign, 2, 'Compact callsign col');
+    _domainAssertEqual_(layout.fields.fml, 0, 'Compact has no FML col');
+    return layout.codeRangeA1;
+  });
+
+  _domainPush_(report, 'monthly.layout rejects unsupported headers', function() {
+    const sheet = _domainMakeFakeSheet_('06', [
+      ['Телефон', 'ПІБ', 'Посада', 'Коментар'],
+      ['+380661111111', 'Петренко', 'стрілець', '']
+    ]);
+    const layout = detectMonthlyLayoutFromSheet_(sheet);
+    _domainAssert_(layout === null, 'Unsupported layout should return null');
+    return 'null-ok';
+  });
+}
+
 function runStage6ADomainTests_(options) {
   const opts = options || {};
   const report = {
@@ -136,6 +327,10 @@ function runStage6ADomainTests_(options) {
     _domainAssert_(statuses.indexOf(SendPanelConstants_.STATUS_BLOCKED) !== -1, 'Немає STATUS_BLOCKED');
     return statuses.join(', ');
   });
+
+  // PERSONNEL and sheet schema regressions
+  _runPersonnelRepositoryDomainTests_(report);
+  _runMonthlyLayoutDomainTests_(report);
 
   // Reconciliation pure compare
   _domainPush_(report, 'reconciliation.compare missing rows', function() {
