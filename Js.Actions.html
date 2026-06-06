@@ -280,12 +280,49 @@
     } catch (_) {}
   }
 
+  function extractCommanderLink_(result) {
+    return String(
+      result?.link ||
+        result?.data?.link ||
+        result?.data?.result?.link ||
+        result?.result?.link ||
+        result?.raw?.data?.link ||
+        result?.raw?.data?.result?.link ||
+        "",
+    ).trim();
+  }
+
+  function openPreparedCommanderLink_(popup, link) {
+    if (!link) {
+      showToast("✕ Посилання WhatsApp не отримано від сервера");
+      try {
+        if (popup && !popup.closed) popup.close();
+      } catch (_) {}
+      return false;
+    }
+
+    if (STATE.DIAG_TEST_MODE) return true;
+
+    try {
+      if (popup && !popup.closed) {
+        popup.location.href = link;
+        return true;
+      }
+    } catch (_) {}
+
+    openLinkSafe(link);
+    return true;
+  }
+
   async function sendDetailedToCommander() {
     if (!STATE.lastDetailedDate || !STATE.lastDetailedText) {
       showToast("✕ Спочатку створи детальне зведення");
       return;
     }
 
+    const popup = STATE.DIAG_TEST_MODE
+      ? null
+      : window.open("about:blank", "WA_COMMANDER_WINDOW");
     showLoading();
 
     try {
@@ -300,12 +337,19 @@
       );
 
       if (result?.success) {
-        if (!STATE.DIAG_TEST_MODE) openLinkSafe(result.link);
+        const link = extractCommanderLink_(result);
+        openPreparedCommanderLink_(popup, link);
         showToast("✓ Відправлено командиру");
       } else {
+        try {
+          if (popup && !popup.closed) popup.close();
+        } catch (_) {}
         showToast("✕ " + (result?.error || "Помилка"));
       }
     } catch (error) {
+      try {
+        if (popup && !popup.closed) popup.close();
+      } catch (_) {}
       showToast("✕ " + normalizeError(error));
     } finally {
       hideLoading();
@@ -318,6 +362,9 @@
       return;
     }
 
+    const popup = STATE.DIAG_TEST_MODE
+      ? null
+      : window.open("about:blank", "WA_COMMANDER_WINDOW");
     showLoading();
 
     try {
@@ -332,12 +379,19 @@
       );
 
       if (result?.success) {
-        if (!STATE.DIAG_TEST_MODE) openLinkSafe(result.link);
+        const link = extractCommanderLink_(result);
+        openPreparedCommanderLink_(popup, link);
         showToast("✓ Відправлено командиру");
       } else {
+        try {
+          if (popup && !popup.closed) popup.close();
+        } catch (_) {}
         showToast("✕ " + (result?.error || "Помилка"));
       }
     } catch (error) {
+      try {
+        if (popup && !popup.closed) popup.close();
+      } catch (_) {}
       showToast("✕ " + normalizeError(error));
     } finally {
       hideLoading();
