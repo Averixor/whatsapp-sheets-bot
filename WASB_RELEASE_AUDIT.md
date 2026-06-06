@@ -1,66 +1,52 @@
-# WASB — release status
+# WASB — production release status
 
 **Проєкт:** whatsapp-sheets-bot / WASB
 **Версія:** Stage 7.1
 **Дата оновлення:** 2026-06-03
-**Повний технічний аудит:** [WASB_FULL_TECH_AUDIT_2026-06-03.md](WASB_FULL_TECH_AUDIT_2026-06-03.md)
+**Повний аудит:** [WASB_FULL_TECH_AUDIT_2026-06-03.md](./WASB_FULL_TECH_AUDIT_2026-06-03.md)
 
 ---
 
-## Поточний статус (one-liner)
+## Поточний статус
 
 ```text
 WASB — PRODUCTION-READY (CODE + CI)
 Release closure — PENDING smoke authorization
+Production smoke — BLOCKED BY APPS SCRIPT AUTHORIZATION
+Git — CLEAN
+GitHub main — UP TO DATE
+GAS — PUSHED
+CI — PASS
+Workbook regression 06 — PASS, personnel=29
+Access API governance — PASS, 17/17 policies
+OAuth scopes — NARROWED, 6 scopes
 Final verdict — NOT CLOSED UNTIL GAS SMOKE PASS
 ```
 
 ---
 
-## Стан перевірок
+## Що PASS
 
-| Перевірка | Статус |
-|-----------|--------|
-| Git working tree | **CLEAN** |
-| GitHub `main` | **UP TO DATE** (synced with `origin/main`) |
-| GAS deploy (`clasp push`) | **PUSHED** |
-| `npm run ci` (локально / GitHub Actions) | **PASS** |
-| Function graph audit | **PASS** — 81 bound refs, 0 missing |
-| Workbook regression `06` | **PASS** — `C2:AF30`, personnel=29 |
-| Access API governance | **PASS** — 17/17 policies |
-| OAuth scopes | **NARROWED** — 6 scopes (`drive`/`documents` removed) |
-| Protections | **OK** — 9/9 service sheets |
-| Production smoke (`npm run gas:smoke`) | **BLOCKED** — Apps Script authorization |
-
-### Кодова база (snapshot)
-
-| Метрика | Значення |
-|---------|----------|
-| `.gs` файлів | 112 |
-| `.html` файлів | 35 |
-| Рядків (gs+html) | ~57 700 |
-| Top-level функцій | 1052 |
+| Перевірка | Результат |
+|-----------|-----------|
+| `npm run ci` (локально + GitHub Actions) | PASS — 14 скриптів |
+| Function graph audit | 81 bound refs, 0 missing, 1052 defs |
+| Workbook contract `06` | `C2:AF30`, personnel=29 |
+| Access API governance | 17/17 endpoints + role policies |
+| OAuth scopes | 6 (без `drive`, без `documents`) |
+| Protections | 9/9 службових листів |
+| ACCESS / RBAC | owner/admin, strict user key, bridge off |
+| Script Properties | `WASB_SPREADSHEET_ID`, `WASB_OWNER_EMAIL` задані |
+| GAS deploy | `npx clasp push` виконано |
+| Git | clean working tree, `main` = `origin/main` |
 
 ---
 
-## Єдиний блокер до CLOSED
+## Що BLOCKED
 
-1. **Власник** один раз вручну запускає `apiRunProductionSmokeChecks()` в Apps Script UI.
-2. Потім локально:
-
-```bash
-cd ~/git/whatsapp-sheets-bot
-npm run gas:smoke
-```
-
-Очікування: `ok === true`, `checks.migrationFlag !== 'true'`, `checks.clientSignal` — envelope `success: true`.
-
-Якщо `clasp run` падає з permission error:
-
-- увімкнути **Google Apps Script API** у Google Cloud Console;
-- `npx clasp login`, перевірити `.clasp.json` scriptId;
-- `appsscript.json` → `"executionApi": { "access": "ANYONE" }`;
-- оновити **API executable** deployment у Apps Script UI.
+| Блокер | Причина | Обхід |
+|--------|---------|-------|
+| `npm run gas:smoke` | clasp не має дозволу на Execution API | Власник один раз запускає `apiRunProductionSmokeChecks()` в Apps Script UI |
 
 ---
 
@@ -73,44 +59,47 @@ npm run gas:smoke
 - [x] `WASB_ACCESS_MIGRATION_EMAIL_BRIDGE` вимкнено
 - [x] `apiStage7BootstrapRuntimeAndAlertsSheets()`
 - [x] `apiStage7BootstrapAccessSheet()`
-- [x] ACCESS: owner/admin/sysadmin, `user_key_current_hash` заповнений
+- [x] ACCESS: enabled owner/admin/sysadmin, `user_key_current_hash` заповнений
 - [x] `apiStage7DebugAccess()`: `bootstrapAllowed=false`, `adminConfigured=true`
 - [x] `apiStage7QuickHealthCheck()` — без критичних FAIL
 - [x] `apiRunStage7RegressionTests()` — PASS
-- [x] `apiStage7ApplyProtections({ dryRun: true/false })` — застосовано
-- [x] GAS синхронізовано з репозиторієм (`clasp push`)
+- [x] `apiStage7ApplyProtections({ dryRun: true })` — переглянуто
+- [x] `apiStage7ApplyProtections({ dryRun: false })` — застосовано
+- [x] GAS синхронізовано з локальним кодом (`clasp push`)
 - [x] `npm run ci` — PASS
-- [x] OAuth scopes звужені (6 scopes)
-- [x] Git clean, `main` на GitHub актуальний
+- [x] OAuth scopes звужено до 6
+- [x] Git clean, GitHub `main` up to date
 
-### Залишилось
+### Залишилось для CLOSED
 
-- [ ] `apiRunProductionSmokeChecks()` — ручний запуск власником у GAS UI
-- [ ] `npm run gas:smoke` — PASS
-- [ ] Оновити цей файл: `Final verdict — CLOSED`
+- [ ] Власник один раз вручну запускає `apiRunProductionSmokeChecks()` в Apps Script UI
+- [ ] `npm run gas:smoke` — PASS (`ok === true`)
 
 ---
 
-## Після smoke PASS
+## Закриття релізу
+
+Після ручного smoke в Apps Script:
 
 ```bash
+cd ~/git/whatsapp-sheets-bot
 npm run gas:smoke
 npm run ci
 ```
 
-Якщо все зелене — змінити вердикт у цьому файлі на:
+Якщо smoke PASS — оновити цей файл:
 
 ```text
 WASB production release — CLOSED
+Final verdict — CLOSED
 ```
 
 ---
 
 ## Пост-реліз (не блокери)
 
-1. Розбити великі модулі: `SmokeTests.gs`, `AccessEnforcement.gs`, `AccessControl.AuthResolver.gs`.
-2. Видалити bridge flag `USE_NEW_API_PATH` до 2026-09-30.
-3. Покращити commit messages (замість `"7"`).
-4. Дані в книзі: Callsign `ВАМПИР`→`ВАМПІР`, `МАЛОЙ`→`МАЛИЙ`; потім `apiStage7ClearPhoneCache()`.
-
-Детальний борг і архітектура — у [WASB_FULL_TECH_AUDIT_2026-06-03.md](WASB_FULL_TECH_AUDIT_2026-06-03.md).
+1. Покращити commit messages (замість `"7"`).
+2. Розбити великі модулі: `SmokeTests.gs`, `AccessEnforcement.gs`, `AccessControl.AuthResolver.gs`.
+3. Видалити bridge flag `USE_NEW_API_PATH` до 2026-09-30.
+4. Міграція `innerHTML` → sanitizer sinks.
+5. Дані в книзі: Callsign `ВАМПИР`→`ВАМПІР`, `МАЛОЙ`→`МАЛИЙ`; потім `apiStage7ClearPhoneCache()`.

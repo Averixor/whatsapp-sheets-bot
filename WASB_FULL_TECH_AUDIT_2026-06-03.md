@@ -4,7 +4,7 @@
 **Версія:** Stage 7.1 (`package.json` `"version": "7"`)  
 **Платформа:** Google Apps Script V8 + Google Sheets + HtmlService  
 **Репозиторій:** `main` — синхронізований з `origin/main`, робоче дерево чисте  
-**Пов'язаний документ:** [WASB_RELEASE_AUDIT.md](WASB_RELEASE_AUDIT.md) — короткий release-status
+**Пов'язаний документ:** [WASB_RELEASE_AUDIT.md](./WASB_RELEASE_AUDIT.md) — короткий release-status
 
 ---
 
@@ -54,7 +54,7 @@
 
 | Метрика | Значення |
 |---------|----------|
-| `.gs` файлів | **112** |
+| `.gs` файлів | **112** (CI `ci-gas-sanity`) |
 | `.html` файлів | **35** |
 | Загальний обсяг (gs+html) | **~57 700 рядків** |
 | Top-level функцій | **1052** |
@@ -65,7 +65,7 @@
 | Access API governance | **17** endpoints / **17** role policies |
 | Клієнтські символи (deps contract) | **224** |
 
-### Найбільші модулі
+### Найбільші модулі (рядків)
 
 | Файл | ~рядків | Роль |
 |------|---------|------|
@@ -95,6 +95,12 @@
 4. **Repositories** — `PersonnelRepository`, `PersonsRepository`, `SendPanelRepository`, `SummaryRepository`, …
 5. **DataAccess** — resolver spreadsheet ID, `openById`, container fallback.
 
+### Канонічні API
+
+- Користувач: `Stage7ServerApi.gs`
+- Адмін: `Stage7MaintenanceApi.gs`
+- Сумісність: `SidebarServer.gs`, `DeprecatedRegistry.gs`
+
 ### Envelope (відповіді сервера)
 
 Контракт: `contracts/envelope.contract.json`
@@ -107,11 +113,11 @@ success | message | data.result | data.meta | dryRun (top-level + nested)
 
 ### Compatibility / legacy
 
-- `SidebarServer.gs` — тонкий шар сумісності (send*, commander recipient).
+- `SidebarServer.gs` — тонкий шар сумісності (send*, commander).
 - `DeprecatedRegistry.gs` — інвентар видалених globals (CI перевіряє відсутність).
 - Bridge flag `USE_NEW_API_PATH` (default `true`, sunset **2026-09-30**, `contracts/bridge-flags.registry.json`).
 
-Детальніше: [ARCHITECTURE.md](ARCHITECTURE.md).
+Детальніше: [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ---
 
@@ -146,7 +152,7 @@ Core → State → Api → Render.* → Diagnostics
 ### XSS
 
 - `innerHTML`: **14** використань у **7** файлах.
-- CI `audit-client-xss.mjs`: **93** дозволених safe-patterns (reviewed 2026-05-29).
+- CI `audit-client-xss.mjs`: **93** дозволених safe-patterns, reviewed 2026-05-29.
 - Рекомендовані sinks: `escapeHtml`, `escapeAttr`, `escapeJsString`, `setHtml`, `setText`.
 - Контракт: `contracts/xss-policy.contract.json`.
 
@@ -189,8 +195,6 @@ Core → State → Api → Render.* → Diagnostics
 - Bootstrap-owner: вимкнено після налаштування ACCESS.
 - Emergency bridge: `WASB_ACCESS_MIGRATION_EMAIL_BRIDGE` — має бути off у prod.
 
-Детальніше: [SECURITY.md](SECURITY.md), [RUNBOOK.md](RUNBOOK.md) §4.
-
 ### Script Properties (production)
 
 | Key | Призначення |
@@ -221,6 +225,8 @@ Core → State → Api → Render.* → Diagnostics
 
 Доступ до функцій обмежується внутрішніми role guards. Trade-off для `clasp run` smoke.
 
+Детальніше: [SECURITY.md](./SECURITY.md).
+
 ### Ризики
 
 | Ризик | Рівень | Коментар |
@@ -228,7 +234,7 @@ Core → State → Api → Render.* → Diagnostics
 | Execution API ANYONE | середній | Компенсується RBAC усередині entrypoints |
 | innerHTML (14 місць) | низький | Під governance XSS-аудиту |
 | Великі Access-модулі | низький | Складність супроводу |
-| clasp uuid CVE (moderate) | низький | Тільки devDependency, не runtime GAS |
+| clasp uuid CVE (moderate) | низький | Тільки devDependency |
 
 ---
 
@@ -249,13 +255,21 @@ Core → State → Api → Render.* → Diagnostics
 | `wasbAccessSheetOnEditAutofillHotfix_` | Hotfix autofill |
 | `autoVacationReminder` / `autoBirthdayReminder` | Legacy reminders |
 
+### Допоміжні
+
+- `OperationSafety.gs`, `LockHelpers.gs`, `JobRuntime.gs`, `Reconciliation.gs`
+- `SystemSheetsSelfHeal`, `LifecycleRetention.gs`
+- `GasRuntimeSmoke.gs` — `apiRunProductionSmokeChecks()`
+
 ### WhatsApp-посилання
 
 Центральний генератор: `buildWhatsAppWebLink_` у `Utils.gs` → `web.whatsapp.com/send`. Legacy `wa.me` у HYPERLINK приймається при читанні.
 
 ### Commander recipient
 
-Bootstrap: `commanderRole`, `commanderRecipients` (`Stage7ServerApi.gs`); UI select у sidebar (`Js.Render.Panel.html`); override при send (`SidebarServer.gs`, `Js.Actions.html`).
+- Bootstrap: `commanderRole`, `commanderRecipients` (`Stage7ServerApi.gs`);
+- UI: select «Отримувач» у sidebar;
+- Override при send: `SidebarServer.gs` + `Js.Actions.html`.
 
 ---
 
@@ -281,13 +295,17 @@ Bootstrap: `commanderRole`, `commanderRecipients` (`Stage7ServerApi.gs`); UI sel
 | `verify-oauth-scopes` | 6 scopes |
 | `verify-jsconfig` | IDE/tsserver inputs |
 
-GitHub Actions: `.github/workflows/ci.yml` — Node 24, `npm ci` + `npm run ci` на push/PR до `main`.
+### GitHub Actions
+
+`.github/workflows/ci.yml`: Node 24, `npm ci` + `npm run ci` на push/PR до `main`. Job `preprod-checklist` публікує ручний GAS-checklist у Step Summary.
 
 ### Деплой
 
 ```bash
 npm run deploy:prod   # ci + clasp push + gas:smoke
 ```
+
+Детальніше: [AGENTS.md](./AGENTS.md), [RUNBOOK.md](./RUNBOOK.md).
 
 ---
 
@@ -323,7 +341,7 @@ dependencies: uuid ^14.0.0
 ```
 
 **npm audit:** 5 moderate (uuid у transitive deps clasp/googleapis).  
-**Не використовувати** `npm audit fix --force` — відкотить clasp до 2.5.0 (див. [AGENTS.md](AGENTS.md)).
+**Не використовувати** `npm audit fix --force` — відкотить clasp до 2.5.0.
 
 Runtime GAS не залежить від npm-пакетів.
 
@@ -336,7 +354,7 @@ Runtime GAS не залежить від npm-пакетів.
 | `ARCHITECTURE.md` | Актуальний |
 | `RUNBOOK.md` | Повний bootstrap/access/maintenance |
 | `SECURITY.md` | Identity, roles, lockout |
-| `AGENTS.md` | CI/deploy для AI/розробників |
+| `AGENTS.md` | CI/deploy |
 | `WASB_RELEASE_AUDIT.md` | Короткий release-status |
 | `docs/refactor/*` | Governance, access matrix |
 | `contracts/*` | 10+ machine-readable контрактів |
@@ -370,11 +388,25 @@ Runtime GAS не залежить від npm-пакетів.
 - `Stage7TestRunner` розбитий на підмодулі ✅
 - Envelope `dryRun` узгодження ✅
 - WhatsApp `web.whatsapp.com` ✅
-- XSS-аудит клієнта в CI ✅
 
 ---
 
-## 14. Загальна оцінка
+## 14. Матриця готовності до production
+
+| Критерій | Статус |
+|----------|--------|
+| Локальний CI | ✅ PASS |
+| Git main синхронізований | ✅ |
+| GAS deploy (clasp push) | ✅ |
+| Script Properties | ✅ |
+| ACCESS / RBAC | ✅ |
+| Protections 9/9 | ✅ |
+| Workbook regression 06 | ✅ personnel=29 |
+| Access API governance 17/17 | ✅ |
+| Production smoke (clasp) | ❌ BLOCKED |
+| OAuth scopes | ✅ 6 scopes (narrowed) |
+
+### Фінальний вердикт
 
 ```text
 WASB — PRODUCTION-READY (CODE + CI)
@@ -382,4 +414,14 @@ Release closure — PENDING smoke authorization
 Overall grade — 8.2/10
 ```
 
-Повний release-status: [WASB_RELEASE_AUDIT.md](WASB_RELEASE_AUDIT.md).
+---
+
+## 15. Рекомендовані наступні кроки
+
+1. Власник — один раз у GAS Editor: `apiRunProductionSmokeChecks()`.
+2. Перевірити clasp: Apps Script API enabled, `clasp login`, `executionApi.access: ANYONE`, API executable deployment.
+3. `npm run gas:smoke` — має повернути `ok === true`.
+4. У книзі — виправити Callsign, потім `apiStage7ClearPhoneCache()`.
+5. Ручна перевірка sidebar: bootstrap < 20s, «Командиру» → `web.whatsapp.com`.
+
+Після успішного smoke — змінити вердикт у [WASB_RELEASE_AUDIT.md](./WASB_RELEASE_AUDIT.md) на `WASB production release — CLOSED`.
