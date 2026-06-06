@@ -12,12 +12,12 @@
     "ci:client": "node scripts/verify-client-includes.mjs && node scripts/verify-client-js.mjs && node scripts/verify-client-deps.mjs",
     "ci:gas": "node scripts/ci-gas-sanity.mjs",
     "audit:functions": "node scripts/audit-function-graph.mjs",
-    "gas:smoke": "clasp run apiRunProductionSmokeChecks",
-    "deploy:prod": "npm run ci && clasp push && npm run gas:smoke",
-    "gas status": "clasp status",
-    "gas pull": "clasp pull",
-    "gas push": "clasp push",
-    "gas open": "clasp open"
+    "gas:smoke": "npx clasp run apiRunProductionSmokeChecks",
+    "deploy:prod": "npm run ci && npx clasp push && npm run gas:smoke",
+    "gas status": "npx clasp status",
+    "gas pull": "npx clasp pull",
+    "gas push": "npx clasp push",
+    "gas open": "npx clasp open"
   },
   "devDependencies": {
     "@google/clasp": "^3.3.0"
