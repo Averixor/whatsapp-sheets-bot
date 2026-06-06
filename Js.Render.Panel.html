@@ -807,6 +807,20 @@
     );
   }
 
+  function renderSelectedRecipientSendButton_(message, className) {
+    var safeMessage = String(message || "").trim();
+    if (!safeMessage) {
+      return '<div class="vacation-card__empty">Немає тексту повідомлення</div>';
+    }
+    return (
+      '<button class="' +
+      escapeAttr(className || "result-link") +
+      '" onclick="SidebarApp.sendMessageToSelectedRecipient(\'' +
+      escapeJsString(safeMessage) +
+      "')\">Відправити отримувачу</button>"
+    );
+  }
+
   // =========================
   // RESULT RENDERING
   // =========================
@@ -873,6 +887,7 @@
             <div class="result-label" style="color: var(--success-color);">Результати</div>
             <div class="result-value">${escapeHtml(data?.message ?? "")}</div>
           </div>
+          ${renderCommanderRecipientControls_()}
         `;
         if (hasVacationBlocks(data)) html += renderVacationAlerts(data);
         break;
@@ -945,11 +960,7 @@
           <div class="vacation-card vacation-card--commander">
             <div class="vacation-card__name">${esc(row.fml)}</div>
             <div class="vacation-card__text">${esc(row?.message || '')}</div>
-            ${
-              row.link
-                ? `<button class="result-link vacation-card__btn" onclick="SidebarApp.sendVacationMessage('${escJs(row.link)}')">Відправити</button>`
-                : `<div class="vacation-card__empty">Немає посилання</div>`
-            }
+            ${renderSelectedRecipientSendButton_(row?.message, "result-link vacation-card__btn")}
           </div>
         `;
       });

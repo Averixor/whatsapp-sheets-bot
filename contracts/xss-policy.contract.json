@@ -5,7 +5,7 @@
   "legacyPatternCount": 93,
   "migrationNotes": "Prefer routing new HTML through sanitizerSinks (escapeHtml, escapeAttr, escapeJsString, esc) instead of expanding SAFE_EXPR. Legacy patterns remain allowed until sink migration completes.",
   "reviewedAllowlist": {
-    "reviewedAt": "2026-05-29",
+    "reviewedAt": "2026-06-06",
     "changeReason": "P2 explicit reviewed allowlist groups for SAFE_EXPR governance",
     "requireFullCoverage": true,
     "groups": [
@@ -33,6 +33,7 @@
           "^renderPendingRepairsTable_\\s*\\(",
           "^renderVacationAlerts\\s*\\(",
           "^renderBirthdayResult\\s*\\(",
+          "^renderSelectedRecipientSendButton_\\s*\\(",
           "^renderSupplementaryBlocks\\s*\\(",
           "^renderAccessDebugResult_\\s*\\(",
           "^renderCheckItemCompact\\s*\\(",
@@ -245,6 +246,7 @@
     "^renderPendingRepairsTable_\\s*\\(",
     "^renderVacationAlerts\\s*\\(",
     "^renderBirthdayResult\\s*\\(",
+    "^renderSelectedRecipientSendButton_\\s*\\(",
     "^renderSupplementaryBlocks\\s*\\(",
     "^renderAccessDebugResult_\\s*\\(",
     "^normalizeError\\s*\\(",

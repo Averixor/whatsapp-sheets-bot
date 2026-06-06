@@ -326,23 +326,48 @@ function _veWaLink_(phone, message) {
   return buildWhatsAppWebLink_(phone, message);
 }
 
-function _veCommanderPhone_() {
+function _veHasExplicitRecipient_(options) {
+  var input = options && typeof options === 'object' ? options : {};
+  var override =
+    input.recipientOverride && typeof input.recipientOverride === 'object'
+      ? input.recipientOverride
+      : {};
+  return !!String(
+    override.phone ||
+      override.callsign ||
+      override.role ||
+      input.recipientPhone ||
+      input.recipientCallsign ||
+      input.recipientRole ||
+      input.commanderRole ||
+      '',
+  ).trim();
+}
+
+function _veCommanderRecipient_(options) {
   try {
+    if (typeof resolveMessageRecipient_ === 'function') {
+      return resolveMessageRecipient_(
+        Object.assign({ fallbackRole: _veCommanderRole_() }, options || {}),
+      );
+    }
+
     const role = _veCommanderRole_();
-
-    if (typeof findPhone_ === 'function') {
-      return findPhone_({ role: role, callsign: role }) || '';
-    }
-
-    if (typeof findPhoneByRole_ === 'function') {
-      return findPhoneByRole_(role) || '';
-    }
-
-    return '';
+    const phone =
+      typeof findPhone_ === 'function'
+        ? findPhone_({ role: role, callsign: role }) || ''
+        : '';
+    return phone ? { phone: phone, role: role, callsign: role, source: 'legacy' } : null;
   } catch (e) {
-    console.error('_veCommanderPhone_ error:', e);
-    return '';
+    console.error('_veCommanderRecipient_ error:', e);
+    if (_veHasExplicitRecipient_(options)) throw e;
+    return null;
   }
+}
+
+function _veCommanderPhone_(options) {
+  const recipient = _veCommanderRecipient_(options);
+  return recipient && recipient.phone ? recipient.phone : '';
 }
 
 function _veProfilesList_() {
@@ -437,7 +462,7 @@ function _veBuildVacationCommanderMessage_(kind, data) {
 
 // ==================== VACATION ENGINE ====================
 
-function runVacationEngine_(targetDate) {
+function runVacationEngine_(targetDate, options) {
   const result = {
     soldierMessages: [],
     commanderMessages: [],
@@ -483,9 +508,20 @@ function runVacationEngine_(targetDate) {
     today.setHours(12, 0, 0, 0);
 
     const tz = _veTimeZone_();
-    const commanderPhone = VACATION_ENGINE_CONFIG.NOTIFY_COMMANDER
-      ? _veCommanderPhone_()
-      : '';
+    const commanderRecipient = VACATION_ENGINE_CONFIG.NOTIFY_COMMANDER
+      ? _veCommanderRecipient_(options)
+      : null;
+    const commanderPhone =
+      commanderRecipient && commanderRecipient.phone
+        ? commanderRecipient.phone
+        : '';
+    result.commanderRecipient = commanderRecipient
+      ? {
+          role: commanderRecipient.role || commanderRecipient.callsign || '',
+          callsign: commanderRecipient.callsign || commanderRecipient.role || '',
+          source: commanderRecipient.source || '',
+        }
+      : null;
 
     for (const row of rows) {
       const fml = String(row[VACATION_ENGINE_CONFIG.NAME_COL - 1] || '').trim();
@@ -559,6 +595,7 @@ function runVacationEngine_(targetDate) {
             vacationWord: vacationWord,
             message: commanderMessage,
             link: _veWaLink_(commanderPhone, commanderMessage),
+            recipientRole: result.commanderRecipient && result.commanderRecipient.role || '',
             id: `commander_soon3_${_veNormId_(fml)}_${startStr}`
           });
         }
@@ -602,6 +639,7 @@ function runVacationEngine_(targetDate) {
             vacationWord: vacationWord,
             message: commanderMessage,
             link: _veWaLink_(commanderPhone, commanderMessage),
+            recipientRole: result.commanderRecipient && result.commanderRecipient.role || '',
             id: `commander_tomorrow_${_veNormId_(fml)}_${startStr}`
           });
         }
@@ -828,13 +866,13 @@ function _veBuildBirthdayGreetingMessage_(data) {
   ].join('\n');
 }
 
-function _veBirthdayCommanderPhone_() {
-  return _veCommanderPhone_();
+function _veBirthdayCommanderPhone_(options) {
+  return _veCommanderPhone_(options);
 }
 
 // ==================== BIRTHDAY ENGINE ====================
 
-function runBirthdayEngine_(targetDate) {
+function runBirthdayEngine_(targetDate, options) {
   const result = {
     commanderMessages: [],
     birthdayMessages: [],
@@ -843,7 +881,18 @@ function runBirthdayEngine_(targetDate) {
 
   try {
     const items = _veProfilesList_();
-    const commanderPhone = _veBirthdayCommanderPhone_();
+    const commanderRecipient = _veCommanderRecipient_(options);
+    const commanderPhone =
+      commanderRecipient && commanderRecipient.phone
+        ? commanderRecipient.phone
+        : '';
+    result.commanderRecipient = commanderRecipient
+      ? {
+          role: commanderRecipient.role || commanderRecipient.callsign || '',
+          callsign: commanderRecipient.callsign || commanderRecipient.role || '',
+          source: commanderRecipient.source || '',
+        }
+      : null;
 
     const parsedTarget = targetDate instanceof Date
       ? new Date(targetDate)
@@ -914,6 +963,7 @@ function runBirthdayEngine_(targetDate) {
           daysUntil: daysUntil,
           message: message,
           link: _veWaLink_(commanderPhone, message),
+          recipientRole: result.commanderRecipient && result.commanderRecipient.role || '',
           id: `birthday_commander_${_veNormId_(item.fml)}_${daysUntil}`
         });
       }

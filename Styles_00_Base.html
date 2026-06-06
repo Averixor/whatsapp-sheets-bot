@@ -108,6 +108,36 @@
     min-width: 0;
   }
 
+  html,
+  select,
+  textarea,
+  input {
+    color-scheme: dark;
+  }
+
+  select {
+    background-color: #0f172a;
+    color: #f8fafc;
+    border-color: #334155;
+  }
+
+  select option,
+  select optgroup {
+    background-color: #0f172a;
+    color: #f8fafc;
+  }
+
+  select option:checked {
+    background-color: #2563eb;
+    color: #ffffff;
+  }
+
+  select option:disabled,
+  select optgroup:disabled {
+    background-color: #0f172a;
+    color: #64748b;
+  }
+
   body {
     font-family: var(--font-sans);
     background: var(--body-gradient);

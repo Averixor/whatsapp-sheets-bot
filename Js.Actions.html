@@ -405,7 +405,8 @@
   function displayBirthdayResult(result) {
     const contentEl = $id("resultContent");
     if (!contentEl) return;
-    contentEl.innerHTML = renderBirthdayResult(result);
+    contentEl.innerHTML =
+      renderCommanderRecipientControls_() + renderBirthdayResult(result);
   }
 
   function formatYearsUa(age) {
@@ -478,11 +479,7 @@
               <div class="birthday-card__note">
                 ${esc(formatBirthdayCardNote(row.daysUntil, "commander"))}
               </div>
-              ${
-                row.link
-                  ? `<button class="birthday-card__btn birthday-card__btn--blue" onclick="SidebarApp.sendBirthdayMessage('${escapeJsString(row.link)}')">Відправити</button>`
-                  : `<div class="birthday-card__empty">Немає посилання</div>`
-              }
+              ${renderSelectedRecipientSendButton_(row?.message, "birthday-card__btn birthday-card__btn--blue")}
             </div>
           `;
         });
@@ -618,6 +615,49 @@
 
     if (!STATE.DIAG_TEST_MODE) openLinkSafe(link);
     logToConsole("📱 WhatsApp відкрито", "success");
+  }
+
+  async function sendMessageToSelectedRecipient(message) {
+    const safeMessage = String(message || "").trim();
+    if (!safeMessage) {
+      showToast("✕ Немає тексту повідомлення");
+      return;
+    }
+
+    const popup = STATE.DIAG_TEST_MODE
+      ? null
+      : window.open("about:blank", "WA_RECIPIENT_WINDOW");
+    showLoading();
+
+    try {
+      const result = await runServerMethod_(
+        "prepareMessageToRecipientSidebar",
+        [
+          safeMessage,
+          {
+            recipientMode: "selected",
+            recipientRole: getSelectedCommanderRecipient_(),
+          },
+        ],
+        "Js.Actions.sendMessageToSelectedRecipient",
+      );
+      const link = extractCommanderLink_(result);
+      if (result?.success && openPreparedCommanderLink_(popup, link)) {
+        showToast("✓ Повідомлення підготовлено");
+      } else {
+        try {
+          if (popup && !popup.closed) popup.close();
+        } catch (_) {}
+        showToast("✕ " + (result?.error || "Не вдалося підготувати повідомлення"));
+      }
+    } catch (error) {
+      try {
+        if (popup && !popup.closed) popup.close();
+      } catch (_) {}
+      showToast("✕ " + normalizeError(error));
+    } finally {
+      hideLoading();
+    }
   }
 
   // =========================
@@ -1130,6 +1170,7 @@
     setCommanderRecipient,
     sendVacationMessage,
     sendBirthdayMessage,
+    sendMessageToSelectedRecipient,
     openBirthdayWA,
 
     copyResultText,

@@ -12,9 +12,15 @@ const SummaryService_ = (function() {
     return SummaryRepository_.buildDetailedSummary(dateStr || _todayStr_());
   }
 
-  function buildCommanderPreview(dateStr) {
+  function buildCommanderPreview(dateOrOptions) {
+    const options =
+      dateOrOptions && typeof dateOrOptions === 'object'
+        ? Object.assign({}, dateOrOptions)
+        : { date: dateOrOptions };
+    const dateStr = options.date || options.dateStr || _todayStr_();
     const summary = buildDay(dateStr);
-    const phone = findPhone_({ role: CONFIG.COMMANDER_ROLE }) || '';
+    const recipient = resolveMessageRecipient_(options);
+    const phone = recipient.phone || '';
     const link = phone
       ? PreviewLinkService_.buildWaLink(phone, summary.summary || '')
       : '';
@@ -24,14 +30,15 @@ const SummaryService_ = (function() {
       date: summary.date || dateStr || _todayStr_(),
       summary: summary.summary || '',
       phone: phone,
+      recipient: recipient,
       link: link,
       sheet: summary.sheet || '',
       kind: 'commanderSummaryPreview'
     };
   }
 
-  function buildCommanderLink(dateStr) {
-    return buildCommanderPreview(dateStr);
+  function buildCommanderLink(dateOrOptions) {
+    return buildCommanderPreview(dateOrOptions);
   }
 
   return {

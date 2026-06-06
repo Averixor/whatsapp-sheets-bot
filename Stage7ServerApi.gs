@@ -508,8 +508,12 @@ function apiLoadCalendarDay(dateStr) {
   return apiStage7GetSidebarData(dateStr || _todayStr_());
 }
 
-function apiCheckVacationsAndBirthdays(dateStr) {
-  const info = validateDatePayload_({ date: dateStr || _todayStr_() }, "date");
+function apiCheckVacationsAndBirthdays(dateOrOptions) {
+  const options =
+    dateOrOptions && typeof dateOrOptions === "object"
+      ? Object.assign({}, dateOrOptions)
+      : { date: dateOrOptions || _todayStr_() };
+  const info = validateDatePayload_(options, "date");
   if (
     typeof AccessEnforcement_ === "object" &&
     AccessEnforcement_.assertCanRunLeaveBirthdayCheck
@@ -524,7 +528,9 @@ function apiCheckVacationsAndBirthdays(dateStr) {
     VacationService_ &&
     typeof VacationService_.check === "function"
       ? VacationService_.check(
-          info.payload.dateStr || info.payload.date || _todayStr_(),
+          Object.assign({}, info.payload, {
+            date: info.payload.dateStr || info.payload.date || _todayStr_(),
+          }),
         )
       : {
           date: info.payload.dateStr || info.payload.date || _todayStr_(),
@@ -533,12 +539,14 @@ function apiCheckVacationsAndBirthdays(dateStr) {
               DateUtils_.parseUaDate(
                 info.payload.dateStr || info.payload.date,
               ) || new Date(),
+              info.payload,
             ) || {},
           birthdays:
             runBirthdayEngine_(
               DateUtils_.parseUaDate(
                 info.payload.dateStr || info.payload.date,
               ) || new Date(),
+              info.payload,
             ) || {},
         };
 

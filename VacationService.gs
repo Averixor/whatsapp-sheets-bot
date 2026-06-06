@@ -4,10 +4,14 @@
  */
 
 const VacationService_ = (function() {
-  function check(dateStr) {
-    const target = DateUtils_.parseUaDate(dateStr || _todayStr_()) || new Date();
-    const vacations = runVacationEngine_(target);
-    const birthdays = runBirthdayEngine_(target);
+  function check(dateOrOptions) {
+    const options =
+      dateOrOptions && typeof dateOrOptions === 'object'
+        ? Object.assign({}, dateOrOptions)
+        : { date: dateOrOptions };
+    const target = DateUtils_.parseUaDate(options.date || options.dateStr || _todayStr_()) || new Date();
+    const vacations = runVacationEngine_(target, options);
+    const birthdays = runBirthdayEngine_(target, options);
 
     return {
       date: Utilities.formatDate(target, getTimeZone_(), 'dd.MM.yyyy'),

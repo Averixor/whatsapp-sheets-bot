@@ -180,8 +180,12 @@
       }, result || {});
     },
 
-    async checkVacationsAndBirthdays(dateStr = '') {
-      const response = await Api.run('apiCheckVacationsAndBirthdays', dateStr || '');
+    async checkVacationsAndBirthdays(dateOrOptions = '') {
+      const options =
+        dateOrOptions && typeof dateOrOptions === 'object'
+          ? Object.assign({}, dateOrOptions)
+          : { date: dateOrOptions || '' };
+      const response = await Api.run('apiCheckVacationsAndBirthdays', options);
       const result = unwrapStage4Result(response) || {};
       return {
         success: !!response?.success,

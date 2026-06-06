@@ -487,7 +487,11 @@
         case "vacationReminder": {
           const result = await ActionDispatcher.run(
             "checkVacationsAndBirthdays",
-            () => Stage7Api.checkVacationsAndBirthdays(_todayStr_()),
+            () =>
+              Stage7Api.checkVacationsAndBirthdays({
+                date: _todayStr_(),
+                recipientRole: getSelectedCommanderRecipient_(),
+              }),
           );
           if (result?.success) {
             showStandardResult("Нагадування про відпустки");
@@ -508,7 +512,10 @@
 
         case "birthdayCheck": {
           const result = await ActionDispatcher.run("checkBirthdays", () =>
-            Stage7Api.checkVacationsAndBirthdays(_todayStr_()),
+            Stage7Api.checkVacationsAndBirthdays({
+              date: _todayStr_(),
+              recipientRole: getSelectedCommanderRecipient_(),
+            }),
           );
           if (result?.success) {
             showStandardResult("🎂 Дні Народження");

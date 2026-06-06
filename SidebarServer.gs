@@ -23,6 +23,17 @@ function _resolveCommanderRoleForSidebar_(commanderRole) {
   ).trim();
 }
 
+function _requireSidebarAccessGuard_(guardName, args) {
+  if (
+    typeof AccessEnforcement_ !== 'object' ||
+    !AccessEnforcement_ ||
+    typeof AccessEnforcement_[guardName] !== 'function'
+  ) {
+    throw new Error('Access guard unavailable: ' + guardName);
+  }
+  return AccessEnforcement_[guardName].apply(AccessEnforcement_, args || []);
+}
+
 function getCommanderRecipientOptions_() {
   var defaultRole = _resolveCommanderRoleForSidebar_('');
   var seen = Object.create(null);
@@ -67,18 +78,17 @@ function getCommanderRecipientOptions_() {
 
 function sendDaySummaryToCommanderSidebar(dateStr, summaryText, commanderRole) {
   try {
-    if (typeof AccessEnforcement_ === 'object' && AccessEnforcement_.assertCanUseWorkingActions) {
-      AccessEnforcement_.assertCanUseWorkingActions('sendDaySummaryToCommanderSidebar', { requestedDate: dateStr || '' });
-    }
+    _requireSidebarAccessGuard_('assertCanUseWorkingActions', [
+      'sendDaySummaryToCommanderSidebar',
+      { requestedDate: dateStr || '' },
+    ]);
     if (!summaryText) {
       throw new Error('Немає тексту зведення');
     }
 
-    var selectedRole = _resolveCommanderRoleForSidebar_(commanderRole);
-    const phone = findPhone_({ role: selectedRole });
-    if (!phone) {
-      throw new Error(`Телефон для ролі "${selectedRole}" не знайдено в PHONES`);
-    }
+    var recipient = resolveMessageRecipient_({ recipientRole: commanderRole });
+    var selectedRole = recipient.role;
+    const phone = recipient.phone;
 
     const safe = trimToEncoded_(summaryText, CONFIG.MAX_WA_TEXT);
     const link = buildWhatsAppWebLink_(phone, safe);
@@ -96,7 +106,7 @@ function sendDaySummaryToCommanderSidebar(dateStr, summaryText, commanderRole) {
     }]);
 
     return okResponse_(
-      { link: link, commanderRole: selectedRole },
+      { link: link, commanderRole: selectedRole, recipient: recipient },
       'Зведення для командира підготовлено',
       { function: 'sendDaySummaryToCommanderSidebar' },
     );
@@ -107,18 +117,14 @@ function sendDaySummaryToCommanderSidebar(dateStr, summaryText, commanderRole) {
 
 function sendDetailedToCommanderSidebar(dateStr, detailedText, commanderRole) {
   try {
-    if (typeof AccessEnforcement_ === 'object' && AccessEnforcement_.assertCanUseDetailedSummary) {
-      AccessEnforcement_.assertCanUseDetailedSummary(dateStr || '');
-    }
+    _requireSidebarAccessGuard_('assertCanUseDetailedSummary', [dateStr || '']);
     if (!detailedText) {
       throw new Error('Немає тексту детального зведення');
     }
 
-    var selectedRole = _resolveCommanderRoleForSidebar_(commanderRole);
-    const phone = findPhone_({ role: selectedRole });
-    if (!phone) {
-      throw new Error(`Телефон для ролі "${selectedRole}" не знайдено в PHONES`);
-    }
+    var recipient = resolveMessageRecipient_({ recipientRole: commanderRole });
+    var selectedRole = recipient.role;
+    const phone = recipient.phone;
 
     const safe = trimToEncoded_(detailedText, CONFIG.MAX_WA_TEXT);
     const link = buildWhatsAppWebLink_(phone, safe);
@@ -136,12 +142,40 @@ function sendDetailedToCommanderSidebar(dateStr, detailedText, commanderRole) {
     }]);
 
     return okResponse_(
-      { link: link, commanderRole: selectedRole },
+      { link: link, commanderRole: selectedRole, recipient: recipient },
       'Детальне зведення для командира підготовлено',
       { function: 'sendDetailedToCommanderSidebar' },
     );
   } catch (e) {
     return errorResponse_(e, { function: 'sendDetailedToCommanderSidebar' });
+  }
+}
+
+function prepareMessageToRecipientSidebar(message, recipientOptions) {
+  try {
+    _requireSidebarAccessGuard_('assertCanUseWorkingActions', [
+      'prepareMessageToRecipientSidebar',
+      {
+        recipientMode: String(
+          (recipientOptions && recipientOptions.recipientMode) || '',
+        ),
+      },
+    ]);
+    if (!String(message || '').trim()) {
+      throw new Error('Немає тексту повідомлення');
+    }
+
+    var recipient = resolveMessageRecipient_(recipientOptions || {});
+    var safe = trimToEncoded_(message, CONFIG.MAX_WA_TEXT);
+    var link = buildWhatsAppWebLink_(recipient.phone, safe);
+
+    return okResponse_(
+      { link: link, recipient: recipient },
+      'Повідомлення для отримувача підготовлено',
+      { function: 'prepareMessageToRecipientSidebar' },
+    );
+  } catch (e) {
+    return errorResponse_(e, { function: 'prepareMessageToRecipientSidebar' });
   }
 }
 
