@@ -1,6 +1,11 @@
 # Changelog
 
-## 2026-06-07 — documentation consolidation
+## 2026-06-07 — PERSONNEL Status dropdown aligned with production workbook
+
+- **`PersonnelRepository.gs`**: 9-value dropdown (`В наявності` … `СЗЧ`); default
+  `В наявності`; inactive `Вибув` + `СЗЧ`; legacy `Дієвий`/`Відрядження`/EN on read
+- **`contracts/personnel-status.contract.json`**, **`scripts/verify-personnel-status-contract.mjs`**: CI governance
+- Docs: **`README.md`**, **`ARCHITECTURE.md`**, **`RUNBOOK.md`**, **`AGENTS.md`**, **`SheetSchemas.gs`**, **`DomainTests.gs`**
 
 - aligned `README.md`, `ARCHITECTURE.md`, `RUNBOOK.md`, `SECURITY.md`,
   `CONTRIBUTING.md`, and `AGENTS.md` with the current code and 17-check CI suite

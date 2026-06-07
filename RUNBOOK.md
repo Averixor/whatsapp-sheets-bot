@@ -256,6 +256,7 @@ Local equivalent: **`npm run ci`**.
 
 |--------|---------|
 | `ci-gas-sanity.mjs` | Syntax check all `.gs` files |
+| `verify-personnel-status-contract.mjs` | PERSONNEL Status dropdown/active/inactive lists vs `PersonnelRepository.gs` |
 | `verify-workbook-contract.mjs` | Compact monthly workbook geometry and personnel count |
 | `verify-recipient-contract.mjs` | Recipient routing and dark-select UI contract |
 | `audit-function-graph.mjs` | Bound entrypoint refs vs definitions |
@@ -349,11 +350,11 @@ Required headers: `FML`, `Birthday`, `Phone`, `Callsign`, `Position`, `OSH_4`, `
 ### One-time / migration in the spreadsheet
 
 1. Add column **`Status`** if missing (or run **`apiStage7BootstrapRuntimeAndAlertsSheets`** / self-heal to seed headers on empty `PERSONNEL`).
-2. For everyone on duty: leave **`Status` empty** or use an active UA value:
-   **`Дієвий`**, **`Тимчасовий`**, **`Відрядження`**, **`В наявності`**,
-   **`Відпустка`**, **`Гусачівка`**, or **`Відкомандерований`**. Do not mix
-   EN/UA in the same column.
-3. For departed personnel (including transferred out of the unit): set **`Вибув`** — do not delete the row immediately unless you prefer a hard delete. Do **not** use **`Переведений`** (legacy values map to **`Вибув`** on read).
+2. For everyone on duty: leave **`Status` empty** (defaults to **`В наявності`**) or pick an active dropdown value:
+   **`В наявності`**, **`У відрядженні`**, **`Відпустка`**, **`Лікарняний`**, **`Тимчасовий`**, **`Гусачівка`**, **`БЗВП`**. Do not mix EN/UA in the same column.
+3. For departed or absent-without-leave: set **`Вибув`** or **`СЗЧ`** — excluded from schedule, phones, and cards. Do **not** use **`Переведений`** (legacy values map to **`Вибув`** on read).
+
+**Dropdown order (9 values):** `В наявності` → `У відрядженні` → `Вибув` → `Відпустка` → `Лікарняний` → `Тимчасовий` → `Гусачівка` → `БЗВП` → `СЗЧ`. Legacy labels (`Дієвий`, `Відрядження`, `Active`, EN) normalize on read.
 
 **Data validation (dropdown):** apply to the **whole** Status column from row 2, e.g. `PERSONNEL!M2:M`, not a single cell like `M10`. After deploy, run **`applyPersonnelStatusColumnValidation()`** in the Apps Script editor, or **`ensureSystemSheetByName_('PERSONNEL')`** / bootstrap self-heal to apply the list automatically.
 

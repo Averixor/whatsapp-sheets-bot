@@ -7,10 +7,11 @@
  *   - ID (Армія+): optional data field, NOT a stable system key
  *   - Position: organizational slot, NOT a person key
  *
- * Status (UA): канон Дієвий|Тимчасовий|Відрядження|Вибув або значення з книги
- * (В наявності, Відпустка, Гусачівка, Відкомандерований).
- * Active runtime records: усе, крім Вибув.
- * Legacy EN on read: Active→Дієвий, Temp→Тимчасовий, Removed/Transferred→Вибув.
+ * Status (UA): dropdown у PERSONNEL — 9 значень з книги (див. PERSONNEL_STATUS_SHEET_VALUES_).
+ * Active runtime: усе, крім Вибув та СЗЧ.
+ * Порожньо = В наявності.
+ * Legacy EN/старі мітки на читанні: Active/Дієвий→В наявності, Temp→Тимчасовий,
+ * Відрядження/У відрядженні→У відрядженні, Removed→Вибув.
  */
 
 var PERSONNEL_SHEET_NAME =
@@ -59,49 +60,51 @@ var PERSONNEL_OPTIONAL_HEADER_KEYS = [
   "TEMPLATE",
 ];
 
-/** Значення в аркуші PERSONNEL (українською, без змішування з EN). */
-var PERSONNEL_ACTIVE_STATUSES_ = [
-  "Дієвий",
-  "Тимчасовий",
-  "Відрядження",
-  "В наявності",
-  "Відпустка",
-  "Гусачівка",
-  "Відкомандерований",
-];
-
-var PERSONNEL_INACTIVE_STATUSES_ = ["Вибув"];
-
+/** Dropdown і канонічні значення в колонці Status (порядок як у книзі). */
 var PERSONNEL_STATUS_SHEET_VALUES_ = [
-  "Дієвий",
-  "Тимчасовий",
-  "Відрядження",
-  "Вибув",
   "В наявності",
+  "У відрядженні",
+  "Вибув",
   "Відпустка",
+  "Лікарняний",
+  "Тимчасовий",
   "Гусачівка",
-  "Відкомандерований",
+  "БЗВП",
+  "СЗЧ",
 ];
 
-var PERSONNEL_DEFAULT_STATUS_UA_ = "Дієвий";
+/** Активні для графіка, телефонів, карток, списків (не Вибув / не СЗЧ). */
+var PERSONNEL_ACTIVE_STATUSES_ = [
+  "В наявності",
+  "У відрядженні",
+  "Відпустка",
+  "Лікарняний",
+  "Тимчасовий",
+  "Гусачівка",
+  "БЗВП",
+];
 
-/** Legacy EN / synonyms / typos → canonical UA label. */
+var PERSONNEL_INACTIVE_STATUSES_ = ["Вибув", "СЗЧ"];
+
+var PERSONNEL_DEFAULT_STATUS_UA_ = "В наявності";
+
+/** Legacy EN / synonyms / typos → canonical UA label (dropdown). */
 var PERSONNEL_STATUS_LEGACY_TO_UA_ = {
-  active: "Дієвий",
-  aktiv: "Дієвий",
-  активний: "Дієвий",
-  активна: "Дієвий",
-  дієвий: "Дієвий",
-  діевий: "Дієвий",
-  дієв: "Дієвий",
+  active: "В наявності",
+  aktiv: "В наявності",
+  активний: "В наявності",
+  активна: "В наявності",
+  дієвий: "В наявності",
+  діевий: "В наявності",
+  дієв: "В наявності",
   temp: "Тимчасовий",
   temporary: "Тимчасовий",
   тимчасовий: "Тимчасовий",
   тимчасово: "Тимчасовий",
-  відрядження: "Відрядження",
-  vidriadzhennia: "Відрядження",
-  deployment: "Відрядження",
-  assignment: "Відрядження",
+  відрядження: "У відрядженні",
+  vidriadzhennia: "У відрядженні",
+  deployment: "У відрядженні",
+  assignment: "У відрядженні",
   transferred: "Вибув",
   transfered: "Вибув",
   переведений: "Вибув",
@@ -118,21 +121,28 @@ var PERSONNEL_STATUS_LEGACY_TO_UA_ = {
   наявності: "В наявності",
   відпустка: "Відпустка",
   vacation: "Відпустка",
+  лікарняний: "Лікарняний",
+  лікарн: "Лікарняний",
+  hospital: "Лікарняний",
   гусачівка: "Гусачівка",
   гусачі: "Гусачівка",
-  відкомандерований: "Відкомандерований",
-  відкомандирований: "Відкомандерований",
+  У відрядженні: "У відрядженні",
+  У відрядженні: "У відрядженні",
+  бзвп: "БЗВП",
+  сзч: "СЗЧ",
+  awol: "СЗЧ",
 };
 
 var PERSONNEL_STATUS_UA_TO_CANONICAL_ = {
-  Дієвий: "Active",
-  Тимчасовий: "Temp",
-  Відрядження: "Assignment",
-  Вибув: "Removed",
   "В наявності": "Active",
+  У відрядженні: "Detached",
+  Вибув: "Removed",
   Відпустка: "Vacation",
+  Лікарняний: "Hospital",
+  Тимчасовий: "Temp",
   Гусачівка: "Away",
-  Відкомандерований: "Detached",
+  БЗВП: "Training",
+  СЗЧ: "AWOL",
 };
 
 function _personnelGlobal_() {
@@ -240,7 +250,7 @@ function applyPersonnelStatusColumnValidation_(sh) {
     .requireValueInList(getPersonnelStatusListValues_(), true)
     .setAllowInvalid(false)
     .setHelpText(
-      "Статус з книги. Порожньо = Дієвий; активні записи — усе, крім Вибув.",
+      "Статус зі списку. Порожньо = В наявності; активні — усе, крім Вибув та СЗЧ.",
     )
     .build();
 
@@ -525,7 +535,7 @@ function getPersonnelRows_() {
   return _personnelGetLoaded_().slice();
 }
 
-/** Лише Дієвий / Тимчасовий / Відрядження (для графіка, телефонів, карток, списків). */
+/** Лише активні Status (див. PERSONNEL_ACTIVE_STATUSES_) — графік, телефони, картки. */
 function getPersonnelActiveRows_() {
   return getPersonnelRows_().filter(function (row) {
     return row && row.active === true;

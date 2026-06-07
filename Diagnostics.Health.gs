@@ -122,10 +122,10 @@ function healthCheck() {
           warnings.length ? "; " + warnings.join("; ") : ""
         }`,
         howTo: duplicateActiveCallsigns
-          ? "Виправте дублікати позивних серед Дієвий/Тимчасовий/Відрядження у PERSONNEL"
+          ? "Виправте дублікати позивних серед активних записів PERSONNEL"
           : activeRows.length
             ? ""
-            : "Заповніть PERSONNEL (Callsign + FML, Status=Дієвий або порожньо)",
+            : "Заповніть PERSONNEL (Callsign + FML, Status=В наявності або порожньо)",
       };
     },
   );

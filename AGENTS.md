@@ -71,10 +71,10 @@ Or one command: `npm run deploy:prod` (uses `npx clasp` from `package.json`).
 - Monthly schedule row key: **Callsign**; personal fields from `PERSONNEL` by Callsign (fallback **FML**).
 - **ID** (Армія+) is optional data, not a required system key.
 - **Position** is not a person key.
-- **Status** (UA only in sheet): active values are `Дієвий`, `Тимчасовий`,
-  `Відрядження`, `В наявності`, `Відпустка`, `Гусачівка`,
-  `Відкомандерований`; `Вибув` is inactive; empty = `Дієвий`. Legacy EN is
-  mapped on read only.
+- **Status** (UA only in sheet): dropdown — `В наявності`, `У відрядженні`,
+  `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`.
+  Runtime-active: all except `Вибув` and `СЗЧ`; empty = `В наявності`. Legacy
+  (`Дієвий`, `Active`, `Відрядження`, EN) mapped on read only.
 - Final headers: `ID | FML | … | Unit | Status` — see `RUNBOOK.md` §14.
 - After deploy or PERSONNEL edits: run **`apiStage7ClearPhoneCache()`** in GAS (mandatory).
 - See `.cursor/rules/personnel-data-keys.mdc`.

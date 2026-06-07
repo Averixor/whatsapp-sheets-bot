@@ -15,6 +15,12 @@ snapshots to the repository.
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Local workflow, CI, change policy |
 | [AGENTS.md](../AGENTS.md) | Automation-agent instructions |
 
+## Refactor Planning
+
+| File | Purpose |
+|------|---------|
+| [p2-candidates.md](./refactor/p2-candidates.md) | Post-release, non-blocking candidates for mechanical module splits |
+
 Machine-readable policy belongs in [`contracts/`](../contracts/). Snapshot
 changes are governed by `scripts/verify-snapshot-governance.mjs` and must be
 recorded in [`contracts/SNAPSHOT_CHANGELOG.md`](../contracts/SNAPSHOT_CHANGELOG.md).

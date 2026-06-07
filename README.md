@@ -51,9 +51,9 @@ Full workflow, release checklist, and post-deploy checks: **`CONTRIBUTING.md`** 
 
 The repository runs a lightweight CI workflow on **`push`** and **`pull_request`** to **`main`**, and **`workflow_dispatch`**.
 
-It runs 17 checks via `npm run ci`, including:
+It runs 18 checks via `npm run ci`, including:
 
-- GAS source sanity, workbook + recipient contracts, function graph audit
+- GAS source sanity, workbook + recipient + personnel-status contracts, function graph audit
 - Client includes / JS / layer deps, XSS, envelope compat
 - UseCase facade, snapshot governance, bridge flags, access API governance, OAuth scopes, jsconfig
 
@@ -151,9 +151,11 @@ Notes:
 - Monthly sheets store **Callsign + schedule**; `PERSONNEL` stores person fields.
 - `Callsign` is the schedule/lookup key. `FML` is the fallback display identity.
 - `ID` is optional Армія+ data; `Position` is not a person key.
-- Active UA statuses: `Дієвий`, `Тимчасовий`, `Відрядження`, `В наявності`,
-  `Відпустка`, `Гусачівка`, `Відкомандерований`; `Вибув` is inactive; empty
-  status defaults to `Дієвий`.
+- Active UA statuses (dropdown, 9 values): `В наявності`, `У відрядженні`,
+  `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`.
+  Runtime-active (schedule, phones, cards): all except **`Вибув`** and **`СЗЧ`**.
+  Empty status defaults to **`В наявності`**. Legacy labels (`Дієвий`, `Active`,
+  `Відрядження`, EN) map on read only — see `PersonnelRepository.gs`.
 - Runtime reads by header names and supports documented aliases. After edits,
   run `apiStage7ClearPhoneCache()`.
 

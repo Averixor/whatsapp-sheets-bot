@@ -529,7 +529,7 @@ function _ssBuildPersonnelSchema_() {
       'Phone', '2_Phone', 'Callsign', 'TEMPLATE', 'Rank', 'Position',
       'OSH_4', 'Unit', 'Status'
     ],
-    notes: 'Єдине джерело даних людини. Місячний графік: Callsign. Status: канон або значення з книги (В наявності, Відпустка, …).'
+    notes: 'Єдине джерело даних людини. Місячний графік: Callsign. Status dropdown (9 UA): В наявності … СЗЧ — див. PersonnelRepository.gs / personnel-status.contract.json.'
   });
 }
 
