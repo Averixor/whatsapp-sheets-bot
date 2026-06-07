@@ -23,17 +23,27 @@ WASB is a spreadsheet-bound Google Apps Script application.
   - `Js.Render.Calendar.html`
   - `Js.Render.Results.html`
   - `Js.Diagnostics.html`
+  - `Js.Security.Boot.html`
+  - `Js.Security.Util.html`
+  - `Js.Security.Access.html`
+  - `Js.Security.Debug.html`
+  - `Js.Security.Login.html`
+  - `Js.Security.DebugView.html`
+  - `Js.Security.Policy.html`
+  - `Js.Security.Guards.html`
+  - `Js.Security.Forms.html`
+  - `Js.Security.Exports.html`
   - `Js.Helpers.html`
-  - `Js.Security.html`
   - `Js.Events.html`
   - `Js.Actions.html`
-  - `Js.Render.html` — legacy shim only (not in loader chain)
+- `Js.Security.html` is a legacy shim and is not in the loader chain
 
 ### Packaging policy
 
 - runtime files stay in the repository root for easy GAS web-editor import
-- active docs stay in the repository root
-- historical and transitional materials are intentionally excluded from this compact GAS import ZIP
+- Markdown is excluded from `clasp push` by `.claspignore`
+- root operational docs are the human source of truth; contracts are machine-readable policy
+- one-off audits, production workbook snapshots, and transitional notes are not kept in the repository
 
 ## 2. Canonical server layers
 
@@ -95,6 +105,7 @@ This layer is used for heavier or sensitive workflows. Lightweight read-only rou
 
 Key repositories and services:
 
+- `PersonnelRepository.gs`
 - `PersonsRepository.gs`
 - `SendPanelRepository.gs`
 - `SummaryRepository.gs`
@@ -148,8 +159,8 @@ Operational meaning:
 
 - `guest` — safe-only mode
 - `viewer` — personnel list and own card only
-- `operator` — daily operational work
-- `maintainer` — diagnostics and operational inspection
+- `operator` — person cards and short/detailed summaries
+- `maintainer` — operator rights plus SEND_PANEL, working actions, diagnostics, and operational inspection
 - `admin` — access/log administration
 - `sysadmin` — protections, triggers, repair, cache/system maintenance
 - `owner` — full access
@@ -187,7 +198,7 @@ Jobs that call user-guarded use cases pass the system descriptor explicitly. Exa
 
 Maintenance jobs routed through `runMaintenanceScenario` (`healthCheck`, `cleanupCaches`, `cleanupLifecycleRetention`, …) do not use user RBAC guards; they rely on the system job path and `WASB_SPREADSHEET_ID` for headless spreadsheet binding.
 
-Manual job launch from the GAS editor (`apiRunStage7Job` with `trigger: false`) **does not** inherit system context; it runs under the maintainer/sysadmin session that invoked the API.
+Manual job launch from the GAS editor (`apiRunStage7Job` with `trigger: false`) **does not** inherit system context; it requires the sysadmin session that invoked the API.
 
 Spreadsheet audit handlers (`stage7SecurityAuditOnEdit`, `stage7SecurityAuditOnChange`) are also installed by `Triggers.gs`, but they do **not** use the system actor to bypass checks. They resolve the editor from the Apps Script event and log suspicious protected-sheet edits or structural changes when the actor is not allowed.
 
@@ -196,7 +207,7 @@ Spreadsheet audit handlers (`stage7SecurityAuditOnEdit`, `stage7SecurityAuditOnC
 Main operational sheets typically include:
 
 - month sheets (`01`..`12`) — schedule codes only (позивний + графік по датах)
-- `PERSONNEL` — **canonical** personal data (header-based via `PersonnelRepository.gs`). **Schedule key: Callsign** (monthly sheets). **Lookup: Callsign → FML**. `ID` = optional Армія+ (not a system key). `Position` = org slot, not person key. `Status` in sheet: **Дієвий / Тимчасовий / Відрядження** (active) vs **Вибув** (inactive).
+- `PERSONNEL` — **canonical** personal data (header-based via `PersonnelRepository.gs`). **Schedule key: Callsign** (monthly sheets). **Lookup: Callsign → FML**. `ID` = optional Армія+ (not a system key). `Position` = org slot, not person key. Active `Status` values are **Дієвий / Тимчасовий / Відрядження / В наявності / Відпустка / Гусачівка / Відкомандерований**; **Вибув** is inactive; empty defaults to **Дієвий**.
 - `PHONES` — legacy fallback when `PERSONNEL` is empty/unavailable (`loadPhonesIndex_` prefers `PERSONNEL`)
 - `DICT`
 - `DICT_SUM`
@@ -225,7 +236,7 @@ Protected / service sheets include:
 | `Проєкти`    | `ProjectRequests.gs` (`ensureProjectsSheet_`)          | same                                |
 | `Заявки`     | `ProjectRequests.gs` (`ensureRequestsSheet_`)          | same                                |
 
-Тригер входу: **`apiStage7BootstrapSidebar()`** → **`_ensureOptionalBusinessSheetsQuiet_()`** in `Stage7ServerApi.gs`. Деталі колонок і шаблонних рядків — **`RUNBOOK.md` §18**.
+Тригер входу: **`apiStage7BootstrapSidebar()`** → **`_ensureOptionalBusinessSheetsQuiet_()`** in `Stage7ServerApi.gs`. Деталі колонок і шаблонних рядків — **`RUNBOOK.md` §20**.
 
 ## 8. Sidebar runtime principles
 
@@ -258,6 +269,7 @@ Canonical resolver: **`DataAccess.gs`**.
 | `WASB_SPREADSHEET_ID` | Spreadsheet for headless/trigger runs |
 | `WASB_OWNER_EMAIL` | Owner email for privileged security notifications |
 | `WASB_ACCESS_MIGRATION_EMAIL_BRIDGE` | Emergency email bridge; off in normal operation |
+| `WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP` | Legacy plaintext temp-password lookup during migration only; off in normal operation |
 
 Service sheet bootstrap: **`ServiceSheetsBootstrap.gs`** → `apiStage7BootstrapRuntimeAndAlertsSheets()`.
 
@@ -265,5 +277,8 @@ Never hardcode production spreadsheet IDs in source files.
 
 ## 11. Documentation and truth alignment
 
-Active documentation is intentionally limited to five root markdown files.
-Historical notes, one-off reports, and transition artifacts are not shipped in this compact GAS import ZIP. Keep them in a separate repository/archive so the runtime bundle stays readable and import-safe.
+Operational truth belongs in `README.md`, `ARCHITECTURE.md`, `RUNBOOK.md`,
+`SECURITY.md`, `CONTRIBUTING.md`, `AGENTS.md`, and `CHANGELOG.md`.
+Machine-readable truth belongs in `contracts/` and `scripts/snapshots/`.
+Production status must be verified from current CI, clasp, smoke, and GAS
+diagnostics rather than copied into a static audit document.

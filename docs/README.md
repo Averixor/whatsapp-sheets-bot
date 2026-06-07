@@ -1,40 +1,23 @@
-# WASB — документація репозиторію (не GAS bundle)
+# WASB documentation index
 
-Ці файли **не завантажуються** в Apps Script editor. Вони для maintainers у Git.
+Markdown files are excluded from `clasp push` by `.claspignore`. Keep operational
+truth in the documents below; do not add one-off audits or production workbook
+snapshots to the repository.
 
-## Кореневі operational docs (див. `README.md` → Documentation map)
+| File | Source-of-truth responsibility |
+|------|--------------------------------|
+| [README.md](../README.md) | Project overview, quick start, documentation map |
+| [ARCHITECTURE.md](../ARCHITECTURE.md) | Runtime layers, data flow, canonical APIs |
+| [RUNBOOK.md](../RUNBOOK.md) | Bootstrap, deployment, production checks, troubleshooting |
+| [SECURITY.md](../SECURITY.md) | Identity, RBAC, lockout, protected data |
+| [CHANGELOG.md](../CHANGELOG.md) | Durable release history |
+| [CONTRIBUTING.md](../CONTRIBUTING.md) | Local workflow, CI, change policy |
+| [AGENTS.md](../AGENTS.md) | Automation-agent instructions |
 
-| Файл | Призначення |
-|------|-------------|
-| [README.md](../README.md) | Огляд, quick start, map |
-| [ARCHITECTURE.md](../ARCHITECTURE.md) | Шари runtime, API, data flow |
-| [RUNBOOK.md](../RUNBOOK.md) | Bootstrap, ACCESS, deploy, troubleshooting |
-| [SECURITY.md](../SECURITY.md) | Identity, roles, lockout |
-| [CHANGELOG.md](../CHANGELOG.md) | Історія релізів |
-| [CONTRIBUTING.md](../CONTRIBUTING.md) | CI, commit policy, clasp |
-| [AGENTS.md](../AGENTS.md) | Інструкції для Cursor / CI |
+Machine-readable policy belongs in [`contracts/`](../contracts/). Snapshot
+changes are governed by `scripts/verify-snapshot-governance.mjs` and must be
+recorded in [`contracts/SNAPSHOT_CHANGELOG.md`](../contracts/SNAPSHOT_CHANGELOG.md).
 
-## Аудит і release-status (Git only)
-
-| Файл | Призначення |
-|------|-------------|
-| [WASB_RELEASE_AUDIT.md](../WASB_RELEASE_AUDIT.md) | **Короткий** production status (PASS / BLOCKED / CLOSED) |
-| [WASB_FULL_TECH_AUDIT_2026-06-03.md](../WASB_FULL_TECH_AUDIT_2026-06-03.md) | Повний технічний аудит **коду** |
-| [WASB_WORKBOOK_AUDIT_2026-06-07.md](../WASB_WORKBOOK_AUDIT_2026-06-07.md) | Аудит **production-книги** «Взводу Охорони» |
-
-Оновлюйте **release audit** після smoke; workbook audit — після змін у структурі книги.
-
-## Governance (`docs/refactor/`)
-
-| Файл | Статус | Призначення |
-|------|--------|-------------|
-| [operational-stewardship.md](./refactor/operational-stewardship.md) | active | Owner/backup, cadence, emergency E1–E4 |
-| [snapshot-governance.md](./refactor/snapshot-governance.md) | active | Contract snapshots, CI |
-| [entropy-review-checklist.md](./refactor/entropy-review-checklist.md) | active | Шаблон quarterly review |
-| [entropy-review-2026-Q2.md](./refactor/entropy-review-2026-Q2.md) | snapshot | Останній quarterly output |
-| [access-roles-actions-matrix.md](./refactor/access-roles-actions-matrix.md) | active | RBAC matrix |
-| [accesscontrol-hardening.md](./refactor/accesscontrol-hardening.md) | reference | Phase 2 AccessControl doctrine |
-| [usecase-dependency-map.md](./refactor/usecase-dependency-map.md) | reference | UseCase → repo call chains |
-| [emergency-log.md](./refactor/emergency-log.md) | template | Post-mortem log (порожній = OK) |
-
-Machine-readable contracts: [`contracts/`](../contracts/).
+Production status is verified from current evidence (`npm run ci`, `clasp
+status`, `npm run gas:smoke`, GAS diagnostics), not maintained in a static audit
+document.

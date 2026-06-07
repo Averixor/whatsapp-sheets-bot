@@ -2,7 +2,7 @@
   "version": 1,
   "flags": {
     "USE_NEW_API_PATH": {
-      "owner": "WASB refactor steward — primary maintainer in docs/refactor/operational-stewardship.md",
+      "owner": "WASB primary maintainer",
       "introduced": "2026-05",
       "sunsetTarget": "2026-09-30",
       "telemetryKey": "gsRun-bridge",

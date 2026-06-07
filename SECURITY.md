@@ -78,11 +78,12 @@ Role order:
 - operational work role
 - person cards
 - summaries
-- send-panel routine actions
+- no SEND_PANEL or working-action permission
 
 ### maintainer
 
 - operator rights
+- SEND_PANEL and working actions
 - diagnostics
 - operational inspection
 - pending repairs visibility

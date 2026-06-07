@@ -2,11 +2,10 @@
 
 WASB is a spreadsheet-bound Google Apps Script bundle for personnel tracking, daily summaries, person cards, calendar views, send-panel workflows, and operational maintenance inside a single Google Sheets project.
 
-This repository is packaged for the **GAS web editor first**:
+This repository is packaged for Google Apps Script through `clasp`:
 
 - runtime files stay in the repository root (`.gs`, `.html`, `appsscript.json`)
-- active operational documentation stays in the repository root
-- this compact ZIP ships only runtime files and the **five** operational root markdown documents (see Documentation map)
+- operational documentation stays in Git and is excluded from `clasp push`
 
 ## Active release baseline
 
@@ -15,8 +14,7 @@ This repository is packaged for the **GAS web editor first**:
 - **Identity model:** strict user-key access based on `Session.getTemporaryActiveUserKey()`
 - **Current access flow:** automatic key recognition first, self-bind login by **email/phone + callsign** only when the current key is not registered
 - **Runtime style:** modular HtmlService sidebar (`Sidebar.html` → `JavaScript.html` → `Js.*` chain)
-- **Packaging policy:** compact GAS bundle ships **5 operational root markdown files** (runtime docs only; see Documentation map)
-- **Production status:** **NOT CLOSED** (smoke blocked) — [`WASB_RELEASE_AUDIT.md`](./WASB_RELEASE_AUDIT.md)
+- **Packaging policy:** Markdown is excluded from `clasp push`; root docs are the operational source of truth
 
 ## What is active in this release
 
@@ -29,34 +27,23 @@ This repository is packaged for the **GAS web editor first**:
 
 ## Maintainer workflow
 
-**Primary** (PowerShell profile with project aliases):
-
-```powershell
-Set-Location "C:\Users\User\Desktop\whatsapp-sheets-bot"
-wcheck
-wpush -Message "7"
+```bash
+npm ci
+npm run ci
+npx clasp status
+npx clasp push
+npm run gas:smoke
 ```
 
-**Fallback** (no aliases — same checks, standard git + clasp):
-
-```powershell
-Set-Location "C:\Users\User\Desktop\whatsapp-sheets-bot"
-node .\scripts\ci-gas-sanity.mjs
-node .\scripts\audit-function-graph.mjs
-git add .
-git commit -m "7"
-git push origin main
-clasp push
-```
-
-Or: `npm run ci` then commit/push/clasp as needed.
+Use Node.js 24 (`.nvmrc`). `npm run deploy:prod` runs local CI, pushes through
+the repository-pinned `clasp`, then runs the remote production smoke.
 
 - **Script properties** (Apps Script → Project settings → Script properties):
-  - **`WASB_SPREADSHEET_ID`** — headless/triggers (see `RUNBOOK.md` §14)
+  - **`WASB_SPREADSHEET_ID`** — headless/triggers (see `RUNBOOK.md` §15)
   - **`WASB_OWNER_EMAIL`** — security mail with full user key for owner
   - **`WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`** — off in normal operation
   - **`WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP`** — legacy plaintext temp-password lookup during migration only; off in normal operation
-- After **PHONES** / birthday changes: run **`apiStage7ClearPhoneCache()`** in the GAS editor, then reload the sidebar.
+- After **PERSONNEL**, **PHONES**, or birthday changes: run **`apiStage7ClearPhoneCache()`** in the GAS editor, then reload the sidebar.
 
 Full workflow, release checklist, and post-deploy checks: **`CONTRIBUTING.md`** and **`RUNBOOK.md`**.
 
@@ -64,7 +51,7 @@ Full workflow, release checklist, and post-deploy checks: **`CONTRIBUTING.md`** 
 
 The repository runs a lightweight CI workflow on **`push`** and **`pull_request`** to **`main`**, and **`workflow_dispatch`**.
 
-It checks (via `npm run ci`):
+It runs 17 checks via `npm run ci`, including:
 
 - GAS source sanity, workbook + recipient contracts, function graph audit
 - Client includes / JS / layer deps, XSS, envelope compat
@@ -72,11 +59,12 @@ It checks (via `npm run ci`):
 
 See [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) (Node 24, `actions/checkout@v5`, `actions/setup-node@v5`).
 
-The workflow does not deploy to Apps Script. Deployment remains local via **`clasp push`** / **`wpush`**.
+The workflow does not deploy to Apps Script. Deployment remains local via
+**`npx clasp push`** or `npm run deploy:prod`.
 
 ## Documentation map
 
-**Operational set (typical compact GAS import / ZIP — 5 files):**
+**Operational source-of-truth set:**
 
 | File | Purpose |
 |------|---------|
@@ -92,19 +80,11 @@ The workflow does not deploy to Apps Script. Deployment remains local via **`cla
 |------|---------|
 | [`CONTRIBUTING.md`](./CONTRIBUTING.md) | Local workflow, CI, clasp, commit policy |
 | [`AGENTS.md`](./AGENTS.md) | Cursor / cloud agent instructions |
-| [`docs/README.md`](./docs/README.md) | Index: audits + `docs/refactor/` governance |
+| [`docs/README.md`](./docs/README.md) | Documentation index and ownership rules |
 
-**Audit / release tracking:**
-
-| File | Purpose |
-|------|---------|
-| [`WASB_RELEASE_AUDIT.md`](./WASB_RELEASE_AUDIT.md) | Short production status (PASS / BLOCKED / CLOSED) |
-| [`WASB_FULL_TECH_AUDIT_2026-06-03.md`](./WASB_FULL_TECH_AUDIT_2026-06-03.md) | Full codebase technical audit |
-| [`WASB_WORKBOOK_AUDIT_2026-06-07.md`](./WASB_WORKBOOK_AUDIT_2026-06-07.md) | Production workbook «Книга Взводу Охорони» |
-
-**Meta:** `CODE_OF_CONDUCT.md` — community policy (not part of GAS bundle).
-
-Historical refactor notes live under [`docs/refactor/`](./docs/refactor/). Removed: `WASB_REPAIR_NOTES.md` (one-off recovery log), `g2-governance-roadmap.md` (G2 implemented → see `contracts/client-layers.contract.json`).
+Contracts and snapshots are machine-readable governance artifacts under
+`contracts/` and `scripts/snapshots/`. Do not commit one-off audits, production
+workbook exports, personal data, or local workbook paths.
 
 ## Repository layout
 
@@ -116,7 +96,9 @@ Historical refactor notes live under [`docs/refactor/`](./docs/refactor/). Remov
 ├── RUNBOOK.md
 ├── SECURITY.md
 ├── CHANGELOG.md
-├── docs/                             # governance + audit index (Git only)
+├── docs/README.md                    # documentation index (Git only)
+├── contracts/                        # machine-readable policy/contracts
+├── scripts/                          # local CI and governance checks
 └── no _extras/ in compact GAS release ZIP
 ```
 
@@ -133,7 +115,7 @@ Historical refactor notes live under [`docs/refactor/`](./docs/refactor/). Remov
 9. Run `apiStage7QuickHealthCheck()`.
 10. Verify the `🧑‍💻` sidebar block for each role you actually use.
 
-Після першого відкриття сайдбару (або явного виклику **`apiStage7BootstrapSidebar()`**) за потреби створюються порожні optional аркуші **`Дані`**, **`Проєкти`**, **`Заявки`** із заголовками й одним шаблонним рядком; якщо аркуш уже має дані, вміст не перезаписується. Див. **`RUNBOOK.md`** §18.
+Після першого відкриття сайдбару (або явного виклику **`apiStage7BootstrapSidebar()`**) за потреби створюються порожні optional аркуші **`Дані`**, **`Проєкти`**, **`Заявки`** із заголовками й одним шаблонним рядком; якщо аркуш уже має дані, вміст не перезаписується. Див. **`RUNBOOK.md`** §20.
 
 ## ACCESS sheet schema
 
@@ -163,6 +145,17 @@ Notes:
 - `user_key_current_hash` and `user_key_prev_hash` store **hashes**, not raw keys.
 - `person_callsign` is mandatory for viewers and for self-bind workflows tied to a callsign.
 - `self_bind_allowed` should be explicitly controlled for any record that may use the self-bind flow.
+
+## PERSONNEL model
+
+- Monthly sheets store **Callsign + schedule**; `PERSONNEL` stores person fields.
+- `Callsign` is the schedule/lookup key. `FML` is the fallback display identity.
+- `ID` is optional Армія+ data; `Position` is not a person key.
+- Active UA statuses: `Дієвий`, `Тимчасовий`, `Відрядження`, `В наявності`,
+  `Відпустка`, `Гусачівка`, `Відкомандерований`; `Вибув` is inactive; empty
+  status defaults to `Дієвий`.
+- Runtime reads by header names and supports documented aliases. After edits,
+  run `apiStage7ClearPhoneCache()`.
 
 ## Identity and login in one minute
 

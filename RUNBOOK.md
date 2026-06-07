@@ -138,8 +138,8 @@ After migration:
 - viewer sees the personnel list
 - viewer can open only their own card
 - viewer cannot open the detailed summary
-- operator can use send-panel and routine work actions
-- maintainer can run diagnostics and inspect state
+- operator can open person cards and build short/detailed summaries
+- maintainer can use SEND_PANEL, working actions, diagnostics, and inspect state
 - admin can manage access and logs
 - sysadmin can run protections, trigger cleanup, and repair flows
 
@@ -250,12 +250,14 @@ If something breaks:
 
 The repository runs CI automatically on **`push`** and **`pull_request`** to **`main`**, and **`workflow_dispatch`**.
 
-Local equivalent: **`npm run ci`** (or `wcheck` if configured).
+Local equivalent: **`npm run ci`**.
 
 | Script | Purpose |
 
 |--------|---------|
 | `ci-gas-sanity.mjs` | Syntax check all `.gs` files |
+| `verify-workbook-contract.mjs` | Compact monthly workbook geometry and personnel count |
+| `verify-recipient-contract.mjs` | Recipient routing and dark-select UI contract |
 | `audit-function-graph.mjs` | Bound entrypoint refs vs definitions |
 | `verify-client-includes.mjs` | `JavaScript.html` include order |
 | `verify-client-js.mjs` | Combined sidebar client parse-check |
@@ -265,21 +267,23 @@ Local equivalent: **`npm run ci`** (or `wcheck` if configured).
 | `verify-usecase-facade.mjs` | `Stage7UseCases_` contract vs snapshot |
 | `verify-snapshot-governance.mjs` | Snapshot mutations require `contracts/SNAPSHOT_CHANGELOG.md` + metadata |
 | `verify-bridge-flags.mjs` | `USE_NEW_API_PATH` registry vs codebase (`contracts/bridge-flags.registry.json`) |
+| `verify-access-api-governance.mjs` | Access endpoints, role policies, and client routes |
+| `verify-oauth-scopes.mjs` | Manifest scopes vs allowlist |
 | `verify-jsconfig.mjs` | `jsconfig.json` include/exclude globs resolve to tsserver inputs |
 
 There is **no** Apps Script deployment in CI (`clasp` is local only). See `.github/workflows/ci.yml`.
 
 ---
 
-1. Run local checks (`wcheck` or `npm run ci`, or the two `node scripts/...` commands—see `CONTRIBUTING.md`).
+1. Run local checks (`npm run ci`; see `CONTRIBUTING.md`).
 2. Confirm `audit-function-graph` ends with **`MISSING: none`**.
-3. Commit using the **current version string** for release drops (example: **`7`**). Avoid vague messages for version cuts.
+3. Commit with a short descriptive message; avoid version-only or vague messages.
 4. **`git push origin main`**.
 5. **`clasp status`** then **`clasp push`** — GitHub alone does not update the bound script project.
 6. In Apps Script → **Project settings → Script properties**: ensure **`WASB_SPREADSHEET_ID`** is set if you rely on triggers/headless runs (use your production spreadsheet ID).
 7. Reload the spreadsheet UI; close and reopen the sidebar.
 8. Run smoke when appropriate (see §13 — `npm run gas:smoke` or manual editor checks).
-9. After **`PERSONNEL`** structure or data changes (see §15a): run **`apiStage7ClearPhoneCache()`**, then re-check a person card and personnel modal.
+9. After **`PERSONNEL`** structure or data changes (see §14): run **`apiStage7ClearPhoneCache()`**, then re-check a person card and personnel modal.
 
 ## 13. Post-deploy checks
 
@@ -329,7 +333,7 @@ Run from the Apps Script editor when relevant after a deploy or config change:
 - `runSmokeTests()` — smoke bundle
 - `apiStage7ClearPhoneCache()` — invalidate phone/profile/PERSONNEL caches (required after **PERSONNEL** or **PHONES** edits)
 
-## 15a. PERSONNEL sheet (canonical people data)
+## 14. PERSONNEL sheet (canonical people data)
 
 **Rule:** monthly sheet = **Callsign + schedule**; **PERSONNEL** = all person fields; **Status** = activity filter.
 
@@ -338,13 +342,17 @@ Run from the Apps Script editor when relevant after a deploy or config change:
 `ID | FML | Birthday | Age | Days_until_birthday | Phone | 2_Phone | Callsign | Title | Position | OSH_4 | Unit | Status`
 
 Column order may vary; code reads by **header names**, not column index.
-Required headers: `FML`, `Birthday`, `Phone`, `2_Phone`, `Callsign`, `Title`, `Position`, `OSH_4`, `Status`.
-`ID`, `Age`, `Days_until_birthday`, and `Unit` are recommended but optional; `Age` / `Days_until_birthday` may be computed helper columns.
+Required headers: `FML`, `Birthday`, `Phone`, `Callsign`, `Position`, `OSH_4`, `Status`.
+`ID`, `Age`, `Days_until_birthday`, `2_Phone`, `Title`/`Rank`, `TEMPLATE`, and
+`Unit` are optional; birthday helper columns may be computed.
 
 ### One-time / migration in the spreadsheet
 
 1. Add column **`Status`** if missing (or run **`apiStage7BootstrapRuntimeAndAlertsSheets`** / self-heal to seed headers on empty `PERSONNEL`).
-2. For everyone on duty: leave **`Status` empty** or set **`Дієвий`** (both count as active). **`Тимчасовий`** and **`Відрядження`** also stay in runtime lists. Do **not** mix EN/UA in the same column.
+2. For everyone on duty: leave **`Status` empty** or use an active UA value:
+   **`Дієвий`**, **`Тимчасовий`**, **`Відрядження`**, **`В наявності`**,
+   **`Відпустка`**, **`Гусачівка`**, or **`Відкомандерований`**. Do not mix
+   EN/UA in the same column.
 3. For departed personnel (including transferred out of the unit): set **`Вибув`** — do not delete the row immediately unless you prefer a hard delete. Do **not** use **`Переведений`** (legacy values map to **`Вибув`** on read).
 
 **Data validation (dropdown):** apply to the **whole** Status column from row 2, e.g. `PERSONNEL!M2:M`, not a single cell like `M10`. After deploy, run **`applyPersonnelStatusColumnValidation()`** in the Apps Script editor, or **`ensureSystemSheetByName_('PERSONNEL')`** / bootstrap self-heal to apply the list automatically.
@@ -363,7 +371,7 @@ Then reload the spreadsheet and reopen the sidebar. Verify one **person card**, 
 
 Optional: `npm run gas:smoke` or `apiStage7QuickHealthCheck()` — health fails on duplicate **active** Callsign values.
 
-## 14. Script properties
+## 15. Script properties
 
 Canonical resolver (**`DataAccess.gs`**):
 
@@ -380,7 +388,7 @@ Headless executions (scheduled triggers without an open UI) **require** `WASB_SP
 
 Do **not** hardcode production spreadsheet IDs in source files; use Script properties instead.
 
-## 15. PHONES cache and birthday (ДН)
+## 16. PHONES cache and birthday (ДН)
 
 Runtime prefers **`PERSONNEL`** for phones/profiles when the sheet has data; **PHONES** remains a legacy fallback.
 
@@ -388,74 +396,19 @@ After editing **PERSONNEL**, **PHONES**, or birthday logic, run **`apiStage7Clea
 
 Operational detail: **`loadPhonesIndex_()`** builds from **PERSONNEL** (active rows) when available (`PersonnelRepository.gs`); otherwise from **PHONES** headers (`Stage7PhoneDictPayloadShims.gs`).
 
-## 19. Operational stewardship (refactor doctrine)
+## 17. Contract and snapshot governance
 
-See **`docs/refactor/operational-stewardship.md`** for owner/backup roles, monthly checklist, handoff, and emergency exceptions.
+- Machine-readable policy lives under `contracts/`.
+- Snapshot captures live under `scripts/snapshots/`.
+- Any snapshot mutation must include `reviewedAt`, `changeReason`, and a matching
+  entry in `contracts/SNAPSHOT_CHANGELOG.md`.
+- `npm run ci` enforces facade, snapshot, bridge-flag, client-layer, access API,
+  XSS, envelope, workbook, recipient, and OAuth contracts.
+- Before high-risk runtime changes, validate on a separate non-production
+  spreadsheet with synthetic data; never commit production workbook exports,
+  spreadsheet IDs, or personal data.
 
-| Item | Location |
-
-|------|----------|
-| Owner / backup | `docs/refactor/operational-stewardship.md` — update on handoff |
-| **Contracts (G1)** | `contracts/` — envelope, facade, access, bridge-flags, xss-policy, client-includes |
-| **Client layers (G2)** | `contracts/client-layers.contract.json` + `scripts/verify-client-deps.mjs` |
-| Envelope migration | `contracts/envelope-migration.contract.json` — version bump checklist |
-| Snapshot governance | `docs/refactor/snapshot-governance.md`, `contracts/SNAPSHOT_CHANGELOG.md` |
-| Canary spreadsheet | Script Property `WASB_CANARY_SPREADSHEET_ID` (non-production; owner-maintained) |
-| Facade contract CI | `contracts/facade.contract.json` + `scripts/snapshots/stage7-usecases-facade.json` + `npm run ci` |
-| Access baseline | `contracts/access.contract.json` + `scripts/snapshots/access-debug-baseline.json` (capture from `apiStage7DebugAccess()` on canary) |
-| Access baseline bootstrap | `scripts/bootstrap-access-baseline.mjs` — merge canary JSON via `ACCESS_DESCRIPTOR_JSON=...` (descriptor stays `null` until capture) |
-| Bridge flags | `contracts/bridge-flags.registry.json` — `USE_NEW_API_PATH` owner/sunset/telemetry |
-| Entropy review | `docs/refactor/entropy-review-YYYY-QN.md` (quarterly; latest: `entropy-review-2026-Q2.md`) |
-| Rollback tags | `wasb-pre-pr7-*`, `wasb-pre-phase2-access` before high-risk merges |
-
-**Cadences:** monthly stewardship checklist (~30 min); quarterly entropy + canary parity (~2 h).
-
-**Freeze window:** no `blast-radius-high` merges Fri 16:00 – Mon 10:00 local, or during send-panel peak / month rollover (owner may mark additional freeze periods here).
-
-## 20. Canary spreadsheet (refactor / runtime PR gate)
-
-Permanent non-production copy for automated and manual smoke before runtime-critical merges (`requires-canary`, PR3+).
-
-### Setup
-
-1. Create or designate a **separate spreadsheet** (never production).
-2. In the **canary** Apps Script project → Script properties: set **`WASB_CANARY_SPREADSHEET_ID`** to that spreadsheet ID.
-3. Set **`WASB_SPREADSHEET_ID`** on the canary deployment to the same ID (headless runs).
-4. Reduced dataset: 2–3 monthly sheets, minimal `SEND_PANEL`, synthetic `ACCESS` rows.
-5. Synthetic edge cases: guest / operator / admin roles, incomplete registration, empty panel row.
-
-Do **not** commit production spreadsheet IDs to source; record the canary ID only in Script properties and owner notes.
-
-### Smoke flows (after PR3, PR6, PR7+)
-
-Run on canary before merging `requires-canary` PRs:
-
-| Flow | API / action |
-
-|------|----------------|
-| Generate panel | `generateSendPanelForDate` |
-| Calendar load | `loadCalendarDay` |
-| Person card | `openPersonCard` |
-| Access policy | `apiStage7DebugAccess` |
-| Maintenance | `runMaintenanceScenario` (shallow health) |
-
-Gate: canary smoke **PASS** before merge of runtime-critical PRs.
-
-### Quarterly canary parity review
-
-Every **3 months** or after major production change (owner + backup):
-
-| Check | Action |
-
-|-------|--------|
-| Schema drift | Compare `SheetSchemas` / ACCESS columns canary vs production |
-| New edge cases | Add synthetic rows from production incidents (anonymized) |
-| Role matrix | Verify guest / operator / admin / incomplete registration |
-| Smoke flows | Re-run full canary automation; refresh `access-debug-baseline.json` if needed |
-
-If parity review is **overdue > 90 days**, block merge of `rollback-required` PRs until refresh (see `docs/refactor/entropy-review-checklist.md`).
-
-## 16. Legacy aliases (removed)
+## 18. Legacy aliases (removed)
 
 `LegacyApiAliases.gs`, `LegacyMaintenanceAliases.gs`, and `Stage7LegacyFunctionShims.gs` were **removed**. Canonical surface:
 
@@ -481,7 +434,7 @@ Do **not** reintroduce `apiStage4*` / `apiGet*` globals. Before adding any alias
 
 For day-to-day operations, prefer calling **`apiStage7*`** and documented Stage7 routes from §13 and **`CONTRIBUTING.md`**.
 
-## 17. Reflective helpers: eval / `Function('return this')` (P2.e audit)
+## 19. Reflective helpers: eval / `Function('return this')`
 
 | Location                         | Usage                                                                                                                                | Role                               | Risk                                        | Decision                                                                          |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------- |
@@ -492,7 +445,7 @@ For day-to-day operations, prefer calling **`apiStage7*`** and documented Stage7
 
 Do **not** reintroduce `eval` for resolving test or handler names; extend **`getStage7TestRunnerExplicitRegistry_()`** when adding fixed registry tasks.
 
-## 18. Optional business sheets (Дані / Проєкти / Заявки)
+## 20. Optional business sheets (Дані / Проєкти / Заявки)
 
 Ці три аркуші **не** створюються «ядром» bootstrap сервісних таблиць (`apiStage7BootstrapRuntimeAndAlertsSheets`). Вони підтягуються окремо:
 

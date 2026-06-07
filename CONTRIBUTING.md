@@ -6,80 +6,33 @@ This repository contains a Google Apps Script and Google Sheets automation proje
 
 ## Local workflow (source of truth)
 
-The maintainers’ machine often uses **PowerShell profile aliases** (`wcheck`, `wpush`, `wstatus`). In environments where those aliases are missing (for example Cursor without your profile), use the **fallback** commands in the next section—the checks are the same; only the wrapper differs.
+Use Node.js 24 (`.nvmrc`) and the repository-pinned dependencies:
 
-### Primary workflow (aliases available)
-
-```powershell
-Set-Location "C:\Users\User\Desktop\whatsapp-sheets-bot"
-
-wcheck
-wpush -Message "7"
-```
-
-**`wcheck`** (project-specific alias) should run, in substance:
-
-- `node scripts/ci-gas-sanity.mjs` — scans `.gs` for accidental pasted shell text, validates `appsscript.json` scopes, etc.
-- `node scripts/audit-function-graph.mjs` — ensures menu/trigger/client-bound function names exist (`MISSING: none`).
-
-**`wpush -Message "7"`** (project-specific alias) should, in substance:
-
-- `git status`
-- the same Node checks as above
-- `git add` / `git commit` / `git push origin main`
-- `clasp status` and `clasp push` so **GitHub and Apps Script both** get the update.
-
-### Fallback workflow (no `wcheck` / `wpush`)
-
-```powershell
-Set-Location "C:\Users\User\Desktop\whatsapp-sheets-bot"
-
-node .\scripts\ci-gas-sanity.mjs
-node .\scripts\audit-function-graph.mjs
-
-git status
-git add .
-git commit -m "7"
-git push origin main
-
-clasp status
-clasp push
-```
-
-Via **npm** (same checks as above; `package.json` wires them to `node scripts/...`):
-
-```powershell
+```bash
+npm ci
 npm run ci
+npx clasp status
 ```
 
-Or stepwise:
+Run individual npm scripts only when diagnosing a specific failed check.
 
-```powershell
-npm run ci:gas
-npm run audit:functions
-```
+### Commit messages
 
-On **Windows**, `npm run ci` can still invoke **Command Prompt** for the `&&` chain in some setups. If scripts fail with a disabled **cmd.exe** or administrator lockdown, use the two `node .\scripts\...` lines from the fallback block above — those are the canonical checks and match **GitHub Actions** (see `.github/workflows/ci.yml`).
-
-### Commit message policy (release line on `main`)
-
-For the current release line, the commit message for release-style commits should be exactly the version string, for example:
-
-```text
-7
-```
-
-Do **not** use vague release commits such as `fix`, `update`, `final`, or `test` when cutting a versioned drop to `main`. For **non-release** feature branches, short descriptive messages remain fine.
+Use short descriptive messages such as `fix access registration expiry` or
+`docs: align operational runbook`. A version-only message such as `7` is not
+descriptive enough.
 
 ### Apps Script deployment
 
-**Pushing to GitHub does not update Google Apps Script.** After `git push`:
+**Pushing to GitHub does not update Google Apps Script.** Deploy explicitly:
 
-```powershell
-clasp status
-clasp push
+```bash
+npx clasp status
+npx clasp push
+npm run gas:smoke
 ```
 
+Or run `npm run deploy:prod` for CI + push + remote smoke.
 ### Script Properties (spreadsheet binding)
 
 For **headless** runs (time-driven triggers, executions without an open spreadsheet UI), set in **Apps Script → Project settings → Script properties**:
@@ -90,11 +43,11 @@ If this property is empty, `getWasbSpreadsheet_()` falls back to **`SpreadsheetA
 
 ### Optional business sheets (`Дані` / `Проєкти` / `Заявки`)
 
-Sidebar bootstrap can create and seed these sheets (headers + one template row) when they are missing or completely empty. Behaviour, column lists, and caveats are documented in **`RUNBOOK.md` §18**. If you change **`ensure*`** helpers, update that section and **`ARCHITECTURE.md`** (§7) so docs stay accurate.
+Sidebar bootstrap can create and seed these sheets (headers + one template row) when they are missing or completely empty. Behaviour, column lists, and caveats are documented in **`RUNBOOK.md` §20**. If you change **`ensure*`** helpers, update that section and **`ARCHITECTURE.md`** (§7) so docs stay accurate.
 
-### PHONES sheet / birthday (ДН) cache
+### PERSONNEL / PHONES / birthday cache
 
-After changing the **PHONES** sheet layout, phone index logic, or birthday column behavior, clear the script cache that backs phone profiles:
+After changing **PERSONNEL**, **PHONES**, phone index logic, or birthday behavior, clear the script cache that backs profiles:
 
 - Run **`apiStage7ClearPhoneCache()`** in the Apps Script editor (maintenance API).
 
@@ -104,18 +57,19 @@ Then in the spreadsheet: close the sidebar → open it again → open a person c
 
 The repository runs a lightweight CI workflow on push and pull requests to **`main`** (also **`workflow_dispatch`**).
 
-It checks:
+It runs the complete `npm run ci` contract suite: GAS sanity, workbook and
+recipient contracts, function graph, client parsing/layers/XSS, response
+envelope, facade/snapshot/bridge governance, access API policy, OAuth scopes,
+and jsconfig verification.
 
-- GAS source sanity: `node scripts/ci-gas-sanity.mjs`
-- Function graph audit: `node scripts/audit-function-graph.mjs`
-
-The workflow does **not** deploy to Apps Script. Deployment stays local (`clasp push` / **`wpush`**). No Google secrets.
+The workflow does **not** deploy to Apps Script. Deployment stays local
+(`npx clasp push` / `npm run deploy:prod`). No Google secrets.
 
 ## Basic workflow (contributors)
 
 1. Use a branch for non-trivial work when possible.
 2. Make focused edits.
-3. Run **`wcheck`** or **`npm run ci`** (or the two `node` commands) before pushing.
+3. Run **`npm run ci`** before pushing.
 4. Commit with an appropriate message (see above).
 5. Open a pull request when collaboration is needed.
 
@@ -183,15 +137,6 @@ A pull request should include:
 - How it was tested.
 - Any known risks or limitations.
 - Screenshots or logs if the change affects UI or diagnostics.
-
-## Commit messages (non-release work)
-
-For everyday development (not version cuts to `main`), use short descriptive messages, for example:
-
-```text
-fix access self-registration autofill
-refactor stage7 diagnostics helpers
-```
 
 ## Testing notes
 

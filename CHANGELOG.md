@@ -1,11 +1,14 @@
 # Changelog
 
-## 2026-06-07 — documentation alignment + workbook audit
+## 2026-06-07 — documentation consolidation
 
-- **`WASB_WORKBOOK_AUDIT_2026-06-07.md`**: production workbook audit («Книга Взводу Охорони»)
-- **`docs/README.md`**: index for audits and `docs/refactor/` governance
-- **`WASB_RELEASE_AUDIT.md`**, **`README.md`**: aligned status (**NOT CLOSED** until `gas:smoke`); fixed doc map
-- **Removed:** `WASB_REPAIR_NOTES.md` (historical one-off recovery), `docs/refactor/g2-governance-roadmap.md` (G2 implemented → `contracts/client-layers.contract.json`)
+- aligned `README.md`, `ARCHITECTURE.md`, `RUNBOOK.md`, `SECURITY.md`,
+  `CONTRIBUTING.md`, and `AGENTS.md` with the current code and 17-check CI suite
+- reduced documentation to maintained operational sources plus `docs/README.md`
+- removed one-off audit snapshots, completed refactor notes, and the unused
+  generic code-of-conduct document
+- moved release-status verification to current evidence: CI, clasp status,
+  production smoke, and GAS diagnostics
 
 ## 2026-05-29 — Remote GAS runtime smoke (clasp run)
 
@@ -46,7 +49,6 @@
 - removed hardcoded spreadsheet IDs from docs and debug helpers; resolver is **`getWasbSpreadsheet_()`** via Script properties
 - corrected **`RUNBOOK.md`**: no `_extras/` folder; bootstrap entrypoints mapped to source files
 - updated **`ARCHITECTURE.md`**: `Styles.html` bundle, `ProjectRequests` APIs, script properties section
-- aligned root docs with codebase; **`WASB_RELEASE_AUDIT.md`** metrics refreshed
 
 ## 2026-05-17 — Stage 7.1 production release CLOSED
 
@@ -55,11 +57,10 @@
 - CI локально: `ci-gas-sanity` OK, `audit-function-graph` OK, `MISSING: none`.
 - GAS validation: project test pack PASS, Access diagnostics PASS, protections apply OK.
 - Виправлено й підтверджено envelope `dryRun`: `data.result.dryRun=false`, `data.meta.dryRun=false`, top-level `dryRun=false`.
-- Додано `WASB_RELEASE_AUDIT.md` як фінальний audit/status-документ релізу.
 
 ## 2026-05-15 — optional business sheets documentation
 
-- documented auto-seeding of **`Дані` / `Проєкти` / `Заявки`** (sidebar bootstrap, empty-sheet-only rule, template rows) in **`RUNBOOK.md`** §18, **`ARCHITECTURE.md`**, **`README.md`**, **`CONTRIBUTING.md`**
+- documented auto-seeding of **`Дані` / `Проєкти` / `Заявки`** (sidebar bootstrap, empty-sheet-only rule, template rows) in **`RUNBOOK.md`** §20, **`ARCHITECTURE.md`**, **`README.md`**, **`CONTRIBUTING.md`**
 - aligned inline comments in **`Stage7ServerApi.gs`** and **`ProjectRequests.gs`** with the same behaviour
 
 ## 2026-05-08 — Stage 7.1.5 maintenance
@@ -82,7 +83,7 @@
 ## 2026-03-29 — Stage 7.1.2 final-clean baseline
 
 - established the Stage 7.1.2 final-clean release identity
-- reduced active root documentation to five operational markdown files
+- reduced active documentation to maintained operational sources
 - kept historical reports outside the active runtime docs path
 - preserved compatibility facades while marking them as non-canonical
 - aligned release naming, metadata, diagnostics wording, and runtime packaging

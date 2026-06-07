@@ -33,11 +33,12 @@ This project cannot be "run" locally in the traditional sense. There is no dev s
 
 ### Testing
 
-- **Local (automated):** `npm run ci` — 15 static checks, no Google credentials.
+- **Local (automated):** `npm run ci` — 17 static checks, no Google credentials.
 - **Remote (automated after push):** `npm run gas:smoke` — `apiRunProductionSmokeChecks` via `clasp run`.
 - **Remote (manual):** `apiRunStage7RegressionTests()` in GAS editor.
 
-Documentation index: [`docs/README.md`](./docs/README.md). Release status: [`WASB_RELEASE_AUDIT.md`](./WASB_RELEASE_AUDIT.md).
+Documentation index: [`docs/README.md`](./docs/README.md). Verify release status
+from current CI, clasp status, remote smoke, and GAS diagnostics.
 
 ### Production runtime smoke
 
@@ -63,15 +64,18 @@ Or one command: `npm run deploy:prod` (uses `npx clasp` from `package.json`).
 1. Enable **Google Apps Script API** in [Google Cloud Console](https://console.cloud.google.com/) for the clasp OAuth project.
 2. Run `clasp login` and confirm `.clasp.json` scriptId matches the target project.
 3. Confirm `appsscript.json` contains `"executionApi": { "access": "ANYONE" }`.
-4. Re-run `clasp push`, then create or refresh an **API executable** deployment if the Apps Script UI prompts for it.
+4. Re-run `npx clasp push`, then create or refresh an **API executable** deployment if the Apps Script UI prompts for it.
 
 ### PERSONNEL keys (do not regress)
 
 - Monthly schedule row key: **Callsign**; personal fields from `PERSONNEL` by Callsign (fallback **FML**).
 - **ID** (Армія+) is optional data, not a required system key.
 - **Position** is not a person key.
-- **Status** (UA only in sheet): `Дієвий` | `Тимчасовий` | `Відрядження` | `Вибув` (empty = `Дієвий`). Active runtime: first three; `Вибув` excluded. Legacy EN mapped on read only.
-- Final headers: `ID | FML | … | Unit | Status` — see `RUNBOOK.md` §15a.
+- **Status** (UA only in sheet): active values are `Дієвий`, `Тимчасовий`,
+  `Відрядження`, `В наявності`, `Відпустка`, `Гусачівка`,
+  `Відкомандерований`; `Вибув` is inactive; empty = `Дієвий`. Legacy EN is
+  mapped on read only.
+- Final headers: `ID | FML | … | Unit | Status` — see `RUNBOOK.md` §14.
 - After deploy or PERSONNEL edits: run **`apiStage7ClearPhoneCache()`** in GAS (mandatory).
 - See `.cursor/rules/personnel-data-keys.mdc`.
 
