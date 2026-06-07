@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-06-07 — documentation alignment + workbook audit
+
+- **`WASB_WORKBOOK_AUDIT_2026-06-07.md`**: production workbook audit («Книга Взводу Охорони»)
+- **`docs/README.md`**: index for audits and `docs/refactor/` governance
+- **`WASB_RELEASE_AUDIT.md`**, **`README.md`**: aligned status (**NOT CLOSED** until `gas:smoke`); fixed doc map
+- **Removed:** `WASB_REPAIR_NOTES.md` (historical one-off recovery), `docs/refactor/g2-governance-roadmap.md` (G2 implemented → `contracts/client-layers.contract.json`)
+
 ## 2026-05-29 — Remote GAS runtime smoke (clasp run)
 
 - **`GasRuntimeSmoke.gs`**: `apiRunProductionSmokeChecks()` — policy, normalize, client signal, health, migration flag
@@ -39,7 +46,7 @@
 - removed hardcoded spreadsheet IDs from docs and debug helpers; resolver is **`getWasbSpreadsheet_()`** via Script properties
 - corrected **`RUNBOOK.md`**: no `_extras/` folder; bootstrap entrypoints mapped to source files
 - updated **`ARCHITECTURE.md`**: `Styles.html` bundle, `ProjectRequests` APIs, script properties section
-- marked **`WASB_REPAIR_NOTES.md`** as historical; **`WASB_RELEASE_AUDIT.md`** metrics refreshed
+- aligned root docs with codebase; **`WASB_RELEASE_AUDIT.md`** metrics refreshed
 
 ## 2026-05-17 — Stage 7.1 production release CLOSED
 

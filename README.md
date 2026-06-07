@@ -16,7 +16,7 @@ This repository is packaged for the **GAS web editor first**:
 - **Current access flow:** automatic key recognition first, self-bind login by **email/phone + callsign** only when the current key is not registered
 - **Runtime style:** modular HtmlService sidebar (`Sidebar.html` → `JavaScript.html` → `Js.*` chain)
 - **Packaging policy:** compact GAS bundle ships **5 operational root markdown files** (runtime docs only; see Documentation map)
-- **Production status:** **CLOSED** (Stage 7.1) — [`WASB_RELEASE_AUDIT.md`](./WASB_RELEASE_AUDIT.md)
+- **Production status:** **NOT CLOSED** (smoke blocked) — [`WASB_RELEASE_AUDIT.md`](./WASB_RELEASE_AUDIT.md)
 
 ## What is active in this release
 
@@ -64,44 +64,59 @@ Full workflow, release checklist, and post-deploy checks: **`CONTRIBUTING.md`** 
 
 The repository runs a lightweight CI workflow on **`push`** and **`pull_request`** to **`main`**, and **`workflow_dispatch`**.
 
-It checks:
+It checks (via `npm run ci`):
 
-- GAS source sanity: `node scripts/ci-gas-sanity.mjs`
-- Function graph audit: `node scripts/audit-function-graph.mjs`
+- GAS source sanity, workbook + recipient contracts, function graph audit
+- Client includes / JS / layer deps, XSS, envelope compat
+- UseCase facade, snapshot governance, bridge flags, access API governance, OAuth scopes, jsconfig
+
+See [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) (Node 24, `actions/checkout@v5`, `actions/setup-node@v5`).
 
 The workflow does not deploy to Apps Script. Deployment remains local via **`clasp push`** / **`wpush`**.
 
 ## Documentation map
 
-**Operational set (typical compact GAS import / ZIP):**
+**Operational set (typical compact GAS import / ZIP — 5 files):**
 
-- `README.md` — release overview, layout, quick start, document map
-- `ARCHITECTURE.md` — runtime shape, canonical layers, data flow, service sheets, client/runtime policy
-- `RUNBOOK.md` — import, bootstrap, access setup, deploy checks, troubleshooting, rollback rules
-- `SECURITY.md` — identity, login flow, roles, lockouts, alerts, protections, security boundaries
-- `CHANGELOG.md` — concise release history for maintainers
+| File | Purpose |
+|------|---------|
+| `README.md` | Release overview, layout, quick start |
+| `ARCHITECTURE.md` | Runtime shape, layers, data flow |
+| `RUNBOOK.md` | Import, bootstrap, ACCESS, deploy, troubleshooting |
+| `SECURITY.md` | Identity, roles, lockouts, protections |
+| `CHANGELOG.md` | Release history |
 
-**Also in this Git repository (maintainers; usually not uploaded into the GAS editor):**
+**Also in Git (maintainers; not uploaded to GAS editor):**
 
-- [`WASB_RELEASE_AUDIT.md`](./WASB_RELEASE_AUDIT.md) — повний технічний аналіз WASB і фінальний статус production-релізу Stage 7.1.
-- `CONTRIBUTING.md` — local workflow, fallback commands, GitHub Actions CI, commit policy, Script properties
+| File | Purpose |
+|------|---------|
+| [`CONTRIBUTING.md`](./CONTRIBUTING.md) | Local workflow, CI, clasp, commit policy |
+| [`AGENTS.md`](./AGENTS.md) | Cursor / cloud agent instructions |
+| [`docs/README.md`](./docs/README.md) | Index: audits + `docs/refactor/` governance |
 
-**Other root markdown (optional / meta):**
+**Audit / release tracking:**
 
-- `CODE_OF_CONDUCT.md`, `WASB_REPAIR_NOTES.md` — policy and ad-hoc notes; not part of the GAS runtime bundle
+| File | Purpose |
+|------|---------|
+| [`WASB_RELEASE_AUDIT.md`](./WASB_RELEASE_AUDIT.md) | Short production status (PASS / BLOCKED / CLOSED) |
+| [`WASB_FULL_TECH_AUDIT_2026-06-03.md`](./WASB_FULL_TECH_AUDIT_2026-06-03.md) | Full codebase technical audit |
+| [`WASB_WORKBOOK_AUDIT_2026-06-07.md`](./WASB_WORKBOOK_AUDIT_2026-06-07.md) | Production workbook «Книга Взводу Охорони» |
 
-Historical/audit materials beyond the above are kept outside the compact import ZIP when you package for GAS.
+**Meta:** `CODE_OF_CONDUCT.md` — community policy (not part of GAS bundle).
+
+Historical refactor notes live under [`docs/refactor/`](./docs/refactor/). Removed: `WASB_REPAIR_NOTES.md` (one-off recovery log), `g2-governance-roadmap.md` (G2 implemented → see `contracts/client-layers.contract.json`).
 
 ## Repository layout
 
 ```text
 .
 ├── *.gs / *.html / appsscript.json   # GAS runtime files
-├── README.md                         # ops docs (+ CONTRIBUTING.md, etc. — see Documentation map)
+├── README.md                         # ops docs (see Documentation map)
 ├── ARCHITECTURE.md
 ├── RUNBOOK.md
 ├── SECURITY.md
 ├── CHANGELOG.md
+├── docs/                             # governance + audit index (Git only)
 └── no _extras/ in compact GAS release ZIP
 ```
 

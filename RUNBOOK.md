@@ -405,7 +405,6 @@ See **`docs/refactor/operational-stewardship.md`** for owner/backup roles, month
 | Access baseline | `contracts/access.contract.json` + `scripts/snapshots/access-debug-baseline.json` (capture from `apiStage7DebugAccess()` on canary) |
 | Access baseline bootstrap | `scripts/bootstrap-access-baseline.mjs` — merge canary JSON via `ACCESS_DESCRIPTOR_JSON=...` (descriptor stays `null` until capture) |
 | Bridge flags | `contracts/bridge-flags.registry.json` — `USE_NEW_API_PATH` owner/sunset/telemetry |
-| G2 roadmap | `docs/refactor/g2-governance-roadmap.md` (client layers — **implemented**) |
 | Entropy review | `docs/refactor/entropy-review-YYYY-QN.md` (quarterly; latest: `entropy-review-2026-Q2.md`) |
 | Rollback tags | `wasb-pre-pr7-*`, `wasb-pre-phase2-access` before high-risk merges |
 

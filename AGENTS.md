@@ -33,9 +33,11 @@ This project cannot be "run" locally in the traditional sense. There is no dev s
 
 ### Testing
 
-- **Local (automated):** `npm run ci` — all static checks pass without credentials.
-- **Remote (automated after push):** `npm run gas:smoke` — runs `apiRunProductionSmokeChecks` in Google Apps Script via `clasp run` (requires Apps Script API, `clasp login`, and `executionApi.access: ANYONE` in `appsscript.json`).
-- **Remote (manual):** Apps Script editor entrypoints such as `apiRunStage7RegressionTests()` when deeper regression is needed.
+- **Local (automated):** `npm run ci` — 15 static checks, no Google credentials.
+- **Remote (automated after push):** `npm run gas:smoke` — `apiRunProductionSmokeChecks` via `clasp run`.
+- **Remote (manual):** `apiRunStage7RegressionTests()` in GAS editor.
+
+Documentation index: [`docs/README.md`](./docs/README.md). Release status: [`WASB_RELEASE_AUDIT.md`](./WASB_RELEASE_AUDIT.md).
 
 ### Production runtime smoke
 

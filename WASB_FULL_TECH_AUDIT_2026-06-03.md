@@ -1,10 +1,10 @@
 # WASB — повний технічний аудит проєкту
 
-**Дата аудиту:** 2026-06-03  
+**Дата аудиту:** 2026-06-03 (метрики оновлено 2026-06-07)  
 **Версія:** Stage 7.1 (`package.json` `"version": "7"`)  
 **Платформа:** Google Apps Script V8 + Google Sheets + HtmlService  
-**Репозиторій:** `main` — синхронізований з `origin/main`, робоче дерево чисте  
-**Пов'язаний документ:** [WASB_RELEASE_AUDIT.md](./WASB_RELEASE_AUDIT.md) — короткий release-status
+**Репозиторій:** `main` @ `5f7eab2`  
+**Пов'язані документи:** [WASB_RELEASE_AUDIT.md](./WASB_RELEASE_AUDIT.md) · [WASB_WORKBOOK_AUDIT_2026-06-07.md](./WASB_WORKBOOK_AUDIT_2026-06-07.md) · [docs/README.md](./docs/README.md)
 
 ---
 
@@ -14,7 +14,7 @@
 |---------|--------|------|
 | Архітектура | **8.5/10** | Чіткі шари, контракти, facade |
 | Безпека (RBAC + access) | **8.5/10** | Server-side enforcement, governance CI |
-| Якість коду / CI | **9/10** | 14 перевірок, усі PASS |
+| Якість коду / CI | **9/10** | 15 перевірок, усі PASS |
 | Клієнт (sidebar) | **8/10** | Шарова модель, XSS-аудит |
 | Операційна готовність | **7/10** | Smoke через `clasp run` заблокований |
 | Технічний борг | **помірний** | Великі модулі, bridge-flag sunset |
@@ -57,13 +57,14 @@
 | `.gs` файлів | **112** (CI `ci-gas-sanity`) |
 | `.html` файлів | **35** |
 | Загальний обсяг (gs+html) | **~57 700 рядків** |
-| Top-level функцій | **1052** |
+| Top-level функцій | **1061** |
 | Bound entrypoints (меню/тригери) | **81** (missing: **0**) |
 | Stage7 application API | **22** entrypoints (`Stage7ServerApi.gs`) |
 | Stage7 maintenance API | **39** entrypoints (`Stage7MaintenanceApi.gs`) |
 | UseCases facade | **17** публічних методів |
 | Access API governance | **17** endpoints / **17** role policies |
-| Клієнтські символи (deps contract) | **224** |
+| Клієнтські символи (deps contract) | **226** |
+| Domain tests | `DomainTests.gs` (~560 рядків, PR #13–#14) |
 
 ### Найбільші модулі (рядків)
 
@@ -356,7 +357,8 @@ Runtime GAS не залежить від npm-пакетів.
 | `SECURITY.md` | Identity, roles, lockout |
 | `AGENTS.md` | CI/deploy |
 | `WASB_RELEASE_AUDIT.md` | Короткий release-status |
-| `docs/refactor/*` | Governance, access matrix |
+| `docs/README.md` | Індекс audit + governance |
+| `docs/refactor/` | Governance, access matrix (див. docs/README) |
 | `contracts/*` | 10+ machine-readable контрактів |
 
 **Слабке місце:** commit messages — серія `"7"`, погана читабельність git-історії.
