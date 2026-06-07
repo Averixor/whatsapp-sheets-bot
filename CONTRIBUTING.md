@@ -33,6 +33,7 @@ npm run gas:smoke
 ```
 
 Or run `npm run deploy:prod` for CI + push + remote smoke.
+
 ### Script Properties (spreadsheet binding)
 
 For **headless** runs (time-driven triggers, executions without an open spreadsheet UI), set in **Apps Script → Project settings → Script properties**:

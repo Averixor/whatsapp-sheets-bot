@@ -1,13 +1,13 @@
-var WASB_ACCESS_SHEET_NAME_HOTFIX_ = 'ACCESS';
-var WASB_ACCESS_KEYS_OUTBOX_SHEET_NAME_HOTFIX_ = 'ACCESS_KEYS_OUTBOX';
+var WASB_ACCESS_SHEET_NAME_HOTFIX_ = "ACCESS";
+var WASB_ACCESS_KEYS_OUTBOX_SHEET_NAME_HOTFIX_ = "ACCESS_KEYS_OUTBOX";
 var WASB_ACCESS_TEMPLATE_ROW_HOTFIX_ = 2;
 
 function wasbAccessNormalizeHeaderHotfix_(value) {
-  return String(value || '')
+  return String(value || "")
     .toLowerCase()
-    .replace(/\u00a0/g, ' ')
+    .replace(/\u00a0/g, " ")
     .replace(/[ʼ’`´]/g, "'")
-    .replace(/\s+/g, ' ')
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -30,7 +30,7 @@ function wasbAccessGetSheetHotfix_() {
   var sheet = ss.getSheetByName(WASB_ACCESS_SHEET_NAME_HOTFIX_);
 
   if (!sheet) {
-    throw new Error('Лист ACCESS не знайдено.');
+    throw new Error("Лист ACCESS не знайдено.");
   }
 
   return sheet;
@@ -44,28 +44,32 @@ function wasbAccessGetHeadersHotfix_(sheet) {
 function wasbAccessSha256HexHotfix_(text) {
   var bytes = Utilities.computeDigest(
     Utilities.DigestAlgorithm.SHA_256,
-    String(text || ''),
-    Utilities.Charset.UTF_8
+    String(text || ""),
+    Utilities.Charset.UTF_8,
   );
 
-  return bytes.map(function (b) {
-    var v = b;
-    if (v < 0) {
-      v += 256;
-    }
-    return ('0' + v.toString(16)).slice(-2);
-  }).join('');
+  return bytes
+    .map(function (b) {
+      var v = b;
+      if (v < 0) {
+        v += 256;
+      }
+      return ("0" + v.toString(16)).slice(-2);
+    })
+    .join("");
 }
 
 function wasbAccessGeneratePlainKeyHotfix_() {
-  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  var raw = '';
+  var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  var raw = "";
 
   for (var i = 0; i < 12; i++) {
     raw += chars.charAt(Math.floor(Math.random() * chars.length));
   }
 
-  return 'WASB-' + raw.slice(0, 4) + '-' + raw.slice(4, 8) + '-' + raw.slice(8, 12);
+  return (
+    "WASB-" + raw.slice(0, 4) + "-" + raw.slice(4, 8) + "-" + raw.slice(8, 12)
+  );
 }
 
 function wasbAccessApplyTemplateToRowHotfix_(sheet, row) {
@@ -84,7 +88,11 @@ function wasbAccessApplyTemplateToRowHotfix_(sheet, row) {
   var target = sheet.getRange(row, 1, 1, lastCol);
 
   source.copyTo(target, SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
-  source.copyTo(target, SpreadsheetApp.CopyPasteType.PASTE_DATA_VALIDATION, false);
+  source.copyTo(
+    target,
+    SpreadsheetApp.CopyPasteType.PASTE_DATA_VALIDATION,
+    false,
+  );
 }
 
 function wasbAccessEnsureOutboxHotfix_() {
@@ -93,15 +101,19 @@ function wasbAccessEnsureOutboxHotfix_() {
 
   if (!sheet) {
     sheet = ss.insertSheet(WASB_ACCESS_KEYS_OUTBOX_SHEET_NAME_HOTFIX_);
-    sheet.getRange(1, 1, 1, 7).setValues([[
-      'created_at',
-      'email',
-      'login',
-      'display_name',
-      'callsign',
-      'plain_access_key',
-      'note'
-    ]]);
+    sheet
+      .getRange(1, 1, 1, 7)
+      .setValues([
+        [
+          "created_at",
+          "email",
+          "login",
+          "display_name",
+          "callsign",
+          "plain_access_key",
+          "note",
+        ],
+      ]);
     sheet.setFrozenRows(1);
   }
 
@@ -109,8 +121,8 @@ function wasbAccessEnsureOutboxHotfix_() {
 }
 
 /**
- * Основная функция ремонта.
- * Запускать вручную после добавления новых строк в ACCESS.
+ * Основна функція відновлення рядків ACCESS.
+ * Запускати вручну після додавання нових рядків у ACCESS.
  */
 
 function wasbRepairAccessSheetRowsHotfix() {
@@ -123,75 +135,71 @@ function wasbRepairAccessSheetRowsHotfix() {
       ok: true,
       repairedRows: 0,
       generatedKeys: 0,
-      message: 'ACCESS пустий.'
+      message: "ACCESS пустий.",
     };
   }
 
   var emailCol = wasbAccessFindColHotfix_(headers, [
-    'електронна пошта',
-    'email'
+    "електронна пошта",
+    "email",
   ]);
 
-  var loginCol = wasbAccessFindColHotfix_(headers, [
-    'логін',
-    'login'
-  ]);
+  var loginCol = wasbAccessFindColHotfix_(headers, ["логін", "login"]);
 
-  var activeCol = wasbAccessFindColHotfix_(headers, [
-    'активний',
-    'enabled'
-  ]);
+  var activeCol = wasbAccessFindColHotfix_(headers, ["активний", "enabled"]);
 
   var displayCol = wasbAccessFindColHotfix_(headers, [
-    'імʼя, що відображається',
-    'ім’я, що відображається',
-    'display_name',
-    'display name'
+    "імʼя, що відображається",
+    "ім’я, що відображається",
+    "display_name",
+    "display name",
   ]);
 
   var callsignCol = wasbAccessFindColHotfix_(headers, [
-    'позивний користувача',
-    'person_callsign',
-    'callsign'
+    "позивний користувача",
+    "person_callsign",
+    "callsign",
   ]);
 
   var selfBindCol = wasbAccessFindColHotfix_(headers, [
-    'дозволена самостійна привʼязка',
-    'дозволена самостійна прив’язка',
-    'self_bind_allowed',
-    'self_bind'
+    "дозволена самостійна привʼязка",
+    "дозволена самостійна прив’язка",
+    "self_bind_allowed",
+    "self_bind",
   ]);
 
   var currentHashCol = wasbAccessFindColHotfix_(headers, [
-    'хеш поточного ключа',
-    'user_key_current_hash',
-    'curr_hash'
+    "хеш поточного ключа",
+    "user_key_current_hash",
+    "curr_hash",
   ]);
 
   var requestHashCol = wasbAccessFindColHotfix_(headers, [
-    'хеш ключа із запиту',
-    'request_user_key_hash',
-    'req_hash'
+    "хеш ключа із запиту",
+    "request_user_key_hash",
+    "req_hash",
   ]);
 
   var statusCol = wasbAccessFindColHotfix_(headers, [
-    'статус реєстрації',
-    'registration_status',
-    'reg_status'
+    "статус реєстрації",
+    "registration_status",
+    "reg_status",
   ]);
 
   var approvedByCol = wasbAccessFindColHotfix_(headers, [
-    'ким схвалено',
-    'approved_by'
+    "ким схвалено",
+    "approved_by",
   ]);
 
   var approvedAtCol = wasbAccessFindColHotfix_(headers, [
-    'час схвалення',
-    'approved_at'
+    "час схвалення",
+    "approved_at",
   ]);
 
   if (!currentHashCol) {
-    throw new Error('Не найдена колонка "хеш поточного ключа" / user_key_current_hash.');
+    throw new Error(
+      'Не знайдено колонку "хеш поточного ключа" / user_key_current_hash.',
+    );
   }
 
   var outbox = wasbAccessEnsureOutboxHotfix_();
@@ -201,18 +209,20 @@ function wasbRepairAccessSheetRowsHotfix() {
   var outboxRows = [];
 
   for (var row = 2; row <= lastRow; row++) {
-    var rowValues = sheet.getRange(row, 1, 1, sheet.getLastColumn()).getValues()[0];
+    var rowValues = sheet
+      .getRange(row, 1, 1, sheet.getLastColumn())
+      .getValues()[0];
 
-    var email = emailCol ? rowValues[emailCol - 1] : '';
-    var login = loginCol ? rowValues[loginCol - 1] : '';
-    var displayName = displayCol ? rowValues[displayCol - 1] : '';
-    var callsign = callsignCol ? rowValues[callsignCol - 1] : '';
+    var email = emailCol ? rowValues[emailCol - 1] : "";
+    var login = loginCol ? rowValues[loginCol - 1] : "";
+    var displayName = displayCol ? rowValues[displayCol - 1] : "";
+    var callsign = callsignCol ? rowValues[callsignCol - 1] : "";
 
     var hasPerson =
-      String(email || '').trim() ||
-      String(login || '').trim() ||
-      String(displayName || '').trim() ||
-      String(callsign || '').trim();
+      String(email || "").trim() ||
+      String(login || "").trim() ||
+      String(displayName || "").trim() ||
+      String(callsign || "").trim();
 
     if (!hasPerson) {
       continue;
@@ -221,7 +231,7 @@ function wasbRepairAccessSheetRowsHotfix() {
     wasbAccessApplyTemplateToRowHotfix_(sheet, row);
     repairedRows++;
 
-    var currentHash = String(rowValues[currentHashCol - 1] || '').trim();
+    var currentHash = String(rowValues[currentHashCol - 1] || "").trim();
 
     if (!currentHash) {
       var plainKey = wasbAccessGeneratePlainKeyHotfix_();
@@ -233,23 +243,25 @@ function wasbRepairAccessSheetRowsHotfix() {
         sheet.getRange(row, requestHashCol).setValue(hash);
       }
 
-      if (selfBindCol && !String(rowValues[selfBindCol - 1] || '').trim()) {
+      if (selfBindCol && !String(rowValues[selfBindCol - 1] || "").trim()) {
         sheet.getRange(row, selfBindCol).setValue(true);
       }
 
-      if (activeCol && !String(rowValues[activeCol - 1] || '').trim()) {
+      if (activeCol && !String(rowValues[activeCol - 1] || "").trim()) {
         sheet.getRange(row, activeCol).setValue(true);
       }
 
-      if (statusCol && !String(rowValues[statusCol - 1] || '').trim()) {
-        sheet.getRange(row, statusCol).setValue('key_sent');
+      if (statusCol && !String(rowValues[statusCol - 1] || "").trim()) {
+        sheet.getRange(row, statusCol).setValue("key_sent");
       }
 
-      if (approvedByCol && !String(rowValues[approvedByCol - 1] || '').trim()) {
-        sheet.getRange(row, approvedByCol).setValue(Session.getActiveUser().getEmail() || 'admin');
+      if (approvedByCol && !String(rowValues[approvedByCol - 1] || "").trim()) {
+        sheet
+          .getRange(row, approvedByCol)
+          .setValue(Session.getActiveUser().getEmail() || "admin");
       }
 
-      if (approvedAtCol && !String(rowValues[approvedAtCol - 1] || '').trim()) {
+      if (approvedAtCol && !String(rowValues[approvedAtCol - 1] || "").trim()) {
         sheet.getRange(row, approvedAtCol).setValue(now);
       }
 
@@ -260,7 +272,7 @@ function wasbRepairAccessSheetRowsHotfix() {
         displayName,
         callsign,
         plainKey,
-        'Новий ключ створено. Передайте користувачу і після використання очистить рядок.'
+        "Новий ключ створено. Передайте користувачу і після використання очистіть рядок.",
       ]);
 
       generatedKeys++;
@@ -268,7 +280,13 @@ function wasbRepairAccessSheetRowsHotfix() {
   }
 
   if (outboxRows.length) {
-    outbox.getRange(outbox.getLastRow() + 1, 1, outboxRows.length, outboxRows[0].length)
+    outbox
+      .getRange(
+        outbox.getLastRow() + 1,
+        1,
+        outboxRows.length,
+        outboxRows[0].length,
+      )
       .setValues(outboxRows);
   }
 
@@ -276,25 +294,27 @@ function wasbRepairAccessSheetRowsHotfix() {
     ok: true,
     repairedRows: repairedRows,
     generatedKeys: generatedKeys,
-    outboxSheet: WASB_ACCESS_KEYS_OUTBOX_SHEET_NAME_HOTFIX_
+    outboxSheet: WASB_ACCESS_KEYS_OUTBOX_SHEET_NAME_HOTFIX_,
   };
 }
 
 /**
- * Установить автообработчик редактирования ACCESS.
- * Запустить один раз вручную из Apps Script.
+ * Встановити автообробник редагування ACCESS.
+ * Запустити один раз вручну з редактора Apps Script.
  */
 
 function wasbInstallAccessSheetAutofillTriggerHotfix() {
   var triggers = ScriptApp.getProjectTriggers();
 
   triggers.forEach(function (trigger) {
-    if (trigger.getHandlerFunction() === 'wasbAccessSheetOnEditAutofillHotfix_') {
+    if (
+      trigger.getHandlerFunction() === "wasbAccessSheetOnEditAutofillHotfix_"
+    ) {
       ScriptApp.deleteTrigger(trigger);
     }
   });
 
-  ScriptApp.newTrigger('wasbAccessSheetOnEditAutofillHotfix_')
+  ScriptApp.newTrigger("wasbAccessSheetOnEditAutofillHotfix_")
     .forSpreadsheet(getWasbSpreadsheet_())
     .onEdit()
     .create();
@@ -302,12 +322,12 @@ function wasbInstallAccessSheetAutofillTriggerHotfix() {
   return {
     ok: true,
     installed: true,
-    handler: 'wasbAccessSheetOnEditAutofillHotfix_'
+    handler: "wasbAccessSheetOnEditAutofillHotfix_",
   };
 }
 
 /**
- * Автозаполнение строки ACCESS при ручном редактировании.
+ * Автозаповнення рядка ACCESS під час ручного редагування.
  */
 
 function wasbAccessSheetOnEditAutofillHotfix_(e) {
