@@ -94,41 +94,36 @@ function healthCheck() {
     };
   });
 
-  _runHealthCheckItem_(
-    report,
-    "PERSONNEL",
-    "CRITICAL",
-    function () {
-      const activeRows =
-        typeof getPersonnelActiveRows_ === "function"
-          ? getPersonnelActiveRows_()
-          : typeof getPersonnelRows_ === "function"
-            ? getPersonnelRows_()
-            : [];
-      const warnings =
-        typeof getPersonnelWarnings_ === "function"
-          ? getPersonnelWarnings_()
+  _runHealthCheckItem_(report, "PERSONNEL", "CRITICAL", function () {
+    const activeRows =
+      typeof getPersonnelActiveRows_ === "function"
+        ? getPersonnelActiveRows_()
+        : typeof getPersonnelRows_ === "function"
+          ? getPersonnelRows_()
           : [];
-      const duplicateActiveCallsigns = warnings.some(function (w) {
-        return String(w || "").indexOf("дубль активного позивного") !== -1;
-      });
-      return {
-        status: duplicateActiveCallsigns
-          ? "FAIL"
-          : activeRows.length
-            ? "OK"
-            : "WARN",
-        details: `Активних у PERSONNEL: ${activeRows.length}${
-          warnings.length ? "; " + warnings.join("; ") : ""
-        }`,
-        howTo: duplicateActiveCallsigns
-          ? "Виправте дублікати позивних серед активних записів PERSONNEL"
-          : activeRows.length
-            ? ""
-            : "Заповніть PERSONNEL (Callsign + FML, Status=В наявності або порожньо)",
-      };
-    },
-  );
+    const warnings =
+      typeof getPersonnelWarnings_ === "function"
+        ? getPersonnelWarnings_()
+        : [];
+    const duplicateActiveCallsigns = warnings.some(function (w) {
+      return String(w || "").indexOf("дубль активного позивного") !== -1;
+    });
+    return {
+      status: duplicateActiveCallsigns
+        ? "FAIL"
+        : activeRows.length
+          ? "OK"
+          : "WARN",
+      details: `Активних у PERSONNEL: ${activeRows.length}${
+        warnings.length ? "; " + warnings.join("; ") : ""
+      }`,
+      howTo: duplicateActiveCallsigns
+        ? "Виправте дублікати позивних серед активних записів PERSONNEL"
+        : activeRows.length
+          ? ""
+          : "Заповніть PERSONNEL (Callsign + FML, Status=В наявності або порожньо)",
+    };
+  });
 
   _runHealthCheckItem_(report, "Обов'язкові аркуші", "CRITICAL", function () {
     const ss = getWasbSpreadsheet_();
@@ -526,28 +521,33 @@ function healthCheck() {
     },
   );
 
-  _runHealthCheckItem_(report, "Legacy API surface removed", "WARN", function () {
-    const presentLegacy =
-      typeof findPresentLegacyApiGlobals_ === "function"
-        ? findPresentLegacyApiGlobals_()
-        : [];
-    const helperAliases =
-      typeof findPresentLegacyHelperGlobals_ === "function"
-        ? findPresentLegacyHelperGlobals_()
-        : [];
-    const all = presentLegacy.concat(helperAliases);
+  _runHealthCheckItem_(
+    report,
+    "Legacy API surface removed",
+    "WARN",
+    function () {
+      const presentLegacy =
+        typeof findPresentLegacyApiGlobals_ === "function"
+          ? findPresentLegacyApiGlobals_()
+          : [];
+      const helperAliases =
+        typeof findPresentLegacyHelperGlobals_ === "function"
+          ? findPresentLegacyHelperGlobals_()
+          : [];
+      const all = presentLegacy.concat(helperAliases);
 
-    return {
-      status: all.length ? "WARN" : "OK",
-      severity: "WARN",
-      details: all.length
-        ? "Залишились: " + all.join(", ")
-        : "Canonical-only API + DateUtils_/HtmlUtils_",
-      howTo: all.length
-        ? "Приберіть Legacy*.gs та deprecated helper wrappers"
-        : "",
-    };
-  });
+      return {
+        status: all.length ? "WARN" : "OK",
+        severity: "WARN",
+        details: all.length
+          ? "Залишились: " + all.join(", ")
+          : "Canonical-only API + DateUtils_/HtmlUtils_",
+        howTo: all.length
+          ? "Приберіть Legacy*.gs та deprecated helper wrappers"
+          : "",
+      };
+    },
+  );
 
   _runHealthCheckItem_(
     report,

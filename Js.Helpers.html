@@ -144,7 +144,7 @@
   // =========================
   // INIT
   // =========================
-  
+
   async function initSidebar() {
     startSidebarBootTimeout(SIDEBAR_BOOT_TIMEOUT_MS);
     showLoading("Завантаження...");
@@ -170,10 +170,7 @@
           "bootstrapSidebar",
         );
       } catch (bootErr) {
-        logToConsole(
-          `⚠ bootstrapSidebar: ${normalizeError(bootErr)}`,
-          "warn",
-        );
+        logToConsole(`⚠ bootstrapSidebar: ${normalizeError(bootErr)}`, "warn");
       }
 
       if (boot?.success) {
@@ -225,10 +222,7 @@
             updateMonthBadge(STATE.currentMonth);
           }
         } catch (monthsErr) {
-          logToConsole(
-            `⚠ getMonths: ${normalizeError(monthsErr)}`,
-            "warn",
-          );
+          logToConsole(`⚠ getMonths: ${normalizeError(monthsErr)}`, "warn");
         }
       }
 

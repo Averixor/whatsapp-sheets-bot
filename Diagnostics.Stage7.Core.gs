@@ -266,11 +266,7 @@ function _diagResolveSeverity_(status, rawSeverity) {
 
 function _diagResolveUiGroup_(check) {
   var explicit = String((check && check.uiGroup) || "").toLowerCase();
-  if (
-    explicit === "critical" ||
-    explicit === "warnings" ||
-    explicit === "ok"
-  ) {
+  if (explicit === "critical" || explicit === "warnings" || explicit === "ok") {
     return explicit;
   }
 

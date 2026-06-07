@@ -3,14 +3,16 @@ function _personCardSafeHtml_(value) {
 }
 
 function _personCardJsString_(value) {
-  return JSON.stringify(value === null || typeof value === 'undefined' ? '' : String(value));
+  return JSON.stringify(
+    value === null || typeof value === "undefined" ? "" : String(value),
+  );
 }
 
 function _getSheetByDateStr_(dateStr) {
   const d = DateUtils_.parseUaDate(dateStr);
   const ss = getWasbSpreadsheet_();
   if (d) {
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
     const sh = ss.getSheetByName(mm);
     if (sh) return sh;
   }
@@ -23,7 +25,7 @@ function _getPrevMonthSheetByDateStr_(dateStr) {
   const ss = getWasbSpreadsheet_();
   const prev = new Date(d);
   prev.setMonth(prev.getMonth() - 1);
-  const mm = String(prev.getMonth() + 1).padStart(2, '0');
+  const mm = String(prev.getMonth() + 1).padStart(2, "0");
   return ss.getSheetByName(mm);
 }
 
@@ -44,9 +46,9 @@ function _findRowByCallsign_(sheet, callsign) {
 }
 
 function _formatPhoneDisplay_(phone) {
-  if (!phone || phone === '—') return '—';
-  const d = String(phone).replace(/\D/g, '');
-  if (d.length === 12 && d.startsWith('380')) {
+  if (!phone || phone === "—") return "—";
+  const d = String(phone).replace(/\D/g, "");
+  if (d.length === 12 && d.startsWith("380")) {
     return `+380 ${d.slice(3, 5)} ${d.slice(5, 8)} ${d.slice(8, 10)} ${d.slice(10, 12)}`;
   }
   return String(phone);
@@ -62,16 +64,16 @@ function getVacationInfoByFml_(fml, dateStr) {
 
 function getPersonGroupForDate_(sheet, row, dateStr) {
   const col = findTodayColumn_(sheet, dateStr);
-  if (col === -1) return '—';
+  if (col === -1) return "—";
   const codeRef = sheet.getRange(getMonthlyCodeRangeA1ForSheet_(sheet));
-  if (row < codeRef.getRow() || row > codeRef.getLastRow()) return '—';
-  const code = String(sheet.getRange(row, col).getDisplayValue() || '').trim();
-  if (!code) return '—';
+  if (row < codeRef.getRow() || row > codeRef.getLastRow()) return "—";
+  const code = String(sheet.getRange(row, col).getDisplayValue() || "").trim();
+  if (!code) return "—";
   for (const group of Object.keys(SUMMARY_GROUPS)) {
     const codes = SUMMARY_GROUPS[group];
     if (codes.includes(code)) return displayNameForCode_(group);
   }
-  return displayNameForCode_(code) || 'Інше';
+  return displayNameForCode_(code) || "Інше";
 }
 
 function _buildPersonCardData_(callsign, dateStr) {
@@ -80,13 +82,24 @@ function _buildPersonCardData_(callsign, dateStr) {
 }
 
 function getPersonCardData(callsign, dateStr) {
-  const context = { function: 'getPersonCardData', callsign: callsign || '', date: dateStr || '' };
+  const context = {
+    function: "getPersonCardData",
+    callsign: callsign || "",
+    date: dateStr || "",
+  };
   try {
-    if (typeof AccessEnforcement_ === 'object' && AccessEnforcement_.assertCanOpenPersonCard) {
-      AccessEnforcement_.assertCanOpenPersonCard(callsign || '', dateStr || '');
+    if (
+      typeof AccessEnforcement_ === "object" &&
+      AccessEnforcement_.assertCanOpenPersonCard
+    ) {
+      AccessEnforcement_.assertCanOpenPersonCard(callsign || "", dateStr || "");
     }
     const data = PersonsRepository_.getPersonByCallsign(callsign, dateStr);
-    return Object.assign(okResponse_(data, 'Дані картки завантажено', context), data, { ok: true });
+    return Object.assign(
+      okResponse_(data, "Дані картки завантажено", context),
+      data,
+      { ok: true },
+    );
   } catch (e) {
     return Object.assign(errorResponse_(e, context), { ok: false });
   }
@@ -99,46 +112,55 @@ function openPersonCardByCallsign_(callsign) {
 function openPersonCardByCallsignAndDate_(callsign, dateStr) {
   const data = getPersonCardData(callsign, dateStr);
   if (!data || !data.ok) {
-    throw new Error(data && data.error ? data.error : 'Не вдалося відкрити картку');
+    throw new Error(
+      data && data.error ? data.error : "Не вдалося відкрити картку",
+    );
   }
 
-  const escapedCallsign = _personCardSafeHtml_(data.callsign || '');
-  const escapedDateStr = _personCardSafeHtml_(data.dateStr || '');
-  const escapedFml = _personCardSafeHtml_(data.fml || '—');
-  const escapedRank = _personCardSafeHtml_(data.rank || '—');
-  const escapedPosition = _personCardSafeHtml_(data.position || '—');
-  const escapedOshs = _personCardSafeHtml_(data.oshs || '—');
-  const escapedPhoneDisplay = _personCardSafeHtml_(data.phoneDisplay || '—');
-  const escapedBirthday = _personCardSafeHtml_(data.birthday || '—');
-  const escapedTodayGroup = _personCardSafeHtml_(data.todayGroup || '—');
-  const escapedBrDaysThisMonth = _personCardSafeHtml_(data.brDaysThisMonth || '—');
-  const escapedBrDaysPrevMonth = _personCardSafeHtml_(data.brDaysPrevMonth || '—');
-  const escapedMessage = _personCardSafeHtml_(data.message || '');
-  const callsignJs = _personCardJsString_(data.callsign || '');
-  const waLink = String(data.waLink || '').trim();
+  const escapedCallsign = _personCardSafeHtml_(data.callsign || "");
+  const escapedDateStr = _personCardSafeHtml_(data.dateStr || "");
+  const escapedFml = _personCardSafeHtml_(data.fml || "—");
+  const escapedRank = _personCardSafeHtml_(data.rank || "—");
+  const escapedPosition = _personCardSafeHtml_(data.position || "—");
+  const escapedOshs = _personCardSafeHtml_(data.oshs || "—");
+  const escapedPhoneDisplay = _personCardSafeHtml_(data.phoneDisplay || "—");
+  const escapedBirthday = _personCardSafeHtml_(data.birthday || "—");
+  const escapedTodayGroup = _personCardSafeHtml_(data.todayGroup || "—");
+  const escapedBrDaysThisMonth = _personCardSafeHtml_(
+    data.brDaysThisMonth || "—",
+  );
+  const escapedBrDaysPrevMonth = _personCardSafeHtml_(
+    data.brDaysPrevMonth || "—",
+  );
+  const escapedMessage = _personCardSafeHtml_(data.message || "");
+  const callsignJs = _personCardJsString_(data.callsign || "");
+  const waLink = String(data.waLink || "").trim();
 
-  const currentVacHtml = data.vac && data.vac.inVacation && Array.isArray(data.vac.matches)
-    ? `<div class="vacation-card vacation-card-current">
+  const currentVacHtml =
+    data.vac && data.vac.inVacation && Array.isArray(data.vac.matches)
+      ? `<div class="vacation-card vacation-card-current">
         <div class="vacation-card-title">Відпустка зараз</div>
-        <div class="vacation-card-list">${data.vac.matches.map(function(v) {
-          return `<div class="vacation-card-line">${_personCardSafeHtml_(v.no || '—')}: ${_personCardSafeHtml_(v.start || '—')} — ${_personCardSafeHtml_(v.end || '—')}</div>`;})
-          .join('')}
+        <div class="vacation-card-list">${data.vac.matches
+          .map(function (v) {
+            return `<div class="vacation-card-line">${_personCardSafeHtml_(v.no || "—")}: ${_personCardSafeHtml_(v.start || "—")} — ${_personCardSafeHtml_(v.end || "—")}</div>`;
+          })
+          .join("")}
         </div>
       </div>`
-    : '';
+      : "";
 
   const nextVacHtml = data.nextVacation
     ? `<div class="vacation-card vacation-card-next">
         <div class="vacation-card-title">Найближча відпустка</div>
-        <div class="vacation-card-subtitle">${_personCardSafeHtml_(data.nextVacation.word || '—')}</div>
-        <div class="vacation-card-dates">${_personCardSafeHtml_(data.nextVacation.start || '—')} — ${_personCardSafeHtml_(data.nextVacation.end || '—')}</div>
-        <div class="vacation-card-remaining">Залишилось: ${_personCardSafeHtml_(String(data.nextVacation.daysUntil ?? '—'))} дн.</div>
+        <div class="vacation-card-subtitle">${_personCardSafeHtml_(data.nextVacation.word || "—")}</div>
+        <div class="vacation-card-dates">${_personCardSafeHtml_(data.nextVacation.start || "—")} — ${_personCardSafeHtml_(data.nextVacation.end || "—")}</div>
+        <div class="vacation-card-remaining">Залишилось: ${_personCardSafeHtml_(String(data.nextVacation.daysUntil ?? "—"))} дн.</div>
       </div>`
-    : '';
+    : "";
 
   const whatsappHtml = waLink
     ? `<a class="btn btn-primary action-button" id="waButton" href="${_personCardSafeHtml_(waLink)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>`
-    : '';
+    : "";
 
   const htmlContent = `
     <!doctype html>
@@ -733,19 +755,19 @@ function openPersonCardByCallsignAndDate_(callsign, dateStr) {
     </html>
   `;
 
-  const html = HtmlService.createHtmlOutput(htmlContent)
-    .setTitle(`👤 ${data.callsign}`);
+  const html = HtmlService.createHtmlOutput(htmlContent).setTitle(
+    `👤 ${data.callsign}`,
+  );
 
   SpreadsheetApp.getUi().showSidebar(html);
   return true;
 }
 
 function openPersonCalendar_(callsign) {
-  const t = HtmlService.createTemplateFromFile('PersonCalendar');
-  t.callsign = String(callsign || '').trim();
+  const t = HtmlService.createTemplateFromFile("PersonCalendar");
+  t.callsign = String(callsign || "").trim();
   t.today = _todayStr_();
-  const html = t.evaluate()
-    .setTitle(`📅 ${callsign}`);
+  const html = t.evaluate().setTitle(`📅 ${callsign}`);
   SpreadsheetApp.getUi().showSidebar(html);
 }
 

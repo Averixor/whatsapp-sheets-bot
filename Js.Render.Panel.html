@@ -959,7 +959,7 @@
         html += `
           <div class="vacation-card vacation-card--commander">
             <div class="vacation-card__name">${esc(row.fml)}</div>
-            <div class="vacation-card__text">${esc(row?.message || '')}</div>
+            <div class="vacation-card__text">${esc(row?.message || "")}</div>
             ${renderSelectedRecipientSendButton_(row?.message, "result-link vacation-card__btn")}
           </div>
         `;
@@ -1019,5 +1019,4 @@
   }
 
   // =========================
-
 </script>

@@ -155,7 +155,9 @@ function apiStage7RepairSystemSheets() {
   _stage7AssertRole_("admin", "repair system sheets");
 
   const systemSheets =
-    typeof ensureAllSystemSheets_ === "function" ? ensureAllSystemSheets_() : [];
+    typeof ensureAllSystemSheets_ === "function"
+      ? ensureAllSystemSheets_()
+      : [];
   const businessSheets =
     typeof _repairOptionalBusinessSheets_ === "function"
       ? _repairOptionalBusinessSheets_()

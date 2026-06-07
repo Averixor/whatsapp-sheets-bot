@@ -40,37 +40,43 @@ function runStage3HealthCheck_(options) {
     );
   });
 
-  ["PERSONNEL", "PHONES", "DICT", "DICT_SUM", "SEND_PANEL", "VACATIONS", "LOG"].forEach(
-    function (key) {
-      try {
-        const schema = SheetSchemas_.get(key);
-        const sheet = ss.getSheetByName(schema.name);
-        if (!sheet) return;
-        const result = validateSheetHeadersBySchema_(sheet, schema);
-        _stage7PushCheck_(
-          checks,
-          `Headers ${schema.key}`,
-          result.ok ? "OK" : "WARN",
-          result.ok
-            ? "Headers відповідають схемі"
-            : "Проблеми з headers: " +
-                []
-                  .concat(result.missing || [])
-                  .concat(result.mismatches || [])
-                  .join("; "),
-          result.ok ? "" : "Звірте header row зі схемою у SheetSchemas.gs",
-        );
-      } catch (e) {
-        _stage7PushCheck_(
-          checks,
-          `Headers ${key}`,
-          "WARN",
-          e && e.message ? e.message : String(e),
-          "Перевірте schema/header contract",
-        );
-      }
-    },
-  );
+  [
+    "PERSONNEL",
+    "PHONES",
+    "DICT",
+    "DICT_SUM",
+    "SEND_PANEL",
+    "VACATIONS",
+    "LOG",
+  ].forEach(function (key) {
+    try {
+      const schema = SheetSchemas_.get(key);
+      const sheet = ss.getSheetByName(schema.name);
+      if (!sheet) return;
+      const result = validateSheetHeadersBySchema_(sheet, schema);
+      _stage7PushCheck_(
+        checks,
+        `Headers ${schema.key}`,
+        result.ok ? "OK" : "WARN",
+        result.ok
+          ? "Headers відповідають схемі"
+          : "Проблеми з headers: " +
+              []
+                .concat(result.missing || [])
+                .concat(result.mismatches || [])
+                .join("; "),
+        result.ok ? "" : "Звірте header row зі схемою у SheetSchemas.gs",
+      );
+    } catch (e) {
+      _stage7PushCheck_(
+        checks,
+        `Headers ${key}`,
+        "WARN",
+        e && e.message ? e.message : String(e),
+        "Перевірте schema/header contract",
+      );
+    }
+  });
 
   [
     "DataAccess_",
@@ -555,9 +561,7 @@ function runStage5MetadataConsistencyCheck_() {
   _stage7PushCheck_(
     checks,
     "No legacy maintenance facade",
-    !maintenancePolicy || !maintenancePolicy.compatibilityFile
-      ? "OK"
-      : "FAIL",
+    !maintenancePolicy || !maintenancePolicy.compatibilityFile ? "OK" : "FAIL",
     maintenancePolicy && maintenancePolicy.compatibilityFile
       ? maintenancePolicy.compatibilityFile
       : "canonical-only",
@@ -682,7 +686,9 @@ function runStage5MetadataConsistencyCheck_() {
     helperOk
       ? "HtmlUtils_.escapeHtml() — єдиний canonical path; legacy alias відсутні"
       : "Потрібен HtmlUtils_.escapeHtml без escapeHtml_ / _escapeHtml_",
-    helperOk ? "" : "Перевірте HtmlUtils.gs — приберіть global escapeHtml_ wrappers",
+    helperOk
+      ? ""
+      : "Перевірте HtmlUtils.gs — приберіть global escapeHtml_ wrappers",
   );
 
   return checks;

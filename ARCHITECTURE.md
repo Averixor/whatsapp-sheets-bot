@@ -264,11 +264,11 @@ Diagnostics are for verification, not as a replacement for server-side enforceme
 
 Canonical resolver: **`DataAccess.gs`**.
 
-| Property | Purpose |
-| -------- | ------- |
-| `WASB_SPREADSHEET_ID` | Spreadsheet for headless/trigger runs |
-| `WASB_OWNER_EMAIL` | Owner email for privileged security notifications |
-| `WASB_ACCESS_MIGRATION_EMAIL_BRIDGE` | Emergency email bridge; off in normal operation |
+| Property                                 | Purpose                                                                              |
+| ---------------------------------------- | ------------------------------------------------------------------------------------ |
+| `WASB_SPREADSHEET_ID`                    | Spreadsheet for headless/trigger runs                                                |
+| `WASB_OWNER_EMAIL`                       | Owner email for privileged security notifications                                    |
+| `WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`     | Emergency email bridge; off in normal operation                                      |
 | `WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP` | Legacy plaintext temp-password lookup during migration only; off in normal operation |
 
 Service sheet bootstrap: **`ServiceSheetsBootstrap.gs`** → `apiStage7BootstrapRuntimeAndAlertsSheets()`.

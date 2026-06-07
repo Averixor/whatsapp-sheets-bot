@@ -3,7 +3,7 @@
  */
 
 function stage7TestRunnerAttachReporting_(ctx) {
-  ctx.normalizeTaskReturn_ = function(value) {
+  ctx.normalizeTaskReturn_ = function (value) {
     if (value === null || typeof value === "undefined") {
       return { type: "empty", raw: null };
     }
@@ -21,9 +21,9 @@ function stage7TestRunnerAttachReporting_(ctx) {
     }
 
     return { type: "object", raw: value };
-  }
+  };
 
-  ctx.isCompatibilityTask_ = function(task) {
+  ctx.isCompatibilityTask_ = function (task) {
     if (!task) return false;
 
     var id = String(task.id || "").toLowerCase();
@@ -40,13 +40,13 @@ function stage7TestRunnerAttachReporting_(ctx) {
       fn.indexOf("stage4") !== -1 ||
       fn.indexOf("historical") !== -1
     );
-  }
+  };
 
-  ctx.normalizeCompatibilityStatus_ = function(status, task) {
+  ctx.normalizeCompatibilityStatus_ = function (status, task) {
     return status;
-  }
+  };
 
-  ctx.inferStatus_ = function(details, task) {
+  ctx.inferStatus_ = function (details, task) {
     var raw = details ? details.raw : null;
 
     if (raw === false) return "FAIL";
@@ -119,9 +119,9 @@ function stage7TestRunnerAttachReporting_(ctx) {
     }
 
     return "PASS";
-  }
+  };
 
-  ctx.inferChecksStatus_ = function(items) {
+  ctx.inferChecksStatus_ = function (items) {
     if (!Array.isArray(items)) return "PASS";
 
     var hasWarn = false;
@@ -157,9 +157,9 @@ function stage7TestRunnerAttachReporting_(ctx) {
     }
 
     return hasWarn ? "WARN" : "PASS";
-  }
+  };
 
-  ctx.isFailStatus_ = function(status) {
+  ctx.isFailStatus_ = function (status) {
     var value = String(status).toUpperCase();
     return (
       value === "FAIL" ||
@@ -169,9 +169,9 @@ function stage7TestRunnerAttachReporting_(ctx) {
       value === "BROKEN" ||
       value === "BLOCKED"
     );
-  }
+  };
 
-  ctx.isWarnStatus_ = function(status) {
+  ctx.isWarnStatus_ = function (status) {
     var value = String(status).toUpperCase();
     return (
       value === "WARN" ||
@@ -182,9 +182,9 @@ function stage7TestRunnerAttachReporting_(ctx) {
       value === "SKIPPED" ||
       value === "PSEUDO"
     );
-  }
+  };
 
-  ctx.isPseudoInfo_ = function(item) {
+  ctx.isPseudoInfo_ = function (item) {
     if (!item || typeof item !== "object") return false;
 
     var status = String(item.status || item.result || "").toUpperCase();
@@ -201,16 +201,16 @@ function stage7TestRunnerAttachReporting_(ctx) {
         item.passed === false) &&
         severity === "INFO")
     );
-  }
+  };
 
-  ctx.statusToUiGroup_ = function(status, ok, task) {
+  ctx.statusToUiGroup_ = function (status, ok, task) {
     if (status === "SKIPPED") return "warnings";
     if (status === "FAIL") return "critical";
     if (status === "WARN") return "warnings";
     return "ok";
-  }
+  };
 
-  ctx.humanizeReportValue_ = function(value, limit) {
+  ctx.humanizeReportValue_ = function (value, limit) {
     limit = limit || 900;
 
     if (value === null || typeof value === "undefined") return "";
@@ -236,9 +236,9 @@ function stage7TestRunnerAttachReporting_(ctx) {
     }
 
     return ctx.compactReportText_(String(value), limit);
-  }
+  };
 
-  ctx.compactReportText_ = function(text, limit) {
+  ctx.compactReportText_ = function (text, limit) {
     text = String(text || "")
       .replace(/\s+/g, " ")
       .trim();
@@ -258,9 +258,9 @@ function stage7TestRunnerAttachReporting_(ctx) {
     }
 
     return text.length > limit ? text.slice(0, limit) + "…" : text;
-  }
+  };
 
-  ctx.summarizeReportArray_ = function(items, limit) {
+  ctx.summarizeReportArray_ = function (items, limit) {
     if (!items.length) return "Список порожній.";
 
     var fail = 0;
@@ -330,9 +330,9 @@ function stage7TestRunnerAttachReporting_(ctx) {
     }
 
     return ctx.compactReportText_(text, limit);
-  }
+  };
 
-  ctx.summarizeReportObject_ = function(obj, limit) {
+  ctx.summarizeReportObject_ = function (obj, limit) {
     if (!obj) return "";
 
     if (obj.message && typeof obj.message !== "object") {
@@ -423,9 +423,9 @@ function stage7TestRunnerAttachReporting_(ctx) {
     }
 
     return "Результат отримано як об’єкт; деталі доступні у TEST_RESULTS.";
-  }
+  };
 
-  ctx.normalizeTestResultsDetailsForRun_ = function(runId) {
+  ctx.normalizeTestResultsDetailsForRun_ = function (runId) {
     try {
       if (!runId) return;
 
@@ -488,11 +488,10 @@ function stage7TestRunnerAttachReporting_(ctx) {
       if (changed) {
         range.setValues(values);
       }
-    } catch (err) {
-    }
-  }
+    } catch (err) {}
+  };
 
-  ctx.detailsJsonCellToHumanText_ = function(value) {
+  ctx.detailsJsonCellToHumanText_ = function (value) {
     if (value === null || typeof value === "undefined") return "";
 
     var text = String(value || "").trim();
@@ -525,9 +524,9 @@ function stage7TestRunnerAttachReporting_(ctx) {
     } catch (err) {
       return ctx.compactReportText_(text, 1800);
     }
-  }
+  };
 
-  ctx.detailsObjectToHumanText_ = function(raw, limit) {
+  ctx.detailsObjectToHumanText_ = function (raw, limit) {
     limit = limit || 1800;
 
     if (raw === null || typeof raw === "undefined") return "";
@@ -644,7 +643,11 @@ function stage7TestRunnerAttachReporting_(ctx) {
     }
 
     if (raw.url || raw.link) {
-      return ctx.withDetailsTitle_(title, "Посилання сформовано коректно.", limit);
+      return ctx.withDetailsTitle_(
+        title,
+        "Посилання сформовано коректно.",
+        limit,
+      );
     }
 
     var keys = Object.keys(raw).filter(function (key) {
@@ -660,9 +663,9 @@ function stage7TestRunnerAttachReporting_(ctx) {
     }
 
     return title || "Результат отримано; технічні дані приховано.";
-  }
+  };
 
-  ctx.detailsChecksToHumanText_ = function(items, limit) {
+  ctx.detailsChecksToHumanText_ = function (items, limit) {
     limit = limit || 1800;
 
     if (!items || !items.length) return "Список порожній.";
@@ -742,9 +745,9 @@ function stage7TestRunnerAttachReporting_(ctx) {
     }
 
     return ctx.compactReportText_(text, limit);
-  }
+  };
 
-  ctx.formatOneCheckLine_ = function(item, fallbackStatus) {
+  ctx.formatOneCheckLine_ = function (item, fallbackStatus) {
     var status = String(
       item.status || item.result || fallbackStatus || "INFO",
     ).toUpperCase();
@@ -766,15 +769,15 @@ function stage7TestRunnerAttachReporting_(ctx) {
     }
 
     return ctx.compactReportText_(line, 260);
-  }
+  };
 
-  ctx.withDetailsTitle_ = function(title, body, limit) {
+  ctx.withDetailsTitle_ = function (title, body, limit) {
     body = ctx.compactReportText_(body, limit || 1800);
     if (!title) return body;
     return ctx.compactReportText_(title + ": " + body, limit || 1800);
-  }
+  };
 
-  ctx.buildHumanTaskMessageFromRaw_ = function(raw, limit) {
+  ctx.buildHumanTaskMessageFromRaw_ = function (raw, limit) {
     limit = limit || 360;
 
     function safeString_(value) {
@@ -1015,9 +1018,9 @@ function stage7TestRunnerAttachReporting_(ctx) {
     }
 
     return "Перевірку виконано успішно.";
-  }
+  };
 
-  ctx.buildTaskMessage_ = function(status, details, task) {
+  ctx.buildTaskMessage_ = function (status, details, task) {
     var raw = details ? details.raw : null;
     var text = ctx.buildHumanTaskMessageFromRaw_(raw, 360);
 
@@ -1040,9 +1043,9 @@ function stage7TestRunnerAttachReporting_(ctx) {
     }
 
     return text || "Перевірку виконано успішно.";
-  }
+  };
 
-  ctx.buildRecommendation_ = function(status, details, task) {
+  ctx.buildRecommendation_ = function (status, details, task) {
     var raw = details ? details.raw : null;
 
     if (raw && typeof raw === "object") {
@@ -1063,9 +1066,9 @@ function stage7TestRunnerAttachReporting_(ctx) {
     if (status === "WARN")
       return "Перевірити попередження та виправити, якщо воно стосується активних Stage 7 / ACCESS / runtime перевірок.";
     return "";
-  }
+  };
 
-  ctx.finalizeReport_ = function(report, startedAt) {
+  ctx.finalizeReport_ = function (report, startedAt) {
     var finishedAt = new Date();
     var passed = 0;
     var failed = 0;
@@ -1110,9 +1113,9 @@ function stage7TestRunnerAttachReporting_(ctx) {
       report.warnings.push(
         "Є критичні помилки. Деплой краще не робити, доки вони не виправлені.",
       );
-  }
+  };
 
-  ctx.resultToCheck_ = function(item) {
+  ctx.resultToCheck_ = function (item) {
     return {
       name: item.name,
       title: item.name,
@@ -1128,9 +1131,9 @@ function stage7TestRunnerAttachReporting_(ctx) {
       durationMs: item.durationMs,
       discovered: item.discovered === true,
     };
-  }
+  };
 
-  ctx.makeSkippedResult_ = function(task, message) {
+  ctx.makeSkippedResult_ = function (task, message) {
     var now = new Date();
     return {
       id: task.id,
@@ -1154,5 +1157,5 @@ function stage7TestRunnerAttachReporting_(ctx) {
         "Запуск пропущено через ліміт часу або відсутність функції.",
       errorStack: "",
     };
-  }
+  };
 }

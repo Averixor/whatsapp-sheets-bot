@@ -3,11 +3,11 @@
  * Validates bound GAS entry points: menu, triggers, gsRun, Api.run, google.script.run.
  * Internal helpers (_prefix) and documented compatibility aliases are allowlisted.
  */
-import fs from 'node:fs';
-import path from 'node:path';
+import fs from "node:fs";
+import path from "node:path";
 
-const repoRoot = path.resolve(import.meta.dirname, '..');
-const SKIP_DIRS = new Set(['node_modules', '.git', 'whatsapp-sheets-bot-git']);
+const repoRoot = path.resolve(import.meta.dirname, "..");
+const SKIP_DIRS = new Set(["node_modules", ".git", "whatsapp-sheets-bot-git"]);
 
 function walk(dir, exts, out = []) {
   for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -20,12 +20,12 @@ function walk(dir, exts, out = []) {
 }
 
 function rel(p) {
-  return path.relative(repoRoot, p).replace(/\\/g, '/');
+  return path.relative(repoRoot, p).replace(/\\/g, "/");
 }
 
 function topLevelGsDefs(file, text) {
   const defs = [];
-  text.split('\n').forEach((line, i) => {
+  text.split("\n").forEach((line, i) => {
     const m = line.match(/^function\s+([A-Za-z_$][\w$]*)\s*\(/);
     if (m) defs.push({ name: m[1], file, line: i + 1 });
   });
@@ -35,13 +35,27 @@ function topLevelGsDefs(file, text) {
 function collectBoundRefs(file, text) {
   const refs = [];
   const add = (name, kind, index) => {
-    refs.push({ name, file, line: text.slice(0, index).split('\n').length, kind });
+    refs.push({
+      name,
+      file,
+      line: text.slice(0, index).split("\n").length,
+      kind,
+    });
   };
   let m;
   const patterns = [
-    { re: /\.add(?:Item|SubMenu)\s*\([^,]+,\s*['"]([A-Za-z_$][\w$]*)['"]/g, kind: 'menu' },
-    { re: /ScriptApp\.newTrigger\s*\(\s*['"]([A-Za-z_$][\w$]*)['"]/g, kind: 'trigger' },
-    { re: /(?:gsRun|Api\.run)\s*\(\s*['"]([A-Za-z_$][\w$]*)['"]/g, kind: 'client' },
+    {
+      re: /\.add(?:Item|SubMenu)\s*\([^,]+,\s*['"]([A-Za-z_$][\w$]*)['"]/g,
+      kind: "menu",
+    },
+    {
+      re: /ScriptApp\.newTrigger\s*\(\s*['"]([A-Za-z_$][\w$]*)['"]/g,
+      kind: "trigger",
+    },
+    {
+      re: /(?:gsRun|Api\.run)\s*\(\s*['"]([A-Za-z_$][\w$]*)['"]/g,
+      kind: "client",
+    },
   ];
   for (const { re, kind } of patterns) {
     const r = new RegExp(re.source, re.flags);
@@ -51,15 +65,19 @@ function collectBoundRefs(file, text) {
   // google.script.run is a fluent client bridge. Handler calls may contain nested
   // functions, arrows, or google.script.host.close(), so a single regex can
   // mistake withSuccessHandler/withFailureHandler for a server endpoint.
-  const bridgeHelpers = new Set(['withSuccessHandler', 'withFailureHandler', 'withUserObject']);
+  const bridgeHelpers = new Set([
+    "withSuccessHandler",
+    "withFailureHandler",
+    "withUserObject",
+  ]);
   const runRe = /google\.script\.run/g;
   while ((m = runRe.exec(text))) {
     const start = m.index;
-    const lineStart = text.lastIndexOf('\n', start) + 1;
-    const commentStart = text.indexOf('//', lineStart);
+    const lineStart = text.lastIndexOf("\n", start) + 1;
+    const commentStart = text.indexOf("//", lineStart);
     if (commentStart >= 0 && commentStart < start) continue;
-    const endCandidates = [';\n', ';', '\n</script>'].map((token) => {
-      const idx = text.indexOf(token.replace('\\n', '\n'), start);
+    const endCandidates = [";\n", ";", "\n</script>"].map((token) => {
+      const idx = text.indexOf(token.replace("\\n", "\n"), start);
       return idx >= 0 ? idx : Number.POSITIVE_INFINITY;
     });
     const end = Math.min(...endCandidates, text.length);
@@ -71,7 +89,7 @@ function collectBoundRefs(file, text) {
       const name = method[1];
       if (!bridgeHelpers.has(name)) target = { name, offset: method.index };
     }
-    if (target) add(target.name, 'client', start + target.offset);
+    if (target) add(target.name, "client", start + target.offset);
   }
   return refs;
 }
@@ -118,19 +136,19 @@ const ALLOW_ORPHAN = [
   /^testDiagnostics/,
 ];
 
-const gsFiles = walk(repoRoot, ['.gs']);
-const htmlFiles = walk(repoRoot, ['.html']);
+const gsFiles = walk(repoRoot, [".gs"]);
+const htmlFiles = walk(repoRoot, [".html"]);
 
 const defNames = new Set();
 for (const file of gsFiles) {
-  for (const d of topLevelGsDefs(file, fs.readFileSync(file, 'utf8'))) {
+  for (const d of topLevelGsDefs(file, fs.readFileSync(file, "utf8"))) {
     defNames.add(d.name);
   }
 }
 
 const boundRefs = [];
 for (const file of [...gsFiles, ...htmlFiles]) {
-  boundRefs.push(...collectBoundRefs(file, fs.readFileSync(file, 'utf8')));
+  boundRefs.push(...collectBoundRefs(file, fs.readFileSync(file, "utf8")));
 }
 
 const refsByName = new Map();
@@ -151,30 +169,37 @@ function isAllowedOrphan(name) {
 }
 
 const PUBLIC_ORPHAN_TARGETS = [
-  'sendFromSidebar',
-  'sendAllFromSidebar',
-  'addAlert',
-  'addAlertsBatch',
-  'clearOldAlerts',
-  'getAlertsStatistics',
-  'getRecentAlerts',
-  'resetAlertsSchemaCache',
+  "sendFromSidebar",
+  "sendAllFromSidebar",
+  "addAlert",
+  "addAlertsBatch",
+  "clearOldAlerts",
+  "getAlertsStatistics",
+  "getRecentAlerts",
+  "resetAlertsSchemaCache",
 ];
 
-const publicOrphans = PUBLIC_ORPHAN_TARGETS.filter((n) => defNames.has(n) && !refsByName.has(n));
+const publicOrphans = PUBLIC_ORPHAN_TARGETS.filter(
+  (n) => defNames.has(n) && !refsByName.has(n),
+);
 
 let exitCode = 0;
-console.log('function-graph-audit: bound refs', boundRefs.length, '| defs', defNames.size);
+console.log(
+  "function-graph-audit: bound refs",
+  boundRefs.length,
+  "| defs",
+  defNames.size,
+);
 
 if (missing.length) {
   exitCode = 1;
-  console.error('\nMISSING (bound ref without top-level function):');
+  console.error("\nMISSING (bound ref without top-level function):");
   for (const m of missing) {
     const s = m.refs[0];
     console.error(`  ${m.name} <- ${s.kind} ${rel(s.file)}:${s.line}`);
   }
 } else {
-  console.log('MISSING: none');
+  console.log("MISSING: none");
 }
 
 process.exit(exitCode);

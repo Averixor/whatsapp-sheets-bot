@@ -361,6 +361,8 @@ var AccessEnforcement_ =
         _configValue_("LOG_SHEET", "LOG"),
         _vacationConfigValue_("VACATIONS_SHEET", "VACATIONS"),
         "VACATION_SCHEDULE",
+        "VACATION_CHECK",
+        "VACATION_OPTIONS",
         _configValue_("SEND_PANEL_SHEET", "SEND_PANEL"),
         _configValue_("PHONES_SHEET", "PHONES"),
       ]);
@@ -642,21 +644,36 @@ var AccessEnforcement_ =
       add("Імʼя", info.firstName || info.first_name || info.name);
       add("Телефон", info.phone);
       add("Email", info.email);
-      add("Позивний", info.enteredCallsign || info.callsign || info.personCallsign);
+      add(
+        "Позивний",
+        info.enteredCallsign || info.callsign || info.personCallsign,
+      );
       add("Бажаний канал звʼязку", preferredContactLabel);
-      add("Telegram username", info.telegramUsername || info.telegram || info.tgUsername);
+      add(
+        "Telegram username",
+        info.telegramUsername || info.telegram || info.tgUsername,
+      );
       add("Signal", info.signal || info.signalPhone);
       add("Статус заявки", info.registrationStatus || info.registration_status);
 
-      add("Тип ідентифікатора", info.identifierType === "phone" ? "телефон" : info.identifierType);
+      add(
+        "Тип ідентифікатора",
+        info.identifierType === "phone" ? "телефон" : info.identifierType,
+      );
       add("Ідентифікатор", info.identifierValue);
       add("Введений позивний", info.enteredCallsign);
       add("Спроба №", info.attemptNumber);
       add("Залишилось спроб", info.remainingAttempts);
-      add("Заблоковано", info.blocked === true ? "так" : info.blocked === false ? "ні" : "");
+      add(
+        "Заблоковано",
+        info.blocked === true ? "так" : info.blocked === false ? "ні" : "",
+      );
       add("Блокування, хв", info.blockDurationMinutes);
       add("Час входу", info.enteredAtText);
-      add("Точка входу", String(info.loginPointText || "").replace(/^Точка входу:\s*/i, ""));
+      add(
+        "Точка входу",
+        String(info.loginPointText || "").replace(/^Точка входу:\s*/i, ""),
+      );
 
       return lines.length
         ? lines.join("\n")
@@ -764,7 +781,8 @@ var AccessEnforcement_ =
       }
 
       var sanitized = sanitizeClientSignalDetails(details);
-      var role = _trimmedString_(descriptor.role, "guest").toLowerCase() || "guest";
+      var role =
+        _trimmedString_(descriptor.role, "guest").toLowerCase() || "guest";
 
       _appendAlert_({
         timestamp: new Date(),
@@ -1179,8 +1197,10 @@ var AccessEnforcement_ =
 
     function _isSystemTriggerContext_(descriptor) {
       var access = descriptor || {};
-      var source = _trimmedString_(access.source || access.accessSource, "")
-        .toLowerCase();
+      var source = _trimmedString_(
+        access.source || access.accessSource,
+        "",
+      ).toLowerCase();
       var actorRole = _trimmedString_(
         access.actorRole || access.initiatorRole || access.role,
         "",
@@ -1434,8 +1454,7 @@ function stage7SecurityAuditOnEdit(e) {
       hasAccess = !!actor.isAdmin && actor.enabled !== false;
     } else {
       hasAccess =
-        AccessEnforcement_.isHighPrivilegeRole(role) &&
-        actor.enabled !== false;
+        AccessEnforcement_.isHighPrivilegeRole(role) && actor.enabled !== false;
     }
 
     if (hasAccess && actor.registered === true) return;
@@ -1603,6 +1622,8 @@ function _getProtectedSheetsForTrigger_() {
     "TEMPLATES",
     "VACATIONS",
     "VACATION_SCHEDULE",
+    "VACATION_CHECK",
+    "VACATION_OPTIONS",
   ].filter(function (value, index, arr) {
     return value && arr.indexOf(value) === index;
   });

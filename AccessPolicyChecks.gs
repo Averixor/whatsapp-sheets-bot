@@ -23,17 +23,15 @@ var POLICY_CHECKS_CONFIG_ = {
     "LOG",
     "VACATIONS",
     "VACATION_SCHEDULE",
+    "VACATION_CHECK",
+    "VACATION_OPTIONS",
     "SEND_PANEL",
     "PHONES",
   ],
 
   STRICT_PROTECTED_SHEETS_MODE: false,
 
-  REQUIRED_MAINTENANCE_ACTIONS: [
-    "repair", 
-    "protections", 
-    "triggers"
-  ],
+  REQUIRED_MAINTENANCE_ACTIONS: ["repair", "protections", "triggers"],
 
   ROLES_WITH_ACTIONS: [
     "viewer",
@@ -751,7 +749,9 @@ function runAccessPolicyChecks(options) {
         }
 
         if (!AccessEnforcement_.canRunLeaveBirthdayCheck(systemTrigger)) {
-          throw new Error("System trigger leave/birthday check should be allowed");
+          throw new Error(
+            "System trigger leave/birthday check should be allowed",
+          );
         }
 
         if (AccessEnforcement_.canRunLeaveBirthdayCheck(partialSystem)) {
@@ -773,10 +773,7 @@ function runAccessPolicyChecks(options) {
           actorRole: "system",
           accessSource: "system_trigger",
         });
-        if (
-          !built ||
-          !AccessEnforcement_.canRunLeaveBirthdayCheck(built)
-        ) {
+        if (!built || !AccessEnforcement_.canRunLeaveBirthdayCheck(built)) {
           throw new Error(
             "Built system trigger descriptor should allow leave/birthday check",
           );
@@ -1071,12 +1068,7 @@ function runAccessPolicyChecks(options) {
       report,
       "maintenance actions contract covers elevated roles",
       function () {
-        var elevated = [
-          "maintainer", 
-          "admin", 
-          "sysadmin", 
-          "owner"
-        ];
+        var elevated = ["maintainer", "admin", "sysadmin", "owner"];
         var output = {};
 
         for (var i = 0; i < elevated.length; i++) {
@@ -1119,8 +1111,12 @@ function runAccessPolicyChecks(options) {
         if (typeof sanitizeAccessSecretFieldUpdates_ !== "function") {
           throw new Error("sanitizeAccessSecretFieldUpdates_ missing");
         }
-        if (typeof resolveAccessTemporaryPasswordPlainForPersist_ !== "function") {
-          throw new Error("resolveAccessTemporaryPasswordPlainForPersist_ missing");
+        if (
+          typeof resolveAccessTemporaryPasswordPlainForPersist_ !== "function"
+        ) {
+          throw new Error(
+            "resolveAccessTemporaryPasswordPlainForPersist_ missing",
+          );
         }
 
         var sanitized = sanitizeAccessSecretFieldUpdates_({
@@ -1136,9 +1132,8 @@ function runAccessPolicyChecks(options) {
           throw new Error("sanitizeAccessSecretFieldUpdates_ kept plain text");
         }
 
-        var persisted = resolveAccessTemporaryPasswordPlainForPersist_(
-          "WASB-TEST-PLAIN",
-        );
+        var persisted =
+          resolveAccessTemporaryPasswordPlainForPersist_("WASB-TEST-PLAIN");
         if (persisted) {
           throw new Error(
             "resolveAccessTemporaryPasswordPlainForPersist_ returned plain text",
@@ -1163,7 +1158,9 @@ function runAccessPolicyChecks(options) {
             "AccessEnforcement_.reportClientAccessSignal is not available",
           );
         }
-        if (typeof AccessEnforcement_.sanitizeClientSignalDetails !== "function") {
+        if (
+          typeof AccessEnforcement_.sanitizeClientSignalDetails !== "function"
+        ) {
           throw new Error(
             "AccessEnforcement_.sanitizeClientSignalDetails is not available",
           );
@@ -1198,7 +1195,9 @@ function runAccessPolicyChecks(options) {
           throw new Error("sanitizeClientSignalDetails kept unknown key foo");
         }
         if (String(sanitized.callsign || "").length > 120) {
-          throw new Error("sanitizeClientSignalDetails did not truncate callsign");
+          throw new Error(
+            "sanitizeClientSignalDetails did not truncate callsign",
+          );
         }
 
         var blocked = AccessEnforcement_.reportClientAccessSignal(
@@ -1300,27 +1299,23 @@ function runAccessPolicyChecks(options) {
       },
     );
 
-    _pushPolicyCheck_(
-      report,
-      "guest denied access api endpoints",
-      function () {
-        var denied = [
-          "apiStage7ReportAccessViolation",
-          "apiStage7BootstrapAccessSheet",
-          "apiStage7NormalizeAccessSheetFormatting",
-          "apiStage7ApplyProtections",
-          "apiSubmitRequest",
-          "apiStage7RepairSystemSheets",
-          "apiStage7NormalizeAllSheetHeadersToEnglish",
-        ];
-        for (var i = 0; i < denied.length; i++) {
-          if (isAccessApiEndpointAllowedForRole_(denied[i], "guest")) {
-            throw new Error("guest should be denied: " + denied[i]);
-          }
+    _pushPolicyCheck_(report, "guest denied access api endpoints", function () {
+      var denied = [
+        "apiStage7ReportAccessViolation",
+        "apiStage7BootstrapAccessSheet",
+        "apiStage7NormalizeAccessSheetFormatting",
+        "apiStage7ApplyProtections",
+        "apiSubmitRequest",
+        "apiStage7RepairSystemSheets",
+        "apiStage7NormalizeAllSheetHeadersToEnglish",
+      ];
+      for (var i = 0; i < denied.length; i++) {
+        if (isAccessApiEndpointAllowedForRole_(denied[i], "guest")) {
+          throw new Error("guest should be denied: " + denied[i]);
         }
-        return { guestDeniedCount: denied.length };
-      },
-    );
+      }
+      return { guestDeniedCount: denied.length };
+    });
 
     _pushPolicyCheck_(
       report,
@@ -1337,9 +1332,7 @@ function runAccessPolicyChecks(options) {
         for (var r = 0; r < roles.length; r++) {
           for (var i = 0; i < allowed.length; i++) {
             if (!isAccessApiEndpointAllowedForRole_(allowed[i], roles[r])) {
-              throw new Error(
-                roles[r] + " should be allowed: " + allowed[i],
-              );
+              throw new Error(roles[r] + " should be allowed: " + allowed[i]);
             }
           }
         }

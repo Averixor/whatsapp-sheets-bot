@@ -249,9 +249,21 @@ function getClientRuntimeContract_() {
 
 function onOpen(e) {
   try {
-    SpreadsheetApp.getUi()
-      .createMenu("WASB")
+    const ui = SpreadsheetApp.getUi();
+    const vacationMenu = ui
+      .createMenu("Відпустки")
+      .addItem("Оновити графік відпусток", "rebuildVacationSystem")
+      .addItem("Перевірити порушення", "checkVacationScheduleOnly")
+      .addItem("Підсвітити проблеми", "highlightVacationProblems")
+      .addItem("Сформувати звіт", "generateVacationReport")
+      .addSeparator()
+      .addItem("Підібрати варіанти", "showVacationPlannerDialog")
+      .addItem("Застосувати вибраний варіант", "applySelectedVacationOption")
+      .addItem("Перевірити ручну дату", "showValidateVacationDateDialog");
+
+    ui.createMenu("WASB")
       .addItem("📱 ПАНЕЛЬ", "showSidebar")
+      .addSubMenu(vacationMenu)
       .addSeparator()
       .addItem("🔄 Оновити меню", "onOpen")
       .addToUi();

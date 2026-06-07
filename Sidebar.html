@@ -1,15 +1,15 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="uk-UA">
   <head>
     <title>WASB</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
       content="Панель керування WASB (WhatsApp-Sheets-Bot)."
-    >
+    />
     <?!= includeTemplate('Styles'); ?>
-    <base target="_top">
+    <base target="_top" />
     <style>
       .header-content {
         position: relative;
@@ -542,10 +542,12 @@
               placeholder="Пошук позивного..."
               aria-describedby="personnelModalCount"
               autocomplete="off"
-            >
+            />
           </div>
           <div class="personnel-modal__body">
-            <h3 class="sr-only" id="personnelGridTitle">Список особового складу</h3>
+            <h3 class="sr-only" id="personnelGridTitle">
+              Список особового складу
+            </h3>
             <section
               class="personnel-grid"
               id="personnelGrid"

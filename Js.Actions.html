@@ -181,7 +181,6 @@
   window.SidebarApp.showRequestsForm = showRequestsForm;
   window.SidebarApp.submitRequestForm = submitRequestForm;
 
-
   function canOpenPersonCardClientSafe_(callsign) {
     if (typeof canOpenPersonCardClient_ === "function") {
       try {
@@ -647,7 +646,9 @@
         try {
           if (popup && !popup.closed) popup.close();
         } catch (_) {}
-        showToast("✕ " + (result?.error || "Не вдалося підготувати повідомлення"));
+        showToast(
+          "✕ " + (result?.error || "Не вдалося підготувати повідомлення"),
+        );
       }
     } catch (error) {
       try {
@@ -816,7 +817,9 @@
     `;
 
     if (looksLikeMessageTemplate_(data?.message)) {
-      $id("personCardMessage")?.classList?.add("person-card__message--template");
+      $id("personCardMessage")?.classList?.add(
+        "person-card__message--template",
+      );
     }
   }
 
@@ -1000,7 +1003,11 @@
       }
       try {
         const res = await Stage7Api.listPersonnelCallsigns();
-        if (res?.success && Array.isArray(res.callsigns) && res.callsigns.length) {
+        if (
+          res?.success &&
+          Array.isArray(res.callsigns) &&
+          res.callsigns.length
+        ) {
           applyPersonnelCallsignsFromServer_(res.callsigns);
           return res.callsigns;
         }

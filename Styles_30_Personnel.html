@@ -1,347 +1,84 @@
-/* VACATION ALERTS */
-  .vacation-alerts {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 16px;
-  }
-
-  .vacation-alerts__list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 10px;
-  }
-
-  .vacation-card {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 14px;
-    padding: 14px;
-    color: var(--text-primary);
-    box-shadow: var(--shadow-sm);
-    transition: var(--transition);
-  }
-
-  .vacation-card:hover {
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
-  }
-
-  .vacation-card--commander {
-    border-left: 4px solid var(--warning-color);
-    background: var(--warning-soft-bg);
-  }
-
-  .vacation-card--soldier {
-    border-left: 4px solid var(--success-color);
-    background: var(--success-soft-bg);
-  }
-
-  .vacation-card__name {
-    color: var(--text-primary);
-    font-weight: 700;
-    font-size: 0.95rem;
-    line-height: 1.35;
-    margin-bottom: 6px;
-    word-break: break-word;
-  }
-
-  .vacation-card__text {
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-    line-height: 1.5;
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-
-  .vacation-card__meta {
-    color: var(--text-secondary);
-    font-size: 0.88rem;
-    line-height: 1.45;
-    word-break: break-word;
-  }
-
-  .vacation-card__btn {
-    width: 100%;
-    margin-top: 12px;
-    justify-content: center;
-    text-align: center;
-  }
-
-  .vacation-card__empty {
-    margin-top: 10px;
-    color: var(--text-muted);
-    font-size: 0.85rem;
-  }
-
-  /* BIRTHDAY CARDS */
-  .birthday-group {
-    border-radius: 14px;
-    padding: 12px;
-    margin-bottom: 12px;
-  }
-
-  .birthday-group--info {
-    background: var(--info-soft-bg);
-    border: 1px solid var(--info-soft-border);
-    border-left: 4px solid var(--info-soft-text);
-  }
-
-  .birthday-group--warning {
-    background: var(--warning-soft-bg);
-    border: 1px solid var(--warning-soft-border);
-    border-left: 4px solid var(--warning-soft-text);
-  }
-
-  .birthday-group__title {
-    font-weight: 800;
-    font-size: 13px;
-    margin-bottom: 10px;
-  }
-
-  .birthday-group--info .birthday-group__title {
-    color: var(--info-soft-text);
-  }
-
-  .birthday-group--warning .birthday-group__title {
-    color: var(--warning-soft-text);
-  }
-
-  .birthday-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 10px 12px;
-    margin-top: 8px;
-    color: var(--text-primary);
-  }
-
-  .birthday-card__name {
-    color: var(--text-primary);
-    font-weight: 800;
-    font-size: 14px;
-    text-align: left;
-  }
-
-  .birthday-card__meta {
-    font-size: 13px;
-    color: var(--text-primary);
-    margin-top: 4px;
-    text-align: left;
-    font-weight: 500;
-  }
-
-  .birthday-card__note {
-    font-size: 12px;
-    color: var(--text-secondary);
-    margin-top: 4px;
-    text-align: left;
-    line-height: 1.35;
-  }
-
-  .birthday-card__empty {
-    color: var(--text-muted);
-    font-size: 12px;
-    margin-top: 6px;
-  }
-
-  .birthday-card__btn {
-    margin-top: 8px;
-    width: 100%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 10px;
-    background: var(--whatsapp-green);
-    color: var(--text-on-accent);
-    border: none;
-    border-radius: 999px;
-    cursor: pointer;
-    font-weight: 700;
-    font-size: 13px;
-  }
-
-  .birthday-card__btn--blue {
-    background: var(--google-blue);
-  }
-
-  /* PERSON CARD */
-  #personCardContainer {
-    margin-top: var(--space-sm);
-  }
-
-  .person-card {
-    margin-top: 12px;
-    padding: 16px;
-    border-radius: 16px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-    backdrop-filter: blur(8px);
-    box-shadow: var(--shadow-sm);
-    transition: var(--transition);
-  }
-
-  .person-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md), var(--shadow-glow);
-    border-color: var(--accent-soft-border);
-  }
-
-  .person-card__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 14px;
-  }
-
-  .person-card__callsign {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--text-primary);
-  }
-
-  .person-card__rank {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-    white-space: nowrap;
-  }
-
-  .person-card__meta {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 14px;
-  }
-
-  .person-card__field {
-    display: block;
-    min-width: 0;
-  }
-
-  .person-card__label {
-    display: block;
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    line-height: 1.25;
-    margin: 0 0 4px 0;
-  }
-
-  .person-card__value {
-    display: block;
-    color: var(--text-primary);
-    font-size: 0.9rem;
-    line-height: 1.4;
-    word-break: break-word;
-    margin: 0;
-  }
-
-  .person-card__section {
-    margin: 12px 0;
-    padding: 12px;
-    border-radius: 12px;
-    border: 1px solid var(--border-color);
-  }
-
-  .person-card__section--warn {
-    background: var(--warning-soft-bg);
-  }
-
-  .person-card__section--info {
-    background: var(--accent-soft-bg);
-  }
-
-  .person-card__section-title {
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: var(--text-primary);
-  }
-
-  .person-card__vac-row {
-    color: var(--text-primary);
-    font-size: 0.9rem;
-    line-height: 1.45;
-  }
-
-  .person-card__actions {
-    display: flex;
-    gap: 8px;
-    margin: 14px 0;
-  }
-
-  .person-card__btn {
-    flex: 1;
-    min-height: 38px;
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    cursor: pointer;
-    text-align: center;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: var(--transition);
-  }
-
-  .person-card__btn:hover:not(:disabled) {
-    background: var(--bg-hover);
-    border-color: var(--border-strong);
-    transform: translateY(-1px);
-  }
-
-  .person-card__btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .person-card__btn--primary {
-    background: linear-gradient(135deg, var(--whatsapp-teal), var(--whatsapp-teal-dark));
-    color: var(--text-on-accent);
-    border-color: transparent;
-    box-shadow: 0 3px 10px rgba(14, 165, 233, 0.3);
-  }
-
-  .person-card__btn--primary:hover {
-    box-shadow: 0 6px 18px rgba(14, 165, 233, 0.45);
-  }
-
-  .person-card__message-label {
-    margin-bottom: 8px;
-    color: var(--text-muted);
-    font-size: 0.9rem;
-  }
-
-  .person-card__message {
-    margin: 0;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--text-primary);
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-size: 0.92rem;
-    line-height: 1.55;
-    font-family: inherit;
-    overflow: visible;
-    max-height: none;
-  }
-
-  .person-card__message--template {
-    font-family: var(--font-mono);
-    font-size: 0.88rem;
-    line-height: 1.5;
-  }
-
-  .person-card-error {
-    margin-top: 12px;
-    padding: 14px;
-    border-radius: 12px;
-    background: var(--danger-soft-bg);
-    border: 1px solid var(--danger-soft-border);
-    color: var(--log-error);
-  }
+/* VACATION ALERTS */ .vacation-alerts { display: flex; flex-direction: column;
+gap: 12px; margin-top: 16px; } .vacation-alerts__list { display: flex;
+flex-direction: column; gap: 12px; margin-top: 10px; } .vacation-card {
+background: var(--bg-secondary); border: 1px solid var(--border-color);
+border-radius: 14px; padding: 14px; color: var(--text-primary); box-shadow:
+var(--shadow-sm); transition: var(--transition); } .vacation-card:hover {
+transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.vacation-card--commander { border-left: 4px solid var(--warning-color);
+background: var(--warning-soft-bg); } .vacation-card--soldier { border-left: 4px
+solid var(--success-color); background: var(--success-soft-bg); }
+.vacation-card__name { color: var(--text-primary); font-weight: 700; font-size:
+0.95rem; line-height: 1.35; margin-bottom: 6px; word-break: break-word; }
+.vacation-card__text { color: var(--text-secondary); font-size: 0.9rem;
+line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.vacation-card__meta { color: var(--text-secondary); font-size: 0.88rem;
+line-height: 1.45; word-break: break-word; } .vacation-card__btn { width: 100%;
+margin-top: 12px; justify-content: center; text-align: center; }
+.vacation-card__empty { margin-top: 10px; color: var(--text-muted); font-size:
+0.85rem; } /* BIRTHDAY CARDS */ .birthday-group { border-radius: 14px; padding:
+12px; margin-bottom: 12px; } .birthday-group--info { background:
+var(--info-soft-bg); border: 1px solid var(--info-soft-border); border-left: 4px
+solid var(--info-soft-text); } .birthday-group--warning { background:
+var(--warning-soft-bg); border: 1px solid var(--warning-soft-border);
+border-left: 4px solid var(--warning-soft-text); } .birthday-group__title {
+font-weight: 800; font-size: 13px; margin-bottom: 10px; } .birthday-group--info
+.birthday-group__title { color: var(--info-soft-text); }
+.birthday-group--warning .birthday-group__title { color:
+var(--warning-soft-text); } .birthday-card { background: var(--bg-card); border:
+1px solid var(--border-color); border-radius: 12px; padding: 10px 12px;
+margin-top: 8px; color: var(--text-primary); } .birthday-card__name { color:
+var(--text-primary); font-weight: 800; font-size: 14px; text-align: left; }
+.birthday-card__meta { font-size: 13px; color: var(--text-primary); margin-top:
+4px; text-align: left; font-weight: 500; } .birthday-card__note { font-size:
+12px; color: var(--text-secondary); margin-top: 4px; text-align: left;
+line-height: 1.35; } .birthday-card__empty { color: var(--text-muted);
+font-size: 12px; margin-top: 6px; } .birthday-card__btn { margin-top: 8px;
+width: 100%; display: inline-flex; align-items: center; justify-content: center;
+gap: 8px; padding: 10px; background: var(--whatsapp-green); color:
+var(--text-on-accent); border: none; border-radius: 999px; cursor: pointer;
+font-weight: 700; font-size: 13px; } .birthday-card__btn--blue { background:
+var(--google-blue); } /* PERSON CARD */ #personCardContainer { margin-top:
+var(--space-sm); } .person-card { margin-top: 12px; padding: 16px;
+border-radius: 16px; background: var(--bg-card); border: 1px solid
+var(--border-color); color: var(--text-primary); backdrop-filter: blur(8px);
+box-shadow: var(--shadow-sm); transition: var(--transition); }
+.person-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md),
+var(--shadow-glow); border-color: var(--accent-soft-border); }
+.person-card__header { display: flex; justify-content: space-between;
+align-items: center; gap: 12px; margin-bottom: 14px; } .person-card__callsign {
+font-size: 1.1rem; font-weight: 700; color: var(--text-primary); }
+.person-card__rank { font-size: 0.9rem; color: var(--text-secondary);
+white-space: nowrap; } .person-card__meta { display: flex; flex-direction:
+column; gap: 10px; margin-bottom: 14px; } .person-card__field { display: block;
+min-width: 0; } .person-card__label { display: block; color: var(--text-muted);
+font-size: 0.9rem; line-height: 1.25; margin: 0 0 4px 0; } .person-card__value {
+display: block; color: var(--text-primary); font-size: 0.9rem; line-height: 1.4;
+word-break: break-word; margin: 0; } .person-card__section { margin: 12px 0;
+padding: 12px; border-radius: 12px; border: 1px solid var(--border-color); }
+.person-card__section--warn { background: var(--warning-soft-bg); }
+.person-card__section--info { background: var(--accent-soft-bg); }
+.person-card__section-title { font-weight: 600; margin-bottom: 8px; color:
+var(--text-primary); } .person-card__vac-row { color: var(--text-primary);
+font-size: 0.9rem; line-height: 1.45; } .person-card__actions { display: flex;
+gap: 8px; margin: 14px 0; } .person-card__btn { flex: 1; min-height: 38px;
+border: 1px solid var(--border-color); border-radius: 12px; background:
+var(--bg-secondary); color: var(--text-primary); cursor: pointer; text-align:
+center; text-decoration: none; display: inline-flex; align-items: center;
+justify-content: center; transition: var(--transition); }
+.person-card__btn:hover:not(:disabled) { background: var(--bg-hover);
+border-color: var(--border-strong); transform: translateY(-1px); }
+.person-card__btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.person-card__btn--primary { background: linear-gradient(135deg,
+var(--whatsapp-teal), var(--whatsapp-teal-dark)); color: var(--text-on-accent);
+border-color: transparent; box-shadow: 0 3px 10px rgba(14, 165, 233, 0.3); }
+.person-card__btn--primary:hover { box-shadow: 0 6px 18px rgba(14, 165, 233,
+0.45); } .person-card__message-label { margin-bottom: 8px; color:
+var(--text-muted); font-size: 0.9rem; } .person-card__message { margin: 0;
+padding: 0; border: 0; background: transparent; color: var(--text-primary);
+white-space: pre-wrap; word-break: break-word; font-size: 0.92rem; line-height:
+1.55; font-family: inherit; overflow: visible; max-height: none; }
+.person-card__message--template { font-family: var(--font-mono); font-size:
+0.88rem; line-height: 1.5; } .person-card-error { margin-top: 12px; padding:
+14px; border-radius: 12px; background: var(--danger-soft-bg); border: 1px solid
+var(--danger-soft-border); color: var(--log-error); }

@@ -4,15 +4,15 @@
  */
 
 function _sshIsObject_(value) {
-  return !!value && typeof value === 'object';
+  return !!value && typeof value === "object";
 }
 
 function _sshIsFunction_(value) {
-  return typeof value === 'function';
+  return typeof value === "function";
 }
 
 function _sshSafeString_(value, fallback) {
-  if (value === null || typeof value === 'undefined') return fallback || '';
+  if (value === null || typeof value === "undefined") return fallback || "";
   return String(value);
 }
 
@@ -22,14 +22,17 @@ function _sshTrimmedString_(value, fallback) {
 
 function _sshConfigObject_() {
   try {
-    if (typeof CONFIG !== 'undefined' && _sshIsObject_(CONFIG)) return CONFIG;
+    if (typeof CONFIG !== "undefined" && _sshIsObject_(CONFIG)) return CONFIG;
   } catch (e) {}
   return {};
 }
 
 function _sshVacationConfigObject_() {
   try {
-    if (typeof VACATION_ENGINE_CONFIG !== 'undefined' && _sshIsObject_(VACATION_ENGINE_CONFIG)) {
+    if (
+      typeof VACATION_ENGINE_CONFIG !== "undefined" &&
+      _sshIsObject_(VACATION_ENGINE_CONFIG)
+    ) {
       return VACATION_ENGINE_CONFIG;
     }
   } catch (e) {}
@@ -38,16 +41,25 @@ function _sshVacationConfigObject_() {
 
 function _sshConfigValue_(key, fallback) {
   try {
-    if (typeof appGetCore === 'function') {
+    if (typeof appGetCore === "function") {
       var viaAppGetCore = appGetCore(key, fallback);
-      if (typeof viaAppGetCore !== 'undefined' && viaAppGetCore !== null && viaAppGetCore !== '') {
+      if (
+        typeof viaAppGetCore !== "undefined" &&
+        viaAppGetCore !== null &&
+        viaAppGetCore !== ""
+      ) {
         return viaAppGetCore;
       }
     }
   } catch (e) {}
 
   var cfg = _sshConfigObject_();
-  if (Object.prototype.hasOwnProperty.call(cfg, key) && cfg[key] !== null && typeof cfg[key] !== 'undefined' && cfg[key] !== '') {
+  if (
+    Object.prototype.hasOwnProperty.call(cfg, key) &&
+    cfg[key] !== null &&
+    typeof cfg[key] !== "undefined" &&
+    cfg[key] !== ""
+  ) {
     return cfg[key];
   }
 
@@ -56,7 +68,12 @@ function _sshConfigValue_(key, fallback) {
 
 function _sshVacationConfigValue_(key, fallback) {
   var cfg = _sshVacationConfigObject_();
-  if (Object.prototype.hasOwnProperty.call(cfg, key) && cfg[key] !== null && typeof cfg[key] !== 'undefined' && cfg[key] !== '') {
+  if (
+    Object.prototype.hasOwnProperty.call(cfg, key) &&
+    cfg[key] !== null &&
+    typeof cfg[key] !== "undefined" &&
+    cfg[key] !== ""
+  ) {
     return cfg[key];
   }
   return fallback;
@@ -64,7 +81,11 @@ function _sshVacationConfigValue_(key, fallback) {
 
 function _sshLog_(message, error) {
   try {
-    Logger.log('[SystemSheetsSelfHeal] ' + _sshSafeString_(message, '') + (error ? ': ' + (error && error.message ? error.message : error) : ''));
+    Logger.log(
+      "[SystemSheetsSelfHeal] " +
+        _sshSafeString_(message, "") +
+        (error ? ": " + (error && error.message ? error.message : error) : ""),
+    );
   } catch (e) {}
 }
 
@@ -82,7 +103,7 @@ function _sshUniqueStrings_(items) {
   var out = [];
 
   for (var i = 0; i < list.length; i++) {
-    var value = _sshTrimmedString_(list[i], '');
+    var value = _sshTrimmedString_(list[i], "");
     if (!value) continue;
     if (seen[value]) continue;
     seen[value] = true;
@@ -93,11 +114,11 @@ function _sshUniqueStrings_(items) {
 }
 
 function _sshDisplayHeaderForCanonical_(header) {
-  var text = _sshTrimmedString_(header, '');
+  var text = _sshTrimmedString_(header, "");
   var labels = {
-    Days_until_birthday: 'Days Until Birthday',
-    '2_Phone': 'Phone 2',
-    OSH_4: 'OSH 4'
+    Days_until_birthday: "Days Until Birthday",
+    "2_Phone": "Phone 2",
+    OSH_4: "OSH 4",
   };
   return labels[text] || text;
 }
@@ -107,45 +128,45 @@ function _sshGetSpreadsheet_() {
   try {
     ss = getWasbSpreadsheet_();
   } catch (e) {
-    _sshLog_('Не вдалося отримати активну таблицю', e);
+    _sshLog_("Не вдалося отримати активну таблицю", e);
   }
 
   if (!ss) {
-    throw new Error('Активну таблицю не знайдено');
+    throw new Error("Активну таблицю не знайдено");
   }
   return ss;
 }
 
 function _sshGetCurrentMonthSheetName_() {
   try {
-    if (typeof getBotMonthSheetName_ === 'function') {
-      var viaFn = _sshTrimmedString_(getBotMonthSheetName_(), '');
+    if (typeof getBotMonthSheetName_ === "function") {
+      var viaFn = _sshTrimmedString_(getBotMonthSheetName_(), "");
       if (viaFn) return viaFn;
     }
   } catch (e) {}
 
   var month = new Date().getMonth() + 1;
-  return String(month).padStart(2, '0');
+  return String(month).padStart(2, "0");
 }
 
 function _sshGetSheetSchemaSafe_(schemaKey) {
   try {
-    if (typeof getSheetSchema_ === 'function') {
+    if (typeof getSheetSchema_ === "function") {
       return getSheetSchema_(schemaKey);
     }
   } catch (e) {
-    _sshLog_('Помилка getSheetSchema_ для ключа ' + schemaKey, e);
+    _sshLog_("Помилка getSheetSchema_ для ключа " + schemaKey, e);
   }
   return null;
 }
 
 function _sshGetSchemaLastColumnSafe_(schema) {
   try {
-    if (typeof getSchemaLastColumn_ === 'function') {
+    if (typeof getSchemaLastColumn_ === "function") {
       return Number(getSchemaLastColumn_(schema)) || 1;
     }
   } catch (e) {
-    _sshLog_('Помилка getSchemaLastColumn_', e);
+    _sshLog_("Помилка getSchemaLastColumn_", e);
   }
 
   var fields = (schema && schema.fields) || {};
@@ -164,305 +185,278 @@ function _sshGetSchemaLastColumnSafe_(schema) {
 function _sshBuildRegistry_() {
   return _sshFreeze_([
     {
-      name: _sshConfigValue_('ACCESS_SHEET', 'ACCESS'),
+      name: _sshConfigValue_("ACCESS_SHEET", "ACCESS"),
       schemaKey: null,
       headers: [
-        'email',
-        'phone',
-        'role',
-        'enabled',
-        'note',
-        'display_name',
-        'person_callsign',
-        'self_bind_allowed',
-        'user_key_current_hash',
-        'user_key_prev_hash',
-        'last_seen_at',
-        'last_rotated_at',
-        'failed_attempts',
-        'locked_until_ms',
-        'login',
-        'password_hash',
-        'password_salt',
-        'registration_status',
-        'preferred_contact',
-        'surname',
-        'first_name',
-        'request_user_key_hash',
-        'request_created_at',
-        'temporary_password_plain',
-        'temporary_password_hash',
-        'temporary_password_salt',
-        'temporary_password_expires_at',
-        'temporary_password_used_at',
-        'approved_by',
-        'approved_at',
-        'activated_at',
-        'telegram_username'
+        "email",
+        "phone",
+        "role",
+        "enabled",
+        "note",
+        "display_name",
+        "person_callsign",
+        "self_bind_allowed",
+        "user_key_current_hash",
+        "user_key_prev_hash",
+        "last_seen_at",
+        "last_rotated_at",
+        "failed_attempts",
+        "locked_until_ms",
+        "login",
+        "password_hash",
+        "password_salt",
+        "registration_status",
+        "preferred_contact",
+        "surname",
+        "first_name",
+        "request_user_key_hash",
+        "request_created_at",
+        "temporary_password_plain",
+        "temporary_password_hash",
+        "temporary_password_salt",
+        "temporary_password_expires_at",
+        "temporary_password_used_at",
+        "approved_by",
+        "approved_at",
+        "activated_at",
+        "telegram_username",
       ],
-      minRows: 2
+      minRows: 2,
     },
 
     {
-      name: _sshConfigValue_('LOG_SHEET', 'LOG'),
-      schemaKey: 'log',
+      name: _sshConfigValue_("LOG_SHEET", "LOG"),
+      schemaKey: "log",
       headers: [
-        'Timestamp',
-        'ReportDate',
-        'Sheet',
-        'Cell',
-        'FML',
-        'Phone',
-        'Code',
-        'Service',
-        'Place',
-        'Tasks',
-        'Message',
-        'Link'
+        "Timestamp",
+        "ReportDate",
+        "Sheet",
+        "Cell",
+        "FML",
+        "Phone",
+        "Code",
+        "Service",
+        "Place",
+        "Tasks",
+        "Message",
+        "Link",
       ],
-      minRows: 2
+      minRows: 2,
     },
 
     {
-      name: _sshConfigValue_('TEMPLATES_SHEET', 'TEMPLATES'),
+      name: _sshConfigValue_("TEMPLATES_SHEET", "TEMPLATES"),
+      schemaKey: null,
+      headers: ["KEY", "TEXT", "ENABLED", "TAGS_HINT", "NOTE"],
+      minRows: 2,
+    },
+
+    {
+      name: _sshConfigValue_("AUDIT_LOG_SHEET", "AUDIT_LOG"),
       schemaKey: null,
       headers: [
-        'KEY',
-        'TEXT',
-        'ENABLED',
-        'TAGS_HINT',
-        'NOTE'
+        "Timestamp",
+        "OperationId",
+        "Scenario",
+        "Level",
+        "Status",
+        "Initiator",
+        "DryRun",
+        "Partial",
+        "AffectedSheets",
+        "AffectedEntities",
+        "AppliedChanges",
+        "SkippedChanges",
+        "Warnings",
+        "PayloadJson",
+        "BeforeJson",
+        "AfterJson",
+        "ChangesJson",
+        "DiagnosticsJson",
+        "Message",
+        "Error",
+        "Context",
       ],
-      minRows: 2
+      minRows: 2,
     },
 
     {
-      name: _sshConfigValue_('AUDIT_LOG_SHEET', 'AUDIT_LOG'),
+      name: _sshConfigValue_("ACTIVE_OPERATIONS_SHEET", "ACTIVE_OPERATIONS"),
       schemaKey: null,
       headers: [
-        'Timestamp',
-        'OperationId',
-        'Scenario',
-        'Level',
-        'Status',
-        'Initiator',
-        'DryRun',
-        'Partial',
-        'AffectedSheets',
-        'AffectedEntities',
-        'AppliedChanges',
-        'SkippedChanges',
-        'Warnings',
-        'PayloadJson',
-        'BeforeJson',
-        'AfterJson',
-        'ChangesJson',
-        'DiagnosticsJson',
-        'Message',
-        'Error',
-        'Context'
+        "OperationId",
+        "Scenario",
+        "Fingerprint",
+        "Status",
+        "StartedAt",
+        "LastHeartbeat",
+        "Initiator",
+        "RunSource",
+        "ExpiresAt",
+        "LockHolder",
+        "ParentOperationId",
+        "Notes",
+        "PayloadJson",
       ],
-      minRows: 2
+      minRows: 2,
     },
 
     {
-      name: _sshConfigValue_('ACTIVE_OPERATIONS_SHEET', 'ACTIVE_OPERATIONS'),
+      name: _sshConfigValue_("ALERTS_LOG_SHEET", "ALERTS_LOG"),
       schemaKey: null,
       headers: [
-        'OperationId',
-        'Scenario',
-        'Fingerprint',
-        'Status',
-        'StartedAt',
-        'LastHeartbeat',
-        'Initiator',
-        'RunSource',
-        'ExpiresAt',
-        'LockHolder',
-        'ParentOperationId',
-        'Notes',
-        'PayloadJson'
+        "Timestamp",
+        "Type",
+        "Severity",
+        "Action",
+        "Outcome",
+        "Role",
+        "DisplayName",
+        "UserKey",
+        "Email",
+        "Source",
+        "Message",
+        "DetailsJson",
       ],
-      minRows: 2
+      minRows: 2,
     },
 
     {
-      name: _sshConfigValue_('ALERTS_LOG_SHEET', 'ALERTS_LOG'),
+      name: _sshConfigValue_("OPS_LOG_SHEET", "OPS_LOG"),
       schemaKey: null,
       headers: [
-        'Timestamp',
-        'Type',
-        'Severity',
-        'Action',
-        'Outcome',
-        'Role',
-        'DisplayName',
-        'UserKey',
-        'Email',
-        'Source',
-        'Message',
-        'DetailsJson'
+        "TimestampStarted",
+        "TimestampFinished",
+        "ID Операції",
+        "ParentOperationId",
+        "Сценарій",
+        "RawScenario",
+        "Ініціатор",
+        "RunSource",
+        "status",
+        "Fingerprint",
+        "AffectedRows",
+        "AffectedEntities",
+        "VerificationResult",
+        "RepairNeeded",
+        "Error",
+        "TransitionReason",
+        "Notes",
+        "ResolvedByOperationId",
+        "ResolvedAt",
+        "ResolutionStatus",
+        "LastHeartbeat",
+        "ExpiresAt",
+        "PayloadJson",
+        "ResultJson",
+        "CheckpointCount",
       ],
-      minRows: 2
+      minRows: 2,
     },
 
     {
-      name: _sshConfigValue_('OPS_LOG_SHEET', 'OPS_LOG'),
+      name: _sshConfigValue_("CHECKPOINTS_SHEET", "CHECKPOINTS"),
       schemaKey: null,
       headers: [
-        'TimestampStarted',
-        'TimestampFinished',
-        'ID Операції',
-        'ParentOperationId',
-        'Сценарій',
-        'RawScenario',
-        'Ініціатор',
-        'RunSource',
-        'status',
-        'Fingerprint',
-        'AffectedRows',
-        'AffectedEntities',
-        'VerificationResult',
-        'RepairNeeded',
-        'Error',
-        'TransitionReason',
-        'Notes',
-        'ResolvedByOperationId',
-        'ResolvedAt',
-        'ResolutionStatus',
-        'LastHeartbeat',
-        'ExpiresAt',
-        'PayloadJson',
-        'ResultJson',
-        'CheckpointCount'
+        "OperationId",
+        "CheckpointIndex",
+        "ProcessedUpTo",
+        "LastProcessedEntity",
+        "LastProcessedRow",
+        "CheckpointTimestamp",
+        "CheckpointPayload",
+        "VerificationSnapshot",
       ],
-      minRows: 2
+      minRows: 2,
     },
 
     {
-      name: _sshConfigValue_('CHECKPOINTS_SHEET', 'CHECKPOINTS'),
+      name: _sshConfigValue_("JOB_RUNTIME_LOG_SHEET", "JOB_RUNTIME_LOG"),
       schemaKey: null,
       headers: [
-        'OperationId',
-        'CheckpointIndex',
-        'ProcessedUpTo',
-        'LastProcessedEntity',
-        'LastProcessedRow',
-        'CheckpointTimestamp',
-        'CheckpointPayload',
-        'VerificationSnapshot'
+        "TimestampStarted",
+        "TimestampFinished",
+        "jobName",
+        "status",
+        "source",
+        "durationMs",
+        "dryRun",
+        "operationId",
+        "Повідомлення",
+        "Error",
+        "initiatorEmail",
+        "initiatorName",
+        "initiatorRole",
+        "initiatorCallsign",
+        "entryPoint",
+        "triggerId",
+        "Notes",
       ],
-      minRows: 2
+      minRows: 2,
     },
 
     {
-      name: _sshConfigValue_('JOB_RUNTIME_LOG_SHEET', 'JOB_RUNTIME_LOG'),
-      schemaKey: null,
+      name: _sshConfigValue_("PERSONNEL_SHEET", "PERSONNEL"),
+      schemaKey: "personnel",
       headers: [
-        'TimestampStarted',
-        'TimestampFinished',
-        'jobName',
-        'status',
-        'source',
-        'durationMs',
-        'dryRun',
-        'operationId',
-        'Повідомлення',
-        'Error',
-        'initiatorEmail',
-        'initiatorName',
-        'initiatorRole',
-        'initiatorCallsign',
-        'entryPoint',
-        'triggerId',
-        'Notes'
+        "ID",
+        "FML",
+        "Birthday",
+        "Age",
+        "Days Until Birthday",
+        "Phone",
+        "Phone 2",
+        "Callsign",
+        "TEMPLATE",
+        "Rank",
+        "Position",
+        "OSH 4",
+        "Unit",
+        "Status",
       ],
-      minRows: 2
+      minRows: 2,
     },
 
     {
-      name: _sshConfigValue_('PERSONNEL_SHEET', 'PERSONNEL'),
-      schemaKey: 'personnel',
-      headers: [
-        'ID',
-        'FML',
-        'Birthday',
-        'Age',
-        'Days Until Birthday',
-        'Phone',
-        'Phone 2',
-        'Callsign',
-        'TEMPLATE',
-        'Rank',
-        'Position',
-        'OSH 4',
-        'Unit',
-        'Status'
-      ],
-      minRows: 2
+      name: _sshConfigValue_("PHONES_SHEET", "PHONES"),
+      schemaKey: "phones",
+      headers: ["Callsign", "Phone", "Phone 2"],
+      minRows: 2,
     },
 
     {
-      name: _sshConfigValue_('PHONES_SHEET', 'PHONES'),
-      schemaKey: 'phones',
+      name: _sshVacationConfigValue_("VACATIONS_SHEET", "VACATIONS"),
+      schemaKey: "vacations",
       headers: [
-        'Callsign',
-        'Phone',
-        'Phone 2'
+        "FML",
+        "Start date",
+        "End date",
+        "Vacation №",
+        "Active",
+        "Notify",
       ],
-      minRows: 2
+      minRows: 2,
     },
 
     {
-      name: _sshVacationConfigValue_('VACATIONS_SHEET', 'VACATIONS'),
-      schemaKey: 'vacations',
-      headers: [
-        'FML',
-        'Start date',
-        'End date',
-        'Vacation №',
-        'Active',
-        'Notify'
-      ],
-      minRows: 2
+      name: _sshConfigValue_("DICT_SUM_SHEET", "DICT_SUM"),
+      schemaKey: "dictSum",
+      headers: ["Код", "Назва", "Порядок"],
+      minRows: 2,
     },
 
     {
-      name: _sshConfigValue_('DICT_SUM_SHEET', 'DICT_SUM'),
-      schemaKey: 'dictSum',
-      headers: [
-        'Код',
-        'Назва',
-        'Порядок'
-      ],
-      minRows: 2
-    },
-
-    {
-      name: _sshConfigValue_('DICT_SHEET', 'DICT'),
-      schemaKey: 'dict',
-      headers: [
-        'Код',
-        'Вид служби',
-        'Місце',
-        'Завдання'
-      ],
-      minRows: 2
+      name: _sshConfigValue_("DICT_SHEET", "DICT"),
+      schemaKey: "dict",
+      headers: ["Код", "Вид служби", "Місце", "Завдання"],
+      minRows: 2,
     },
     {
-      name: _sshConfigValue_('SEND_PANEL_SHEET', 'SEND_PANEL'),
-      schemaKey: 'sendPanel',
-      headers: [
-        'FML',
-        'Phone',
-        'Code',
-        'Tasks',
-        'Status',
-        'Sent',
-        'Action'
-      ],
-      minRows: 3
-    }
+      name: _sshConfigValue_("SEND_PANEL_SHEET", "SEND_PANEL"),
+      schemaKey: "sendPanel",
+      headers: ["FML", "Phone", "Code", "Tasks", "Status", "Sent", "Action"],
+      minRows: 3,
+    },
   ]);
 }
 
@@ -474,13 +468,13 @@ function _getSystemSheetsRegistry_() {
 }
 
 function getAllSystemSheetNames_() {
-  return _getSystemSheetsRegistry_().map(function(item) {
+  return _getSystemSheetsRegistry_().map(function (item) {
     return item.name;
   });
 }
 
 function _systemSheetRecordByName_(name) {
-  var target = _sshTrimmedString_(name, '');
+  var target = _sshTrimmedString_(name, "");
   var registry = _getSystemSheetsRegistry_();
 
   for (var i = 0; i < registry.length; i++) {
@@ -513,14 +507,14 @@ function _buildHeadersFromSchema_(schema) {
   if (maxCol < 1) return [];
 
   var headers = new Array(maxCol);
-  for (var j = 0; j < maxCol; j++) headers[j] = '';
+  for (var j = 0; j < maxCol; j++) headers[j] = "";
 
   for (var k = 0; k < names.length; k++) {
     var fieldName = names[k];
     var fieldCfg = fields[fieldName];
     var fieldCol = Number(fieldCfg && fieldCfg.col);
     if (isFinite(fieldCol) && fieldCol >= 1 && fieldCol <= maxCol) {
-      headers[fieldCol - 1] = _sshSafeString_(fieldCfg.label || fieldName, '');
+      headers[fieldCol - 1] = _sshSafeString_(fieldCfg.label || fieldName, "");
     }
   }
 
@@ -536,7 +530,7 @@ function _ensureSheetSize_(sheet, minRows, minCols) {
   if (curRows < rows) {
     sheet.insertRowsAfter(curRows, rows - curRows);
   }
-  
+
   if (curCols < cols) {
     sheet.insertColumnsAfter(curCols, cols - curCols);
   }
@@ -552,23 +546,30 @@ function _applyBasicSystemSheetStandards_(sheet, headerRow, lastCol) {
   } catch (e) {}
 
   try {
-    sheet.getRange(headerRow, 1, 1, Math.max(lastCol || 1, 1))
-      .setFontWeight('bold')
-      .setBackground('#e8eaed');
+    sheet
+      .getRange(headerRow, 1, 1, Math.max(lastCol || 1, 1))
+      .setFontWeight("bold")
+      .setBackground("#e8eaed");
   } catch (e) {}
 
   try {
-    if (typeof stage7ApplyTableTheme_ === 'function') {
-      stage7ApplyTableTheme_(sheet, headerRow, Math.max(lastCol || 1, 1), { freeze: false });
+    if (typeof stage7ApplyTableTheme_ === "function") {
+      stage7ApplyTableTheme_(sheet, headerRow, Math.max(lastCol || 1, 1), {
+        freeze: false,
+      });
     }
   } catch (e) {
-    _sshLog_('Помилка застосування теми таблиці', e);
+    _sshLog_("Помилка застосування теми таблиці", e);
   }
 }
 
 function _applyAccessCheckboxes_(sheet) {
   if (!sheet) return;
-  if (_sshTrimmedString_(sheet.getName(), '') !== _sshConfigValue_('ACCESS_SHEET', 'ACCESS')) return;
+  if (
+    _sshTrimmedString_(sheet.getName(), "") !==
+    _sshConfigValue_("ACCESS_SHEET", "ACCESS")
+  )
+    return;
 
   var lastRow = Math.max(Number(sheet.getMaxRows()) || 0, 1);
   var checkboxRows = Math.max(lastRow - 1, 0);
@@ -578,13 +579,13 @@ function _applyAccessCheckboxes_(sheet) {
   try {
     sheet.getRange(2, 4, checkboxRows, 1).insertCheckboxes();
   } catch (e) {
-    _sshLog_('Checkbox enabled error', e);
+    _sshLog_("Checkbox enabled error", e);
   }
 
   try {
     sheet.getRange(2, 8, checkboxRows, 1).insertCheckboxes();
   } catch (e) {
-    _sshLog_('Checkbox self_bind_allowed error', e);
+    _sshLog_("Checkbox self_bind_allowed error", e);
   }
 }
 
@@ -607,18 +608,24 @@ function _applyPersonnelStatusValidation_(sheet) {
 
 function _applySendPanelHeaderRowFormatting_(sheet, headerRow, lastCol) {
   if (!sheet) return;
-  if (_sshTrimmedString_(sheet.getName(), '') !== _sshConfigValue_('SEND_PANEL_SHEET', 'SEND_PANEL')) return;
+  if (
+    _sshTrimmedString_(sheet.getName(), "") !==
+    _sshConfigValue_("SEND_PANEL_SHEET", "SEND_PANEL")
+  )
+    return;
 
   try {
     if (headerRow > 1) {
-      sheet.getRange(1, 1, headerRow - 1, Math.max(lastCol, 1)).setFontWeight('bold');
+      sheet
+        .getRange(1, 1, headerRow - 1, Math.max(lastCol, 1))
+        .setFontWeight("bold");
     }
   } catch (e) {}
 }
 
 function _resolveSheetSpec_(record) {
   if (!record) {
-    throw new Error('System sheet record is required');
+    throw new Error("System sheet record is required");
   }
 
   var schema = null;
@@ -626,8 +633,8 @@ function _resolveSheetSpec_(record) {
   var headers = [];
   var lastCol = 1;
   var minRows = Math.max(Number(record.minRows) || 2, 2);
-  var sheetName = _sshTrimmedString_(record.name, '');
-  var sendPanelName = _sshConfigValue_('SEND_PANEL_SHEET', 'SEND_PANEL');
+  var sheetName = _sshTrimmedString_(record.name, "");
+  var sendPanelName = _sshConfigValue_("SEND_PANEL_SHEET", "SEND_PANEL");
 
   if (record.schemaKey) {
     schema = _sshGetSheetSchemaSafe_(record.schemaKey);
@@ -655,14 +662,14 @@ function _resolveSheetSpec_(record) {
     minRows = Math.max(headerRow + 1, minRows);
   }
 
-  while (headers.length < lastCol) headers.push('');
+  while (headers.length < lastCol) headers.push("");
 
   return {
     schema: schema,
     headerRow: headerRow,
     headers: headers,
     lastCol: lastCol,
-    minRows: minRows
+    minRows: minRows,
   };
 }
 
@@ -671,7 +678,9 @@ function _writeHeadersIfNeeded_(sheet, headerRow, headers, forceRewrite) {
 
   var currentValues = [];
   try {
-    currentValues = sheet.getRange(headerRow, 1, 1, headers.length).getDisplayValues()[0];
+    currentValues = sheet
+      .getRange(headerRow, 1, 1, headers.length)
+      .getDisplayValues()[0];
   } catch (e) {
     currentValues = [];
   }
@@ -679,8 +688,8 @@ function _writeHeadersIfNeeded_(sheet, headerRow, headers, forceRewrite) {
   var hasDifferences = !!forceRewrite;
   if (!hasDifferences) {
     for (var i = 0; i < headers.length; i++) {
-      var expected = _sshSafeString_(headers[i], '');
-      var actual = _sshSafeString_(currentValues[i], '');
+      var expected = _sshSafeString_(headers[i], "");
+      var actual = _sshSafeString_(currentValues[i], "");
       if (expected !== actual) {
         hasDifferences = true;
         break;
@@ -698,7 +707,7 @@ function _writeHeadersIfNeeded_(sheet, headerRow, headers, forceRewrite) {
 
 function ensureSystemSheetByName_(sheetName) {
   var record = _systemSheetRecordByName_(sheetName);
-  if (!record) throw new Error('Unknown system sheet: ' + sheetName);
+  if (!record) throw new Error("Unknown system sheet: " + sheetName);
 
   var ss = _sshGetSpreadsheet_();
   var sheet = ss.getSheetByName(record.name);
@@ -711,7 +720,12 @@ function ensureSystemSheetByName_(sheetName) {
   var spec = _resolveSheetSpec_(record);
 
   _ensureSheetSize_(sheet, spec.minRows, spec.lastCol);
-  var headersUpdated = _writeHeadersIfNeeded_(sheet, spec.headerRow, spec.headers, created);
+  var headersUpdated = _writeHeadersIfNeeded_(
+    sheet,
+    spec.headerRow,
+    spec.headers,
+    created,
+  );
 
   _applyBasicSystemSheetStandards_(sheet, spec.headerRow, spec.lastCol);
   _applyAccessCheckboxes_(sheet);
@@ -724,7 +738,7 @@ function ensureSystemSheetByName_(sheetName) {
     headerRow: spec.headerRow,
     columns: spec.lastCol,
     rowsEnsured: spec.minRows,
-    headersUpdated: headersUpdated
+    headersUpdated: headersUpdated,
   };
 }
 
@@ -737,10 +751,10 @@ function ensureAllSystemSheets_() {
     try {
       results.push(ensureSystemSheetByName_(record.name));
     } catch (e) {
-      _sshLog_('Failed to ensure sheet ' + record.name, e);
+      _sshLog_("Failed to ensure sheet " + record.name, e);
       results.push({
         name: record.name,
-        error: e && e.message ? e.message : String(e)
+        error: e && e.message ? e.message : String(e),
       });
     }
   }

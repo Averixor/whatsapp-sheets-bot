@@ -146,15 +146,12 @@
       {
         "id": "static-literals",
         "rationale": "Static string/number literals without dynamic user input",
-        "patterns": [
-          "^['\"]",
-          "^\\d+(\\.\\d+)?$"
-        ]
+        "patterns": ["^['\"]", "^\\d+(\\.\\d+)?$"]
       }
     ]
   },
   "reviewedStandaloneSinks": {
-    "reviewedAt": "2026-05-31",
+    "reviewedAt": "2026-06-07",
     "changeReason": "P2 standalone HtmlService/innerHTML sinks reviewed outside the active sidebar targetFiles bundle",
     "requireCoverage": true,
     "files": [
@@ -197,6 +194,10 @@
       {
         "path": "MonthlyReport.gs",
         "rationale": "Monthly report HTML uses local esc() for dynamic sheet/person/status values"
+      },
+      {
+        "path": "VacationPlannerApi.gs",
+        "rationale": "Vacation planner loads a static local dialog file; dynamic status messages use textContent"
       }
     ]
   },

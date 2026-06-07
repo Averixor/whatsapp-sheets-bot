@@ -2,16 +2,16 @@
 /**
  * Workbook regression checks that can run without Google Apps Script.
  */
-import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import path from 'node:path';
-import vm from 'node:vm';
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import vm from "node:vm";
 
-const repoRoot = path.resolve(import.meta.dirname, '..');
+const repoRoot = path.resolve(import.meta.dirname, "..");
 
 function columnNumberToLetter(value) {
   let n = Number(value);
-  let out = '';
+  let out = "";
   while (n > 0) {
     const rem = (n - 1) % 26;
     out = String.fromCharCode(65 + rem) + out;
@@ -26,7 +26,7 @@ function parseA1(value) {
   const toNumber = (letters) =>
     String(letters)
       .toUpperCase()
-      .split('')
+      .split("")
       .reduce((sum, ch) => sum * 26 + ch.charCodeAt(0) - 64, 0);
   return {
     row: Number(match[2]),
@@ -70,13 +70,15 @@ class FakeRange {
   }
 
   getDisplayValue() {
-    return String(this.getValue() ?? '');
+    return String(this.getValue() ?? "");
   }
 
   getDisplayValues() {
     return Array.from({ length: this.numRows }, (_, rowOffset) =>
       Array.from({ length: this.numCols }, (_, colOffset) =>
-        String(this.sheet.valueAt(this.row + rowOffset, this.col + colOffset) ?? ''),
+        String(
+          this.sheet.valueAt(this.row + rowOffset, this.col + colOffset) ?? "",
+        ),
       ),
     );
   }
@@ -105,7 +107,7 @@ class FakeSheet {
   }
 
   getRange(rowOrA1, col, numRows, numCols) {
-    if (typeof rowOrA1 === 'string') {
+    if (typeof rowOrA1 === "string") {
       const parsed = parseA1(rowOrA1);
       return new FakeRange(
         this,
@@ -120,45 +122,45 @@ class FakeSheet {
 }
 
 function buildCompactJuneSheet() {
-  const rows = Array.from({ length: 45 }, () => Array(33).fill(''));
-  rows[1][1] = 'BRDays';
-  rows[1][2] = 'Callsign';
+  const rows = Array.from({ length: 45 }, () => Array(33).fill(""));
+  rows[1][1] = "BRDays";
+  rows[1][2] = "Callsign";
   for (let col = 3; col <= 32; col++) {
-    rows[1][col] = `${String(col - 2).padStart(2, '0')}.06.2026`;
+    rows[1][col] = `${String(col - 2).padStart(2, "0")}.06.2026`;
   }
 
   for (let row = 2; row <= 30; row++) {
     rows[row][1] = row % 3 === 0 ? 0 : 10;
-    rows[row][2] = `CALLSIGN_${String(row - 1).padStart(2, '0')}`;
-    rows[row][3] = 'Резерв';
+    rows[row][2] = `CALLSIGN_${String(row - 1).padStart(2, "0")}`;
+    rows[row][3] = "Резерв";
   }
 
   [
-    'За_списком',
-    'В_наявності',
-    'Гусачівка',
-    'Відпустка',
-    'ППД',
-    'КП',
-    'БР',
-    'Відкомандеровані',
-    'БЗВП',
-    'Лікарняний',
-    'СЗЧ',
+    "За_списком",
+    "В_наявності",
+    "Гусачівка",
+    "Відпустка",
+    "ППД",
+    "КП",
+    "БР",
+    "Відкомандеровані",
+    "БЗВП",
+    "Лікарняний",
+    "СЗЧ",
   ].forEach((label, index) => {
     const row = 34 + index;
     rows[row][2] = label;
     rows[row][3] = index === 0 ? 29 : index;
   });
 
-  return new FakeSheet('06', rows);
+  return new FakeSheet("06", rows);
 }
 
 function loadWorkbookFunctions() {
   const context = vm.createContext({
     console,
     CONFIG: {
-      CODE_RANGE_A1: 'C2:AF30',
+      CODE_RANGE_A1: "C2:AF30",
       DATE_ROW: 1,
       CALLSIGN_COL: 2,
       LAST_DATA_ROW: 30,
@@ -167,17 +169,21 @@ function loadWorkbookFunctions() {
     VACATION_ENGINE_CONFIG: {},
     DateUtils_: {
       normalizeDate(_value, displayValue) {
-        return String(displayValue || '');
+        return String(displayValue || "");
       },
     },
-    FULL_NAMES: { ОС: 'Особовий склад' },
-    SUMMARY_GROUPS: { Резерв: ['Резерв'] },
+    FULL_NAMES: { ОС: "Особовий склад" },
+    SUMMARY_GROUPS: { Резерв: ["Резерв"] },
   });
 
-  for (const file of ['SheetSchemas.gs', 'Summaries.gs']) {
-    vm.runInContext(fs.readFileSync(path.join(repoRoot, file), 'utf8'), context, {
-      filename: file,
-    });
+  for (const file of ["SheetSchemas.gs", "Summaries.gs"]) {
+    vm.runInContext(
+      fs.readFileSync(path.join(repoRoot, file), "utf8"),
+      context,
+      {
+        filename: file,
+      },
+    );
   }
   return context;
 }
@@ -186,12 +192,12 @@ const context = loadWorkbookFunctions();
 const sheet = buildCompactJuneSheet();
 const layout = context.detectMonthlyLayoutFromSheet_(sheet);
 
-assert.equal(layout.layout, 'compact');
-assert.equal(layout.codeRangeA1, 'C2:AF30');
+assert.equal(layout.layout, "compact");
+assert.equal(layout.codeRangeA1, "C2:AF30");
 assert.equal(
   context.countMonthlyScheduleRowsForColumn_(sheet, 3),
   29,
-  'compact monthly footer rows must not be counted as personnel',
+  "compact monthly footer rows must not be counted as personnel",
 );
 
 const summary = context.buildDaySummaryForColumn_(sheet, 3);

@@ -1,90 +1,90 @@
 <script>
   // Js.Security.Boot — polyfills and shared STATE for access UI.
-    if (typeof window.$id !== "function") {
-      window.$id = function (id) {
-        return document.getElementById(id);
-      };
-    }
+  if (typeof window.$id !== "function") {
+    window.$id = function (id) {
+      return document.getElementById(id);
+    };
+  }
 
-    if (typeof window.escapeHtml !== "function") {
-      window.escapeHtml = function (value) {
-        return String(value == null ? "" : value)
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;")
-          .replace(/'/g, "&#39;");
-      };
-    }
+  if (typeof window.escapeHtml !== "function") {
+    window.escapeHtml = function (value) {
+      return String(value == null ? "" : value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    };
+  }
 
-    if (typeof window.escapeJsString !== "function") {
-      window.escapeJsString = function (value) {
-        return String(value == null ? "" : value)
-          .replace(/\\/g, "\\\\")
-          .replace(/'/g, "\\'")
-          .replace(/"/g, '\\"')
-          .replace(/\r/g, "\\r")
-          .replace(/\n/g, "\\n");
-      };
-    }
+  if (typeof window.escapeJsString !== "function") {
+    window.escapeJsString = function (value) {
+      return String(value == null ? "" : value)
+        .replace(/\\/g, "\\\\")
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '\\"')
+        .replace(/\r/g, "\\r")
+        .replace(/\n/g, "\\n");
+    };
+  }
 
-    if (typeof window.getActionName !== "function") {
-      window.getActionName = function (actionName) {
-        const map = {
-          daySummary: "Зведення за день",
-          detailedDay: "Детальне зведення",
-          generatePanel: "Згенерувати SEND_PANEL",
-          sendUnsent: "Відправити невідправлені",
-          createNextMonth: "Створити наступний місяць",
-          switchMonth: "Переключити місяць",
-          vacationReminder: "Перевірка відпусток",
-          birthdayCheck: "Перевірка днів народження",
-          debugPhones: "Діагностика телефонів",
-          healthCheck: "Перевірка системи",
-          runAllProjectTests: "Всі тести проєкту",
-          pendingRepairs: "Список repair-операцій",
-          operationDetails: "Деталі операції",
-          runRepair: "Запустити repair",
-          clearLog: "Очистити LOG",
-          clearCache: "Очистити кеш",
-          clearPhoneCache: "Очистити кеш телефонів",
-          restartBot: "Перезапустити бота",
-          applyProtections: "Застосувати захист",
-          setupTrigger: "Налаштувати тригер",
-          cleanupTriggers: "Прибрати дублікати тригерів",
-        };
-        return (
-          map[String(actionName || "")] || String(actionName || "Невідома дія")
-        );
+  if (typeof window.getActionName !== "function") {
+    window.getActionName = function (actionName) {
+      const map = {
+        daySummary: "Зведення за день",
+        detailedDay: "Детальне зведення",
+        generatePanel: "Згенерувати SEND_PANEL",
+        sendUnsent: "Відправити невідправлені",
+        createNextMonth: "Створити наступний місяць",
+        switchMonth: "Переключити місяць",
+        vacationReminder: "Перевірка відпусток",
+        birthdayCheck: "Перевірка днів народження",
+        debugPhones: "Діагностика телефонів",
+        healthCheck: "Перевірка системи",
+        runAllProjectTests: "Всі тести проєкту",
+        pendingRepairs: "Список repair-операцій",
+        operationDetails: "Деталі операції",
+        runRepair: "Запустити repair",
+        clearLog: "Очистити LOG",
+        clearCache: "Очистити кеш",
+        clearPhoneCache: "Очистити кеш телефонів",
+        restartBot: "Перезапустити бота",
+        applyProtections: "Застосувати захист",
+        setupTrigger: "Налаштувати тригер",
+        cleanupTriggers: "Прибрати дублікати тригерів",
       };
-    }
+      return (
+        map[String(actionName || "")] || String(actionName || "Невідома дія")
+      );
+    };
+  }
 
-    if (typeof window.normalizeError !== "function") {
-      window.normalizeError = function (error) {
-        if (!error) return "Невідома помилка";
-        if (typeof error === "string") return error;
-        if (error.message) return error.message;
-        try {
-          return JSON.stringify(error);
-        } catch (_) {
-          return String(error);
-        }
-      };
-    }
+  if (typeof window.normalizeError !== "function") {
+    window.normalizeError = function (error) {
+      if (!error) return "Невідома помилка";
+      if (typeof error === "string") return error;
+      if (error.message) return error.message;
+      try {
+        return JSON.stringify(error);
+      } catch (_) {
+        return String(error);
+      }
+    };
+  }
 
-    if (typeof window.logToConsole !== "function") {
-      window.logToConsole = function (message) {
-        console.log(message);
-      };
-    }
+  if (typeof window.logToConsole !== "function") {
+    window.logToConsole = function (message) {
+      console.log(message);
+    };
+  }
 
-    if (typeof window.showToast !== "function") {
-      window.showToast = function (message) {
-        console.log("[TOAST]", message);
-      };
-    }
+  if (typeof window.showToast !== "function") {
+    window.showToast = function (message) {
+      console.log("[TOAST]", message);
+    };
+  }
 
-    if (typeof window.STATE !== "object" || !window.STATE) {
-      window.STATE = {};
-    }
+  if (typeof window.STATE !== "object" || !window.STATE) {
+    window.STATE = {};
+  }
 </script>

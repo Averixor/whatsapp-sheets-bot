@@ -301,12 +301,12 @@ function _personnelCanonicalHeaderKey_(rawHeader) {
     "id армія+": "ID",
     "армія+": "ID",
     fml: "FML",
-    "піб": "FML",
+    піб: "FML",
     pib: "FML",
     birthday: "Birthday",
     "день народження": "Birthday",
     age: "Age",
-    "вік": "Age",
+    вік: "Age",
     days_until_birthday: "Days_until_birthday",
     "days until birthday": "Days_until_birthday",
     phone: "Phone",
@@ -354,9 +354,9 @@ function _personnelGetSheet_(mustExist) {
       'Аркуш "' +
         _personnelSheetName_() +
         '" не знайдено. Створіть базу особового складу з колонками: ' +
-        PERSONNEL_REQUIRED_HEADER_KEYS.concat(PERSONNEL_OPTIONAL_HEADER_KEYS).join(
-          ", ",
-        ),
+        PERSONNEL_REQUIRED_HEADER_KEYS.concat(
+          PERSONNEL_OPTIONAL_HEADER_KEYS,
+        ).join(", "),
     );
   }
   return sh || null;
@@ -413,7 +413,9 @@ function _personnelRowToRecord_(row, sheetRow, col) {
   var id =
     col.ID >= 0 ? String(_personnelReadCell_(row, col.ID) || "").trim() : "";
   var unit =
-    col.Unit >= 0 ? String(_personnelReadCell_(row, col.Unit) || "").trim() : "";
+    col.Unit >= 0
+      ? String(_personnelReadCell_(row, col.Unit) || "").trim()
+      : "";
   var statusRaw =
     col.Status >= 0
       ? String(_personnelReadCell_(row, col.Status) || "").trim()
@@ -687,8 +689,7 @@ function getPersonnelCallsignsListForUi_() {
       PersonsRepository_ &&
       typeof PersonsRepository_.getMonthlyRows === "function"
     ) {
-      var sheet =
-        typeof getBotSheet_ === "function" ? getBotSheet_() : null;
+      var sheet = typeof getBotSheet_ === "function" ? getBotSheet_() : null;
       PersonsRepository_.getMonthlyRows(sheet).forEach(function (row) {
         addCallsign(row && row.callsign);
       });
@@ -697,9 +698,7 @@ function getPersonnelCallsignsListForUi_() {
     try {
       Logger.log(
         "[PersonnelRepository] getPersonnelCallsignsListForUi_ monthly: " +
-          (monthlyErr && monthlyErr.message
-            ? monthlyErr.message
-            : monthlyErr),
+          (monthlyErr && monthlyErr.message ? monthlyErr.message : monthlyErr),
       );
     } catch (_) {}
   }

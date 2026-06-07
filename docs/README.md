@@ -14,6 +14,7 @@ snapshots to the repository.
 | [WASB_RELEASE_AUDIT.md](../WASB_RELEASE_AUDIT.md) | Production release verdict (CLOSED 2026-06-07)            |
 | [CONTRIBUTING.md](../CONTRIBUTING.md)             | Local workflow, CI, change policy                         |
 | [AGENTS.md](../AGENTS.md)                         | Automation-agent instructions                             |
+| [vacation-planner.md](./vacation-planner.md)      | Vacation planner workflow, source blocks, and rules       |
 
 ## Refactor Planning
 

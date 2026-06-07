@@ -518,9 +518,9 @@ function apiCheckVacationsAndBirthdays(dateOrOptions) {
     typeof AccessEnforcement_ === "object" &&
     AccessEnforcement_.assertCanRunLeaveBirthdayCheck
   ) {
-    AccessEnforcement_.assertCanRunLeaveBirthdayCheck(
-      { requestedDate: info.payload.dateStr || info.payload.date || "" },
-    );
+    AccessEnforcement_.assertCanRunLeaveBirthdayCheck({
+      requestedDate: info.payload.dateStr || info.payload.date || "",
+    });
   }
 
   const daily =

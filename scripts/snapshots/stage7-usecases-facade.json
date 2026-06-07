@@ -8,9 +8,7 @@
     {
       "name": "buildDaySummary",
       "paramCount": 1,
-      "paramOrder": [
-        "options"
-      ],
+      "paramOrder": ["options"],
       "envelope": {
         "success": "boolean",
         "message": "string",
@@ -22,9 +20,7 @@
     {
       "name": "buildDetailedSummary",
       "paramCount": 1,
-      "paramOrder": [
-        "options"
-      ],
+      "paramOrder": ["options"],
       "envelope": {
         "success": "boolean",
         "message": "string",
@@ -36,10 +32,7 @@
     {
       "name": "openPersonCard",
       "paramCount": 2,
-      "paramOrder": [
-        "options",
-        "dateStr"
-      ],
+      "paramOrder": ["options", "dateStr"],
       "envelope": {
         "success": "boolean",
         "message": "string",
@@ -51,9 +44,7 @@
     {
       "name": "loadCalendarDay",
       "paramCount": 1,
-      "paramOrder": [
-        "options"
-      ],
+      "paramOrder": ["options"],
       "envelope": {
         "success": "boolean",
         "message": "string",
@@ -65,9 +56,7 @@
     {
       "name": "checkVacationsAndBirthdays",
       "paramCount": 1,
-      "paramOrder": [
-        "options"
-      ],
+      "paramOrder": ["options"],
       "envelope": {
         "success": "boolean",
         "message": "string",
@@ -79,10 +68,7 @@
     {
       "name": "switchBotToMonth",
       "paramCount": 2,
-      "paramOrder": [
-        "options",
-        "monthSheetName"
-      ],
+      "paramOrder": ["options", "monthSheetName"],
       "envelope": {
         "success": "boolean",
         "message": "string",
@@ -94,9 +80,7 @@
     {
       "name": "createNextMonth",
       "paramCount": 1,
-      "paramOrder": [
-        "options"
-      ],
+      "paramOrder": ["options"],
       "envelope": {
         "success": "boolean",
         "message": "string",
@@ -108,9 +92,7 @@
     {
       "name": "runReconciliation",
       "paramCount": 1,
-      "paramOrder": [
-        "options"
-      ],
+      "paramOrder": ["options"],
       "envelope": {
         "success": "boolean",
         "message": "string",
@@ -122,9 +104,7 @@
     {
       "name": "runMaintenanceScenario",
       "paramCount": 1,
-      "paramOrder": [
-        "options"
-      ],
+      "paramOrder": ["options"],
       "envelope": {
         "success": "boolean",
         "message": "string",
@@ -136,9 +116,7 @@
     {
       "name": "generateSendPanelForDate",
       "paramCount": 1,
-      "paramOrder": [
-        "options"
-      ],
+      "paramOrder": ["options"],
       "envelope": {
         "success": "boolean",
         "message": "string",
@@ -150,9 +128,7 @@
     {
       "name": "generateSendPanelForRange",
       "paramCount": 1,
-      "paramOrder": [
-        "options"
-      ],
+      "paramOrder": ["options"],
       "envelope": {
         "success": "boolean",
         "message": "string",
@@ -164,10 +140,7 @@
     {
       "name": "markPanelRowsAsPending",
       "paramCount": 2,
-      "paramOrder": [
-        "rowNumbers",
-        "options"
-      ],
+      "paramOrder": ["rowNumbers", "options"],
       "envelope": {
         "success": "boolean",
         "message": "string",
@@ -179,10 +152,7 @@
     {
       "name": "markPanelRowsAsSent",
       "paramCount": 2,
-      "paramOrder": [
-        "rowNumbers",
-        "options"
-      ],
+      "paramOrder": ["rowNumbers", "options"],
       "envelope": {
         "success": "boolean",
         "message": "string",
@@ -194,10 +164,7 @@
     {
       "name": "markPanelRowsAsUnsent",
       "paramCount": 2,
-      "paramOrder": [
-        "rowNumbers",
-        "options"
-      ],
+      "paramOrder": ["rowNumbers", "options"],
       "envelope": {
         "success": "boolean",
         "message": "string",
@@ -209,9 +176,7 @@
     {
       "name": "sendPendingRows",
       "paramCount": 1,
-      "paramOrder": [
-        "options"
-      ],
+      "paramOrder": ["options"],
       "envelope": {
         "success": "boolean",
         "message": "string",
@@ -223,9 +188,7 @@
     {
       "name": "listMonths",
       "paramCount": 1,
-      "paramOrder": [
-        "options"
-      ],
+      "paramOrder": ["options"],
       "envelope": {
         "success": "boolean",
         "message": "string",
@@ -237,9 +200,7 @@
     {
       "name": "getSendPanelData",
       "paramCount": 1,
-      "paramOrder": [
-        "options"
-      ],
+      "paramOrder": ["options"],
       "envelope": {
         "success": "boolean",
         "message": "string",

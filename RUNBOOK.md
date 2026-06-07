@@ -156,16 +156,16 @@ After migration:
 
 Installed by `Stage7Triggers_.installManagedTriggers()` (`Triggers.gs`):
 
-| Handler | Schedule | Purpose |
-| ------- | -------- | ------- |
-| `stage7JobLifecycleRetentionCleanup` | daily 04:00 | OPS/ACTIVE/CHECKPOINTS/LOG/AUDIT retention |
-| `stage7JobCleanupCaches` | daily 05:00 | cache cleanup |
-| `stage7JobScheduledHealthCheck` | daily 06:00 | shallow health diagnostics |
-| `stage7JobScheduledReconciliation` | daily 07:00 | reconciliation report (`dryRun`) |
-| `stage7JobDailyVacationsAndBirthdays` | daily 08:00 | vacation/birthday engine |
-| `stage7JobDetectStaleOperations` | every 15 min | stale lifecycle operations |
-| `stage7SecurityAuditOnEdit` | on edit | protected sheet edit audit |
-| `stage7SecurityAuditOnChange` | on change | structural change audit |
+| Handler                               | Schedule     | Purpose                                    |
+| ------------------------------------- | ------------ | ------------------------------------------ |
+| `stage7JobLifecycleRetentionCleanup`  | daily 04:00  | OPS/ACTIVE/CHECKPOINTS/LOG/AUDIT retention |
+| `stage7JobCleanupCaches`              | daily 05:00  | cache cleanup                              |
+| `stage7JobScheduledHealthCheck`       | daily 06:00  | shallow health diagnostics                 |
+| `stage7JobScheduledReconciliation`    | daily 07:00  | reconciliation report (`dryRun`)           |
+| `stage7JobDailyVacationsAndBirthdays` | daily 08:00  | vacation/birthday engine                   |
+| `stage7JobDetectStaleOperations`      | every 15 min | stale lifecycle operations                 |
+| `stage7SecurityAuditOnEdit`           | on edit      | protected sheet edit audit                 |
+| `stage7SecurityAuditOnChange`         | on change    | structural change audit                    |
 
 Time-based handlers run with **system trigger context** (`actorRole: system`, not user `guest`). After deploy, run one handler manually from the GAS editor (e.g. `stage7JobScheduledHealthCheck()`) and confirm **no** spurious `WASB SECURITY ATTENTION` alerts for blocked guest access.
 
@@ -308,14 +308,14 @@ npm run deploy:prod
 
 **Expectations:**
 
-| Field | Expected |
-| ----- | -------- |
-| `ok` | `true` |
-| `checks.migrationFlag` | not `'true'` (null/empty OK) |
-| `checks.clientSignal.success` | `true` |
-| `checks.clientSignal.data.result.emailSent` | `false` |
-| `checks.clientSignal.data.result.alertLogged` | `true` |
-| `checks.accessPolicy.ok` | `true` (or `OK_WITH_SKIPS` status without FAIL) |
+| Field                                         | Expected                                        |
+| --------------------------------------------- | ----------------------------------------------- |
+| `ok`                                          | `true`                                          |
+| `checks.migrationFlag`                        | not `'true'` (null/empty OK)                    |
+| `checks.clientSignal.success`                 | `true`                                          |
+| `checks.clientSignal.data.result.emailSent`   | `false`                                         |
+| `checks.clientSignal.data.result.alertLogged` | `true`                                          |
+| `checks.accessPolicy.ok`                      | `true` (or `OK_WITH_SKIPS` status without FAIL) |
 
 **Troubleshooting `clasp run`:**
 
@@ -376,11 +376,11 @@ Optional: `npm run gas:smoke` or `apiStage7QuickHealthCheck()` — health fails 
 
 Canonical resolver (**`DataAccess.gs`**):
 
-| Property | Purpose |
-| -------- | ------- |
-| **`WASB_SPREADSHEET_ID`** | Target spreadsheet for headless runs (triggers, executions without open UI). Required when no container spreadsheet context exists. |
-| **`WASB_OWNER_EMAIL`** | Owner email for security notifications that may include the full user key. Quick health warns if unset. |
-| **`WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`** | Emergency email bridge during migration only. Keep disabled (`false` / unset) in normal operation. |
+| Property                                     | Purpose                                                                                                                                                                                     |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`WASB_SPREADSHEET_ID`**                    | Target spreadsheet for headless runs (triggers, executions without open UI). Required when no container spreadsheet context exists.                                                         |
+| **`WASB_OWNER_EMAIL`**                       | Owner email for security notifications that may include the full user key. Quick health warns if unset.                                                                                     |
+| **`WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`**     | Emergency email bridge during migration only. Keep disabled (`false` / unset) in normal operation.                                                                                          |
 | **`WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP`** | Legacy plaintext temp-password column lookup during migration only. Keep disabled in normal operation; run `apiStage7NormalizeAccessSheetFormatting()` to clear `temporary_password_plain`. |
 
 If **`WASB_SPREADSHEET_ID`** is unset, the code falls back to **`SpreadsheetApp.getActiveSpreadsheet()`** when the script is bound and a spreadsheet context exists.

@@ -2,7 +2,6 @@
  * SmokeTests.gs — merged Stage 7.1 smoke / regression / compatibility suite preserving the full Stage 7 baseline breadth and adding Stage 7 lifecycle/runtime hardening checks, including retention cleanup flow.
  */
 
-
 function runScenarioTests(options) {
   return runStage4ScenarioTests(options || {});
 }
@@ -391,12 +390,11 @@ function runStage4ScenarioTests(options) {
     report,
     "jobs api contract suite",
     function () {
-      [apiListStage7Jobs(), apiInstallStage7Jobs()].forEach(function (
-        result,
-        idx,
-      ) {
-        _assertStage4Meta_(result, "jobs#" + (idx + 1));
-      });
+      [apiListStage7Jobs(), apiInstallStage7Jobs()].forEach(
+        function (result, idx) {
+          _assertStage4Meta_(result, "jobs#" + (idx + 1));
+        },
+      );
       _assertUnifiedContract_(
         apiRunStage7Job(STAGE7_CONFIG.JOBS.SCHEDULED_HEALTHCHECK, {
           dryRun: true,

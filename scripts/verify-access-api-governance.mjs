@@ -62,15 +62,19 @@ function extractFunctionBody(fileRel, fnName) {
 
 function clientMethodUsesApiRun(clientSource, methodPath, apiName) {
   const method = methodPath.split('.').pop();
+  const escapedApiName = apiName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const apiRunRe = new RegExp(
+    `Api\\.run\\s*\\(\\s*["']${escapedApiName}["']`,
+  );
   const methodIdx = clientSource.indexOf(`${method}(`);
   if (methodIdx < 0) {
     const propIdx = clientSource.indexOf(`${method}:`);
     if (propIdx < 0) return false;
     const slice = clientSource.slice(propIdx, propIdx + 1500);
-    return slice.includes(`Api.run('${apiName}'`) || slice.includes(`Api.run("${apiName}"`);
+    return apiRunRe.test(slice);
   }
   const slice = clientSource.slice(methodIdx, methodIdx + 1500);
-  return slice.includes(`Api.run('${apiName}'`) || slice.includes(`Api.run("${apiName}"`);
+  return apiRunRe.test(slice);
 }
 
 function rolePolicyMatches(a, b) {
