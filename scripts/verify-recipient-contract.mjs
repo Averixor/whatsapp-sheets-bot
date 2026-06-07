@@ -256,7 +256,7 @@ function verifyVacationApiRecipientForwarding() {
   assert.equal(serviceCalls[0].recipientMode, 'selected');
   assert.equal(response.success, true);
   assert.equal(response.data.result.date, '17.03.2026');
-  assert.deepEqual(response.affectedSheets, ['06', 'PHONES']);
+  assert.deepEqual(Array.from(response.affectedSheets), ['06', 'PHONES']);
 }
 
 function verifyRecipientRoutingContract() {
