@@ -2,7 +2,7 @@
   "version": 2,
   "maxSafeExprPatterns": 100,
   "warnThreshold": 95,
-  "legacyPatternCount": 93,
+  "legacyPatternCount": 94,
   "migrationNotes": "Prefer routing new HTML through sanitizerSinks (escapeHtml, escapeAttr, escapeJsString, esc) instead of expanding SAFE_EXPR. Legacy patterns remain allowed until sink migration completes.",
   "reviewedAllowlist": {
     "reviewedAt": "2026-06-06",

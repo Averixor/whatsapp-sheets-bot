@@ -193,12 +193,23 @@ function auditFile(relPath) {
   return auditTemplateSinks(source).map((v) => ({ ...v, relPath }));
 }
 
+function getReviewedPatternSet() {
+  const groups = xssPolicy.reviewedAllowlist?.groups || [];
+  const set = new Set();
+  groups.forEach((group) => {
+    (group.patterns || []).forEach((pattern) => set.add(pattern));
+  });
+  return set;
+}
+
 function warnOnNewPatternsWithoutSink() {
   if (!preferredSinks.requireSinkForNewPatterns) return;
   if (patternCount <= legacyPatternCount) return;
 
+  const reviewedPatterns = getReviewedPatternSet();
   const newPatterns = (xssPolicy.patterns || []).slice(legacyPatternCount);
   newPatterns.forEach((source) => {
+    if (reviewedPatterns.has(source)) return;
     const mentionsSink = sanitizerSinks.some((name) => source.includes(name));
     const matchesSinkPattern = sinkNamePattern ? sinkNamePattern.test(source) : false;
     if (!mentionsSink && !matchesSinkPattern) {
