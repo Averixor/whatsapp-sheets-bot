@@ -11,7 +11,7 @@
  * Active runtime: усе, крім Вибув та СЗЧ.
  * Порожньо = В наявності.
  * Legacy EN/старі мітки на читанні: Active/Дієвий→В наявності, Temp→Тимчасовий,
- * Відрядження/У відрядженні→У відрядженні, Removed→Вибув.
+ * Відрядження/Відкомандирований/Detached→PERSONNEL_STATUS_IN_TRIP_UA_, Removed→Вибув.
  */
 
 var PERSONNEL_SHEET_NAME =
@@ -60,90 +60,101 @@ var PERSONNEL_OPTIONAL_HEADER_KEYS = [
   "TEMPLATE",
 ];
 
+/** Canonical Status values (in-trip uses Cyrillic д only — do not retype). */
+var PERSONNEL_STATUS_AVAILABLE_UA_ = "В наявності";
+
+var PERSONNEL_STATUS_IN_TRIP_UA_ =
+  "\u0423 \u0432\u0456\u0434\u0440\u044f\u0434\u0436\u0435\u043d\u043d\u0456";
+
+var PERSONNEL_STATUS_REMOVED_UA_ = "Вибув";
+var PERSONNEL_STATUS_VACATION_UA_ = "Відпустка";
+var PERSONNEL_STATUS_HOSPITAL_UA_ = "Лікарняний";
+var PERSONNEL_STATUS_TEMP_UA_ = "Тимчасовий";
+var PERSONNEL_STATUS_HUSACHIVKA_UA_ = "Гусачівка";
+var PERSONNEL_STATUS_BZVP_UA_ = "БЗВП";
+var PERSONNEL_STATUS_SZCH_UA_ = "СЗЧ";
+
 /** Dropdown і канонічні значення в колонці Status (порядок як у книзі). */
 var PERSONNEL_STATUS_SHEET_VALUES_ = [
-  "В наявності",
-  "У відрядженні",
-  "Вибув",
-  "Відпустка",
-  "Лікарняний",
-  "Тимчасовий",
-  "Гусачівка",
-  "БЗВП",
-  "СЗЧ",
+  PERSONNEL_STATUS_AVAILABLE_UA_,
+  PERSONNEL_STATUS_IN_TRIP_UA_,
+  PERSONNEL_STATUS_REMOVED_UA_,
+  PERSONNEL_STATUS_VACATION_UA_,
+  PERSONNEL_STATUS_HOSPITAL_UA_,
+  PERSONNEL_STATUS_TEMP_UA_,
+  PERSONNEL_STATUS_HUSACHIVKA_UA_,
+  PERSONNEL_STATUS_BZVP_UA_,
+  PERSONNEL_STATUS_SZCH_UA_,
 ];
 
 /** Активні для графіка, телефонів, карток, списків (не Вибув / не СЗЧ). */
 var PERSONNEL_ACTIVE_STATUSES_ = [
-  "В наявності",
-  "У відрядженні",
-  "Відпустка",
-  "Лікарняний",
-  "Тимчасовий",
-  "Гусачівка",
-  "БЗВП",
+  PERSONNEL_STATUS_AVAILABLE_UA_,
+  PERSONNEL_STATUS_IN_TRIP_UA_,
+  PERSONNEL_STATUS_VACATION_UA_,
+  PERSONNEL_STATUS_HOSPITAL_UA_,
+  PERSONNEL_STATUS_TEMP_UA_,
+  PERSONNEL_STATUS_HUSACHIVKA_UA_,
+  PERSONNEL_STATUS_BZVP_UA_,
 ];
 
-var PERSONNEL_INACTIVE_STATUSES_ = ["Вибув", "СЗЧ"];
+var PERSONNEL_INACTIVE_STATUSES_ = [
+  PERSONNEL_STATUS_REMOVED_UA_,
+  PERSONNEL_STATUS_SZCH_UA_,
+];
 
-var PERSONNEL_DEFAULT_STATUS_UA_ = "В наявності";
+var PERSONNEL_DEFAULT_STATUS_UA_ = PERSONNEL_STATUS_AVAILABLE_UA_;
 
 /** Legacy EN / synonyms / typos → canonical UA label (dropdown). */
 var PERSONNEL_STATUS_LEGACY_TO_UA_ = {
-  active: "В наявності",
-  aktiv: "В наявності",
-  активний: "В наявності",
-  активна: "В наявності",
-  дієвий: "В наявності",
-  діевий: "В наявності",
-  дієв: "В наявності",
-  temp: "Тимчасовий",
-  temporary: "Тимчасовий",
-  тимчасовий: "Тимчасовий",
-  тимчасово: "Тимчасовий",
-  відрядження: "У відрядженні",
-  vidriadzhennia: "У відрядженні",
-  deployment: "У відрядженні",
-  assignment: "У відрядженні",
-  transferred: "Вибув",
-  transfered: "Вибув",
-  переведений: "Вибув",
-  переведено: "Вибув",
-  removed: "Вибув",
-  deleted: "Вибув",
-  inactive: "Вибув",
-  archived: "Вибув",
-  вибув: "Вибув",
-  вибувший: "Вибув",
-  видалено: "Вибув",
-  видалений: "Вибув",
-  "в наявності": "В наявності",
-  наявності: "В наявності",
-  відпустка: "Відпустка",
-  vacation: "Відпустка",
-  лікарняний: "Лікарняний",
-  лікарн: "Лікарняний",
-  hospital: "Лікарняний",
-  гусачівка: "Гусачівка",
-  гусачі: "Гусачівка",
-  У відрядженні: "У відрядженні",
-  У відрядженні: "У відрядженні",
-  бзвп: "БЗВП",
-  сзч: "СЗЧ",
-  awol: "СЗЧ",
+  active: PERSONNEL_STATUS_AVAILABLE_UA_,
+  aktiv: PERSONNEL_STATUS_AVAILABLE_UA_,
+  активний: PERSONNEL_STATUS_AVAILABLE_UA_,
+  активна: PERSONNEL_STATUS_AVAILABLE_UA_,
+  дієвий: PERSONNEL_STATUS_AVAILABLE_UA_,
+  діевий: PERSONNEL_STATUS_AVAILABLE_UA_,
+  дієв: PERSONNEL_STATUS_AVAILABLE_UA_,
+  temp: PERSONNEL_STATUS_TEMP_UA_,
+  temporary: PERSONNEL_STATUS_TEMP_UA_,
+  тимчасово: PERSONNEL_STATUS_TEMP_UA_,
+  відрядження: PERSONNEL_STATUS_IN_TRIP_UA_,
+  відряджений: PERSONNEL_STATUS_IN_TRIP_UA_,
+  відряджена: PERSONNEL_STATUS_IN_TRIP_UA_,
+  vidriadzhennia: PERSONNEL_STATUS_IN_TRIP_UA_,
+  deployment: PERSONNEL_STATUS_IN_TRIP_UA_,
+  assignment: PERSONNEL_STATUS_IN_TRIP_UA_,
+  detached: PERSONNEL_STATUS_IN_TRIP_UA_,
+  відкомандирований: PERSONNEL_STATUS_IN_TRIP_UA_,
+  відкомандерований: PERSONNEL_STATUS_IN_TRIP_UA_,
+  transferred: PERSONNEL_STATUS_REMOVED_UA_,
+  transfered: PERSONNEL_STATUS_REMOVED_UA_,
+  переведений: PERSONNEL_STATUS_REMOVED_UA_,
+  переведено: PERSONNEL_STATUS_REMOVED_UA_,
+  removed: PERSONNEL_STATUS_REMOVED_UA_,
+  deleted: PERSONNEL_STATUS_REMOVED_UA_,
+  inactive: PERSONNEL_STATUS_REMOVED_UA_,
+  archived: PERSONNEL_STATUS_REMOVED_UA_,
+  вибувший: PERSONNEL_STATUS_REMOVED_UA_,
+  видалено: PERSONNEL_STATUS_REMOVED_UA_,
+  видалений: PERSONNEL_STATUS_REMOVED_UA_,
+  наявності: PERSONNEL_STATUS_AVAILABLE_UA_,
+  vacation: PERSONNEL_STATUS_VACATION_UA_,
+  лікарн: PERSONNEL_STATUS_HOSPITAL_UA_,
+  hospital: PERSONNEL_STATUS_HOSPITAL_UA_,
+  гусачі: PERSONNEL_STATUS_HUSACHIVKA_UA_,
+  awol: PERSONNEL_STATUS_SZCH_UA_,
 };
 
-var PERSONNEL_STATUS_UA_TO_CANONICAL_ = {
-  "В наявності": "Active",
-  У відрядженні: "Detached",
-  Вибув: "Removed",
-  Відпустка: "Vacation",
-  Лікарняний: "Hospital",
-  Тимчасовий: "Temp",
-  Гусачівка: "Away",
-  БЗВП: "Training",
-  СЗЧ: "AWOL",
-};
+var PERSONNEL_STATUS_UA_TO_CANONICAL_ = {};
+PERSONNEL_STATUS_UA_TO_CANONICAL_[PERSONNEL_STATUS_AVAILABLE_UA_] = "Active";
+PERSONNEL_STATUS_UA_TO_CANONICAL_[PERSONNEL_STATUS_IN_TRIP_UA_] = "Detached";
+PERSONNEL_STATUS_UA_TO_CANONICAL_[PERSONNEL_STATUS_REMOVED_UA_] = "Removed";
+PERSONNEL_STATUS_UA_TO_CANONICAL_[PERSONNEL_STATUS_VACATION_UA_] = "Vacation";
+PERSONNEL_STATUS_UA_TO_CANONICAL_[PERSONNEL_STATUS_HOSPITAL_UA_] = "Hospital";
+PERSONNEL_STATUS_UA_TO_CANONICAL_[PERSONNEL_STATUS_TEMP_UA_] = "Temp";
+PERSONNEL_STATUS_UA_TO_CANONICAL_[PERSONNEL_STATUS_HUSACHIVKA_UA_] = "Away";
+PERSONNEL_STATUS_UA_TO_CANONICAL_[PERSONNEL_STATUS_BZVP_UA_] = "Training";
+PERSONNEL_STATUS_UA_TO_CANONICAL_[PERSONNEL_STATUS_SZCH_UA_] = "AWOL";
 
 function _personnelGlobal_() {
   try {
@@ -846,6 +857,7 @@ var PersonnelRepository_ = PersonnelRepository_ || {
   normalizeStatus: normalizePersonnelStatus_,
   getStatusCanonical: getPersonnelStatusCanonical_,
   isStatusActive: isPersonnelStatusActive_,
+  statusInTrip: PERSONNEL_STATUS_IN_TRIP_UA_,
   activeStatuses: PERSONNEL_ACTIVE_STATUSES_,
   inactiveStatuses: PERSONNEL_INACTIVE_STATUSES_,
   applyStatusValidation: applyPersonnelStatusColumnValidation,

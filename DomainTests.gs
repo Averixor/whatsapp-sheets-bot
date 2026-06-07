@@ -102,17 +102,19 @@ function _domainMakeFakeSheet_(name, values) {
 function _runPersonnelRepositoryDomainTests_(report) {
   _domainPush_(report, 'personnel.status normalization canonical and legacy', function() {
     [
-      ['', 'В наявності'],
-      [null, 'В наявності'],
-      [' Діевий ', 'В наявності'],
-      ['Active', 'В наявності'],
-      ['Temp', 'Тимчасовий'],
-      ['Відрядження', 'У відрядженні'],
-      ['Removed', 'Вибув'],
-      ['Transferred', 'Вибув'],
-      ['Лікарняний', 'Лікарняний'],
-      ['СЗЧ', 'СЗЧ'],
-      ['БЗВП', 'БЗВП']
+      ['', PERSONNEL_STATUS_AVAILABLE_UA_],
+      [null, PERSONNEL_STATUS_AVAILABLE_UA_],
+      [' Діевий ', PERSONNEL_STATUS_AVAILABLE_UA_],
+      ['Active', PERSONNEL_STATUS_AVAILABLE_UA_],
+      ['Temp', PERSONNEL_STATUS_TEMP_UA_],
+      ['Відрядження', PERSONNEL_STATUS_IN_TRIP_UA_],
+      ['Відкомандирований', PERSONNEL_STATUS_IN_TRIP_UA_],
+      ['Detached', PERSONNEL_STATUS_IN_TRIP_UA_],
+      ['Removed', PERSONNEL_STATUS_REMOVED_UA_],
+      ['Transferred', PERSONNEL_STATUS_REMOVED_UA_],
+      [PERSONNEL_STATUS_HOSPITAL_UA_, PERSONNEL_STATUS_HOSPITAL_UA_],
+      [PERSONNEL_STATUS_SZCH_UA_, PERSONNEL_STATUS_SZCH_UA_],
+      [PERSONNEL_STATUS_BZVP_UA_, PERSONNEL_STATUS_BZVP_UA_]
     ].forEach(function(pair) {
       _domainAssertEqual_(normalizePersonnelStatus_(pair[0]), pair[1], 'normalizePersonnelStatus_ mismatch');
     });
@@ -120,11 +122,11 @@ function _runPersonnelRepositoryDomainTests_(report) {
     _domainAssert_(isPersonnelStatusActive_('') === true, 'Порожній Status має бути активним В наявності');
     _domainAssert_(isPersonnelStatusActive_('Temp') === true, 'Legacy Temp має бути активним');
     _domainAssert_(isPersonnelStatusActive_('Removed') === false, 'Legacy Removed має бути неактивним');
-    _domainAssert_(isPersonnelStatusActive_('СЗЧ') === false, 'СЗЧ має бути неактивним');
-    _domainAssert_(isPersonnelStatusActive_('Лікарняний') === true, 'Лікарняний має бути активним');
-    _domainAssertEqual_(getPersonnelStatusCanonical_('Вибув'), 'Removed', 'Вибув canonical');
+    _domainAssert_(isPersonnelStatusActive_(PERSONNEL_STATUS_SZCH_UA_) === false, 'СЗЧ має бути неактивним');
+    _domainAssert_(isPersonnelStatusActive_(PERSONNEL_STATUS_HOSPITAL_UA_) === true, 'Лікарняний має бути активним');
+    _domainAssertEqual_(getPersonnelStatusCanonical_(PERSONNEL_STATUS_REMOVED_UA_), 'Removed', 'Вибув canonical');
     _domainAssertEqual_(getPersonnelStatusListValues_().length, 9, 'dropdown count');
-    _domainAssertEqual_(getPersonnelStatusListValues_()[0], 'В наявності', 'dropdown order');
+    _domainAssertEqual_(getPersonnelStatusListValues_()[0], PERSONNEL_STATUS_AVAILABLE_UA_, 'dropdown order');
     return 'legacy-statuses-ok';
   });
 
@@ -159,7 +161,7 @@ function _runPersonnelRepositoryDomainTests_(report) {
     _domainAssertEqual_(record.title, 'солдат', 'Rank fallback to title');
     _domainAssertEqual_(record.rank, 'солдат', 'Rank mirror');
     _domainAssertEqual_(record.position, 'стрілець', 'Position mapping');
-    _domainAssertEqual_(record.status, 'Вибув', 'Status normalization in record');
+    _domainAssertEqual_(record.status, PERSONNEL_STATUS_REMOVED_UA_, 'Status normalization in record');
     _domainAssert_(record.active === false, 'Removed/Вибув record must be inactive');
     return 'header-alias-record-ok';
   });
