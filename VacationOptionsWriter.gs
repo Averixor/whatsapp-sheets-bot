@@ -145,6 +145,58 @@ const VacationOptionsWriter_ = (function () {
     }
   }
 
+  function _hasFormulaInputs_(sheet, block) {
+    try {
+      const range = sheet.getRange(
+        1,
+        block.startCol,
+        1,
+        VACATION_PLANNER_CONFIG.SOURCE_HEADERS.length,
+      );
+      if (typeof range.getFormulas !== "function") return false;
+      const formulas = range.getFormulas()[0] || [];
+      return [0, 1, 3].some(function (index) {
+        return !!String(formulas[index] || "").trim();
+      });
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function _writableBlock_(sheet, preferredBlock) {
+    if (!_hasFormulaInputs_(sheet, preferredBlock)) return preferredBlock;
+    const fallback = VACATION_PLANNER_CONFIG.BLOCKS.filter(function (block) {
+      return !_hasFormulaInputs_(sheet, block);
+    })[0];
+    if (!fallback) {
+      throw new Error("У VACATIONS немає доступного для запису блоку");
+    }
+    return fallback;
+  }
+
+  function _isTrue_(value) {
+    if (value === true) return true;
+    return ["TRUE", "1", "YES", "Y", "ТАК"].indexOf(
+      String(value == null ? "" : value)
+        .trim()
+        .toUpperCase(),
+    ) !== -1;
+  }
+
+  function _rowMatchesOption_(row, option) {
+    const expectedText = _sourceVacationText_(option).toLowerCase();
+    const expectedNumber = Number(option && option.vacationNumber);
+    const rowText = String((row && row[3]) || "")
+      .trim()
+      .toLowerCase();
+    const special =
+      expectedText.indexOf("додатк") !== -1 ||
+      expectedText.indexOf("сімейн") !== -1;
+    return special
+      ? rowText === expectedText
+      : _vacationNumber_(rowText) === expectedNumber;
+  }
+
   function _hasOwn_(object, key) {
     return !!object && Object.prototype.hasOwnProperty.call(object, key);
   }
@@ -273,7 +325,8 @@ const VacationOptionsWriter_ = (function () {
 
   function writeVacationToSource(option) {
     const sheet = _ensureSourceSheet_();
-    const block = _block_(option.vacationNumber);
+    const requestedBlock = _block_(option.vacationNumber);
+    const block = _writableBlock_(sheet, requestedBlock);
     const lastRow = Math.max(sheet.getLastRow(), 2);
     const rowCount = Math.max(lastRow - 1, 1);
     const values = sheet
@@ -289,7 +342,11 @@ const VacationOptionsWriter_ = (function () {
     let existingTravel = "";
 
     for (let i = 0; i < values.length; i++) {
-      if (_fmlKey_(values[i][0]) === targetKey) {
+      if (
+        _fmlKey_(values[i][0]) === targetKey &&
+        _isTrue_(values[i][4]) &&
+        _rowMatchesOption_(values[i], option)
+      ) {
         targetRow = i + 2;
         existingTravel = String(values[i][7] || "").trim();
         break;
@@ -326,6 +383,7 @@ const VacationOptionsWriter_ = (function () {
         rowNumber: targetRow,
         block: block.key,
         startColumn: block.startCol,
+        requestedBlock: requestedBlock.key,
         formulaDriven: true,
       };
     }
@@ -358,18 +416,30 @@ const VacationOptionsWriter_ = (function () {
       rowNumber: targetRow,
       block: block.key,
       startColumn: block.startCol,
+      requestedBlock: requestedBlock.key,
       formulaDriven: false,
     };
   }
 
-  function setVacationActive(fml, vacationNumber, active) {
+  function setVacationActive(fml, vacationNumber, active, vacationType) {
     const sheet = _ensureSourceSheet_();
-    const block = _block_(vacationNumber);
+    const requestedBlock = _block_(vacationNumber);
+    const block = _writableBlock_(sheet, requestedBlock);
     const rowCount = Math.max(sheet.getLastRow() - 1, 1);
     const values = sheet.getRange(2, block.startCol, rowCount, 9).getValues();
     const targetKey = _fmlKey_(fml);
+    const option = {
+      vacationNumber: vacationNumber,
+      vacationType: vacationType,
+    };
     for (let index = 0; index < values.length; index++) {
-      if (_fmlKey_(values[index][0]) !== targetKey) continue;
+      if (
+        _fmlKey_(values[index][0]) !== targetKey ||
+        !_isTrue_(values[index][4]) ||
+        !_rowMatchesOption_(values[index], option)
+      ) {
+        continue;
+      }
       const rowNumber = index + 2;
       if (_isFormulaDrivenBlock_(sheet, block)) {
         const startRange = sheet.getRange(rowNumber, block.startCol + 1);
@@ -381,6 +451,7 @@ const VacationOptionsWriter_ = (function () {
           sheetName: sheet.getName(),
           rowNumber: rowNumber,
           block: block.key,
+          requestedBlock: requestedBlock.key,
           active: false,
           formulaDriven: true,
         };
@@ -393,6 +464,7 @@ const VacationOptionsWriter_ = (function () {
         sheetName: sheet.getName(),
         rowNumber: rowNumber,
         block: block.key,
+        requestedBlock: requestedBlock.key,
         active: active === true,
         formulaDriven: false,
       };
@@ -509,7 +581,8 @@ const VacationOptionsWriter_ = (function () {
       .getRange(1, 1, 1, width)
       .setFontWeight("bold")
       .setBackground("#D9EAD3");
-    sheet.setFrozenRows(1).setFrozenColumns(2);
+    sheet.setFrozenRows(1);
+    sheet.setFrozenColumns(2);
     if (calendar.dateCount) {
       sheet.getRange(1, 3, 1, calendar.dateCount).setNumberFormat("dd.MM");
       sheet.setColumnWidths(3, calendar.dateCount, 42);

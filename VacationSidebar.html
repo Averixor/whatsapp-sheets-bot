@@ -437,7 +437,13 @@
             cancelVacation(vacation);
           });
           card.appendChild(move);
-          card.appendChild(cancel);
+          if (vacation.manageable !== false) {
+            card.appendChild(cancel);
+          } else {
+            card.appendChild(
+              node("div", "Розрахункова дата з формульного блоку", "muted"),
+            );
+          }
           container.appendChild(card);
         });
       }
@@ -624,6 +630,9 @@
           .moveVacationFromSidebar({
             fml: vacation.fml,
             vacationNumber: vacation.vacationNumber,
+            type: vacation.type,
+            sourceRow: vacation.sourceRow,
+            sourceStartColumn: vacation.sourceStartColumn,
             startDate: formValue("moveStart"),
             days: Number(formValue("moveDays")),
           });

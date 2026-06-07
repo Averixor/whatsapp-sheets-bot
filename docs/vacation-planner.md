@@ -36,6 +36,9 @@ The production sheet uses array formulas for calculated columns such as
 `End date`, `Active`, `Notify`, `Days left`, and `Interval check`. Sidebar
 writes touch only the input cells (`FML`, `Start date`, `Vacation №`, `Travel`);
 cancel clears the start date and lets the existing formulas recalculate.
+If a whole source block exposes formula-generated input columns (as production
+`K:S` currently does), it remains part of repository reads and audits, while
+new or moved vacations are materialized in the writable `A:I` block.
 
 ## Sidebar workflow
 

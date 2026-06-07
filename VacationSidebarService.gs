@@ -140,9 +140,13 @@ const VacationSidebarService_ = (function () {
           vacation.endDate,
         ) + 1,
       active: vacation.active === true,
+      manageable:
+        !vacation._meta || vacation._meta.writable !== false,
       block:
         (vacation._meta && vacation._meta.block) ||
         (Number(vacation.vacationNumber) === 2 ? "second" : "first"),
+      sourceRow: (vacation._meta && vacation._meta.rowNumber) || 0,
+      sourceStartColumn: (vacation._meta && vacation._meta.startColumn) || 0,
     };
   }
 
@@ -309,6 +313,17 @@ const VacationSidebarService_ = (function () {
       const person = _assertActivePerson_(formData && formData.fml);
       const vacationNumber = Number(formData && formData.vacationNumber);
       const existing = _activeVacations_().filter(function (vacation) {
+        const sourceRow = Number(formData && formData.sourceRow);
+        const sourceStartColumn = Number(formData && formData.sourceStartColumn);
+        if (
+          sourceRow &&
+          sourceStartColumn &&
+          vacation._meta &&
+          Number(vacation._meta.rowNumber) === sourceRow &&
+          Number(vacation._meta.startColumn) === sourceStartColumn
+        ) {
+          return true;
+        }
         return (
           String(vacation.fml || "").trim().toUpperCase() ===
             String(person.fml || "").trim().toUpperCase() &&
@@ -334,6 +349,7 @@ const VacationSidebarService_ = (function () {
         formData.fml,
         Number(formData.vacationNumber),
         false,
+        formData.type,
       );
       return {
         write: write,

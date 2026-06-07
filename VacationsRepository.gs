@@ -55,16 +55,24 @@ const VacationsRepository_ = (function () {
     const out = [];
     _blocks_().forEach(function (block) {
       let headers = [];
+      let headerFormulas = [];
       try {
         const headerRange = sheet.getRange(1, block.startCol, 1, 9);
         headers =
           typeof headerRange.getDisplayValues === "function"
             ? headerRange.getDisplayValues()[0]
             : headerRange.getValues()[0];
+        headerFormulas =
+          typeof headerRange.getFormulas === "function"
+            ? headerRange.getFormulas()[0]
+            : [];
       } catch (_) {}
       const daysHeader = String(headers[6] || "")
         .trim()
         .toLowerCase();
+      const writable = [0, 1, 3].every(function (index) {
+        return !String(headerFormulas[index] || "").trim();
+      });
       const rows = sheet
         .getRange(2, block.startCol, rowCount, 9)
         .getValues();
@@ -98,6 +106,7 @@ const VacationsRepository_ = (function () {
             rowNumber: index + 2,
             block: block.key,
             startColumn: block.startCol,
+            writable: writable,
           },
         });
       });

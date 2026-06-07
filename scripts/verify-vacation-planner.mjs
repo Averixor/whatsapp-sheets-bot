@@ -502,24 +502,63 @@ assert.equal(
   "replacing a slot must preserve existing travel when no new value is supplied",
 );
 
-const formulaRows = [
-  [
-    "FML",
-    "Start date",
-    "End date",
-    "Vacation №",
-    "Active",
-    "Notify",
-    "Days left",
-    "Travel",
-    "Interval check",
-  ],
-  ["Формула Людина", date("2026-01-01"), "FORMULA_END", "перша відпустка"],
+const formulaRows = Array.from({ length: 4 }, () => Array(19).fill(""));
+const formulaHeaderValues = [
+  "FML",
+  "Start date",
+  "End date",
+  "Vacation №",
+  "Active",
+  "Notify",
+  "Days left",
+  "Travel",
+  "Interval check",
 ];
-const formulaHeaders = [
-  ["", "", "=ARRAYFORMULA()", "", "=ARRAYFORMULA()", "=ARRAYFORMULA()", "=ARRAYFORMULA()", "", "=ARRAYFORMULA()"],
-];
+formulaRows[0].splice(0, 9, ...formulaHeaderValues);
+formulaRows[0].splice(10, 9, ...formulaHeaderValues);
+formulaRows[1].splice(
+  0,
+  9,
+  "Формула Людина",
+  date("2026-01-01"),
+  "FORMULA_END",
+  "перша відпустка",
+  true,
+  true,
+  0,
+  0,
+  true,
+);
+formulaRows[1].splice(
+  10,
+  9,
+  "Генерована Людина",
+  date("2026-03-01"),
+  "FORMULA_K_END",
+  "друга відпустка",
+  true,
+  true,
+  0,
+  0,
+  true,
+);
+const formulaHeaders = [Array(19).fill("")];
+[2, 4, 5, 6, 8].forEach((index) => {
+  formulaHeaders[0][index] = "=ARRAYFORMULA()";
+});
+[0, 1, 2, 3, 4, 5, 6, 8].forEach((index) => {
+  formulaHeaders[0][10 + index] = "=ARRAYFORMULA()";
+});
 sourceSheet = new FakeSheet("VACATIONS", formulaRows, formulaHeaders);
+const formulaMerged = repository.listAll();
+assert.equal(
+  formulaMerged.find((item) => item.fml === "Формула Людина")._meta.writable,
+  true,
+);
+assert.equal(
+  formulaMerged.find((item) => item.fml === "Генерована Людина")._meta.writable,
+  false,
+);
 const formulaWrite = writer.writeVacationToSource({
   fml: "Формула Людина",
   vacationNumber: 1,
@@ -530,12 +569,38 @@ const formulaWrite = writer.writeVacationToSource({
 });
 assert.equal(formulaWrite.formulaDriven, true);
 assert.equal(sourceSheet.valueAt(2, 3), "FORMULA_END");
-assert.equal(sourceSheet.valueAt(2, 4), "додаткова відпустка");
-assert.equal(sourceSheet.valueAt(2, 8), 4);
-const formulaCancel = writer.setVacationActive("Формула Людина", 1, false);
+assert.equal(sourceSheet.valueAt(formulaWrite.rowNumber, 4), "додаткова відпустка");
+assert.equal(sourceSheet.valueAt(formulaWrite.rowNumber, 8), 4);
+sourceSheet.setValue(formulaWrite.rowNumber, 5, true);
+const formulaCancel = writer.setVacationActive(
+  "Формула Людина",
+  1,
+  false,
+  "ВД",
+);
 assert.equal(formulaCancel.formulaDriven, true);
-assert.equal(sourceSheet.valueAt(2, 2), "");
+assert.equal(sourceSheet.valueAt(formulaWrite.rowNumber, 2), "");
 assert.equal(sourceSheet.valueAt(2, 3), "FORMULA_END");
+sourceSheet.setValue(formulaWrite.rowNumber, 5, false);
+
+const generatedWrite = writer.writeVacationToSource({
+  fml: "Генерована Людина",
+  vacationNumber: 2,
+  startDate: date("2026-04-01"),
+  endDate: date("2026-04-15"),
+  days: 15,
+});
+assert.equal(generatedWrite.requestedBlock, "second");
+assert.equal(
+  generatedWrite.startColumn,
+  1,
+  "formula-generated K:S must route writes into writable A:I",
+);
+assert.equal(sourceSheet.valueAt(2, 11), "Генерована Людина");
+assert.equal(
+  sourceSheet.valueAt(generatedWrite.rowNumber, 4),
+  "друга відпустка",
+);
 
 const optionHeader = [
   "Rank",
@@ -624,6 +689,11 @@ assert.doesNotMatch(sidebar, /innerHTML/);
 assert.match(
   writerSource,
   /const headers = \["Date", "Type", "FML", "Description", "Severity"\]/,
+);
+assert.doesNotMatch(
+  writerSource,
+  /setFrozenRows\([^)]*\)\.setFrozenColumns/,
+  "GAS Sheet.setFrozenRows does not support chaining",
 );
 const sidebarScript = sidebar.match(/<script>([\s\S]*?)<\/script>/i);
 assert.ok(sidebarScript, "VacationSidebar must contain a client script");
