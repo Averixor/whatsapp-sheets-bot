@@ -54,6 +54,17 @@ const VacationsRepository_ = (function () {
     const rowCount = sheet.getLastRow() - 1;
     const out = [];
     _blocks_().forEach(function (block) {
+      let headers = [];
+      try {
+        const headerRange = sheet.getRange(1, block.startCol, 1, 9);
+        headers =
+          typeof headerRange.getDisplayValues === "function"
+            ? headerRange.getDisplayValues()[0]
+            : headerRange.getValues()[0];
+      } catch (_) {}
+      const daysHeader = String(headers[6] || "")
+        .trim()
+        .toLowerCase();
       const rows = sheet
         .getRange(2, block.startCol, rowCount, 9)
         .getValues();
@@ -74,6 +85,9 @@ const VacationsRepository_ = (function () {
           isActive: _bool_(row[4], false),
           notify: _bool_(row[5], true),
           days: Number(row[6]) || 0,
+          declaredDurationDays:
+            daysHeader === "days" ? Number(row[6]) || 0 : 0,
+          daysMeaning: daysHeader || "",
           travel: String(row[7] || "").trim(),
           intervalCheck: String(row[8] || "").trim(),
           startDate: DateUtils_.parseDateAny(row[1]),

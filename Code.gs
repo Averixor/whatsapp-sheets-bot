@@ -252,14 +252,10 @@ function onOpen(e) {
     const ui = SpreadsheetApp.getUi();
     const vacationMenu = ui
       .createMenu("Відпустки")
-      .addItem("Оновити графік відпусток", "rebuildVacationSystem")
-      .addItem("Перевірити порушення", "checkVacationScheduleOnly")
-      .addItem("Підсвітити проблеми", "highlightVacationProblems")
-      .addItem("Сформувати звіт", "generateVacationReport")
+      .addItem("Панель керування", "showVacationSidebar")
       .addSeparator()
-      .addItem("Підібрати варіанти", "showVacationPlannerDialog")
-      .addItem("Застосувати вибраний варіант", "applySelectedVacationOption")
-      .addItem("Перевірити ручну дату", "showValidateVacationDateDialog");
+      .addItem("Оновити графік", "rebuildVacationScheduleFromMenu")
+      .addItem("Перевірити порушення", "checkVacationRulesFromMenu");
 
     ui.createMenu("WASB")
       .addItem("📱 ПАНЕЛЬ", "showSidebar")

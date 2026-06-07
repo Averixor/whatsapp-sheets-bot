@@ -1,111 +1,101 @@
-# Vacation Planner (Scheduler)
+# Vacation Planner
 
-Google Apps Script **scheduler** for unit-wide vacation planning — not a
-formula-based validator. The planner finds the **best** dates for the whole
-unit, not merely admissible ones.
+WASB uses a sidebar-first vacation workflow:
+
+```text
+PERSONNEL -> VACATIONS -> VacationSidebar -> VACATION_SCHEDULE -> VACATION_CHECK
+```
+
+`VacationSidebar.html` is the only vacation-management interface. Sheets are
+data or generated views, not the primary user interface.
 
 Runtime modules: `VacationPlannerConfig.gs`, `VacationPlannerTypes.gs`,
-`VacationPlannerService.gs`, `VacationOptionsWriter.gs`, `VacationPlannerApi.gs`,
-`VacationsRepository.gs`.
+`VacationPlannerService.gs`, `VacationOptionsWriter.gs`,
+`VacationSidebarService.gs`, `VacationsRepository.gs`.
 
-## Canonical sheet names
+## Sources of truth
 
-```javascript
-const VACATION_SCHEDULE_CONFIG = {
-  SHEETS: {
-    SOURCE: "VACATIONS", // never "VACATION"
-    SCHEDULE: "VACATION_SCHEDULE",
-    CHECK: "VACATION_CHECK",
-    OPTIONS: "VACATION_OPTIONS",
-  },
-};
+- `PERSONNEL` is the source of people. Sidebar selectors show active people as
+  `Callsign - FML`.
+- `VACATIONS` is the only source of vacation records.
+- `VACATION_DATA` must not be created.
+- `VACATION_OPTIONS` is optional debug/cache output and is not used by the
+  sidebar workflow.
+
+`VACATIONS` contains two equal source blocks:
+
+| Block | Columns | Slot |
+| --- | --- | --- |
+| First | `A:I` | vacation slot 1 |
+| Second | `K:S` | vacation slot 2 |
+
+`VacationsRepository_.listAll()` merges both blocks before planning, checks,
+cards, or notifications.
+
+The production sheet uses array formulas for calculated columns such as
+`End date`, `Active`, `Notify`, `Days left`, and `Interval check`. Sidebar
+writes touch only the input cells (`FML`, `Start date`, `Vacation №`, `Travel`);
+cancel clears the start date and lets the existing formulas recalculate.
+
+## Sidebar workflow
+
+Open `WASB > Відпустки > Панель керування`.
+
+The sidebar contains:
+
+- `Графік`: statistics, active vacations, cancel, rebuild, open calendar.
+- `Додати`: add `В1`, `В2`, `ВД`, or `СО`.
+- `Підібрати`: show up to five scored options and apply one directly.
+- `Перенести`: move an existing vacation.
+- `Перевірка`: check all rules or validate one date.
+- `Звіт`: generate the vacation summary.
+
+Applying an option revalidates it under a document lock, writes directly to
+`VACATIONS`, then rebuilds `VACATION_SCHEDULE` and `VACATION_CHECK`.
+
+## Generated sheets
+
+`VACATION_SCHEDULE` is a calendar:
+
+```text
+QUANTITY | FML | 01.01 | 02.01 | 03.01 | ...
+15       | ... | В1    | В1    | В1    |
 ```
 
-Full scheduler tuning lives in `VACATION_PLANNER_CONFIG` (rules, scoring,
-blocks, candidate limits). `VACATION_SCHEDULE_CONFIG` is a TZ alias for
-`SHEETS` + `RULES`.
+Markers: `В1` first, `В2` second, `ВД` additional, `СО` family circumstances.
+`QUANTITY` is the total active vacation days for the person.
 
-## Source data (`VACATIONS`)
+`VACATION_CHECK` columns:
 
-| Block  | Columns | Meaning         |
-| ------ | ------- | --------------- |
-| First  | `A:I`   | перша відпустка |
-| Second | `K:S`   | друга відпустка |
-
-Both blocks are **equal** sources. Headers (each block):
-
-`FML | Start date | End date | Vacation № | Active | Notify | Days | Travel | Interval check`
-
-`VacationsRepository_.listAll()` **must merge** `A:I` and `K:S` into one array
-before planner scoring, schedule rebuild, checks, person cards, or notifications.
-
-Vacation № is stored as text: `перша відпустка` / `друга відпустка`.
-
-## Scheduler algorithm
-
-```mermaid
-flowchart TD
-  A[Користувач запросив відпустку] --> B[Читання VACATIONS A:I + K:S]
-  B --> C[100–500 кандидатів дат]
-  C --> D[Hard rules: відкинути недопустимі]
-  D --> E[Score кожного варіанта]
-  E --> F[Сортування за score ASC]
-  F --> G[ТОП-5 → VACATION_OPTIONS]
-  G --> H[Користувач обирає Apply]
-  H --> I[Revalidate + запис у VACATIONS]
-  I --> J[rebuildVacationSystem]
-  J --> K[VACATION_SCHEDULE + VACATION_CHECK]
+```text
+Date | Type | FML | Description | Severity
 ```
 
-Lower **score** = better option for the unit.
+Public violation types are `MAX_CONCURRENT`, `START_TOO_CLOSE`,
+`GAP_TOO_SHORT`, `YEAR_LIMIT`, and `INVALID_DATE`.
 
-## Scoring factors (unit-wide)
+## Rules
 
-| Factor                            | Config key                   | Effect                |
-| --------------------------------- | ---------------------------- | --------------------- |
-| Deviation from desired date       | `DAY_DEVIATION`              | Personal preference   |
-| Peak concurrent vacations         | `HIGH_LOAD_PERIOD`, `PEAK_*` | Minimize peaks        |
-| Average load in period            | `RESERVE_LOAD`               | Preserve unit reserve |
-| Starts too close to others        | `START_TOO_CLOSE`            | Spread departures     |
-| Person interval vs preferred 180d | `INTERVAL_TOO_SHORT`         | Personal spacing      |
-| Month start count                 | `OVERLOADED_MONTH`           | Spread within month   |
-| Month total days vs median        | `MONTH_OVER_BALANCE`         | Even monthly load     |
-| End near another start            | `END_NEAR_OTHER_START`       | Handover spacing      |
-| Over max concurrent (hard rule)   | `OVER_LIMIT`                 | Rejected before score |
+- No more than two active vacations per person per year.
+- At least 150 days between one person's vacations.
+- No more than four people on vacation at once.
+- Different people's starts must be at least two days apart.
+- End date must equal start date plus days minus one.
 
-Hard rules (reject candidate): ≤2 vacations/person/year, ≥150d personal gap,
-≤4 concurrent, ≥2d between different people's starts.
+## Menu handlers
 
-## Workflow
+GAS menus call global wrappers only:
 
-1. `WASB > Відпустки > Підібрати варіанти`
-2. Enter FML, vacation number, desired start, duration, search window
-3. Review top five rows in `VACATION_OPTIONS`
-4. Select exactly one `Apply` checkbox
-5. `WASB > Відпустки > Застосувати вибраний варіант`
+| Action | Global wrapper |
+| --- | --- |
+| Панель керування | `showVacationSidebar()` |
+| Оновити графік | `rebuildVacationScheduleFromMenu()` |
+| Перевірити порушення | `checkVacationRulesFromMenu()` |
 
-Apply revalidates under a document lock, writes vacation 1 to `A:I` or
-vacation 2 to `K:S`, then rebuilds `VACATION_SCHEDULE` and `VACATION_CHECK`.
-
-## Menu (`WASB > Відпустки`)
-
-| Action                       | Global function                    |
-| ---------------------------- | ---------------------------------- |
-| Оновити графік відпусток     | `rebuildVacationSystem()`          |
-| Перевірити порушення         | `checkVacationScheduleOnly()`      |
-| Підсвітити проблеми          | `highlightVacationProblems()`      |
-| Сформувати звіт              | `generateVacationReport()`         |
-| Підібрати варіанти           | `showVacationPlannerDialog()`      |
-| Застосувати вибраний варіант | `applySelectedVacationOption()`    |
-| Перевірити ручну дату        | `showValidateVacationDateDialog()` |
-
-All menu handlers are global GAS functions (required for `onOpen` menus).
-
-Planner actions require WASB working-action access (`maintainer` or above).
-
-## Local verification
+## Verification
 
 ```bash
 npm run ci:vacations
 npm run ci
+npx clasp status
 ```

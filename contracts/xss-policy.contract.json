@@ -196,8 +196,8 @@
         "rationale": "Monthly report HTML uses local esc() for dynamic sheet/person/status values"
       },
       {
-        "path": "VacationPlannerApi.gs",
-        "rationale": "Vacation planner loads a static local dialog file; dynamic status messages use textContent"
+        "path": "VacationSidebarService.gs",
+        "rationale": "Vacation sidebar service loads a static local sidebar file; dynamic client content uses DOM textContent"
       }
     ]
   },

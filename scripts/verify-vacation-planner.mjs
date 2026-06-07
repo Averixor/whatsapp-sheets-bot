@@ -224,6 +224,16 @@ assert.ok(
   overloadedAudit.checks.some((item) => item.rule === "MAX_CONCURRENT"),
   "rebuild audit must report more than four concurrent people",
 );
+const declaredDaysAudit = service.buildScheduleAudit([
+  {
+    ...vacation("Невірний кінець", "2026-09-01", "2026-09-15"),
+    declaredDurationDays: 10,
+  },
+]);
+assert.ok(
+  declaredDaysAudit.checks.some((item) => item.rule === "INVALID_DATE"),
+  "audit must report when end date does not equal start date + days - 1",
+);
 
 class FakeRange {
   constructor(sheet, row, col, numRows = 1, numCols = 1) {
@@ -255,15 +265,38 @@ class FakeRange {
     return this;
   }
 
+  setValue(value) {
+    this.sheet.setValue(this.row, this.col, value);
+    return this;
+  }
+
+  clearContent() {
+    this.sheet.setValue(this.row, this.col, "");
+    return this;
+  }
+
+  getFormulas() {
+    return Array.from({ length: this.numRows }, (_, rowOffset) =>
+      Array.from({ length: this.numCols }, (_, colOffset) =>
+        this.sheet.formulaAt(this.row + rowOffset, this.col + colOffset),
+      ),
+    );
+  }
+
+  getDisplayValues() {
+    return this.getValues().map((row) => row.map((value) => String(value ?? "")));
+  }
+
   setNumberFormat() {
     return this;
   }
 }
 
 class FakeSheet {
-  constructor(name, rows) {
+  constructor(name, rows, formulas = []) {
     this.name = name;
     this.rows = rows;
+    this.formulas = formulas;
   }
 
   getName() {
@@ -282,6 +315,10 @@ class FakeSheet {
     while (this.rows.length < row) this.rows.push([]);
     while (this.rows[row - 1].length < col) this.rows[row - 1].push("");
     this.rows[row - 1][col - 1] = value;
+  }
+
+  formulaAt(row, col) {
+    return (this.formulas[row - 1] || [])[col - 1] ?? "";
   }
 
   getRange(row, col, numRows, numCols) {
@@ -316,7 +353,7 @@ sourceRows[2].splice(
   "Київ",
   "OK",
 );
-const sourceSheet = new FakeSheet("VACATIONS", sourceRows);
+let sourceSheet = new FakeSheet("VACATIONS", sourceRows);
 let optionsSheet = null;
 const spreadsheet = {
   getSheetByName(name) {
@@ -369,6 +406,70 @@ assert.equal(
 
 load(ioContext, "VacationOptionsWriter.gs");
 const writer = vm.runInContext("VacationOptionsWriter_", ioContext);
+const calendar = writer.buildScheduleCalendar([
+  {
+    fml: "Перша Людина",
+    vacationNumber: 1,
+    vacationType: "перша відпустка",
+    startDate: date("2026-01-01"),
+    endDate: date("2026-01-02"),
+    days: 2,
+  },
+  {
+    fml: "Перша Людина",
+    vacationNumber: 2,
+    vacationType: "сімейні обставини",
+    startDate: date("2026-01-04"),
+    endDate: date("2026-01-04"),
+    days: 1,
+  },
+  {
+    fml: "Друга Людина",
+    vacationNumber: 2,
+    vacationType: "додаткова відпустка",
+    startDate: date("2026-01-02"),
+    endDate: date("2026-01-03"),
+    days: 2,
+  },
+]);
+assert.equal(calendar.rows[0][0], "QUANTITY");
+assert.equal(calendar.rows[0][1], "FML");
+assert.equal(calendar.dateCount, 4);
+assert.equal(calendar.personCount, 2);
+const firstPersonRow = calendar.rows.find((row) => row[1] === "Перша Людина");
+const secondPersonRow = calendar.rows.find((row) => row[1] === "Друга Людина");
+assert.equal(firstPersonRow[0], 3);
+assert.deepEqual(Array.from(firstPersonRow.slice(2)), ["В1", "В1", "", "СО"]);
+assert.deepEqual(Array.from(secondPersonRow.slice(2)), ["", "ВД", "ВД", ""]);
+
+const normalizedChecks = writer.normalizeChecks([
+  {
+    severity: "ERROR",
+    rule: "START_GAP",
+    date: "2026-01-01",
+    fml: "A / B",
+    details: "too close",
+  },
+  {
+    severity: "ERROR",
+    rule: "PERSON_GAP",
+    date: "2026",
+    fml: "A",
+    details: "short gap",
+  },
+  {
+    severity: "ERROR",
+    rule: "MAX_PERSON_YEAR",
+    date: "2026",
+    fml: "A",
+    details: "too many",
+  },
+]);
+assert.deepEqual(
+  Array.from(normalizedChecks, (item) => item.type),
+  ["START_TOO_CLOSE", "GAP_TOO_SHORT", "YEAR_LIMIT"],
+);
+
 const writeResult = writer.writeVacationToSource({
   fml: "Нова Друга",
   vacationNumber: 2,
@@ -400,6 +501,41 @@ assert.equal(
   "Київ",
   "replacing a slot must preserve existing travel when no new value is supplied",
 );
+
+const formulaRows = [
+  [
+    "FML",
+    "Start date",
+    "End date",
+    "Vacation №",
+    "Active",
+    "Notify",
+    "Days left",
+    "Travel",
+    "Interval check",
+  ],
+  ["Формула Людина", date("2026-01-01"), "FORMULA_END", "перша відпустка"],
+];
+const formulaHeaders = [
+  ["", "", "=ARRAYFORMULA()", "", "=ARRAYFORMULA()", "=ARRAYFORMULA()", "=ARRAYFORMULA()", "", "=ARRAYFORMULA()"],
+];
+sourceSheet = new FakeSheet("VACATIONS", formulaRows, formulaHeaders);
+const formulaWrite = writer.writeVacationToSource({
+  fml: "Формула Людина",
+  vacationNumber: 1,
+  vacationType: "ВД",
+  startDate: date("2026-02-01"),
+  endDate: date("2026-02-19"),
+  days: 19,
+});
+assert.equal(formulaWrite.formulaDriven, true);
+assert.equal(sourceSheet.valueAt(2, 3), "FORMULA_END");
+assert.equal(sourceSheet.valueAt(2, 4), "додаткова відпустка");
+assert.equal(sourceSheet.valueAt(2, 8), 4);
+const formulaCancel = writer.setVacationActive("Формула Людина", 1, false);
+assert.equal(formulaCancel.formulaDriven, true);
+assert.equal(sourceSheet.valueAt(2, 2), "");
+assert.equal(sourceSheet.valueAt(2, 3), "FORMULA_END");
 
 const optionHeader = [
   "Rank",
@@ -466,5 +602,47 @@ assert.throws(
   /не відповідає тривалості/,
   "apply must reject a manually altered end date",
 );
+
+const code = fs.readFileSync(path.join(repoRoot, "Code.gs"), "utf8");
+const sidebarService = fs.readFileSync(
+  path.join(repoRoot, "VacationSidebarService.gs"),
+  "utf8",
+);
+const sidebar = fs.readFileSync(path.join(repoRoot, "VacationSidebar.html"), "utf8");
+const writerSource = fs.readFileSync(
+  path.join(repoRoot, "VacationOptionsWriter.gs"),
+  "utf8",
+);
+assert.match(code, /"Панель керування", "showVacationSidebar"/);
+assert.doesNotMatch(code, /showVacationPlannerDialog|showValidateVacationDateDialog/);
+assert.doesNotMatch(sidebarService, /\bclass\s+VacationSidebarService/);
+assert.match(sidebarService, /const VacationSidebarService_ = \(function \(\)/);
+assert.match(sidebarService, /PersonnelRepository_\.getActiveRows\(\)/);
+assert.match(sidebarService, /applyVacationOptionFromSidebar/);
+assert.doesNotMatch(sidebar + sidebarService, /VACATION_OPTIONS|writeVacationOptions/);
+assert.doesNotMatch(sidebar, /innerHTML/);
+assert.match(
+  writerSource,
+  /const headers = \["Date", "Type", "FML", "Description", "Severity"\]/,
+);
+const sidebarScript = sidebar.match(/<script>([\s\S]*?)<\/script>/i);
+assert.ok(sidebarScript, "VacationSidebar must contain a client script");
+assert.doesNotThrow(
+  () => new vm.Script(sidebarScript[1], { filename: "VacationSidebar.html" }),
+  "VacationSidebar client script must parse",
+);
+["schedule", "add", "find", "move", "check", "report"].forEach((tab) => {
+  assert.match(sidebar, new RegExp(`data-panel="${tab}"`));
+});
+assert.equal(fs.existsSync(path.join(repoRoot, "VacationPlannerDialog.html")), false);
+assert.equal(fs.existsSync(path.join(repoRoot, "VacationValidateDialog.html")), false);
+assert.equal(fs.existsSync(path.join(repoRoot, "VacationPlannerApi.gs")), false);
+
+const vacationSources = fs
+  .readdirSync(repoRoot)
+  .filter((name) => /^Vacation.*\.(gs|html)$/.test(name))
+  .map((name) => fs.readFileSync(path.join(repoRoot, name), "utf8"))
+  .join("\n");
+assert.doesNotMatch(vacationSources, /VACATION_DATA/);
 
 console.log("verify-vacation-planner: OK");

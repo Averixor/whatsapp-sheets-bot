@@ -69,6 +69,26 @@ const VacationOptionsWriter_ = (function () {
     return Number(number) === 2 ? "друга відпустка" : "перша відпустка";
   }
 
+  function _sourceVacationText_(option) {
+    const code = String(
+      (option && (option.vacationType || option.type)) || "",
+    )
+      .trim()
+      .toUpperCase();
+    if (code === "ВД") return "додаткова відпустка";
+    if (code === "СО") return "сімейні обставини";
+    return _vacationText_(option && option.vacationNumber);
+  }
+
+  function _vacationMarker_(item) {
+    const text = String((item && item.vacationType) || "")
+      .trim()
+      .toLowerCase();
+    if (text.indexOf("додатк") !== -1 || text === "вд") return "ВД";
+    if (text.indexOf("сімейн") !== -1 || text === "со") return "СО";
+    return Number(item && item.vacationNumber) === 2 ? "В2" : "В1";
+  }
+
   function _block_(vacationNumber) {
     const number = Number(vacationNumber);
     const match = VACATION_PLANNER_CONFIG.BLOCKS.filter(function (block) {
@@ -105,6 +125,28 @@ const VacationOptionsWriter_ = (function () {
       }
     });
     return sheet;
+  }
+
+  function _isFormulaDrivenBlock_(sheet, block) {
+    try {
+      const range = sheet.getRange(
+        1,
+        block.startCol,
+        1,
+        VACATION_PLANNER_CONFIG.SOURCE_HEADERS.length,
+      );
+      if (typeof range.getFormulas !== "function") return false;
+      const formulas = range.getFormulas()[0] || [];
+      return [2, 4, 5, 6, 8].some(function (index) {
+        return !!String(formulas[index] || "").trim();
+      });
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function _hasOwn_(object, key) {
+    return !!object && Object.prototype.hasOwnProperty.call(object, key);
   }
 
   function writeVacationOptions(options) {
@@ -263,11 +305,36 @@ const VacationOptionsWriter_ = (function () {
     }
     if (!targetRow) targetRow = lastRow + 1;
 
+    if (_isFormulaDrivenBlock_(sheet, block)) {
+      const durationAdjustment = Number(option.days) - 15;
+      const travel = _hasOwn_(option, "travel")
+        ? option.travel
+        : isFinite(durationAdjustment)
+          ? durationAdjustment
+          : existingTravel;
+      sheet.getRange(targetRow, block.startCol).setValue(option.fml);
+      sheet
+        .getRange(targetRow, block.startCol + 1)
+        .setValue(_date_(option.startDate))
+        .setNumberFormat("dd.MM.yyyy");
+      sheet
+        .getRange(targetRow, block.startCol + 3)
+        .setValue(_sourceVacationText_(option));
+      sheet.getRange(targetRow, block.startCol + 7).setValue(travel);
+      return {
+        sheetName: sheet.getName(),
+        rowNumber: targetRow,
+        block: block.key,
+        startColumn: block.startCol,
+        formulaDriven: true,
+      };
+    }
+
     const rowData = [
       option.fml,
       _date_(option.startDate),
       _date_(option.endDate),
-      _vacationText_(option.vacationNumber),
+      _sourceVacationText_(option),
       true,
       true,
       Number(option.days) || 0,
@@ -291,62 +358,204 @@ const VacationOptionsWriter_ = (function () {
       rowNumber: targetRow,
       block: block.key,
       startColumn: block.startCol,
+      formulaDriven: false,
     };
+  }
+
+  function setVacationActive(fml, vacationNumber, active) {
+    const sheet = _ensureSourceSheet_();
+    const block = _block_(vacationNumber);
+    const rowCount = Math.max(sheet.getLastRow() - 1, 1);
+    const values = sheet.getRange(2, block.startCol, rowCount, 9).getValues();
+    const targetKey = _fmlKey_(fml);
+    for (let index = 0; index < values.length; index++) {
+      if (_fmlKey_(values[index][0]) !== targetKey) continue;
+      const rowNumber = index + 2;
+      if (_isFormulaDrivenBlock_(sheet, block)) {
+        const startRange = sheet.getRange(rowNumber, block.startCol + 1);
+        if (active === true) {
+          throw new Error("Для відновлення відпустки вкажіть нову дату початку");
+        }
+        startRange.clearContent();
+        return {
+          sheetName: sheet.getName(),
+          rowNumber: rowNumber,
+          block: block.key,
+          active: false,
+          formulaDriven: true,
+        };
+      }
+      sheet.getRange(rowNumber, block.startCol + 4).setValue(active === true);
+      sheet
+        .getRange(rowNumber, block.startCol + 8)
+        .setValue(active === true ? "OK" : "CANCELLED");
+      return {
+        sheetName: sheet.getName(),
+        rowNumber: rowNumber,
+        block: block.key,
+        active: active === true,
+        formulaDriven: false,
+      };
+    }
+    throw new Error("Відпустку для скасування не знайдено");
+  }
+
+  function _dateOrdinal_(value) {
+    const date = _date_(value);
+    if (!date) return null;
+    return (
+      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000
+    );
+  }
+
+  function buildScheduleCalendar(schedule) {
+    const list = (Array.isArray(schedule) ? schedule : []).filter(
+      function (item) {
+        return item && _date_(item.startDate) && _date_(item.endDate);
+      },
+    );
+    if (!list.length) {
+      return {
+        rows: [["QUANTITY", "FML"]],
+        dateCount: 0,
+        personCount: 0,
+      };
+    }
+
+    let minOrdinal = null;
+    let maxOrdinal = null;
+    list.forEach(function (item) {
+      const start = _dateOrdinal_(item.startDate);
+      const end = _dateOrdinal_(item.endDate);
+      if (minOrdinal === null || start < minOrdinal) minOrdinal = start;
+      if (maxOrdinal === null || end > maxOrdinal) maxOrdinal = end;
+    });
+
+    const dates = [];
+    for (let ordinal = minOrdinal; ordinal <= maxOrdinal; ordinal++) {
+      const utc = new Date(ordinal * 86400000);
+      dates.push(
+        new Date(
+          utc.getUTCFullYear(),
+          utc.getUTCMonth(),
+          utc.getUTCDate(),
+          12,
+          0,
+          0,
+          0,
+        ),
+      );
+    }
+
+    const people = {};
+    list.forEach(function (item) {
+      const key = _fmlKey_(item.fml);
+      if (!people[key]) {
+        people[key] = {
+          fml: item.fml,
+          quantity: 0,
+          cells: Array(dates.length).fill(""),
+        };
+      }
+      const marker = _vacationMarker_(item);
+      const start = _dateOrdinal_(item.startDate);
+      const end = _dateOrdinal_(item.endDate);
+      people[key].quantity += Number(item.days) || end - start + 1;
+      for (let ordinal = start; ordinal <= end; ordinal++) {
+        const index = ordinal - minOrdinal;
+        const current = people[key].cells[index];
+        people[key].cells[index] = current && current !== marker
+          ? current + "/" + marker
+          : marker;
+      }
+    });
+
+    const rows = [["QUANTITY", "FML"].concat(dates)];
+    Object.keys(people)
+      .map(function (key) {
+        return people[key];
+      })
+      .sort(function (a, b) {
+        return String(a.fml).localeCompare(String(b.fml), "uk");
+      })
+      .forEach(function (person) {
+        rows.push([person.quantity, person.fml].concat(person.cells));
+      });
+    return {
+      rows: rows,
+      dateCount: dates.length,
+      personCount: rows.length - 1,
+    };
+  }
+
+  function _ensureGridSize_(sheet, rowCount, columnCount) {
+    const maxRows = sheet.getMaxRows();
+    const maxColumns = sheet.getMaxColumns();
+    if (maxRows < rowCount) sheet.insertRowsAfter(maxRows, rowCount - maxRows);
+    if (maxColumns < columnCount) {
+      sheet.insertColumnsAfter(maxColumns, columnCount - maxColumns);
+    }
   }
 
   function _writeSchedule_(schedule) {
     const sheet = _ensureSheet_(VACATION_PLANNER_CONFIG.SHEETS.SCHEDULE);
+    const calendar = buildScheduleCalendar(schedule);
+    const rows = calendar.rows;
+    const width = rows[0].length;
+    _ensureGridSize_(sheet, rows.length, width);
     sheet.clear();
-    const headers = [
-      "FML",
-      "Vacation №",
-      "Start date",
-      "End date",
-      "Days",
-      "Active",
-      "Source block",
-      "Source row",
-    ];
-    const rows = [headers];
-    schedule.forEach(function (item) {
-      rows.push([
-        item.fml,
-        _vacationText_(item.vacationNumber),
-        item.startDate,
-        item.endDate,
-        item.days,
-        item.active,
-        item.block,
-        item.sourceRow,
-      ]);
-    });
-    sheet.getRange(1, 1, rows.length, headers.length).setValues(rows);
+    sheet.getRange(1, 1, rows.length, width).setValues(rows);
     sheet
-      .getRange(1, 1, 1, headers.length)
+      .getRange(1, 1, 1, width)
       .setFontWeight("bold")
       .setBackground("#D9EAD3");
-    sheet.setFrozenRows(1);
-    if (rows.length > 1) {
-      sheet.getRange(2, 3, rows.length - 1, 2).setNumberFormat("dd.MM.yyyy");
+    sheet.setFrozenRows(1).setFrozenColumns(2);
+    if (calendar.dateCount) {
+      sheet.getRange(1, 3, 1, calendar.dateCount).setNumberFormat("dd.MM");
+      sheet.setColumnWidths(3, calendar.dateCount, 42);
     }
-    sheet.autoResizeColumns(1, headers.length);
+    sheet.autoResizeColumns(1, 2);
+    return calendar;
+  }
+
+  function _checkType_(rule) {
+    const map = {
+      START_GAP: "START_TOO_CLOSE",
+      PERSON_GAP: "GAP_TOO_SHORT",
+      PERSON_OVERLAP: "GAP_TOO_SHORT",
+      MAX_PERSON_YEAR: "YEAR_LIMIT",
+      INVALID_DURATION: "INVALID_DATE",
+    };
+    return map[rule] || rule;
+  }
+
+  function normalizeChecks(checks) {
+    return (Array.isArray(checks) ? checks : []).map(function (item) {
+      return {
+        date: item.date || "",
+        type: _checkType_(item.rule),
+        fml: item.fml || "",
+        description: item.details || "",
+        severity: item.severity || "ERROR",
+      };
+    });
   }
 
   function _writeChecks_(checks) {
     const sheet = _ensureSheet_(VACATION_PLANNER_CONFIG.SHEETS.CHECK);
     sheet.clear();
-    const headers = ["Severity", "Rule", "Date / period", "FML", "Details"];
+    const headers = ["Date", "Type", "FML", "Description", "Severity"];
     const rows = [headers];
     if (!checks.length) {
-      rows.push(["OK", "ALL_RULES", "", "", "Порушень не знайдено"]);
+      rows.push(["", "ALL_RULES", "", "Порушень не знайдено", "OK"]);
     } else {
-      checks.forEach(function (item) {
+      normalizeChecks(checks).forEach(function (item) {
         rows.push([
-          item.severity,
-          item.rule,
           item.date,
+          item.type,
           item.fml,
-          item.details,
+          item.description,
+          item.severity,
         ]);
       });
     }
@@ -357,7 +566,7 @@ const VacationOptionsWriter_ = (function () {
       .setBackground("#FCE8B2");
     sheet.setFrozenRows(1);
     sheet.autoResizeColumns(1, headers.length);
-    sheet.setColumnWidth(5, 420);
+    sheet.setColumnWidth(4, 420);
   }
 
   function _loadAudit_() {
@@ -367,10 +576,12 @@ const VacationOptionsWriter_ = (function () {
 
   function rebuildVacationSystem() {
     const audit = _loadAudit_();
-    _writeSchedule_(audit.schedule);
+    const calendar = _writeSchedule_(audit.schedule);
     _writeChecks_(audit.checks);
     return {
       scheduleRows: audit.schedule.length,
+      schedulePeople: calendar.personCount,
+      scheduleDays: calendar.dateCount,
       checkRows: audit.checks.length,
       errorCount: audit.checks.filter(function (item) {
         return item.severity === "ERROR";
@@ -379,6 +590,7 @@ const VacationOptionsWriter_ = (function () {
         VACATION_PLANNER_CONFIG.SHEETS.SCHEDULE,
         VACATION_PLANNER_CONFIG.SHEETS.CHECK,
       ],
+      checks: normalizeChecks(audit.checks),
     };
   }
 
@@ -392,6 +604,7 @@ const VacationOptionsWriter_ = (function () {
         return item.severity === "ERROR";
       }).length,
       affectedSheets: [VACATION_PLANNER_CONFIG.SHEETS.CHECK],
+      checks: normalizeChecks(audit.checks),
     };
   }
 
@@ -407,7 +620,7 @@ const VacationOptionsWriter_ = (function () {
     const backgrounds = [];
     const values = sheet.getRange(2, 1, lastRow - 1, width).getValues();
     values.forEach(function (row) {
-      const severity = String(row[0] || "")
+      const severity = String(row[4] || "")
         .trim()
         .toUpperCase();
       const color =
@@ -428,12 +641,12 @@ const VacationOptionsWriter_ = (function () {
 
   function generateVacationReport() {
     const audit = _loadAudit_();
-    const errors = audit.checks.filter(function (item) {
+    const errors = normalizeChecks(audit.checks).filter(function (item) {
       return item.severity === "ERROR";
     });
     const byRule = {};
     errors.forEach(function (item) {
-      byRule[item.rule] = (byRule[item.rule] || 0) + 1;
+      byRule[item.type] = (byRule[item.type] || 0) + 1;
     });
     const lines = [
       "Активних відпусток: " + audit.schedule.length,
@@ -455,7 +668,7 @@ const VacationOptionsWriter_ = (function () {
       summary: lines.join("\n"),
       scheduleRows: audit.schedule.length,
       errorCount: errors.length,
-      checks: audit.checks,
+      checks: errors,
     };
   }
 
@@ -489,6 +702,9 @@ const VacationOptionsWriter_ = (function () {
     writeVacationOptions: writeVacationOptions,
     readSelectedOption: readSelectedOption,
     writeVacationToSource: writeVacationToSource,
+    setVacationActive: setVacationActive,
+    buildScheduleCalendar: buildScheduleCalendar,
+    normalizeChecks: normalizeChecks,
     rebuildVacationSystem: rebuildVacationSystem,
     checkVacationScheduleOnly: checkVacationScheduleOnly,
     highlightVacationProblems: highlightVacationProblems,

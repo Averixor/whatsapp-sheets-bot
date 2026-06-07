@@ -734,6 +734,9 @@ const VacationPlannerService_ = (function () {
       }
       const durationDays =
         daysBetween(vacation.startDate, vacation.endDate) + 1;
+      const declaredDays = Number(
+        vacation.source && vacation.source.declaredDurationDays,
+      );
       if (
         durationDays < 1 ||
         durationDays > VACATION_PLANNER_CONFIG.OPTIONS.MAX_DURATION_DAYS
@@ -751,6 +754,25 @@ const VacationPlannerService_ = (function () {
             durationDays +
             " дн., допустимо 1-" +
             VACATION_PLANNER_CONFIG.OPTIONS.MAX_DURATION_DAYS,
+        });
+      } else if (
+        Number.isInteger(declaredDays) &&
+        declaredDays > 0 &&
+        declaredDays !== durationDays
+      ) {
+        checks.push({
+          severity: "ERROR",
+          rule: "INVALID_DATE",
+          date:
+            _dateKey_(vacation.startDate) +
+            " / " +
+            _dateKey_(vacation.endDate),
+          fml: vacation.fml,
+          details:
+            "Дата завершення не відповідає тривалості: вказано " +
+            declaredDays +
+            " дн., фактично " +
+            durationDays,
         });
       }
     });
@@ -877,6 +899,12 @@ const VacationPlannerService_ = (function () {
           startDate: vacation.startDate,
           endDate: vacation.endDate,
           days: daysBetween(vacation.startDate, vacation.endDate) + 1,
+          vacationType:
+            (vacation.source &&
+              (vacation.source.vacationNo ||
+                vacation.source.vacationType ||
+                vacation.source.type)) ||
+            "",
           active: vacation.active,
           block:
             (vacation.source &&
