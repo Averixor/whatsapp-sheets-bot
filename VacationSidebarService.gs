@@ -87,8 +87,7 @@ const VacationSidebarService_ = (function () {
       })
       .map(function (person) {
         return {
-          id:
-            String(person.callsign || person.id || person.fml || "").trim(),
+          id: String(person.callsign || person.id || person.fml || "").trim(),
           fml: String(person.fml || "").trim(),
           callsign: String(person.callsign || "").trim(),
           rank: String(person.rank || person.title || "").trim(),
@@ -140,8 +139,7 @@ const VacationSidebarService_ = (function () {
           vacation.endDate,
         ) + 1,
       active: vacation.active === true,
-      manageable:
-        !vacation._meta || vacation._meta.writable !== false,
+      manageable: !vacation._meta || vacation._meta.writable !== false,
       block:
         (vacation._meta && vacation._meta.block) ||
         (Number(vacation.vacationNumber) === 2 ? "second" : "first"),
@@ -179,15 +177,21 @@ const VacationSidebarService_ = (function () {
     const occupied = {};
     _activeVacations_().forEach(function (vacation) {
       if (
-        String(vacation.fml || "").trim().toUpperCase() ===
-        String(fml || "").trim().toUpperCase()
+        String(vacation.fml || "")
+          .trim()
+          .toUpperCase() ===
+        String(fml || "")
+          .trim()
+          .toUpperCase()
       ) {
         occupied[Number(vacation.vacationNumber)] = true;
       }
     });
     if (fixed) {
       if (occupied[fixed]) {
-        throw new Error("Цей слот відпустки вже зайнятий. Використайте перенесення.");
+        throw new Error(
+          "Цей слот відпустки вже зайнятий. Використайте перенесення.",
+        );
       }
       return fixed;
     }
@@ -245,9 +249,9 @@ const VacationSidebarService_ = (function () {
 
   function show() {
     _assertWorkingAccess_("showVacationSidebar");
-    const html = HtmlService.createHtmlOutputFromFile("VacationSidebar")
-      .setTitle("Відпустки WASB");
-    SpreadsheetApp.getUi().showSidebar(html);
+    throw new Error(
+      "Окремий sidebar відпусток вимкнено. Відкрийте WASB → 📱 ПАНЕЛЬ → 🏖️ Відпустки.",
+    );
   }
 
   function getState() {
@@ -314,7 +318,9 @@ const VacationSidebarService_ = (function () {
       const vacationNumber = Number(formData && formData.vacationNumber);
       const existing = _activeVacations_().filter(function (vacation) {
         const sourceRow = Number(formData && formData.sourceRow);
-        const sourceStartColumn = Number(formData && formData.sourceStartColumn);
+        const sourceStartColumn = Number(
+          formData && formData.sourceStartColumn,
+        );
         if (
           sourceRow &&
           sourceStartColumn &&
@@ -325,8 +331,12 @@ const VacationSidebarService_ = (function () {
           return true;
         }
         return (
-          String(vacation.fml || "").trim().toUpperCase() ===
-            String(person.fml || "").trim().toUpperCase() &&
+          String(vacation.fml || "")
+            .trim()
+            .toUpperCase() ===
+            String(person.fml || "")
+              .trim()
+              .toUpperCase() &&
           Number(vacation.vacationNumber) === vacationNumber
         );
       })[0];

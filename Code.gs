@@ -227,6 +227,7 @@ function getClientRuntimeContract_() {
       "Js.Render.Panel.html",
       "Js.Render.Calendar.html",
       "Js.Render.Results.html",
+      "Js.Vacations.html",
       "Js.Diagnostics.html",
       "Js.Security.Boot.html",
       "Js.Security.Util.html",
@@ -249,17 +250,9 @@ function getClientRuntimeContract_() {
 
 function onOpen(e) {
   try {
-    const ui = SpreadsheetApp.getUi();
-    const vacationMenu = ui
-      .createMenu("Відпустки")
-      .addItem("Панель керування", "showVacationSidebar")
-      .addSeparator()
-      .addItem("Оновити графік", "rebuildVacationScheduleFromMenu")
-      .addItem("Перевірити порушення", "checkVacationRulesFromMenu");
-
-    ui.createMenu("WASB")
+    SpreadsheetApp.getUi()
+      .createMenu("WASB")
       .addItem("📱 ПАНЕЛЬ", "showSidebar")
-      .addSubMenu(vacationMenu)
       .addSeparator()
       .addItem("🔄 Оновити меню", "onOpen")
       .addToUi();

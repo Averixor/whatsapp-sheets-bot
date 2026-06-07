@@ -8,6 +8,7 @@
     "Js.Render.Panel",
     "Js.Render.Calendar",
     "Js.Render.Results",
+    "Js.Vacations",
     "Js.Diagnostics",
     "Js.Security.Boot",
     "Js.Security.Util",

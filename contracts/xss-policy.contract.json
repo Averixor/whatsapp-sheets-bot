@@ -194,10 +194,6 @@
       {
         "path": "MonthlyReport.gs",
         "rationale": "Monthly report HTML uses local esc() for dynamic sheet/person/status values"
-      },
-      {
-        "path": "VacationSidebarService.gs",
-        "rationale": "Vacation sidebar service loads a static local sidebar file; dynamic client content uses DOM textContent"
       }
     ]
   },
@@ -218,6 +214,7 @@
     "Js.Render.Panel.html",
     "Js.Render.Calendar.html",
     "Js.Render.Results.html",
+    "Js.Vacations.html",
     "Js.Diagnostics.html",
     "Js.Actions.html",
     "Js.Helpers.html",

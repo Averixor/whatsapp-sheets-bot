@@ -1,0 +1,740 @@
+<script>
+  // Js.Vacations — vacation module inside main WASB sidebar (resultContent).
+
+  function renderVacationReminderResult_(vacations, message) {
+    var html =
+      '<div class="result-item">' +
+      '<div class="result-label">Нагадування</div>' +
+      '<div class="result-value">' +
+      escapeHtml(message || "Перевірку виконано") +
+      "</div>";
+    if (
+      typeof hasVacationBlocks === "function" &&
+      hasVacationBlocks(vacations)
+    ) {
+      html += renderVacationAlerts(vacations);
+    }
+    html += "</div>";
+    return html;
+  }
+
+  const VacationModule = {
+    state: {
+      personnel: [],
+      vacations: [],
+      stats: { total: 0, activePeople: 0 },
+      activeTab: "overview",
+      statusMessage: "",
+      statusType: "info",
+      options: [],
+      checks: [],
+      reportText: "",
+      remindersHtml: "",
+      moveIndex: "",
+    },
+
+    esc(value) {
+      return escapeHtml(String(value == null ? "" : value));
+    },
+
+    personLabel(person) {
+      return person.callsign
+        ? person.callsign + " — " + person.fml
+        : person.fml;
+    },
+
+    vacationLabel(vacation) {
+      return (
+        (vacation.type || "Відпустка") +
+        " | " +
+        vacation.fml +
+        " | " +
+        vacation.startDate +
+        " — " +
+        vacation.endDate
+      );
+    },
+
+    peopleOptions(selected) {
+      return (
+        '<option value="">Оберіть людину</option>' +
+        this.state.personnel
+          .map(function (person) {
+            var sel = selected === person.fml ? " selected" : "";
+            return (
+              '<option value="' +
+              VacationModule.esc(person.fml) +
+              '"' +
+              sel +
+              ">" +
+              VacationModule.esc(VacationModule.personLabel(person)) +
+              "</option>"
+            );
+          })
+          .join("")
+      );
+    },
+
+    moveOptions(selectedIndex) {
+      var html = '<option value="">Оберіть відпустку</option>';
+      this.state.vacations.forEach(function (vacation, index) {
+        var sel = String(selectedIndex) === String(index) ? " selected" : "";
+        html +=
+          '<option value="' +
+          index +
+          '"' +
+          sel +
+          ">" +
+          VacationModule.esc(VacationModule.vacationLabel(vacation)) +
+          "</option>";
+      });
+      return html;
+    },
+
+    statusHtml() {
+      if (!this.state.statusMessage) return "";
+      return (
+        '<div class="vacations-status vacations-status--' +
+        this.esc(this.state.statusType || "info") +
+        '">' +
+        this.esc(this.state.statusMessage) +
+        "</div>"
+      );
+    },
+
+    tabsHtml() {
+      var tabs = [
+        { id: "overview", label: "Огляд" },
+        { id: "schedule", label: "Графік" },
+        { id: "add", label: "Додати" },
+        { id: "find", label: "Підібрати" },
+        { id: "move", label: "Перенести" },
+        { id: "check", label: "Перевірка" },
+        { id: "report", label: "Звіт" },
+      ];
+      return (
+        '<div class="vacations-tabs" role="tablist">' +
+        tabs
+          .map(function (tab) {
+            var active =
+              VacationModule.state.activeTab === tab.id ? " active" : "";
+            return (
+              '<button type="button" class="vacations-tab' +
+              active +
+              '" onclick="VacationModule.openTab(\'' +
+              tab.id +
+              "')\">" +
+              VacationModule.esc(tab.label) +
+              "</button>"
+            );
+          })
+          .join("") +
+        "</div>"
+      );
+    },
+
+    vacationListHtml() {
+      var vacations = this.state.vacations;
+      if (!vacations.length) {
+        return '<div class="vacations-empty">Активних відпусток немає.</div>';
+      }
+      return vacations
+        .map(function (vacation, index) {
+          var actions =
+            '<button type="button" class="btn vacations-btn-sm" onclick="VacationModule.prepareMove(' +
+            index +
+            ')">Перенести</button>';
+          if (vacation.manageable !== false) {
+            actions +=
+              '<button type="button" class="btn vacations-btn-sm vacations-btn-danger" onclick="VacationModule.cancelVacation(' +
+              index +
+              ')">Скасувати</button>';
+          } else {
+            actions +=
+              '<span class="vacations-muted">Розрахункова дата з формульного блоку</span>';
+          }
+          return (
+            '<div class="vacations-card">' +
+            '<div class="vacations-card__head"><strong>' +
+            VacationModule.esc(vacation.fml) +
+            '</strong><span class="vacations-badge">' +
+            VacationModule.esc(vacation.type) +
+            "</span></div>" +
+            '<div class="vacations-muted">' +
+            VacationModule.esc(vacation.startDate) +
+            " — " +
+            VacationModule.esc(vacation.endDate) +
+            " (" +
+            VacationModule.esc(vacation.days) +
+            " дн.)</div>" +
+            '<div class="vacations-card__actions">' +
+            actions +
+            "</div></div>"
+          );
+        })
+        .join("");
+    },
+
+    optionsHtml() {
+      var options = this.state.options;
+      if (!options.length) {
+        return '<div class="vacations-empty">Варіантів немає.</div>';
+      }
+      if (options[0].status === "REJECTED") {
+        return (
+          '<div class="vacations-empty">' +
+          this.esc(
+            options[0].explanation || "Допустимих варіантів не знайдено.",
+          ) +
+          "</div>"
+        );
+      }
+      return options
+        .map(function (item, index) {
+          var cls = item.rank === 1 ? " best" : " valid";
+          return (
+            '<div class="vacations-card vacations-option' +
+            cls +
+            '">' +
+            '<div class="vacations-card__head"><strong>Варіант ' +
+            VacationModule.esc(item.rank) +
+            '</strong><span class="vacations-badge">' +
+            VacationModule.esc(item.label) +
+            "</span></div>" +
+            "<div>" +
+            VacationModule.esc(item.startDate) +
+            " — " +
+            VacationModule.esc(item.endDate) +
+            " | " +
+            VacationModule.esc(item.days) +
+            " дн. | score " +
+            VacationModule.esc(item.score) +
+            "</div>" +
+            '<div class="vacations-muted">' +
+            VacationModule.esc(item.explanation) +
+            '</div><button type="button" class="btn btn-primary vacations-btn-sm" onclick="VacationModule.applyOption(' +
+            index +
+            ')">Застосувати</button></div>'
+          );
+        })
+        .join("");
+    },
+
+    checksHtml() {
+      if (!this.state.checks.length) {
+        return '<div class="vacations-card">Порушень не знайдено.</div>';
+      }
+      return this.state.checks
+        .map(function (item) {
+          return (
+            '<div class="vacations-card vacations-violation">' +
+            "<strong>" +
+            VacationModule.esc(item.type) +
+            " | " +
+            VacationModule.esc(item.fml) +
+            "</strong>" +
+            '<div class="vacations-muted">' +
+            VacationModule.esc(item.date) +
+            "</div>" +
+            "<div>" +
+            VacationModule.esc(item.description) +
+            "</div></div>"
+          );
+        })
+        .join("");
+    },
+
+    panelHtml() {
+      var s = this.state;
+      switch (s.activeTab) {
+        case "schedule":
+          return (
+            '<div class="result-screen">' +
+            '<div class="result-screen-title">Графік</div>' +
+            '<div class="vacations-stats">' +
+            '<div class="vacations-stat"><strong>' +
+            this.esc(s.stats.total || 0) +
+            "</strong><span>активних</span></div>" +
+            '<div class="vacations-stat"><strong>' +
+            this.esc(s.stats.activePeople || 0) +
+            "</strong><span>людей</span></div></div>" +
+            '<div class="result-screen-actions">' +
+            '<button class="btn btn-primary" type="button" onclick="VacationModule.rebuildSchedule()">🔄 Оновити графік</button>' +
+            '<button class="btn btn-secondary" type="button" onclick="VacationModule.openScheduleSheet()">📅 Відкрити календар</button>' +
+            "</div></div>"
+          );
+        case "add":
+          return (
+            '<div class="result-screen">' +
+            '<div class="result-screen-title">Додати відпустку</div>' +
+            '<div class="vacations-form">' +
+            "<label>Військовослужбовець</label>" +
+            '<select id="vacAddPerson">' +
+            this.peopleOptions("") +
+            "</select>" +
+            "<label>Тип</label>" +
+            '<select id="vacAddType">' +
+            '<option value="В1">В1 — перша</option>' +
+            '<option value="В2">В2 — друга</option>' +
+            '<option value="ВД">ВД — додаткова</option>' +
+            '<option value="СО">СО — сімейні обставини</option>' +
+            "</select>" +
+            "<label>Дата початку</label>" +
+            '<input id="vacAddStart" type="date">' +
+            "<label>Кількість днів</label>" +
+            '<input id="vacAddDays" type="number" min="1" max="60" value="15">' +
+            '<button type="button" class="btn btn-primary" onclick="VacationModule.submitAdd()">Додати</button>' +
+            "</div></div>"
+          );
+        case "find":
+          return (
+            '<div class="result-screen">' +
+            '<div class="result-screen-title">Підібрати дату</div>' +
+            '<div class="vacations-form">' +
+            "<label>Військовослужбовець</label>" +
+            '<select id="vacFindPerson">' +
+            this.peopleOptions("") +
+            "</select>" +
+            "<label>Слот</label>" +
+            '<select id="vacFindNumber">' +
+            '<option value="1">В1 — перша</option>' +
+            '<option value="2">В2 — друга</option>' +
+            "</select>" +
+            "<label>Бажана дата</label>" +
+            '<input id="vacFindStart" type="date">' +
+            "<label>Кількість днів</label>" +
+            '<input id="vacFindDays" type="number" min="1" max="60" value="15">' +
+            "<label>Вікно пошуку (± днів)</label>" +
+            '<input id="vacFindWindow" type="number" min="0" max="180" value="30">' +
+            '<button type="button" class="btn btn-primary" onclick="VacationModule.submitFind()">Підібрати</button>' +
+            "</div>" +
+            '<div id="vacationFindOptions">' +
+            this.optionsHtml() +
+            "</div></div>"
+          );
+        case "move":
+          return (
+            '<div class="result-screen">' +
+            '<div class="result-screen-title">Перенести відпустку</div>' +
+            '<div class="vacations-form">' +
+            "<label>Відпустка</label>" +
+            '<select id="vacMoveVacation">' +
+            this.moveOptions(this.state.moveIndex) +
+            "</select>" +
+            "<label>Нова дата початку</label>" +
+            '<input id="vacMoveStart" type="date">' +
+            "<label>Кількість днів</label>" +
+            '<input id="vacMoveDays" type="number" min="1" max="60" value="15">' +
+            '<button type="button" class="btn btn-primary" onclick="VacationModule.submitMove()">Перенести</button>' +
+            "</div></div>"
+          );
+        case "check":
+          return (
+            '<div class="result-screen">' +
+            '<div class="result-screen-title">Перевірка</div>' +
+            '<button class="btn btn-primary" type="button" onclick="VacationModule.checkAllRules()">Перевірити всі правила</button>' +
+            '<div class="vacations-form vacations-form--spaced">' +
+            "<label>Військовослужбовець</label>" +
+            '<select id="vacCheckPerson">' +
+            this.peopleOptions("") +
+            "</select>" +
+            "<label>Слот</label>" +
+            '<select id="vacCheckNumber">' +
+            '<option value="1">В1 — перша</option>' +
+            '<option value="2">В2 — друга</option>' +
+            "</select>" +
+            "<label>Дата початку</label>" +
+            '<input id="vacCheckStart" type="date">' +
+            "<label>Кількість днів</label>" +
+            '<input id="vacCheckDays" type="number" min="1" max="60" value="15">' +
+            '<button type="button" class="btn btn-secondary" onclick="VacationModule.checkDate()">Перевірити дату</button>' +
+            "</div>" +
+            '<div id="vacationCheckResult">' +
+            this.checksHtml() +
+            "</div></div>"
+          );
+        case "report":
+          return (
+            '<div class="result-screen">' +
+            '<div class="result-screen-title">Звіт</div>' +
+            '<button class="btn btn-primary" type="button" onclick="VacationModule.generateReport()">Сформувати звіт</button>' +
+            '<pre class="vacations-report" id="vacationReportText">' +
+            this.esc(this.state.reportText || "Звіт ще не сформовано.") +
+            "</pre></div>"
+          );
+        default:
+          return (
+            '<div class="result-screen">' +
+            '<div class="result-screen-title">Огляд відпусток</div>' +
+            '<div class="vacations-stats">' +
+            '<div class="vacations-stat"><strong>' +
+            this.esc(s.stats.total || 0) +
+            "</strong><span>відпусток</span></div>" +
+            '<div class="vacations-stat"><strong>' +
+            this.esc(s.stats.activePeople || 0) +
+            "</strong><span>людей</span></div></div>" +
+            '<div class="result-screen-actions">' +
+            '<button class="btn btn-primary" type="button" onclick="VacationModule.loadState()">Оновити стан</button>' +
+            '<button class="btn btn-primary" type="button" onclick="VacationModule.checkReminders()">🔔 Перевірити нагадування</button>' +
+            '<button class="btn btn-secondary" type="button" onclick="VacationModule.rebuildSchedule()">🔄 Оновити графік</button>' +
+            '<button class="btn btn-secondary" type="button" onclick="VacationModule.openScheduleSheet()">📅 Відкрити календар</button>' +
+            "</div>" +
+            '<div id="vacationOverviewList">' +
+            this.vacationListHtml() +
+            "</div>" +
+            '<div id="vacationReminderResult">' +
+            (s.remindersHtml || "") +
+            "</div></div>"
+          );
+      }
+    },
+
+    render() {
+      setHtml(
+        "resultContent",
+        '<div class="vacations-module vacation-module" id="vacationsModuleRoot">' +
+          this.tabsHtml() +
+          '<div class="vacations-panel">' +
+          this.panelHtml() +
+          this.statusHtml() +
+          "</div></div>",
+      );
+    },
+
+    setStatus(message, type) {
+      this.state.statusMessage = message || "";
+      this.state.statusType = type || "info";
+    },
+
+    read(id) {
+      var el = document.getElementById(id);
+      return el ? el.value : "";
+    },
+
+    show() {
+      showStandardResult("🏖️ Відпустки");
+      setText("resultTitle", "🏖️ Відпустки");
+      this.state.activeTab = "overview";
+      this.setStatus("Завантаження…", "info");
+      this.render();
+      this.loadState();
+    },
+
+    async loadState() {
+      showLoading();
+      try {
+        var result = await runServerMethod_(
+          "getVacationSidebarState",
+          [],
+          "VacationModule.loadState",
+        );
+        this.state.personnel = result.personnel || [];
+        this.state.vacations = result.vacations || [];
+        this.state.stats = result.stats || { total: 0, activePeople: 0 };
+        this.setStatus("", "info");
+        this.render();
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    openTab(tab) {
+      this.state.activeTab = tab;
+      this.setStatus("", "info");
+      this.render();
+    },
+
+    async checkReminders() {
+      showLoading();
+      try {
+        var result = await ActionDispatcher.run(
+          "checkVacationsAndBirthdays",
+          function () {
+            return Stage7Api.checkVacationsAndBirthdays({
+              date: _todayStr_(),
+              recipientRole: getSelectedCommanderRecipient_(),
+            });
+          },
+        );
+        if (!result || !result.success) {
+          throw new Error(result?.error || "Не вдалося перевірити нагадування");
+        }
+        this.state.remindersHtml = renderVacationReminderResult_(
+          result.vacations || {},
+          result.message || "",
+        );
+        this.setStatus("🏖️ Нагадування про відпустки перевірено", "success");
+        logToConsole("🏖️ Нагадування про відпустки перевірено", "success");
+        this.render();
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    async rebuildSchedule() {
+      showLoading();
+      try {
+        var result = await runServerMethod_(
+          "rebuildVacationScheduleFromSidebar",
+          [],
+          "VacationModule.rebuildSchedule",
+        );
+        showToast("✓ Графік оновлено");
+        logToConsole(
+          "✓ Графік відпусток оновлено: " +
+            (result.schedulePeople || 0) +
+            " людей, " +
+            (result.scheduleDays || 0) +
+            " днів",
+          "success",
+        );
+        await this.loadState();
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    async openScheduleSheet() {
+      try {
+        await runServerMethod_(
+          "openVacationScheduleFromSidebar",
+          [],
+          "VacationModule.openScheduleSheet",
+        );
+        showToast("✓ Календар відкрито");
+      } catch (error) {
+        this.showError(error);
+      }
+    },
+
+    async submitAdd() {
+      showLoading();
+      try {
+        await runServerMethod_(
+          "addVacationFromSidebar",
+          [
+            {
+              fml: this.read("vacAddPerson"),
+              type: this.read("vacAddType"),
+              startDate: this.read("vacAddStart"),
+              days: Number(this.read("vacAddDays")),
+            },
+          ],
+          "VacationModule.submitAdd",
+        );
+        showToast("✓ Відпустку додано");
+        this.state.activeTab = "overview";
+        await this.loadState();
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    async submitFind() {
+      showLoading();
+      try {
+        this.state.options = await runServerMethod_(
+          "findVacationSidebarOptions",
+          [
+            {
+              fml: this.read("vacFindPerson"),
+              vacationNumber: Number(this.read("vacFindNumber")),
+              desiredStart: this.read("vacFindStart"),
+              durationDays: Number(this.read("vacFindDays")),
+              searchWindow: Number(this.read("vacFindWindow")),
+            },
+          ],
+          "VacationModule.submitFind",
+        );
+        this.setStatus("Підбір завершено.", "success");
+        this.render();
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    async applyOption(index) {
+      var item = this.state.options[index];
+      if (!item) return;
+      showLoading();
+      try {
+        await runServerMethod_(
+          "applyVacationOptionFromSidebar",
+          [item],
+          "VacationModule.applyOption",
+        );
+        showToast("✓ Варіант застосовано");
+        this.state.activeTab = "overview";
+        await this.loadState();
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    prepareMove(index) {
+      var vacation = this.state.vacations[index];
+      if (!vacation) return;
+      this.state.moveIndex = String(index);
+      this.state.activeTab = "move";
+      this.render();
+      var moveStart = document.getElementById("vacMoveStart");
+      var moveDays = document.getElementById("vacMoveDays");
+      if (moveStart) moveStart.value = vacation.startDate;
+      if (moveDays) moveDays.value = String(vacation.days);
+    },
+
+    async submitMove() {
+      var vacation = this.state.vacations[Number(this.read("vacMoveVacation"))];
+      if (!vacation) throw new Error("Оберіть відпустку");
+      showLoading();
+      try {
+        await runServerMethod_(
+          "moveVacationFromSidebar",
+          [
+            {
+              fml: vacation.fml,
+              vacationNumber: vacation.vacationNumber,
+              type: vacation.type,
+              sourceRow: vacation.sourceRow,
+              sourceStartColumn: vacation.sourceStartColumn,
+              startDate: this.read("vacMoveStart"),
+              days: Number(this.read("vacMoveDays")),
+            },
+          ],
+          "VacationModule.submitMove",
+        );
+        showToast("✓ Відпустку перенесено");
+        this.state.activeTab = "overview";
+        await this.loadState();
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    async checkAllRules() {
+      showLoading();
+      try {
+        var result = await runServerMethod_(
+          "checkVacationRulesFromSidebar",
+          [],
+          "VacationModule.checkAllRules",
+        );
+        this.state.checks = result.checks || [];
+        this.setStatus(
+          result.errorCount
+            ? "Знайдено порушень: " + result.errorCount
+            : "Порушень не знайдено.",
+          result.errorCount ? "error" : "success",
+        );
+        this.render();
+        logToConsole("✓ Правила відпусток перевірено", "success");
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    async checkDate() {
+      showLoading();
+      try {
+        var result = await runServerMethod_(
+          "validateVacationDateFromSidebar",
+          [
+            {
+              fml: this.read("vacCheckPerson"),
+              vacationNumber: Number(this.read("vacCheckNumber")),
+              startDate: this.read("vacCheckStart"),
+              days: Number(this.read("vacCheckDays")),
+            },
+          ],
+          "VacationModule.checkDate",
+        );
+        this.state.checks = result.violations || [];
+        this.setStatus(
+          result.isValid ? "Дата допустима." : "Дата має порушення.",
+          result.isValid ? "success" : "error",
+        );
+        this.render();
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    async generateReport() {
+      showLoading();
+      try {
+        var result = await runServerMethod_(
+          "generateVacationReportFromSidebar",
+          [],
+          "VacationModule.generateReport",
+        );
+        this.state.reportText = result.summary || "Звіт порожній.";
+        this.setStatus("Звіт сформовано.", "success");
+        this.render();
+        logToConsole("✓ Звіт по відпустках сформовано", "success");
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    cancelVacation(index) {
+      var vacation = this.state.vacations[index];
+      if (!vacation) return;
+      if (!window.confirm("Скасувати відпустку: " + vacation.fml + "?")) return;
+      showLoading();
+      runServerMethod_(
+        "cancelVacationFromSidebar",
+        [vacation],
+        "VacationModule.cancelVacation",
+      )
+        .then(function () {
+          showToast("✓ Відпустку скасовано");
+          return VacationModule.loadState();
+        })
+        .catch(function (error) {
+          VacationModule.showError(error);
+        })
+        .finally(function () {
+          hideLoading();
+        });
+    },
+
+    showError(error) {
+      var message = normalizeError(error);
+      this.setStatus(message, "error");
+      this.render();
+      logToConsole("✕ Відпустки: " + message, "error");
+      showToast("✕ " + message);
+    },
+  };
+
+  function showVacationsModule() {
+    VacationModule.show();
+  }
+
+  function checkVacationRemindersFromMainPanel() {
+    return VacationModule.checkReminders();
+  }
+
+  window.VacationModule = VacationModule;
+  window.showVacationsModule = showVacationsModule;
+</script>

@@ -1,23 +1,26 @@
-/* VACATION ALERTS */ .vacation-alerts { display: flex; flex-direction: column;
-gap: 12px; margin-top: 16px; } .vacation-alerts__list { display: flex;
-flex-direction: column; gap: 12px; margin-top: 10px; } .vacation-card {
-background: var(--bg-secondary); border: 1px solid var(--border-color);
-border-radius: 14px; padding: 14px; color: var(--text-primary); box-shadow:
-var(--shadow-sm); transition: var(--transition); } .vacation-card:hover {
-transform: translateY(-1px); box-shadow: var(--shadow-md); }
-.vacation-card--commander { border-left: 4px solid var(--warning-color);
-background: var(--warning-soft-bg); } .vacation-card--soldier { border-left: 4px
-solid var(--success-color); background: var(--success-soft-bg); }
-.vacation-card__name { color: var(--text-primary); font-weight: 700; font-size:
-0.95rem; line-height: 1.35; margin-bottom: 6px; word-break: break-word; }
-.vacation-card__text { color: var(--text-secondary); font-size: 0.9rem;
-line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
-.vacation-card__meta { color: var(--text-secondary); font-size: 0.88rem;
-line-height: 1.45; word-break: break-word; } .vacation-card__btn { width: 100%;
-margin-top: 12px; justify-content: center; text-align: center; }
-.vacation-card__empty { margin-top: 10px; color: var(--text-muted); font-size:
-0.85rem; } /* BIRTHDAY CARDS */ .birthday-group { border-radius: 14px; padding:
-12px; margin-bottom: 12px; } .birthday-group--info { background:
+/* ========================================== VACATION ALERTS
+========================================== */ .vacation-alerts { display: flex;
+flex-direction: column; gap: 12px; margin-top: 16px; } .vacation-alerts__list {
+display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+.vacation-card { background: var(--bg-secondary); border: 1px solid
+var(--border-color); border-radius: 14px; padding: 14px; color:
+var(--text-primary); box-shadow: var(--shadow-sm); transition: transform 0.2s
+ease, box-shadow 0.2s ease; } .vacation-card:hover { transform:
+translateY(-1px); box-shadow: var(--shadow-md); } .vacation-card--commander {
+border-left: 4px solid var(--warning-color); background: var(--warning-soft-bg);
+} .vacation-card--soldier { border-left: 4px solid var(--success-color);
+background: var(--success-soft-bg); } .vacation-card__name { color:
+var(--text-primary); font-weight: 700; font-size: 0.95rem; line-height: 1.35;
+margin-bottom: 6px; word-break: break-word; } .vacation-card__text { color:
+var(--text-secondary); font-size: 0.9rem; line-height: 1.5; white-space:
+pre-wrap; word-break: break-word; } .vacation-card__meta { color:
+var(--text-secondary); font-size: 0.88rem; line-height: 1.45; word-break:
+break-word; } .vacation-card__btn { width: 100%; margin-top: 12px;
+justify-content: center; text-align: center; } .vacation-card__empty {
+margin-top: 10px; color: var(--text-muted); font-size: 0.85rem; } /*
+========================================== BIRTHDAY CARDS
+========================================== */ .birthday-group { border-radius:
+14px; padding: 12px; margin-bottom: 12px; } .birthday-group--info { background:
 var(--info-soft-bg); border: 1px solid var(--info-soft-border); border-left: 4px
 solid var(--info-soft-text); } .birthday-group--warning { background:
 var(--warning-soft-bg); border: 1px solid var(--warning-soft-border);
@@ -34,28 +37,32 @@ var(--text-primary); font-weight: 800; font-size: 14px; text-align: left; }
 12px; color: var(--text-secondary); margin-top: 4px; text-align: left;
 line-height: 1.35; } .birthday-card__empty { color: var(--text-muted);
 font-size: 12px; margin-top: 6px; } .birthday-card__btn { margin-top: 8px;
-width: 100%; display: inline-flex; align-items: center; justify-content: center;
-gap: 8px; padding: 10px; background: var(--whatsapp-green); color:
-var(--text-on-accent); border: none; border-radius: 999px; cursor: pointer;
-font-weight: 700; font-size: 13px; } .birthday-card__btn--blue { background:
-var(--google-blue); } /* PERSON CARD */ #personCardContainer { margin-top:
+width: 100%; min-height: 38px; display: inline-flex; align-items: center;
+justify-content: center; gap: 8px; padding: 6px 12px; background:
+var(--whatsapp-green); color: var(--text-on-accent); border: none;
+border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 13px;
+transition: opacity 0.2s ease; } .birthday-card__btn:hover { opacity: 0.9; }
+.birthday-card__btn--blue { background: var(--google-blue); } /*
+========================================== PERSON CARD
+========================================== */ #personCardContainer { margin-top:
 var(--space-sm); } .person-card { margin-top: 12px; padding: 16px;
 border-radius: 16px; background: var(--bg-card); border: 1px solid
 var(--border-color); color: var(--text-primary); backdrop-filter: blur(8px);
-box-shadow: var(--shadow-sm); transition: var(--transition); }
-.person-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md),
-var(--shadow-glow); border-color: var(--accent-soft-border); }
-.person-card__header { display: flex; justify-content: space-between;
-align-items: center; gap: 12px; margin-bottom: 14px; } .person-card__callsign {
-font-size: 1.1rem; font-weight: 700; color: var(--text-primary); }
-.person-card__rank { font-size: 0.9rem; color: var(--text-secondary);
-white-space: nowrap; } .person-card__meta { display: flex; flex-direction:
-column; gap: 10px; margin-bottom: 14px; } .person-card__field { display: block;
-min-width: 0; } .person-card__label { display: block; color: var(--text-muted);
-font-size: 0.9rem; line-height: 1.25; margin: 0 0 4px 0; } .person-card__value {
-display: block; color: var(--text-primary); font-size: 0.9rem; line-height: 1.4;
-word-break: break-word; margin: 0; } .person-card__section { margin: 12px 0;
-padding: 12px; border-radius: 12px; border: 1px solid var(--border-color); }
+box-shadow: var(--shadow-sm); transition: transform 0.2s ease, box-shadow 0.2s
+ease, border-color 0.2s ease; } .person-card:hover { transform:
+translateY(-2px); box-shadow: var(--shadow-md), var(--shadow-glow);
+border-color: var(--accent-soft-border); } .person-card__header { display: flex;
+justify-content: space-between; align-items: center; gap: 12px; margin-bottom:
+14px; } .person-card__callsign { font-size: 1.1rem; font-weight: 700; color:
+var(--text-primary); } .person-card__rank { font-size: 0.9rem; color:
+var(--text-secondary); white-space: nowrap; } .person-card__meta { display:
+flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.person-card__field { display: block; min-width: 0; } .person-card__label {
+display: block; color: var(--text-muted); font-size: 0.9rem; line-height: 1.25;
+margin: 0 0 4px 0; } .person-card__value { display: block; color:
+var(--text-primary); font-size: 0.9rem; line-height: 1.4; word-break:
+break-word; margin: 0; } .person-card__section { margin: 12px 0; padding: 12px;
+border-radius: 12px; border: 1px solid var(--border-color); }
 .person-card__section--warn { background: var(--warning-soft-bg); }
 .person-card__section--info { background: var(--accent-soft-bg); }
 .person-card__section-title { font-weight: 600; margin-bottom: 8px; color:
@@ -65,7 +72,7 @@ gap: 8px; margin: 14px 0; } .person-card__btn { flex: 1; min-height: 38px;
 border: 1px solid var(--border-color); border-radius: 12px; background:
 var(--bg-secondary); color: var(--text-primary); cursor: pointer; text-align:
 center; text-decoration: none; display: inline-flex; align-items: center;
-justify-content: center; transition: var(--transition); }
+justify-content: center; transition: all 0.2s ease; }
 .person-card__btn:hover:not(:disabled) { background: var(--bg-hover);
 border-color: var(--border-strong); transform: translateY(-1px); }
 .person-card__btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -78,7 +85,55 @@ var(--text-muted); font-size: 0.9rem; } .person-card__message { margin: 0;
 padding: 0; border: 0; background: transparent; color: var(--text-primary);
 white-space: pre-wrap; word-break: break-word; font-size: 0.92rem; line-height:
 1.55; font-family: inherit; overflow: visible; max-height: none; }
-.person-card__message--template { font-family: var(--font-mono); font-size:
-0.88rem; line-height: 1.5; } .person-card-error { margin-top: 12px; padding:
-14px; border-radius: 12px; background: var(--danger-soft-bg); border: 1px solid
-var(--danger-soft-border); color: var(--log-error); }
+.person-card__message--template { font-family: var(--font-mono, monospace);
+font-size: 0.88rem; line-height: 1.5; } .person-card-error { margin-top: 12px;
+padding: 14px; border-radius: 12px; background: var(--danger-soft-bg); border:
+1px solid var(--danger-soft-border); color: var(--log-error); } /*
+========================================== RESPONSIVE DESIGN (Мобільна
+оптимізація) ========================================== */ @media (max-width:
+480px) { .person-card__actions { flex-direction: column; } .person-card__btn {
+width: 100%; } } /* ========================================== VACATIONS MODULE
+(main sidebar) ========================================== */ .vacations-module {
+display: flex; flex-direction: column; gap: 12px; } .vacations-tabs { display:
+grid; gap: 4px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.vacations-tab { background: var(--bg-secondary); border: 1px solid
+var(--border-color); border-radius: 8px; color: var(--text-secondary); cursor:
+pointer; font-size: 11px; padding: 8px 4px; } .vacations-tab.active {
+background: var(--accent-soft-bg); border-color: var(--accent-soft-border);
+color: var(--text-primary); font-weight: 700; } .vacations-panel { display:
+flex; flex-direction: column; gap: 10px; } .vacations-stats { display: grid;
+gap: 8px; grid-template-columns: 1fr 1fr; } .vacations-stat { background:
+var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px;
+padding: 10px; text-align: center; } .vacations-stat strong { color:
+var(--google-blue); display: block; font-size: 22px; } .vacations-stat span {
+color: var(--text-muted); font-size: 11px; } .vacations-actions { display: flex;
+flex-direction: column; gap: 8px; } .vacations-form label { color:
+var(--text-muted); display: block; font-size: 12px; font-weight: 700; margin:
+10px 0 4px; } .vacations-form select, .vacations-form input { background:
+var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px;
+box-sizing: border-box; color: var(--text-primary); padding: 8px; width: 100%; }
+.vacations-form--spaced { margin-top: 12px; } .vacations-card { background:
+var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px;
+margin-top: 8px; padding: 12px; } .vacations-card__head { align-items: center;
+display: flex; gap: 8px; justify-content: space-between; margin-bottom: 6px; }
+.vacations-card__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top:
+8px; } .vacations-badge { background: var(--accent-soft-bg); border-radius:
+999px; color: var(--google-blue); font-size: 10px; font-weight: 700; padding:
+2px 8px; } .vacations-muted { color: var(--text-muted); font-size: 12px; }
+.vacations-empty { color: var(--text-muted); font-size: 12px; padding: 16px 8px;
+text-align: center; } .vacations-status { border-radius: 8px; font-size: 12px;
+margin-top: 8px; padding: 10px; white-space: pre-wrap; }
+.vacations-status--success { background: var(--success-soft-bg); color:
+var(--success-color); } .vacations-status--error { background:
+var(--danger-soft-bg); color: var(--log-error); } .vacations-status--info {
+background: var(--info-soft-bg); color: var(--info-soft-text); }
+.vacations-option.best { border-left: 4px solid var(--success-color); }
+.vacations-option.valid { border-left: 4px solid var(--warning-color); }
+.vacations-violation { border-left: 4px solid var(--log-error); }
+.vacations-btn-sm { font-size: 12px; min-height: 34px; padding: 6px 10px; }
+.vacations-btn-danger { border-color: var(--danger-soft-border); color:
+var(--log-error); } .vacations-subtitle { font-size: 13px; margin: 12px 0 4px; }
+.vacations-report { background: var(--bg-secondary); border: 1px solid
+var(--border-color); border-radius: 10px; font-family: inherit; font-size: 12px;
+margin-top: 10px; padding: 12px; white-space: pre-wrap; } @media (max-width:
+480px) { .vacations-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

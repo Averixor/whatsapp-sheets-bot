@@ -284,7 +284,9 @@ class FakeRange {
   }
 
   getDisplayValues() {
-    return this.getValues().map((row) => row.map((value) => String(value ?? "")));
+    return this.getValues().map((row) =>
+      row.map((value) => String(value ?? "")),
+    );
   }
 
   setNumberFormat() {
@@ -569,7 +571,10 @@ const formulaWrite = writer.writeVacationToSource({
 });
 assert.equal(formulaWrite.formulaDriven, true);
 assert.equal(sourceSheet.valueAt(2, 3), "FORMULA_END");
-assert.equal(sourceSheet.valueAt(formulaWrite.rowNumber, 4), "додаткова відпустка");
+assert.equal(
+  sourceSheet.valueAt(formulaWrite.rowNumber, 4),
+  "додаткова відпустка",
+);
 assert.equal(sourceSheet.valueAt(formulaWrite.rowNumber, 8), 4);
 sourceSheet.setValue(formulaWrite.rowNumber, 5, true);
 const formulaCancel = writer.setVacationActive(
@@ -669,22 +674,61 @@ assert.throws(
 );
 
 const code = fs.readFileSync(path.join(repoRoot, "Code.gs"), "utf8");
+const sidebarHtml = fs.readFileSync(
+  path.join(repoRoot, "Sidebar.html"),
+  "utf8",
+);
+const jsVacations = fs.readFileSync(
+  path.join(repoRoot, "Js.Vacations.html"),
+  "utf8",
+);
+const jsHelpers = fs.readFileSync(
+  path.join(repoRoot, "Js.Helpers.html"),
+  "utf8",
+);
+const includesContract = JSON.parse(
+  fs.readFileSync(
+    path.join(repoRoot, "contracts/client-includes.contract.json"),
+    "utf8",
+  ),
+);
 const sidebarService = fs.readFileSync(
   path.join(repoRoot, "VacationSidebarService.gs"),
   "utf8",
 );
-const sidebar = fs.readFileSync(path.join(repoRoot, "VacationSidebar.html"), "utf8");
+const sidebar = fs.readFileSync(
+  path.join(repoRoot, "VacationSidebar.html"),
+  "utf8",
+);
 const writerSource = fs.readFileSync(
   path.join(repoRoot, "VacationOptionsWriter.gs"),
   "utf8",
 );
-assert.match(code, /"Панель керування", "showVacationSidebar"/);
-assert.doesNotMatch(code, /showVacationPlannerDialog|showValidateVacationDateDialog/);
+assert.doesNotMatch(code, /createMenu\("Відпустки"\)/);
+assert.doesNotMatch(code, /addSubMenu\(vacationMenu\)/);
+assert.match(sidebarHtml, /id="btnVacations"/);
+assert.match(sidebarHtml, /handleMenuAction\('vacations'\)/);
+assert.doesNotMatch(
+  sidebarHtml,
+  /btnVacationReminder|handleMenuAction\('vacationReminder'\)/,
+);
+assert.match(jsHelpers, /vacations:\s*"Відпустки"/);
+assert.match(jsHelpers, /case "vacations":/);
+assert.match(jsHelpers, /showVacationsModule\(\)/);
+assert.match(jsVacations, /const VacationModule = \{/);
+assert.match(jsVacations, /runServerMethod_/);
+assert.match(jsVacations, /window\.VacationModule = VacationModule/);
+assert.ok(includesContract.expected.includes("Js.Vacations"));
+assert.match(jsVacations, /checkVacationRemindersFromMainPanel/);
+assert.match(jsVacations, /getVacationSidebarState/);
 assert.doesNotMatch(sidebarService, /\bclass\s+VacationSidebarService/);
 assert.match(sidebarService, /const VacationSidebarService_ = \(function \(\)/);
 assert.match(sidebarService, /PersonnelRepository_\.getActiveRows\(\)/);
 assert.match(sidebarService, /applyVacationOptionFromSidebar/);
-assert.doesNotMatch(sidebar + sidebarService, /VACATION_OPTIONS|writeVacationOptions/);
+assert.doesNotMatch(
+  sidebar + sidebarService,
+  /VACATION_OPTIONS|writeVacationOptions/,
+);
 assert.doesNotMatch(sidebar, /innerHTML/);
 assert.match(
   writerSource,
@@ -704,9 +748,18 @@ assert.doesNotThrow(
 ["schedule", "add", "find", "move", "check", "report"].forEach((tab) => {
   assert.match(sidebar, new RegExp(`data-panel="${tab}"`));
 });
-assert.equal(fs.existsSync(path.join(repoRoot, "VacationPlannerDialog.html")), false);
-assert.equal(fs.existsSync(path.join(repoRoot, "VacationValidateDialog.html")), false);
-assert.equal(fs.existsSync(path.join(repoRoot, "VacationPlannerApi.gs")), false);
+assert.equal(
+  fs.existsSync(path.join(repoRoot, "VacationPlannerDialog.html")),
+  false,
+);
+assert.equal(
+  fs.existsSync(path.join(repoRoot, "VacationValidateDialog.html")),
+  false,
+);
+assert.equal(
+  fs.existsSync(path.join(repoRoot, "VacationPlannerApi.gs")),
+  false,
+);
 
 const vacationSources = fs
   .readdirSync(repoRoot)

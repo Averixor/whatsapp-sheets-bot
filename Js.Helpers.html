@@ -388,6 +388,7 @@
       applyProtections: "Захист службових листів",
       pendingRepairs: "Операції, що потребують виправлення",
       vacationReminder: "Нагадування про відпустки",
+      vacations: "Відпустки",
       birthdayCheck: "Дні Народження",
       debugAccess: "Перевірка доступу",
       requests: "Заявки",
@@ -477,6 +478,10 @@
           }
           break;
         }
+
+        case "vacations":
+          await showVacationsModule();
+          break;
 
         case "vacationReminder": {
           const result = await ActionDispatcher.run(

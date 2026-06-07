@@ -1,8 +1,9 @@
-<!DOCTYPE html>
+<!doctype html>
+<!-- @deprecated Legacy standalone sidebar. Use WASB → 📱 ПАНЕЛЬ → 🏖️ Відпустки. -->
 <html lang="uk">
   <head>
-    <base target="_top">
-    <meta charset="UTF-8">
+    <base target="_top" />
+    <meta charset="UTF-8" />
     <style>
       :root {
         color: #202124;
@@ -201,7 +202,9 @@
     </div>
 
     <div class="tabs" role="tablist">
-      <button class="tab active" data-panel="schedule" type="button">Графік</button>
+      <button class="tab active" data-panel="schedule" type="button">
+        Графік
+      </button>
       <button class="tab" data-panel="add" type="button">Додати</button>
       <button class="tab" data-panel="find" type="button">Підібрати</button>
       <button class="tab" data-panel="move" type="button">Перенести</button>
@@ -211,7 +214,9 @@
 
     <section id="schedule" class="panel active">
       <div class="stats">
-        <div class="stat"><strong id="total">0</strong><span>відпусток</span></div>
+        <div class="stat">
+          <strong id="total">0</strong><span>відпусток</span>
+        </div>
         <div class="stat"><strong id="people">0</strong><span>людей</span></div>
       </div>
       <button id="rebuild" class="action" type="button">Оновити графік</button>
@@ -236,9 +241,9 @@
           <option value="СО">СО - сімейні обставини</option>
         </select>
         <label for="addStart">Дата початку</label>
-        <input id="addStart" type="date">
+        <input id="addStart" type="date" />
         <label for="addDays">Кількість днів</label>
-        <input id="addDays" type="number" min="1" max="60" value="15">
+        <input id="addDays" type="number" min="1" max="60" value="15" />
       </div>
       <button id="addSubmit" class="action" type="button">Додати</button>
       <div id="addStatus" class="status"></div>
@@ -255,11 +260,11 @@
           <option value="2">В2 - друга</option>
         </select>
         <label for="findStart">Бажана дата</label>
-        <input id="findStart" type="date">
+        <input id="findStart" type="date" />
         <label for="findDays">Кількість днів</label>
-        <input id="findDays" type="number" min="1" max="60" value="15">
+        <input id="findDays" type="number" min="1" max="60" value="15" />
         <label for="findWindow">Вікно пошуку, днів до і після</label>
-        <input id="findWindow" type="number" min="0" max="180" value="30">
+        <input id="findWindow" type="number" min="0" max="180" value="30" />
       </div>
       <button id="findSubmit" class="action" type="button">Підібрати</button>
       <div id="options"></div>
@@ -272,16 +277,18 @@
         <label for="moveVacation">Відпустка</label>
         <select id="moveVacation"></select>
         <label for="moveStart">Нова дата початку</label>
-        <input id="moveStart" type="date">
+        <input id="moveStart" type="date" />
         <label for="moveDays">Кількість днів</label>
-        <input id="moveDays" type="number" min="1" max="60" value="15">
+        <input id="moveDays" type="number" min="1" max="60" value="15" />
       </div>
       <button id="moveSubmit" class="action" type="button">Перенести</button>
       <div id="moveStatus" class="status"></div>
     </section>
 
     <section id="check" class="panel">
-      <button id="checkAll" class="action" type="button">Перевірити всі правила</button>
+      <button id="checkAll" class="action" type="button">
+        Перевірити всі правила
+      </button>
       <div class="card">
         <h3>Перевірити конкретну дату</h3>
         <label for="checkPerson">Військовослужбовець</label>
@@ -292,9 +299,9 @@
           <option value="2">В2 - друга</option>
         </select>
         <label for="checkStart">Дата початку</label>
-        <input id="checkStart" type="date">
+        <input id="checkStart" type="date" />
         <label for="checkDays">Кількість днів</label>
-        <input id="checkDays" type="number" min="1" max="60" value="15">
+        <input id="checkDays" type="number" min="1" max="60" value="15" />
         <button id="checkDate" class="action secondary" type="button">
           Перевірити дату
         </button>
@@ -304,7 +311,9 @@
     </section>
 
     <section id="report" class="panel">
-      <button id="reportSubmit" class="action" type="button">Сформувати звіт</button>
+      <button id="reportSubmit" class="action" type="button">
+        Сформувати звіт
+      </button>
       <div class="card"><pre id="reportText">Звіт ще не сформовано.</pre></div>
       <div id="reportStatus" class="status"></div>
     </section>
@@ -402,7 +411,9 @@
         var container = byId("vacations");
         clear(container);
         if (!state.vacations.length) {
-          container.appendChild(node("div", "Активних відпусток немає.", "empty"));
+          container.appendChild(
+            node("div", "Активних відпусток немає.", "empty"),
+          );
           return;
         }
         state.vacations.forEach(function (vacation, index) {
@@ -528,7 +539,8 @@
       }
 
       function cancelVacation(vacation) {
-        if (!window.confirm("Скасувати " + vacationLabel(vacation) + "?")) return;
+        if (!window.confirm("Скасувати " + vacationLabel(vacation) + "?"))
+          return;
         google.script.run
           .withSuccessHandler(function () {
             showStatus("scheduleStatus", "Відпустку скасовано.", "success");
