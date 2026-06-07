@@ -11,6 +11,7 @@ snapshots to the repository.
 | [RUNBOOK.md](../RUNBOOK.md) | Bootstrap, deployment, production checks, troubleshooting |
 | [SECURITY.md](../SECURITY.md) | Identity, RBAC, lockout, protected data |
 | [CHANGELOG.md](../CHANGELOG.md) | Durable release history |
+| [WASB_RELEASE_AUDIT.md](../WASB_RELEASE_AUDIT.md) | Production release verdict (CLOSED 2026-06-07) |
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Local workflow, CI, change policy |
 | [AGENTS.md](../AGENTS.md) | Automation-agent instructions |
 
@@ -18,6 +19,7 @@ Machine-readable policy belongs in [`contracts/`](../contracts/). Snapshot
 changes are governed by `scripts/verify-snapshot-governance.mjs` and must be
 recorded in [`contracts/SNAPSHOT_CHANGELOG.md`](../contracts/SNAPSHOT_CHANGELOG.md).
 
-Production status is verified from current evidence (`npm run ci`, `clasp
-status`, `npm run gas:smoke`, GAS diagnostics), not maintained in a static audit
-document.
+Production status is recorded in
+[`WASB_RELEASE_AUDIT.md`](../WASB_RELEASE_AUDIT.md) (**CLOSED** 2026-06-07).
+Re-verify with current evidence when redeploying: `npm run ci`, `clasp status`,
+manual `apiRunProductionSmokeChecks()` in GAS, and GAS diagnostics.
