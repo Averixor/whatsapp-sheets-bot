@@ -587,7 +587,23 @@ const normalizedChecks = writer.normalizeChecks([
 ]);
 assert.deepEqual(
   Array.from(normalizedChecks, (item) => item.type),
-  ["START_TOO_CLOSE", "GAP_TOO_SHORT", "YEAR_LIMIT"],
+  ["START_GAP", "PERSON_GAP", "MAX_PERSON_YEAR"],
+);
+assert.deepEqual(
+  Array.from(normalizedChecks, (item) => item.label),
+  [
+    "Дати початку занадто близько",
+    "Замалий інтервал між відпустками",
+    "Забагато відпусток у році",
+  ],
+);
+assert.equal(
+  writer.humanRuleLabel("GAP_TOO_SHORT"),
+  "Замалий інтервал між відпустками",
+);
+assert.doesNotMatch(
+  writer.humanRuleLabel("PERSON_GAP"),
+  /GAP_TOO_SHORT|START_TOO_CLOSE|YEAR_LIMIT/,
 );
 const normalizedProblems = writer.normalizeProblems(
   [
@@ -904,10 +920,10 @@ const sourceBeforeRebuild = sourceSheet.rows.map((row) => row.slice());
 const multiMonthRebuild = writer.rebuildVacationSystem();
 const scheduleSheet = generatedSheets.VACATION_SCHEDULE;
 assert.ok(scheduleSheet, "rebuild must create VACATION_SCHEDULE");
-assert.deepEqual(
-  Array.from(multiMonthRebuild.affectedSheets),
-  ["VACATION_SCHEDULE", "VACATION_CHECK"],
-);
+assert.deepEqual(Array.from(multiMonthRebuild.affectedSheets), [
+  "VACATION_SCHEDULE",
+  "VACATION_CHECK",
+]);
 assert.equal(optionsSheet, null, "rebuild must not use VACATION_OPTIONS");
 assert.deepEqual(
   sourceSheet.rows,
@@ -985,6 +1001,43 @@ assert.equal(emptyRebuild.scheduleDays, 0);
 assert.equal(generatedSheets.VACATION_SCHEDULE.borders.length, 0);
 assert.equal(generatedSheets.VACATION_SCHEDULE.backgrounds.length, 1);
 
+sourceSheet = new FakeSheet("VACATIONS", [
+  Array(19).fill(""),
+  sourceVacationRow([
+    {
+      startColumn: 1,
+      fml: "Гап Людина",
+      start: "2026-01-01",
+      end: "2026-01-15",
+      type: "перша відпустка",
+      days: 15,
+    },
+    {
+      startColumn: 11,
+      fml: "Гап Людина",
+      start: "2026-02-01",
+      end: "2026-02-15",
+      type: "друга відпустка",
+      days: 15,
+    },
+  ]),
+]);
+generatedSheets = {};
+const gapReport = writer.generateVacationReport();
+assert.ok(gapReport.errorCount > 0, "gap report must include problems");
+assert.match(gapReport.summary, /⚠️ Проблемні питання: \d+/);
+assert.match(gapReport.summary, /• Замалий інтервал між відпустками —/);
+assert.doesNotMatch(
+  gapReport.summary,
+  /GAP_TOO_SHORT|YEAR_LIMIT|START_TOO_CLOSE|Порушень:/,
+);
+assert.match(
+  gapReport.summary,
+  /Деталі та варіанти вирішення доступні в розділі «Проблемні питання»/,
+);
+assert.equal(gapReport.adminSheet, "VACATION_CHECK");
+assert.match(gapReport.problemSummary.summaryLine, /Усі пов'язані із/);
+
 const code = fs.readFileSync(path.join(repoRoot, "Code.gs"), "utf8");
 const sidebarHtml = fs.readFileSync(
   path.join(repoRoot, "Sidebar.html"),
@@ -1047,7 +1100,7 @@ const problemCardsHtml = renderVacationProblems([
   },
 ]);
 assert.match(problemCardsHtml, /vacation-problem-card/);
-assert.match(problemCardsHtml, /Малий інтервал між відпустками/);
+assert.match(problemCardsHtml, /Замалий інтервал між відпустками/);
 assert.match(problemCardsHtml, /Варіанти вирішення:/);
 assert.match(problemCardsHtml, /Підібрати нову дату/);
 assert.doesNotMatch(problemCardsHtml, /Тест <script>/);
@@ -1126,7 +1179,22 @@ assert.match(jsVacations, /window\.VacationModule = VacationModule/);
 assert.ok(includesContract.expected.includes("Js.Vacations"));
 assert.match(jsVacations, /checkVacationRemindersFromMainPanel/);
 assert.match(jsVacations, /getVacationSidebarState/);
-assert.match(jsVacations, /const VACATION_PROBLEM_LABELS = \{/);
+assert.match(jsVacations, /const VACATION_RULE_HUMAN_LABELS = \{/);
+assert.match(jsVacations, /function humanVacationRuleLabel_/);
+assert.match(jsVacations, /scheduleSummaryHtml\(\)/);
+assert.match(jsVacations, /🏖️ Графік відпусток/);
+assert.match(
+  renderVacationProblems([
+    { type: "GAP_TOO_SHORT", fml: "Тест", date: "2026-07-01" },
+  ]),
+  /Замалий інтервал між відпустками/,
+);
+assert.doesNotMatch(
+  renderVacationProblems([
+    { type: "GAP_TOO_SHORT", fml: "Тест", date: "2026-07-01" },
+  ]),
+  /GAP_TOO_SHORT/,
+);
 assert.match(jsVacations, /function buildVacationProblemSuggestions_/);
 assert.match(jsVacations, /function renderVacationProblems_/);
 assert.match(jsVacations, /Проблемні питання/);
