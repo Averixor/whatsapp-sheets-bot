@@ -480,6 +480,20 @@ const VacationOptionsWriter_ = (function () {
     );
   }
 
+  function _dateKey_(value) {
+    if (
+      typeof value === "string" &&
+      /^\d{4}-\d{2}-\d{2}$/.test(value.trim())
+    ) {
+      return value.trim();
+    }
+    const date = _date_(value);
+    if (!date) return "";
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return date.getFullYear() + "-" + month + "-" + day;
+  }
+
   function buildScheduleCalendar(schedule) {
     const list = (Array.isArray(schedule) ? schedule : []).filter(
       function (item) {
@@ -569,6 +583,63 @@ const VacationOptionsWriter_ = (function () {
     }
   }
 
+  function _scheduleCellColor_(value) {
+    const text = String(value || "").trim();
+    if (!text) return "#FFFFFF";
+    if (text.indexOf("/") !== -1) return "#F4CCCC";
+    if (text === "В1") return "#D9EAD3";
+    if (text === "В2") return "#CFE2F3";
+    if (text === "ВД") return "#FCE5CD";
+    if (text === "СО") return "#EADCF8";
+    return "#D9EAD3";
+  }
+
+  function _formatScheduleCalendar_(sheet, calendar) {
+    const rowCount = calendar.personCount + 1;
+    const dateCount = calendar.dateCount;
+    if (!dateCount || rowCount <= 1) return;
+
+    const dataRowCount = rowCount - 1;
+    const dataRange = sheet.getRange(2, 3, dataRowCount, dateCount);
+    const values = dataRange.getDisplayValues();
+    const backgrounds = values.map(function (row) {
+      return row.map(_scheduleCellColor_);
+    });
+    dataRange.setBackgrounds(backgrounds);
+  }
+
+  function _applyMonthSeparators_(sheet, calendar) {
+    const rowCount = calendar.personCount + 1;
+    const dateCount = calendar.dateCount;
+    if (!dateCount || rowCount <= 0) return;
+
+    const headerValues = sheet.getRange(1, 3, 1, dateCount).getValues()[0];
+    for (let index = 0; index < headerValues.length - 1; index++) {
+      const current = headerValues[index];
+      const next = headerValues[index + 1];
+      if (!(current instanceof Date) || !(next instanceof Date)) continue;
+
+      const isMonthEnd =
+        current.getMonth() !== next.getMonth() ||
+        current.getFullYear() !== next.getFullYear();
+      if (!isMonthEnd) continue;
+
+      const column = 3 + index;
+      sheet
+        .getRange(1, column, rowCount, 1)
+        .setBorder(
+          null,
+          null,
+          null,
+          true,
+          null,
+          null,
+          "#000000",
+          SpreadsheetApp.BorderStyle.SOLID_MEDIUM,
+        );
+    }
+  }
+
   function _writeSchedule_(schedule) {
     const sheet = _ensureSheet_(VACATION_PLANNER_CONFIG.SHEETS.SCHEDULE);
     const calendar = buildScheduleCalendar(schedule);
@@ -587,6 +658,8 @@ const VacationOptionsWriter_ = (function () {
       sheet.getRange(1, 3, 1, calendar.dateCount).setNumberFormat("dd.MM");
       sheet.setColumnWidths(3, calendar.dateCount, 42);
     }
+    _formatScheduleCalendar_(sheet, calendar);
+    _applyMonthSeparators_(sheet, calendar);
     sheet.autoResizeColumns(1, 2);
     return calendar;
   }
@@ -610,6 +683,87 @@ const VacationOptionsWriter_ = (function () {
         fml: item.fml || "",
         description: item.details || "",
         severity: item.severity || "ERROR",
+      };
+    });
+  }
+
+  function _extractProblemDates_(problem) {
+    return (
+      String((problem && problem.date) || "").match(/\d{4}-\d{2}-\d{2}/g) ||
+      []
+    );
+  }
+
+  function _splitProblemFml_(value) {
+    return String(value || "")
+      .split(/\s*(?:\/|,)\s*/)
+      .map(function (item) {
+        return item.trim();
+      })
+      .filter(Boolean);
+  }
+
+  function _findProblemScheduleItem_(problem, schedule) {
+    const list = Array.isArray(schedule) ? schedule : [];
+    const people = _splitProblemFml_(problem && problem.fml);
+    const dates = _extractProblemDates_(problem);
+    const peopleKeys = people.map(_fmlKey_);
+
+    const matches = list.filter(function (item) {
+      const fmlMatches =
+        !peopleKeys.length || peopleKeys.indexOf(_fmlKey_(item.fml)) !== -1;
+      if (!fmlMatches) return false;
+      if (!dates.length) return true;
+      const start = _dateKey_(item.startDate);
+      const end = _dateKey_(item.endDate);
+      return dates.indexOf(start) !== -1 || dates.indexOf(end) !== -1;
+    });
+
+    if (matches.length) return matches[0];
+    if (!peopleKeys.length) return null;
+    return (
+      list.filter(function (item) {
+        return peopleKeys.indexOf(_fmlKey_(item.fml)) !== -1;
+      })[0] || null
+    );
+  }
+
+  function normalizeProblems(checks, schedule) {
+    return (Array.isArray(checks) ? checks : []).map(function (item) {
+      const type = String((item && (item.rule || item.type)) || "").trim();
+      const match = _findProblemScheduleItem_(item, schedule);
+      const startDate =
+        _dateKey_(item && item.startDate) || _dateKey_(match && match.startDate);
+      const endDate =
+        _dateKey_(item && item.endDate) || _dateKey_(match && match.endDate);
+      const days = Number((item && item.days) || (match && match.days)) || "";
+      return {
+        date: (item && item.date) || startDate || "",
+        type: type || _checkType_(item && item.rule),
+        rule: type || "",
+        fml: (item && item.fml) || "",
+        primaryFml:
+          (match && match.fml) ||
+          _splitProblemFml_(item && item.fml)[0] ||
+          "",
+        description:
+          (item && (item.details || item.message || item.description)) || "",
+        details:
+          (item && (item.details || item.message || item.description)) || "",
+        severity: (item && item.severity) || "ERROR",
+        vacationNumber:
+          Number(
+            (item && item.vacationNumber) || (match && match.vacationNumber),
+          ) ||
+          "",
+        startDate: startDate,
+        endDate: endDate,
+        days: days,
+        sourceRow: (item && item.sourceRow) || (match && match.sourceRow) || "",
+        sourceStartColumn:
+          (item && item.sourceStartColumn) ||
+          (match && match.sourceStartColumn) ||
+          "",
       };
     });
   }
@@ -663,7 +817,7 @@ const VacationOptionsWriter_ = (function () {
         VACATION_PLANNER_CONFIG.SHEETS.SCHEDULE,
         VACATION_PLANNER_CONFIG.SHEETS.CHECK,
       ],
-      checks: normalizeChecks(audit.checks),
+      checks: normalizeProblems(audit.checks, audit.schedule),
     };
   }
 
@@ -677,7 +831,7 @@ const VacationOptionsWriter_ = (function () {
         return item.severity === "ERROR";
       }).length,
       affectedSheets: [VACATION_PLANNER_CONFIG.SHEETS.CHECK],
-      checks: normalizeChecks(audit.checks),
+      checks: normalizeProblems(audit.checks, audit.schedule),
     };
   }
 
@@ -778,6 +932,7 @@ const VacationOptionsWriter_ = (function () {
     setVacationActive: setVacationActive,
     buildScheduleCalendar: buildScheduleCalendar,
     normalizeChecks: normalizeChecks,
+    normalizeProblems: normalizeProblems,
     rebuildVacationSystem: rebuildVacationSystem,
     checkVacationScheduleOnly: checkVacationScheduleOnly,
     highlightVacationProblems: highlightVacationProblems,

@@ -35,11 +35,22 @@ read-only in UI.
 | Додати    | add В1/В2/ВД/СО                                                       |
 | Підібрати | planner top options + apply                                           |
 | Перенести | move active vacation                                                  |
-| Перевірка | all rules + single-date validation                                    |
+| Проблеми  | understandable problem cards, suggestions, jump to date picker        |
 | Звіт      | unit report                                                           |
 
 Reminders call `apiCheckVacationsAndBirthdays` inside the vacations screen
 (legacy `vacationReminder` action remains for tests only).
+
+`VACATION_CHECK` remains the technical audit sheet. The main sidebar exposes
+the same rule violations as **Проблемні питання** with public labels,
+explanations, suggestions, and a safe jump to `Підібрати`. The jump prefills
+the vacation when the server can identify it and otherwise asks the user to
+verify the fields.
+
+`VACATION_SCHEDULE` keeps `QUANTITY | FML` in columns `A:B`. Only calendar
+cells from `C2` are colored: `В1`, `В2`, `ВД`, `СО`, and mixed markers use
+distinct fills, while blanks stay white. A medium right border marks every
+month transition across the full calendar height.
 
 ## Server entrypoints (unchanged)
 

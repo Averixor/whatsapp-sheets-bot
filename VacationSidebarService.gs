@@ -384,11 +384,15 @@ const VacationSidebarService_ = (function () {
         fml: option.fml,
         details: item.message,
         severity: item.severity,
+        vacationNumber: option.vacationNumber,
+        startDate: option.startDate,
+        endDate: option.endDate,
+        days: option.days,
       };
     });
     return {
       isValid: validation.isValid,
-      violations: VacationOptionsWriter_.normalizeChecks(checks),
+      violations: VacationOptionsWriter_.normalizeProblems(checks, [option]),
     };
   }
 

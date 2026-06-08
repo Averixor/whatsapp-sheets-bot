@@ -916,6 +916,11 @@ const VacationPlannerService_ = (function () {
               vacation.source._meta &&
               vacation.source._meta.rowNumber) ||
             "",
+          sourceStartColumn:
+            (vacation.source &&
+              vacation.source._meta &&
+              vacation.source._meta.startColumn) ||
+            "",
         };
       });
 
