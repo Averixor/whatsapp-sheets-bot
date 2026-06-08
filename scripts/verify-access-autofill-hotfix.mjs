@@ -267,8 +267,14 @@ const generatedPlainKey = outboxSheet.valueAt(2, 6);
 assert.match(generatedPlainKey, /^WASB-[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
 assert.equal(newHash, sha256Hex(generatedPlainKey));
 
-const triggerSheet = new FakeSheet("ACCESS", [headers, Array(headers.length).fill("")]);
-const ignoredSheet = new FakeSheet("OTHER", [headers, Array(headers.length).fill("")]);
+const triggerSheet = new FakeSheet("ACCESS", [
+  headers,
+  ["template@example.test", ...Array(headers.length - 1).fill("")],
+]);
+const ignoredSheet = new FakeSheet("OTHER", [
+  headers,
+  ["ignored@example.test", ...Array(headers.length - 1).fill("")],
+]);
 const triggerContext = makeContext(makeSpreadsheet([triggerSheet, ignoredSheet]));
 loadHotfix(triggerContext);
 const onEdit = vm.runInContext("wasbAccessSheetOnEditAutofillHotfix_", triggerContext);
