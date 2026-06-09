@@ -1,9 +1,9 @@
 function debugOpenPersonCardShahtar_() {
-  return apiOpenPersonCard('ШАХТАР', '28.04.2026');
+  return apiOpenPersonCard("ШАХТАР", "28.04.2026");
 }
 
 function debugOpenPersonCardGraf_() {
-  return apiOpenPersonCard('ГРАФ', '28.04.2026');
+  return apiOpenPersonCard("ГРАФ", "28.04.2026");
 }
 
 function runStage6ADomainTestsManual() {
@@ -14,46 +14,62 @@ function runStage6ADomainTestsManual() {
 
 function debugFindPhoneContractManual() {
   var index = {
-    byFml: { 'Петренко Іван Іванович': '+380661111111' },
-    byNorm: { 'петренко іван іванович': '+380661111111' },
-    byRole: { 'ГРАФ': '+380662222222' },
-    byCallsign: { 'РОЛАНД': '+380663333333' },
-    items: []
+    byFml: { "Петренко Іван Іванович": "+380661111111" },
+    byNorm: { "петренко іван іванович": "+380661111111" },
+    byRole: { ГРАФ: "+380662222222" },
+    byCallsign: { РОЛАНД: "+380663333333" },
+    items: [],
   };
 
   var result = {
-    byFml: findPhone_({ fml: 'Петренко Іван Іванович' }, { index: index }),
-    byRole: findPhone_({ role: 'ГРАФ' }, { index: index }),
-    byCallsign: findPhone_({ callsign: 'роланд' }, { index: index })
+    byFml: findPhone_({ fml: "Петренко Іван Іванович" }, { index: index }),
+    byRole: findPhone_({ role: "ГРАФ" }, { index: index }),
+    byCallsign: findPhone_({ callsign: "роланд" }, { index: index }),
   };
 
   Logger.log(JSON.stringify(result, null, 2));
   return result;
 }
 
-
 function debugDataAccessContractManual() {
   var out = {
     dataAccessType: typeof DataAccess_,
-    keys: typeof DataAccess_ === 'object' && DataAccess_ ? Object.keys(DataAccess_) : [],
-    hasGetSheet: typeof DataAccess_ !== 'undefined' && DataAccess_ && typeof DataAccess_.getSheet,
-    hasReadRows: typeof DataAccess_ !== 'undefined' && DataAccess_ && typeof DataAccess_.readRows,
-    hasReadObjects: typeof DataAccess_ !== 'undefined' && DataAccess_ && typeof DataAccess_.readObjects,
-    hasAppendObjects: typeof DataAccess_ !== 'undefined' && DataAccess_ && typeof DataAccess_.appendObjects
+    keys:
+      typeof DataAccess_ === "object" && DataAccess_
+        ? Object.keys(DataAccess_)
+        : [],
+    hasGetSheet:
+      typeof DataAccess_ !== "undefined" &&
+      DataAccess_ &&
+      typeof DataAccess_.getSheet,
+    hasReadRows:
+      typeof DataAccess_ !== "undefined" &&
+      DataAccess_ &&
+      typeof DataAccess_.readRows,
+    hasReadObjects:
+      typeof DataAccess_ !== "undefined" &&
+      DataAccess_ &&
+      typeof DataAccess_.readObjects,
+    hasAppendObjects:
+      typeof DataAccess_ !== "undefined" &&
+      DataAccess_ &&
+      typeof DataAccess_.appendObjects,
   };
 
   Logger.log(JSON.stringify(out, null, 2));
   return out;
 }
 
-
 function debugSendPanelBlockedRowsManual() {
   var rows = SendPanelRepository_.readRows();
-  var blocked = rows.filter(function(item) {
-    return normalizeSendPanelStatus_(item.status) !== SendPanelConstants_.STATUS_READY;
+  var blocked = rows.filter(function (item) {
+    return (
+      normalizeSendPanelStatus_(item.status) !==
+      SendPanelConstants_.STATUS_READY
+    );
   });
 
-  var out = blocked.map(function(item) {
+  var out = blocked.map(function (item) {
     return {
       row: item.row,
       fml: item.fml,
@@ -62,28 +78,34 @@ function debugSendPanelBlockedRowsManual() {
       tasks: item.tasks,
       status: item.status,
       sent: item.sent,
-      hasLink: !!item.link
+      hasLink: !!item.link,
     };
   });
 
-  Logger.log(JSON.stringify({
-    total: rows.length,
-    blocked: out.length,
-    rows: out
-  }, null, 2));
+  Logger.log(
+    JSON.stringify(
+      {
+        total: rows.length,
+        blocked: out.length,
+        rows: out,
+      },
+      null,
+      2,
+    ),
+  );
 
   return out;
 }
 
-
 function debugSendPanelSheetStateManual() {
   var ss = getWasbSpreadsheet_();
-  var sheetName = (typeof CONFIG !== 'undefined' && CONFIG && CONFIG.SEND_PANEL_SHEET)
-    ? CONFIG.SEND_PANEL_SHEET
-    : 'SEND_PANEL';
+  var sheetName =
+    typeof CONFIG !== "undefined" && CONFIG && CONFIG.SEND_PANEL_SHEET
+      ? CONFIG.SEND_PANEL_SHEET
+      : "SEND_PANEL";
 
   var sh = ss.getSheetByName(sheetName);
-  var schema = SheetSchemas_.get('SEND_PANEL');
+  var schema = SheetSchemas_.get("SEND_PANEL");
 
   var out = {
     spreadsheetName: ss.getName(),
@@ -97,7 +119,7 @@ function debugSendPanelSheetStateManual() {
     lastColumn: sh ? sh.getLastColumn() : 0,
     rawPreview: [],
     repositoryRowsCount: 0,
-    repositoryRows: []
+    repositoryRows: [],
   };
 
   if (sh) {
@@ -119,23 +141,28 @@ function debugSendPanelSheetStateManual() {
 }
 
 function debugSendPanelPreviewForDateManual() {
-  var dateStr = '30.04.2026';
+  var dateStr = "30.04.2026";
   var out = SendPanelRepository_.preview(dateStr);
 
-  Logger.log(JSON.stringify({
-    date: out.date,
-    month: out.month,
-    rowsCount: out.rows ? out.rows.length : 0,
-    stats: out.stats,
-    firstRows: (out.rows || []).slice(0, 10)
-  }, null, 2));
+  Logger.log(
+    JSON.stringify(
+      {
+        date: out.date,
+        month: out.month,
+        rowsCount: out.rows ? out.rows.length : 0,
+        stats: out.stats,
+        firstRows: (out.rows || []).slice(0, 10),
+      },
+      null,
+      2,
+    ),
+  );
 
   return out;
 }
 
-
 function debugSendPanelBuildRawForDateManual() {
-  var dateStr = '30.04.2026';
+  var dateStr = "30.04.2026";
 
   var ctx = PersonsRepository_.getDateContext(dateStr);
   var source = ctx.sheet;
@@ -146,31 +173,37 @@ function debugSendPanelBuildRawForDateManual() {
 
   var codes = source.getRange(start, ctx.col, num, 1).getDisplayValues();
   var callsignCol = getMonthlyCallsignColForSheet_(source);
-  var callsigns = source.getRange(start, callsignCol, num, 1).getDisplayValues();
+  var callsigns = source
+    .getRange(start, callsignCol, num, 1)
+    .getDisplayValues();
 
   var sourceRows = [];
+
   for (var i = 0; i < num; i++) {
-    var code = String(codes[i][0] || '').trim();
-    var callsign = String(callsigns[i][0] || '').trim();
+    var code = String(codes[i][0] || "").trim();
+    var callsign = String(callsigns[i][0] || "").trim();
     var person = null;
+
     try {
-      person = callsign && typeof resolvePersonnelForLookup_ === 'function'
-        ? resolvePersonnelForLookup_(callsign, '', '')
-        : null;
+      person =
+        callsign && typeof resolvePersonnelForLookup_ === "function"
+          ? resolvePersonnelForLookup_(callsign, "", "")
+          : null;
     } catch (_) {}
 
     if (code || callsign) {
       sourceRows.push({
         row: start + i,
         callsign: callsign,
-        fml: person && person.fml ? person.fml : '',
-        code: code
+        fml: person && person.fml ? person.fml : "",
+        code: code,
       });
     }
   }
 
   var built = null;
-  var builtError = '';
+  var builtError = "";
+
   try {
     built = SendPanelRepository_.buildRowsForDate(dateStr);
   } catch (e) {
@@ -178,7 +211,8 @@ function debugSendPanelBuildRawForDateManual() {
   }
 
   var preview = null;
-  var previewError = '';
+  var previewError = "";
+
   try {
     preview = SendPanelRepository_.preview(dateStr);
   } catch (e2) {
@@ -194,7 +228,7 @@ function debugSendPanelBuildRawForDateManual() {
       codeRange: codeRangeA1,
       startRow: start,
       rowCount: num,
-      callsignCol: callsignCol
+      callsignCol: callsignCol,
     },
     sourceRowsCount: sourceRows.length,
     sourceRowsFirst20: sourceRows.slice(0, 20),
@@ -204,7 +238,8 @@ function debugSendPanelBuildRawForDateManual() {
     previewError: previewError,
     previewRowsCount: preview && preview.rows ? preview.rows.length : 0,
     previewStats: preview ? preview.stats : null,
-    previewRowsFirst10: preview && preview.rows ? preview.rows.slice(0, 10) : []
+    previewRowsFirst10:
+      preview && preview.rows ? preview.rows.slice(0, 10) : [],
   };
 
   Logger.log(JSON.stringify(out, null, 2));
@@ -214,14 +249,14 @@ function debugSendPanelBuildRawForDateManual() {
 function debugManualSheetAccess_() {
   var result = {
     activeSpreadsheetOk: false,
-    activeSpreadsheetId: '',
-    activeSpreadsheetName: '',
+    activeSpreadsheetId: "",
+    activeSpreadsheetName: "",
     openByIdOk: false,
-    openByIdName: '',
+    openByIdName: "",
     accessSheetOk: false,
     accessSheetLastRow: 0,
     accessSheetLastColumn: 0,
-    error: ''
+    error: "",
   };
 
   try {
@@ -237,7 +272,7 @@ function debugManualSheetAccess_() {
   }
 
   if (!result.activeSpreadsheetId) {
-    result.error = 'getWasbSpreadsheet_() не повернув ID таблиці';
+    result.error = "getWasbSpreadsheet_() не повернув ID таблиці";
     Logger.log(JSON.stringify(result, null, 2));
     return result;
   }
@@ -248,7 +283,7 @@ function debugManualSheetAccess_() {
     result.openByIdOk = true;
     result.openByIdName = ss.getName();
 
-    var accessSheet = ss.getSheetByName('ACCESS');
+    var accessSheet = ss.getSheetByName("ACCESS");
     result.accessSheetOk = !!accessSheet;
 
     if (accessSheet) {
@@ -258,6 +293,118 @@ function debugManualSheetAccess_() {
   } catch (e2) {
     result.error = e2 && e2.message ? e2.message : String(e2);
   }
+
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
+}
+
+function debugTrimPersonnelStatusDryRunManual() {
+  return oneShotTrimPersonnelStatusManual_({ dryRun: true });
+}
+
+function runTrimPersonnelStatusOnceManual() {
+  return oneShotTrimPersonnelStatusManual_({ dryRun: false });
+}
+
+function oneShotTrimPersonnelStatusManual_(options) {
+  options = options || {};
+
+  var dryRun = options.dryRun !== false;
+
+  var ss =
+    typeof getWasbSpreadsheet_ === "function"
+      ? getWasbSpreadsheet_()
+      : SpreadsheetApp.getActiveSpreadsheet();
+
+  if (!ss) {
+    throw new Error("Spreadsheet not found");
+  }
+
+  var sheet = ss.getSheetByName("PERSONNEL");
+
+  if (!sheet) {
+    throw new Error("PERSONNEL sheet not found");
+  }
+
+  var lastRow = sheet.getLastRow();
+  var lastColumn = sheet.getLastColumn();
+
+  if (lastRow < 2 || lastColumn < 1) {
+    return {
+      dryRun: dryRun,
+      spreadsheetName: ss.getName(),
+      sheetName: sheet.getName(),
+      changed: 0,
+      rows: [],
+    };
+  }
+
+  var values = sheet.getRange(1, 1, lastRow, lastColumn).getDisplayValues();
+
+  var headers = values[0].map(function (value) {
+    return String(value || "").trim();
+  });
+
+  var statusColIndex = headers.indexOf("Status");
+
+  if (statusColIndex === -1) {
+    throw new Error("Status column not found");
+  }
+
+  var changedRows = [];
+
+  for (var r = 1; r < values.length; r += 1) {
+    var oldValue = String(values[r][statusColIndex] || "");
+    var newValue = oldValue.trim();
+
+    if (oldValue !== newValue) {
+      changedRows.push({
+        row: r + 1,
+        oldValue: oldValue,
+        newValue: newValue,
+      });
+
+      if (!dryRun) {
+        sheet.getRange(r + 1, statusColIndex + 1).setValue(newValue);
+      }
+    }
+  }
+
+  var validationResult = null;
+  var cacheClearResult = null;
+  var validationError = "";
+  var cacheClearError = "";
+
+  if (!dryRun) {
+    if (typeof applyPersonnelStatusColumnValidation === "function") {
+      try {
+        validationResult = applyPersonnelStatusColumnValidation();
+      } catch (e1) {
+        validationError = e1 && e1.message ? e1.message : String(e1);
+      }
+    }
+
+    if (typeof apiStage7ClearPhoneCache === "function") {
+      try {
+        cacheClearResult = apiStage7ClearPhoneCache();
+      } catch (e2) {
+        cacheClearError = e2 && e2.message ? e2.message : String(e2);
+      }
+    }
+  }
+
+  var result = {
+    dryRun: dryRun,
+    spreadsheetName: ss.getName(),
+    sheetName: sheet.getName(),
+    statusColumn: statusColIndex + 1,
+    changed: changedRows.length,
+    rows: changedRows,
+    validationApplied: !!validationResult,
+    validationError: validationError,
+    cacheCleared: !!cacheClearResult,
+    cacheClearError: cacheClearError,
+  };
 
   Logger.log(JSON.stringify(result, null, 2));
   return result;
