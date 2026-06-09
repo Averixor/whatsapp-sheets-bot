@@ -507,6 +507,9 @@ const ioContext = vm.createContext({
     const text = String(value || "").toLowerCase();
     return text.includes("друг") ? 2 : text.includes("перш") ? 1 : 0;
   },
+  preserveUserConditionalFormatRules_(_sheet, rebuildFn) {
+    return rebuildFn();
+  },
   SpreadsheetApp: {
     BorderStyle: {
       SOLID_MEDIUM: "SOLID_MEDIUM",

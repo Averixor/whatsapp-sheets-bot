@@ -457,6 +457,37 @@ function _sshBuildRegistry_() {
       headers: ["FML", "Phone", "Code", "Tasks", "Status", "Sent", "Action"],
       minRows: 3,
     },
+    {
+      name: "FORMAT_RULES_REGISTRY",
+      schemaKey: null,
+      headers: [
+        "ID",
+        "Sheet",
+        "Range",
+        "RuleType",
+        "ConditionType",
+        "ConditionValue",
+        "Formula",
+        "Background",
+        "FontColor",
+        "Bold",
+        "Italic",
+        "TextStyle",
+        "Priority",
+        "DetectedAs",
+        "Decision",
+        "Relevance",
+        "MovePolicy",
+        "AdoptToCode",
+        "ExpiresAt",
+        "Comment",
+        "Fingerprint",
+        "FirstSeenAt",
+        "LastSeenAt",
+        "LastAppliedAt",
+      ],
+      minRows: 500,
+    },
   ]);
 }
 
@@ -623,6 +654,17 @@ function _applySendPanelHeaderRowFormatting_(sheet, headerRow, lastCol) {
   } catch (e) {}
 }
 
+function _applyFormatRulesRegistryStandards_(sheet) {
+  if (!sheet || String(sheet.getName()) !== "FORMAT_RULES_REGISTRY") return;
+  try {
+    if (typeof _formatRulesApplyRegistryValidation_ === "function") {
+      _formatRulesApplyRegistryValidation_(sheet);
+    }
+  } catch (e) {
+    _sshLog_("FORMAT_RULES_REGISTRY validation", e);
+  }
+}
+
 function _resolveSheetSpec_(record) {
   if (!record) {
     throw new Error("System sheet record is required");
@@ -709,6 +751,24 @@ function ensureSystemSheetByName_(sheetName) {
   var record = _systemSheetRecordByName_(sheetName);
   if (!record) throw new Error("Unknown system sheet: " + sheetName);
 
+  if (
+    record.name === "FORMAT_RULES_REGISTRY" &&
+    typeof ensureFormatRulesRegistrySheet_ === "function"
+  ) {
+    var registryResult = ensureFormatRulesRegistrySheet_();
+    return {
+      name: record.name,
+      created: registryResult.created,
+      headerRow: 1,
+      columns: FORMAT_RULES_REGISTRY_HEADERS_.length,
+      rowsEnsured: Math.max(
+        Number(registryResult.sheet.getMaxRows()) || 0,
+        record.minRows,
+      ),
+      headersUpdated: registryResult.headersUpdated,
+    };
+  }
+
   var ss = _sshGetSpreadsheet_();
   var sheet = ss.getSheetByName(record.name);
   var created = !sheet;
@@ -731,6 +791,7 @@ function ensureSystemSheetByName_(sheetName) {
   _applyAccessCheckboxes_(sheet);
   _applySendPanelHeaderRowFormatting_(sheet, spec.headerRow, spec.lastCol);
   _applyPersonnelStatusValidation_(sheet);
+  _applyFormatRulesRegistryStandards_(sheet);
 
   return {
     name: record.name,

@@ -232,6 +232,16 @@ function ensureSendPanelStatusFormula_(panel) {
 }
 
 function ensureSendPanelStructure_(panel, botMonth, panelDate) {
+  return preserveUserConditionalFormatRules_(
+    panel,
+    function () {
+      return rebuildSendPanelStructureUnsafe_(panel, botMonth, panelDate);
+    },
+    { defaultMovePolicy: "RemapWithSheet" },
+  );
+}
+
+function rebuildSendPanelStructureUnsafe_(panel, botMonth, panelDate) {
   try { panel.getRange(1, 1, 1, 7).breakApart(); } catch (e) {}
   panel.clearContents();
   panel.clearFormats();
@@ -260,6 +270,7 @@ function ensureSendPanelStructure_(panel, botMonth, panelDate) {
   panel.getRange(startRow, 1, rowCount, 7).setBackground(null);
 
   setSendPanelMetadata_(panel, safeMonth, safeDate);
+  return panel;
 }
 
 function setSendPanelMetadata_(panel, botMonth, panelDate) {

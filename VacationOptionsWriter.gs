@@ -204,32 +204,40 @@ const VacationOptionsWriter_ = (function () {
   function writeVacationOptions(options) {
     const list = Array.isArray(options) ? options : [];
     const sheet = _ensureSheet_(VACATION_PLANNER_CONFIG.SHEETS.OPTIONS);
-    sheet.clear();
+    return preserveUserConditionalFormatRules_(
+      sheet,
+      function () {
+        sheet.clear();
 
-    const rows = [OPTIONS_HEADERS.slice()];
-    list.forEach(function (option) {
-      const rejected = option.status === "REJECTED";
-      rows.push([
-        option.rank || 0,
-        option.fml || "",
-        _vacationText_(option.vacationNumber),
-        _date_(option.startDate) || "",
-        _date_(option.endDate) || "",
-        Number(option.days) || 0,
-        Number(option.score) || 0,
-        rejected
-          ? "Відхилено"
-          : Number(option.rank) === 1
-            ? "Кращий"
-            : "Допустимий",
-        option.explanation || "",
-        false,
-      ]);
-    });
+        const rows = [OPTIONS_HEADERS.slice()];
+        list.forEach(function (option) {
+          const rejected = option.status === "REJECTED";
+          rows.push([
+            option.rank || 0,
+            option.fml || "",
+            _vacationText_(option.vacationNumber),
+            _date_(option.startDate) || "",
+            _date_(option.endDate) || "",
+            Number(option.days) || 0,
+            Number(option.score) || 0,
+            rejected
+              ? "Відхилено"
+              : Number(option.rank) === 1
+                ? "Кращий"
+                : "Допустимий",
+            option.explanation || "",
+            false,
+          ]);
+        });
 
-    sheet.getRange(1, 1, rows.length, OPTIONS_HEADERS.length).setValues(rows);
-    _formatOptionsSheet_(sheet, rows.length);
-    return sheet;
+        sheet
+          .getRange(1, 1, rows.length, OPTIONS_HEADERS.length)
+          .setValues(rows);
+        _formatOptionsSheet_(sheet, rows.length);
+        return sheet;
+      },
+      { defaultMovePolicy: "RemapWithSheet" },
+    );
   }
 
   function _formatOptionsSheet_(sheet, rowCount) {
@@ -644,22 +652,28 @@ const VacationOptionsWriter_ = (function () {
     const rows = calendar.rows;
     const width = rows[0].length;
     _ensureGridSize_(sheet, rows.length, width);
-    sheet.clear();
-    sheet.getRange(1, 1, rows.length, width).setValues(rows);
-    sheet
-      .getRange(1, 1, 1, width)
-      .setFontWeight("bold")
-      .setBackground("#D9EAD3");
-    sheet.setFrozenRows(1);
-    sheet.setFrozenColumns(2);
-    if (calendar.dateCount) {
-      sheet.getRange(1, 3, 1, calendar.dateCount).setNumberFormat("dd.MM");
-      sheet.setColumnWidths(3, calendar.dateCount, 42);
-    }
-    _formatScheduleCalendar_(sheet, calendar);
-    _applyMonthSeparators_(sheet, calendar);
-    sheet.autoResizeColumns(1, 2);
-    return calendar;
+    return preserveUserConditionalFormatRules_(
+      sheet,
+      function () {
+        sheet.clear();
+        sheet.getRange(1, 1, rows.length, width).setValues(rows);
+        sheet
+          .getRange(1, 1, 1, width)
+          .setFontWeight("bold")
+          .setBackground("#D9EAD3");
+        sheet.setFrozenRows(1);
+        sheet.setFrozenColumns(2);
+        if (calendar.dateCount) {
+          sheet.getRange(1, 3, 1, calendar.dateCount).setNumberFormat("dd.MM");
+          sheet.setColumnWidths(3, calendar.dateCount, 42);
+        }
+        _formatScheduleCalendar_(sheet, calendar);
+        _applyMonthSeparators_(sheet, calendar);
+        sheet.autoResizeColumns(1, 2);
+        return calendar;
+      },
+      { defaultMovePolicy: "RemapWithVacationCalendar" },
+    );
   }
 
   const VACATION_RULE_HUMAN_LABELS = {
@@ -866,30 +880,36 @@ const VacationOptionsWriter_ = (function () {
 
   function _writeChecks_(checks) {
     const sheet = _ensureSheet_(VACATION_PLANNER_CONFIG.SHEETS.CHECK);
-    sheet.clear();
-    const headers = ["Date", "Type", "FML", "Description", "Severity"];
-    const rows = [headers];
-    if (!checks.length) {
-      rows.push(["", "ALL_RULES", "", "Порушень не знайдено", "OK"]);
-    } else {
-      normalizeChecks(checks).forEach(function (item) {
-        rows.push([
-          item.date,
-          item.label,
-          item.fml,
-          item.description,
-          item.severity,
-        ]);
-      });
-    }
-    sheet.getRange(1, 1, rows.length, headers.length).setValues(rows);
-    sheet
-      .getRange(1, 1, 1, headers.length)
-      .setFontWeight("bold")
-      .setBackground("#FCE8B2");
-    sheet.setFrozenRows(1);
-    sheet.autoResizeColumns(1, headers.length);
-    sheet.setColumnWidth(4, 420);
+    return preserveUserConditionalFormatRules_(
+      sheet,
+      function () {
+        sheet.clear();
+        const headers = ["Date", "Type", "FML", "Description", "Severity"];
+        const rows = [headers];
+        if (!checks.length) {
+          rows.push(["", "ALL_RULES", "", "Порушень не знайдено", "OK"]);
+        } else {
+          normalizeChecks(checks).forEach(function (item) {
+            rows.push([
+              item.date,
+              item.label,
+              item.fml,
+              item.description,
+              item.severity,
+            ]);
+          });
+        }
+        sheet.getRange(1, 1, rows.length, headers.length).setValues(rows);
+        sheet
+          .getRange(1, 1, 1, headers.length)
+          .setFontWeight("bold")
+          .setBackground("#FCE8B2");
+        sheet.setFrozenRows(1);
+        sheet.autoResizeColumns(1, headers.length);
+        sheet.setColumnWidth(4, 420);
+      },
+      { defaultMovePolicy: "RemapWithSheet" },
+    );
   }
 
   function _loadAudit_() {

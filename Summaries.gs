@@ -259,38 +259,45 @@ function formatDetailedSummaryLegacy_(date, people) {
 
 function createDetailedSheet_(date, people) {
   const sh = ensureSheet_(CONFIG.DETAIL_SHEET);
-  sh.clear();
-  sh.getRange(1, 1, 1, 4)
-    .setValues([["Date", "Group", "Surname", "Code"]])
-    .setFontWeight("bold")
-    .setHorizontalAlignment("center")
-    .setBackground("#f0f0f0");
+  return preserveUserConditionalFormatRules_(
+    sh,
+    function () {
+      sh.clear();
+      sh.getRange(1, 1, 1, 4)
+        .setValues([["Date", "Group", "Surname", "Code"]])
+        .setFontWeight("bold")
+        .setHorizontalAlignment("center")
+        .setBackground("#f0f0f0");
 
-  const groupOf = (code) => {
-    for (const [g, arr] of Object.entries(SUMMARY_GROUPS))
-      if (arr.includes(code)) return g;
-    return "Інше";
-  };
+      const groupOf = (code) => {
+        for (const [g, arr] of Object.entries(SUMMARY_GROUPS))
+          if (arr.includes(code)) return g;
+        return "Інше";
+      };
 
-  const rows = [];
-  people
-    .slice()
-    .sort(
-      (a, b) =>
-        groupOf(a.code).localeCompare(groupOf(b.code)) ||
-        a.surname.localeCompare(b.surname),
-    )
-    .forEach((p) =>
-      rows.push([
-        date,
-        displayNameForCode_(groupOf(p.code)),
-        p.surname,
-        p.code,
-      ]),
-    );
+      const rows = [];
+      people
+        .slice()
+        .sort(
+          (a, b) =>
+            groupOf(a.code).localeCompare(groupOf(b.code)) ||
+            a.surname.localeCompare(b.surname),
+        )
+        .forEach((p) =>
+          rows.push([
+            date,
+            displayNameForCode_(groupOf(p.code)),
+            p.surname,
+            p.code,
+          ]),
+        );
 
-  if (rows.length) sh.getRange(2, 1, rows.length, 4).setValues(rows);
-  sh.autoResizeColumns(1, 4);
+      if (rows.length) sh.getRange(2, 1, rows.length, 4).setValues(rows);
+      sh.autoResizeColumns(1, 4);
+      return sh;
+    },
+    { defaultMovePolicy: "RemapWithSheet" },
+  );
 }
 
 function createDetailedDaySummary() {

@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "phase": "conditional-format-rules",
+  "registrySheet": "FORMAT_RULES_REGISTRY",
+  "headers": [
+    "ID",
+    "Sheet",
+    "Range",
+    "RuleType",
+    "ConditionType",
+    "ConditionValue",
+    "Formula",
+    "Background",
+    "FontColor",
+    "Bold",
+    "Italic",
+    "TextStyle",
+    "Priority",
+    "DetectedAs",
+    "Decision",
+    "Relevance",
+    "MovePolicy",
+    "AdoptToCode",
+    "ExpiresAt",
+    "Comment",
+    "Fingerprint",
+    "FirstSeenAt",
+    "LastSeenAt",
+    "LastAppliedAt"
+  ],
+  "dropdowns": {
+    "DetectedAs": ["WASB_MANAGED", "MANUAL", "UNKNOWN", "ADOPTED"],
+    "Decision": ["Preserve", "Adopt", "Temporary", "Ignore", "DeleteAllowed"],
+    "Relevance": ["Permanent", "Temporary", "OneTime", "Deprecated", "Unknown"],
+    "MovePolicy": [
+      "KeepOriginalRange",
+      "RemapWithSheet",
+      "RemapWithSchedule",
+      "RemapWithVacationCalendar",
+      "DoNotMove"
+    ],
+    "AdoptToCode": ["TRUE", "FALSE"]
+  },
+  "userControlledFields": [
+    "Decision",
+    "Relevance",
+    "MovePolicy",
+    "AdoptToCode",
+    "ExpiresAt",
+    "Comment"
+  ],
+  "apis": {
+    "apiScanManualFormatRules": "maintainer",
+    "apiApplyFormatRulesRegistry": "maintainer",
+    "apiExportAdoptedFormatRules": "sysadmin"
+  },
+  "sourceFiles": [
+    "ConditionalFormatGovernance.gs",
+    "ConditionalFormatRegistry.gs",
+    "ConditionalFormatAdoptedRules.gs"
+  ],
+  "preserveWrapper": "preserveUserConditionalFormatRules_",
+  "directConditionalRuleWriter": {
+    "method": "setConditionalFormatRules",
+    "allowedFiles": ["ConditionalFormatGovernance.gs"]
+  },
+  "destructiveFormattingIntegrations": {
+    "VacationOptionsWriter.gs": [
+      "writeVacationOptions",
+      "_writeSchedule_",
+      "_writeChecks_"
+    ],
+    "SendPanel.gs": ["ensureSendPanelStructure_"],
+    "Summaries.gs": ["createDetailedSheet_"]
+  },
+  "monthlyScheduleCopyPaths": ["MonthSheets.gs", "UseCases.MonthOps.gs"],
+  "protectedPriorityOrder": ["MANUAL", "UNKNOWN", "ADOPTED", "WASB_MANAGED"],
+  "unknownPolicy": "preserve-as-user",
+  "defaultMovePolicy": "KeepOriginalRange",
+  "deletePolicy": "Decision=DeleteAllowed-only",
+  "staticFormatAudit": {
+    "phase": 2,
+    "status": "not-implemented"
+  }
+}

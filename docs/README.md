@@ -15,6 +15,7 @@ snapshots to the repository.
 | [CONTRIBUTING.md](../CONTRIBUTING.md)             | Local workflow, CI, change policy                         |
 | [AGENTS.md](../AGENTS.md)                         | Automation-agent instructions                             |
 | [vacation-planner.md](./vacation-planner.md)      | Vacation planner workflow, source blocks, and rules       |
+| [format-rules-governance.md](./format-rules-governance.md) | Manual conditional-format registry and rebuild protection |
 
 ## Refactor Planning
 

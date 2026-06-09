@@ -83,6 +83,9 @@
     "apiStage7RepairSystemSheets",
     "apiStage7NormalizeAllSheetHeadersToEnglish",
     "apiStage7BootstrapRuntimeAndAlertsSheets",
+    "apiScanManualFormatRules",
+    "apiApplyFormatRulesRegistry",
+    "apiExportAdoptedFormatRules",
     "apiLoadCalendarDay"
   ],
   "requiredGovernanceEndpoints": [
@@ -91,7 +94,10 @@
     "apiStage7BootstrapSidebar",
     "apiMarkPanelRowsAsSentFast",
     "apiLoadCalendarDay",
-    "apiStage7QuickHealthCheck"
+    "apiStage7QuickHealthCheck",
+    "apiScanManualFormatRules",
+    "apiApplyFormatRulesRegistry",
+    "apiExportAdoptedFormatRules"
   ],
   "rolePolicyGroups": {
     "guest": [
@@ -144,7 +150,9 @@
       "apiStage7HealthCheck",
       "apiRunStage7Diagnostics",
       "apiStage7ListPendingRepairs",
-      "apiStage7GetOperationDetails"
+      "apiStage7GetOperationDetails",
+      "apiScanManualFormatRules",
+      "apiApplyFormatRulesRegistry"
     ],
     "admin": [
       "apiCheckVacationsAndBirthdays",
@@ -172,7 +180,8 @@
       "apiStage7RunLifecycleRetentionCleanup",
       "apiStage7ReportAccessViolation",
       "apiStage7ApplyProtections",
-      "apiStage7NormalizeAllSheetHeadersToEnglish"
+      "apiStage7NormalizeAllSheetHeadersToEnglish",
+      "apiExportAdoptedFormatRules"
     ]
   },
   "rolePolicyOverrides": {

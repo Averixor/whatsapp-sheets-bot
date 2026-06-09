@@ -108,6 +108,9 @@ const PROJECT_STAGE7_CANONICAL_API_MAP_ = Object.freeze({
     "apiStage7NormalizeAllSheetHeadersToEnglish",
     "apiStage7BootstrapRuntimeAndAlertsSheets",
     "apiStage7BootstrapAccessSheet",
+    "apiScanManualFormatRules",
+    "apiApplyFormatRulesRegistry",
+    "apiExportAdoptedFormatRules",
   ]),
 
   compatibility: Object.freeze(["apiLoadCalendarDay"]),
@@ -372,6 +375,18 @@ const PROJECT_STAGE7_ACCESS_API_ROLE_POLICY_ = Object.freeze({
   apiStage7BootstrapRuntimeAndAlertsSheets: Object.freeze({
     guestAllowed: false,
     minRole: "admin",
+  }),
+  apiScanManualFormatRules: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
+  }),
+  apiApplyFormatRulesRegistry: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
+  }),
+  apiExportAdoptedFormatRules: Object.freeze({
+    guestAllowed: false,
+    minRole: "sysadmin",
   }),
   apiLoadCalendarDay: Object.freeze({
     guestAllowed: false,
@@ -706,6 +721,9 @@ const PROJECT_BUNDLE_FILE_INDEX_ = Object.freeze([
   "AuditTrail.gs",
   "CHANGELOG.md",
   "Code.gs",
+  "ConditionalFormatAdoptedRules.gs",
+  "ConditionalFormatGovernance.gs",
+  "ConditionalFormatRegistry.gs",
   "DataAccess.gs",
   "DateUtils.gs",
   "DeprecatedRegistry.gs",
