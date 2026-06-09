@@ -268,6 +268,7 @@ const VacationSidebarService_ = (function () {
         total: vacations.length,
         activePeople: Object.keys(people).length,
       },
+      problemSummary: VacationOptionsWriter_.summarizeVacationProblems(),
     };
   }
 

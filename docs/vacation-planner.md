@@ -41,11 +41,11 @@ read-only in UI.
 Reminders call `apiCheckVacationsAndBirthdays` inside the vacations screen
 (legacy `vacationReminder` action remains for tests only).
 
-`VACATION_CHECK` remains the technical audit sheet. The main sidebar exposes
-the same rule violations as **Проблемні питання** with public labels,
-explanations, suggestions, and a safe jump to `Підібрати`. The jump prefills
-the vacation when the server can identify it and otherwise asks the user to
-verify the fields.
+`VACATION_CHECK` remains a technical audit sheet for administrators. End users
+see **Проблемні питання** with human-readable labels (never internal codes like
+`GAP_TOO_SHORT`), explanations, suggestions, and a safe jump to `Підібрати`.
+Reports and the overview card point to **Проблемні питання** instead of the
+audit sheet.
 
 `VACATION_SCHEDULE` keeps `QUANTITY | FML` in columns `A:B`. Only calendar
 cells from `C2` are colored: `В1`, `В2`, `ВД`, `СО`, and mixed markers use

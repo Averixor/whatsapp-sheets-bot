@@ -18,18 +18,42 @@
     return html;
   }
 
-  const VACATION_PROBLEM_LABELS = {
+  const VACATION_RULE_HUMAN_LABELS = {
+    GAP_TOO_SHORT: "Замалий інтервал між відпустками",
+    PERSON_GAP: "Замалий інтервал між відпустками",
+    PERSON_OVERLAP: "Відпустки однієї людини перетинаються",
+    START_TOO_CLOSE: "Дати початку занадто близько",
+    START_GAP: "Дати початку занадто близько",
+    YEAR_LIMIT: "Забагато відпусток у році",
+    MAX_PERSON_YEAR: "Забагато відпусток у році",
+    MAX_CONCURRENT: "Забагато людей одночасно у відпустці",
     INVALID_DATE: "Некоректна дата",
     INVALID_DURATION: "Некоректна тривалість",
-    MAX_PERSON_YEAR: "Забагато відпусток у році",
-    PERSON_OVERLAP: "Перетин відпусток однієї людини",
-    PERSON_GAP: "Малий інтервал між відпустками",
-    START_GAP: "Занадто близькі дати початку",
-    MAX_CONCURRENT: "Перевищено одночасну кількість відпусток",
   };
 
+  function normalizeVacationRuleType_(type) {
+    var aliases = {
+      GAP_TOO_SHORT: "PERSON_GAP",
+      START_TOO_CLOSE: "START_GAP",
+      YEAR_LIMIT: "MAX_PERSON_YEAR",
+    };
+    return aliases[type] || type;
+  }
+
+  function humanVacationRuleLabel_(type) {
+    var key = String(type || "").trim();
+    return (
+      VACATION_RULE_HUMAN_LABELS[key] ||
+      VACATION_RULE_HUMAN_LABELS[normalizeVacationRuleType_(key)] ||
+      key ||
+      "Проблема"
+    );
+  }
+
   function buildVacationProblemSuggestions_(problem) {
-    var type = String((problem && (problem.type || problem.rule)) || "").trim();
+    var type = normalizeVacationRuleType_(
+      String((problem && (problem.type || problem.rule)) || "").trim(),
+    );
     if (type === "INVALID_DATE") {
       return [
         "Перевірити дату початку та дату завершення у VACATIONS.",
@@ -86,8 +110,10 @@
     }
     return list
       .map(function (item, index) {
-        var type = String((item && (item.type || item.rule)) || "").trim();
-        var label = VACATION_PROBLEM_LABELS[type] || type || "Проблема";
+        var type = normalizeVacationRuleType_(
+          String((item && (item.type || item.rule)) || "").trim(),
+        );
+        var label = humanVacationRuleLabel_(type);
         var suggestions = buildVacationProblemSuggestions_(item);
         var canFindNewDate =
           ["PERSON_GAP", "START_GAP", "MAX_CONCURRENT"].indexOf(type) !== -1;
@@ -140,6 +166,7 @@
       options: [],
       checks: [],
       problemsLoaded: false,
+      problemSummary: null,
       reportText: "",
       remindersHtml: "",
       moveIndex: "",
@@ -340,6 +367,48 @@
       return renderVacationProblems_(this.state.checks);
     },
 
+    scheduleSummaryHtml() {
+      var summary = this.state.problemSummary || {};
+      var total = Number(this.state.stats.total || summary.scheduleRows || 0);
+      var errorCount = Number(summary.errorCount || 0);
+      var html =
+        '<div class="vacations-card vacations-schedule-summary">' +
+        '<div class="vacations-card__head"><strong>🏖️ Графік відпусток</strong></div>' +
+        '<div class="vacation-problem-card__person">Активних відпусток: ' +
+        this.esc(total) +
+        "</div>";
+      if (errorCount > 0) {
+        html +=
+          '<div class="vacations-problem-summary-warning">⚠️ Є ' +
+          this.esc(errorCount) +
+          " проблемні питання</div>";
+        if (summary.summaryLine) {
+          html +=
+            '<div class="vacations-muted vacations-problem-summary-line">' +
+            this.esc(summary.summaryLine) +
+            "</div>";
+        } else if (Array.isArray(summary.items) && summary.items.length) {
+          html += '<ul class="vacations-problem-summary-list">';
+          summary.items.forEach(function (item) {
+            html +=
+              "<li>" +
+              VacationModule.esc(item.label) +
+              " — " +
+              VacationModule.esc(item.count) +
+              "</li>";
+          });
+          html += "</ul>";
+        }
+        html +=
+          '<div class="vacations-muted vacations-problem-summary-hint">Відкрийте «Проблемні питання», щоб переглянути деталі та підібрати рішення.</div>' +
+          '<div class="result-screen-actions">' +
+          '<button class="btn btn-secondary vacations-btn-sm" type="button" onclick="VacationModule.openTab(\'check\')">Проблемні питання</button>' +
+          "</div>";
+      }
+      html += "</div>";
+      return html;
+    },
+
     panelHtml() {
       var s = this.state;
       switch (s.activeTab) {
@@ -483,6 +552,7 @@
             '<div class="vacations-stat"><strong>' +
             this.esc(s.stats.activePeople || 0) +
             "</strong><span>людей</span></div></div>" +
+            this.scheduleSummaryHtml() +
             '<div class="result-screen-actions">' +
             '<button class="btn btn-primary" type="button" onclick="VacationModule.loadState()">Оновити стан</button>' +
             '<button class="btn btn-primary" type="button" onclick="VacationModule.checkReminders()">🔔 Перевірити нагадування</button>' +
@@ -570,6 +640,7 @@
         this.state.personnel = result.personnel || [];
         this.state.vacations = result.vacations || [];
         this.state.stats = result.stats || { total: 0, activePeople: 0 };
+        this.state.problemSummary = result.problemSummary || null;
         this.setStatus("", "info");
         this.render();
       } catch (error) {
@@ -647,6 +718,9 @@
             " днів",
           "success",
         );
+        if (result.problemSummary) {
+          this.state.problemSummary = result.problemSummary;
+        }
         await this.loadState();
       } catch (error) {
         this.showError(error);
@@ -790,11 +864,21 @@
         );
         this.state.checks = result.checks || [];
         this.state.problemsLoaded = true;
+        if (result.problemSummary) {
+          this.state.problemSummary = result.problemSummary;
+        } else if (result.errorCount != null) {
+          this.state.problemSummary = {
+            errorCount: result.errorCount,
+            scheduleRows: result.scheduleRows || this.state.stats.total,
+            items: [],
+            summaryLine: "",
+          };
+        }
         this.setStatus(
           result.errorCount
             ? "Проблемних питань: " + result.errorCount
             : "Проблемних питань не знайдено.",
-          result.errorCount ? "error" : "success",
+          result.errorCount ? "warning" : "success",
         );
         this.render();
         logToConsole(
@@ -852,9 +936,15 @@
           "VacationModule.generateReport",
         );
         this.state.reportText = result.summary || "Звіт порожній.";
+        if (result.problemSummary) {
+          this.state.problemSummary = result.problemSummary;
+        }
         this.setStatus("Звіт сформовано.", "success");
         this.render();
-        logToConsole("✓ Звіт по відпустках сформовано", "success");
+        var adminNote = result.adminSheet
+          ? " (технічний аудит: " + result.adminSheet + ")"
+          : "";
+        logToConsole("✓ Звіт по відпустках сформовано" + adminNote, "success");
       } catch (error) {
         this.showError(error);
       } finally {

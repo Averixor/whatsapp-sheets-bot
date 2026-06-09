@@ -70,9 +70,7 @@ const VacationOptionsWriter_ = (function () {
   }
 
   function _sourceVacationText_(option) {
-    const code = String(
-      (option && (option.vacationType || option.type)) || "",
-    )
+    const code = String((option && (option.vacationType || option.type)) || "")
       .trim()
       .toUpperCase();
     if (code === "ВД") return "додаткова відпустка";
@@ -176,11 +174,13 @@ const VacationOptionsWriter_ = (function () {
 
   function _isTrue_(value) {
     if (value === true) return true;
-    return ["TRUE", "1", "YES", "Y", "ТАК"].indexOf(
-      String(value == null ? "" : value)
-        .trim()
-        .toUpperCase(),
-    ) !== -1;
+    return (
+      ["TRUE", "1", "YES", "Y", "ТАК"].indexOf(
+        String(value == null ? "" : value)
+          .trim()
+          .toUpperCase(),
+      ) !== -1
+    );
   }
 
   function _rowMatchesOption_(row, option) {
@@ -444,7 +444,9 @@ const VacationOptionsWriter_ = (function () {
       if (_isFormulaDrivenBlock_(sheet, block)) {
         const startRange = sheet.getRange(rowNumber, block.startCol + 1);
         if (active === true) {
-          throw new Error("Для відновлення відпустки вкажіть нову дату початку");
+          throw new Error(
+            "Для відновлення відпустки вкажіть нову дату початку",
+          );
         }
         startRange.clearContent();
         return {
@@ -481,10 +483,7 @@ const VacationOptionsWriter_ = (function () {
   }
 
   function _dateKey_(value) {
-    if (
-      typeof value === "string" &&
-      /^\d{4}-\d{2}-\d{2}$/.test(value.trim())
-    ) {
+    if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
       return value.trim();
     }
     const date = _date_(value);
@@ -550,9 +549,8 @@ const VacationOptionsWriter_ = (function () {
       for (let ordinal = start; ordinal <= end; ordinal++) {
         const index = ordinal - minOrdinal;
         const current = people[key].cells[index];
-        people[key].cells[index] = current && current !== marker
-          ? current + "/" + marker
-          : marker;
+        people[key].cells[index] =
+          current && current !== marker ? current + "/" + marker : marker;
       }
     });
 
@@ -664,22 +662,123 @@ const VacationOptionsWriter_ = (function () {
     return calendar;
   }
 
-  function _checkType_(rule) {
-    const map = {
-      START_GAP: "START_TOO_CLOSE",
-      PERSON_GAP: "GAP_TOO_SHORT",
-      PERSON_OVERLAP: "GAP_TOO_SHORT",
-      MAX_PERSON_YEAR: "YEAR_LIMIT",
-      INVALID_DURATION: "INVALID_DATE",
+  const VACATION_RULE_HUMAN_LABELS = {
+    GAP_TOO_SHORT: "Замалий інтервал між відпустками",
+    PERSON_GAP: "Замалий інтервал між відпустками",
+    PERSON_OVERLAP: "Відпустки однієї людини перетинаються",
+    START_TOO_CLOSE: "Дати початку занадто близько",
+    START_GAP: "Дати початку занадто близько",
+    YEAR_LIMIT: "Забагато відпусток у році",
+    MAX_PERSON_YEAR: "Забагато відпусток у році",
+    MAX_CONCURRENT: "Забагато людей одночасно у відпустці",
+    INVALID_DATE: "Некоректна дата",
+    INVALID_DURATION: "Некоректна тривалість",
+  };
+
+  const VACATION_RULE_SUMMARY_PHRASE = {
+    GAP_TOO_SHORT: "замалим інтервалом між відпустками",
+    PERSON_GAP: "замалим інтервалом між відпустками",
+    PERSON_OVERLAP: "перетином відпусток однієї людини",
+    START_TOO_CLOSE: "занадто близькими датами початку",
+    START_GAP: "занадто близькими датами початку",
+    YEAR_LIMIT: "забагаттям відпусток у році",
+    MAX_PERSON_YEAR: "забагаттям відпусток у році",
+    MAX_CONCURRENT: "одночасною кількістю людей у відпустці",
+    INVALID_DATE: "некоректними датами",
+    INVALID_DURATION: "некоректною тривалістю",
+  };
+
+  function _humanRuleLabel_(code) {
+    const key = String(code || "").trim();
+    return VACATION_RULE_HUMAN_LABELS[key] || key || "Проблема";
+  }
+
+  function _groupProblemsByLabel_(errors) {
+    const byLabel = {};
+    (Array.isArray(errors) ? errors : []).forEach(function (item) {
+      const label = _humanRuleLabel_(item.rule || item.type);
+      byLabel[label] = (byLabel[label] || 0) + 1;
+    });
+    return byLabel;
+  }
+
+  function _buildProblemSummaryLine_(errors) {
+    const list = Array.isArray(errors) ? errors : [];
+    if (!list.length) return "";
+    const labels = list.map(function (item) {
+      return _humanRuleLabel_(item.rule || item.type);
+    });
+    const uniqueLabels = labels.filter(function (value, index, array) {
+      return array.indexOf(value) === index;
+    });
+    if (uniqueLabels.length !== 1) return "";
+    const phrases = list
+      .map(function (item) {
+        return VACATION_RULE_SUMMARY_PHRASE[item.rule || item.type];
+      })
+      .filter(Boolean);
+    const uniquePhrases = phrases.filter(function (value, index, array) {
+      return array.indexOf(value) === index;
+    });
+    if (uniquePhrases.length === 1) {
+      return "Усі пов'язані із " + uniquePhrases[0] + ".";
+    }
+    return "Усі пов'язані з: " + String(uniqueLabels[0]).toLowerCase() + ".";
+  }
+
+  function _formatVacationReportSummary_(scheduleRows, errors) {
+    const byLabel = _groupProblemsByLabel_(errors);
+    const labels = Object.keys(byLabel).sort();
+    const lines = [
+      "🏖️ Графік відпусток",
+      "",
+      "Активних відпусток: " + scheduleRows,
+    ];
+    if (!errors.length) {
+      lines.push("", "Графік відповідає обмеженням підрозділу.");
+      return lines.join("\n");
+    }
+    lines.push("", "⚠️ Проблемні питання: " + errors.length);
+    labels.forEach(function (label) {
+      lines.push("• " + label + " — " + byLabel[label]);
+    });
+    lines.push(
+      "",
+      "Деталі та варіанти вирішення доступні в розділі «Проблемні питання».",
+    );
+    return lines.join("\n");
+  }
+
+  function _summarizeAuditProblems_(audit) {
+    const errors = (audit.checks || []).filter(function (item) {
+      return item.severity === "ERROR";
+    });
+    const byLabel = _groupProblemsByLabel_(errors);
+    const items = Object.keys(byLabel)
+      .sort()
+      .map(function (label) {
+        return { label: label, count: byLabel[label] };
+      });
+    return {
+      errorCount: errors.length,
+      scheduleRows: (audit.schedule || []).length,
+      byLabel: byLabel,
+      items: items,
+      summaryLine: _buildProblemSummaryLine_(errors),
     };
-    return map[rule] || rule;
+  }
+
+  function summarizeVacationProblems() {
+    return _summarizeAuditProblems_(_loadAudit_());
   }
 
   function normalizeChecks(checks) {
     return (Array.isArray(checks) ? checks : []).map(function (item) {
+      const rule = String((item && item.rule) || "").trim();
       return {
         date: item.date || "",
-        type: _checkType_(item.rule),
+        type: rule,
+        label: _humanRuleLabel_(rule),
         fml: item.fml || "",
         description: item.details || "",
         severity: item.severity || "ERROR",
@@ -689,8 +788,7 @@ const VacationOptionsWriter_ = (function () {
 
   function _extractProblemDates_(problem) {
     return (
-      String((problem && problem.date) || "").match(/\d{4}-\d{2}-\d{2}/g) ||
-      []
+      String((problem && problem.date) || "").match(/\d{4}-\d{2}-\d{2}/g) || []
     );
   }
 
@@ -733,19 +831,18 @@ const VacationOptionsWriter_ = (function () {
       const type = String((item && (item.rule || item.type)) || "").trim();
       const match = _findProblemScheduleItem_(item, schedule);
       const startDate =
-        _dateKey_(item && item.startDate) || _dateKey_(match && match.startDate);
+        _dateKey_(item && item.startDate) ||
+        _dateKey_(match && match.startDate);
       const endDate =
         _dateKey_(item && item.endDate) || _dateKey_(match && match.endDate);
       const days = Number((item && item.days) || (match && match.days)) || "";
       return {
         date: (item && item.date) || startDate || "",
-        type: type || _checkType_(item && item.rule),
+        type: type || String((item && item.rule) || "").trim(),
         rule: type || "",
         fml: (item && item.fml) || "",
         primaryFml:
-          (match && match.fml) ||
-          _splitProblemFml_(item && item.fml)[0] ||
-          "",
+          (match && match.fml) || _splitProblemFml_(item && item.fml)[0] || "",
         description:
           (item && (item.details || item.message || item.description)) || "",
         details:
@@ -754,8 +851,7 @@ const VacationOptionsWriter_ = (function () {
         vacationNumber:
           Number(
             (item && item.vacationNumber) || (match && match.vacationNumber),
-          ) ||
-          "",
+          ) || "",
         startDate: startDate,
         endDate: endDate,
         days: days,
@@ -779,7 +875,7 @@ const VacationOptionsWriter_ = (function () {
       normalizeChecks(checks).forEach(function (item) {
         rows.push([
           item.date,
-          item.type,
+          item.label,
           item.fml,
           item.description,
           item.severity,
@@ -805,33 +901,33 @@ const VacationOptionsWriter_ = (function () {
     const audit = _loadAudit_();
     const calendar = _writeSchedule_(audit.schedule);
     _writeChecks_(audit.checks);
+    const problemSummary = _summarizeAuditProblems_(audit);
     return {
       scheduleRows: audit.schedule.length,
       schedulePeople: calendar.personCount,
       scheduleDays: calendar.dateCount,
       checkRows: audit.checks.length,
-      errorCount: audit.checks.filter(function (item) {
-        return item.severity === "ERROR";
-      }).length,
+      errorCount: problemSummary.errorCount,
       affectedSheets: [
         VACATION_PLANNER_CONFIG.SHEETS.SCHEDULE,
         VACATION_PLANNER_CONFIG.SHEETS.CHECK,
       ],
       checks: normalizeProblems(audit.checks, audit.schedule),
+      problemSummary: problemSummary,
     };
   }
 
   function checkVacationScheduleOnly() {
     const audit = _loadAudit_();
     _writeChecks_(audit.checks);
+    const problemSummary = _summarizeAuditProblems_(audit);
     return {
       scheduleRows: audit.schedule.length,
       checkRows: audit.checks.length,
-      errorCount: audit.checks.filter(function (item) {
-        return item.severity === "ERROR";
-      }).length,
+      errorCount: problemSummary.errorCount,
       affectedSheets: [VACATION_PLANNER_CONFIG.SHEETS.CHECK],
       checks: normalizeProblems(audit.checks, audit.schedule),
+      problemSummary: problemSummary,
     };
   }
 
@@ -868,34 +964,16 @@ const VacationOptionsWriter_ = (function () {
 
   function generateVacationReport() {
     const audit = _loadAudit_();
-    const errors = normalizeChecks(audit.checks).filter(function (item) {
+    const errors = audit.checks.filter(function (item) {
       return item.severity === "ERROR";
     });
-    const byRule = {};
-    errors.forEach(function (item) {
-      byRule[item.type] = (byRule[item.type] || 0) + 1;
-    });
-    const lines = [
-      "Активних відпусток: " + audit.schedule.length,
-      "Порушень: " + errors.length,
-    ];
-    Object.keys(byRule)
-      .sort()
-      .forEach(function (rule) {
-        lines.push("  • " + rule + ": " + byRule[rule]);
-      });
-    if (!errors.length) {
-      lines.push("Графік відповідає обмеженням підрозділу.");
-    } else {
-      lines.push(
-        "Деталі — на аркуші " + VACATION_PLANNER_CONFIG.SHEETS.CHECK + ".",
-      );
-    }
     return {
-      summary: lines.join("\n"),
+      summary: _formatVacationReportSummary_(audit.schedule.length, errors),
       scheduleRows: audit.schedule.length,
       errorCount: errors.length,
-      checks: errors,
+      checks: normalizeProblems(errors, audit.schedule),
+      problemSummary: _summarizeAuditProblems_(audit),
+      adminSheet: VACATION_PLANNER_CONFIG.SHEETS.CHECK,
     };
   }
 
@@ -933,6 +1011,8 @@ const VacationOptionsWriter_ = (function () {
     buildScheduleCalendar: buildScheduleCalendar,
     normalizeChecks: normalizeChecks,
     normalizeProblems: normalizeProblems,
+    summarizeVacationProblems: summarizeVacationProblems,
+    humanRuleLabel: _humanRuleLabel_,
     rebuildVacationSystem: rebuildVacationSystem,
     checkVacationScheduleOnly: checkVacationScheduleOnly,
     highlightVacationProblems: highlightVacationProblems,
