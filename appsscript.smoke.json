@@ -11,6 +11,6 @@
     "https://www.googleapis.com/auth/script.scriptapp"
   ],
   "executionApi": {
-    "access": "MYSELF"
+    "access": "ANYONE"
   }
 }

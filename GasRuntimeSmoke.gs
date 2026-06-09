@@ -2,9 +2,9 @@
  * Remote GAS runtime smoke — post-deploy verification via clasp run.
  *
  *   npm run gas:smoke
- *   clasp run apiRunProductionSmokeChecks
+ *   clasp -P .clasp.smoke.json run apiRunSmokeChecks
  */
-function apiRunProductionSmokeChecks() {
+function apiRunSmokeChecks() {
   var result = {
     ok: true,
     checks: {},

@@ -1,20 +1,267 @@
 {
-  "version": 2,
+  "version": 3,
   "metadataSource": "ProjectMetadata.gs",
-  "metadataField": "PROJECT_STAGE7_CANONICAL_API_MAP_",
+  "canonicalApiField": "PROJECT_STAGE7_CANONICAL_API_MAP_",
+  "publicApiField": "PROJECT_STAGE7_PUBLIC_API_MAP_",
   "rolePolicyField": "PROJECT_STAGE7_ACCESS_API_ROLE_POLICY_",
   "clientApiFile": "Js.Api.html",
-  "requiredGovernanceEndpoints": [
-    "apiStage7SubmitAccessKeyRequest",
-    "apiStage7RegisterAccessWithTemporaryPassword",
-    "apiStage7LoginByIdentifierAndCallsign",
-    "apiStage7ListBindableCallsigns",
-    "apiStage7ReportAccessViolation",
-    "apiStage7ReportClientAccessSignal",
+  "routingRegistryFile": "RoutingRegistry.gs",
+  "clientRoutingGroupsField": "PROJECT_STAGE7_CLIENT_ROUTING_GROUPS_",
+  "productionManifestFile": "appsscript.json",
+  "productionExecutionApiAccess": "MYSELF",
+  "smokeManifestFile": "appsscript.smoke.json",
+  "smokeExecutionApiAccess": "ANYONE",
+  "productionClaspIgnoreFile": ".claspignore",
+  "smokeOnlyFiles": [
+    "GasRuntimeSmoke.gs"
+  ],
+  "publicEndpoints": [
+    "apiStage7GetAccessDescriptorLite",
+    "apiStage7BootstrapSidebar",
     "apiGetActiveProjects",
     "apiSubmitRequest",
+    "apiStage7ListPersonnelCallsigns",
+    "apiStage7ReportClientAccessSignal",
+    "apiStage7GetMonthsList",
+    "apiStage7GetSidebarData",
+    "apiGenerateSendPanelForDate",
+    "apiGenerateSendPanelForRange",
+    "apiStage7GetSendPanelData",
+    "apiMarkPanelRowsAsPending",
+    "apiMarkPanelRowsAsSent",
+    "apiMarkPanelRowsAsSentFast",
+    "apiMarkPanelRowsAsUnsent",
+    "apiSendPendingRows",
+    "apiBuildDaySummary",
+    "apiBuildDetailedSummary",
+    "apiOpenPersonCard",
+    "apiCheckVacationsAndBirthdays",
+    "apiStage7SwitchBotToMonth",
+    "apiStage7CreateNextMonth",
+    "apiRunReconciliation",
+    "apiPreviewSelectionMessage",
+    "apiPreviewMultipleMessages",
+    "apiPreviewGroupedMessages",
+    "apiPrepareRangeMessages",
+    "apiBuildCommanderSummaryPreview",
+    "apiBuildCommanderSummaryLink",
+    "apiLogPreparedMessages",
+    "apiRunSelectionDiagnostics",
+    "apiStage7ClearCache",
+    "apiStage7ClearLog",
+    "apiStage7ClearPhoneCache",
+    "apiStage7RestartBot",
+    "apiStage7SetupVacationTriggers",
+    "apiStage7CleanupDuplicateTriggers",
+    "apiStage7DebugPhones",
+    "apiStage7BuildBirthdayLink",
+    "apiRunStage7MaintenanceScenario",
+    "apiInstallStage7Jobs",
+    "apiListStage7Jobs",
+    "apiRunStage7Job",
+    "apiStage7QuickHealthCheck",
+    "apiStage7HealthCheck",
+    "apiRunStage7Diagnostics",
+    "apiRunStage7RegressionTests",
+    "apiRunStage7AllProjectTests",
+    "apiRunStage7ProjectTestChunk",
+    "apiListStage7JobRuntime",
+    "apiStage7ListPendingRepairs",
+    "apiStage7GetOperationDetails",
+    "apiStage7RunRepair",
+    "apiStage7RunLifecycleRetentionCleanup",
+    "apiStage7GetAccessDescriptor",
+    "apiStage7DebugAccess",
+    "apiStage7ListBindableCallsigns",
+    "apiStage7LoginByIdentifierAndCallsign",
+    "apiStage7SubmitAccessKeyRequest",
+    "apiStage7RegisterAccessWithTemporaryPassword",
+    "apiStage7ReportAccessViolation",
+    "apiStage7NormalizeAccessSheetFormatting",
+    "apiStage7BootstrapAccessSheet",
+    "apiStage7ApplyProtections",
     "apiStage7RepairSystemSheets",
-    "apiStage7NormalizeAllSheetHeadersToEnglish"
+    "apiStage7NormalizeAllSheetHeadersToEnglish",
+    "apiStage7BootstrapRuntimeAndAlertsSheets",
+    "apiLoadCalendarDay"
+  ],
+  "requiredGovernanceEndpoints": [
+    "apiStage7ListPersonnelCallsigns",
+    "apiStage7BuildBirthdayLink",
+    "apiStage7BootstrapSidebar",
+    "apiMarkPanelRowsAsSentFast",
+    "apiLoadCalendarDay",
+    "apiStage7QuickHealthCheck"
+  ],
+  "rolePolicyGroups": {
+    "guest": [
+      "apiStage7GetAccessDescriptorLite",
+      "apiStage7BootstrapSidebar",
+      "apiGetActiveProjects",
+      "apiStage7ReportClientAccessSignal",
+      "apiStage7GetMonthsList",
+      "apiStage7GetAccessDescriptor",
+      "apiStage7DebugAccess",
+      "apiStage7ListBindableCallsigns",
+      "apiStage7LoginByIdentifierAndCallsign",
+      "apiStage7SubmitAccessKeyRequest",
+      "apiStage7RegisterAccessWithTemporaryPassword"
+    ],
+    "viewer": [
+      "apiSubmitRequest",
+      "apiStage7ListPersonnelCallsigns",
+      "apiStage7GetSidebarData",
+      "apiOpenPersonCard",
+      "apiPreviewSelectionMessage",
+      "apiPreviewMultipleMessages",
+      "apiPreviewGroupedMessages",
+      "apiStage7BuildBirthdayLink",
+      "apiLoadCalendarDay"
+    ],
+    "operator": [
+      "apiBuildDaySummary",
+      "apiBuildDetailedSummary",
+      "apiBuildCommanderSummaryPreview",
+      "apiLogPreparedMessages"
+    ],
+    "maintainer": [
+      "apiGenerateSendPanelForDate",
+      "apiGenerateSendPanelForRange",
+      "apiStage7GetSendPanelData",
+      "apiMarkPanelRowsAsPending",
+      "apiMarkPanelRowsAsSent",
+      "apiMarkPanelRowsAsSentFast",
+      "apiMarkPanelRowsAsUnsent",
+      "apiSendPendingRows",
+      "apiStage7SwitchBotToMonth",
+      "apiStage7CreateNextMonth",
+      "apiRunReconciliation",
+      "apiPrepareRangeMessages",
+      "apiBuildCommanderSummaryLink",
+      "apiRunSelectionDiagnostics",
+      "apiStage7DebugPhones",
+      "apiStage7QuickHealthCheck",
+      "apiStage7HealthCheck",
+      "apiRunStage7Diagnostics",
+      "apiStage7ListPendingRepairs",
+      "apiStage7GetOperationDetails"
+    ],
+    "admin": [
+      "apiCheckVacationsAndBirthdays",
+      "apiStage7ClearLog",
+      "apiRunStage7MaintenanceScenario",
+      "apiRunStage7RegressionTests",
+      "apiRunStage7AllProjectTests",
+      "apiRunStage7ProjectTestChunk",
+      "apiListStage7JobRuntime",
+      "apiStage7NormalizeAccessSheetFormatting",
+      "apiStage7BootstrapAccessSheet",
+      "apiStage7RepairSystemSheets",
+      "apiStage7BootstrapRuntimeAndAlertsSheets"
+    ],
+    "sysadmin": [
+      "apiStage7ClearCache",
+      "apiStage7ClearPhoneCache",
+      "apiStage7RestartBot",
+      "apiStage7SetupVacationTriggers",
+      "apiStage7CleanupDuplicateTriggers",
+      "apiInstallStage7Jobs",
+      "apiListStage7Jobs",
+      "apiRunStage7Job",
+      "apiStage7RunRepair",
+      "apiStage7RunLifecycleRetentionCleanup",
+      "apiStage7ReportAccessViolation",
+      "apiStage7ApplyProtections",
+      "apiStage7NormalizeAllSheetHeadersToEnglish"
+    ]
+  },
+  "rolePolicyOverrides": {
+    "apiOpenPersonCard": "viewer-own-or-operator",
+    "apiLogPreparedMessages": "maintainer-for-range"
+  },
+  "defaultProtectedEndpointGuard": "_stage7AssertRole_(\"{minRole}\"",
+  "guardOverrides": {
+    "apiStage7ListPersonnelCallsigns": "_stage7AssertCanViewSidebarPersonnel_(",
+    "apiStage7GetSidebarData": "_stage7AssertCanViewSidebarPersonnel_(",
+    "apiOpenPersonCard": "AccessEnforcement_.assertCanOpenPersonCard(",
+    "apiLogPreparedMessages": "_stage7AssertRole_(requiredRole",
+    "apiStage7ReportAccessViolation": "_stage7HasRoleAtLeastSilent_(\"sysadmin\")",
+    "apiStage7NormalizeAccessSheetFormatting": "roleOrder.admin",
+    "apiStage7BootstrapRuntimeAndAlertsSheets": "_ssbAssertAdminAccess_(",
+    "apiLoadCalendarDay": "apiStage7GetSidebarData("
+  },
+  "requiredServerMarkers": {
+    "apiStage7BootstrapSidebar": [
+      "_stage7CanViewSidebarPersonnel_(descriptor)"
+    ]
+  },
+  "forbiddenServerMarkers": {
+    "apiStage7BootstrapSidebar": [
+      "_repairOptionalBusinessSheets_",
+      "_ensureOptionalBusinessSheetsQuiet_",
+      "ensureAllSystemSheets_"
+    ],
+    "apiGetActiveProjects": [
+      "ensureProjectsSheet_",
+      "insertSheet"
+    ]
+  },
+  "requiredRoutingEndpoints": [
+    "apiStage7BootstrapSidebar",
+    "apiMarkPanelRowsAsPending",
+    "apiMarkPanelRowsAsSentFast",
+    "apiLoadCalendarDay",
+    "apiStage7QuickHealthCheck"
+  ],
+  "excludedEntrypoints": [
+    {
+      "name": "apiExecute_",
+      "reason": "internal response helper; trailing underscore marks non-public API"
+    },
+    {
+      "name": "apiRunSmokeChecks",
+      "reason": "smoke-project-only entrypoint; excluded from production public API"
+    },
+    {
+      "name": "apiBuildSendPanelFast",
+      "reason": "legacy/manual fast-path wrapper; not client-reachable"
+    },
+    {
+      "name": "apiGenerateSendPanelForDateFast",
+      "reason": "legacy/manual fast-path wrapper; not client-reachable"
+    },
+    {
+      "name": "apiResetAllSentFast",
+      "reason": "legacy/manual fast-path wrapper; not client-reachable"
+    },
+    {
+      "name": "apiMarkRowSentFast",
+      "reason": "legacy/manual fast-path wrapper; not client-reachable"
+    },
+    {
+      "name": "apiRunStage7JobDailyVacationsAndBirthdaysManual",
+      "reason": "GAS-editor manual wrapper; delegates to guarded apiRunStage7Job"
+    },
+    {
+      "name": "apiRunStage7JobScheduledReconciliationManual",
+      "reason": "GAS-editor manual wrapper; delegates to guarded apiRunStage7Job"
+    },
+    {
+      "name": "apiRunStage7JobScheduledHealthCheckManual",
+      "reason": "GAS-editor manual wrapper; delegates to guarded apiRunStage7Job"
+    },
+    {
+      "name": "apiRunStage7JobCleanupCachesManual",
+      "reason": "GAS-editor manual wrapper; delegates to guarded apiRunStage7Job"
+    },
+    {
+      "name": "apiRunStage7JobDetectStaleOperationsManual",
+      "reason": "GAS-editor manual wrapper; delegates to guarded apiRunStage7Job"
+    },
+    {
+      "name": "apiRunStage7JobLifecycleRetentionCleanupManual",
+      "reason": "GAS-editor manual wrapper; delegates to guarded apiRunStage7Job"
+    }
   ],
   "deprecatedEndpoints": [
     {
@@ -25,175 +272,11 @@
       "removed": true
     }
   ],
-  "endpoints": [
-    {
-      "name": "apiStage7GetAccessDescriptorLite",
-      "file": "Stage7ServerApi.gs",
-      "bucket": "application",
-      "rolePolicy": { "guestAllowed": true },
-      "clientMethods": ["Stage7Api.getAccessDescriptorLite"]
-    },
-    {
-      "name": "apiStage7BootstrapSidebar",
-      "file": "Stage7ServerApi.gs",
-      "bucket": "application",
-      "rolePolicy": { "guestAllowed": true },
-      "clientMethods": ["Stage7Api.bootstrapSidebar"],
-      "forbiddenServerMarkers": [
-        "_repairOptionalBusinessSheets_",
-        "_ensureOptionalBusinessSheetsQuiet_",
-        "ensureAllSystemSheets_"
-      ]
-    },
-    {
-      "name": "apiGetActiveProjects",
-      "file": "ProjectRequests.gs",
-      "bucket": "application",
-      "rolePolicy": { "guestAllowed": true },
-      "forbiddenServerMarkers": ["ensureProjectsSheet_", "insertSheet"]
-    },
-    {
-      "name": "apiSubmitRequest",
-      "file": "ProjectRequests.gs",
-      "bucket": "application",
-      "rolePolicy": { "guestAllowed": false, "minRole": "viewer" },
-      "serverGuard": "_stage7AssertRole_(\"viewer\""
-    },
-    {
-      "name": "apiStage7ReportClientAccessSignal",
-      "file": "Stage7ServerApi.gs",
-      "bucket": "application",
-      "rolePolicy": { "guestAllowed": true },
-      "clientMethods": ["MaintenanceApi.reportClientAccessSignal"],
-      "visibility": "public_client"
-    },
-    {
-      "name": "apiStage7GetAccessDescriptor",
-      "file": "Stage7MaintenanceApi.gs",
-      "bucket": "maintenance",
-      "rolePolicy": { "guestAllowed": true },
-      "clientMethods": ["MaintenanceApi.getAccessDescriptor"]
-    },
-    {
-      "name": "apiStage7DebugAccess",
-      "file": "Stage7MaintenanceApi.gs",
-      "bucket": "maintenance",
-      "rolePolicy": { "guestAllowed": true },
-      "clientMethods": ["MaintenanceApi.debugAccess"]
-    },
-    {
-      "name": "apiStage7ReportAccessViolation",
-      "file": "Stage7MaintenanceApi.gs",
-      "bucket": "maintenance",
-      "rolePolicy": { "guestAllowed": false, "minRole": "sysadmin" },
-      "visibility": "sysadmin_only",
-      "serverGuard": "_stage7HasRoleAtLeastSilent_(\"sysadmin\")"
-    },
-    {
-      "name": "apiStage7ListBindableCallsigns",
-      "file": "Stage7MaintenanceApi.gs",
-      "bucket": "maintenance",
-      "rolePolicy": { "guestAllowed": true },
-      "clientMethods": ["MaintenanceApi.listBindableCallsigns"]
-    },
-    {
-      "name": "apiStage7LoginByIdentifierAndCallsign",
-      "file": "Stage7MaintenanceApi.gs",
-      "bucket": "maintenance",
-      "rolePolicy": { "guestAllowed": true },
-      "clientMethods": ["MaintenanceApi.loginByIdentifierAndCallsign"]
-    },
-    {
-      "name": "apiStage7SubmitAccessKeyRequest",
-      "file": "Stage7MaintenanceApi.gs",
-      "bucket": "maintenance",
-      "rolePolicy": { "guestAllowed": true },
-      "clientMethods": [
-        "Stage7Api.submitAccessKeyRequest",
-        "MaintenanceApi.submitAccessKeyRequest"
-      ]
-    },
-    {
-      "name": "apiStage7RegisterAccessWithTemporaryPassword",
-      "file": "Stage7MaintenanceApi.gs",
-      "bucket": "maintenance",
-      "rolePolicy": { "guestAllowed": true },
-      "clientMethods": [
-        "Stage7Api.registerAccessWithTemporaryPassword",
-        "MaintenanceApi.registerAccessWithTemporaryPassword"
-      ]
-    },
-    {
-      "name": "apiStage7NormalizeAccessSheetFormatting",
-      "file": "AccessControl.SheetRepository.gs",
-      "bucket": "maintenance",
-      "rolePolicy": { "guestAllowed": false, "minRole": "admin" },
-      "serverGuard": "roleOrder.admin"
-    },
-    {
-      "name": "apiStage7BootstrapAccessSheet",
-      "file": "Stage7MaintenanceApi.gs",
-      "bucket": "maintenance",
-      "rolePolicy": { "guestAllowed": false, "minRole": "admin" },
-      "clientMethods": ["MaintenanceApi.bootstrapAccessSheet"],
-      "serverGuard": "_stage7AssertRole_(\"admin\""
-    },
-    {
-      "name": "apiStage7ApplyProtections",
-      "file": "Stage7MaintenanceApi.gs",
-      "bucket": "maintenance",
-      "rolePolicy": { "guestAllowed": false, "minRole": "sysadmin" },
-      "serverGuard": "_stage7AssertRole_(\"sysadmin\""
-    },
-    {
-      "name": "apiStage7RepairSystemSheets",
-      "file": "Stage7MaintenanceApi.gs",
-      "bucket": "maintenance",
-      "rolePolicy": { "guestAllowed": false, "minRole": "admin" },
-      "serverGuard": "_stage7AssertRole_(\"admin\""
-    },
-    {
-      "name": "apiStage7NormalizeAllSheetHeadersToEnglish",
-      "file": "SheetHeadersEnglishMigration.gs",
-      "bucket": "maintenance",
-      "rolePolicy": { "guestAllowed": false, "minRole": "sysadmin" },
-      "serverGuard": "_stage7AssertRole_(\"sysadmin\"",
-      "guardedFunctions": [
-        {
-          "file": "SheetHeadersEnglishMigration.gs",
-          "name": "wasbNormalizeAllSheetHeadersToEnglish",
-          "serverGuard": "_stage7AssertRole_(\"sysadmin\""
-        }
-      ]
-    }
-  ],
   "clientSignalPolicy": {
     "publicEndpoint": "apiStage7ReportClientAccessSignal",
     "forbiddenPublicEndpoint": "apiStage7ReportAccessViolation",
     "uiReporterFile": "Js.Security.Access.html",
     "uiReporterFunction": "reportAccessViolation_",
     "requiredApiRun": "apiStage7ReportClientAccessSignal"
-  },
-  "rolePolicyTests": {
-    "guestAllowed": [
-      "apiStage7SubmitAccessKeyRequest",
-      "apiStage7RegisterAccessWithTemporaryPassword",
-      "apiStage7LoginByIdentifierAndCallsign",
-      "apiStage7ListBindableCallsigns",
-      "apiStage7ReportClientAccessSignal",
-      "apiStage7GetAccessDescriptorLite",
-      "apiStage7BootstrapSidebar",
-      "apiGetActiveProjects"
-    ],
-    "guestDenied": [
-      "apiStage7ReportAccessViolation",
-      "apiStage7BootstrapAccessSheet",
-      "apiStage7NormalizeAccessSheetFormatting",
-      "apiStage7ApplyProtections",
-      "apiSubmitRequest",
-      "apiStage7RepairSystemSheets",
-      "apiStage7NormalizeAllSheetHeadersToEnglish"
-    ],
-    "rolesInheritGuestAllowed": ["viewer", "operator", "admin"]
   }
 }

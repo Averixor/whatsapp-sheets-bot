@@ -168,21 +168,24 @@ function apiStage7BootstrapSidebar() {
 
   var personnelCallsigns = [];
   var personnelWarnings = [];
-  try {
-    if (typeof getPersonnelCallsignsListForUi_ === "function") {
-      personnelCallsigns = getPersonnelCallsignsListForUi_();
-    } else if (typeof getPersonnelCallsignsList_ === "function") {
-      personnelCallsigns = getPersonnelCallsignsList_();
+  const canViewPersonnel = _stage7CanViewSidebarPersonnel_(descriptor);
+  if (canViewPersonnel) {
+    try {
+      if (typeof getPersonnelCallsignsListForUi_ === "function") {
+        personnelCallsigns = getPersonnelCallsignsListForUi_();
+      } else if (typeof getPersonnelCallsignsList_ === "function") {
+        personnelCallsigns = getPersonnelCallsignsList_();
+      }
+      if (typeof getPersonnelWarnings_ === "function") {
+        personnelWarnings = getPersonnelWarnings_();
+      }
+    } catch (personnelErr) {
+      warnings.push(
+        personnelErr && personnelErr.message
+          ? String(personnelErr.message)
+          : String(personnelErr),
+      );
     }
-    if (typeof getPersonnelWarnings_ === "function") {
-      personnelWarnings = getPersonnelWarnings_();
-    }
-  } catch (personnelErr) {
-    warnings.push(
-      personnelErr && personnelErr.message
-        ? String(personnelErr.message)
-        : String(personnelErr),
-    );
   }
   personnelWarnings.forEach(function (w) {
     warnings.push(String(w));
@@ -194,16 +197,18 @@ function apiStage7BootstrapSidebar() {
       : "ГРАФ",
   ).trim();
   var commanderRecipients = [];
-  try {
-    if (typeof getCommanderRecipientOptions_ === "function") {
-      commanderRecipients = getCommanderRecipientOptions_();
+  if (canViewPersonnel) {
+    try {
+      if (typeof getCommanderRecipientOptions_ === "function") {
+        commanderRecipients = getCommanderRecipientOptions_();
+      }
+    } catch (commanderErr) {
+      warnings.push(
+        commanderErr && commanderErr.message
+          ? String(commanderErr.message)
+          : String(commanderErr),
+      );
     }
-  } catch (commanderErr) {
-    warnings.push(
-      commanderErr && commanderErr.message
-        ? String(commanderErr.message)
-        : String(commanderErr),
-    );
   }
 
   return _stage7FastResponse_(
@@ -225,7 +230,31 @@ function apiStage7BootstrapSidebar() {
   );
 }
 
+function _stage7CanViewSidebarPersonnel_(descriptor) {
+  return !!(
+    typeof AccessEnforcement_ === "object" &&
+    AccessEnforcement_ &&
+    typeof AccessEnforcement_.canViewSidebarPersonnel === "function" &&
+    AccessEnforcement_.canViewSidebarPersonnel(descriptor)
+  );
+}
+
+function _stage7AssertCanViewSidebarPersonnel_(actionName, descriptorOpt) {
+  if (
+    typeof AccessEnforcement_ !== "object" ||
+    !AccessEnforcement_ ||
+    typeof AccessEnforcement_.assertCanViewSidebarPersonnel !== "function"
+  ) {
+    throw new Error("AccessEnforcement_ недоступний: доступ заборонено");
+  }
+  return AccessEnforcement_.assertCanViewSidebarPersonnel(
+    actionName || "viewSidebarPersonnel",
+    descriptorOpt,
+  );
+}
+
 function apiStage7ListPersonnelCallsigns() {
+  _stage7AssertCanViewSidebarPersonnel_("listPersonnelCallsigns");
   var callsigns = [];
   var sheetWarnings = [];
   try {
@@ -286,19 +315,16 @@ function apiStage7GetMonthsList() {
   );
 }
 
-function _stage7LoadSidebarPersonnelForSession_(dateStr, actionName) {
+function _stage7LoadSidebarPersonnelForSession_(
+  dateStr,
+  actionName,
+  descriptorOpt,
+) {
   const info = validateDatePayload_({ date: dateStr || _todayStr_() }, "date");
   const safeDate = info.payload.dateStr || info.payload.date || _todayStr_();
-  let descriptor = null;
-
-  if (
-    typeof AccessEnforcement_ === "object" &&
-    AccessEnforcement_.assertCanViewSidebarPersonnel
-  ) {
-    descriptor = AccessEnforcement_.assertCanViewSidebarPersonnel(
-      actionName || "getSidebarData",
-    );
-  }
+  const descriptor =
+    descriptorOpt ||
+    _stage7AssertCanViewSidebarPersonnel_(actionName || "getSidebarData");
 
   const sidebar = PersonsRepository_.getSidebarPersonnel(safeDate);
 
@@ -316,9 +342,11 @@ function _stage7LoadSidebarPersonnelForSession_(dateStr, actionName) {
 }
 
 function apiStage7GetSidebarData(dateStr) {
+  const descriptor = _stage7AssertCanViewSidebarPersonnel_("getSidebarData");
   const sidebar = _stage7LoadSidebarPersonnelForSession_(
     dateStr,
     "getSidebarData",
+    descriptor,
   );
 
   return _stage7FastResponse_(
@@ -331,12 +359,7 @@ function apiStage7GetSidebarData(dateStr) {
 }
 
 function apiStage7GetSendPanelData() {
-  if (
-    typeof AccessEnforcement_ === "object" &&
-    AccessEnforcement_.assertCanUseSendPanel
-  ) {
-    AccessEnforcement_.assertCanUseSendPanel("getSendPanelData", {});
-  }
+  _stage7AssertRole_("maintainer", "get send panel data");
 
   const rows = SendPanelRepository_.readRows();
   const stats = SendPanelRepository_.buildStats(rows);
@@ -364,22 +387,27 @@ function apiStage7GetSendPanelData() {
 }
 
 function apiStage7SwitchBotToMonth(monthSheetName) {
+  _stage7AssertRole_("maintainer", "switch bot month");
   return Stage7UseCases_.switchBotToMonth({ month: monthSheetName || "" });
 }
 
 function apiGenerateSendPanelForDate(options) {
+  _stage7AssertRole_("maintainer", "generate send panel for date");
   return Stage7UseCases_.generateSendPanelForDate(options || {});
 }
 
 function apiGenerateSendPanelForRange(options) {
+  _stage7AssertRole_("maintainer", "generate send panel for range");
   return Stage7UseCases_.generateSendPanelForRange(options || {});
 }
 
 function apiMarkPanelRowsAsPending(rowNumbers, options) {
+  _stage7AssertRole_("maintainer", "mark panel rows as pending");
   return Stage7UseCases_.markPanelRowsAsPending(rowNumbers, options || {});
 }
 
 function apiMarkPanelRowsAsSent(rowNumbers, options) {
+  _stage7AssertRole_("maintainer", "mark panel rows as sent");
   return Stage7UseCases_.markPanelRowsAsSent(rowNumbers, options || {});
 }
 
@@ -400,6 +428,7 @@ function _sanitizeFastSendPanelRows_(rowNumbers) {
 }
 
 function apiMarkPanelRowsAsSentFast(rowNumbers, options) {
+  _stage7AssertRole_("maintainer", "mark panel rows as sent fast");
   const opts = Object.assign(
     {
       dryRun: false,
@@ -453,18 +482,22 @@ function apiMarkPanelRowsAsSentFast(rowNumbers, options) {
 }
 
 function apiMarkPanelRowsAsUnsent(rowNumbers, options) {
+  _stage7AssertRole_("maintainer", "mark panel rows as unsent");
   return Stage7UseCases_.markPanelRowsAsUnsent(rowNumbers, options || {});
 }
 
 function apiSendPendingRows(options) {
+  _stage7AssertRole_("maintainer", "send pending rows");
   return Stage7UseCases_.sendPendingRows(options || {});
 }
 
 function apiBuildDaySummary(dateStr) {
+  _stage7AssertRole_("operator", "build day summary");
   return Stage7UseCases_.buildDaySummary({ date: dateStr || _todayStr_() });
 }
 
 function apiBuildDetailedSummary(dateStr) {
+  _stage7AssertRole_("operator", "build detailed summary");
   return Stage7UseCases_.buildDetailedSummary({
     date: dateStr || _todayStr_(),
   });
@@ -476,14 +509,16 @@ function apiOpenPersonCard(callsign, dateStr) {
     date: dateStr || _todayStr_(),
   });
   if (
-    typeof AccessEnforcement_ === "object" &&
-    AccessEnforcement_.assertCanOpenPersonCard
+    typeof AccessEnforcement_ !== "object" ||
+    !AccessEnforcement_ ||
+    typeof AccessEnforcement_.assertCanOpenPersonCard !== "function"
   ) {
-    AccessEnforcement_.assertCanOpenPersonCard(
-      info.payload.callsign || "",
-      info.payload.dateStr || info.payload.date || "",
-    );
+    throw new Error("AccessEnforcement_ недоступний: доступ заборонено");
   }
+  AccessEnforcement_.assertCanOpenPersonCard(
+    info.payload.callsign || "",
+    info.payload.dateStr || info.payload.date || "",
+  );
 
   const person = PersonsRepository_.getPersonByCallsign(
     info.payload.callsign,
@@ -509,20 +544,12 @@ function apiLoadCalendarDay(dateStr) {
 }
 
 function apiCheckVacationsAndBirthdays(dateOrOptions) {
+  _stage7AssertRole_("admin", "check vacations and birthdays");
   const options =
     dateOrOptions && typeof dateOrOptions === "object"
       ? Object.assign({}, dateOrOptions)
       : { date: dateOrOptions || _todayStr_() };
   const info = validateDatePayload_(options, "date");
-  if (
-    typeof AccessEnforcement_ === "object" &&
-    AccessEnforcement_.assertCanRunLeaveBirthdayCheck
-  ) {
-    AccessEnforcement_.assertCanRunLeaveBirthdayCheck({
-      requestedDate: info.payload.dateStr || info.payload.date || "",
-    });
-  }
-
   const daily =
     typeof VacationService_ === "object" &&
     VacationService_ &&
@@ -570,10 +597,12 @@ function apiCheckVacationsAndBirthdays(dateOrOptions) {
 }
 
 function apiStage7CreateNextMonth(options) {
+  _stage7AssertRole_("maintainer", "create next month");
   return Stage7UseCases_.createNextMonth(options || {});
 }
 
 function apiRunReconciliation(options) {
+  _stage7AssertRole_("maintainer", "run reconciliation");
   return Stage7UseCases_.runReconciliation(options || {});
 }
 

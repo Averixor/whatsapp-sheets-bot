@@ -57,7 +57,9 @@ const PROJECT_STAGE7_CANONICAL_API_MAP_ = Object.freeze({
     "apiGenerateSendPanelForDate",
     "apiGenerateSendPanelForRange",
     "apiStage7GetSendPanelData",
+    "apiMarkPanelRowsAsPending",
     "apiMarkPanelRowsAsSent",
+    "apiMarkPanelRowsAsSentFast",
     "apiMarkPanelRowsAsUnsent",
     "apiSendPendingRows",
     "apiBuildDaySummary",
@@ -82,6 +84,7 @@ const PROJECT_STAGE7_CANONICAL_API_MAP_ = Object.freeze({
     "apiInstallStage7Jobs",
     "apiListStage7Jobs",
     "apiRunStage7Job",
+    "apiStage7QuickHealthCheck",
     "apiStage7HealthCheck",
     "apiRunStage7Diagnostics",
     "apiRunStage7RegressionTests",
@@ -107,7 +110,7 @@ const PROJECT_STAGE7_CANONICAL_API_MAP_ = Object.freeze({
     "apiStage7BootstrapAccessSheet",
   ]),
 
-  compatibility: Object.freeze([]),
+  compatibility: Object.freeze(["apiLoadCalendarDay"]),
 });
 
 const PROJECT_STAGE7_ACCESS_API_ROLE_POLICY_ = Object.freeze({
@@ -124,8 +127,205 @@ const PROJECT_STAGE7_ACCESS_API_ROLE_POLICY_ = Object.freeze({
     guestAllowed: false,
     minRole: "viewer",
   }),
+  apiStage7ListPersonnelCallsigns: Object.freeze({
+    guestAllowed: false,
+    minRole: "viewer",
+  }),
   apiStage7ReportClientAccessSignal: Object.freeze({
     guestAllowed: true,
+  }),
+  apiStage7GetMonthsList: Object.freeze({
+    guestAllowed: true,
+  }),
+  apiStage7GetSidebarData: Object.freeze({
+    guestAllowed: false,
+    minRole: "viewer",
+  }),
+  apiGenerateSendPanelForDate: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
+  }),
+  apiGenerateSendPanelForRange: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
+  }),
+  apiStage7GetSendPanelData: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
+  }),
+  apiMarkPanelRowsAsPending: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
+  }),
+  apiMarkPanelRowsAsSent: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
+  }),
+  apiMarkPanelRowsAsSentFast: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
+  }),
+  apiMarkPanelRowsAsUnsent: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
+  }),
+  apiSendPendingRows: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
+  }),
+  apiBuildDaySummary: Object.freeze({
+    guestAllowed: false,
+    minRole: "operator",
+  }),
+  apiBuildDetailedSummary: Object.freeze({
+    guestAllowed: false,
+    minRole: "operator",
+  }),
+  apiOpenPersonCard: Object.freeze({
+    guestAllowed: false,
+    minRole: "viewer",
+    policy: "viewer-own-or-operator",
+  }),
+  apiCheckVacationsAndBirthdays: Object.freeze({
+    guestAllowed: false,
+    minRole: "admin",
+  }),
+  apiStage7SwitchBotToMonth: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
+  }),
+  apiStage7CreateNextMonth: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
+  }),
+  apiRunReconciliation: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
+  }),
+  apiPreviewSelectionMessage: Object.freeze({
+    guestAllowed: false,
+    minRole: "viewer",
+  }),
+  apiPreviewMultipleMessages: Object.freeze({
+    guestAllowed: false,
+    minRole: "viewer",
+  }),
+  apiPreviewGroupedMessages: Object.freeze({
+    guestAllowed: false,
+    minRole: "viewer",
+  }),
+  apiPrepareRangeMessages: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
+  }),
+  apiBuildCommanderSummaryPreview: Object.freeze({
+    guestAllowed: false,
+    minRole: "operator",
+  }),
+  apiBuildCommanderSummaryLink: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
+  }),
+  apiLogPreparedMessages: Object.freeze({
+    guestAllowed: false,
+    minRole: "operator",
+    policy: "maintainer-for-range",
+  }),
+  apiRunSelectionDiagnostics: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
+  }),
+  apiStage7ClearCache: Object.freeze({
+    guestAllowed: false,
+    minRole: "sysadmin",
+  }),
+  apiStage7ClearLog: Object.freeze({
+    guestAllowed: false,
+    minRole: "admin",
+  }),
+  apiStage7ClearPhoneCache: Object.freeze({
+    guestAllowed: false,
+    minRole: "sysadmin",
+  }),
+  apiStage7RestartBot: Object.freeze({
+    guestAllowed: false,
+    minRole: "sysadmin",
+  }),
+  apiStage7SetupVacationTriggers: Object.freeze({
+    guestAllowed: false,
+    minRole: "sysadmin",
+  }),
+  apiStage7CleanupDuplicateTriggers: Object.freeze({
+    guestAllowed: false,
+    minRole: "sysadmin",
+  }),
+  apiStage7DebugPhones: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
+  }),
+  apiStage7BuildBirthdayLink: Object.freeze({
+    guestAllowed: false,
+    minRole: "viewer",
+  }),
+  apiRunStage7MaintenanceScenario: Object.freeze({
+    guestAllowed: false,
+    minRole: "admin",
+  }),
+  apiInstallStage7Jobs: Object.freeze({
+    guestAllowed: false,
+    minRole: "sysadmin",
+  }),
+  apiListStage7Jobs: Object.freeze({
+    guestAllowed: false,
+    minRole: "sysadmin",
+  }),
+  apiRunStage7Job: Object.freeze({
+    guestAllowed: false,
+    minRole: "sysadmin",
+  }),
+  apiStage7QuickHealthCheck: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
+  }),
+  apiStage7HealthCheck: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
+  }),
+  apiRunStage7Diagnostics: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
+  }),
+  apiRunStage7RegressionTests: Object.freeze({
+    guestAllowed: false,
+    minRole: "admin",
+  }),
+  apiRunStage7AllProjectTests: Object.freeze({
+    guestAllowed: false,
+    minRole: "admin",
+  }),
+  apiRunStage7ProjectTestChunk: Object.freeze({
+    guestAllowed: false,
+    minRole: "admin",
+  }),
+  apiListStage7JobRuntime: Object.freeze({
+    guestAllowed: false,
+    minRole: "admin",
+  }),
+  apiStage7ListPendingRepairs: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
+  }),
+  apiStage7GetOperationDetails: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
+  }),
+  apiStage7RunRepair: Object.freeze({
+    guestAllowed: false,
+    minRole: "sysadmin",
+  }),
+  apiStage7RunLifecycleRetentionCleanup: Object.freeze({
+    guestAllowed: false,
+    minRole: "sysadmin",
   }),
   apiStage7GetAccessDescriptor: Object.freeze({
     guestAllowed: true,
@@ -169,6 +369,14 @@ const PROJECT_STAGE7_ACCESS_API_ROLE_POLICY_ = Object.freeze({
     guestAllowed: false,
     minRole: "sysadmin",
   }),
+  apiStage7BootstrapRuntimeAndAlertsSheets: Object.freeze({
+    guestAllowed: false,
+    minRole: "admin",
+  }),
+  apiLoadCalendarDay: Object.freeze({
+    guestAllowed: false,
+    minRole: "viewer",
+  }),
 });
 
 const PROJECT_STAGE7_PUBLIC_API_MAP_ = Object.freeze({
@@ -188,6 +396,7 @@ const PROJECT_STAGE7_PUBLIC_API_MAP_ = Object.freeze({
 });
 
 const PROJECT_STAGE7_CLIENT_ROUTING_POLICY_ = Object.freeze({
+  bootstrapSidebar: "apiStage7BootstrapSidebar",
   getMonthsList: "apiStage7GetMonthsList",
   getSidebarData: "apiStage7GetSidebarData",
   getSendPanelData: "apiStage7GetSendPanelData",
@@ -199,7 +408,9 @@ const PROJECT_STAGE7_CLIENT_ROUTING_POLICY_ = Object.freeze({
   birthdayCheck: "apiCheckVacationsAndBirthdays",
   switchMonth: "apiStage7SwitchBotToMonth",
   createNextMonth: "apiStage7CreateNextMonth",
+  markPanelRowsAsPending: "apiMarkPanelRowsAsPending",
   markPanelRowsAsSent: "apiMarkPanelRowsAsSent",
+  markPanelRowsAsSentFast: "apiMarkPanelRowsAsSentFast",
   markSendPanelRowsAsSent: "apiMarkPanelRowsAsSent",
   markPanelRowsAsUnsent: "apiMarkPanelRowsAsUnsent",
   sendUnsent: "apiSendPendingRows",
@@ -216,10 +427,12 @@ const PROJECT_STAGE7_CLIENT_ROUTING_POLICY_ = Object.freeze({
   operationDetails: "apiStage7GetOperationDetails",
   runRepair: "apiStage7RunRepair",
   lifecycleRetentionCleanup: "apiStage7RunLifecycleRetentionCleanup",
+  quickHealthCheck: "apiStage7QuickHealthCheck",
 });
 
 const PROJECT_STAGE7_CLIENT_ROUTING_GROUPS_ = Object.freeze({
   sidebar: Object.freeze({
+    bootstrapSidebar: "apiStage7BootstrapSidebar",
     getMonthsList: "apiStage7GetMonthsList",
     getSidebarData: "apiStage7GetSidebarData",
     getSendPanelData: "apiStage7GetSendPanelData",
@@ -231,7 +444,9 @@ const PROJECT_STAGE7_CLIENT_ROUTING_GROUPS_ = Object.freeze({
     birthdayCheck: "apiCheckVacationsAndBirthdays",
     switchMonth: "apiStage7SwitchBotToMonth",
     createNextMonth: "apiStage7CreateNextMonth",
+    markPanelRowsAsPending: "apiMarkPanelRowsAsPending",
     markPanelRowsAsSent: "apiMarkPanelRowsAsSent",
+    markPanelRowsAsSentFast: "apiMarkPanelRowsAsSentFast",
     markSendPanelRowsAsSent: "apiMarkPanelRowsAsSent",
     markPanelRowsAsUnsent: "apiMarkPanelRowsAsUnsent",
     sendUnsent: "apiSendPendingRows",
@@ -263,6 +478,7 @@ const PROJECT_STAGE7_CLIENT_ROUTING_GROUPS_ = Object.freeze({
     listJobs: "apiListStage7Jobs",
     runJob: "apiRunStage7Job",
     healthCheck: "apiStage7HealthCheck",
+    quickHealthCheck: "apiStage7QuickHealthCheck",
     runDiagnostics: "apiRunStage7Diagnostics",
     runRegressionTests: "apiRunStage7RegressionTests",
     runAllProjectTests: "apiRunStage7AllProjectTests",
@@ -276,6 +492,10 @@ const PROJECT_STAGE7_CLIENT_ROUTING_GROUPS_ = Object.freeze({
     applyProtections: "apiStage7ApplyProtections",
     bootstrapAccessSheet: "apiStage7BootstrapAccessSheet",
     bootstrapRuntimeAndAlertsSheets: "apiStage7BootstrapRuntimeAndAlertsSheets",
+  }),
+
+  compatibility: Object.freeze({
+    loadCalendarDay: "apiLoadCalendarDay",
   }),
 });
 
@@ -305,7 +525,7 @@ const PROJECT_CLIENT_ROUTING_POLICY_ = Object.freeze({
   apiStage7BootstrapSidebar: Object.freeze({
     client: "Stage7Api.bootstrapSidebar",
     server: "apiStage7BootstrapSidebar",
-    useCase: "Stage7UseCases_.bootstrapSidebar",
+    useCase: "Stage7ServerApi.apiStage7BootstrapSidebar",
     status: "canonical",
     uiAllowed: true,
   }),
@@ -342,6 +562,13 @@ const PROJECT_CLIENT_ROUTING_POLICY_ = Object.freeze({
     server: "apiMarkPanelRowsAsSent",
     useCase: "Stage7UseCases_.markPanelRowsAsSent",
     status: "canonical",
+    uiAllowed: true,
+  }),
+  apiMarkPanelRowsAsSentFast: Object.freeze({
+    client: "Stage7Api.markAsSentFast",
+    server: "apiMarkPanelRowsAsSentFast",
+    useCase: "SendPanelRepository_.markRowsAsSent",
+    status: "canonical-fast-path",
     uiAllowed: true,
   }),
   apiMarkPanelRowsAsUnsent: Object.freeze({
@@ -413,6 +640,20 @@ const PROJECT_CLIENT_ROUTING_POLICY_ = Object.freeze({
     useCase: "Stage7UseCases_.runReconciliation",
     status: "canonical",
     uiAllowed: true,
+  }),
+  apiStage7QuickHealthCheck: Object.freeze({
+    client: "MaintenanceApi.quickHealthCheck",
+    server: "apiStage7QuickHealthCheck",
+    useCase: "runDiagnosticsByMode_",
+    status: "canonical",
+    uiAllowed: true,
+  }),
+  apiLoadCalendarDay: Object.freeze({
+    client: null,
+    server: "apiLoadCalendarDay",
+    useCase: "apiStage7GetSidebarData",
+    status: "compatibility-alias",
+    uiAllowed: false,
   }),
 });
 
@@ -490,7 +731,6 @@ const PROJECT_BUNDLE_FILE_INDEX_ = Object.freeze([
   "Js.Diagnostics.html",
   "Js.Events.html",
   "Js.Helpers.html",
-  "Js.Render.html",
   "Js.Render.Calendar.html",
   "Js.Render.Panel.html",
   "Js.Render.Results.html",
@@ -542,7 +782,6 @@ const PROJECT_BUNDLE_FILE_INDEX_ = Object.freeze([
   "SmokeTests.Helpers.gs",
   "SpreadsheetActionsApi.gs",
   "SpreadsheetProtection.gs",
-  "Stage7CompatConfig.gs",
   "Stage7Config.gs",
   "Stage7GlobalDependencyAliases.gs",
   "Stage7MaintenanceApi.gs",

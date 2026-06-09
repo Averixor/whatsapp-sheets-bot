@@ -435,6 +435,7 @@ function apiStage7DebugPhones() {
 }
 
 function apiStage7BuildBirthdayLink(phone, name) {
+  _stage7AssertRole_("viewer", "build birthday link");
   return WorkflowOrchestrator_.run({
     scenario: "stage7BuildBirthdayLink",
     payload: {

@@ -29,10 +29,14 @@ descriptive enough.
 ```bash
 npx clasp status
 npx clasp push
-npm run gas:smoke
 ```
 
-Or run `npm run deploy:prod` for CI + push + remote smoke.
+Or run `npm run deploy:prod` for CI + production push. Production keeps
+`executionApi.access = MYSELF`; it does not run remote smoke.
+
+For remote smoke, configure `.clasp.smoke.json` from
+`.clasp.smoke.example.json` with a separate non-production Apps Script project,
+then run `npm run deploy:smoke`.
 
 ### Script Properties (spreadsheet binding)
 
@@ -48,7 +52,9 @@ Sidebar bootstrap can create and seed these sheets (headers + one template row) 
 
 ### PERSONNEL / PHONES / birthday cache
 
-After changing **PERSONNEL**, **PHONES**, phone index logic, or birthday behavior, clear the script cache that backs profiles:
+After every production deploy, and after changing **PERSONNEL**, **PHONES**,
+phone index logic, or birthday behavior, clear the script cache that backs
+profiles:
 
 - Run **`apiStage7ClearPhoneCache()`** in the Apps Script editor (maintenance API).
 

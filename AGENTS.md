@@ -34,7 +34,7 @@ This project cannot be "run" locally in the traditional sense. There is no dev s
 ### Testing
 
 - **Local (automated):** `npm run ci` — 17 static checks, no Google credentials.
-- **Remote (automated after push):** `npm run gas:smoke` — `apiRunProductionSmokeChecks` via `clasp run`.
+- **Remote smoke (separate non-production project):** `npm run deploy:smoke` — `apiRunSmokeChecks` via `.clasp.smoke.json`.
 - **Remote (manual):** `apiRunStage7RegressionTests()` in GAS editor.
 
 Documentation index: [`docs/README.md`](./docs/README.md). Verify release status
@@ -48,12 +48,13 @@ After local CI and deploy:
 fish_add_path $HOME/.local/node-v24.16.0/bin   # if Node 22 is default
 npm run ci
 npx clasp push
-npm run gas:smoke
+apiStage7ClearPhoneCache() # run in the production GAS editor
 ```
 
-Or one command: `npm run deploy:prod` (uses `npx clasp` from `package.json`).
+Or one command: `npm run deploy:prod` (local CI + production push). Run
+`npm run deploy:smoke` separately against the non-production smoke project.
 
-**Expectations** (`apiRunProductionSmokeChecks` result):
+**Expectations** (`apiRunSmokeChecks` result):
 
 - `ok === true`
 - `checks.migrationFlag !== 'true'` (null/empty is OK)
@@ -63,8 +64,9 @@ Or one command: `npm run deploy:prod` (uses `npx clasp` from `package.json`).
 
 1. Enable **Google Apps Script API** in [Google Cloud Console](https://console.cloud.google.com/) for the clasp OAuth project.
 2. Run `clasp login` and confirm `.clasp.json` scriptId matches the target project.
-3. Confirm `appsscript.json` contains `"executionApi": { "access": "ANYONE" }`.
-4. Re-run `npx clasp push`, then create or refresh an **API executable** deployment if the Apps Script UI prompts for it.
+3. Confirm `appsscript.smoke.json` contains `"executionApi": { "access": "ANYONE" }`.
+4. Confirm production `appsscript.json` remains `"executionApi": { "access": "MYSELF" }`.
+5. Re-run `npm run gas:smoke:push`, then create or refresh an **API executable** deployment in the smoke project if the Apps Script UI prompts for it.
 
 ### PERSONNEL keys (do not regress)
 
@@ -76,7 +78,7 @@ Or one command: `npm run deploy:prod` (uses `npx clasp` from `package.json`).
   Runtime-active: all except `Вибув` and `СЗЧ`; empty = `В наявності`. Legacy
   (`Дієвий`, `Active`, `Відрядження`, EN) mapped on read only.
 - Final headers: `ID | FML | … | Unit | Status` — see `RUNBOOK.md` §14.
-- After deploy or PERSONNEL edits: run **`apiStage7ClearPhoneCache()`** in GAS (mandatory).
+- After every production deploy or PERSONNEL edits: run **`apiStage7ClearPhoneCache()`** in GAS (mandatory).
 - See `.cursor/rules/personnel-data-keys.mdc`.
 
 ### Key gotchas

@@ -32,18 +32,30 @@ npm ci
 npm run ci
 npx clasp status
 npx clasp push
-npm run gas:smoke
+apiStage7ClearPhoneCache() # run in the production GAS editor
 ```
 
-Use Node.js 24 (`.nvmrc`). `npm run deploy:prod` runs local CI, pushes through
-the repository-pinned `clasp`, then runs the remote production smoke.
+Use Node.js 24 (`.nvmrc`). `npm run deploy:prod` runs local CI and pushes the
+production project with `executionApi.access = MYSELF`.
+
+Remote smoke is deliberately separate from production:
+
+```bash
+cp .clasp.smoke.example.json .clasp.smoke.json
+npm run deploy:smoke
+```
+
+The smoke config must target a separate non-production Apps Script project and
+test spreadsheet. It stages `appsscript.smoke.json` (`executionApi: ANYONE`) in
+`/tmp/wasb-smoke-bundle`; production never receives that manifest or
+`GasRuntimeSmoke.gs`.
 
 - **Script properties** (Apps Script → Project settings → Script properties):
   - **`WASB_SPREADSHEET_ID`** — headless/triggers (see `RUNBOOK.md` §15)
   - **`WASB_OWNER_EMAIL`** — security mail with full user key for owner
   - **`WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`** — off in normal operation
   - **`WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP`** — legacy plaintext temp-password lookup during migration only; off in normal operation
-- After **PERSONNEL**, **PHONES**, or birthday changes: run **`apiStage7ClearPhoneCache()`** in the GAS editor, then reload the sidebar.
+- After every production deploy and after **PERSONNEL**, **PHONES**, or birthday changes: run **`apiStage7ClearPhoneCache()`** in the GAS editor, then reload the sidebar.
 
 Full workflow, release checklist, and post-deploy checks: **`CONTRIBUTING.md`** and **`RUNBOOK.md`**.
 

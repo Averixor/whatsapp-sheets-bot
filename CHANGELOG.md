@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-06-09 — Public API RBAC and deployment separation
+
+- **Security:** fail-closed RBAC on personnel callsigns, birthday links,
+  reconciliation, sidebar data, send-panel entrypoints, summaries, and
+  spreadsheet action APIs; guest bootstrap no longer reads personnel or
+  commander-recipient data.
+- **Governance:** `contracts/access-api.contract.json` v3 and
+  `verify-access-api-governance.mjs` cover all 68 public/canonical APIs, all
+  client `Api.run` calls, role/guard markers, explicit non-public entrypoints,
+  routing metadata, bundle-file existence, and deployment manifests.
+- **Metadata:** removed ghost `Js.Render.html` / `Stage7CompatConfig.gs`
+  references and registered bootstrap, pending/fast sent, quick-health, and
+  calendar compatibility routes.
+- **Operations:** production Execution API is `MYSELF`; remote smoke uses a
+  separate non-production project, `appsscript.smoke.json`, and
+  `apiRunSmokeChecks`. `GasRuntimeSmoke.gs` is excluded from production push.
+- **Post-deploy:** `apiStage7ClearPhoneCache()` is mandatory after every
+  production deploy and after PERSONNEL/PHONES changes.
+
 ## 2026-06-07 — PERSONNEL Status dropdown aligned with production workbook
 
 - **`PersonnelRepository.gs`**: 9-value dropdown (`В наявності` … `СЗЧ`); default
@@ -13,7 +32,7 @@
 - removed one-off audit snapshots, completed refactor notes, and the unused
   generic code-of-conduct document
 - moved release-status verification to current evidence: CI, clasp status,
-  production smoke, and GAS diagnostics
+  separate smoke project, and GAS diagnostics
 
 ## 2026-05-29 — Remote GAS runtime smoke (clasp run)
 

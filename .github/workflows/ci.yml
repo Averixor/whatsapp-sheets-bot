@@ -66,7 +66,10 @@ jobs:
 
           ### Перевірки після деплою коду
           - [ ] `npm run ci` локально — зелений
+          - [ ] production `appsscript.json`: `executionApi.access = MYSELF`
+          - [ ] `apiStage7ClearPhoneCache()` після кожного production deploy
           - [ ] `apiRunStage7RegressionTests()` у GAS editor
           - [ ] `apiStage7QuickHealthCheck()` (перевірка `WASB_OWNER_EMAIL` — WARN якщо не задано)
+          - [ ] remote smoke запускається лише через окремий `.clasp.smoke.json` / test spreadsheet
 
           EOF

@@ -145,6 +145,18 @@ Use **`apiStage7ReportClientAccessSignal`** instead:
 
 Access API surface is governed by `contracts/access-api.contract.json` and `npm run ci` (`verify-access-api-governance.mjs`).
 
+### Execution API separation
+
+- production `appsscript.json` is fixed to `executionApi.access = MYSELF`
+- `GasRuntimeSmoke.gs` is excluded from production `clasp push`
+- remote smoke uses a separate non-production Apps Script project,
+  `.clasp.smoke.json`, and `appsscript.smoke.json`
+- never point `.clasp.smoke.json` at the production script or spreadsheet
+
+The access governance contract verifies the production manifest, every public
+`api*` entrypoint, explicit non-public exclusions, role policy, guard markers,
+critical routing metadata, and client-reachable API calls.
+
 ## 6. Lockouts and failure handling
 
 ### ACCESS-level fields

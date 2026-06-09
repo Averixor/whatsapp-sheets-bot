@@ -17,6 +17,20 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ =
     WASB_STAGE7_ROUTING_REGISTRY_STORE_) ||
   Object.freeze({
     sidebar: Object.freeze({
+      bootstrapSidebar: Object.freeze({
+        routeName: "sidebar.bootstrapSidebar",
+        publicApiMethod: "apiStage7BootstrapSidebar",
+        useCase: "Stage7ServerApi.apiStage7BootstrapSidebar",
+        category: "sidebar",
+        compatibilityStatus: "canonical",
+        mode: "read",
+        lockRequired: false,
+        dryRunSupported: false,
+        uiAllowed: true,
+        clientActionAliases: ["bootstrapSidebar"],
+        verifyAfterWrite: false,
+      }),
+
       getMonthsList: Object.freeze({
         routeName: "sidebar.getMonthsList",
         publicApiMethod: "apiStage7GetMonthsList",
@@ -87,6 +101,20 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ =
         verifyAfterWrite: true,
       }),
 
+      markPanelRowsAsPending: Object.freeze({
+        routeName: "sidebar.markPanelRowsAsPending",
+        publicApiMethod: "apiMarkPanelRowsAsPending",
+        useCase: "Stage7UseCases_.markPanelRowsAsPending",
+        category: "sidebar",
+        compatibilityStatus: "canonical",
+        mode: "write",
+        lockRequired: true,
+        dryRunSupported: true,
+        uiAllowed: true,
+        clientActionAliases: ["markPanelRowsAsPending"],
+        verifyAfterWrite: true,
+      }),
+
       markPanelRowsAsSent: Object.freeze({
         routeName: "sidebar.markPanelRowsAsSent",
         publicApiMethod: "apiMarkPanelRowsAsSent",
@@ -98,6 +126,20 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ =
         dryRunSupported: true,
         uiAllowed: true,
         clientActionAliases: ["markPanelRowsAsSent", "markSendPanelRowsAsSent"],
+        verifyAfterWrite: true,
+      }),
+
+      markPanelRowsAsSentFast: Object.freeze({
+        routeName: "sidebar.markPanelRowsAsSentFast",
+        publicApiMethod: "apiMarkPanelRowsAsSentFast",
+        useCase: "SendPanelRepository_.markRowsAsSent",
+        category: "sidebar",
+        compatibilityStatus: "canonical-fast-path",
+        mode: "write",
+        lockRequired: true,
+        dryRunSupported: true,
+        uiAllowed: true,
+        clientActionAliases: ["markPanelRowsAsSentFast"],
         verifyAfterWrite: true,
       }),
 
@@ -511,6 +553,20 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ =
         verifyAfterWrite: true,
       }),
 
+      quickHealthCheck: Object.freeze({
+        routeName: "maintenance.quickHealthCheck",
+        publicApiMethod: "apiStage7QuickHealthCheck",
+        useCase: "runDiagnosticsByMode_",
+        category: "maintenance",
+        compatibilityStatus: "canonical",
+        mode: "read",
+        lockRequired: false,
+        dryRunSupported: true,
+        uiAllowed: true,
+        clientActionAliases: ["quickHealthCheck"],
+        verifyAfterWrite: false,
+      }),
+
       healthCheck: Object.freeze({
         routeName: "maintenance.healthCheck",
         publicApiMethod: "apiStage7HealthCheck",
@@ -648,6 +704,22 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ =
         dryRunSupported: false,
         uiAllowed: true,
         clientActionAliases: ["lifecycleRetentionCleanup"],
+        verifyAfterWrite: false,
+      }),
+    }),
+
+    compatibility: Object.freeze({
+      loadCalendarDay: Object.freeze({
+        routeName: "compatibility.loadCalendarDay",
+        publicApiMethod: "apiLoadCalendarDay",
+        useCase: "apiStage7GetSidebarData",
+        category: "compatibility",
+        compatibilityStatus: "alias",
+        mode: "read",
+        lockRequired: false,
+        dryRunSupported: false,
+        uiAllowed: false,
+        clientActionAliases: [],
         verifyAfterWrite: false,
       }),
     }),

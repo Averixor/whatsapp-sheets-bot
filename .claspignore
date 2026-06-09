@@ -23,10 +23,15 @@ _person_card_compact_report.txt
 
 package.json
 package-lock.json
+appsscript.smoke.json
+.clasp.smokeignore
 
 !appsscript.json
 !*.gs
 !*.html
+
+# Smoke-only API is deployed through the separate smoke project.
+GasRuntimeSmoke.gs
 
 # Generated/debug client bundle - do not push
 _combined_client_debug.*

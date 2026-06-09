@@ -179,6 +179,7 @@ function _saPreviewNoPayloadsResponse_(
 // ==================== PUBLIC API ====================
 
 function apiPreviewSelectionMessage(options) {
+  _stage7AssertRole_("viewer", "preview selection message");
   const deps = _saRequireDependencies_();
   const WorkflowOrchestrator_ = deps.WorkflowOrchestrator_;
   const SelectionActionService_ = deps.SelectionActionService_;
@@ -240,6 +241,7 @@ function apiPreviewSelectionMessage(options) {
 }
 
 function apiPreviewMultipleMessages(options) {
+  _stage7AssertRole_("viewer", "preview multiple messages");
   const deps = _saRequireDependencies_();
   const WorkflowOrchestrator_ = deps.WorkflowOrchestrator_;
   const SelectionActionService_ = deps.SelectionActionService_;
@@ -276,6 +278,7 @@ function apiPreviewMultipleMessages(options) {
 }
 
 function apiPreviewGroupedMessages(options) {
+  _stage7AssertRole_("viewer", "preview grouped messages");
   const deps = _saRequireDependencies_();
   const WorkflowOrchestrator_ = deps.WorkflowOrchestrator_;
   const SelectionActionService_ = deps.SelectionActionService_;
@@ -312,6 +315,7 @@ function apiPreviewGroupedMessages(options) {
 }
 
 function apiPrepareRangeMessages(options) {
+  _stage7AssertRole_("maintainer", "prepare range messages");
   const deps = _saRequireDependencies_();
   const WorkflowOrchestrator_ = deps.WorkflowOrchestrator_;
   const SelectionActionService_ = deps.SelectionActionService_;
@@ -350,6 +354,7 @@ function apiPrepareRangeMessages(options) {
 }
 
 function apiBuildCommanderSummaryPreview(options) {
+  _stage7AssertRole_("operator", "build commander summary preview");
   const deps = _saRequireDependencies_();
   const WorkflowOrchestrator_ = deps.WorkflowOrchestrator_;
   const SelectionActionService_ = deps.SelectionActionService_;
@@ -381,6 +386,7 @@ function apiBuildCommanderSummaryPreview(options) {
 }
 
 function apiBuildCommanderSummaryLink(options) {
+  _stage7AssertRole_("maintainer", "build commander summary link");
   const deps = _saRequireDependencies_();
   const WorkflowOrchestrator_ = deps.WorkflowOrchestrator_;
   const SelectionActionService_ = deps.SelectionActionService_;
@@ -417,6 +423,11 @@ function apiBuildCommanderSummaryLink(options) {
 }
 
 function apiLogPreparedMessages(options) {
+  const requiredRole =
+    String((options && options.mode) || "selection").toLowerCase() === "range"
+      ? "maintainer"
+      : "operator";
+  _stage7AssertRole_(requiredRole, "log prepared messages");
   const deps = _saRequireDependencies_();
   const WorkflowOrchestrator_ = deps.WorkflowOrchestrator_;
   const SelectionActionService_ = deps.SelectionActionService_;
@@ -507,6 +518,7 @@ function apiLogPreparedMessages(options) {
 }
 
 function apiRunSelectionDiagnostics(options) {
+  _stage7AssertRole_("maintainer", "run selection diagnostics");
   const deps = _saRequireDependencies_();
   const WorkflowOrchestrator_ = deps.WorkflowOrchestrator_;
   const SelectionActionService_ = deps.SelectionActionService_;

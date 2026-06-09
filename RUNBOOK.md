@@ -283,28 +283,52 @@ There is **no** Apps Script deployment in CI (`clasp` is local only). See `.gith
 5. **`clasp status`** then **`clasp push`** — GitHub alone does not update the bound script project.
 6. In Apps Script → **Project settings → Script properties**: ensure **`WASB_SPREADSHEET_ID`** is set if you rely on triggers/headless runs (use your production spreadsheet ID).
 7. Reload the spreadsheet UI; close and reopen the sidebar.
-8. Run smoke when appropriate (see §13 — `npm run gas:smoke` or manual editor checks).
-9. After **`PERSONNEL`** structure or data changes (see §14): run **`apiStage7ClearPhoneCache()`**, then re-check a person card and personnel modal.
+8. Confirm production `appsscript.json` still has `executionApi.access = MYSELF`.
+9. Run **`apiStage7ClearPhoneCache()`** after every deploy, then re-check a person card and personnel modal.
+10. Run smoke only against the separate smoke project (see §13).
 
 ## 13. Post-deploy checks
 
-### Production runtime smoke (automated via clasp)
+### Production deployment (closed Execution API)
 
-After `clasp push`, run remote GAS smoke from the repo root (Node 24 + `clasp login`):
-
-```bash
-npm run gas:smoke
-```
-
-Entrypoint: **`apiRunProductionSmokeChecks`** in `GasRuntimeSmoke.gs` (bundled with `clasp push`).
-
-Full deploy flow:
+Production deployment never opens Execution API to other users:
 
 ```bash
 npm run deploy:prod
 ```
 
-(`npm run ci` → `clasp push` → `npm run gas:smoke`)
+This runs `npm run ci` and `npx clasp push`. Production uses
+`appsscript.json` with `executionApi.access = MYSELF`; `.claspignore` excludes
+`GasRuntimeSmoke.gs`.
+
+Immediately after push, run in the production GAS editor:
+
+```text
+apiStage7ClearPhoneCache()
+```
+
+Then reload the spreadsheet/sidebar and verify a person card, personnel modal,
+SEND_PANEL row, and the expected role.
+
+### Separate remote smoke project
+
+Create a separate non-production Apps Script project and test spreadsheet.
+Copy the local config template once:
+
+```bash
+cp .clasp.smoke.example.json .clasp.smoke.json
+```
+
+Set its `scriptId`/`projectId`, configure `WASB_SPREADSHEET_ID` to the test
+spreadsheet, grant the smoke executor the required ACCESS role, then run:
+
+```bash
+npm run deploy:smoke
+```
+
+`deploy:smoke` stages root GAS source plus `appsscript.smoke.json` in
+`/tmp/wasb-smoke-bundle`, pushes only to `.clasp.smoke.json`, and runs
+`apiRunSmokeChecks`. Never point `.clasp.smoke.json` at production.
 
 **Expectations:**
 
@@ -321,8 +345,9 @@ npm run deploy:prod
 
 - Enable **Apps Script API** for the Google account / Cloud project used by clasp.
 - `clasp login` — refresh OAuth if expired.
-- `appsscript.json` must include `"executionApi": { "access": "ANYONE" }`.
-- Run `clasp push` before smoke; create/update **API executable** deployment if required by the script project.
+- Smoke project must use `appsscript.smoke.json` with `"executionApi": { "access": "ANYONE" }`.
+- Production `appsscript.json` must remain `"executionApi": { "access": "MYSELF" }`.
+- Run `npm run gas:smoke:push` before smoke; create/update an **API executable** deployment in the smoke project if required.
 
 ### Manual GAS functions (editor)
 
@@ -332,7 +357,7 @@ Run from the Apps Script editor when relevant after a deploy or config change:
 - `apiStage7DebugAccess()` — access debug payload
 - `runAccessPolicyChecks()` — access policy assertions
 - `runSmokeTests()` — smoke bundle
-- `apiStage7ClearPhoneCache()` — invalidate phone/profile/PERSONNEL caches (required after **PERSONNEL** or **PHONES** edits)
+- `apiStage7ClearPhoneCache()` — invalidate phone/profile/PERSONNEL caches (required after every production deploy and after **PERSONNEL** or **PHONES** edits)
 
 ## 14. PERSONNEL sheet (canonical people data)
 
@@ -360,7 +385,7 @@ Required headers: `FML`, `Birthday`, `Phone`, `Callsign`, `Position`, `OSH_4`, `
 
 **`ID`** (Армія+) may stay empty or temporary; it is not required for cards, schedule, phones, or birthdays.
 
-### After `clasp push` (mandatory)
+### After every production `clasp push` (mandatory)
 
 In Apps Script editor (or maintenance menu):
 
@@ -370,7 +395,9 @@ apiStage7ClearPhoneCache()
 
 Then reload the spreadsheet and reopen the sidebar. Verify one **person card**, **personnel modal** (callsign list), and **SEND_PANEL** row.
 
-Optional: `npm run gas:smoke` or `apiStage7QuickHealthCheck()` — health fails on duplicate **active** Callsign values.
+Optional: `apiStage7QuickHealthCheck()` in production, or `npm run gas:smoke`
+against the separate smoke project. Health fails on duplicate **active**
+Callsign values.
 
 ## 15. Script properties
 
