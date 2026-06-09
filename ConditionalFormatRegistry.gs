@@ -158,11 +158,27 @@ function _formatRulesApplyRegistryValidation_(sheet) {
       .build();
     sheet.getRange(2, index[header] + 1, rowCount, 1).setDataValidation(rule);
   });
-  ["ConditionValue", "Formula", "Comment", "Fingerprint"].forEach(
-    function (header) {
-      sheet.getRange(2, index[header] + 1, rowCount, 1).setNumberFormat("@");
-    },
-  );
+  [
+    "ID",
+    "Sheet",
+    "Range",
+    "RuleType",
+    "ConditionType",
+    "ConditionValue",
+    "Formula",
+    "Background",
+    "FontColor",
+    "TextStyle",
+    "DetectedAs",
+    "Decision",
+    "Relevance",
+    "MovePolicy",
+    "AdoptToCode",
+    "Comment",
+    "Fingerprint",
+  ].forEach(function (header) {
+    sheet.getRange(2, index[header] + 1, rowCount, 1).setNumberFormat("@");
+  });
 }
 
 function ensureFormatRulesRegistrySheet_() {

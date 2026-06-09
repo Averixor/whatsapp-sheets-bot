@@ -278,7 +278,16 @@ class FakeRegistryRange {
     return this;
   }
 
-  setNumberFormat() {
+  setNumberFormat(format) {
+    for (let row = 0; row < this.numRows; row++) {
+      for (let column = 0; column < this.numColumns; column++) {
+        this.sheet.setNumberFormat(
+          this.row + row,
+          this.column + column,
+          format,
+        );
+      }
+    }
     return this;
   }
 }
@@ -289,6 +298,7 @@ class FakeRegistrySheet {
     this.maxRows = 1;
     this.maxColumns = 1;
     this.values = [];
+    this.numberFormats = [];
   }
 
   getName() {
@@ -326,7 +336,19 @@ class FakeRegistrySheet {
   setValue(row, column, value) {
     while (this.values.length < row) this.values.push([]);
     while (this.values[row - 1].length < column) this.values[row - 1].push("");
-    this.values[row - 1][column - 1] = value;
+    const format = (this.numberFormats[row - 1] || [])[column - 1];
+    this.values[row - 1][column - 1] =
+      typeof value === "string" && /^0\d+$/.test(value) && format !== "@"
+        ? Number(value)
+        : value;
+  }
+
+  setNumberFormat(row, column, format) {
+    while (this.numberFormats.length < row) this.numberFormats.push([]);
+    while (this.numberFormats[row - 1].length < column) {
+      this.numberFormats[row - 1].push("");
+    }
+    this.numberFormats[row - 1][column - 1] = format;
   }
 
   getRange(row, column, numRows, numColumns) {
@@ -395,6 +417,11 @@ assert.equal(repeatRecords[0].MovePolicy, "DoNotMove");
 assert.equal(repeatRecords[0].AdoptToCode, "TRUE");
 assert.equal(repeatRecords[0].Comment, "reviewed");
 assert.equal(repeatRecords[0].Formula, "=A1", "formulas must remain literal text");
+assert.equal(
+  repeatRecords[0].Sheet,
+  "06",
+  "numeric-looking sheet names must remain literal text",
+);
 
 let guardedRole = "";
 context._stage7AssertRole_ = (role) => {
