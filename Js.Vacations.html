@@ -18,6 +18,34 @@
     return html;
   }
 
+  function formatDateUa(value) {
+    if (typeof formatDateForDisplay === "function") {
+      return formatDateForDisplay(value);
+    }
+    if (!value) return "";
+    if (typeof value === "string") {
+      var text = value.trim();
+      if (/^\d{2}\.\d{2}\.\d{4}$/.test(text)) {
+        return text;
+      }
+      if (/\d{4}-\d{2}-\d{2}/.test(text)) {
+        return text.replace(
+          /\b(\d{4})-(\d{2})-(\d{2})\b/g,
+          function (_, year, month, day) {
+            return day + "." + month + "." + year;
+          },
+        );
+      }
+    }
+    var date = value instanceof Date ? value : new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+      var dayPart = String(date.getDate()).padStart(2, "0");
+      var monthPart = String(date.getMonth() + 1).padStart(2, "0");
+      return dayPart + "." + monthPart + "." + date.getFullYear();
+    }
+    return String(value);
+  }
+
   const VACATION_RULE_HUMAN_LABELS = {
     GAP_TOO_SHORT: "Замалий інтервал між відпустками",
     PERSON_GAP: "Замалий інтервал між відпустками",
@@ -136,7 +164,7 @@
           escapeHtml((item && item.fml) || "—") +
           "</div>" +
           '<div class="vacations-muted">Дата: ' +
-          escapeHtml((item && item.date) || "—") +
+          escapeHtml(formatDateUa((item && item.date) || "—")) +
           "</div>" +
           '<div class="vacation-problem-card__description">' +
           escapeHtml((item && (item.description || item.details)) || "") +
@@ -178,6 +206,10 @@
       return escapeHtml(String(value == null ? "" : value));
     },
 
+    fmtDate(value) {
+      return formatDateUa(value);
+    },
+
     personLabel(person) {
       return person.callsign
         ? person.callsign + " — " + person.fml
@@ -190,9 +222,9 @@
         " | " +
         vacation.fml +
         " | " +
-        vacation.startDate +
+        this.fmtDate(vacation.startDate) +
         " — " +
-        vacation.endDate
+        this.fmtDate(vacation.endDate)
       );
     },
 
@@ -303,9 +335,9 @@
             VacationModule.esc(vacation.type) +
             "</span></div>" +
             '<div class="vacations-muted">' +
-            VacationModule.esc(vacation.startDate) +
+            VacationModule.esc(VacationModule.fmtDate(vacation.startDate)) +
             " — " +
-            VacationModule.esc(vacation.endDate) +
+            VacationModule.esc(VacationModule.fmtDate(vacation.endDate)) +
             " (" +
             VacationModule.esc(vacation.days) +
             " дн.)</div>" +
@@ -345,9 +377,9 @@
             VacationModule.esc(item.label) +
             "</span></div>" +
             "<div>" +
-            VacationModule.esc(item.startDate) +
+            VacationModule.esc(VacationModule.fmtDate(item.startDate)) +
             " — " +
-            VacationModule.esc(item.endDate) +
+            VacationModule.esc(VacationModule.fmtDate(item.endDate)) +
             " | " +
             VacationModule.esc(item.days) +
             " дн. | score " +

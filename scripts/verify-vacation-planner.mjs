@@ -1069,6 +1069,16 @@ const vacationClientContext = vm.createContext({
   setHtml(_id, html) {
     vacationClientRendered = html;
   },
+  formatDateForDisplay(value) {
+    if (!value) return "";
+    if (typeof value === "string" && /\d{4}-\d{2}-\d{2}/.test(value)) {
+      return value.replace(
+        /\b(\d{4})-(\d{2})-(\d{2})\b/g,
+        (_, y, m, d) => `${d}.${m}.${y}`,
+      );
+    }
+    return String(value);
+  },
 });
 vm.runInContext(jsVacationsScript[1], vacationClientContext, {
   filename: "Js.Vacations.html",
@@ -1112,10 +1122,34 @@ assert.doesNotMatch(
   renderVacationProblems([{ type: "INVALID_DATE", fml: "Тест" }]),
   /Підібрати нову дату/,
 );
+assert.match(jsVacations, /function formatDateUa/);
+assert.match(jsVacations, /fmtDate\(vacation\.startDate\)/);
+const formatDateUa = vm.runInContext("formatDateUa", vacationClientContext);
+assert.equal(formatDateUa("2027-05-13"), "13.05.2027");
+assert.equal(formatDateUa("13.05.2027"), "13.05.2027");
+assert.equal(
+  formatDateUa("2026-01-01 / 2026-07-01"),
+  "01.01.2026 / 01.07.2026",
+);
 const vacationClientModule = vm.runInContext(
   "VacationModule",
   vacationClientContext,
 );
+vacationClientModule.state.vacations = [
+  {
+    fml: "Пелих Артем Андрійович",
+    type: "В1",
+    startDate: "2027-05-13",
+    endDate: "2027-05-27",
+    days: 15,
+    manageable: true,
+  },
+];
+vacationClientModule.state.activeTab = "overview";
+vacationClientModule.render();
+assert.match(vacationClientRendered, /13\.05\.2027 — 27\.05\.2027 \(15 дн\.\)/);
+assert.doesNotMatch(vacationClientRendered, /2027-05-13/);
+vacationClientModule.state.vacations = [];
 vacationClientModule.state.personnel = [
   { fml: "Тест Людина", callsign: "Тест" },
 ];
