@@ -379,6 +379,13 @@ assert.equal(upsert([registryInput]).inserted, 1);
 const headerIndex = Object.fromEntries(
   contract.headers.map((header, index) => [header, index]),
 );
+function setRegistryField(fingerprintValue, field, value) {
+  const rowIndex = registrySheet.values.findIndex(
+    (row) => row[headerIndex.Fingerprint] === fingerprintValue,
+  );
+  assert.ok(rowIndex > 0, `registry row for ${fingerprintValue} must exist`);
+  registrySheet.values[rowIndex][headerIndex[field]] = value;
+}
 registrySheet.values[1][headerIndex.Decision] = "Adopt";
 registrySheet.values[1][headerIndex.Relevance] = "Permanent";
 registrySheet.values[1][headerIndex.MovePolicy] = "DoNotMove";
@@ -495,6 +502,62 @@ assert.equal(
   "preserve-safe rebuild must restore an unknown user rule",
 );
 
+const deleteAllowedPreserveRule = fakeRule("DELETE_ALLOWED_PRESERVE");
+const deleteAllowedPreserveSerialized = serialize(
+  fakeSheet,
+  deleteAllowedPreserveRule,
+  1,
+);
+assert.equal(upsert([deleteAllowedPreserveSerialized]).inserted, 1);
+setRegistryField(
+  deleteAllowedPreserveSerialized.Fingerprint,
+  "Decision",
+  "DeleteAllowed",
+);
+const deleteAllowedPreserveSheet = {
+  ...fakeSheet,
+  rules: [deleteAllowedPreserveRule],
+  getConditionalFormatRules() {
+    return this.rules;
+  },
+  setConditionalFormatRules(rules) {
+    this.rules = rules;
+  },
+};
+preserve(deleteAllowedPreserveSheet, () => {
+  deleteAllowedPreserveSheet.rules = [];
+});
+assert.equal(
+  deleteAllowedPreserveSheet.rules.length,
+  0,
+  "preserve-safe rebuild must not resurrect DeleteAllowed user rules",
+);
+
+const rollbackRule = fakeRule("ROLLBACK");
+const rollbackSheet = {
+  ...fakeSheet,
+  rules: [rollbackRule],
+  getConditionalFormatRules() {
+    return this.rules;
+  },
+  setConditionalFormatRules(rules) {
+    this.rules = rules;
+  },
+};
+assert.throws(
+  () =>
+    preserve(rollbackSheet, () => {
+      rollbackSheet.rules = [];
+      throw new Error("boom");
+    }),
+  /boom/,
+);
+assert.equal(
+  rollbackSheet.rules.length,
+  1,
+  "failed preserve-safe rebuild must roll back the pre-existing user rule",
+);
+
 const remap = vm.runInContext("_formatRulesRemapRange_", context);
 const remapSheet = {
   getRange(...args) {
@@ -521,6 +584,27 @@ assert.deepEqual(
   ),
   [2, 3, 32, 31],
   "schedule-edge rule must remap from C2:AF30 to C2:AG33",
+);
+assert.deepEqual(
+  Array.from(
+    remap(
+      remapSheet,
+      {
+        a1: "C2:H4",
+        row: 2,
+        column: 3,
+        numRows: 3,
+        numColumns: 6,
+        lastRow: 4,
+        lastColumn: 8,
+      },
+      "RemapWithVacationCalendar",
+      { lastRow: 4, lastColumn: 8 },
+      { lastRow: 6, lastColumn: 10 },
+    ),
+  ),
+  [2, 3, 5, 8],
+  "vacation calendar rule must grow with rebuilt schedule bounds",
 );
 
 assert.match(

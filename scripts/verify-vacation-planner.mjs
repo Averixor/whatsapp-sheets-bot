@@ -1041,6 +1041,45 @@ assert.match(
 assert.equal(gapReport.adminSheet, "VACATION_CHECK");
 assert.match(gapReport.problemSummary.summaryLine, /Усі пов'язані із/);
 
+generatedSheets = {};
+const gapCheckResult = writer.highlightVacationProblems();
+const gapCheckSheet = generatedSheets.VACATION_CHECK;
+assert.ok(gapCheckResult.errorCount > 0, "check-only flow must find gap errors");
+assert.ok(gapCheckSheet, "check-only flow must write VACATION_CHECK");
+const gapCheckRows = gapCheckSheet.rows.slice(1);
+assert.ok(
+  gapCheckRows.some(
+    (row) =>
+      row[1] === "Замалий інтервал між відпустками" && row[4] === "ERROR",
+  ),
+  "VACATION_CHECK must show Ukrainian labels and ERROR severity",
+);
+assert.ok(
+  gapCheckRows.every((row) => row[1] !== "PERSON_GAP"),
+  "VACATION_CHECK must not expose raw rule codes for known problems",
+);
+assert.equal(
+  gapCheckSheet.backgroundAt(2, 1),
+  "#F4CCCC",
+  "ERROR check rows must be highlighted red",
+);
+
+sourceSheet = new FakeSheet("VACATIONS", [Array(19).fill("")]);
+generatedSheets = {};
+const cleanCheckResult = writer.highlightVacationProblems();
+const cleanCheckSheet = generatedSheets.VACATION_CHECK;
+assert.equal(cleanCheckResult.errorCount, 0);
+assert.deepEqual(
+  Array.from(cleanCheckSheet.rows[1]),
+  ["", "ALL_RULES", "", "Порушень не знайдено", "OK"],
+  "empty check flow must write the no-violations row",
+);
+assert.equal(
+  cleanCheckSheet.backgroundAt(2, 1),
+  "#D9EAD3",
+  "OK check rows must be highlighted green",
+);
+
 const code = fs.readFileSync(path.join(repoRoot, "Code.gs"), "utf8");
 const sidebarHtml = fs.readFileSync(
   path.join(repoRoot, "Sidebar.html"),
