@@ -114,15 +114,19 @@ var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px;
 box-sizing: border-box; color: var(--text-primary); padding: 8px; width: 100%; }
 .vacations-form--spaced { margin-top: 12px; } .vacations-card { background:
 var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px;
-margin-top: 8px; padding: 12px; } .vacations-card__head { align-items: center;
-display: flex; gap: 8px; justify-content: space-between; margin-bottom: 6px; }
+margin-top: 8px; padding: 12px; } .vacations-card__head, .vacation-card-header {
+align-items: flex-start; display: flex; gap: 8px; margin-bottom: 6px; }
+.vacations-card__title, .vacation-card-title { flex: 1 1 auto; font-weight: 700;
+line-height: 1.35; min-width: 0; word-break: break-word; }
 .vacations-card__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top:
-8px; } .vacations-badge { background: var(--accent-soft-bg); border-radius:
-999px; color: var(--google-blue); font-size: 10px; font-weight: 700; padding:
-2px 8px; } .vacations-muted { color: var(--text-muted); font-size: 12px; }
-.vacations-empty { color: var(--text-muted); font-size: 12px; padding: 16px 8px;
-text-align: center; } .vacations-status { border-radius: 8px; font-size: 12px;
-margin-top: 8px; padding: 10px; white-space: pre-wrap; }
+8px; } .vacations-badge, .vacation-card-badge { align-items: center; background:
+var(--accent-soft-bg); border-radius: 999px; color: var(--google-blue); display:
+inline-flex; flex: 0 0 auto; font-size: 10px; font-weight: 700; height: 22px;
+justify-content: center; line-height: 1; min-width: 28px; padding: 0 8px;
+white-space: nowrap; } .vacations-muted { color: var(--text-muted); font-size:
+12px; } .vacations-empty { color: var(--text-muted); font-size: 12px; padding:
+16px 8px; text-align: center; } .vacations-status { border-radius: 8px;
+font-size: 12px; margin-top: 8px; padding: 10px; white-space: pre-wrap; }
 .vacations-status--success { background: var(--success-soft-bg); color:
 var(--success-color); } .vacations-status--error { background:
 var(--danger-soft-bg); color: var(--log-error); } .vacations-status--info {

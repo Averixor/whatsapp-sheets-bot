@@ -1047,6 +1047,10 @@ const jsVacations = fs.readFileSync(
   path.join(repoRoot, "Js.Vacations.html"),
   "utf8",
 );
+const stylesPersonnel = fs.readFileSync(
+  path.join(repoRoot, "Styles_30_Personnel.html"),
+  "utf8",
+);
 const jsVacationsScript = jsVacations.match(/<script>([\s\S]*?)<\/script>/i);
 assert.ok(jsVacationsScript, "Js.Vacations must contain a client script");
 let vacationClientRendered = "";
@@ -1207,6 +1211,33 @@ assert.match(jsVacations, /Натисніть кнопку, щоб переві�
 assert.match(jsVacations, /openFindFromProblem\(index\)/);
 assert.match(jsVacations, /Підібрати нову дату/);
 assert.doesNotMatch(jsVacations, /label:\s*"Перевірка"/);
+assert.match(
+  stylesPersonnel,
+  /\.vacation-card-header[\s\S]*?align-items:\s*flex-start/,
+  "vacation card header must align badge to top",
+);
+assert.match(
+  stylesPersonnel,
+  /\.vacation-card-title[\s\S]*?min-width:\s*0/,
+  "vacation card title must shrink before badge",
+);
+assert.match(
+  stylesPersonnel,
+  /\.vacation-card-badge[\s\S]*?flex:\s*0\s+0\s+auto[\s\S]*?white-space:\s*nowrap/,
+  "vacation card badge must not shrink or wrap",
+);
+assert.match(jsVacations, /vacation-card-badge/);
+assert.match(
+  jsVacations,
+  /vacation-card-badge">' \+\s*\n\s*VacationModule\.esc\(vacation\.type\)/,
+  "vacation type badge must be a single span without split text",
+);
+assert.doesNotMatch(jsVacations, /vacation-card-badge">В\s/);
+assert.match(
+  sidebar,
+  /\.badge[\s\S]*?flex:\s*0\s+0\s+auto[\s\S]*?white-space:\s*nowrap/,
+  "legacy VacationSidebar badge must not wrap",
+);
 assert.doesNotMatch(sidebarService, /\bclass\s+VacationSidebarService/);
 assert.match(sidebarService, /const VacationSidebarService_ = \(function \(\)/);
 assert.match(sidebarService, /PersonnelRepository_\.getActiveRows\(\)/);

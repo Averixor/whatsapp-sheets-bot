@@ -126,9 +126,10 @@
           : "";
         return (
           '<div class="vacations-card vacation-problem-card">' +
-          '<div class="vacations-card__head"><strong>' +
+          '<div class="vacations-card__head vacation-card-header">' +
+          '<strong class="vacations-card__title vacation-card-title">' +
           escapeHtml(label) +
-          '</strong><span class="vacations-badge">' +
+          '</strong><span class="vacations-badge vacation-card-badge">' +
           escapeHtml((item && item.severity) || "ERROR") +
           "</span></div>" +
           '<div class="vacation-problem-card__person">' +
@@ -295,9 +296,10 @@
           }
           return (
             '<div class="vacations-card">' +
-            '<div class="vacations-card__head"><strong>' +
+            '<div class="vacations-card__head vacation-card-header">' +
+            '<strong class="vacations-card__title vacation-card-title">' +
             VacationModule.esc(vacation.fml) +
-            '</strong><span class="vacations-badge">' +
+            '</strong><span class="vacations-badge vacation-card-badge">' +
             VacationModule.esc(vacation.type) +
             "</span></div>" +
             '<div class="vacations-muted">' +
@@ -336,9 +338,10 @@
             '<div class="vacations-card vacations-option' +
             cls +
             '">' +
-            '<div class="vacations-card__head"><strong>Варіант ' +
+            '<div class="vacations-card__head vacation-card-header">' +
+            '<strong class="vacations-card__title vacation-card-title">Варіант ' +
             VacationModule.esc(item.rank) +
-            '</strong><span class="vacations-badge">' +
+            '</strong><span class="vacations-badge vacation-card-badge">' +
             VacationModule.esc(item.label) +
             "</span></div>" +
             "<div>" +
