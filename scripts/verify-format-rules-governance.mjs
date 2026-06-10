@@ -390,6 +390,85 @@ context.SpreadsheetApp.newDataValidation = () => ({
 
 const upsert = vm.runInContext("upsertFormatRulesRegistryRecords_", context);
 const readRegistry = vm.runInContext("readFormatRulesRegistry_", context);
+const ensureRegistrySheet = vm.runInContext(
+  "ensureFormatRulesRegistrySheet_",
+  context,
+);
+const legacyRegistrySheet = new FakeRegistrySheet(contract.registrySheet);
+legacyRegistrySheet.maxRows = 2;
+legacyRegistrySheet.maxColumns = 9;
+legacyRegistrySheet.values = [
+  [
+    "Comment",
+    "Fingerprint",
+    "Decision",
+    "Sheet",
+    "MovePolicy",
+    "RuleType",
+    "Range",
+    "ID",
+    "Relevance",
+  ],
+  [
+    "reviewed before migration",
+    "CFR-legacy",
+    "Adopt",
+    "June",
+    "DoNotMove",
+    "CONDITIONAL_FORMAT",
+    "C2:AG33",
+    "legacy-id",
+    "Permanent",
+  ],
+];
+context.DataAccess_ = {
+  getSpreadsheet: () => ({
+    getSheetByName(name) {
+      return name === contract.registrySheet ? legacyRegistrySheet : null;
+    },
+    insertSheet() {
+      return legacyRegistrySheet;
+    },
+  }),
+};
+const migratedRegistry = ensureRegistrySheet();
+assert.equal(
+  migratedRegistry.headersUpdated,
+  true,
+  "legacy registry headers must be normalized",
+);
+assert.deepEqual(
+  legacyRegistrySheet.values[0].slice(0, contract.headers.length),
+  contract.headers,
+  "registry migration must restore canonical header order",
+);
+const migratedHeaderIndex = Object.fromEntries(
+  contract.headers.map((header, index) => [header, index]),
+);
+assert.equal(legacyRegistrySheet.values[1][migratedHeaderIndex.ID], "legacy-id");
+assert.equal(legacyRegistrySheet.values[1][migratedHeaderIndex.Sheet], "June");
+assert.equal(
+  legacyRegistrySheet.values[1][migratedHeaderIndex.Fingerprint],
+  "CFR-legacy",
+);
+assert.equal(
+  legacyRegistrySheet.values[1][migratedHeaderIndex.Decision],
+  "Adopt",
+);
+assert.equal(
+  legacyRegistrySheet.values[1][migratedHeaderIndex.MovePolicy],
+  "DoNotMove",
+);
+assert.equal(
+  legacyRegistrySheet.values[1][migratedHeaderIndex.Comment],
+  "reviewed before migration",
+);
+assert.equal(
+  legacyRegistrySheet.values[1][migratedHeaderIndex.ConditionType],
+  "",
+  "missing legacy columns must be initialized without shifting user data",
+);
+context.DataAccess_ = { getSpreadsheet: () => fakeSpreadsheet };
 const registryInput = {
   ...baseRecord,
   Formula: "=A1",
