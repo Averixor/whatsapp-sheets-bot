@@ -169,6 +169,14 @@ const criteriaValuesFromRecord = vm.runInContext(
   "_formatRulesCriteriaValuesFromRecord_",
   context,
 );
+const definitionMatchesRecord = vm.runInContext(
+  "_formatRulesDefinitionMatchesRecord_",
+  context,
+);
+const findKnownDefinition = vm.runInContext(
+  "_formatRulesFindKnownDefinition_",
+  context,
+);
 assert.deepEqual(
   Array.from(
     criteriaValuesFromRecord(fakeSheet, {
@@ -219,6 +227,54 @@ assert.equal(
   }).detectedAs,
   "MANUAL",
   "approval to export must not pretend the rule is already code-adopted",
+);
+
+const adoptedRecord = {
+  ...baseRecord,
+  Range: "AG33,C2:AG33",
+  FontColor: "#FFFFFF",
+  Italic: "FALSE",
+  TextStyle: JSON.stringify({ underline: false, strikethrough: false }),
+};
+const exactDefinition = {
+  sheet: "06",
+  range: "C2:AG33,AG33",
+  condition: { type: "TEXT_EQUAL_TO", value: "Black" },
+  format: {
+    background: "#000000",
+    fontColor: "#ffffff",
+    bold: "TRUE",
+    italic: false,
+    underline: false,
+    strikethrough: false,
+  },
+};
+assert.equal(
+  definitionMatchesRecord(exactDefinition, adoptedRecord),
+  true,
+  "adopted definitions must match registry rows after stable normalization",
+);
+assert.equal(
+  definitionMatchesRecord(
+    {
+      ...exactDefinition,
+      condition: { type: "TEXT_EQUAL_TO", value: "Blue" },
+    },
+    adoptedRecord,
+  ),
+  false,
+  "near-miss adopted definitions must not match user rules",
+);
+assert.equal(
+  findKnownDefinition(
+    [
+      { ...exactDefinition, condition: { type: "TEXT_EQUAL_TO", value: "Blue" } },
+      exactDefinition,
+    ],
+    adoptedRecord,
+  ),
+  exactDefinition,
+  "known-definition lookup must return only the exact adopted rule",
 );
 
 class FakeRegistryRange {
