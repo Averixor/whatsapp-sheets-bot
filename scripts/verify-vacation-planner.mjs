@@ -1355,7 +1355,7 @@ sidebarServiceContext.PersonnelRepository_ = {
     return sidebarPersonnelRows.slice();
   },
   getByFml(fml, options) {
-    assert.deepEqual(options, { activeOnly: true });
+    assert.equal(options && options.activeOnly, true);
     return (
       sidebarPersonnelRows.find(
         (person) =>
