@@ -71,7 +71,10 @@
     "usecase",
     "Wasb",
     "WASB",
-    "whatsapp"
+    "whatsapp",
+    "healthcheck",
+    "HEALTHCHECK",
+    "maint"
   ],
   "ignorePaths": [
     "node_modules/**",
