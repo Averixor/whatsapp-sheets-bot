@@ -1259,6 +1259,7 @@ function runAccessPolicyChecks(options) {
           "apiStage7SubmitAccessKeyRequest",
           "apiStage7RegisterAccessWithTemporaryPassword",
           "apiStage7LoginByIdentifierAndCallsign",
+          "apiStage7LoginByAccessKey",
           "apiStage7ListBindableCallsigns",
           "apiStage7ReportAccessViolation",
           "apiStage7ReportClientAccessSignal",
@@ -1284,6 +1285,7 @@ function runAccessPolicyChecks(options) {
           "apiStage7SubmitAccessKeyRequest",
           "apiStage7RegisterAccessWithTemporaryPassword",
           "apiStage7LoginByIdentifierAndCallsign",
+          "apiStage7LoginByAccessKey",
           "apiStage7ListBindableCallsigns",
           "apiStage7ReportClientAccessSignal",
           "apiStage7GetAccessDescriptorLite",
@@ -1324,6 +1326,7 @@ function runAccessPolicyChecks(options) {
         var allowed = [
           "apiStage7SubmitAccessKeyRequest",
           "apiStage7LoginByIdentifierAndCallsign",
+          "apiStage7LoginByAccessKey",
           "apiStage7ListBindableCallsigns",
           "apiStage7ReportClientAccessSignal",
           "apiSubmitRequest",

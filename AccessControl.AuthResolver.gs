@@ -1327,6 +1327,216 @@ function submitAccessKeyRequest(payload) {
   }
 }
 
+function _findAccessEntryByPasswordSecret_(entries, secret) {
+  const value = String(secret || "").trim();
+  if (!value || /^WASB-/i.test(value)) return null;
+  const list = Array.isArray(entries) ? entries : [];
+  for (let i = 0; i < list.length; i++) {
+    const row = list[i];
+    if (row.enabled !== true) continue;
+    if (String(row.registrationStatus || "").toLowerCase() !== "active")
+      continue;
+    if (!row.passwordHash || !row.passwordSalt) continue;
+    if (typeof hashAccessPasswordWithSalt_ !== "function") continue;
+    const enteredHash = hashAccessPasswordWithSalt_(value, row.passwordSalt);
+    if (enteredHash === row.passwordHash) return row;
+  }
+  return null;
+}
+
+function _isTemporaryAccessKeyUsable_(entry) {
+  if (!entry) return false;
+  const status = String(entry.registrationStatus || "")
+    .trim()
+    .toLowerCase();
+  const hasCredentials = !!(
+    String(entry.login || "").trim() && String(entry.passwordHash || "").trim()
+  );
+  if (
+    status !== "approved" &&
+    status !== "key_sent" &&
+    !(status === "active" && !hasCredentials)
+  ) {
+    return false;
+  }
+  if (entry.enabled !== true) return false;
+  if (!entry.temporaryPasswordHash || !entry.temporaryPasswordSalt)
+    return false;
+  if (entry.temporaryPasswordUsedAt && hasCredentials) return false;
+  if (entry.temporaryPasswordExpiresAt) {
+    const expiresRaw = String(entry.temporaryPasswordExpiresAt || "").trim();
+    const expiresDate = new Date(expiresRaw.replace(" ", "T"));
+    if (!isNaN(expiresDate.getTime()) && Date.now() > expiresDate.getTime()) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function _bindAccessEntryToCurrentKey_(entry, currentKeyHash) {
+  const occupantHash = normalizeStoredHash_(entry.userKeyCurrentHash);
+  const shouldRotateCurrentKey =
+    occupantHash && occupantHash !== currentKeyHash;
+  const updates = {
+    user_key_current_hash: currentKeyHash,
+    request_user_key_hash: currentKeyHash,
+    last_seen_at: _nowText_(),
+    failed_attempts: 0,
+    locked_until_ms: 0,
+  };
+  if (shouldRotateCurrentKey) {
+    updates.user_key_prev_hash = occupantHash;
+    updates.last_rotated_at = _nowText_("long");
+  } else if (!entry.lastRotatedAt) {
+    updates.last_rotated_at = _nowText_("long");
+  }
+  return _updateEntryFields_(entry.sheetRow, updates) || entry;
+}
+
+/**
+ * Вхід за вже виданим ключем доступу (тимчасовий WASB-код або пароль активного запису).
+ */
+function loginByAccessKey(accessKeyOrPayload) {
+  const payload =
+    accessKeyOrPayload &&
+    typeof accessKeyOrPayload === "object" &&
+    !Array.isArray(accessKeyOrPayload)
+      ? Object.assign({}, accessKeyOrPayload)
+      : { accessKey: accessKeyOrPayload };
+  const accessKey = String(
+    payload.accessKey || payload.key || payload.temporaryPassword || "",
+  ).trim();
+  const currentKeyHash = getCurrentUserKeyHash_();
+  const supportCallsign = getPrimarySupportCallsign_();
+
+  if (!currentKeyHash) {
+    return {
+      success: false,
+      ok: false,
+      code: REASON_CODES.SELF_BIND_KEY_UNAVAILABLE,
+      message:
+        "Не вдалося визначити ключ користувача. Оновіть панель і спробуйте ще раз.",
+    };
+  }
+  if (!accessKey) {
+    return {
+      success: false,
+      ok: false,
+      code: "access.login.key_required",
+      message: "Введіть ключ доступу.",
+    };
+  }
+
+  const loginState = _getSelfBindLoginPublicState_(currentKeyHash);
+  if (loginState.locked) {
+    return {
+      success: false,
+      ok: false,
+      code: REASON_CODES.SELF_BIND_LOGIN_BLOCKED,
+      message:
+        "Ваш вхід тимчасово заблоковано на " +
+        loginState.remainingMinutes +
+        " хв. " +
+        getSelfBindHelpText_() +
+        ".",
+      loginLockout: loginState,
+    };
+  }
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
+    const entries = _readSheetEntries_();
+    let entry = null;
+    let matchType = "";
+
+    const tempEntry = _findAccessEntryByTemporaryPassword_(entries, accessKey);
+    if (tempEntry && _isTemporaryAccessKeyUsable_(tempEntry)) {
+      entry = tempEntry;
+      matchType = "temporary_password";
+    }
+    if (!entry) {
+      const passwordEntry = _findAccessEntryByPasswordSecret_(
+        entries,
+        accessKey,
+      );
+      if (passwordEntry) {
+        entry = passwordEntry;
+        matchType = "password";
+      }
+    }
+
+    if (!entry) {
+      const failure = _registerSelfBindFailure_(currentKeyHash, {
+        identifierType: "access_key",
+        identifierValue: "",
+        callsign: "",
+        reasonCode: "access.login.key_invalid",
+        reasonMessage: "Ключ доступу не підтверджено.",
+        loginMeta: {},
+      });
+      const finalCode = failure.blocked
+        ? REASON_CODES.SELF_BIND_LOGIN_BLOCKED
+        : "access.login.key_invalid";
+      return {
+        success: false,
+        ok: false,
+        code: finalCode,
+        message: failure.blocked
+          ? "Ваш вхід тимчасово заблоковано на " +
+            failure.remainingMinutes +
+            " хв. " +
+            getSelfBindHelpText_() +
+            "."
+          : "Ключ доступу не підтверджено.",
+        loginLockout: failure.blocked ? failure : loginState,
+      };
+    }
+
+    if (_isTimedLocked_(entry)) {
+      return {
+        success: false,
+        ok: false,
+        code: REASON_CODES.DENIED_TIMED_LOCKOUT,
+        message:
+          "Доступ тимчасово заблоковано. " + getSelfBindHelpText_() + ".",
+      };
+    }
+
+    const savedEntry = _bindAccessEntryToCurrentKey_(entry, currentKeyHash);
+    _clearSelfBindLoginState_(currentKeyHash);
+    _applySuccessfulAuth_(savedEntry, currentKeyHash);
+
+    const complete = _isAccessEntryActivationComplete_(savedEntry);
+    const descriptor = describe({ includeSensitiveDebug: false });
+    if (!complete) {
+      return {
+        success: true,
+        ok: true,
+        code: "access.login.registration_required",
+        message:
+          matchType === "temporary_password"
+            ? "Ключ підтверджено. Завершіть реєстрацію: створіть логін і пароль."
+            : "Ключ підтверджено, але реєстрацію ще не завершено.",
+        descriptor: descriptor,
+        registrationRequired: true,
+        supportCallsign: supportCallsign,
+      };
+    }
+
+    return {
+      success: true,
+      ok: true,
+      code: REASON_CODES.OK,
+      message: "Вхід виконано.",
+      descriptor: descriptor,
+      supportCallsign: supportCallsign,
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function _findAccessEntryByTemporaryPassword_(entries, temporaryPassword) {
   const tempPlain = String(temporaryPassword || "").trim();
   if (!tempPlain || !/^WASB-/i.test(tempPlain)) return null;

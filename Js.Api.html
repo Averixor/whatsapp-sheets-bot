@@ -375,6 +375,13 @@
       adaptStage4UtilityResponse(
         await Api.run("apiStage7LoginByIdentifierAndCallsign", payload || {}),
       ),
+    loginByAccessKey: async (payload = {}) =>
+      adaptStage4UtilityResponse(
+        await Api.run(
+          "apiStage7LoginByAccessKey",
+          typeof payload === "string" ? { accessKey: payload } : payload || {},
+        ),
+      ),
     applyProtections: async (options = {}) =>
       adaptStage4UtilityResponse(
         await Api.run("apiStage7ApplyProtections", options),

@@ -1,219 +1,226 @@
 <script>
   // Js.Security.Forms — key request and temporary-password registration.
-    function setAccessLoginMode_(mode) {
-      const requestForm = document.getElementById("accessKeyRequestForm");
-      const haveKeyForm = document.getElementById("accessHaveKeyForm");
-      if (requestForm)
-        requestForm.style.display = mode === "haveKey" ? "none" : "block";
-      if (haveKeyForm)
-        haveKeyForm.style.display = mode === "haveKey" ? "block" : "none";
+  function setAccessLoginMode_(mode) {
+    const requestForm = document.getElementById("accessKeyRequestForm");
+    const loginForm = document.getElementById("accessLoginForm");
+    const haveKeyForm = document.getElementById("accessHaveKeyForm");
+    const normalized =
+      mode === "request" ? "request" : mode === "haveKey" ? "haveKey" : "login";
+    if (requestForm)
+      requestForm.style.display = normalized === "request" ? "block" : "none";
+    if (loginForm)
+      loginForm.style.display = normalized === "login" ? "block" : "none";
+    if (haveKeyForm)
+      haveKeyForm.style.display = normalized === "haveKey" ? "block" : "none";
+  }
+
+  let accessKeyRequestLastSentAt_ = Number(
+    localStorage.getItem("wasb_access_key_request_last_sent_at") || "0",
+  );
+
+  async function submitAccessKeyRequestForm_() {
+    const nowMs = Date.now();
+    const cooldownMs = 5 * 60 * 1000;
+    const remainingMs = cooldownMs - (nowMs - accessKeyRequestLastSentAt_);
+
+    if (remainingMs > 0) {
+      const minutes = Math.ceil(remainingMs / 60000);
+      setAccessLoginModalMessage_(
+        "Повторну заявку можна надіслати через " + minutes + " хв.",
+        true,
+      );
+      return;
     }
 
-    let accessKeyRequestLastSentAt_ = Number(
-      localStorage.getItem("wasb_access_key_request_last_sent_at") || "0",
-    );
+    const payload = {
+      phone: safeString_(
+        document.getElementById("accessRequestPhoneInput") &&
+          document.getElementById("accessRequestPhoneInput").value,
+      ),
+      email: safeString_(
+        document.getElementById("accessRequestEmailInput") &&
+          document.getElementById("accessRequestEmailInput").value,
+      ),
+      callsign: safeString_(
+        document.getElementById("accessRequestCallsignInput") &&
+          document.getElementById("accessRequestCallsignInput").value,
+      ).toUpperCase(),
+      surname: safeString_(
+        document.getElementById("accessRequestSurnameInput") &&
+          document.getElementById("accessRequestSurnameInput").value,
+      ),
+      firstName: safeString_(
+        document.getElementById("accessRequestFirstNameInput") &&
+          document.getElementById("accessRequestFirstNameInput").value,
+      ),
+      preferredContact: safeString_(
+        document.getElementById("accessRequestPreferredContactInput") &&
+          document.getElementById("accessRequestPreferredContactInput").value,
+      ),
+      telegramUsername: safeString_(
+        document.getElementById("accessRequestTelegramUsername") &&
+          document.getElementById("accessRequestTelegramUsername").value,
+      ),
+    };
 
-    async function submitAccessKeyRequestForm_() {
-      const nowMs = Date.now();
-      const cooldownMs = 5 * 60 * 1000;
-      const remainingMs = cooldownMs - (nowMs - accessKeyRequestLastSentAt_);
+    const hasContactIdentity = !!(payload.phone || payload.email);
+    const hasNameIdentity = !!(payload.surname && payload.firstName);
+    const hasCallsignIdentity = !!payload.callsign;
+    const hasPersonIdentity = hasCallsignIdentity || hasNameIdentity;
 
-      if (remainingMs > 0) {
-        const minutes = Math.ceil(remainingMs / 60000);
+    if (!hasContactIdentity || !hasPersonIdentity) {
+      setAccessLoginModalMessage_(
+        "Заповніть телефон або email, а також позивний або прізвище та імʼя.",
+        true,
+      );
+      return;
+    }
+    try {
+      const result = await Stage7Api.submitAccessKeyRequest(payload);
+      if (result && result.success === false) {
         setAccessLoginModalMessage_(
-          "Повторну заявку можна надіслати через " + minutes + " хв.",
+          result.message || "Не вдалося надіслати заявку.",
           true,
         );
         return;
       }
-
-      const payload = {
-        phone: safeString_(
-          document.getElementById("accessRequestPhoneInput") &&
-            document.getElementById("accessRequestPhoneInput").value,
-        ),
-        email: safeString_(
-          document.getElementById("accessRequestEmailInput") &&
-            document.getElementById("accessRequestEmailInput").value,
-        ),
-        callsign: safeString_(
-          document.getElementById("accessRequestCallsignInput") &&
-            document.getElementById("accessRequestCallsignInput").value,
-        ).toUpperCase(),
-        surname: safeString_(
-          document.getElementById("accessRequestSurnameInput") &&
-            document.getElementById("accessRequestSurnameInput").value,
-        ),
-        firstName: safeString_(
-          document.getElementById("accessRequestFirstNameInput") &&
-            document.getElementById("accessRequestFirstNameInput").value,
-        ),
-        preferredContact: safeString_(
-          document.getElementById("accessRequestPreferredContactInput") &&
-            document.getElementById("accessRequestPreferredContactInput").value,
-        ),
-        telegramUsername: safeString_(
-          document.getElementById("accessRequestTelegramUsername") &&
-            document.getElementById("accessRequestTelegramUsername").value,
-        ),
-      };
-
-      const hasContactIdentity = !!(payload.phone || payload.email);
-      const hasNameIdentity = !!(payload.surname && payload.firstName);
-      const hasCallsignIdentity = !!payload.callsign;
-      const hasPersonIdentity = hasCallsignIdentity || hasNameIdentity;
-
-      if (!hasContactIdentity || !hasPersonIdentity) {
-        setAccessLoginModalMessage_(
-          "Заповніть телефон або email, а також позивний або прізвище та імʼя.",
-          true,
-        );
-        return;
-      }
-      try {
-        const result = await Stage7Api.submitAccessKeyRequest(payload);
-        if (result && result.success === false) {
-          setAccessLoginModalMessage_(
-            result.message || "Не вдалося надіслати заявку.",
-            true,
-          );
-          return;
-        }
-        const temporaryPassword = safeString_(
-          (result && result.temporaryPassword) ||
-            (result && result.data && result.data.temporaryPassword),
-        );
-        const expiresAt = safeString_(
-          (result && result.temporaryPasswordExpiresAt) ||
-            (result && result.data && result.data.temporaryPasswordExpiresAt),
-        );
-        if (temporaryPassword) {
-          setAccessLoginModalMessage_(
-            "Заявку надіслано. Збережіть тимчасовий код доступу — він показується один раз:\n" +
-              temporaryPassword +
-              (expiresAt ? "\nДіє до: " + expiresAt : ""),
-            false,
-          );
-        } else {
-          setAccessLoginModalMessage_(
-            (result && result.message) ||
-              "Заявку надіслано. Очікуйте підтвердження адміністратора.",
-            false,
-          );
-        }
-        accessKeyRequestLastSentAt_ = Date.now();
-        localStorage.setItem(
-          "wasb_access_key_request_last_sent_at",
-          String(accessKeyRequestLastSentAt_),
-        );
-
-        const haveKeyBtn = document.getElementById("accessLoginModeHaveKeyBtn");
-        if (haveKeyBtn) haveKeyBtn.style.display = "block";
-
-        const requestBtn = document.getElementById("accessKeyRequestSubmitBtn");
-        if (requestBtn) {
-          requestBtn.disabled = true;
-          requestBtn.textContent = "Заявку вже надіслано";
-        }
-
-        showToast(
-          temporaryPassword
-            ? "Заявку надіслано. Збережіть тимчасовий код — він більше не показується."
-            : "Заявку на отримання ключа надіслано",
-        );
-      } catch (error) {
-        setAccessLoginModalMessage_(
-          error && error.message ? error.message : String(error),
-          true,
-        );
-      }
-    }
-
-    async function submitHaveKeyRegistrationForm_() {
       const temporaryPassword = safeString_(
-        document.getElementById("accessHaveKeyInput") &&
-          document.getElementById("accessHaveKeyInput").value,
+        (result && result.temporaryPassword) ||
+          (result && result.data && result.data.temporaryPassword),
       );
-      const login = safeString_(
-        document.getElementById("accessHaveLoginInput") &&
-          document.getElementById("accessHaveLoginInput").value,
+      const expiresAt = safeString_(
+        (result && result.temporaryPasswordExpiresAt) ||
+          (result && result.data && result.data.temporaryPasswordExpiresAt),
       );
-      const password = String(
-        (document.getElementById("accessHavePasswordInput") &&
-          document.getElementById("accessHavePasswordInput").value) ||
-          "",
-      );
-      const passwordRepeat = String(
-        (document.getElementById("accessHavePassword2Input") &&
-          document.getElementById("accessHavePassword2Input").value) ||
-          "",
-      );
-      if (!temporaryPassword) {
-        setAccessLoginModalMessage_("Введіть тимчасовий код доступу.", true);
-        return;
-      }
-      if (!login) {
-        setAccessLoginModalMessage_("Введіть логін.", true);
-        return;
-      }
-      if (!password || password.length < 8) {
+      if (temporaryPassword) {
         setAccessLoginModalMessage_(
-          "Пароль має містити мінімум 8 символів.",
-          true,
-        );
-        return;
-      }
-      if (password !== passwordRepeat) {
-        setAccessLoginModalMessage_("Паролі не збігаються.", true);
-        return;
-      }
-      setAccessLoginLoading_(true);
-      setAccessLoginModalMessage_("Перевіряю код і активую доступ...", false);
-      try {
-        const api =
-          window.Stage7Api ||
-          window.MaintenanceApi ||
-          Stage7Api ||
-          MaintenanceApi ||
-          {};
-        if (typeof api.registerAccessWithTemporaryPassword !== "function")
-          throw new Error(
-            "Метод реєстрації доступу недоступний у клієнтському API.",
-          );
-        const result = await api.registerAccessWithTemporaryPassword({
-          temporaryPassword: temporaryPassword,
-          login: login,
-          password: password,
-          passwordRepeat: passwordRepeat,
-        });
-        if (result && result.success === false) {
-          setAccessLoginModalMessage_(
-            result.message || "Не вдалося активувати доступ.",
-            true,
-          );
-          return;
-        }
-        setAccessLoginModalMessage_(
-          (result && result.message) || "Доступ активовано. Оновіть панель.",
+          "Заявку надіслано. Збережіть тимчасовий код доступу — він показується один раз:\n" +
+            temporaryPassword +
+            (expiresAt ? "\nДіє до: " + expiresAt : ""),
           false,
         );
-        showToast("Доступ активовано");
-        setTimeout(function () {
-          try {
-            closeAccessLoginModal();
-          } catch (_) {}
-          try {
-            if (typeof loadAccessDescriptor === "function")
-              loadAccessDescriptor();
-          } catch (_) {}
-        }, 800);
-      } catch (error) {
+      } else {
         setAccessLoginModalMessage_(
-          "Помилка активації: " + normalizeError(error),
+          (result && result.message) ||
+            "Заявку надіслано. Очікуйте підтвердження адміністратора.",
+          false,
+        );
+      }
+      accessKeyRequestLastSentAt_ = Date.now();
+      localStorage.setItem(
+        "wasb_access_key_request_last_sent_at",
+        String(accessKeyRequestLastSentAt_),
+      );
+
+      const requestBtn = document.getElementById("accessKeyRequestSubmitBtn");
+      if (requestBtn) {
+        requestBtn.disabled = true;
+        requestBtn.textContent = "Заявку вже надіслано";
+      }
+
+      showToast(
+        temporaryPassword
+          ? "Заявку надіслано. Збережіть тимчасовий код — він більше не показується."
+          : "Заявку на отримання ключа надіслано",
+      );
+      if (temporaryPassword) {
+        setAccessLoginMode_("haveKey");
+        const haveKeyInput = document.getElementById("accessHaveKeyInput");
+        if (haveKeyInput) haveKeyInput.value = temporaryPassword;
+      }
+    } catch (error) {
+      setAccessLoginModalMessage_(
+        error && error.message ? error.message : String(error),
+        true,
+      );
+    }
+  }
+
+  async function submitHaveKeyRegistrationForm_() {
+    const temporaryPassword = safeString_(
+      document.getElementById("accessHaveKeyInput") &&
+        document.getElementById("accessHaveKeyInput").value,
+    );
+    const login = safeString_(
+      document.getElementById("accessHaveLoginInput") &&
+        document.getElementById("accessHaveLoginInput").value,
+    );
+    const password = String(
+      (document.getElementById("accessHavePasswordInput") &&
+        document.getElementById("accessHavePasswordInput").value) ||
+        "",
+    );
+    const passwordRepeat = String(
+      (document.getElementById("accessHavePassword2Input") &&
+        document.getElementById("accessHavePassword2Input").value) ||
+        "",
+    );
+    if (!temporaryPassword) {
+      setAccessLoginModalMessage_("Введіть тимчасовий код доступу.", true);
+      return;
+    }
+    if (!login) {
+      setAccessLoginModalMessage_("Введіть логін.", true);
+      return;
+    }
+    if (!password || password.length < 8) {
+      setAccessLoginModalMessage_(
+        "Пароль має містити мінімум 8 символів.",
+        true,
+      );
+      return;
+    }
+    if (password !== passwordRepeat) {
+      setAccessLoginModalMessage_("Паролі не збігаються.", true);
+      return;
+    }
+    setAccessLoginLoading_(true);
+    setAccessLoginModalMessage_("Перевіряю код і активую доступ...", false);
+    try {
+      const api =
+        window.Stage7Api ||
+        window.MaintenanceApi ||
+        Stage7Api ||
+        MaintenanceApi ||
+        {};
+      if (typeof api.registerAccessWithTemporaryPassword !== "function")
+        throw new Error(
+          "Метод реєстрації доступу недоступний у клієнтському API.",
+        );
+      const result = await api.registerAccessWithTemporaryPassword({
+        temporaryPassword: temporaryPassword,
+        login: login,
+        password: password,
+        passwordRepeat: passwordRepeat,
+      });
+      if (result && result.success === false) {
+        setAccessLoginModalMessage_(
+          result.message || "Не вдалося активувати доступ.",
           true,
         );
-      } finally {
-        setAccessLoginLoading_(false);
+        return;
       }
+      setAccessLoginModalMessage_(
+        (result && result.message) || "Доступ активовано. Оновіть панель.",
+        false,
+      );
+      showToast("Доступ активовано");
+      setTimeout(function () {
+        try {
+          closeAccessLoginModal();
+        } catch (_) {}
+        try {
+          if (typeof loadAccessDescriptor === "function")
+            loadAccessDescriptor();
+        } catch (_) {}
+      }, 800);
+    } catch (error) {
+      setAccessLoginModalMessage_(
+        "Помилка активації: " + normalizeError(error),
+        true,
+      );
+    } finally {
+      setAccessLoginLoading_(false);
     }
+  }
 </script>
