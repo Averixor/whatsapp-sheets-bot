@@ -1284,6 +1284,175 @@ assert.doesNotMatch(
   /VACATION_OPTIONS|writeVacationOptions/,
 );
 assert.doesNotMatch(sidebar, /innerHTML/);
+
+const sidebarServiceContext = vm.createContext({
+  console,
+  Date,
+  Session: {
+    getScriptTimeZone() {
+      return "UTC";
+    },
+  },
+  Utilities: {
+    formatDate(value, _timeZone, pattern) {
+      assert.equal(pattern, "yyyy-MM-dd");
+      const month = String(value.getMonth() + 1).padStart(2, "0");
+      const day = String(value.getDate()).padStart(2, "0");
+      return `${value.getFullYear()}-${month}-${day}`;
+    },
+  },
+});
+load(sidebarServiceContext, "VacationPlannerConfig.gs");
+load(sidebarServiceContext, "VacationPlannerService.gs");
+
+let sidebarGuardThrows = false;
+let sidebarGuardActions = [];
+let sidebarLockWaits = 0;
+let sidebarLockReleases = 0;
+let sidebarWrites = [];
+let sidebarRebuilds = 0;
+let sidebarVacations = [];
+const sidebarPersonnelRows = [
+  {
+    fml: "Сервіс Людина",
+    callsign: "SERVICE",
+    title: "солдат",
+    position: "оператор",
+  },
+];
+
+function resetSidebarHarness() {
+  sidebarGuardThrows = false;
+  sidebarGuardActions = [];
+  sidebarLockWaits = 0;
+  sidebarLockReleases = 0;
+  sidebarWrites = [];
+  sidebarRebuilds = 0;
+  sidebarVacations = [];
+}
+
+sidebarServiceContext.AccessEnforcement_ = {
+  assertCanUseWorkingActions(actionName, meta) {
+    sidebarGuardActions.push({ actionName, meta });
+    if (sidebarGuardThrows) throw new Error("access denied");
+  },
+};
+sidebarServiceContext.LockService = {
+  getDocumentLock() {
+    return {
+      waitLock(ms) {
+        assert.equal(ms, 30000);
+        sidebarLockWaits++;
+      },
+      releaseLock() {
+        sidebarLockReleases++;
+      },
+    };
+  },
+};
+sidebarServiceContext.PersonnelRepository_ = {
+  getActiveRows() {
+    return sidebarPersonnelRows.slice();
+  },
+  getByFml(fml, options) {
+    assert.deepEqual(options, { activeOnly: true });
+    return (
+      sidebarPersonnelRows.find(
+        (person) =>
+          String(person.fml).toUpperCase() === String(fml || "").toUpperCase(),
+      ) || null
+    );
+  },
+};
+sidebarServiceContext.VacationsRepository_ = {
+  listAll() {
+    return sidebarVacations.slice();
+  },
+};
+sidebarServiceContext.VacationOptionsWriter_ = {
+  writeVacationToSource(option) {
+    sidebarWrites.push(option);
+    return {
+      sheetName: "VACATIONS",
+      rowNumber: 7,
+      block: "first",
+      startColumn: 1,
+    };
+  },
+  rebuildVacationSystem() {
+    sidebarRebuilds++;
+    return { affectedSheets: ["VACATION_SCHEDULE", "VACATION_CHECK"] };
+  },
+  summarizeVacationProblems() {
+    return { errorCount: 0, items: [] };
+  },
+};
+load(sidebarServiceContext, "VacationSidebarService.gs");
+const sidebarServiceApi = vm.runInContext(
+  "VacationSidebarService_",
+  sidebarServiceContext,
+);
+
+resetSidebarHarness();
+sidebarGuardThrows = true;
+assert.throws(
+  () =>
+    sidebarServiceApi.addVacation({
+      fml: "Сервіс Людина",
+      type: "В1",
+      startDate: "2026-07-10",
+      days: 15,
+    }),
+  /access denied/,
+  "vacation sidebar mutations must fail before lock/write when RBAC denies access",
+);
+assert.deepEqual(
+  sidebarGuardActions.map((item) => item.actionName),
+  ["addVacationFromSidebar"],
+);
+assert.equal(sidebarLockWaits, 0);
+assert.equal(sidebarLockReleases, 0);
+assert.equal(sidebarWrites.length, 0);
+
+resetSidebarHarness();
+sidebarVacations = ["A", "B", "C", "D"].map((fml) =>
+  vacation(fml, "2026-07-01", "2026-07-31"),
+);
+assert.throws(
+  () =>
+    sidebarServiceApi.addVacation({
+      fml: "Сервіс Людина",
+      type: "В1",
+      startDate: "2026-07-10",
+      days: 15,
+    }),
+  /Одночасно буде 5 людей/,
+  "validation failures inside the vacation mutation lock must surface to the caller",
+);
+assert.equal(sidebarLockWaits, 1);
+assert.equal(sidebarLockReleases, 1);
+assert.equal(sidebarWrites.length, 0);
+assert.equal(sidebarRebuilds, 0);
+
+resetSidebarHarness();
+const addResult = sidebarServiceApi.addVacation({
+  fml: "Сервіс Людина",
+  type: "В1",
+  startDate: "2026-09-10",
+  days: 15,
+});
+assert.equal(sidebarLockWaits, 1);
+assert.equal(sidebarLockReleases, 1);
+assert.equal(sidebarWrites.length, 1);
+assert.equal(sidebarRebuilds, 1);
+assert.equal(sidebarWrites[0].fml, "Сервіс Людина");
+assert.equal(sidebarWrites[0].vacationNumber, 1);
+assert.equal(addResult.vacation.startDate, "2026-09-10");
+assert.deepEqual(
+  sidebarGuardActions.map((item) => item.actionName),
+  ["addVacationFromSidebar"],
+);
+
 assert.match(
   writerSource,
   /const headers = \["Date", "Type", "FML", "Description", "Severity"\]/,
