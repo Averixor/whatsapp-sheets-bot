@@ -365,12 +365,17 @@ Run from the Apps Script editor when relevant after a deploy or config change:
 
 ### Final header row (row 1)
 
-`ID | FML | Birthday | Age | Days_until_birthday | Phone | 2_Phone | Callsign | Title | Position | OSH_4 | Unit | Status`
+Logical (canonical): `ID | FML | Birthday | Age | Days_until_birthday | Phone | 2_Phone | Callsign | Title | Position | OSH_4 | Unit | Status`
 
-Column order may vary; code reads by **header names**, not column index.
-Required headers: `FML`, `Birthday`, `Phone`, `Callsign`, `Position`, `OSH_4`, `Status`.
-`ID`, `Age`, `Days_until_birthday`, `2_Phone`, `Title`/`Rank`, `TEMPLATE`, and
-`Unit` are optional; birthday helper columns may be computed.
+**Reference workbook "Книга Взводу Охорони" physical layout (supported):**
+
+- Name parts: `Last name`, `First name`, `Patronymic` (code synthesizes `FML` = "Last First Patronymic")
+- Callsign carrier: `TEMPLATE` column (preferred; the `Callsign` header cell may contain a formula)
+- `ID` / `ID v/s`, `Rank` (instead of/ + Title), `OSH 4` (space ok), `Status`
+- Code reads **exclusively by header names** (with aliases for UA/EN/split variants) — column index is ignored.
+
+Required (logical): `FML` (or split name parts), `Birthday`, `Phone`, `Callsign` (or TEMPLATE), `Position`, `OSH_4` (or "OSH 4"), `Status`.
+`ID`, `Age`, `Days_until_birthday`, `2_Phone`/`Phone 2`, `Title`/`Rank`, `TEMPLATE`, `Unit`, and split name columns are optional; computed helpers are tolerated.
 
 ### One-time / migration in the spreadsheet
 

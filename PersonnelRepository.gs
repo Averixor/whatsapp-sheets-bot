@@ -20,7 +20,12 @@ var PERSONNEL_SHEET_NAME =
     : "PERSONNEL";
 
 /** Sheet must have these header columns (ID and computed birthday helpers are optional). */
-/** Canonical header order (values in ID may be empty). */
+/** Canonical (logical) header order. Physical layout in reference workbook "Книга Взводу Охорони" uses:
+ *  - Split names: "Last name", "First name", "Patronymic" (code synthesizes FML)
+ *  - "TEMPLATE" column carries the working callsign value (preferred for lookup)
+ *  - "OSH 4" (space), "Rank" instead of/plus Title, "ID v/s" + "ID"
+ *  Reading is header-name based with aliases (see _personnelCanonicalHeaderKey_).
+ */
 var PERSONNEL_CANONICAL_HEADER_ORDER_ = [
   "ID",
   "FML",
@@ -48,7 +53,7 @@ var PERSONNEL_REQUIRED_HEADER_KEYS = [
   "Status",
 ];
 
-/** ID, Unit, Rank/Title, 2_Phone, TEMPLATE, computed birthday helpers — optional. */
+/** ID, Unit, Rank/Title, 2_Phone, TEMPLATE, computed birthday helpers, split names (Last/First/Patronymic) — optional. Split names are used to synthesize FML when no FML column (as in reference Книга Взводу Охорони). */
 var PERSONNEL_OPTIONAL_HEADER_KEYS = [
   "ID",
   "Age",
@@ -58,6 +63,9 @@ var PERSONNEL_OPTIONAL_HEADER_KEYS = [
   "Title",
   "Rank",
   "TEMPLATE",
+  "LastName",
+  "FirstName",
+  "Patronymic",
 ];
 
 /** Canonical Status values (in-trip uses Cyrillic д only — do not retype). */
@@ -303,6 +311,14 @@ function _personnelCanonicalHeaderKey_(rawHeader) {
     fml: "FML",
     піб: "FML",
     pib: "FML",
+    "last name": "LastName",
+    lastname: "LastName",
+    прізвище: "LastName",
+    "first name": "FirstName",
+    firstname: "FirstName",
+    "ім'я": "FirstName",
+    patronymic: "Patronymic",
+    "по батькові": "Patronymic",
     birthday: "Birthday",
     "день народження": "Birthday",
     age: "Age",
@@ -356,7 +372,8 @@ function _personnelGetSheet_(mustExist) {
         '" не знайдено. Створіть базу особового складу з колонками: ' +
         PERSONNEL_REQUIRED_HEADER_KEYS.concat(
           PERSONNEL_OPTIONAL_HEADER_KEYS,
-        ).join(", "),
+        ).join(", ") +
+        " (підтримуються також Last name/First name/Patronymic замість FML та TEMPLATE для позивного — як у Книзі Взводу Охорони)",
     );
   }
   return sh || null;
@@ -376,7 +393,18 @@ function _personnelBuildHeaderColIndex_(headersRow) {
 
   var missing = [];
   PERSONNEL_REQUIRED_HEADER_KEYS.forEach(function (key) {
-    if (col[key] === undefined) missing.push(key);
+    if (col[key] === undefined) {
+      // FML may be synthesized from LastName/FirstName/Patronymic in reference workbooks (e.g. Книга Взводу Охорони)
+      if (key === "FML") {
+        var hasNameParts =
+          (col.LastName !== undefined && col.LastName >= 0) ||
+          (col.FirstName !== undefined && col.FirstName >= 0) ||
+          (col.Patronymic !== undefined && col.Patronymic >= 0);
+        if (!hasNameParts) missing.push(key);
+      } else {
+        missing.push(key);
+      }
+    }
   });
 
   if (col.Title === undefined && col.Rank === undefined) {
@@ -398,6 +426,9 @@ function _personnelBuildHeaderColIndex_(headersRow) {
 
   if (col["2_Phone"] === undefined) col["2_Phone"] = -1;
   if (col.TEMPLATE === undefined) col.TEMPLATE = -1;
+  if (col.LastName === undefined) col.LastName = -1;
+  if (col.FirstName === undefined) col.FirstName = -1;
+  if (col.Patronymic === undefined) col.Patronymic = -1;
 
   return col;
 }
@@ -423,6 +454,37 @@ function _personnelRowToRecord_(row, sheetRow, col) {
   var status = normalizePersonnelStatus_(statusRaw);
   var statusCanonical = getPersonnelStatusCanonical_(status);
   var active = isPersonnelStatusActive_(status);
+
+  // Support reference workbook "Книга Взводу Охорони" layout: split name parts + TEMPLATE as callsign carrier
+  if (!fml) {
+    var ln =
+      col.LastName !== undefined && col.LastName >= 0
+        ? String(_personnelReadCell_(row, col.LastName) || "").trim()
+        : "";
+    var fn =
+      col.FirstName !== undefined && col.FirstName >= 0
+        ? String(_personnelReadCell_(row, col.FirstName) || "").trim()
+        : "";
+    var pn =
+      col.Patronymic !== undefined && col.Patronymic >= 0
+        ? String(_personnelReadCell_(row, col.Patronymic) || "").trim()
+        : "";
+    if (ln || fn || pn) {
+      fml = [ln, fn, pn]
+        .filter(function (x) {
+          return !!x;
+        })
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+  }
+
+  // Prefer TEMPLATE value for callsign when the Callsign column is empty or formula-derived (as in the reference PERSONNEL)
+  if (!callsign && col.TEMPLATE !== undefined && col.TEMPLATE >= 0) {
+    var t = String(_personnelReadCell_(row, col.TEMPLATE) || "").trim();
+    if (t) callsign = t;
+  }
 
   if (!fml && !callsign) {
     if (unit) return null;

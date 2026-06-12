@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-06-13 — Sync to reference workbook "Книга Взводу Охорони.xlsx"
+
+- **Code:** PersonnelRepository now fully supports the physical PERSONNEL layout from the reference xlsx:
+  - Split name columns `Last name` / `First name` / `Patronymic` → synthesized `FML`
+  - `TEMPLATE` column preferred as callsign value (for PERSONNEL rows)
+  - Aliases extended for split names; FML requirement relaxed when name parts present; name-part columns defaulted
+  - Monthly sheets in the xlsx use `ПОЗИВНИЙ` (Callsign) + `П.І.Б.` / codes — compatible with existing SheetSchemas / lookup by Callsign
+- **Docs:** Updated `README.md`, `RUNBOOK.md` §14, `AGENTS.md`, `CHANGELOG.md` to describe logical vs physical columns, reference xlsx support, and post-sync state. All documents aligned with project + the provided table.
+- **Verification:** `npm run ci` (guardrails for personnel-status, workbook, recipient, client, etc.) re-checked after changes.
+- No new modules; only targeted extensions inside existing reading logic. `apiStage7ClearPhoneCache()` still mandatory after PERSONNEL changes.
+
 ## 2026-06-09 — Public API RBAC and deployment separation
 
 - **Security:** fail-closed RBAC on personnel callsigns, birthday links,

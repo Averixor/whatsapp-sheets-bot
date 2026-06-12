@@ -78,21 +78,21 @@ The workflow does not deploy to Apps Script. Deployment remains local via
 
 **Operational source-of-truth set:**
 
-| File | Purpose |
-|------|---------|
-| `README.md` | Release overview, layout, quick start |
-| `ARCHITECTURE.md` | Runtime shape, layers, data flow |
-| `RUNBOOK.md` | Import, bootstrap, ACCESS, deploy, troubleshooting |
-| `SECURITY.md` | Identity, roles, lockouts, protections |
-| `CHANGELOG.md` | Release history |
+| File              | Purpose                                            |
+| ----------------- | -------------------------------------------------- |
+| `README.md`       | Release overview, layout, quick start              |
+| `ARCHITECTURE.md` | Runtime shape, layers, data flow                   |
+| `RUNBOOK.md`      | Import, bootstrap, ACCESS, deploy, troubleshooting |
+| `SECURITY.md`     | Identity, roles, lockouts, protections             |
+| `CHANGELOG.md`    | Release history                                    |
 
 **Also in Git (maintainers; not uploaded to GAS editor):**
 
-| File | Purpose |
-|------|---------|
+| File                                   | Purpose                                  |
+| -------------------------------------- | ---------------------------------------- |
 | [`CONTRIBUTING.md`](./CONTRIBUTING.md) | Local workflow, CI, clasp, commit policy |
-| [`AGENTS.md`](./AGENTS.md) | Cursor / cloud agent instructions |
-| [`docs/README.md`](./docs/README.md) | Documentation index and ownership rules |
+| [`AGENTS.md`](./AGENTS.md)             | Cursor / cloud agent instructions        |
+| [`docs/README.md`](./docs/README.md)   | Documentation index and ownership rules  |
 
 Contracts and snapshots are machine-readable governance artifacts under
 `contracts/` and `scripts/snapshots/`. Do not commit one-off audits, production
@@ -161,14 +161,14 @@ Notes:
 ## PERSONNEL model
 
 - Monthly sheets store **Callsign + schedule**; `PERSONNEL` stores person fields.
-- `Callsign` is the schedule/lookup key. `FML` is the fallback display identity.
+- `Callsign` is the schedule/lookup key. `FML` is the fallback display identity (synthesized from `Last name` + `First name` + `Patronymic` when the reference workbook "Книга Взводу Охорони.xlsx" layout is used; `TEMPLATE` column supplies the callsign value).
 - `ID` is optional Армія+ data; `Position` is not a person key.
 - Active UA statuses (dropdown, 9 values): `В наявності`, `У відрядженні`,
   `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`.
   Runtime-active (schedule, phones, cards): all except **`Вибув`** and **`СЗЧ`**.
   Empty status defaults to **`В наявності`**. Legacy labels (`Дієвий`, `Active`,
   `Відрядження`, EN) map on read only — see `PersonnelRepository.gs`.
-- Runtime reads by header names and supports documented aliases. After edits,
+- Runtime reads by header names and supports documented aliases (split names, TEMPLATE, OSH 4, etc.). After edits,
   run `apiStage7ClearPhoneCache()`.
 
 ## Identity and login in one minute

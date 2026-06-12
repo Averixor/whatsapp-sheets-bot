@@ -77,7 +77,7 @@ Or one command: `npm run deploy:prod` (local CI + production push). Run
   `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`.
   Runtime-active: all except `Вибув` and `СЗЧ`; empty = `В наявності`. Legacy
   (`Дієвий`, `Active`, `Відрядження`, EN) mapped on read only.
-- Final headers: `ID | FML | … | Unit | Status` — see `RUNBOOK.md` §14.
+- Final (logical) headers: `ID | FML | … | Unit | Status`. Physical in reference "Книга Взводу Охорони.xlsx": split `Last name` / `First name` / `Patronymic` (FML synthesized), `TEMPLATE` as callsign value, `OSH 4`, `Rank`. Code reads by **header names only** (aliases cover variants). See `RUNBOOK.md` §14.
 - After every production deploy or PERSONNEL edits: run **`apiStage7ClearPhoneCache()`** in GAS (mandatory).
 - See `.cursor/rules/personnel-data-keys.mdc`.
 
