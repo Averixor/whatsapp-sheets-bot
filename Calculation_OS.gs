@@ -798,7 +798,7 @@ var Calculation_OS_ = (function () {
       var timezone =
         Calculation_OS_text_(spreadsheet.getSpreadsheetTimeZone()) ||
         Session.getScriptTimeZone();
-      var now = new Date();
+      var now = getTomorrowReportDate_();
       var dateKey = Calculation_OS_dateKey_(now, timezone);
       var monthSource = Calculation_OS_resolveMonthSheet_(
         spreadsheet,
@@ -890,8 +890,62 @@ var Calculation_OS_ = (function () {
     return { ok: true, handler: handler, removed: removed };
   }
 
+  function Calculation_OS_rebuildTomorrowReport_() {
+    var lock = LockService.getDocumentLock();
+    if (!lock.tryLock(30000)) {
+      throw new Error("Calculation_OS вже виконується");
+    }
+    try {
+      var ss = SpreadsheetApp.getActive();
+      var sheet = ss.getActiveSheet();
+
+      var targetDate = getTomorrowReportDate_();
+      var targetCol = findDayColumn_(sheet, 1, targetDate);
+
+      var timezone =
+        Calculation_OS_text_(ss.getSpreadsheetTimeZone()) ||
+        Session.getScriptTimeZone();
+      var dateKey = Calculation_OS_dateKey_(targetDate, timezone);
+
+      var personnelCounts = Calculation_OS_readPersonnelCounts_(ss);
+      var dictionary = Calculation_OS_readDictionary_(ss);
+      var codeCounts = Calculation_OS_countCurrentCodes_(
+        sheet,
+        targetCol,
+        dictionary,
+      );
+      var metrics = Calculation_OS_buildMetrics_(
+        personnelCounts,
+        codeCounts,
+        dictionary,
+      );
+      var output = Calculation_OS_ensureOutputSheet_(ss, targetDate, timezone);
+      var dayColumn = Number(Calculation_OS_dayText_(targetDate, timezone)) + 1;
+      var writeResult = Calculation_OS_writeSnapshot_(
+        output,
+        dayColumn,
+        dateKey,
+        metrics,
+      );
+      return {
+        ok: true,
+        date: dateKey,
+        sourceSheet: sheet.getName(),
+        sourceDateColumn: targetCol,
+        personnel: personnelCounts,
+        countedCodes: Object.keys(codeCounts).length,
+        metrics: metrics.length,
+        recorded: writeResult.recorded,
+        reason: writeResult.reason,
+      };
+    } finally {
+      lock.releaseLock();
+    }
+  }
+
   return Object.freeze({
     runDaily: Calculation_OS_runDaily,
+    rebuildTomorrowReport: Calculation_OS_rebuildTomorrowReport_,
     installDailyTrigger: Calculation_OS_installDailyTrigger,
     removeDailyTrigger: Calculation_OS_removeDailyTrigger,
   });
@@ -899,6 +953,10 @@ var Calculation_OS_ = (function () {
 
 function Calculation_OS_runDaily() {
   return Calculation_OS_.runDaily();
+}
+
+function rebuildTomorrowReport_() {
+  return Calculation_OS_.rebuildTomorrowReport();
 }
 
 function Calculation_OS_installDailyTrigger() {
