@@ -256,6 +256,11 @@ function onOpen(e) {
       .addSeparator()
       .addItem("🔄 Оновити меню", "onOpen")
       .addToUi();
+
+    SpreadsheetApp.getUi()
+      .createMenu("Звіти")
+      .addItem("Оновити звіт на завтра", "runTomorrowReportFromMenu")
+      .addToUi();
   } catch (err) {
     console.error("onOpen menu error:", err);
   }
@@ -283,6 +288,34 @@ function onOpen(e) {
     }
   } catch (err2) {
     console.error("onOpen refreshAccessSheetUi error:", err2);
+  }
+}
+
+function runTomorrowReportFromMenu() {
+  const ss = SpreadsheetApp.getActive();
+  const ui = SpreadsheetApp.getUi();
+
+  try {
+    ss.toast("Формую звіт на завтра...", "Завантаження", 30);
+
+    rebuildTomorrowReport_();
+
+    const date = getTomorrowReportDate_();
+    const formatted = Utilities.formatDate(
+      date,
+      Session.getScriptTimeZone(),
+      "dd.MM.yyyy",
+    );
+
+    ss.toast(`Звіт на ${formatted} оновлено`, "Готово", 5);
+  } catch (err) {
+    ss.toast("Помилка формування звіту", "Помилка", 10);
+    ui.alert(
+      "Помилка",
+      String(err && err.message ? err.message : err),
+      ui.ButtonSet.OK,
+    );
+    throw err;
   }
 }
 

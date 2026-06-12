@@ -937,6 +937,40 @@ function apiStage7SubmitAccessKeyRequest(payload) {
   );
 }
 
+function apiStage7LoginByAccessKey(accessKeyOrPayload) {
+  const payload =
+    accessKeyOrPayload &&
+    typeof accessKeyOrPayload === "object" &&
+    !Array.isArray(accessKeyOrPayload)
+      ? Object.assign({}, accessKeyOrPayload)
+      : { accessKey: accessKeyOrPayload || "" };
+
+  const result =
+    typeof AccessControl_ === "object" && AccessControl_.loginByAccessKey
+      ? AccessControl_.loginByAccessKey(payload)
+      : {
+          success: false,
+          ok: false,
+          message: "AccessControl_ недоступний",
+          code: "access.login.unavailable",
+        };
+  const success = result && result.success !== false;
+  const message =
+    result && result.message
+      ? result.message
+      : success
+        ? "Вхід виконано"
+        : "Не вдалося виконати вхід";
+  return _stage7BuildMaintenanceResponse_(
+    success,
+    message,
+    result || {},
+    "stage7LoginByAccessKey",
+    success ? [] : [message],
+    { affectedSheets: [appGetCore("ACCESS_SHEET", "ACCESS")] },
+  );
+}
+
 function apiStage7RegisterAccessWithTemporaryPassword(payload) {
   const result =
     typeof AccessControl_ === "object" &&

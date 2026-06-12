@@ -408,6 +408,52 @@
     displayInResult("error", { error: message });
   }
 
+  async function goToScreen(screenName, payload = {}) {
+    showGlobalLoader("Завантаження екрана...");
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      if (typeof renderScreen === "function") {
+        renderScreen(screenName, payload);
+      } else {
+        if (
+          screenName === "calendarScreen" &&
+          typeof showCalendar === "function"
+        )
+          showCalendar(payload.action);
+        else if (
+          screenName === "requestAccessForm" &&
+          typeof showRequestsForm === "function"
+        )
+          showRequestsForm();
+        else if (
+          screenName === "accessLoginForm" &&
+          typeof openAccessLoginFlow === "function"
+        )
+          openAccessLoginFlow("login");
+        else if (
+          screenName === "reportScreen" &&
+          typeof VacationModule !== "undefined" &&
+          typeof VacationModule.generateReport === "function"
+        )
+          VacationModule.generateReport();
+        else
+          console.warn(
+            "renderScreen is not defined and no fallback found for",
+            screenName,
+          );
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Помилка переходу між екранами: " + err.message);
+    } finally {
+      hideGlobalLoader();
+    }
+  }
+
+  window.goToScreen = goToScreen;
+
   async function handleMenuAction(action) {
     logToConsole(`➡️ Виконання: ${getActionName(action)}`, "info");
 
@@ -456,11 +502,11 @@
         }
 
         case "daySummary":
-          showCalendar(action);
+          goToScreen("calendarScreen", { action });
           break;
 
         case "detailedDay":
-          showCalendar(action);
+          goToScreen("calendarScreen", { action });
           break;
 
         case "createNextMonth": {
@@ -622,7 +668,7 @@
           break;
 
         case "requests":
-          await SidebarApp.showRequestsForm();
+          await goToScreen("requestAccessForm");
           break;
 
         default:

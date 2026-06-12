@@ -1,124 +1,120 @@
 <script>
   // Js.Security.Policy — banner, header login, load descriptor.
-    function updateHeaderLoginButton_(access) {
-      const btn = document.getElementById("btnHeaderLogin");
-      if (!btn) return;
+  function updateHeaderLoginButton_(access) {
+    const btn = document.getElementById("btnHeaderLogin");
+    if (!btn) return;
 
-      var locked = access && access.loginLockout && access.loginLockout.locked;
-      var show =
-        !locked && access && access.selfBindRequired && access.canSelfBind;
+    var locked = access && access.loginLockout && access.loginLockout.locked;
+    var show =
+      !locked && access && access.selfBindRequired && access.canSelfBind;
 
-      btn.classList.toggle("wasb-is-hidden", !show);
-      btn.disabled = !!locked;
-      btn.title = locked
-        ? "Вхід тимчасово заблоковано"
-        : "Увійти (email/телефон + позивний)";
-    }
+    btn.classList.toggle("wasb-is-hidden", !show);
+    btn.disabled = !!locked;
+    btn.title = locked
+      ? "Вхід тимчасово заблоковано"
+      : "Увійти за ключем доступу";
+  }
 
-    function applyAccessPolicyUI() {
-      const banner = $id("accessBanner");
-      const message = $id("accessBannerText");
-      const access = normalizeAccessForUi_(
-        STATE.access || {
-          role: "guest",
-          isAdmin: false,
-          knownUser: false,
-          reasonString: "",
-        },
-      );
+  function applyAccessPolicyUI() {
+    const banner = $id("accessBanner");
+    const message = $id("accessBannerText");
+    const access = normalizeAccessForUi_(
+      STATE.access || {
+        role: "guest",
+        isAdmin: false,
+        knownUser: false,
+        reasonString: "",
+      },
+    );
 
-      STATE.access = access;
-      updateHeaderLoginButton_(access);
+    STATE.access = access;
+    updateHeaderLoginButton_(access);
 
-      if (!banner || !message) {
-        updateRestrictedUi_();
-        return;
-      }
-
-      banner.classList.remove("wasb-is-hidden");
-      banner.classList.remove(
-        "is-guest",
-        "is-viewer",
-        "is-operator",
-        "is-maintainer",
-        "is-admin",
-        "is-sysadmin",
-        "is-owner",
-        "is-safe-mode",
-      );
-      banner.classList.add(
-        "is-" + String(access.role || "guest").toLowerCase(),
-      );
-      if (!access.knownUser) banner.classList.add("is-safe-mode");
-
-      const roleLabel = getAccessRoleLabel_(access.role);
-      const parts = [
-        "<span>Режим доступу: " + escapeHtml(roleLabel) + "</span>",
-      ];
-      if (access.loginLockout && access.loginLockout.locked) {
-        parts.push(
-          '<span class="status-badge__meta">Вхід заблоковано на ' +
-            escapeHtml(String(access.loginLockout.remainingMinutes || 0)) +
-            " хв</span>",
-        );
-      } else if (access.selfBindRequired && access.canSelfBind) {
-        parts.push(
-          '<button type="button" class="btn" style="min-width:auto; padding:6px 10px;" onclick="openAccessLoginFlow(&quot;login&quot;)">Увійти</button> <button type="button" class="btn btn-primary" style="min-width:auto; padding:6px 10px;" onclick="openAccessLoginFlow(&quot;request&quot;)">Отримати ключ доступу</button>',
-        );
-      } else if (!access.keyAvailable && !access.registered) {
-        parts.push(
-          '<button type="button" class="btn" style="min-width:auto; padding:6px 10px;" onclick="loadAccessDescriptor()">Повторити</button>',
-        );
-      }
-
-      message.innerHTML = parts.join(" ");
-      message.style.display = "flex";
-      message.style.alignItems = "center";
-      message.style.flexWrap = "wrap";
-      message.style.gap = "8px";
-
-      const consoleMessage = buildAccessBannerMessage_(access);
-      if (consoleMessage) {
-        logToConsole(
-          "🛡 " + consoleMessage,
-          access.knownUser ? "info" : "warning",
-        );
-      }
-
+    if (!banner || !message) {
       updateRestrictedUi_();
+      return;
     }
 
-    async function loadAccessDescriptor() {
-      const requestId = safeNumber_(STATE._accessDescriptorRequestId, 0) + 1;
-      STATE._accessDescriptorRequestId = requestId;
+    banner.classList.remove("wasb-is-hidden");
+    banner.classList.remove(
+      "is-guest",
+      "is-viewer",
+      "is-operator",
+      "is-maintainer",
+      "is-admin",
+      "is-sysadmin",
+      "is-owner",
+      "is-safe-mode",
+    );
+    banner.classList.add("is-" + String(access.role || "guest").toLowerCase());
+    if (!access.knownUser) banner.classList.add("is-safe-mode");
 
-      try {
-        const descriptor = await MaintenanceApi.getAccessDescriptor();
-        const raw =
-          descriptor && descriptor.data
-            ? descriptor.data
-            : {
-                role: "guest",
-                isAdmin: false,
-                knownUser: false,
-                reasonString: "",
-              };
-        if (STATE._accessDescriptorRequestId !== requestId) return;
-        STATE.access = normalizeAccessForUi_(raw);
-      } catch (error) {
-        if (STATE._accessDescriptorRequestId !== requestId) return;
-        STATE.access = normalizeAccessForUi_({
-          role: "guest",
-          isAdmin: false,
-          knownUser: false,
-          reasonString: normalizeError(error),
-        });
-      }
-
-      if (STATE.accessDebug) {
-        STATE.accessDebug.hashVisible = false;
-      }
-
-      applyAccessPolicyUI();
+    const roleLabel = getAccessRoleLabel_(access.role);
+    const parts = ["<span>Режим доступу: " + escapeHtml(roleLabel) + "</span>"];
+    if (access.loginLockout && access.loginLockout.locked) {
+      parts.push(
+        '<span class="status-badge__meta">Вхід заблоковано на ' +
+          escapeHtml(String(access.loginLockout.remainingMinutes || 0)) +
+          " хв</span>",
+      );
+    } else if (access.selfBindRequired && access.canSelfBind) {
+      parts.push(
+        '<button type="button" class="btn" style="min-width:auto; padding:6px 10px;" onclick="openAccessLoginFlow(&quot;login&quot;)">Увійти</button> <button type="button" class="btn btn-primary" style="min-width:auto; padding:6px 10px;" onclick="openAccessLoginFlow(&quot;request&quot;)">Отримати ключ доступу</button>',
+      );
+    } else if (!access.keyAvailable && !access.registered) {
+      parts.push(
+        '<button type="button" class="btn" style="min-width:auto; padding:6px 10px;" onclick="loadAccessDescriptor()">Повторити</button>',
+      );
     }
+
+    message.innerHTML = parts.join(" ");
+    message.style.display = "flex";
+    message.style.alignItems = "center";
+    message.style.flexWrap = "wrap";
+    message.style.gap = "8px";
+
+    const consoleMessage = buildAccessBannerMessage_(access);
+    if (consoleMessage) {
+      logToConsole(
+        "🛡 " + consoleMessage,
+        access.knownUser ? "info" : "warning",
+      );
+    }
+
+    updateRestrictedUi_();
+  }
+
+  async function loadAccessDescriptor() {
+    const requestId = safeNumber_(STATE._accessDescriptorRequestId, 0) + 1;
+    STATE._accessDescriptorRequestId = requestId;
+
+    try {
+      const descriptor = await MaintenanceApi.getAccessDescriptor();
+      const raw =
+        descriptor && descriptor.data
+          ? descriptor.data
+          : {
+              role: "guest",
+              isAdmin: false,
+              knownUser: false,
+              reasonString: "",
+            };
+      if (STATE._accessDescriptorRequestId !== requestId) return;
+      STATE.access = normalizeAccessForUi_(raw);
+    } catch (error) {
+      if (STATE._accessDescriptorRequestId !== requestId) return;
+      STATE.access = normalizeAccessForUi_({
+        role: "guest",
+        isAdmin: false,
+        knownUser: false,
+        reasonString: normalizeError(error),
+      });
+    }
+
+    if (STATE.accessDebug) {
+      STATE.accessDebug.hashVisible = false;
+    }
+
+    applyAccessPolicyUI();
+  }
 </script>

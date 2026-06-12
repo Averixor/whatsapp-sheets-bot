@@ -632,6 +632,38 @@
     hide("loadingOverlay");
   }
 
+  function showGlobalLoader(text = "Завантаження...") {
+    let loader = document.getElementById("globalLoader");
+
+    if (!loader) {
+      loader = document.createElement("div");
+      loader.id = "globalLoader";
+
+      const box = document.createElement("div");
+      box.className = "global-loader-box";
+
+      const spinner = document.createElement("div");
+      spinner.className = "global-loader-spinner";
+
+      const textEl = document.createElement("div");
+      textEl.id = "globalLoaderText";
+
+      box.appendChild(spinner);
+      box.appendChild(textEl);
+      loader.appendChild(box);
+
+      document.body.appendChild(loader);
+    }
+
+    document.getElementById("globalLoaderText").textContent = text;
+    loader.classList.add("is-visible");
+  }
+
+  function hideGlobalLoader() {
+    const loader = document.getElementById("globalLoader");
+    if (loader) loader.classList.remove("is-visible");
+  }
+
   function flashScreenTransition_(message, durationMs) {
     if (!$id("loadingOverlay")) return;
 

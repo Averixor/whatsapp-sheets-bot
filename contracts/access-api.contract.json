@@ -12,9 +12,7 @@
   "smokeManifestFile": "appsscript.smoke.json",
   "smokeExecutionApiAccess": "ANYONE",
   "productionClaspIgnoreFile": ".claspignore",
-  "smokeOnlyFiles": [
-    "GasRuntimeSmoke.gs"
-  ],
+  "smokeOnlyFiles": ["GasRuntimeSmoke.gs"],
   "publicEndpoints": [
     "apiStage7GetAccessDescriptorLite",
     "apiStage7BootstrapSidebar",
@@ -74,6 +72,7 @@
     "apiStage7DebugAccess",
     "apiStage7ListBindableCallsigns",
     "apiStage7LoginByIdentifierAndCallsign",
+    "apiStage7LoginByAccessKey",
     "apiStage7SubmitAccessKeyRequest",
     "apiStage7RegisterAccessWithTemporaryPassword",
     "apiStage7ReportAccessViolation",
@@ -110,6 +109,7 @@
       "apiStage7DebugAccess",
       "apiStage7ListBindableCallsigns",
       "apiStage7LoginByIdentifierAndCallsign",
+      "apiStage7LoginByAccessKey",
       "apiStage7SubmitAccessKeyRequest",
       "apiStage7RegisterAccessWithTemporaryPassword"
     ],
@@ -200,9 +200,7 @@
     "apiLoadCalendarDay": "apiStage7GetSidebarData("
   },
   "requiredServerMarkers": {
-    "apiStage7BootstrapSidebar": [
-      "_stage7CanViewSidebarPersonnel_(descriptor)"
-    ]
+    "apiStage7BootstrapSidebar": ["_stage7CanViewSidebarPersonnel_(descriptor)"]
   },
   "forbiddenServerMarkers": {
     "apiStage7BootstrapSidebar": [
@@ -210,10 +208,7 @@
       "_ensureOptionalBusinessSheetsQuiet_",
       "ensureAllSystemSheets_"
     ],
-    "apiGetActiveProjects": [
-      "ensureProjectsSheet_",
-      "insertSheet"
-    ]
+    "apiGetActiveProjects": ["ensureProjectsSheet_", "insertSheet"]
   },
   "requiredRoutingEndpoints": [
     "apiStage7BootstrapSidebar",
