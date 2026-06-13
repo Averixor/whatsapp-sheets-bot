@@ -401,6 +401,10 @@ function _personnelBuildHeaderColIndex_(headersRow) {
           (col.FirstName !== undefined && col.FirstName >= 0) ||
           (col.Patronymic !== undefined && col.Patronymic >= 0);
         if (!hasNameParts) missing.push(key);
+      } else if (key === "Callsign") {
+        if (col.TEMPLATE === undefined || col.TEMPLATE < 0) {
+          missing.push(key);
+        }
       } else {
         missing.push(key);
       }
@@ -425,6 +429,7 @@ function _personnelBuildHeaderColIndex_(headersRow) {
   });
 
   if (col["2_Phone"] === undefined) col["2_Phone"] = -1;
+  if (col.Callsign === undefined) col.Callsign = -1;
   if (col.TEMPLATE === undefined) col.TEMPLATE = -1;
   if (col.LastName === undefined) col.LastName = -1;
   if (col.FirstName === undefined) col.FirstName = -1;
