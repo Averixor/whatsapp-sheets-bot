@@ -260,7 +260,6 @@ Local equivalent: **`npm run ci`**.
 | `verify-personnel-workbook-layout.mjs` | PERSONNEL reference workbook layout: split FML, TEMPLATE callsign, Rank, OSH 4 |
 | `verify-workbook-contract.mjs` | Compact monthly workbook geometry and personnel count |
 | `verify-recipient-contract.mjs` | Recipient routing and dark-select UI contract |
-| `verify-calculation-os.mjs` | Calculation_OS daily snapshot parsing, idempotent writes, and trigger contract |
 | `audit-function-graph.mjs` | Bound entrypoint refs vs definitions |
 | `verify-client-includes.mjs` | `JavaScript.html` include order |
 | `verify-client-js.mjs` | Combined sidebar client parse-check |
