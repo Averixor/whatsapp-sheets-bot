@@ -2,32 +2,6 @@
  * Utils.gs — спільні утиліти для WhatsAppBot
  */
 
-function getTomorrowReportDate_() {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function findDayColumn_(sheet, headerRow, targetDate) {
-  const targetDay = targetDate.getDate();
-  const lastCol = sheet.getLastColumn();
-
-  const headers = sheet
-    .getRange(headerRow, 1, 1, lastCol)
-    .getDisplayValues()[0];
-
-  const index = headers.findIndex(
-    (v) => Number(String(v).trim()) === targetDay,
-  );
-
-  if (index === -1) {
-    throw new Error(`Не знайдено колонку для дня ${targetDay}`);
-  }
-
-  return index + 1;
-}
-
 function getTimeZone_() {
   return DateUtils_.getTimeZone();
 }
