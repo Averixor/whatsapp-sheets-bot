@@ -1,20 +1,26 @@
 /**
  * VacationPlannerConfig.gs — configuration for the vacation scheduler (WASB).
  *
- * Source of truth for sheet names:
- *   SOURCE  = VACATIONS  (never VACATION)
- *   Block 1 = A:I (перша відпустка)
- *   Block 2 = K:S (друга відпустка)
+ * Source adapter:
+ *   default = VACATIONS A:I + K:S (legacy)
+ *   opt-in  = flat VACATION_REQUESTS
  *
- * `VacationsRepository_.listAll()` merges both blocks before any calculation.
+ * `VacationsRepository_.listAll()` hides the active physical source.
  */
 
 const VACATION_PLANNER_CONFIG = Object.freeze({
   SHEETS: Object.freeze({
     SOURCE: "VACATIONS",
-    OPTIONS: "VACATION_OPTIONS",
+    REQUESTS: "VACATION_REQUESTS",
     SCHEDULE: "VACATION_SCHEDULE",
     CHECK: "VACATION_CHECK",
+  }),
+
+  SOURCE_MODE_PROPERTY: "WASB_VACATION_SOURCE",
+
+  SOURCE_MODES: Object.freeze({
+    LEGACY: "VACATIONS",
+    REQUESTS: "VACATION_REQUESTS",
   }),
 
   SOURCE_HEADERS: Object.freeze([
@@ -28,6 +34,30 @@ const VACATION_PLANNER_CONFIG = Object.freeze({
     "Travel",
     "Interval check",
   ]),
+
+  REQUEST_HEADERS: Object.freeze([
+    "ID",
+    "PersonKey",
+    "FML",
+    "Year",
+    "VacationNo",
+    "Type",
+    "DesiredStart",
+    "ApprovedStart",
+    "EndDate",
+    "Days",
+    "TravelDays",
+    "Status",
+    "Notify",
+    "CreatedAt",
+    "UpdatedAt",
+    "Comment",
+  ]),
+
+  REQUEST_ACTIVE_STATUSES: Object.freeze(["Proposed", "Approved", "Applied"]),
+  REQUEST_OPERATIONAL_STATUSES: Object.freeze(["Approved", "Applied"]),
+  REQUEST_FACT_STATUSES: Object.freeze(["Applied"]),
+  REQUEST_REMINDER_STATUSES: Object.freeze(["Approved", "Applied"]),
 
   BLOCKS: Object.freeze([
     Object.freeze({
@@ -50,7 +80,26 @@ const VACATION_PLANNER_CONFIG = Object.freeze({
     PREFERRED_GAP_DAYS: 180,
     MAX_CONCURRENT: 4,
     MIN_START_GAP_DAYS: 2,
+    MONTH_START_WARNING: 3,
   }),
+
+  BLOCKING_RULES: Object.freeze([
+    "INVALID_OPTION",
+    "INVALID_DATE",
+    "INVALID_DURATION",
+    "PERSON_OVERLAP",
+    "MAX_PERSON_YEAR",
+    "MAX_CONCURRENT",
+  ]),
+
+  WARNING_RULES: Object.freeze([
+    "PERSON_GAP",
+    "START_GAP",
+    "HIGH_LOAD_PERIOD",
+    "MONTH_BALANCE",
+  ]),
+
+  FACT_CODES: Object.freeze(["Відпус", "Відпустка"]),
 
   OPTIONS: Object.freeze({
     MAX_VARIANTS: 5,

@@ -34,6 +34,20 @@ const Reconciliation_ = (function () {
     return getSendPanelAllAllowedStatuses_();
   }
 
+  function _vacationSourceSheetName_() {
+    return typeof VacationsRepository_ === "object" &&
+      VacationsRepository_ &&
+      typeof VacationsRepository_.getSourceSheetName === "function"
+      ? VacationsRepository_.getSourceSheetName()
+      : "VACATIONS";
+  }
+
+  function _vacationSourceSheet_() {
+    return DataAccess_.getSpreadsheet().getSheetByName(
+      _vacationSourceSheetName_(),
+    );
+  }
+
   function compareRows(expectedRows, actualRows) {
     const expectedIndex = _indexRows(expectedRows || []);
     const actualIndex = _indexRows(actualRows || []);
@@ -137,11 +151,12 @@ const Reconciliation_ = (function () {
     const compared = compareRows(expected.rows || [], actualRows || []);
     const issues = (compared.issues || []).slice();
 
-    const vacationsSheet = DataAccess_.getSheet("VACATIONS", null, false);
+    const vacationSourceName = _vacationSourceSheetName_();
+    const vacationsSheet = _vacationSourceSheet_();
     if (!vacationsSheet) {
       issues.push(
         _issue("vacationsMismatch", "WARN", false, {
-          details: "Аркуш VACATIONS відсутній",
+          details: "Аркуш " + vacationSourceName + " відсутній",
         }),
       );
     }
@@ -581,12 +596,14 @@ const Reconciliation_ = (function () {
       });
     }
 
+    const vacationSourceName = _vacationSourceSheetName_();
+    const vacationSourceSheet = _vacationSourceSheet_();
     checks.push({
       name: "monthly ↔ vacations",
-      status: DataAccess_.getSheet("VACATIONS", null, false) ? "OK" : "WARN",
-      details: DataAccess_.getSheet("VACATIONS", null, false)
-        ? "VACATIONS доступний"
-        : "VACATIONS відсутній",
+      status: vacationSourceSheet ? "OK" : "WARN",
+      details: vacationSourceSheet
+        ? vacationSourceName + " доступний"
+        : vacationSourceName + " відсутній",
     });
 
     checks.push({

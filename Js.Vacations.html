@@ -57,6 +57,11 @@
     MAX_CONCURRENT: "Забагато людей одночасно у відпустці",
     INVALID_DATE: "Некоректна дата",
     INVALID_DURATION: "Некоректна тривалість",
+    PERSONNEL_VACATION_WITHOUT_PLAN: "Статус PERSONNEL не підтверджений планом",
+    MONTHLY_VACATION_WITHOUT_PLAN: "Код у місячному графіку не підтверджений планом",
+    PLAN_WITHOUT_MONTHLY_VACATION: "План не відображений у місячному графіку",
+    HIGH_LOAD_PERIOD: "Період на межі допустимого навантаження",
+    MONTH_BALANCE: "Перекос стартів відпусток у місяці",
   };
 
   function normalizeVacationRuleType_(type) {
@@ -84,7 +89,7 @@
     );
     if (type === "INVALID_DATE") {
       return [
-        "Перевірити дату початку та дату завершення у VACATIONS.",
+        "Перевірити дату початку та дату завершення у джерелі плану відпусток.",
         "Перезаписати відпустку через модуль 🏖️ Відпустки, щоб формули перерахували дату.",
       ];
     }
@@ -97,7 +102,7 @@
     if (type === "MAX_PERSON_YEAR") {
       return [
         "Скасувати або перенести одну з відпусток цієї людини на інший рік.",
-        "Перевірити, чи не дублюється запис у VACATIONS.",
+        "Перевірити, чи не дублюється запис у джерелі плану відпусток.",
       ];
     }
     if (type === "PERSON_OVERLAP") {
@@ -125,8 +130,32 @@
         "Скористатися вкладкою «Підібрати» для проблемного військовослужбовця.",
       ];
     }
+    if (type === "HIGH_LOAD_PERIOD" || type === "MONTH_BALANCE") {
+      return [
+        "Перевірити навантаження підрозділу у вибраному періоді.",
+        "За потреби підібрати менш завантажену дату.",
+      ];
+    }
+    if (type === "PERSONNEL_VACATION_WITHOUT_PLAN") {
+      return [
+        "Перевірити поточний статус людини у PERSONNEL.",
+        "Якщо людина у відпустці — додати або виправити відповідний запис у плані відпусток.",
+      ];
+    }
+    if (type === "MONTHLY_VACATION_WITHOUT_PLAN") {
+      return [
+        "Перевірити код «Відпус» у місячному графіку.",
+        "Якщо відпустка фактична — додати або виправити відповідний запис у плані відпусток.",
+      ];
+    }
+    if (type === "PLAN_WITHOUT_MONTHLY_VACATION") {
+      return [
+        "Перевірити дати активної відпустки у плані відпусток.",
+        "Якщо план уже застосований — встановити код «Відпус» у місячному графіку.",
+      ];
+    }
     return [
-      "Перевірити запис у VACATIONS.",
+      "Перевірити запис у джерелі плану відпусток.",
       "Спробувати перенести відпустку через модуль 🏖️ Відпустки.",
     ];
   }
@@ -210,6 +239,17 @@
       return formatDateUa(value);
     },
 
+    requestStatusLabel(status) {
+      var labels = {
+        Draft: "Чернетка",
+        Proposed: "Запропоновано",
+        Approved: "Затверджено",
+        Applied: "Застосовано",
+        Cancelled: "Скасовано",
+      };
+      return labels[String(status || "").trim()] || String(status || "").trim();
+    },
+
     personLabel(person) {
       return person.callsign
         ? person.callsign + " — " + person.fml
@@ -278,10 +318,9 @@
     tabsHtml() {
       var tabs = [
         { id: "overview", label: "Огляд" },
-        { id: "schedule", label: "Графік" },
+        { id: "plan", label: "План" },
         { id: "add", label: "Додати" },
         { id: "find", label: "Підібрати" },
-        { id: "move", label: "Перенести" },
         { id: "check", label: "Проблеми" },
         { id: "report", label: "Звіт" },
       ];
@@ -341,12 +380,39 @@
             " (" +
             VacationModule.esc(vacation.days) +
             " дн.)</div>" +
+            (vacation.status
+              ? '<div class="vacations-muted">Статус: ' +
+                VacationModule.esc(
+                  VacationModule.requestStatusLabel(vacation.status),
+                ) +
+                "</div>"
+              : "") +
             '<div class="vacations-card__actions">' +
             actions +
             "</div></div>"
           );
         })
         .join("");
+    },
+
+    moveFormHtml() {
+      if (this.state.moveIndex === "" || this.state.moveIndex == null) {
+        return "";
+      }
+      return (
+        '<div class="vacations-form vacations-form--spaced">' +
+        '<div class="vacations-subtitle">Перенести відпустку</div>' +
+        "<label>Відпустка</label>" +
+        '<select id="vacMoveVacation">' +
+        this.moveOptions(this.state.moveIndex) +
+        "</select>" +
+        "<label>Нова дата початку</label>" +
+        '<input id="vacMoveStart" type="date">' +
+        "<label>Кількість днів</label>" +
+        '<input id="vacMoveDays" type="number" min="1" max="60" value="15">' +
+        '<button type="button" class="btn btn-primary" onclick="VacationModule.submitMove()">Перенести</button>' +
+        "</div>"
+      );
     },
 
     optionsHtml() {
@@ -405,17 +471,17 @@
     scheduleSummaryHtml() {
       var summary = this.state.problemSummary || {};
       var total = Number(this.state.stats.total || summary.scheduleRows || 0);
-      var errorCount = Number(summary.errorCount || 0);
+      var problemCount = Number(summary.problemCount || summary.errorCount || 0);
       var html =
         '<div class="vacations-card vacations-schedule-summary">' +
         '<div class="vacations-card__head"><strong>🏖️ Графік відпусток</strong></div>' +
         '<div class="vacation-problem-card__person">Активних відпусток: ' +
         this.esc(total) +
         "</div>";
-      if (errorCount > 0) {
+      if (problemCount > 0) {
         html +=
           '<div class="vacations-problem-summary-warning">⚠️ Є ' +
-          this.esc(errorCount) +
+          this.esc(problemCount) +
           " проблемні питання</div>";
         if (summary.summaryLine) {
           html +=
@@ -447,10 +513,10 @@
     panelHtml() {
       var s = this.state;
       switch (s.activeTab) {
-        case "schedule":
+        case "plan":
           return (
             '<div class="result-screen">' +
-            '<div class="result-screen-title">Графік</div>' +
+            '<div class="result-screen-title">План відпусток</div>' +
             '<div class="vacations-stats">' +
             '<div class="vacations-stat"><strong>' +
             this.esc(s.stats.total || 0) +
@@ -461,7 +527,12 @@
             '<div class="result-screen-actions">' +
             '<button class="btn btn-primary" type="button" onclick="VacationModule.rebuildSchedule()">🔄 Оновити графік</button>' +
             '<button class="btn btn-secondary" type="button" onclick="VacationModule.openScheduleSheet()">📅 Відкрити календар</button>' +
-            "</div></div>"
+            "</div>" +
+            '<div id="vacationPlanList">' +
+            this.vacationListHtml() +
+            "</div>" +
+            this.moveFormHtml() +
+            "</div>"
           );
         case "add":
           return (
@@ -524,22 +595,6 @@
             this.optionsHtml() +
             "</div></div>"
           );
-        case "move":
-          return (
-            '<div class="result-screen">' +
-            '<div class="result-screen-title">Перенести відпустку</div>' +
-            '<div class="vacations-form">' +
-            "<label>Відпустка</label>" +
-            '<select id="vacMoveVacation">' +
-            this.moveOptions(this.state.moveIndex) +
-            "</select>" +
-            "<label>Нова дата початку</label>" +
-            '<input id="vacMoveStart" type="date">' +
-            "<label>Кількість днів</label>" +
-            '<input id="vacMoveDays" type="number" min="1" max="60" value="15">' +
-            '<button type="button" class="btn btn-primary" onclick="VacationModule.submitMove()">Перенести</button>' +
-            "</div></div>"
-          );
         case "check":
           return (
             '<div class="result-screen">' +
@@ -593,9 +648,6 @@
             '<button class="btn btn-primary" type="button" onclick="VacationModule.checkReminders()">🔔 Перевірити нагадування</button>' +
             '<button class="btn btn-secondary" type="button" onclick="VacationModule.rebuildSchedule()">🔄 Оновити графік</button>' +
             '<button class="btn btn-secondary" type="button" onclick="VacationModule.openScheduleSheet()">📅 Відкрити календар</button>' +
-            "</div>" +
-            '<div id="vacationOverviewList">' +
-            this.vacationListHtml() +
             "</div>" +
             '<div id="vacationReminderResult">' +
             (s.remindersHtml || "") +
@@ -780,7 +832,7 @@
     async submitAdd() {
       showLoading();
       try {
-        await runServerMethod_(
+        var result = await runServerMethod_(
           "addVacationFromSidebar",
           [
             {
@@ -792,7 +844,11 @@
           ],
           "VacationModule.submitAdd",
         );
-        showToast("✓ Відпустку додано");
+        showToast(
+          result.warnings && result.warnings.length
+            ? "⚠ Відпустку додано з попередженнями"
+            : "✓ Відпустку додано",
+        );
         this.state.activeTab = "overview";
         await this.loadState();
       } catch (error) {
@@ -832,12 +888,16 @@
       if (!item) return;
       showLoading();
       try {
-        await runServerMethod_(
+        var result = await runServerMethod_(
           "applyVacationOptionFromSidebar",
           [item],
           "VacationModule.applyOption",
         );
-        showToast("✓ Варіант застосовано");
+        showToast(
+          result.warnings && result.warnings.length
+            ? "⚠ Варіант застосовано з попередженнями"
+            : "✓ Варіант застосовано",
+        );
         this.state.activeTab = "overview";
         await this.loadState();
       } catch (error) {
@@ -851,7 +911,7 @@
       var vacation = this.state.vacations[index];
       if (!vacation) return;
       this.state.moveIndex = String(index);
-      this.state.activeTab = "move";
+      this.state.activeTab = "plan";
       this.render();
       var moveStart = document.getElementById("vacMoveStart");
       var moveDays = document.getElementById("vacMoveDays");
@@ -864,10 +924,12 @@
       if (!vacation) throw new Error("Оберіть відпустку");
       showLoading();
       try {
-        await runServerMethod_(
+        var result = await runServerMethod_(
           "moveVacationFromSidebar",
           [
             {
+              requestId: vacation.requestId,
+              personKey: vacation.personKey,
               fml: vacation.fml,
               vacationNumber: vacation.vacationNumber,
               type: vacation.type,
@@ -879,8 +941,13 @@
           ],
           "VacationModule.submitMove",
         );
-        showToast("✓ Відпустку перенесено");
-        this.state.activeTab = "overview";
+        showToast(
+          result.warnings && result.warnings.length
+            ? "⚠ Відпустку перенесено з попередженнями"
+            : "✓ Відпустку перенесено",
+        );
+        this.state.moveIndex = "";
+        this.state.activeTab = "plan";
         await this.loadState();
       } catch (error) {
         this.showError(error);
@@ -904,16 +971,19 @@
         } else if (result.errorCount != null) {
           this.state.problemSummary = {
             errorCount: result.errorCount,
+            warningCount: result.warningCount || 0,
+            problemCount: result.problemCount || result.errorCount,
             scheduleRows: result.scheduleRows || this.state.stats.total,
             items: [],
             summaryLine: "",
           };
         }
         this.setStatus(
-          result.errorCount
-            ? "Проблемних питань: " + result.errorCount
+          result.problemCount || result.errorCount
+            ? "Проблемних питань: " +
+                (result.problemCount || result.errorCount)
             : "Проблемних питань не знайдено.",
-          result.errorCount ? "warning" : "success",
+          result.problemCount || result.errorCount ? "warning" : "success",
         );
         this.render();
         logToConsole(

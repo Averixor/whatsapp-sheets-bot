@@ -501,3 +501,20 @@ Do **not** reintroduce `eval` for resolving test or handler names; extend **`get
 ### Перевірка
 
 У **`runSmokeTests()`** є крок **«Optional business sheets ensured …»** (`SmokeTests.gs`): ті самі **`ensure*`** потім перевіряють, що всі три назви існують (`skipOnError`).
+
+## 21. Vacation source migration
+
+`VACATIONS` remains the default legacy source. The flat `VACATION_REQUESTS`
+source is opt-in and must be migrated explicitly by a sysadmin.
+
+1. Deploy and run `previewVacationRequestsMigration()` in the GAS editor.
+2. Confirm `invalidActiveRows === 0` and `requestRows === legacyRows`.
+3. Run `applyVacationRequestsMigration()`.
+4. Confirm Script Property `WASB_VACATION_SOURCE` equals
+   `VACATION_REQUESTS`.
+5. Run `checkVacationRulesFromMenu()` and `apiCheckVacationsAndBirthdays()`.
+6. Verify `VACATION_CHECK`, the main vacation panel, and reminder output.
+
+The migration refuses to overwrite a non-empty `VACATION_REQUESTS`. Roll back
+reads and writes with `rollbackVacationRequestsToLegacy()`; migrated rows remain
+intact for diagnosis. Do not delete `VACATIONS` during the compatibility period.

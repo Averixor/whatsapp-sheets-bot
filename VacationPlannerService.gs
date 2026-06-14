@@ -18,6 +18,29 @@ const VacationPlannerService_ = (function () {
       .replace(/[’'`"ʼ]/g, "'");
   }
 
+  function _personAliases_(source) {
+    const item = source || {};
+    if (Array.isArray(item.personAliases)) return item.personAliases.slice();
+    const seen = {};
+    return [item.personKey, item.callsign, item.fml, item.FML]
+      .map(_fmlKey_)
+      .filter(function (key) {
+        if (!key || seen[key]) return false;
+        seen[key] = true;
+        return true;
+      });
+  }
+
+  function _samePerson_(left, right) {
+    const rightAliases = {};
+    _personAliases_(right).forEach(function (key) {
+      rightAliases[key] = true;
+    });
+    return _personAliases_(left).some(function (key) {
+      return rightAliases[key] === true;
+    });
+  }
+
   function _toNoon_(value) {
     if (value instanceof Date && !isNaN(value.getTime())) {
       return new Date(
@@ -122,9 +145,13 @@ const VacationPlannerService_ = (function () {
 
   function _normalizeVacation_(item) {
     const source = item || {};
+    const personAliases = _personAliases_(source);
     return {
       fml: _trim_(source.fml),
       fmlKey: _fmlKey_(source.fml),
+      personKey: _trim_(source.personKey || source.callsign || source.fml),
+      personKeyKey: personAliases[0] || "",
+      personAliases: personAliases,
       startDate: _toNoon_(source.startDate || source.startDateRaw),
       endDate: _toNoon_(source.endDate || source.endDateRaw),
       vacationNumber: _vacationNumber_(
@@ -139,7 +166,7 @@ const VacationPlannerService_ = (function () {
     return (Array.isArray(allVacations) ? allVacations : [])
       .map(_normalizeVacation_)
       .filter(function (item) {
-        return item.active && item.fmlKey && item.startDate && item.endDate;
+        return item.active && item.personKeyKey && item.startDate && item.endDate;
       });
   }
 
@@ -211,6 +238,11 @@ const VacationPlannerService_ = (function () {
     return {
       fml: fml,
       fmlKey: _fmlKey_(fml),
+      personKey: _trim_(source.personKey || source.callsign || fml),
+      personAliases: _personAliases_({
+        personKey: source.personKey || source.callsign,
+        fml: fml,
+      }),
       vacationNumber: vacationNumber,
       desiredStart: desiredStart,
       durationDays: durationDays,
@@ -221,8 +253,16 @@ const VacationPlannerService_ = (function () {
   }
 
   function _isTargetSlot_(vacation, option) {
+    const requestId = _trim_(option && option.requestId);
+    const source = (vacation && vacation.source) || {};
+    if (requestId) {
+      return _trim_(source.requestId || source.id) === requestId;
+    }
+    if (source._meta && source._meta.schema === "vacation_requests") {
+      return false;
+    }
     return (
-      vacation.fmlKey === _fmlKey_(option.fml) &&
+      _samePerson_(vacation, option) &&
       vacation.vacationNumber > 0 &&
       vacation.vacationNumber === _vacationNumber_(option.vacationNumber)
     );
@@ -253,6 +293,221 @@ const VacationPlannerService_ = (function () {
     ].join("-");
   }
 
+  function _isVacationFactCode_(value) {
+    const key = _trim_(value).toUpperCase();
+    const configured =
+      VACATION_PLANNER_CONFIG &&
+      Array.isArray(VACATION_PLANNER_CONFIG.FACT_CODES)
+        ? VACATION_PLANNER_CONFIG.FACT_CODES
+        : ["Відпус", "Відпустка"];
+    return configured.some(function (code) {
+      return _trim_(code).toUpperCase() === key;
+    });
+  }
+
+  function _dateRangeLabel_(dates) {
+    const keys = (Array.isArray(dates) ? dates : [])
+      .map(_dateKey_)
+      .filter(Boolean)
+      .sort();
+    if (!keys.length) return "";
+    return keys.length === 1 ? keys[0] : keys[0] + " / " + keys[keys.length - 1];
+  }
+
+  function _vacationCoversDate_(vacation, date) {
+    return (
+      _dayOrdinal_(vacation.startDate) <= _dayOrdinal_(date) &&
+      _dayOrdinal_(vacation.endDate) >= _dayOrdinal_(date)
+    );
+  }
+
+  function _personnelHasVacationStatus_(person) {
+    const canonical = _trim_(person && person.statusCanonical).toUpperCase();
+    const status = _trim_(
+      person && (person.status || person.Status),
+    ).toUpperCase();
+    return canonical === "VACATION" || status === "ВІДПУСТКА";
+  }
+
+  function _sourceFlag_(vacation, key, defaultValue) {
+    const source = (vacation && vacation.source) || {};
+    return Object.prototype.hasOwnProperty.call(source, key)
+      ? source[key] === true
+      : defaultValue;
+  }
+
+  /**
+   * Non-mutating reconciliation between planned vacations and operational facts.
+   * Monthly facts must include blank codes so a represented person/date can be
+   * distinguished from a month that does not exist yet.
+   */
+  function buildConsistencyAudit(
+    allVacations,
+    personnelRows,
+    monthlyFacts,
+    auditDate,
+  ) {
+    const checks = [];
+    const vacations = _normalizedActiveVacations_(allVacations);
+    const operationalVacations = vacations.filter(function (vacation) {
+      return _sourceFlag_(vacation, "operationalActive", true);
+    });
+    const factExpectedVacations = vacations.filter(function (vacation) {
+      return _sourceFlag_(vacation, "factExpected", true);
+    });
+    const today = _toNoon_(auditDate) || _toNoon_(new Date());
+
+    (Array.isArray(personnelRows) ? personnelRows : []).forEach(
+      function (person) {
+        const fml = _trim_(person && (person.fml || person.FML));
+        const personIdentity = {
+          personKey: person && (person.personKey || person.callsign),
+          fml: fml,
+        };
+        if (
+          !_personAliases_(personIdentity).length ||
+          !_personnelHasVacationStatus_(person)
+        ) {
+          return;
+        }
+        const hasCurrentVacation = operationalVacations.some(
+          function (vacation) {
+            return (
+              _samePerson_(vacation, personIdentity) &&
+              _vacationCoversDate_(vacation, today)
+            );
+          },
+        );
+        if (hasCurrentVacation) return;
+        checks.push({
+          severity: "ERROR",
+          rule: "PERSONNEL_VACATION_WITHOUT_PLAN",
+          date: _dateKey_(today),
+          fml: fml,
+          details:
+            "У PERSONNEL встановлено статус «Відпустка», але на цю дату немає затвердженої або застосованої відпустки у джерелі плану",
+        });
+      },
+    );
+
+    const facts = (Array.isArray(monthlyFacts) ? monthlyFacts : [])
+      .map(function (fact) {
+        const fml = _trim_(fact && (fact.fml || fact.FML || fact.callsign));
+        const personAliases = _personAliases_({
+          personKey: fact && fact.personKey,
+          callsign: fact && fact.callsign,
+          fml: fml,
+        });
+        return {
+          fml: fml,
+          fmlKey: _fmlKey_(fml),
+          personKeyKey: personAliases[0] || "",
+          personAliases: personAliases,
+          date: _toNoon_(fact && fact.date),
+          code: _trim_(fact && fact.code),
+          source: fact || {},
+        };
+      })
+      .filter(function (fact) {
+        return fact.personKeyKey && fact.date;
+      });
+
+    const factsByPersonDate = {};
+    facts.forEach(function (fact) {
+      fact.personAliases.forEach(function (alias) {
+        const key = alias + "|" + _dateKey_(fact.date);
+        if (!factsByPersonDate[key]) factsByPersonDate[key] = [];
+        factsByPersonDate[key].push(fact);
+      });
+    });
+
+    const monthlyWithoutPlan = {};
+    facts.forEach(function (fact) {
+      if (!_isVacationFactCode_(fact.code)) return;
+      const hasPlan = operationalVacations.some(function (vacation) {
+        return (
+          _samePerson_(vacation, fact) &&
+          _vacationCoversDate_(vacation, fact.date)
+        );
+      });
+      if (hasPlan) return;
+      if (!monthlyWithoutPlan[fact.personKeyKey]) {
+        monthlyWithoutPlan[fact.personKeyKey] = { fml: fact.fml, dates: [] };
+      }
+      monthlyWithoutPlan[fact.personKeyKey].dates.push(fact.date);
+    });
+    Object.keys(monthlyWithoutPlan).forEach(function (key) {
+      const item = monthlyWithoutPlan[key];
+      checks.push({
+        severity: "ERROR",
+        rule: "MONTHLY_VACATION_WITHOUT_PLAN",
+        date: _dateRangeLabel_(item.dates),
+        fml: item.fml,
+        details:
+          "У місячному графіку код «Відпус» стоїть " +
+          item.dates.length +
+          " дн., але відповідної затвердженої або застосованої відпустки у джерелі плану немає",
+      });
+    });
+
+    factExpectedVacations.forEach(function (vacation) {
+      const missingDates = [];
+      let current = vacation.startDate;
+      let guard = 0;
+      while (
+        _dayOrdinal_(current) <= _dayOrdinal_(vacation.endDate) &&
+        guard < 730
+      ) {
+        const representedFacts = [];
+        vacation.personAliases.forEach(function (alias) {
+          const key = alias + "|" + _dateKey_(current);
+          (factsByPersonDate[key] || []).forEach(function (fact) {
+            if (representedFacts.indexOf(fact) === -1) {
+              representedFacts.push(fact);
+            }
+          });
+        });
+        if (
+          representedFacts.length &&
+          !representedFacts.some(function (fact) {
+            return _isVacationFactCode_(fact.code);
+          })
+        ) {
+          missingDates.push(current);
+        }
+        current = addDays(current, 1);
+        guard++;
+      }
+      if (!missingDates.length) return;
+      checks.push({
+        severity: "ERROR",
+        rule: "PLAN_WITHOUT_MONTHLY_VACATION",
+        date: _dateRangeLabel_(missingDates),
+        fml: vacation.fml,
+        details:
+          "У джерелі плану є застосована відпустка, але у місячному графіку відсутній код «Відпус» на " +
+          missingDates.length +
+          " дн.",
+        vacationNumber: vacation.vacationNumber,
+        startDate: vacation.startDate,
+        endDate: vacation.endDate,
+        days: daysBetween(vacation.startDate, vacation.endDate) + 1,
+        sourceRow:
+          (vacation.source &&
+            vacation.source._meta &&
+            vacation.source._meta.rowNumber) ||
+          "",
+        sourceStartColumn:
+          (vacation.source &&
+            vacation.source._meta &&
+            vacation.source._meta.startColumn) ||
+          "",
+      });
+    });
+
+    return checks;
+  }
+
   function countConcurrentVacations(startDate, endDate, vacations) {
     const list = _normalizedActiveVacations_(vacations);
     const dailyCounts = [];
@@ -270,7 +525,7 @@ const VacationPlannerService_ = (function () {
             vacation.endDate,
           )
         ) {
-          people[vacation.fmlKey] = true;
+          people[vacation.personKeyKey] = true;
         }
       });
       dailyCounts.push(Object.keys(people).length);
@@ -288,27 +543,45 @@ const VacationPlannerService_ = (function () {
     };
   }
 
+  function _blockingValidation_(rule, message) {
+    const violation = {
+      rule: rule,
+      severity: "CRITICAL",
+      message: message,
+    };
+    return {
+      isValid: false,
+      violations: [violation],
+      blockingViolations: [violation],
+      warnings: [],
+    };
+  }
+
   function validateVacationOption(option, allVacations) {
     const startDate = _toNoon_(option && option.startDate);
     const endDate = _toNoon_(option && option.endDate);
     const fml = _trim_(option && option.fml);
     const fmlKey = _fmlKey_(fml);
+    const personAliases = _personAliases_({
+      personKey: option && option.personKey,
+      fml: fml,
+    });
     const vacationNumber = _vacationNumber_(
       option && option.vacationNumber,
     );
     const violations = [];
 
-    if (!fmlKey || !startDate || !endDate || vacationNumber < 1) {
-      return {
-        isValid: false,
-        violations: [
-          {
-            rule: "INVALID_OPTION",
-            severity: "CRITICAL",
-            message: "Варіант має неповні або некоректні дані",
-          },
-        ],
-      };
+    if (!personAliases.length || vacationNumber < 1) {
+      return _blockingValidation_(
+        "INVALID_OPTION",
+        "Варіант має неповні або некоректні дані",
+      );
+    }
+    if (!startDate || !endDate) {
+      return _blockingValidation_(
+        "INVALID_DATE",
+        "Варіант містить некоректну дату початку або завершення",
+      );
     }
     const durationDays = daysBetween(startDate, endDate) + 1;
     if (
@@ -316,24 +589,21 @@ const VacationPlannerService_ = (function () {
       durationDays < 1 ||
       durationDays > VACATION_PLANNER_CONFIG.OPTIONS.MAX_DURATION_DAYS
     ) {
-      return {
-        isValid: false,
-        violations: [
-          {
-            rule: "INVALID_DURATION",
-            severity: "CRITICAL",
-            message:
-              "Тривалість варіанта має бути від 1 до " +
-              VACATION_PLANNER_CONFIG.OPTIONS.MAX_DURATION_DAYS +
-              " днів",
-          },
-        ],
-      };
+      return _blockingValidation_(
+        "INVALID_DURATION",
+        "Тривалість варіанта має бути від 1 до " +
+          VACATION_PLANNER_CONFIG.OPTIONS.MAX_DURATION_DAYS +
+          " днів",
+      );
     }
 
     const normalizedOption = {
+      requestId: _trim_(option && option.requestId),
       fml: fml,
       fmlKey: fmlKey,
+      personKey: _trim_((option && option.personKey) || fml),
+      personKeyKey: personAliases[0] || "",
+      personAliases: personAliases,
       vacationNumber: vacationNumber,
       startDate: startDate,
       endDate: endDate,
@@ -344,10 +614,10 @@ const VacationPlannerService_ = (function () {
       },
     );
     const personVacations = vacations.filter(function (vacation) {
-      return vacation.fmlKey === fmlKey;
+      return _samePerson_(vacation, normalizedOption);
     });
     const otherVacations = vacations.filter(function (vacation) {
-      return vacation.fmlKey !== fmlKey;
+      return !_samePerson_(vacation, normalizedOption);
     });
     const rules = VACATION_PLANNER_CONFIG.RULES;
     const requestYear = startDate.getFullYear();
@@ -390,7 +660,7 @@ const VacationPlannerService_ = (function () {
       } else if (gap < rules.MIN_DAYS_GAP) {
         violations.push({
           rule: "PERSON_GAP",
-          severity: "CRITICAL",
+          severity: "WARNING",
           message:
             "Інтервал між відпустками " +
             gap +
@@ -414,7 +684,7 @@ const VacationPlannerService_ = (function () {
     if (nearStarts.length) {
       violations.push({
         rule: "START_GAP",
-        severity: "CRITICAL",
+        severity: "WARNING",
         message:
           "Старт надто близько до: " +
           nearStarts
@@ -437,11 +707,40 @@ const VacationPlannerService_ = (function () {
           " людей, максимум " +
           rules.MAX_CONCURRENT,
       });
+    } else if (maxWithCandidate === rules.MAX_CONCURRENT) {
+      violations.push({
+        rule: "HIGH_LOAD_PERIOD",
+        severity: "WARNING",
+        message:
+          "Період досягає граничного навантаження: одночасно " +
+          maxWithCandidate +
+          " людей",
+      });
     }
 
+    const monthStats = _monthStats_(normalizedOption, allVacations);
+    if (monthStats.starts + 1 >= rules.MONTH_START_WARNING) {
+      violations.push({
+        rule: "MONTH_BALANCE",
+        severity: "WARNING",
+        message:
+          "У цьому місяці буде " +
+          (monthStats.starts + 1) +
+          " стартів відпусток",
+      });
+    }
+
+    const warnings = violations.filter(function (violation) {
+      return violation.severity === "WARNING";
+    });
+    const blockingViolations = violations.filter(function (violation) {
+      return violation.severity !== "WARNING";
+    });
     return {
-      isValid: violations.length === 0,
+      isValid: blockingViolations.length === 0,
       violations: violations,
+      blockingViolations: blockingViolations,
+      warnings: warnings,
       concurrentCount: {
         max: load.max,
         maxWithCandidate: maxWithCandidate,
@@ -498,7 +797,7 @@ const VacationPlannerService_ = (function () {
 
   function _endNearStarts_(option, allVacations) {
     return _normalizedActiveVacations_(allVacations).filter(function (vacation) {
-      if (vacation.fmlKey === _fmlKey_(option.fml)) return false;
+      if (_samePerson_(vacation, option)) return false;
       const gap = Math.abs(daysBetween(option.endDate, vacation.startDate));
       return gap > 0 && gap <= 3;
     }).length;
@@ -531,7 +830,7 @@ const VacationPlannerService_ = (function () {
 
     const normalized = _normalizedActiveVacations_(allVacations);
     normalized.forEach(function (vacation) {
-      if (vacation.fmlKey === _fmlKey_(option.fml)) return;
+      if (_samePerson_(vacation, option)) return;
       const gap = Math.abs(daysBetween(option.startDate, vacation.startDate));
       if (gap >= rules.MIN_START_GAP_DAYS && gap <= 4) {
         score += Math.round(config.START_TOO_CLOSE / gap);
@@ -608,12 +907,23 @@ const VacationPlannerService_ = (function () {
           " дн.",
       );
     }
+    if (validation.warnings && validation.warnings.length) {
+      parts.push(
+        "Попередження: " +
+          validation.warnings
+            .map(function (warning) {
+              return warning.message;
+            })
+            .join("; "),
+      );
+    }
     return parts.join("; ");
   }
 
   function _rejectedOption_(request, reason) {
     return {
       rank: 0,
+      personKey: request.personKey,
       fml: request.fml,
       vacationNumber: request.vacationNumber,
       startDate: request.desiredStart,
@@ -640,6 +950,7 @@ const VacationPlannerService_ = (function () {
 
     generateCandidateDates(normalizedRequest).forEach(function (startDate) {
       const option = {
+        personKey: normalizedRequest.personKey,
         fml: normalizedRequest.fml,
         vacationNumber: normalizedRequest.vacationNumber,
         startDate: startDate,
@@ -663,6 +974,10 @@ const VacationPlannerService_ = (function () {
         return;
       }
 
+      option.status =
+        validation.warnings && validation.warnings.length
+          ? "COMPROMISE"
+          : "VALID";
       option.score = scoreVacationOption(
         option,
         sourceVacations,
@@ -719,7 +1034,7 @@ const VacationPlannerService_ = (function () {
     const normalizedSource = (Array.isArray(allVacations) ? allVacations : [])
       .map(_normalizeVacation_)
       .filter(function (vacation) {
-        return vacation.active && vacation.fmlKey;
+        return vacation.active && vacation.personKeyKey;
       });
     normalizedSource.forEach(function (vacation) {
       if (!vacation.startDate || !vacation.endDate) {
@@ -783,7 +1098,7 @@ const VacationPlannerService_ = (function () {
     const byPersonYear = {};
     vacations.forEach(function (vacation) {
       const key =
-        vacation.fmlKey + "|" + String(vacation.startDate.getFullYear());
+        vacation.personKeyKey + "|" + String(vacation.startDate.getFullYear());
       if (!byPersonYear[key]) byPersonYear[key] = [];
       byPersonYear[key].push(vacation);
     });
@@ -804,11 +1119,36 @@ const VacationPlannerService_ = (function () {
       }
     });
 
+    const startsByMonth = {};
+    vacations.forEach(function (vacation) {
+      const key =
+        String(vacation.startDate.getFullYear()) +
+        "-" +
+        String(vacation.startDate.getMonth() + 1).padStart(2, "0");
+      if (!startsByMonth[key]) startsByMonth[key] = [];
+      startsByMonth[key].push(vacation);
+    });
+    Object.keys(startsByMonth).forEach(function (key) {
+      const items = startsByMonth[key];
+      if (items.length < rules.MONTH_START_WARNING) return;
+      checks.push({
+        severity: "WARNING",
+        rule: "MONTH_BALANCE",
+        date: key,
+        fml: items
+          .map(function (item) {
+            return item.fml;
+          })
+          .join(", "),
+        details: "Стартів відпусток у місяці: " + items.length,
+      });
+    });
+
     for (let i = 0; i < vacations.length; i++) {
       for (let j = i + 1; j < vacations.length; j++) {
         const left = vacations[i];
         const right = vacations[j];
-        if (left.fmlKey === right.fmlKey) {
+        if (_samePerson_(left, right)) {
           const gap = _gapBetweenRanges_(
             left.startDate,
             left.endDate,
@@ -817,9 +1157,12 @@ const VacationPlannerService_ = (function () {
           );
           if (gap < rules.MIN_DAYS_GAP) {
             checks.push({
-              severity: "ERROR",
+              severity: gap < 0 ? "ERROR" : "WARNING",
               rule: gap < 0 ? "PERSON_OVERLAP" : "PERSON_GAP",
-              date: _dateKey_(left.startDate) + " / " + _dateKey_(right.startDate),
+              date:
+                _dateKey_(left.startDate) +
+                " / " +
+                _dateKey_(right.startDate),
               fml: left.fml,
               details:
                 gap < 0
@@ -836,7 +1179,7 @@ const VacationPlannerService_ = (function () {
           );
           if (startGap < rules.MIN_START_GAP_DAYS) {
             checks.push({
-              severity: "ERROR",
+              severity: "WARNING",
               rule: "START_GAP",
               date: _dateKey_(left.startDate),
               fml: left.fml + " / " + right.fml,
@@ -861,7 +1204,7 @@ const VacationPlannerService_ = (function () {
       ) {
         const key = _dateKey_(current);
         if (!dailyPeople[key]) dailyPeople[key] = {};
-        dailyPeople[key][vacation.fmlKey] = vacation.fml;
+        dailyPeople[key][vacation.personKeyKey] = vacation.fml;
         current = addDays(current, 1);
         guard++;
       }
@@ -872,10 +1215,14 @@ const VacationPlannerService_ = (function () {
         const people = Object.keys(dailyPeople[dateKey]).map(function (key) {
           return dailyPeople[dateKey][key];
         });
-        if (people.length > rules.MAX_CONCURRENT) {
+        if (people.length >= rules.MAX_CONCURRENT) {
           checks.push({
-            severity: "ERROR",
-            rule: "MAX_CONCURRENT",
+            severity:
+              people.length > rules.MAX_CONCURRENT ? "ERROR" : "WARNING",
+            rule:
+              people.length > rules.MAX_CONCURRENT
+                ? "MAX_CONCURRENT"
+                : "HIGH_LOAD_PERIOD",
             date: dateKey,
             fml: people.join(", "),
             details:
@@ -936,6 +1283,7 @@ const VacationPlannerService_ = (function () {
     countConcurrentVacations: countConcurrentVacations,
     calculateEndDate: calculateEndDate,
     daysBetween: daysBetween,
+    buildConsistencyAudit: buildConsistencyAudit,
     buildScheduleAudit: buildScheduleAudit,
   };
 })();

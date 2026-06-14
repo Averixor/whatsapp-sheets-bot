@@ -15,6 +15,7 @@ function checkSheets() {
       { name: CONFIG.DICT_SUM_SHEET || "DICT_SUM", required: true },
       { name: CONFIG.LOG_SHEET || "LOG", required: false },
       { name: "VACATIONS", required: false },
+      { name: "VACATION_REQUESTS", required: false },
       { name: "TEMPLATES", required: false },
     ];
 

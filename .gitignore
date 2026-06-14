@@ -22,3 +22,4 @@ _audit-out.txt
 !.clasp.example.json
 !.clasp.smoke.example.json
 .npmrc
+.clasp.smoke.json

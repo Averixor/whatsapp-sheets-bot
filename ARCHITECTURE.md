@@ -212,7 +212,9 @@ Main operational sheets typically include:
 - `DICT`
 - `DICT_SUM`
 - `SEND_PANEL`
-- `VACATIONS`
+- `VACATIONS` — legacy vacation source (`A:I` + `K:S`)
+- `VACATION_REQUESTS` — opt-in flat vacation source; activated explicitly with
+  Script Property `WASB_VACATION_SOURCE=VACATION_REQUESTS`
 - `LOG`
 - `TEMPLATES`
 

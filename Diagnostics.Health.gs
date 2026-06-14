@@ -128,13 +128,19 @@ function healthCheck() {
   _runHealthCheckItem_(report, "Обов'язкові аркуші", "CRITICAL", function () {
     const ss = getWasbSpreadsheet_();
     const sheets = ss.getSheets().map((s) => s.getName());
+    const vacationSource =
+      typeof VacationsRepository_ === "object" &&
+      VacationsRepository_ &&
+      typeof VacationsRepository_.getSourceSheetName === "function"
+        ? VacationsRepository_.getSourceSheetName()
+        : "VACATIONS";
 
     const required = [
       CONFIG.PHONES_SHEET,
       CONFIG.DICT_SHEET,
       CONFIG.DICT_SUM_SHEET,
       CONFIG.LOG_SHEET,
-      "VACATIONS",
+      vacationSource,
       "TEMPLATES",
     ].filter(Boolean);
 

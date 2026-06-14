@@ -128,7 +128,10 @@ const VacationSidebarService_ = (function () {
 
   function _serializeVacation_(vacation) {
     return {
+      requestId: String(vacation.requestId || vacation.id || "").trim(),
+      personKey: String(vacation.personKey || "").trim(),
       fml: vacation.fml,
+      status: String(vacation.status || "").trim(),
       vacationNumber: vacation.vacationNumber,
       type: _typeCode_(vacation),
       startDate: _isoDate_(vacation.startDate),
@@ -149,9 +152,11 @@ const VacationSidebarService_ = (function () {
   }
 
   function _serializeOption_(option) {
-    const valid = option.status === "VALID";
+    const accepted = option.status !== "REJECTED";
+    const compromise = option.status === "COMPROMISE";
     return {
       rank: Number(option.rank) || 0,
+      personKey: String(option.personKey || "").trim(),
       fml: option.fml,
       vacationNumber: option.vacationNumber,
       type: Number(option.vacationNumber) === 2 ? "В2" : "В1",
@@ -159,15 +164,17 @@ const VacationSidebarService_ = (function () {
       endDate: _isoDate_(option.endDate),
       days: Number(option.days) || 0,
       score: Number(option.score) || 0,
-      status: valid ? "VALID" : "REJECTED",
+      status: accepted ? option.status : "REJECTED",
       label:
-        valid && Number(option.rank) === 1
-          ? "Найкращий"
-          : valid && Number(option.rank) === 2
-            ? "Допустимий"
-            : valid
-              ? "Запасний"
-              : "Відхилено",
+        compromise
+          ? "З попередженням"
+          : accepted && Number(option.rank) === 1
+            ? "Найкращий"
+            : accepted && Number(option.rank) === 2
+              ? "Допустимий"
+              : accepted
+                ? "Запасний"
+                : "Відхилено",
       explanation: option.explanation || "",
     };
   }
@@ -212,6 +219,8 @@ const VacationSidebarService_ = (function () {
       searchWindow: 0,
     });
     return {
+      requestId: String(source.requestId || "").trim(),
+      personKey: String(source.personKey || "").trim(),
       fml: normalized.fml,
       vacationNumber: normalized.vacationNumber,
       vacationType: type || (vacationNumber === 2 ? "В2" : "В1"),
@@ -230,8 +239,10 @@ const VacationSidebarService_ = (function () {
       _vacations_(),
     );
     if (!validation.isValid) {
+      const blocking =
+        validation.blockingViolations || validation.violations || [];
       throw new Error(
-        validation.violations
+        blocking
           .map(function (violation) {
             return violation.message;
           })
@@ -244,6 +255,13 @@ const VacationSidebarService_ = (function () {
       vacation: _serializeVacation_(Object.assign({ active: true }, option)),
       write: write,
       rebuild: rebuild,
+      warnings: (validation.warnings || []).map(function (warning) {
+        return {
+          rule: warning.rule,
+          severity: warning.severity,
+          message: warning.message,
+        };
+      }),
     };
   }
 
@@ -274,9 +292,12 @@ const VacationSidebarService_ = (function () {
 
   function findOptions(formData) {
     _assertWorkingAccess_("findVacationSidebarOptions");
-    _assertActivePerson_(formData && formData.fml);
+    const person = _assertActivePerson_(formData && formData.fml);
     return VacationPlannerService_.suggestVacationOptions(
-      formData,
+      Object.assign({}, formData, {
+        fml: person.fml,
+        personKey: person.callsign || person.fml,
+      }),
       _vacations_(),
     ).map(_serializeOption_);
   }
@@ -289,7 +310,10 @@ const VacationSidebarService_ = (function () {
       const vacationNumber = _resolveAddSlot_(person.fml, type);
       return _validateAndWrite_(
         _optionFromForm_(
-          Object.assign({}, formData, { fml: person.fml }),
+          Object.assign({}, formData, {
+            fml: person.fml,
+            personKey: person.callsign || person.fml,
+          }),
           vacationNumber,
           type,
         ),
@@ -304,7 +328,10 @@ const VacationSidebarService_ = (function () {
       const vacationNumber = Number(optionData && optionData.vacationNumber);
       return _validateAndWrite_(
         _optionFromForm_(
-          Object.assign({}, optionData, { fml: person.fml }),
+          Object.assign({}, optionData, {
+            fml: person.fml,
+            personKey: person.callsign || person.fml,
+          }),
           vacationNumber,
           vacationNumber === 2 ? "В2" : "В1",
         ),
@@ -344,7 +371,10 @@ const VacationSidebarService_ = (function () {
       if (!existing) throw new Error("Відпустку для перенесення не знайдено");
       return _validateAndWrite_(
         _optionFromForm_(
-          Object.assign({}, formData, { fml: person.fml }),
+          Object.assign({}, formData, {
+            fml: person.fml,
+            personKey: person.callsign || person.fml,
+          }),
           vacationNumber,
           _typeCode_(existing),
         ),
@@ -361,6 +391,7 @@ const VacationSidebarService_ = (function () {
         Number(formData.vacationNumber),
         false,
         formData.type,
+        formData,
       );
       return {
         write: write,
@@ -371,9 +402,15 @@ const VacationSidebarService_ = (function () {
 
   function validateDate(formData) {
     _assertWorkingAccess_("validateVacationDateFromSidebar");
-    _assertActivePerson_(formData && formData.fml);
+    const person = _assertActivePerson_(formData && formData.fml);
     const vacationNumber = Number(formData && formData.vacationNumber);
-    const option = _optionFromForm_(formData, vacationNumber);
+    const option = _optionFromForm_(
+      Object.assign({}, formData, {
+        fml: person.fml,
+        personKey: person.callsign || person.fml,
+      }),
+      vacationNumber,
+    );
     const validation = VacationPlannerService_.validateVacationOption(
       option,
       _vacations_(),

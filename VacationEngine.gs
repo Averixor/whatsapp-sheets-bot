@@ -478,34 +478,27 @@ function runVacationEngine_(targetDate, options) {
   };
 
   try {
-    const ss = getWasbSpreadsheet_();
-
-    if (!ss) {
-      result.debug.error = "Активну таблицю не знайдено";
+    if (
+      typeof VacationsRepository_ !== "object" ||
+      !VacationsRepository_ ||
+      typeof VacationsRepository_.listAll !== "function"
+    ) {
+      result.debug.error = "VacationsRepository_ недоступний";
       return result;
     }
 
-    const sh = ss.getSheetByName(VACATION_ENGINE_CONFIG.VACATIONS_SHEET);
-
-    if (!sh) {
-      result.debug.error = `Лист "${VACATION_ENGINE_CONFIG.VACATIONS_SHEET}" не знайдено`;
-      return result;
-    }
-
-    const lastRow = sh.getLastRow();
-
-    if (lastRow < 2) {
-      return result;
-    }
-
-    const vacationItems =
-      typeof VacationsRepository_ === "object" &&
-      VacationsRepository_ &&
-      typeof VacationsRepository_.listAll === "function"
-        ? VacationsRepository_.listAll()
-        : [];
+    const vacationItems = VacationsRepository_.listAll();
+    result.debug.sourceMode =
+      typeof VacationsRepository_.getSourceMode === "function"
+        ? VacationsRepository_.getSourceMode()
+        : "legacy";
+    result.debug.sourceSheet =
+      typeof VacationsRepository_.getSourceSheetName === "function"
+        ? VacationsRepository_.getSourceSheetName()
+        : VACATION_ENGINE_CONFIG.VACATIONS_SHEET;
 
     result.debug.totalRows = vacationItems.length;
+    if (!vacationItems.length) return result;
 
     const parsedTarget =
       targetDate instanceof Date
@@ -540,7 +533,7 @@ function runVacationEngine_(targetDate, options) {
       const isActive = _veBool_(item.active, false);
       const notifyPerson = _veBool_(item.notify, true);
 
-      if (!fml || !isActive) continue;
+      if (!fml || !isActive || item.reminderEligible === false) continue;
 
       result.debug.activeRows++;
 
@@ -561,6 +554,7 @@ function runVacationEngine_(targetDate, options) {
 
       const surname = fml.split(" ")[0] || fml;
       const callsign =
+        String(item.personKey || "").trim() ||
         (typeof _getCallsignByFml_ === "function"
           ? _getCallsignByFml_(fml)
           : "") || surname;
@@ -588,9 +582,11 @@ function runVacationEngine_(targetDate, options) {
       };
 
       const soldierPhone =
-        notifyPerson && typeof _getPhoneByFml_ === "function"
-          ? _getPhoneByFml_(fml)
-          : "";
+        notifyPerson && typeof findPhone_ === "function"
+          ? findPhone_({ callsign: callsign, fml: fml }) || ""
+          : notifyPerson && typeof _getPhoneByFml_ === "function"
+            ? _getPhoneByFml_(fml)
+            : "";
 
       if (daysUntil === 3) {
         if (commanderPhone) {

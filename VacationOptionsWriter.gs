@@ -3,19 +3,6 @@
  */
 
 const VacationOptionsWriter_ = (function () {
-  const OPTIONS_HEADERS = [
-    "Rank",
-    "FML",
-    "Vacation №",
-    "Start date",
-    "End date",
-    "Days",
-    "Score",
-    "Status",
-    "Explanation",
-    "Apply",
-  ];
-
   function _spreadsheet_() {
     if (
       typeof DataAccess_ === "object" &&
@@ -31,6 +18,15 @@ const VacationOptionsWriter_ = (function () {
     if (typeof _normFml_ === "function") return _normFml_(value);
     return String(value || "")
       .replace(/\s+/g, " ")
+      .trim()
+      .toUpperCase();
+  }
+
+  function _callsignKey_(value) {
+    if (typeof _normCallsignKey_ === "function") {
+      return _normCallsignKey_(value);
+    }
+    return String(value || "")
       .trim()
       .toUpperCase();
   }
@@ -79,7 +75,9 @@ const VacationOptionsWriter_ = (function () {
   }
 
   function _vacationMarker_(item) {
-    const text = String((item && item.vacationType) || "")
+    const text = String(
+      (item && (item.vacationType || item.type || item.vacationNo)) || "",
+    )
       .trim()
       .toLowerCase();
     if (text.indexOf("додатк") !== -1 || text === "вд") return "ВД";
@@ -123,6 +121,240 @@ const VacationOptionsWriter_ = (function () {
       }
     });
     return sheet;
+  }
+
+  function _ensureRequestsSheet_() {
+    const sheet = _ensureSheet_(VACATION_PLANNER_CONFIG.SHEETS.REQUESTS);
+    const headers = VACATION_PLANNER_CONFIG.REQUEST_HEADERS;
+    const headerRange = sheet.getRange(1, 1, 1, headers.length);
+    const current = headerRange.getValues()[0];
+    let changed = false;
+    headers.forEach(function (header, index) {
+      const value = String(current[index] || "").trim();
+      if (!value) {
+        current[index] = header;
+        changed = true;
+        return;
+      }
+      if (value !== header) {
+        throw new Error(
+          "VACATION_REQUESTS: очікується колонка «" +
+            header +
+            "» у позиції " +
+            (index + 1),
+        );
+      }
+    });
+    if (changed) headerRange.setValues([current]);
+    headerRange.setFontWeight("bold").setBackground("#D9EAD3");
+    sheet.setFrozenRows(1);
+    return sheet;
+  }
+
+  function _sourceMode_() {
+    if (
+      typeof VacationsRepository_ !== "object" ||
+      !VacationsRepository_ ||
+      typeof VacationsRepository_.getSourceMode !== "function"
+    ) {
+      throw new Error(
+        "VacationsRepository_ недоступний: запис джерела відпусток заборонено",
+      );
+    }
+    return VacationsRepository_.getSourceMode();
+  }
+
+  function _setSourceMode_(sheetName) {
+    if (
+      typeof PropertiesService === "undefined" ||
+      !PropertiesService ||
+      typeof PropertiesService.getScriptProperties !== "function"
+    ) {
+      throw new Error("PropertiesService недоступний");
+    }
+    PropertiesService.getScriptProperties().setProperty(
+      VACATION_PLANNER_CONFIG.SOURCE_MODE_PROPERTY,
+      sheetName,
+    );
+  }
+
+  function _uniqueRequestId_() {
+    try {
+      if (
+        typeof Utilities !== "undefined" &&
+        Utilities &&
+        typeof Utilities.getUuid === "function"
+      ) {
+        return Utilities.getUuid();
+      }
+    } catch (_) {}
+    return (
+      "VAC-" +
+      String(new Date().getTime()) +
+      "-" +
+      String(Math.floor(Math.random() * 1000000))
+    );
+  }
+
+  function _personKeyForFml_(fml) {
+    try {
+      if (
+        typeof PersonnelRepository_ === "object" &&
+        PersonnelRepository_ &&
+        typeof PersonnelRepository_.getByFml === "function"
+      ) {
+        const person = PersonnelRepository_.getByFml(fml, {
+          activeOnly: false,
+        });
+        if (person) {
+          return String(person.callsign || person.fml || fml || "").trim();
+        }
+      }
+    } catch (_) {}
+    return String(fml || "").trim();
+  }
+
+  function _requestStatusIsActive_(value) {
+    const key = String(value || "")
+      .trim()
+      .toUpperCase();
+    return ["PROPOSED", "APPROVED", "APPLIED"].indexOf(key) !== -1;
+  }
+
+  function _requestRowMatchesOption_(row, option, activeOnly) {
+    const requestId = String((option && option.requestId) || "").trim();
+    if (requestId) {
+      return (
+        String((row && row[0]) || "").trim() === requestId &&
+        (!activeOnly || _requestStatusIsActive_((row && row[11]) || ""))
+      );
+    }
+    const expectedType = _vacationMarker_(option);
+    return (
+      _fmlKey_((row && row[2]) || "") === _fmlKey_(option && option.fml) &&
+      Number((row && row[4]) || 0) === Number(option && option.vacationNumber) &&
+      String((row && row[5]) || "")
+        .trim()
+        .toUpperCase() === expectedType &&
+      (!activeOnly || _requestStatusIsActive_((row && row[11]) || ""))
+    );
+  }
+
+  function _requestRowData_(option, existingRow, status) {
+    const current = Array.isArray(existingRow) ? existingRow : [];
+    const startDate = _date_(option && option.startDate);
+    const endDate = _date_(option && option.endDate);
+    const now = new Date();
+    const notify = _hasOwn_(option, "notify")
+      ? option.notify === true
+      : current.length
+        ? _isTrue_(current[12])
+        : true;
+    const travel = _hasOwn_(option, "travel")
+      ? option.travel
+      : current.length
+        ? current[10]
+        : "";
+    return [
+      String(current[0] || (option && option.requestId) || _uniqueRequestId_()),
+      String(
+        current[1] ||
+          (option && option.personKey) ||
+          _personKeyForFml_(option && option.fml),
+      ),
+      String((option && option.fml) || "").trim(),
+      startDate ? startDate.getFullYear() : "",
+      Number(option && option.vacationNumber) || "",
+      _vacationMarker_(option),
+      current[6] || startDate || "",
+      startDate || "",
+      endDate || "",
+      Number(option && option.days) || 0,
+      travel,
+      status || "Approved",
+      notify,
+      current[13] || now,
+      now,
+      current[15] || "",
+    ];
+  }
+
+  function _writeVacationToRequests_(option) {
+    const sheet = _ensureRequestsSheet_();
+    const width = VACATION_PLANNER_CONFIG.REQUEST_HEADERS.length;
+    const rowCount = Math.max(sheet.getLastRow() - 1, 0);
+    const rows = rowCount
+      ? sheet.getRange(2, 1, rowCount, width).getValues()
+      : [];
+    let targetRow = 0;
+    let existingRow = [];
+    const requestId = String((option && option.requestId) || "").trim();
+    if (requestId) {
+      for (let index = 0; index < rows.length; index++) {
+        if (_requestRowMatchesOption_(rows[index], option, true)) {
+          targetRow = index + 2;
+          existingRow = rows[index];
+          break;
+        }
+      }
+    }
+    if (!targetRow && requestId) {
+      throw new Error("Заявку для оновлення не знайдено");
+    }
+    if (!targetRow) targetRow = Math.max(sheet.getLastRow() + 1, 2);
+
+    sheet
+      .getRange(targetRow, 1, 1, width)
+      .setValues([_requestRowData_(option, existingRow, "Approved")]);
+    sheet.getRange(targetRow, 7, 1, 3).setNumberFormat("dd.MM.yyyy");
+    return {
+      sheetName: sheet.getName(),
+      rowNumber: targetRow,
+      block: "request",
+      startColumn: 1,
+      requestedBlock: "request",
+      formulaDriven: false,
+      sourceMode: "requests",
+    };
+  }
+
+  function _setRequestVacationActive_(
+    fml,
+    vacationNumber,
+    active,
+    vacationType,
+    locator,
+  ) {
+    const sheet = _ensureRequestsSheet_();
+    const width = VACATION_PLANNER_CONFIG.REQUEST_HEADERS.length;
+    const rowCount = Math.max(sheet.getLastRow() - 1, 0);
+    if (!rowCount) throw new Error("Відпустку для скасування не знайдено");
+    const rows = sheet.getRange(2, 1, rowCount, width).getValues();
+    const option = {
+      fml: fml,
+      vacationNumber: vacationNumber,
+      vacationType: vacationType,
+      requestId: locator && locator.requestId,
+    };
+    for (let index = 0; index < rows.length; index++) {
+      if (!_requestRowMatchesOption_(rows[index], option, true)) continue;
+      const rowNumber = index + 2;
+      sheet
+        .getRange(rowNumber, 12)
+        .setValue(active === true ? "Approved" : "Cancelled");
+      sheet.getRange(rowNumber, 15).setValue(new Date());
+      return {
+        sheetName: sheet.getName(),
+        rowNumber: rowNumber,
+        block: "request",
+        startColumn: 1,
+        requestedBlock: "request",
+        active: active === true,
+        formulaDriven: false,
+        sourceMode: "requests",
+      };
+    }
+    throw new Error("Відпустку для скасування не знайдено");
   }
 
   function _isFormulaDrivenBlock_(sheet, block) {
@@ -201,137 +433,7 @@ const VacationOptionsWriter_ = (function () {
     return !!object && Object.prototype.hasOwnProperty.call(object, key);
   }
 
-  function writeVacationOptions(options) {
-    const list = Array.isArray(options) ? options : [];
-    const sheet = _ensureSheet_(VACATION_PLANNER_CONFIG.SHEETS.OPTIONS);
-    return preserveUserConditionalFormatRules_(
-      sheet,
-      function () {
-        sheet.clear();
-
-        const rows = [OPTIONS_HEADERS.slice()];
-        list.forEach(function (option) {
-          const rejected = option.status === "REJECTED";
-          rows.push([
-            option.rank || 0,
-            option.fml || "",
-            _vacationText_(option.vacationNumber),
-            _date_(option.startDate) || "",
-            _date_(option.endDate) || "",
-            Number(option.days) || 0,
-            Number(option.score) || 0,
-            rejected
-              ? "Відхилено"
-              : Number(option.rank) === 1
-                ? "Кращий"
-                : "Допустимий",
-            option.explanation || "",
-            false,
-          ]);
-        });
-
-        sheet
-          .getRange(1, 1, rows.length, OPTIONS_HEADERS.length)
-          .setValues(rows);
-        _formatOptionsSheet_(sheet, rows.length);
-        return sheet;
-      },
-      { defaultMovePolicy: "RemapWithSheet" },
-    );
-  }
-
-  function _formatOptionsSheet_(sheet, rowCount) {
-    const width = OPTIONS_HEADERS.length;
-    sheet
-      .getRange(1, 1, 1, width)
-      .setFontWeight("bold")
-      .setBackground("#E8EAF6");
-    sheet.setFrozenRows(1);
-    sheet.autoResizeColumns(1, width);
-    sheet.setColumnWidth(9, 420);
-
-    if (rowCount < 2) return;
-    sheet.getRange(2, 4, rowCount - 1, 2).setNumberFormat("dd.MM.yyyy");
-    sheet.getRange(2, width, rowCount - 1, 1).insertCheckboxes();
-
-    const statuses = sheet.getRange(2, 8, rowCount - 1, 1).getValues();
-    statuses.forEach(function (row, index) {
-      const color =
-        row[0] === "Кращий"
-          ? "#C8E6C9"
-          : row[0] === "Допустимий"
-            ? "#FFF9C4"
-            : "#FFCDD2";
-      sheet.getRange(index + 2, 1, 1, width).setBackground(color);
-    });
-  }
-
-  function readSelectedOption() {
-    const sheet = _spreadsheet_().getSheetByName(
-      VACATION_PLANNER_CONFIG.SHEETS.OPTIONS,
-    );
-    if (!sheet) {
-      throw new Error(
-        "Аркуш VACATION_OPTIONS не знайдено. Спочатку виконайте підбір.",
-      );
-    }
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2)
-      throw new Error("На аркуші VACATION_OPTIONS немає варіантів");
-
-    const values = sheet
-      .getRange(2, 1, lastRow - 1, OPTIONS_HEADERS.length)
-      .getValues();
-    const selected = values.filter(function (row) {
-      return row[9] === true;
-    });
-    if (!selected.length) {
-      throw new Error("Не вибрано жодного варіанту в колонці Apply");
-    }
-    if (selected.length > 1) {
-      throw new Error("Виберіть рівно один варіант у колонці Apply");
-    }
-
-    const row = selected[0];
-    if (String(row[7] || "").trim() === "Відхилено") {
-      throw new Error("Відхилений варіант не можна застосувати");
-    }
-    const option = {
-      rank: Number(row[0]) || 0,
-      fml: String(row[1] || "").trim(),
-      vacationNumber: _vacationNumber_(row[2]),
-      startDate: _date_(row[3]),
-      endDate: _date_(row[4]),
-      days: Number(row[5]) || 0,
-      score: Number(row[6]) || 0,
-      status: "VALID",
-    };
-    if (
-      !option.fml ||
-      !option.vacationNumber ||
-      !option.startDate ||
-      !option.endDate ||
-      !Number.isInteger(option.days) ||
-      option.days < 1 ||
-      option.days > VACATION_PLANNER_CONFIG.OPTIONS.MAX_DURATION_DAYS
-    ) {
-      throw new Error("Вибраний рядок містить некоректні дані");
-    }
-    const expectedEnd = VacationPlannerService_.calculateEndDate(
-      option.startDate,
-      option.days,
-    );
-    if (
-      VacationPlannerService_.daysBetween(expectedEnd, option.endDate) !== 0
-    ) {
-      throw new Error(
-        "Дата завершення не відповідає тривалості. Виконайте підбір повторно",
-      );
-    }
-    return option;
-  }
-
-  function writeVacationToSource(option) {
+  function _writeVacationToLegacy_(option) {
     const sheet = _ensureSourceSheet_();
     const requestedBlock = _block_(option.vacationNumber);
     const block = _writableBlock_(sheet, requestedBlock);
@@ -429,7 +531,7 @@ const VacationOptionsWriter_ = (function () {
     };
   }
 
-  function setVacationActive(fml, vacationNumber, active, vacationType) {
+  function _setLegacyVacationActive_(fml, vacationNumber, active, vacationType) {
     const sheet = _ensureSourceSheet_();
     const requestedBlock = _block_(vacationNumber);
     const block = _writableBlock_(sheet, requestedBlock);
@@ -480,6 +582,151 @@ const VacationOptionsWriter_ = (function () {
       };
     }
     throw new Error("Відпустку для скасування не знайдено");
+  }
+
+  function writeVacationToSource(option) {
+    return _sourceMode_() === "requests"
+      ? _writeVacationToRequests_(option)
+      : _writeVacationToLegacy_(option);
+  }
+
+  function setVacationActive(
+    fml,
+    vacationNumber,
+    active,
+    vacationType,
+    locator,
+  ) {
+    return _sourceMode_() === "requests"
+      ? _setRequestVacationActive_(
+          fml,
+          vacationNumber,
+          active,
+          vacationType,
+          locator,
+        )
+      : _setLegacyVacationActive_(
+          fml,
+          vacationNumber,
+          active,
+          vacationType,
+        );
+  }
+
+  function migrateLegacyToRequests(options) {
+    const opts = options || {};
+    const dryRun = opts.dryRun !== false;
+    const activate = opts.activate === true;
+    const legacy = VacationsRepository_.listLegacy();
+    const invalidActive = legacy.filter(function (vacation) {
+      return (
+        vacation.active === true &&
+        (!vacation.fml ||
+          !vacation.vacationNumber ||
+          !vacation.startDate ||
+          !vacation.endDate)
+      );
+    });
+    if (activate && invalidActive.length) {
+      throw new Error(
+        "Міграцію не активовано: активних рядків з некоректними даними — " +
+          invalidActive.length,
+      );
+    }
+
+    const existingRequests = VacationsRepository_.listRequests();
+    if (!dryRun && existingRequests.length) {
+      throw new Error(
+        "VACATION_REQUESTS вже містить дані. Міграція не перезаписує існуючі записи.",
+      );
+    }
+
+    const now = new Date();
+    const rows = legacy.map(function (vacation) {
+      const startDate = _date_(vacation.startDate || vacation.startDateRaw);
+      const endDate = _date_(vacation.endDate || vacation.endDateRaw);
+      const comment =
+        "Migrated from VACATIONS" +
+        (vacation._meta
+          ? " " +
+            String(vacation._meta.block || "") +
+            " row " +
+            String(vacation._meta.rowNumber || "")
+          : "");
+      return [
+        _uniqueRequestId_(),
+        _personKeyForFml_(vacation.fml),
+        vacation.fml,
+        startDate ? startDate.getFullYear() : "",
+        Number(vacation.vacationNumber) || "",
+        _vacationMarker_(vacation),
+        startDate || vacation.startDateRaw || "",
+        startDate || vacation.startDateRaw || "",
+        endDate || vacation.endDateRaw || "",
+        Number(vacation.days) ||
+          (startDate && endDate
+            ? VacationPlannerService_.daysBetween(startDate, endDate) + 1
+            : 0),
+        vacation.travel || "",
+        vacation.active === true ? "Applied" : "Cancelled",
+        vacation.notify !== false,
+        now,
+        now,
+        comment.trim(),
+      ];
+    });
+
+    if (!dryRun) {
+      const sheet = _ensureRequestsSheet_();
+      if (rows.length) {
+        sheet
+          .getRange(
+            2,
+            1,
+            rows.length,
+            VACATION_PLANNER_CONFIG.REQUEST_HEADERS.length,
+          )
+          .setValues(rows);
+        sheet.getRange(2, 7, rows.length, 3).setNumberFormat("dd.MM.yyyy");
+      }
+      if (activate) {
+        _setSourceMode_(VACATION_PLANNER_CONFIG.SHEETS.REQUESTS);
+      }
+    }
+
+    return {
+      dryRun: dryRun,
+      activate: activate && !dryRun,
+      legacyRows: legacy.length,
+      requestRows: rows.length,
+      invalidActiveRows: invalidActive.length,
+      sourceModeAfter:
+        activate && !dryRun ? "requests" : VacationsRepository_.getSourceMode(),
+      affectedSheets: dryRun ? [] : [VACATION_PLANNER_CONFIG.SHEETS.REQUESTS],
+    };
+  }
+
+  function switchSourceMode(mode) {
+    const key = String(mode || "")
+      .trim()
+      .toUpperCase();
+    const requestsName = VACATION_PLANNER_CONFIG.SHEETS.REQUESTS;
+    const legacyName = VACATION_PLANNER_CONFIG.SHEETS.SOURCE;
+    const useRequests = key === "REQUESTS" || key === requestsName;
+    const targetName = useRequests ? requestsName : legacyName;
+    const sheet = _spreadsheet_().getSheetByName(targetName);
+    if (!sheet) throw new Error("Аркуш " + targetName + " не знайдено");
+    if (
+      useRequests &&
+      !VacationsRepository_.listRequests({ required: true }).length
+    ) {
+      throw new Error("VACATION_REQUESTS не містить записів");
+    }
+    _setSourceMode_(targetName);
+    return {
+      sourceMode: useRequests ? "requests" : "legacy",
+      sourceSheet: targetName,
+    };
   }
 
   function _dateOrdinal_(value) {
@@ -687,6 +934,11 @@ const VacationOptionsWriter_ = (function () {
     MAX_CONCURRENT: "Забагато людей одночасно у відпустці",
     INVALID_DATE: "Некоректна дата",
     INVALID_DURATION: "Некоректна тривалість",
+    PERSONNEL_VACATION_WITHOUT_PLAN: "Статус PERSONNEL не підтверджений планом",
+    MONTHLY_VACATION_WITHOUT_PLAN: "Код у місячному графіку не підтверджений планом",
+    PLAN_WITHOUT_MONTHLY_VACATION: "План не відображений у місячному графіку",
+    HIGH_LOAD_PERIOD: "Період на межі допустимого навантаження",
+    MONTH_BALANCE: "Перекос стартів відпусток у місяці",
   };
 
   const VACATION_RULE_SUMMARY_PHRASE = {
@@ -700,6 +952,11 @@ const VacationOptionsWriter_ = (function () {
     MAX_CONCURRENT: "одночасною кількістю людей у відпустці",
     INVALID_DATE: "некоректними датами",
     INVALID_DURATION: "некоректною тривалістю",
+    PERSONNEL_VACATION_WITHOUT_PLAN: "неузгодженим статусом PERSONNEL",
+    MONTHLY_VACATION_WITHOUT_PLAN: "кодом «Відпус» без плану",
+    PLAN_WITHOUT_MONTHLY_VACATION: "планом без коду «Відпус»",
+    HIGH_LOAD_PERIOD: "граничним навантаженням періоду",
+    MONTH_BALANCE: "перекосом стартів у місяці",
   };
 
   function _humanRuleLabel_(code) {
@@ -740,19 +997,19 @@ const VacationOptionsWriter_ = (function () {
     return "Усі пов'язані з: " + String(uniqueLabels[0]).toLowerCase() + ".";
   }
 
-  function _formatVacationReportSummary_(scheduleRows, errors) {
-    const byLabel = _groupProblemsByLabel_(errors);
+  function _formatVacationReportSummary_(scheduleRows, problems) {
+    const byLabel = _groupProblemsByLabel_(problems);
     const labels = Object.keys(byLabel).sort();
     const lines = [
       "🏖️ Графік відпусток",
       "",
       "Активних відпусток: " + scheduleRows,
     ];
-    if (!errors.length) {
+    if (!problems.length) {
       lines.push("", "Графік відповідає обмеженням підрозділу.");
       return lines.join("\n");
     }
-    lines.push("", "⚠️ Проблемні питання: " + errors.length);
+    lines.push("", "⚠️ Проблемні питання: " + problems.length);
     labels.forEach(function (label) {
       lines.push("• " + label + " — " + byLabel[label]);
     });
@@ -764,10 +1021,16 @@ const VacationOptionsWriter_ = (function () {
   }
 
   function _summarizeAuditProblems_(audit) {
-    const errors = (audit.checks || []).filter(function (item) {
+    const problems = (audit.checks || []).filter(function (item) {
+      return item.severity !== "OK";
+    });
+    const errors = problems.filter(function (item) {
       return item.severity === "ERROR";
     });
-    const byLabel = _groupProblemsByLabel_(errors);
+    const warnings = problems.filter(function (item) {
+      return item.severity === "WARNING";
+    });
+    const byLabel = _groupProblemsByLabel_(problems);
     const items = Object.keys(byLabel)
       .sort()
       .map(function (label) {
@@ -775,10 +1038,12 @@ const VacationOptionsWriter_ = (function () {
       });
     return {
       errorCount: errors.length,
+      warningCount: warnings.length,
+      problemCount: problems.length,
       scheduleRows: (audit.schedule || []).length,
       byLabel: byLabel,
       items: items,
-      summaryLine: _buildProblemSummaryLine_(errors),
+      summaryLine: _buildProblemSummaryLine_(problems),
     };
   }
 
@@ -912,9 +1177,107 @@ const VacationOptionsWriter_ = (function () {
     );
   }
 
+  function _collectPersonnelRows_() {
+    try {
+      if (
+        typeof PersonnelRepository_ === "object" &&
+        PersonnelRepository_ &&
+        typeof PersonnelRepository_.getRows === "function"
+      ) {
+        return PersonnelRepository_.getRows();
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  function _collectMonthlyVacationFacts_() {
+    const ss = _spreadsheet_();
+    if (!ss || typeof ss.getSheets !== "function") return [];
+    if (typeof detectMonthlyLayoutFromSheet_ !== "function") return [];
+
+    let personnelByCallsign = {};
+    try {
+      if (typeof getPersonnelMapByCallsignAll_ === "function") {
+        personnelByCallsign = getPersonnelMapByCallsignAll_() || {};
+      }
+    } catch (_) {}
+
+    const facts = [];
+    ss.getSheets().forEach(function (sheet) {
+      let layout = null;
+      try {
+        layout = detectMonthlyLayoutFromSheet_(sheet);
+      } catch (_) {}
+      if (!layout || !layout.matrix || !layout.fields) return;
+
+      const matrix = layout.matrix;
+      const rowCount = matrix.endRow - matrix.startRow + 1;
+      const colCount = matrix.endCol - matrix.startCol + 1;
+      if (rowCount < 1 || colCount < 1) return;
+
+      const codes = sheet
+        .getRange(matrix.startRow, matrix.startCol, rowCount, colCount)
+        .getDisplayValues();
+      const callsigns = sheet
+        .getRange(matrix.startRow, layout.fields.callsign, rowCount, 1)
+        .getDisplayValues();
+      const dateRow =
+        typeof CONFIG === "object" && CONFIG && CONFIG.DATE_ROW
+          ? Number(CONFIG.DATE_ROW) || 1
+          : 1;
+      const dateRange = sheet.getRange(dateRow, matrix.startCol, 1, colCount);
+      const dateValues = dateRange.getValues()[0];
+      const dateDisplays = dateRange.getDisplayValues()[0];
+
+      let monthlyFmls = [];
+      const fmlCol = Number(layout.fields.fml) || 0;
+      if (fmlCol > 0) {
+        monthlyFmls = sheet
+          .getRange(matrix.startRow, fmlCol, rowCount, 1)
+          .getDisplayValues();
+      }
+
+      for (let colIndex = 0; colIndex < colCount; colIndex++) {
+        const date =
+          _date_(dateValues[colIndex]) || _date_(dateDisplays[colIndex]);
+        if (!date) continue;
+        for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+          const callsign = String((callsigns[rowIndex] || [])[0] || "").trim();
+          if (!callsign) continue;
+          const personnel = personnelByCallsign[_callsignKey_(callsign)] || null;
+          const monthlyFml = String(
+            (monthlyFmls[rowIndex] || [])[0] || "",
+          ).trim();
+          facts.push({
+            personKey: callsign,
+            fml:
+              (personnel && String(personnel.fml || "").trim()) ||
+              monthlyFml ||
+              callsign,
+            callsign: callsign,
+            date: date,
+            code: String((codes[rowIndex] || [])[colIndex] || "").trim(),
+            sheetName: sheet.getName(),
+            rowNumber: matrix.startRow + rowIndex,
+            columnNumber: matrix.startCol + colIndex,
+          });
+        }
+      }
+    });
+    return facts;
+  }
+
   function _loadAudit_() {
     const allVacations = VacationsRepository_.listAll();
-    return VacationPlannerService_.buildScheduleAudit(allVacations);
+    const audit = VacationPlannerService_.buildScheduleAudit(allVacations);
+    const consistencyChecks = VacationPlannerService_.buildConsistencyAudit(
+      allVacations,
+      _collectPersonnelRows_(),
+      _collectMonthlyVacationFacts_(),
+      new Date(),
+    );
+    audit.checks = audit.checks.concat(consistencyChecks);
+    return audit;
   }
 
   function rebuildVacationSystem() {
@@ -928,6 +1291,8 @@ const VacationOptionsWriter_ = (function () {
       scheduleDays: calendar.dateCount,
       checkRows: audit.checks.length,
       errorCount: problemSummary.errorCount,
+      warningCount: problemSummary.warningCount,
+      problemCount: problemSummary.problemCount,
       affectedSheets: [
         VACATION_PLANNER_CONFIG.SHEETS.SCHEDULE,
         VACATION_PLANNER_CONFIG.SHEETS.CHECK,
@@ -945,6 +1310,8 @@ const VacationOptionsWriter_ = (function () {
       scheduleRows: audit.schedule.length,
       checkRows: audit.checks.length,
       errorCount: problemSummary.errorCount,
+      warningCount: problemSummary.warningCount,
+      problemCount: problemSummary.problemCount,
       affectedSheets: [VACATION_PLANNER_CONFIG.SHEETS.CHECK],
       checks: normalizeProblems(audit.checks, audit.schedule),
       problemSummary: problemSummary,
@@ -984,48 +1351,23 @@ const VacationOptionsWriter_ = (function () {
 
   function generateVacationReport() {
     const audit = _loadAudit_();
-    const errors = audit.checks.filter(function (item) {
-      return item.severity === "ERROR";
-    });
+    const problemSummary = _summarizeAuditProblems_(audit);
     return {
-      summary: _formatVacationReportSummary_(audit.schedule.length, errors),
+      summary: _formatVacationReportSummary_(
+        audit.schedule.length,
+        audit.checks,
+      ),
       scheduleRows: audit.schedule.length,
-      errorCount: errors.length,
-      checks: normalizeProblems(errors, audit.schedule),
-      problemSummary: _summarizeAuditProblems_(audit),
+      errorCount: problemSummary.errorCount,
+      warningCount: problemSummary.warningCount,
+      problemCount: problemSummary.problemCount,
+      checks: normalizeProblems(audit.checks, audit.schedule),
+      problemSummary: problemSummary,
       adminSheet: VACATION_PLANNER_CONFIG.SHEETS.CHECK,
     };
   }
 
-  function applySelectedOption() {
-    const option = readSelectedOption();
-    const validation = VacationPlannerService_.validateVacationOption(
-      option,
-      VacationsRepository_.listAll(),
-    );
-    if (!validation.isValid) {
-      throw new Error(
-        "Варіант більше не доступний: " +
-          validation.violations
-            .map(function (item) {
-              return item.message;
-            })
-            .join("; "),
-      );
-    }
-
-    const write = writeVacationToSource(option);
-    const rebuild = rebuildVacationSystem();
-    return {
-      option: option,
-      write: write,
-      rebuild: rebuild,
-    };
-  }
-
   return {
-    writeVacationOptions: writeVacationOptions,
-    readSelectedOption: readSelectedOption,
     writeVacationToSource: writeVacationToSource,
     setVacationActive: setVacationActive,
     buildScheduleCalendar: buildScheduleCalendar,
@@ -1037,6 +1379,52 @@ const VacationOptionsWriter_ = (function () {
     checkVacationScheduleOnly: checkVacationScheduleOnly,
     highlightVacationProblems: highlightVacationProblems,
     generateVacationReport: generateVacationReport,
-    applySelectedOption: applySelectedOption,
+    migrateLegacyToRequests: migrateLegacyToRequests,
+    switchSourceMode: switchSourceMode,
   };
 })();
+
+function migrateVacationsToRequests(options) {
+  if (typeof _stage7AssertRole_ !== "function") {
+    throw new Error("Перевірка ролі недоступна: міграцію заборонено");
+  }
+  _stage7AssertRole_("sysadmin", "migrate vacations to VACATION_REQUESTS");
+  return _withVacationMigrationLock_(function () {
+    return VacationOptionsWriter_.migrateLegacyToRequests(options || {});
+  });
+}
+
+function previewVacationRequestsMigration() {
+  return migrateVacationsToRequests({ dryRun: true, activate: false });
+}
+
+function applyVacationRequestsMigration() {
+  return migrateVacationsToRequests({ dryRun: false, activate: true });
+}
+
+function rollbackVacationRequestsToLegacy() {
+  if (typeof _stage7AssertRole_ !== "function") {
+    throw new Error("Перевірка ролі недоступна: перемикання заборонено");
+  }
+  _stage7AssertRole_("sysadmin", "rollback vacations to VACATIONS");
+  return _withVacationMigrationLock_(function () {
+    return VacationOptionsWriter_.switchSourceMode("legacy");
+  });
+}
+
+function _withVacationMigrationLock_(callback) {
+  if (
+    typeof LockService === "undefined" ||
+    !LockService ||
+    typeof LockService.getDocumentLock !== "function"
+  ) {
+    throw new Error("Document lock недоступний: міграцію заборонено");
+  }
+  const lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
+  try {
+    return callback();
+  } finally {
+    lock.releaseLock();
+  }
+}

@@ -83,8 +83,9 @@ const startGapCheck = service.validateVacationOption(
   },
   [vacation("Інша Людина", "2026-07-11", "2026-07-25")],
 );
-assert.equal(startGapCheck.isValid, false);
-assert.ok(startGapCheck.violations.some((item) => item.rule === "START_GAP"));
+assert.equal(startGapCheck.isValid, true);
+assert.ok(startGapCheck.warnings.some((item) => item.rule === "START_GAP"));
+assert.equal(startGapCheck.blockingViolations.length, 0);
 
 const concurrent = ["A", "B", "C", "D"].map((fml) =>
   vacation(fml, "2026-07-01", "2026-07-31"),
@@ -120,6 +121,19 @@ assert.ok(
   personYearCheck.violations.some((item) => item.rule === "MAX_PERSON_YEAR"),
 );
 
+const invalidDateCheck = service.validateVacationOption(
+  {
+    fml: "Некоректна Дата",
+    vacationNumber: 1,
+    startDate: "not-a-date",
+    endDate: date("2026-11-15"),
+  },
+  [],
+);
+assert.equal(invalidDateCheck.isValid, false);
+assert.equal(invalidDateCheck.blockingViolations[0].rule, "INVALID_DATE");
+assert.deepEqual(Array.from(invalidDateCheck.warnings), []);
+
 const personGapCheck = service.validateVacationOption(
   {
     fml: "Своя Людина",
@@ -129,8 +143,69 @@ const personGapCheck = service.validateVacationOption(
   },
   [vacation("Своя Людина", "2026-01-01", "2026-01-15", 1)],
 );
-assert.equal(personGapCheck.isValid, false);
-assert.ok(personGapCheck.violations.some((item) => item.rule === "PERSON_GAP"));
+assert.equal(personGapCheck.isValid, true);
+assert.ok(personGapCheck.warnings.some((item) => item.rule === "PERSON_GAP"));
+assert.equal(personGapCheck.blockingViolations.length, 0);
+
+const requestSourceVacation = {
+  ...vacation("Заявка За ID", "2026-05-01", "2026-05-15", 1),
+  requestId: "request-existing",
+  _meta: { schema: "vacation_requests" },
+};
+const newSameSlotRequest = service.validateVacationOption(
+  {
+    fml: "Заявка За ID",
+    vacationNumber: 1,
+    startDate: date("2026-05-10"),
+    endDate: date("2026-05-20"),
+  },
+  [requestSourceVacation],
+);
+assert.equal(newSameSlotRequest.isValid, false);
+assert.ok(
+  newSameSlotRequest.blockingViolations.some(
+    (item) => item.rule === "PERSON_OVERLAP",
+  ),
+  "new request rows must not replace an existing request merely by slot",
+);
+const existingRequestMove = service.validateVacationOption(
+  {
+    requestId: "request-existing",
+    fml: "Заявка За ID",
+    vacationNumber: 1,
+    startDate: date("2026-06-01"),
+    endDate: date("2026-06-15"),
+  },
+  [requestSourceVacation],
+);
+assert.equal(
+  existingRequestMove.isValid,
+  true,
+  "requestId updates must exclude only the request being moved",
+);
+const renamedPersonOverlap = service.validateVacationOption(
+  {
+    personKey: "ALPHA",
+    fml: "Нове ПІБ",
+    vacationNumber: 2,
+    startDate: date("2026-05-10"),
+    endDate: date("2026-05-20"),
+  },
+  [
+    {
+      ...vacation("Старе ПІБ", "2026-05-01", "2026-05-15", 1),
+      personKey: "ALPHA",
+      requestId: "request-renamed",
+      _meta: { schema: "vacation_requests" },
+    },
+  ],
+);
+assert.ok(
+  renamedPersonOverlap.blockingViolations.some(
+    (item) => item.rule === "PERSON_OVERLAP",
+  ),
+  "PersonKey must keep overlap checks stable after an FML rename",
+);
 
 const requestBase = {
   fml: "Нова Людина",
@@ -159,6 +234,9 @@ const quietValidation = service.validateVacationOption(quietOption, unitLoad);
 const busyValidation = service.validateVacationOption(busyOption, unitLoad);
 assert.equal(quietValidation.isValid, true);
 assert.equal(busyValidation.isValid, true);
+assert.ok(
+  busyValidation.warnings.some((item) => item.rule === "HIGH_LOAD_PERIOD"),
+);
 const quietScore = service.scoreVacationOption(
   quietOption,
   unitLoad,
@@ -174,6 +252,35 @@ const busyScore = service.scoreVacationOption(
 assert.ok(
   quietScore < busyScore,
   "scheduler must prefer lower unit load over higher peak periods",
+);
+const compromiseOptions = service.suggestVacationOptions(
+  {
+    fml: "Нова Людина",
+    vacationNumber: 1,
+    desiredStart: "2026-07-15",
+    durationDays: 15,
+    searchWindow: 0,
+  },
+  unitLoad,
+);
+assert.equal(compromiseOptions[0].status, "COMPROMISE");
+assert.match(compromiseOptions[0].explanation, /Попередження:/);
+
+const monthBalanceCheck = service.validateVacationOption(
+  {
+    fml: "Третій Старт",
+    vacationNumber: 1,
+    startDate: date("2026-06-20"),
+    endDate: date("2026-06-30"),
+  },
+  [
+    vacation("Перший Старт", "2026-06-01", "2026-06-05"),
+    vacation("Другий Старт", "2026-06-10", "2026-06-14"),
+  ],
+);
+assert.equal(monthBalanceCheck.isValid, true);
+assert.ok(
+  monthBalanceCheck.warnings.some((item) => item.rule === "MONTH_BALANCE"),
 );
 
 const invalidDurationCheck = service.validateVacationOption(
@@ -216,6 +323,13 @@ assert.ok(
   !audit.checks.some((item) => item.rule === "MAX_CONCURRENT"),
   "four concurrent people are allowed",
 );
+assert.ok(
+  audit.checks.some(
+    (item) =>
+      item.rule === "HIGH_LOAD_PERIOD" && item.severity === "WARNING",
+  ),
+  "four concurrent people must produce a non-blocking load warning",
+);
 const overloadedAudit = service.buildScheduleAudit([
   ...concurrent,
   vacation("E", "2026-07-01", "2026-07-31"),
@@ -223,6 +337,16 @@ const overloadedAudit = service.buildScheduleAudit([
 assert.ok(
   overloadedAudit.checks.some((item) => item.rule === "MAX_CONCURRENT"),
   "rebuild audit must report more than four concurrent people",
+);
+const overlapAudit = service.buildScheduleAudit([
+  vacation("Перетин Людини", "2026-01-01", "2026-01-15", 1),
+  vacation("Перетин Людини", "2026-01-10", "2026-01-20", 2),
+]);
+assert.ok(
+  overlapAudit.checks.some(
+    (item) => item.rule === "PERSON_OVERLAP" && item.severity === "ERROR",
+  ),
+  "same-person overlap must remain blocking",
 );
 const declaredDaysAudit = service.buildScheduleAudit([
   {
@@ -233,6 +357,169 @@ const declaredDaysAudit = service.buildScheduleAudit([
 assert.ok(
   declaredDaysAudit.checks.some((item) => item.rule === "INVALID_DATE"),
   "audit must report when end date does not equal start date + days - 1",
+);
+
+const consistencyAudit = service.buildConsistencyAudit(
+  [
+    vacation("План Без Факту", "2026-06-10", "2026-06-12"),
+    vacation("Узгоджена Людина", "2026-06-10", "2026-06-12"),
+  ],
+  [
+    {
+      fml: "Статус Без Плану",
+      status: "Відпустка",
+      statusCanonical: "Vacation",
+    },
+    {
+      fml: "Узгоджена Людина",
+      status: "Відпустка",
+      statusCanonical: "Vacation",
+    },
+  ],
+  [
+    { fml: "Факт Без Плану", date: date("2026-06-10"), code: "Відпус" },
+    { fml: "Факт Без Плану", date: date("2026-06-11"), code: "Відпус" },
+    { fml: "План Без Факту", date: date("2026-06-10"), code: "БР" },
+    { fml: "План Без Факту", date: date("2026-06-11"), code: "" },
+    { fml: "Узгоджена Людина", date: date("2026-06-10"), code: "Відпус" },
+    { fml: "Узгоджена Людина", date: date("2026-06-11"), code: "Відпус" },
+    { fml: "Узгоджена Людина", date: date("2026-06-12"), code: "Відпус" },
+  ],
+  date("2026-06-11"),
+);
+assert.deepEqual(
+  Array.from(consistencyAudit, (item) => item.rule).sort(),
+  [
+    "MONTHLY_VACATION_WITHOUT_PLAN",
+    "PERSONNEL_VACATION_WITHOUT_PLAN",
+    "PLAN_WITHOUT_MONTHLY_VACATION",
+  ],
+);
+assert.equal(
+  consistencyAudit.find(
+    (item) => item.rule === "MONTHLY_VACATION_WITHOUT_PLAN",
+  ).date,
+  "2026-06-10 / 2026-06-11",
+);
+assert.equal(
+  consistencyAudit.find(
+    (item) => item.rule === "PLAN_WITHOUT_MONTHLY_VACATION",
+  ).date,
+  "2026-06-10 / 2026-06-11",
+);
+assert.ok(
+  !consistencyAudit.some((item) => item.fml === "Узгоджена Людина"),
+  "matching status, plan, and monthly facts must not produce a problem",
+);
+assert.ok(
+  !consistencyAudit.some(
+    (item) =>
+      item.rule === "PLAN_WITHOUT_MONTHLY_VACATION" &&
+      item.date.includes("2026-06-12"),
+  ),
+  "dates absent from monthly sheets must not produce false positives",
+);
+
+const requestStatusAudit = service.buildConsistencyAudit(
+  [
+    {
+      ...vacation("Лише Пропозиція", "2026-06-10", "2026-06-12"),
+      operationalActive: false,
+      factExpected: false,
+    },
+    {
+      ...vacation("Лише Затверджена", "2026-06-10", "2026-06-12"),
+      operationalActive: true,
+      factExpected: false,
+    },
+    {
+      ...vacation("Застосована Без Факту", "2026-06-10", "2026-06-12"),
+      operationalActive: true,
+      factExpected: true,
+    },
+  ],
+  [
+    {
+      fml: "Лише Пропозиція",
+      status: "Відпустка",
+      statusCanonical: "Vacation",
+    },
+    {
+      fml: "Лише Затверджена",
+      status: "Відпустка",
+      statusCanonical: "Vacation",
+    },
+  ],
+  [
+    { fml: "Лише Пропозиція", date: date("2026-06-11"), code: "Відпус" },
+    { fml: "Лише Затверджена", date: date("2026-06-11"), code: "" },
+    { fml: "Застосована Без Факту", date: date("2026-06-11"), code: "" },
+  ],
+  date("2026-06-11"),
+);
+assert.ok(
+  requestStatusAudit.some(
+    (item) =>
+      item.rule === "PERSONNEL_VACATION_WITHOUT_PLAN" &&
+      item.fml === "Лише Пропозиція",
+  ),
+  "Proposed requests must not satisfy an operational PERSONNEL status",
+);
+assert.ok(
+  requestStatusAudit.some(
+    (item) =>
+      item.rule === "MONTHLY_VACATION_WITHOUT_PLAN" &&
+      item.fml === "Лише Пропозиція",
+  ),
+  "Proposed requests must not satisfy a monthly vacation fact",
+);
+assert.ok(
+  requestStatusAudit.some(
+    (item) =>
+      item.rule === "PLAN_WITHOUT_MONTHLY_VACATION" &&
+      item.fml === "Застосована Без Факту",
+  ),
+  "Applied requests must have matching represented monthly facts",
+);
+assert.ok(
+  !requestStatusAudit.some(
+    (item) =>
+      item.rule === "PLAN_WITHOUT_MONTHLY_VACATION" &&
+      item.fml === "Лише Затверджена",
+  ),
+  "Approved requests must not require monthly facts before application",
+);
+const renamedPersonConsistency = service.buildConsistencyAudit(
+  [
+    {
+      ...vacation("Старе ПІБ", "2026-06-11", "2026-06-11"),
+      personKey: "ALPHA",
+      operationalActive: true,
+      factExpected: true,
+    },
+  ],
+  [
+    {
+      callsign: "ALPHA",
+      fml: "Нове ПІБ",
+      status: "Відпустка",
+      statusCanonical: "Vacation",
+    },
+  ],
+  [
+    {
+      callsign: "ALPHA",
+      fml: "Нове ПІБ",
+      date: date("2026-06-11"),
+      code: "Відпус",
+    },
+  ],
+  date("2026-06-11"),
+);
+assert.deepEqual(
+  Array.from(renamedPersonConsistency),
+  [],
+  "PersonKey/callsign aliases must reconcile plan and fact after an FML rename",
 );
 
 class FakeRange {
@@ -367,6 +654,10 @@ class FakeSheet {
     return 0;
   }
 
+  getLastColumn() {
+    return this.maxColumns;
+  }
+
   valueAt(row, col) {
     return (this.rows[row - 1] || [])[col - 1] ?? "";
   }
@@ -467,24 +758,49 @@ sourceRows[2].splice(
   "OK",
 );
 let sourceSheet = new FakeSheet("VACATIONS", sourceRows);
-let optionsSheet = null;
+let requestSheet = null;
 let generatedSheets = {};
 const spreadsheet = {
   getSheetByName(name) {
     if (name === "VACATIONS") return sourceSheet;
-    if (name === "VACATION_OPTIONS") return optionsSheet;
+    if (name === "VACATION_REQUESTS") return requestSheet;
     return generatedSheets[name] || null;
   },
   insertSheet(name) {
     if (name === "VACATIONS") return sourceSheet;
+    if (name === "VACATION_REQUESTS") {
+      requestSheet = new FakeSheet(name, [[]]);
+      return requestSheet;
+    }
     generatedSheets[name] = new FakeSheet(name, [[]]);
     return generatedSheets[name];
   },
 };
 
+const scriptProperties = {};
+let requestIdSequence = 0;
 const ioContext = vm.createContext({
   console,
   Date,
+  Math,
+  PropertiesService: {
+    getScriptProperties() {
+      return {
+        getProperty(key) {
+          return scriptProperties[key] || "";
+        },
+        setProperty(key, value) {
+          scriptProperties[key] = String(value);
+        },
+      };
+    },
+  },
+  Utilities: {
+    getUuid() {
+      requestIdSequence += 1;
+      return `request-${requestIdSequence}`;
+    },
+  },
   DataAccess_: {
     getSheet() {
       return sourceSheet;
@@ -526,9 +842,185 @@ assert.equal(
   Array.from(merged, (item) => item._meta.startColumn).join(","),
   "1,11",
 );
+const workingPropertiesService = ioContext.PropertiesService;
+ioContext.PropertiesService = {
+  getScriptProperties() {
+    throw new Error("property read denied");
+  },
+};
+assert.throws(
+  () => repository.getSourceMode(),
+  /Не вдалося визначити джерело відпусток/,
+  "source selection must fail closed when Script Properties cannot be read",
+);
+ioContext.PropertiesService = workingPropertiesService;
 
 load(ioContext, "VacationOptionsWriter.gs");
 const writer = vm.runInContext("VacationOptionsWriter_", ioContext);
+assert.equal(repository.getSourceMode(), "legacy");
+scriptProperties.WASB_VACATION_SOURCE = "REQUESTS";
+assert.throws(
+  () => repository.getSourceMode(),
+  /Невідоме значення WASB_VACATION_SOURCE/,
+  "unknown source modes must fail closed instead of selecting legacy",
+);
+delete scriptProperties.WASB_VACATION_SOURCE;
+const migrationPreview = writer.migrateLegacyToRequests({
+  activate: true,
+});
+assert.equal(migrationPreview.dryRun, true);
+assert.equal(migrationPreview.activate, false);
+assert.equal(migrationPreview.requestRows, 2);
+assert.equal(requestSheet, null, "dry-run must not create VACATION_REQUESTS");
+assert.equal(repository.getSourceMode(), "legacy");
+
+const migrationApplied = writer.migrateLegacyToRequests({
+  dryRun: false,
+  activate: true,
+});
+assert.equal(migrationApplied.sourceModeAfter, "requests");
+assert.equal(repository.getSourceMode(), "requests");
+assert.ok(requestSheet, "migration must create VACATION_REQUESTS");
+assert.deepEqual(
+  Array.from(requestSheet.rows[0]),
+  Array.from(plannerConfig.REQUEST_HEADERS),
+);
+const migratedRequests = repository.listAll();
+assert.equal(migratedRequests.length, 2);
+assert.equal(migratedRequests[0]._meta.schema, "vacation_requests");
+assert.equal(migratedRequests[0].status, "Applied");
+assert.equal(migratedRequests[0].operationalActive, true);
+assert.equal(migratedRequests[0].factExpected, true);
+assert.equal(migratedRequests[0].reminderEligible, true);
+assert.equal(migratedRequests[0].vacationNo, "перша відпустка");
+assert.equal(migratedRequests[1].vacationType, "В2");
+assert.equal(migratedRequests[1].vacationNo, "друга відпустка");
+requestSheet.rows[1][11] = "Proposed";
+const proposedRequest = repository.listAll()[0];
+assert.equal(proposedRequest.active, true);
+assert.equal(proposedRequest.operationalActive, false);
+assert.equal(proposedRequest.factExpected, false);
+assert.equal(proposedRequest.reminderEligible, false);
+requestSheet.rows[1][11] = "Applied";
+const originalPersonKey = requestSheet.rows[1][1];
+const originalFml = requestSheet.rows[1][2];
+requestSheet.rows[1][1] = "ALPHA";
+requestSheet.rows[1][2] = "Старе ПІБ";
+ioContext.PersonnelRepository_ = {
+  getByFml(value) {
+    return value === "Нове ПІБ"
+      ? { callsign: "ALPHA", fml: "Нове ПІБ" }
+      : null;
+  },
+};
+assert.equal(
+  repository.findByFml("Нове ПІБ")[0].requestId,
+  migratedRequests[0].requestId,
+  "person-card lookup must resolve a renamed FML through PersonKey",
+);
+delete ioContext.PersonnelRepository_;
+requestSheet.rows[1][1] = originalPersonKey;
+requestSheet.rows[1][2] = originalFml;
+
+const requestWrite = writer.writeVacationToSource({
+  fml: "Нова Заявка",
+  vacationNumber: 1,
+  vacationType: "ВД",
+  startDate: date("2026-12-01"),
+  endDate: date("2026-12-05"),
+  days: 5,
+});
+assert.equal(requestWrite.sourceMode, "requests");
+assert.equal(requestWrite.sheetName, "VACATION_REQUESTS");
+let addedRequest = repository
+  .listAll()
+  .find((item) => item.fml === "Нова Заявка");
+assert.equal(addedRequest.vacationType, "ВД");
+assert.equal(addedRequest.status, "Approved");
+assert.equal(addedRequest.active, true);
+assert.equal(addedRequest.operationalActive, true);
+assert.equal(addedRequest.factExpected, false);
+assert.equal(addedRequest.reminderEligible, true);
+const requestRowsBeforeMove = requestSheet.getLastRow();
+writer.writeVacationToSource({
+  requestId: addedRequest.requestId,
+  personKey: addedRequest.personKey,
+  fml: "Перейменована Заявка",
+  vacationNumber: 2,
+  vacationType: "В1",
+  startDate: date("2026-12-10"),
+  endDate: date("2026-12-14"),
+  days: 5,
+});
+assert.equal(
+  requestSheet.getLastRow(),
+  requestRowsBeforeMove,
+  "requestId update must not append a second row",
+);
+addedRequest = repository
+  .listAll()
+  .find((item) => item.requestId === addedRequest.requestId);
+assert.equal(addedRequest.fml, "Перейменована Заявка");
+assert.equal(addedRequest.vacationNumber, 2);
+const requestCancel = writer.setVacationActive("Невірне ФІО", 1, false, "ВД", {
+  requestId: addedRequest.requestId,
+});
+assert.equal(requestCancel.sourceMode, "requests");
+addedRequest = repository
+  .listAll()
+  .find((item) => item.requestId === addedRequest.requestId);
+assert.equal(addedRequest.status, "Cancelled");
+assert.equal(addedRequest.active, false);
+const duplicateRequestRow = requestSheet.rows[1].slice();
+requestSheet.rows.push(duplicateRequestRow);
+assert.throws(
+  () => repository.listAll(),
+  /дубль ID/,
+  "request source must reject duplicate IDs",
+);
+requestSheet.rows.pop();
+const missingIdRow = requestSheet.rows[1].slice();
+missingIdRow[0] = "";
+requestSheet.rows.push(missingIdRow);
+assert.throws(
+  () => repository.listAll(),
+  /не містить обов'язковий ID/,
+  "request source must reject non-empty rows without IDs",
+);
+requestSheet.rows.pop();
+const missingPersonKeyRow = requestSheet.rows[1].slice();
+missingPersonKeyRow[0] = "request-missing-person-key";
+missingPersonKeyRow[1] = "";
+requestSheet.rows.push(missingPersonKeyRow);
+assert.throws(
+  () => repository.listAll(),
+  /повинен містити PersonKey та FML/,
+  "active requests must identify the person explicitly",
+);
+requestSheet.rows.pop();
+assert.throws(
+  () => writer.migrateLegacyToRequests({ dryRun: false }),
+  /вже містить дані/,
+  "migration must not overwrite existing request rows",
+);
+
+const preparedRequestSheet = requestSheet;
+requestSheet = null;
+assert.throws(
+  () => repository.listAll(),
+  /Активне джерело VACATION_REQUESTS не знайдено/,
+  "active request mode must fail explicitly instead of falling back",
+);
+requestSheet = preparedRequestSheet;
+const rollbackSource = writer.switchSourceMode("legacy");
+assert.equal(rollbackSource.sourceSheet, "VACATIONS");
+assert.equal(repository.getSourceMode(), "legacy");
+assert.equal(repository.listAll().length, 2);
+const reactivateSource = writer.switchSourceMode("requests");
+assert.equal(reactivateSource.sourceSheet, "VACATION_REQUESTS");
+assert.equal(repository.getSourceMode(), "requests");
+writer.switchSourceMode("legacy");
+
 const calendar = writer.buildScheduleCalendar([
   {
     fml: "Перша Людина",
@@ -771,72 +1263,6 @@ assert.equal(
   "друга відпустка",
 );
 
-const optionHeader = [
-  "Rank",
-  "FML",
-  "Vacation №",
-  "Start date",
-  "End date",
-  "Days",
-  "Score",
-  "Status",
-  "Explanation",
-  "Apply",
-];
-optionsSheet = new FakeSheet("VACATION_OPTIONS", [
-  optionHeader,
-  [
-    1,
-    "Один",
-    "перша відпустка",
-    date("2026-10-01"),
-    date("2026-10-15"),
-    15,
-    0,
-    "Кращий",
-    "",
-    true,
-  ],
-  [
-    2,
-    "Два",
-    "друга відпустка",
-    date("2026-11-01"),
-    date("2026-11-15"),
-    15,
-    10,
-    "Допустимий",
-    "",
-    true,
-  ],
-]);
-assert.throws(
-  () => writer.readSelectedOption(),
-  /рівно один/,
-  "apply must reject multiple selected rows",
-);
-
-optionsSheet = new FakeSheet("VACATION_OPTIONS", [
-  optionHeader,
-  [
-    1,
-    "Один",
-    "перша відпустка",
-    date("2026-10-01"),
-    date("2026-10-20"),
-    15,
-    0,
-    "Кращий",
-    "",
-    true,
-  ],
-]);
-assert.throws(
-  () => writer.readSelectedOption(),
-  /не відповідає тривалості/,
-  "apply must reject a manually altered end date",
-);
-
 function sourceVacationRow(entries) {
   const row = Array(19).fill("");
   entries.forEach((entry) => {
@@ -917,7 +1343,6 @@ sourceSheet = new FakeSheet("VACATIONS", [
     },
   ]),
 ]);
-optionsSheet = null;
 generatedSheets = {};
 const sourceBeforeRebuild = sourceSheet.rows.map((row) => row.slice());
 const multiMonthRebuild = writer.rebuildVacationSystem();
@@ -927,7 +1352,6 @@ assert.deepEqual(Array.from(multiMonthRebuild.affectedSheets), [
   "VACATION_SCHEDULE",
   "VACATION_CHECK",
 ]);
-assert.equal(optionsSheet, null, "rebuild must not use VACATION_OPTIONS");
 assert.deepEqual(
   sourceSheet.rows,
   sourceBeforeRebuild,
@@ -1027,7 +1451,9 @@ sourceSheet = new FakeSheet("VACATIONS", [
 ]);
 generatedSheets = {};
 const gapReport = writer.generateVacationReport();
-assert.ok(gapReport.errorCount > 0, "gap report must include problems");
+assert.equal(gapReport.errorCount, 0, "short gaps must not be blocking");
+assert.ok(gapReport.warningCount > 0, "gap report must include warnings");
+assert.ok(gapReport.problemCount > 0, "gap report must include problems");
 assert.match(gapReport.summary, /⚠️ Проблемні питання: \d+/);
 assert.match(gapReport.summary, /• Замалий інтервал між відпустками —/);
 assert.doesNotMatch(
@@ -1102,6 +1528,11 @@ const problemTypes = [
   "PERSON_GAP",
   "START_GAP",
   "MAX_CONCURRENT",
+  "PERSONNEL_VACATION_WITHOUT_PLAN",
+  "MONTHLY_VACATION_WITHOUT_PLAN",
+  "PLAN_WITHOUT_MONTHLY_VACATION",
+  "HIGH_LOAD_PERIOD",
+  "MONTH_BALANCE",
 ];
 problemTypes.forEach((type) => {
   const suggestions = problemSuggestions({ type });
@@ -1148,7 +1579,7 @@ vacationClientModule.state.vacations = [
     manageable: true,
   },
 ];
-vacationClientModule.state.activeTab = "overview";
+vacationClientModule.state.activeTab = "plan";
 vacationClientModule.render();
 assert.match(vacationClientRendered, /13\.05\.2027 — 27\.05\.2027 \(15 дн\.\)/);
 assert.doesNotMatch(vacationClientRendered, /2027-05-13/);
@@ -1203,6 +1634,10 @@ const writerSource = fs.readFileSync(
   path.join(repoRoot, "VacationOptionsWriter.gs"),
   "utf8",
 );
+const engineSource = fs.readFileSync(
+  path.join(repoRoot, "VacationEngine.gs"),
+  "utf8",
+);
 assert.doesNotMatch(code, /createMenu\("Відпустки"\)/);
 assert.doesNotMatch(code, /addSubMenu\(vacationMenu\)/);
 assert.match(sidebarHtml, /id="btnVacations"/);
@@ -1224,6 +1659,11 @@ assert.match(jsVacations, /const VACATION_RULE_HUMAN_LABELS = \{/);
 assert.match(jsVacations, /function humanVacationRuleLabel_/);
 assert.match(jsVacations, /scheduleSummaryHtml\(\)/);
 assert.match(jsVacations, /🏖️ Графік відпусток/);
+assert.match(jsVacations, /requestStatusLabel\(status\)/);
+assert.match(sidebarService, /status:\s*String\(vacation\.status/);
+assert.match(jsVacations, /\{ id: "plan", label: "План" \}/);
+assert.doesNotMatch(jsVacations, /\{ id: "schedule", label: "Графік" \}/);
+assert.doesNotMatch(jsVacations, /\{ id: "move", label: "Перенести" \}/);
 assert.match(
   renderVacationProblems([
     { type: "GAP_TOO_SHORT", fml: "Тест", date: "2026-07-01" },
@@ -1279,9 +1719,43 @@ assert.doesNotMatch(sidebarService, /\bclass\s+VacationSidebarService/);
 assert.match(sidebarService, /const VacationSidebarService_ = \(function \(\)/);
 assert.match(sidebarService, /PersonnelRepository_\.getActiveRows\(\)/);
 assert.match(sidebarService, /applyVacationOptionFromSidebar/);
+assert.match(sidebarService, /requestId:\s*String\(vacation\.requestId/);
+assert.match(jsVacations, /requestId:\s*vacation\.requestId/);
 assert.doesNotMatch(
   sidebar + sidebarService,
   /VACATION_OPTIONS|writeVacationOptions/,
+);
+assert.doesNotMatch(writerSource, /VACATION_OPTIONS|writeVacationOptions/);
+assert.match(writerSource, /function _withVacationMigrationLock_\(callback\)/);
+assert.match(
+  writerSource,
+  /_withVacationMigrationLock_\(function \(\)[\s\S]*?migrateLegacyToRequests/,
+  "migration entrypoint must serialize with panel writes",
+);
+assert.match(
+  engineSource,
+  /item\.reminderEligible === false/,
+  "reminder engine must ignore Proposed requests",
+);
+assert.match(
+  engineSource,
+  /findPhone_\(\{ callsign: callsign, fml: fml \}\)/,
+  "reminder engine must resolve recipients Callsign-first with FML fallback",
+);
+assert.doesNotMatch(
+  engineSource,
+  /VacationPlannerService_|VacationOptionsWriter_|VacationSidebarService_/,
+  "reminder engine must remain independent from planner, writer, and UI",
+);
+assert.doesNotMatch(
+  [
+    engineSource,
+    sidebarService,
+    writerSource,
+    fs.readFileSync(path.join(repoRoot, "VacationPlannerService.gs"), "utf8"),
+  ].join("\n"),
+  /Calculation_OS/,
+  "vacation runtime must not depend on Calculation_OS",
 );
 assert.doesNotMatch(sidebar, /innerHTML/);
 assert.match(

@@ -66,7 +66,6 @@
   },
   "destructiveFormattingIntegrations": {
     "VacationOptionsWriter.gs": [
-      "writeVacationOptions",
       "_writeSchedule_",
       "_writeChecks_"
     ],

@@ -227,6 +227,10 @@
       "reason": "smoke-project-only entrypoint; excluded from production public API"
     },
     {
+      "name": "apiRunVacationRuntimeSmoke",
+      "reason": "self-cleaning vacation smoke-project-only entrypoint; excluded from production public API"
+    },
+    {
       "name": "apiBuildSendPanelFast",
       "reason": "legacy/manual fast-path wrapper; not client-reachable"
     },
