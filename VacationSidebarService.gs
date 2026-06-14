@@ -512,6 +512,50 @@ const VacationSidebarService_ = (function () {
     });
   }
 
+  function buildBulkFixPlan(formData) {
+    _assertWorkingAccess_("buildVacationBulkFixPlanFromSidebar");
+    return _withDocumentLock_(function () {
+      if (
+        typeof VacationBulkFix_ !== "object" ||
+        !VacationBulkFix_ ||
+        typeof VacationBulkFix_.buildVacationBulkFixPlan_ !== "function"
+      ) {
+        throw new Error("Модуль пакетного виправлення недоступний");
+      }
+      return VacationBulkFix_.buildVacationBulkFixPlan_(formData || {});
+    });
+  }
+
+  function applyBulkFixPlan(formData) {
+    _assertWorkingAccess_("applyVacationBulkFixPlanFromSidebar");
+    return _withDocumentLock_(function () {
+      if (
+        typeof VacationBulkFix_ !== "object" ||
+        !VacationBulkFix_ ||
+        typeof VacationBulkFix_.applyVacationBulkFixPlan_ !== "function"
+      ) {
+        throw new Error("Модуль пакетного виправлення недоступний");
+      }
+      const plan =
+        formData && formData.plan && typeof formData.plan === "object"
+          ? formData.plan
+          : formData || {};
+      return VacationBulkFix_.applyVacationBulkFixPlan_(plan);
+    });
+  }
+
+  function getMonthCalendar(formData) {
+    _assertWorkingAccess_("getVacationMonthCalendarFromSidebar");
+    if (
+      typeof VacationMonthCalendar_ !== "object" ||
+      !VacationMonthCalendar_ ||
+      typeof VacationMonthCalendar_.getVacationMonthCalendar_ !== "function"
+    ) {
+      throw new Error("Модуль місячного календаря недоступний");
+    }
+    return VacationMonthCalendar_.getVacationMonthCalendar_(formData || {});
+  }
+
   function applyRightPanelMigration() {
     _assertWorkingAccess_("applyRightPanelMigrationFromSidebar");
     return _withDocumentLock_(function () {
@@ -570,6 +614,9 @@ const VacationSidebarService_ = (function () {
     openSchedule: openSchedule,
     openUpdatedSchedule: openUpdatedSchedule,
     applyFixSuggestion: applyFixSuggestion,
+    buildBulkFixPlan: buildBulkFixPlan,
+    applyBulkFixPlan: applyBulkFixPlan,
+    getMonthCalendar: getMonthCalendar,
     applyRightPanelMigration: applyRightPanelMigration,
   };
 })();
@@ -636,6 +683,18 @@ function openUpdatedVacationScheduleFromSidebar(formData) {
 
 function applyVacationSuggestionFromSidebar(formData) {
   return VacationSidebarService_.applyFixSuggestion(formData);
+}
+
+function buildVacationBulkFixPlanFromSidebar(formData) {
+  return VacationSidebarService_.buildBulkFixPlan(formData);
+}
+
+function applyVacationBulkFixPlanFromSidebar(formData) {
+  return VacationSidebarService_.applyBulkFixPlan(formData);
+}
+
+function getVacationMonthCalendarFromSidebar(formData) {
+  return VacationSidebarService_.getMonthCalendar(formData);
 }
 
 function applyRightPanelMigrationFromSidebar() {

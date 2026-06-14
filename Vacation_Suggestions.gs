@@ -679,10 +679,13 @@ const VacationSuggestions_ = (function () {
       requestId: target.requestId || "",
       oldStart: _formatUa_(_dateKey_(target.startDate)),
       oldEnd: _formatUa_(_dateKey_(target.endDate)),
+      oldStartIso: _dateKey_(target.startDate),
+      oldEndIso: _dateKey_(target.endDate),
       newStart: _formatUa_(_dateKey_(newStart)),
       newEnd: _formatUa_(_dateKey_(newEnd)),
       newStartIso: _dateKey_(newStart),
       newEndIso: _dateKey_(newEnd),
+      days: _durationDays_(target.startDate, target.endDate),
       effect: _buildSuggestionEffects_(
         target,
         newStart,
@@ -1122,6 +1125,31 @@ function calculateSuggestionScore_(candidate, context, validation) {
   );
 }
 
+function _resolveSuggestionDurationDays_(data) {
+  const source = data && typeof data === "object" ? data : {};
+  const direct = Number(
+    source.days != null
+      ? source.days
+      : source.durationDays != null
+        ? source.durationDays
+        : source.duration,
+  );
+  if (Number.isInteger(direct) && direct > 0) return direct;
+
+  const startIso = String(source.newStartIso || source.startDate || "").trim();
+  const endIso = String(source.newEndIso || "").trim();
+  if (!startIso || !endIso) return NaN;
+
+  const service =
+    typeof VacationPlannerService_ === "object" ? VacationPlannerService_ : null;
+  if (!service || typeof service.daysBetween !== "function") return NaN;
+
+  const start = new Date(startIso + "T12:00:00");
+  const end = new Date(endIso + "T12:00:00");
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return NaN;
+  return service.daysBetween(start, end) + 1;
+}
+
 function applyVacationSuggestion_(suggestionId, payload) {
   const data = payload || {};
   if (
@@ -1134,13 +1162,25 @@ function applyVacationSuggestion_(suggestionId, payload) {
   if (!data.fml || !data.newStartIso) {
     throw new Error("Неповні дані для застосування пропозиції");
   }
+  const days = _resolveSuggestionDurationDays_(data);
+  if (
+    !Number.isInteger(days) ||
+    days < 1 ||
+    days > VACATION_PLANNER_CONFIG.OPTIONS.MAX_DURATION_DAYS
+  ) {
+    throw new Error(
+      "Тривалість має бути від 1 до " +
+        VACATION_PLANNER_CONFIG.OPTIONS.MAX_DURATION_DAYS +
+        " днів",
+    );
+  }
   const result = VacationSidebarService_.moveVacation({
     requestId: data.requestId || "",
     personKey: data.personKey || data.fml,
     fml: data.fml,
     vacationNumber: Number(data.vacationNumber),
     startDate: data.newStartIso,
-    days: Number(data.days) || undefined,
+    days: days,
     sourceRow: data.sourceRow,
     sourceStartColumn: data.sourceStartColumn,
     comment:

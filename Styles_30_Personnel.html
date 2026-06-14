@@ -598,6 +598,95 @@
   white-space: pre-wrap;
 }
 
+.vacations-bulk-actions {
+  margin: 10px 0;
+}
+
+.vacations-bulk-plan__moves {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 10px 0 0;
+  padding-left: 18px;
+}
+
+.vacations-mini-calendar {
+  margin-top: 10px;
+}
+
+.vacations-mini-calendar__header {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.vacations-mini-calendar__grid {
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.vacations-mini-calendar__weekday {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.vacations-mini-calendar__day {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  min-height: 72px;
+  padding: 4px;
+  text-align: left;
+}
+
+.vacations-mini-calendar__day--outside {
+  opacity: 0.45;
+}
+
+.vacations-mini-calendar__day--weekend {
+  background: var(--bg-secondary);
+}
+
+.vacations-mini-calendar__day--full {
+  background: var(--warning-soft-bg);
+  border-color: var(--warning-color);
+}
+
+.vacations-mini-calendar__day--overload {
+  background: var(--danger-soft-bg);
+  border-color: var(--log-error);
+}
+
+.vacations-mini-calendar__day-number {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.vacations-mini-calendar__person {
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vacations-mini-calendar__more {
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.vacations-calendar-day-details {
+  font-size: 12px;
+  line-height: 1.45;
+  margin-top: 10px;
+}
+
 /* ====================== RESPONSIVE ====================== */
 @media (max-width: 480px) {
   .person-card__actions {

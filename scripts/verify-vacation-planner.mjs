@@ -1428,6 +1428,11 @@ assert.equal(monkoSuggestion.oldEnd, "04.01.2027");
 assert.equal(monkoSuggestion.newStart, "04.01.2027");
 assert.equal(monkoSuggestion.newEnd, "18.01.2027");
 assert.equal(
+  monkoSuggestion.days,
+  service.daysBetween(date("2026-12-21"), date("2027-01-04")) + 1,
+  "suggestion must include days for auto-apply",
+);
+assert.equal(
   monkoSuggestion.canAutoApply,
   true,
   "Monko move must be auto-applicable",
@@ -2447,7 +2452,33 @@ assert.match(
   jsVacations,
   /async loadProblems\(\)[\s\S]*?"checkVacationRulesFromSidebar"/,
 );
-assert.match(jsVacations, /Натисніть кнопку, щоб перевірити графік/);
+assert.match(jsVacations, /Натисніть «Знайти проблеми»/);
+assert.match(jsVacations, /Підібрати пакетне рішення/);
+assert.match(jsVacations, /Застосувати пакетне рішення/);
+assert.match(jsVacations, /buildVacationBulkFixPlanFromSidebar/);
+assert.match(jsVacations, /applyVacationBulkFixPlanFromSidebar/);
+assert.match(jsVacations, /getVacationMonthCalendarFromSidebar/);
+assert.match(jsVacations, /loadMonthCalendar\(/);
+assert.match(jsVacations, /renderMonthCalendar\(/);
+assert.match(jsVacations, /showCalendarDayDetails\(/);
+assert.match(jsVacations, /for=\\"vacCalendarYear\\"/);
+assert.match(jsVacations, /for=\\"vacCalendarMonth\\"/);
+assert.match(jsVacations, /for=\\"vacScheduleYear\\"/);
+assert.match(jsVacations, /for=\\"vacAddPerson\\"/);
+assert.match(jsVacations, /for=\\"vacCheckDays\\"/);
+assert.match(sidebarService, /buildVacationBulkFixPlanFromSidebar/);
+assert.match(sidebarService, /applyVacationBulkFixPlanFromSidebar/);
+assert.match(sidebarService, /getVacationMonthCalendarFromSidebar/);
+assert.match(
+  stylesPersonnel,
+  /\.vacations-mini-calendar__day--full/,
+  "mini calendar must style full days",
+);
+assert.match(
+  stylesPersonnel,
+  /\.vacations-mini-calendar__day--overload/,
+  "mini calendar must style overloaded days",
+);
 assert.match(jsVacations, /openFindFromProblem\(index\)/);
 assert.match(jsVacations, /Підібрати нову дату/);
 assert.doesNotMatch(jsVacations, /label:\s*"Перевірка"/);
@@ -2585,5 +2616,136 @@ assert.match(
   /WASB_OWNER_EMAIL|getWasbOwnerEmail_/,
 );
 assert.match(reminderMailSource, /input\.trigger === true \|\| input\.isSystemTrigger === true/);
+
+const bulkFixSource = fs.readFileSync(
+  path.join(repoRoot, "VacationBulkFix.gs"),
+  "utf8",
+);
+const monthCalendarSource = fs.readFileSync(
+  path.join(repoRoot, "VacationMonthCalendar.gs"),
+  "utf8",
+);
+assert.match(bulkFixSource, /function buildVacationBulkFixPlanFromSidebar/);
+assert.match(bulkFixSource, /function applyVacationBulkFixPlanFromSidebar/);
+assert.match(bulkFixSource, /function validateVacationBulkFixPlan_/);
+assert.match(bulkFixSource, /vacation\.bulk_plan\.stale/);
+assert.match(monthCalendarSource, /function getVacationMonthCalendarFromSidebar/);
+assert.match(monthCalendarSource, /readVacationSource_\(\)/);
+assert.doesNotMatch(monthCalendarSource, /readRightPanelRows/);
+
+const calendarContext = vm.createContext({
+  console,
+  Date,
+  Session: { getScriptTimeZone: () => "Europe/Kyiv" },
+  Utilities: {
+    formatDate(value, _tz, pattern) {
+      const year = value.getFullYear();
+      const month = String(value.getMonth() + 1).padStart(2, "0");
+      const day = String(value.getDate()).padStart(2, "0");
+      if (pattern === "yyyy-MM-dd") return `${year}-${month}-${day}`;
+      return `${day}.${month}.${year}`;
+    },
+  },
+  VACATION_PLANNER_CONFIG: plannerConfig,
+  DateUtils_: {
+    parseDateAny(value) {
+      if (value instanceof Date) return value;
+      const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!match) return null;
+      return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12, 0, 0, 0);
+    },
+  },
+  PersonnelRepository_: {
+    getByFml() {
+      return null;
+    },
+  },
+  readVacationSource_() {
+    return [
+      {
+        row: 2,
+        fml: "Alpha One",
+        startDate: date("2026-11-28"),
+        endDate: date("2026-12-05"),
+        vacationNo: "перша відпустка",
+        active: true,
+        intervalCheck: "OK",
+      },
+      {
+        row: 3,
+        fml: "Beta Two",
+        startDate: date("2026-12-10"),
+        endDate: date("2027-01-05"),
+        vacationNo: "перша відпустка",
+        active: false,
+        intervalCheck: "OK",
+      },
+      {
+        row: 4,
+        fml: "Gamma Three",
+        startDate: date("2026-12-20"),
+        endDate: date("2026-12-24"),
+        vacationNo: "перша відпустка",
+        active: true,
+        intervalCheck: "OK",
+      },
+      {
+        row: 5,
+        fml: "Delta Four",
+        startDate: date("2026-12-20"),
+        endDate: date("2026-12-24"),
+        vacationNo: "перша відпустка",
+        active: true,
+        intervalCheck: "OK",
+      },
+      {
+        row: 6,
+        fml: "Epsilon Five",
+        startDate: date("2026-12-20"),
+        endDate: date("2026-12-24"),
+        vacationNo: "перша відпустка",
+        active: true,
+        intervalCheck: "OK",
+      },
+      {
+        row: 7,
+        fml: "Zeta Six",
+        startDate: date("2026-12-21"),
+        endDate: date("2026-12-23"),
+        vacationNo: "перша відпустка",
+        active: true,
+        intervalCheck: "OK",
+      },
+    ];
+  },
+});
+load(calendarContext, "VacationMonthCalendar.gs");
+const monthCalendar = vm.runInContext("VacationMonthCalendar_", calendarContext);
+const december = monthCalendar.getVacationMonthCalendar_({ year: 2026, month: 12 });
+assert.equal(december.success, true);
+const decemberDays = december.weeks.flat();
+const dec1 = decemberDays.find((item) => item.dateIso === "2026-12-01");
+const dec20 = decemberDays.find((item) => item.dateIso === "2026-12-20");
+const dec24 = decemberDays.find((item) => item.dateIso === "2026-12-24");
+assert.ok(dec1 && dec1.vacationsCount >= 1, "cross-month vacation must appear on Dec 1");
+assert.ok(
+  decemberDays.some((item) => item.dateIso === "2026-12-05" && item.vacationsCount >= 1),
+  "cross-month vacation must appear through Dec 5",
+);
+assert.ok(
+  decemberDays.some((item) => item.dateIso === "2027-01-01" && item.inMonth === false),
+  "January spillover day stays outside selected month grid cell",
+);
+assert.equal(dec20.full, true);
+assert.equal(dec20.overload, false);
+assert.equal(dec20.vacationsCount, 4);
+const overloadDay = decemberDays.find((item) => item.dateIso === "2026-12-21");
+assert.ok(overloadDay, "Dec 21 must exist in calendar grid");
+assert.equal(overloadDay.overload, true);
+assert.equal(overloadDay.vacationsCount, 5);
+const fullDay = decemberDays.find((item) => item.dateIso === "2026-12-24");
+assert.ok(fullDay, "Dec 24 must exist in calendar grid");
+assert.equal(fullDay.full, true, "day with 4 vacations must be full");
+assert.equal(fullDay.overload, false, "day with exactly 4 vacations must not be overload");
 
 console.log("verify-vacation-planner: OK");
