@@ -273,6 +273,10 @@
     {
       "name": "apiSendLeaveBirthdayReminderDigestTest",
       "reason": "GAS-editor manual test for owner email digest; not client-reachable"
+    },
+    {
+      "name": "apiStage7ReissueAccessTemporaryPassword",
+      "reason": "GAS-editor/sysadmin service to reissue ACCESS temporary password; not client-reachable"
     }
   ],
   "deprecatedEndpoints": [

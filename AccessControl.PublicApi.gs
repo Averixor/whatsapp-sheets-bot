@@ -1073,6 +1073,7 @@ var AccessControl_ = Object.freeze({
   loginByIdentifierAndCallsign: loginByIdentifierAndCallsign,
   loginByAccessKey: loginByAccessKey,
   registerAccessWithTemporaryPassword: registerAccessWithTemporaryPassword,
+  reissueAccessTemporaryPassword: reissueAccessTemporaryPassword_,
 
   bootstrapSheet: bootstrapSheet,
   refreshAccessSheetUi: refreshAccessSheetUi,

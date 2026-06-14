@@ -997,3 +997,52 @@ function apiStage7RegisterAccessWithTemporaryPassword(payload) {
     { affectedSheets: [appGetCore("ACCESS_SHEET", "ACCESS")] },
   );
 }
+
+function apiStage7ReissueAccessTemporaryPassword(payload) {
+  _stage7AssertRole_("sysadmin", "reissue ACCESS temporary password");
+  const result =
+    typeof reissueAccessTemporaryPassword_ === "function"
+      ? reissueAccessTemporaryPassword_(payload || {})
+      : {
+          ok: false,
+          success: false,
+          code: "access.reissue.unavailable",
+          message: "reissueAccessTemporaryPassword_ недоступний",
+        };
+  const success = !!(
+    result &&
+    result.success &&
+    result.ok !== false &&
+    Number(result.matchedRowNumber || result.accessSheetRow || 0) > 0 &&
+    Number(result.rowsUpdated || 0) > 0
+  );
+  const message =
+    result && result.message
+      ? result.message
+      : success
+        ? "Тимчасовий пароль перевипущено"
+        : "Не вдалося перевипустити тимчасовий пароль";
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (ss) {
+      ss.toast(message, "WASB ACCESS", success ? 10 : 8);
+    }
+  } catch (_) {}
+  if (success) {
+    const rowNumber = result.matchedRowNumber || result.accessSheetRow || "";
+    console.log(
+      "[ACCESS] Service reissue completed for row " +
+        String(rowNumber) +
+        ", role=" +
+        String(result.role || result.matchedRole || ""),
+    );
+  }
+  return _stage7BuildMaintenanceResponse_(
+    success,
+    message,
+    result || {},
+    "stage7ReissueAccessTemporaryPassword",
+    success ? [] : [message],
+    { affectedSheets: [appGetCore("ACCESS_SHEET", "ACCESS")] },
+  );
+}
