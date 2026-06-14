@@ -31,6 +31,13 @@ function vacation(fml, start, end, vacationNumber = 1) {
   };
 }
 
+function inactiveVacation(fml, start, end, vacationNumber = 1) {
+  return {
+    ...vacation(fml, start, end, vacationNumber),
+    active: false,
+  };
+}
+
 const serviceContext = vm.createContext({ console, Date });
 load(serviceContext, "VacationPlannerConfig.gs");
 load(serviceContext, "VacationPlannerService.gs");
@@ -1125,6 +1132,114 @@ assert.equal(calendar.startDate.getDate(), 1);
 assert.equal(calendar.endDate.getMonth(), 11);
 assert.equal(calendar.endDate.getDate(), 31);
 
+const inactiveScheduleAudit = service.buildScheduleAudit([
+  inactiveVacation("Губарев Станіслав Павлович", "2026-01-10", "2026-01-24"),
+  vacation("Лагодний", "2026-03-09", "2026-03-23"),
+]);
+assert.equal(
+  inactiveScheduleAudit.schedule.length,
+  2,
+  "inactive vacations must still appear in annual schedule source",
+);
+assert.ok(
+  inactiveScheduleAudit.schedule.some(
+    (item) => item.fml === "Губарев Станіслав Павлович",
+  ),
+  "inactive january vacation must be included in schedule",
+);
+
+const pastYearCalendar = writer.buildScheduleCalendar(
+  inactiveScheduleAudit.schedule,
+  { year: 2026 },
+);
+function calendarMarkerAt(calendar, fml, isoDate) {
+  const row = calendar.rows.find((entry) => entry[1] === fml);
+  assert.ok(row, `schedule row missing for ${fml}`);
+  const colIndex = calendar.rows[0].findIndex((value) => {
+    return (
+      value instanceof Date && value.toISOString().slice(0, 10) === isoDate
+    );
+  });
+  assert.notEqual(colIndex, -1, `schedule date missing: ${isoDate}`);
+  return row[colIndex];
+}
+assert.equal(
+  calendarMarkerAt(
+    pastYearCalendar,
+    "Губарев Станіслав Павлович",
+    "2026-01-10",
+  ),
+  "В1",
+  "inactive january vacation must be painted in january",
+);
+assert.equal(
+  calendarMarkerAt(
+    pastYearCalendar,
+    "Губарев Станіслав Павлович",
+    "2026-01-24",
+  ),
+  "В1",
+);
+assert.equal(
+  calendarMarkerAt(pastYearCalendar, "Лагодний", "2026-03-09"),
+  "В1",
+  "march vacation must be painted in march",
+);
+assert.equal(
+  calendarMarkerAt(
+    writer.buildScheduleCalendar(
+      service.buildScheduleAudit([
+        vacation("Печерик", "2026-03-15", "2026-03-31"),
+        vacation("Сухоруков", "2026-03-25", "2026-04-08"),
+      ]).schedule,
+      { year: 2026 },
+    ),
+    "Печерик",
+    "2026-03-31",
+  ),
+  "В1",
+);
+assert.equal(
+  calendarMarkerAt(
+    writer.buildScheduleCalendar(
+      service.buildScheduleAudit([
+        vacation("Сухоруков", "2026-03-25", "2026-04-08"),
+      ]).schedule,
+      { year: 2026 },
+    ),
+    "Сухоруков",
+    "2026-03-25",
+  ),
+  "В1",
+  "cross-month vacation must be painted at march start",
+);
+assert.equal(
+  calendarMarkerAt(
+    writer.buildScheduleCalendar(
+      service.buildScheduleAudit([
+        vacation("Сухоруков", "2026-03-25", "2026-04-08"),
+      ]).schedule,
+      { year: 2026 },
+    ),
+    "Сухоруков",
+    "2026-04-08",
+  ),
+  "В1",
+  "cross-month vacation must be painted through april end",
+);
+
+const negativeDaysLeftAudit = service.buildScheduleAudit([
+  {
+    ...inactiveVacation("Минула Відпустка", "2026-01-01", "2026-01-15"),
+    daysLeft: -40,
+  },
+]);
+assert.equal(
+  negativeDaysLeftAudit.schedule.length,
+  1,
+  "daysLeft must not exclude vacations from annual schedule",
+);
+
 const normalizedChecks = writer.normalizeChecks([
   {
     severity: "ERROR",
@@ -1692,9 +1807,9 @@ function sourceVacationRow(entry) {
     date(entry.start),
     date(entry.end),
     entry.type,
-    true,
-    true,
-    entry.days,
+    entry.active !== false,
+    entry.notify !== false,
+    entry.daysLeft != null ? entry.daysLeft : entry.days,
     "",
     "OK",
   );
@@ -1838,6 +1953,58 @@ assert.equal(singleMonthRebuild.scheduleDays, 365);
 assert.ok(
   generatedSheets.VACATION_SCHEDULE.borders.length >= 11,
   "full-year calendar must add month separators",
+);
+
+sourceSheet = new FakeSheet(
+  "VACATIONS",
+  sourceVacationSheet([
+    {
+      fml: "Губарев Станіслав Павлович",
+      start: "2026-01-10",
+      end: "2026-01-24",
+      type: "перша відпустка",
+      days: 15,
+      active: false,
+      daysLeft: -30,
+    },
+    {
+      fml: "Лагодний",
+      start: "2026-03-09",
+      end: "2026-03-23",
+      type: "перша відпустка",
+      days: 15,
+      active: false,
+      daysLeft: -5,
+    },
+  ]),
+);
+generatedSheets = {};
+const inactiveSourceRebuild = writer.rebuildVacationSystem({ year: 2026 });
+assert.equal(
+  inactiveSourceRebuild.schedulePeople,
+  2,
+  "rebuild must paint inactive past vacations for the selected year",
+);
+const inactiveSourceSchedule = generatedSheets.VACATION_SCHEDULE;
+const gubarevRow = inactiveSourceSchedule.rows.findIndex(
+  (row) => row[1] === "Губарев Станіслав Павлович",
+);
+assert.notEqual(gubarevRow, -1);
+assert.equal(
+  inactiveSourceSchedule.backgroundAt(
+    gubarevRow + 1,
+    dateColumn(inactiveSourceSchedule, "2026-01-10"),
+  ),
+  "#D9EAD3",
+  "inactive january vacation must be painted on VACATION_SCHEDULE",
+);
+assert.equal(
+  inactiveSourceSchedule.backgroundAt(
+    inactiveSourceSchedule.rows.findIndex((row) => row[1] === "Лагодний") + 1,
+    dateColumn(inactiveSourceSchedule, "2026-03-09"),
+  ),
+  "#D9EAD3",
+  "inactive march vacation must be painted on VACATION_SCHEDULE",
 );
 
 sourceSheet = new FakeSheet("VACATIONS", [Array(19).fill("")]);
@@ -2112,15 +2279,28 @@ const writerSource = fs.readFileSync(
   path.join(repoRoot, "VacationOptionsWriter.gs"),
   "utf8",
 );
+const plannerServiceSource = fs.readFileSync(
+  path.join(repoRoot, "VacationPlannerService.gs"),
+  "utf8",
+);
 const engineSource = fs.readFileSync(
   path.join(repoRoot, "VacationEngine.gs"),
   "utf8",
 );
-assert.match(code, /openVacationsInMainSidebar_/);
-assert.match(code, /Відкрити панель/);
-assert.match(code, /Перейти до відпусток/);
+const onOpenMenuBlock = code.match(
+  /createMenu\("WASB"\)([\s\S]*?)\.addToUi\(\)/,
+);
+assert.ok(onOpenMenuBlock, "onOpen must register WASB menu");
+assert.equal(
+  (onOpenMenuBlock[1].match(/\.addItem\(/g) || []).length,
+  1,
+  "WASB menu must expose exactly one item",
+);
+assert.match(code, /addItem\("Відкрити панель", "showSidebar"\)/);
+assert.doesNotMatch(code, /Перейти до відпусток/);
+assert.doesNotMatch(code, /Оновити меню/);
 assert.doesNotMatch(code, /createMenu\("Відпустки"\)/);
-assert.doesNotMatch(code, /addSubMenu\(vacationMenu\)/);
+assert.doesNotMatch(code, /addSubMenu/);
 assert.match(sidebarServer, /getSidebarLaunchSection_/);
 assert.match(jsHelpers, /getSidebarLaunchSection_/);
 assert.match(jsHelpers, /launchSection === "vacations"/);
@@ -2128,10 +2308,27 @@ assert.match(writerSource, /buildVacationScheduleYearRange_/);
 assert.match(writerSource, /new Date\(y, 0, 1/);
 assert.match(writerSource, /new Date\(y, 11, 31/);
 assert.match(writerSource, /dd\.MM\.yy/);
+assert.match(
+  plannerServiceSource,
+  /const scheduleVacations = normalizedAll/,
+  "annual schedule must include inactive vacations",
+);
+assert.doesNotMatch(
+  plannerServiceSource,
+  /const schedule = vacations[\s\S]{0,120}\.map\(function \(vacation\)/,
+  "schedule must not be limited to active vacations only",
+);
 assert.match(sidebarService, /scheduleYear:/);
 assert.match(jsVacations, /getScheduleYear_/);
 assert.match(jsVacations, /vacScheduleYear/);
 assert.match(jsVacations, /rebuildVacationScheduleFromSidebar[\s\S]*year:/);
+assert.match(jsVacations, /openUpdatedSchedule\(\)/);
+assert.match(jsVacations, /Оновити і відкрити графік/);
+assert.match(jsVacations, /openUpdatedVacationScheduleFromSidebar/);
+assert.match(jsVacations, /\[VacationModule\.openUpdatedSchedule\] clicked/);
+assert.doesNotMatch(jsVacations, /Відкрити календар/);
+assert.match(sidebarService, /openUpdatedVacationScheduleFromSidebar/);
+assert.match(sidebarService, /function openUpdatedSchedule\(formData\)/);
 assert.match(sidebarHtml, /id="btnVacations"/);
 assert.match(sidebarHtml, /handleMenuAction\('vacations'\)/);
 assert.doesNotMatch(

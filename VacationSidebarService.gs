@@ -469,9 +469,34 @@ const VacationSidebarService_ = (function () {
     const sheet = spreadsheet.getSheetByName(
       VACATION_PLANNER_CONFIG.SHEETS.SCHEDULE,
     );
-    if (!sheet) throw new Error("Аркуш VACATION_SCHEDULE ще не створено");
+    if (!sheet) {
+      throw new Error("Аркуш VACATION_SCHEDULE не знайдено");
+    }
     spreadsheet.setActiveSheet(sheet);
-    return { sheetName: sheet.getName() };
+    return { ok: true, sheetName: sheet.getName() };
+  }
+
+  function openUpdatedSchedule(formData) {
+    _assertWorkingAccess_("openUpdatedVacationScheduleFromSidebar");
+    return _withDocumentLock_(function () {
+      const year = Number(formData && formData.year);
+      const rebuild = VacationOptionsWriter_.rebuildVacationSystem(
+        year >= 1900 && year <= 9999 ? { year: year } : {},
+      );
+      const opened = openSchedule();
+      const scheduleYear =
+        Number(rebuild && rebuild.scheduleYear) ||
+        (year >= 1900 && year <= 9999 ? year : 0) ||
+        VacationOptionsWriter_.resolveScheduleYear({});
+      return {
+        ok: true,
+        year: scheduleYear,
+        rebuild: rebuild,
+        opened: opened,
+        message:
+          "Графік відпусток за " + scheduleYear + " рік оновлено і відкрито",
+      };
+    });
   }
 
   function applyFixSuggestion(formData) {
@@ -543,6 +568,7 @@ const VacationSidebarService_ = (function () {
     checkViolations: checkViolations,
     generateReport: generateReport,
     openSchedule: openSchedule,
+    openUpdatedSchedule: openUpdatedSchedule,
     applyFixSuggestion: applyFixSuggestion,
     applyRightPanelMigration: applyRightPanelMigration,
   };
@@ -602,6 +628,10 @@ function generateVacationReportFromSidebar() {
 
 function openVacationScheduleFromSidebar() {
   return VacationSidebarService_.openSchedule();
+}
+
+function openUpdatedVacationScheduleFromSidebar(formData) {
+  return VacationSidebarService_.openUpdatedSchedule(formData);
 }
 
 function applyVacationSuggestionFromSidebar(formData) {

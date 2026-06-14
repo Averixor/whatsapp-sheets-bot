@@ -698,7 +698,7 @@
             this.scheduleYearSelectorHtml() +
             '<div class="result-screen-actions">' +
             '<button class="btn btn-primary" type="button" onclick="VacationModule.rebuildSchedule()">🔄 Оновити графік</button>' +
-            '<button class="btn btn-secondary" type="button" onclick="VacationModule.openScheduleSheet()">📅 Відкрити календар</button>' +
+            '<button class="btn btn-secondary" type="button" onclick="VacationModule.openUpdatedSchedule()">📅 Оновити і відкрити графік</button>' +
             "</div>" +
             '<div id="vacationPlanList">' +
             this.vacationListHtml() +
@@ -819,7 +819,7 @@
             '<button class="btn btn-primary" type="button" onclick="VacationModule.loadState()">Оновити стан</button>' +
             '<button class="btn btn-primary" type="button" onclick="VacationModule.checkReminders()">🔔 Перевірити нагадування</button>' +
             '<button class="btn btn-secondary" type="button" onclick="VacationModule.rebuildSchedule()">🔄 Оновити графік</button>' +
-            '<button class="btn btn-secondary" type="button" onclick="VacationModule.openScheduleSheet()">📅 Відкрити календар</button>' +
+            '<button class="btn btn-secondary" type="button" onclick="VacationModule.openUpdatedSchedule()">📅 Оновити і відкрити графік</button>' +
             "</div>" +
             '<div id="vacationReminderResult">' +
             (s.remindersHtml || "") +
@@ -1085,16 +1085,40 @@
       }
     },
 
-    async openScheduleSheet() {
+    async openUpdatedSchedule() {
+      console.log("[VacationModule.openUpdatedSchedule] clicked");
+      showLoading();
+      showToast("Оновлюю графік відпусток...");
       try {
-        await runServerMethod_(
-          "openVacationScheduleFromSidebar",
-          [],
-          "VacationModule.openScheduleSheet",
+        var year = this.getScheduleYear_();
+        this.state.scheduleYear = year;
+        var result = await runServerMethod_(
+          "openUpdatedVacationScheduleFromSidebar",
+          [{ year: year }],
+          "VacationModule.openUpdatedSchedule",
         );
-        showToast("✓ Календар відкрито");
+        logToConsole(
+          "[VacationModule.openUpdatedSchedule] success " +
+            JSON.stringify(result || {}),
+          "success",
+        );
+        showToast(
+          result && result.message
+            ? result.message
+            : "Графік відпусток оновлено і відкрито",
+        );
+        if (result && result.rebuild && result.rebuild.problemSummary) {
+          this.state.problemSummary = result.rebuild.problemSummary;
+        }
+        if (result && result.year) {
+          this.state.scheduleYear = Number(result.year);
+        }
+        await this.loadState();
       } catch (error) {
+        console.error("[VacationModule.openUpdatedSchedule] failed", error);
         this.showError(error);
+      } finally {
+        hideLoading();
       }
     },
 

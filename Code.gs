@@ -251,12 +251,7 @@ function getClientRuntimeContract_() {
 function onOpen(e) {
   try {
     const ui = SpreadsheetApp.getUi();
-    ui.createMenu("WASB")
-      .addItem("Відкрити панель", "showSidebar")
-      .addItem("Перейти до відпусток", "openVacationsInMainSidebar_")
-      .addSeparator()
-      .addItem("🔄 Оновити меню", "onOpen")
-      .addToUi();
+    ui.createMenu("WASB").addItem("Відкрити панель", "showSidebar").addToUi();
   } catch (err) {
     console.error("onOpen menu error:", err);
   }
