@@ -1839,16 +1839,16 @@ assert.equal(vacationEngineResult.debug.totalRows, 4);
 assert.equal(vacationEngineResult.debug.activeRows, 2);
 assert.equal(vacationEngineResult.debug.sourceMode, "requests");
 assert.deepEqual(
-  vacationEngineResult.soldierMessages.map((item) => item.fml),
+  Array.from(vacationEngineResult.soldierMessages, (item) => item.fml),
   ["Fallback Person", "Approved Person"],
   "engine must emit only eligible active vacation reminders sorted by daysUntil",
 );
 assert.deepEqual(
-  vacationEngineResult.commanderMessages.map((item) => item.fml),
+  Array.from(vacationEngineResult.commanderMessages, (item) => item.fml),
   ["Fallback Person", "Approved Person"],
 );
 assert.deepEqual(
-  vacationEngineResult.soldierMessages.map((item) => item.phone),
+  Array.from(vacationEngineResult.soldierMessages, (item) => item.phone),
   ["380222222222", "380111111111"],
   "engine must allow Callsign-first lookup with FML fallback",
 );
