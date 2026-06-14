@@ -35,7 +35,12 @@ function countMonthlyScheduleRowsForColumn_(sheet, col) {
  * ПІБ для зведення: активний PERSONNEL → будь-який Status → колонка FML на листі → позивний.
  * Наявність у графіку на дату не залежить від Status у PERSONNEL.
  */
-function resolveSummaryPersonFml_(sheet, rowIndex, rowCallsign, personnelByCallsignAny) {
+function resolveSummaryPersonFml_(
+  sheet,
+  rowIndex,
+  rowCallsign,
+  personnelByCallsignAny,
+) {
   const callsign = String(rowCallsign || "").trim();
   if (!callsign) return "";
 
@@ -402,7 +407,7 @@ function buildMessage_({ reportDate, service, place, tasks, brDays, minimal }) {
     }
 
     if (tasks) {
-      lines.push(`\nВиконувані завдання:\n${tasks}`);
+      lines.push(`\nВиконані завдання:\n${tasks}`);
     }
 
     lines.push("\n*(ʢ ￣︿￣)*   *⨦*   *(￣︿￣ ʡ)*");
@@ -453,21 +458,21 @@ function buildMessage_({ reportDate, service, place, tasks, brDays, minimal }) {
       ? _line_(
           serviceTemplate
             ? renderTemplate_(serviceTemplate, { service })
-            : `Вид служби: ${service}`
+            : `Вид служби: ${service}`,
         )
       : "";
 
     const brLine = _line_(
       brTemplate
         ? renderTemplate_(brTemplate, { brDays: String(br) })
-        : `Днів на БР: ${br}`
+        : `Днів на БР: ${br}`,
     );
 
     const placeBlock = place
       ? _block_(
           placeTemplate
             ? renderTemplate_(placeTemplate, { place })
-            : `Місце виконання:\n${place}`
+            : `Місце виконання:\n${place}`,
         )
       : "";
 
@@ -475,7 +480,7 @@ function buildMessage_({ reportDate, service, place, tasks, brDays, minimal }) {
       ? _block_(
           tasksTemplate
             ? renderTemplate_(tasksTemplate, { tasks })
-            : `Виконувані завдання:\n${tasks}`
+            : `Виконані завдання:\n${tasks}`,
         )
       : "";
 
