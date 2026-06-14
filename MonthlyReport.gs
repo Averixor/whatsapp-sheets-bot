@@ -614,8 +614,8 @@ function generateMonthlyReportHTML_(personnel, statusSummary, sheetName) {
       <div class="legend-item"><span class="status st-Відпус">Відпус</span> — Відпустка</div>
       <div class="legend-item"><span class="status st-Евак">Евак</span> — Медевак</div>
       <div class="legend-item"><span class="status st-КП">КП</span> — Командний пункт</div>
-      <div class="legend-item"><span class="status st-Black">Black</span> — Екіпаж Black</div>
-      <div class="legend-item"><span class="status st-Роланд">Роланд</span> — Екіпаж Roland</div>
+      <div class="legend-item"><span class="status st-Black">Black</span> — Екіпаж Чорний</div>
+      <div class="legend-item"><span class="status st-Роланд">Роланд</span> — Екіпаж Роланд</div>
     </div>
 `;
 

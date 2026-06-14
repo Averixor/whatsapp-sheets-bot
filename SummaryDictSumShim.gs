@@ -4,8 +4,8 @@
  * Reads summary group rules from DICT_SUM and returns:
  * [{ code, label, order, showZero }]
  *
- * Expected DICT_SUM headers in 1.xlsx:
- * Code | Name | Queue
+ * Expected DICT_SUM headers:
+ * Код | Назва (або Вид служби) | Порядок
  * Legacy Label/Order/ShowZero headers are still accepted.
  */
 function readDictSum_() {
@@ -37,6 +37,7 @@ function readDictSum_() {
         "name",
         "full_name",
         "fullname",
+        "вид_служби",
       ]),
       order: findDictSumColumn_(headers, [
         "order",
@@ -101,38 +102,44 @@ function readDictSum_() {
 }
 
 function getDefaultDictSumRules_() {
-  const order = [
-    "ОС",
-    "БР",
-    "Евак",
-    "Roland",
-    "Black",
-    "1РБпАК",
-    "2РБпАК",
-    "1УРБпАК",
-    "2УРБпАК",
-    "КП",
-    "Резерв",
-    "Відпус",
-    "Лікарн",
-    "*1РБпАК",
-    "*2РБпАК",
-    "*1УРБпАК",
-    "*2УРБпАК",
-    "*ВЗ",
-    "*ВМЗ",
-    "Гусачі",
-    "Відряд",
-    "БЗВП",
+  const entries = [
+    { code: "ОС", order: 1 },
+    { code: "Black", order: 10 },
+    { code: "Roland", order: 15 },
+    { code: "БР", order: 20 },
+    { code: "Евак", order: 25 },
+    { code: "1РБпАК", order: 30 },
+    { code: "2РБпАК", order: 35 },
+    { code: "1УРБпАК", order: 40 },
+    { code: "2УРБпАК", order: 100 },
+    { code: "КП", order: 105 },
+    { code: "Резерв", order: 140 },
+    { code: "*ВЗ", order: 145 },
+    { code: "*ВМЗ", order: 150 },
+    { code: "*1РБпАК", order: 155 },
+    { code: "*2РБпАК", order: 160 },
+    { code: "*1УРБпАК", order: 165 },
+    { code: "*2УРБпАК", order: 200 },
+    { code: "Відряд", order: 205 },
+    { code: "Відпус", order: 210 },
+    { code: "Лікарн", order: 215 },
+    { code: "Київ", order: 220 },
+    { code: "Гусачі", order: 225 },
+    { code: "DC", order: 230 },
+    { code: "БЗВП", order: 245 },
+    { code: "СЗЧ", order: 300 },
+    { code: "Вибув", order: 333 },
   ];
 
-  return order.map(function (code, index) {
+  return entries.map(function (entry) {
     return {
-      code: code,
+      code: entry.code,
       label:
-        (typeof FULL_NAMES !== "undefined" && FULL_NAMES && FULL_NAMES[code]) ||
-        code,
-      order: index + 1,
+        (typeof FULL_NAMES !== "undefined" &&
+          FULL_NAMES &&
+          FULL_NAMES[entry.code]) ||
+        entry.code,
+      order: entry.order,
       showZero: false,
     };
   });

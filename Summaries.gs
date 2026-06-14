@@ -105,38 +105,21 @@ function buildDaySummaryForColumn_(sheet, col) {
 
   const lines = [`${FULL_NAMES["ОС"] || "Особовий склад"} — ${total}`];
 
-  [
-    "БР",
-    "Roland",
-    "Black",
-    "Евак",
-    "1РБпАК",
-    "2РБпАК",
-    "1УРБпАК",
-    "2УРБпАК",
-    "КП",
-    "Резерв",
-    "Відряд",
-    "Відпус",
-    "Гусачі",
-    "БЗВП",
-    "Лікарн",
-    "*ВМЗ",
-    "*1РБпАК",
-    "*2РБпАК",
-    "*1УРБпАК",
-    "*2УРБпАК",
-    "*ВЗ",
-  ].forEach((group) => {
-    let cnt = 0;
-    (SUMMARY_GROUPS[group] || []).forEach((code) => {
-      cnt += freq[code] || 0;
-    });
+  readDictSum_()
+    .filter(function (rule) {
+      return rule.code !== "ОС";
+    })
+    .forEach(function (rule) {
+      const group = rule.code;
+      let cnt = 0;
+      (SUMMARY_GROUPS[group] || [group]).forEach(function (code) {
+        cnt += freq[code] || 0;
+      });
 
-    if (cnt > 0) {
-      lines.push(`${FULL_NAMES[group] || group} — ${cnt}`);
-    }
-  });
+      if (cnt > 0) {
+        lines.push(`${rule.label || FULL_NAMES[group] || group} — ${cnt}`);
+      }
+    });
 
   return lines.length
     ? [shortDate, ...lines].join("\n")
@@ -226,38 +209,29 @@ function formatDetailedSummaryLegacy_(date, people) {
   txt += `*${FULL_NAMES["ОС"] || "Особовий склад"}* — ${all.size}\n\n`;
 
   const usedSurnames = new Set();
-  const add = (group) => {
-    const codes = SUMMARY_GROUPS[group] || [group];
-    const subset = people.filter(
-      (p) => codes.includes(p.code) && !usedSurnames.has(p.surname),
-    );
-    const set = new Set(subset.map((p) => p.surname));
-    if (!set.size) return;
-    txt += `*${FULL_NAMES[group] || group}* — ${set.size}\n${Array.from(set).sort().join(", ")}.\n\n`;
-    set.forEach((s) => usedSurnames.add(s));
-  };
-
-  add("БР");
-  add("Евак");
-  add("Roland");
-  add("Black");
-  add("1РБпАК");
-  add("2РБпАК");
-  add("1УРБпАК");
-  add("2УРБпАК");
-  add("КП");
-  add("Резерв");
-  add("Відпус");
-  add("Лікарн");
-  add("*1РБпАК");
-  add("*2РБпАК");
-  add("*1УРБпАК");
-  add("*2УРБпАК");
-  add("*ВЗ");
-  add("*ВМЗ");
-  add("Гусачі");
-  add("Відряд");
-  add("БЗВП");
+  readDictSum_()
+    .filter(function (rule) {
+      return rule.code !== "ОС";
+    })
+    .forEach(function (rule) {
+      const group = rule.code;
+      const codes = SUMMARY_GROUPS[group] || [group];
+      const subset = people.filter(function (p) {
+        return codes.includes(p.code) && !usedSurnames.has(p.surname);
+      });
+      const set = new Set(
+        subset.map(function (p) {
+          return p.surname;
+        }),
+      );
+      if (!set.size) return;
+      txt +=
+        `*${rule.label || FULL_NAMES[group] || group}* — ${set.size}\n` +
+        `${Array.from(set).sort().join(", ")}.\n\n`;
+      set.forEach(function (s) {
+        usedSurnames.add(s);
+      });
+    });
 
   return txt;
 }

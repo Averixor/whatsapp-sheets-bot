@@ -172,11 +172,32 @@ function loadWorkbookFunctions() {
         return String(displayValue || "");
       },
     },
-    FULL_NAMES: { ОС: "Особовий склад" },
-    SUMMARY_GROUPS: { Резерв: ["Резерв"] },
+    getWasbSpreadsheet_: () => null,
+    FULL_NAMES: {
+      ОС: "Особовий склад",
+      Black: "Екіпаж Чорний",
+      Roland: "Екіпаж Роланд",
+      Резерв: "Резерв",
+      DC: "Drone Camp",
+      Київ: "ППД Київ",
+      Вибув: "Вибув",
+      "2УРБпАК": "Охорона позиції 2 роти УБпАК",
+    },
+    SUMMARY_GROUPS: {
+      Резерв: ["Резерв"],
+      Black: ["Black"],
+      Roland: ["Roland"],
+      DC: ["DC"],
+      Київ: ["Київ"],
+      Вибув: ["Вибув"],
+    },
   });
 
-  for (const file of ["SheetSchemas.gs", "Summaries.gs"]) {
+  for (const file of [
+    "SummaryDictSumShim.gs",
+    "SheetSchemas.gs",
+    "Summaries.gs",
+  ]) {
     vm.runInContext(
       fs.readFileSync(path.join(repoRoot, file), "utf8"),
       context,
@@ -203,6 +224,22 @@ assert.equal(
 const summary = context.buildDaySummaryForColumn_(sheet, 3);
 assert.match(summary, /Особовий склад — 29/);
 assert.doesNotMatch(summary, /Особовий склад — 40/);
+
+const dictSumRules = context.getDefaultDictSumRules_();
+const dictSumCodes = dictSumRules.map((rule) => rule.code);
+assert.ok(dictSumCodes.includes("DC"), "DICT_SUM defaults must include DC");
+assert.ok(dictSumCodes.includes("Київ"), "DICT_SUM defaults must include Київ");
+assert.ok(
+  dictSumCodes.includes("Вибув"),
+  "DICT_SUM defaults must include Вибув",
+);
+assert.ok(
+  dictSumCodes.indexOf("Black") < dictSumCodes.indexOf("Roland"),
+  "Black must sort before Roland",
+);
+assert.equal(dictSumRules.find((rule) => rule.code === "Black").order, 10);
+assert.equal(dictSumRules.find((rule) => rule.code === "2УРБпАК").order, 100);
+assert.equal(dictSumRules.find((rule) => rule.code === "Вибув").order, 333);
 
 console.log(
   `verify-workbook-contract: OK (${sheet.getName()} ${layout.codeRangeA1}, personnel=29)`,

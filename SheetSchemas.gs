@@ -785,7 +785,7 @@ function _ssBuildDictSumSchema_() {
 
     headerAliases: _ssFreeze_({
       code: ["Code", "Код"],
-      label: ["Label", "Назва", "Name"],
+      label: ["Label", "Назва", "Name", "Вид служби"],
       order: ["Queue", "SortOrder", "Order", "Порядок"],
     }),
 
