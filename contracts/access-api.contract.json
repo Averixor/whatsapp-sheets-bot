@@ -269,6 +269,10 @@
     {
       "name": "apiRunStage7JobLifecycleRetentionCleanupManual",
       "reason": "GAS-editor manual wrapper; delegates to guarded apiRunStage7Job"
+    },
+    {
+      "name": "apiSendLeaveBirthdayReminderDigestTest",
+      "reason": "GAS-editor manual test for owner email digest; not client-reachable"
     }
   ],
   "deprecatedEndpoints": [

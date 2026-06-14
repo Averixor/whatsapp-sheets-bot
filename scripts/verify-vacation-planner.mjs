@@ -2565,4 +2565,23 @@ const vacationSources = fs
   .join("\n");
 assert.doesNotMatch(vacationSources, /VACATION_DATA/);
 
+const maintenanceSource = fs.readFileSync(
+  path.join(repoRoot, "UseCases.Maintenance.gs"),
+  "utf8",
+);
+const reminderMailSource = fs.readFileSync(
+  path.join(repoRoot, "LeaveBirthdayReminderMail.gs"),
+  "utf8",
+);
+assert.match(
+  maintenanceSource,
+  /sendLeaveBirthdayReminderDigestEmail_\(/,
+  "daily leave/birthday check must attempt owner email digest",
+);
+assert.match(
+  reminderMailSource,
+  /WASB_OWNER_EMAIL|getWasbOwnerEmail_/,
+);
+assert.match(reminderMailSource, /input\.trigger === true \|\| input\.isSystemTrigger === true/);
+
 console.log("verify-vacation-planner: OK");

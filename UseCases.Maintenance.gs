@@ -41,6 +41,14 @@ var UseCasesMaintenance_ = (function () {
           DateUtils_.parseUaDate(input.dateStr || input.date) || new Date();
         const vacations = runVacationEngine_(targetDate, input) || {};
         const birthdays = runBirthdayEngine_(targetDate, input) || {};
+        const emailDigest =
+          typeof sendLeaveBirthdayReminderDigestEmail_ === "function"
+            ? sendLeaveBirthdayReminderDigestEmail_(
+                vacations,
+                birthdays,
+                input,
+              )
+            : null;
         return {
           success: true,
           message: "Перевірку відпусток виконано",
@@ -48,6 +56,7 @@ var UseCasesMaintenance_ = (function () {
             date: input.dateStr || input.date,
             vacations: vacations,
             birthdays: birthdays,
+            emailDigest: emailDigest,
           },
           changes: [],
           affectedSheets: [getBotMonthSheetName_(), CONFIG.PHONES_SHEET],
