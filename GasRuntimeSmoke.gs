@@ -109,6 +109,7 @@ function apiRunVacationRuntimeSmoke() {
     personnelRow: 0,
     requestId: "",
     previousSourceProperty: null,
+    sourcePropertyCaptured: false,
   };
   var ss = null;
   var calculationSheet = null;
@@ -138,6 +139,7 @@ function apiRunVacationRuntimeSmoke() {
     context.previousSourceProperty = props.getProperty(
       VACATION_PLANNER_CONFIG.SOURCE_MODE_PROPERTY,
     );
+    context.sourcePropertyCaptured = true;
     props.setProperty(
       VACATION_PLANNER_CONFIG.SOURCE_MODE_PROPERTY,
       VACATION_PLANNER_CONFIG.SHEETS.REQUESTS,
@@ -329,16 +331,22 @@ function apiRunVacationRuntimeSmoke() {
     }
 
     try {
-      var sourceProps = PropertiesService.getScriptProperties();
-      if (context.previousSourceProperty == null) {
-        sourceProps.deleteProperty(VACATION_PLANNER_CONFIG.SOURCE_MODE_PROPERTY);
+      if (context.sourcePropertyCaptured) {
+        var sourceProps = PropertiesService.getScriptProperties();
+        if (context.previousSourceProperty == null) {
+          sourceProps.deleteProperty(
+            VACATION_PLANNER_CONFIG.SOURCE_MODE_PROPERTY,
+          );
+        } else {
+          sourceProps.setProperty(
+            VACATION_PLANNER_CONFIG.SOURCE_MODE_PROPERTY,
+            context.previousSourceProperty,
+          );
+        }
+        report.cleanup.sourceModeRestored = true;
       } else {
-        sourceProps.setProperty(
-          VACATION_PLANNER_CONFIG.SOURCE_MODE_PROPERTY,
-          context.previousSourceProperty,
-        );
+        report.cleanup.sourceModeRestored = "skipped-not-captured";
       }
-      report.cleanup.sourceModeRestored = true;
     } catch (cleanupSourceError) {
       report.ok = false;
       report.errors.push(_vacationRuntimeSmokeError_(cleanupSourceError));
@@ -449,12 +457,28 @@ function _vacationRuntimeSmokeFindStateVacation_(state, fml) {
   })[0];
 }
 
+function _vacationRuntimeSmokeRequestHeaderIndex_(sheet) {
+  var headers = sheet
+    .getRange(1, 1, 1, sheet.getLastColumn())
+    .getDisplayValues()[0];
+  var index = {};
+  headers.forEach(function (header, position) {
+    index[String(header || "").trim()] = position + 1;
+  });
+  return index;
+}
+
 function _vacationRuntimeSmokeSetRequestStatus_(ss, requestId, status) {
   var sheet = ss.getSheetByName(VACATION_PLANNER_CONFIG.SHEETS.REQUESTS);
   var row = _vacationRuntimeSmokeFindRequestRow_(sheet, requestId);
   if (!row) throw new Error("Smoke request не знайдено: " + requestId);
-  sheet.getRange(row, 12).setValue(status);
-  sheet.getRange(row, 15).setValue(new Date());
+  var columns = _vacationRuntimeSmokeRequestHeaderIndex_(sheet);
+  _vacationRuntimeSmokeAssert_(
+    columns.Status && columns.UpdatedAt,
+    "VACATION_REQUESTS не містить колонок Status/UpdatedAt",
+  );
+  sheet.getRange(row, columns.Status).setValue(status);
+  sheet.getRange(row, columns.UpdatedAt).setValue(new Date());
 }
 
 function _vacationRuntimeSmokeFindRequestRow_(sheet, requestId) {
