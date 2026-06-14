@@ -42,6 +42,14 @@ assert.doesNotMatch(reissueSource, /updates[\s\S]{0,120}\brole\b/);
 assert.match(reissueSource, /maskSensitiveValue_/);
 assert.doesNotMatch(reissueSource, /console\.log[\s\S]*password_hash/);
 assert.match(maintenanceSource, /function apiStage7ReissueAccessTemporaryPassword/);
+assert.match(maintenanceSource, /function apiStage7ReissueOwnerTemporaryPasswordManual/);
+assert.match(
+  maintenanceSource,
+  /apiStage7ReissueAccessTemporaryPassword\(\{[\s\S]*email:\s*"ryabinin\.sergei\.alekseevich@gmail\.com"[\s\S]*login:\s*"ШАХТАР"[\s\S]*expectedRole:\s*"owner"[\s\S]*\}\)/,
+);
+assert.match(maintenanceSource, /JSON\.stringify\(result,\s*null,\s*2\)/);
+assert.match(maintenanceSource, /Logger\.log\(payload\)/);
+assert.match(maintenanceSource, /return result;/);
 assert.match(maintenanceSource, /reissueAccessTemporaryPassword_/);
 assert.match(maintenanceSource, /matchedRowNumber/);
 assert.match(maintenanceSource, /rowsUpdated/);

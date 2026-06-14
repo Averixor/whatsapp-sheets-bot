@@ -1,0 +1,16 @@
+{
+  "html.validate.scripts": false,
+  "html.validate.styles": false,
+  "javascript.validate.enable": false,
+  "typescript.validate.enable": false,
+  "files.associations": {
+    "Js.*.html": "html",
+    "Styles_*.html": "css"
+  },
+  "[html]": {
+    "editor.formatOnSave": false
+  },
+  "[css]": {
+    "editor.formatOnSave": false
+  }
+}

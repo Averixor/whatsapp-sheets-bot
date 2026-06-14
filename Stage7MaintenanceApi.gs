@@ -1046,3 +1046,15 @@ function apiStage7ReissueAccessTemporaryPassword(payload) {
     { affectedSheets: [appGetCore("ACCESS_SHEET", "ACCESS")] },
   );
 }
+
+function apiStage7ReissueOwnerTemporaryPasswordManual() {
+  const result = apiStage7ReissueAccessTemporaryPassword({
+    email: "ryabinin.sergei.alekseevich@gmail.com",
+    login: "ШАХТАР",
+    expectedRole: "owner",
+  });
+  const payload = JSON.stringify(result, null, 2);
+  console.log(payload);
+  Logger.log(payload);
+  return result;
+}

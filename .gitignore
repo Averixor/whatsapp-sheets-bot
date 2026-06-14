@@ -12,7 +12,8 @@ _person_card_compact_report.txt
 _audit-out.txt
 
 # VS Code / AI local settings
-.vscode/
+.vscode/*
+!.vscode/settings.json
 .aider*
 
 # Local Google Apps Script / clasp mapping

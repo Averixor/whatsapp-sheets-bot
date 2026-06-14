@@ -34,6 +34,10 @@ function getSidebarLaunchSection_() {
   return section;
 }
 
+function getSidebarLaunchSection() {
+  return getSidebarLaunchSection_();
+}
+
 function _resolveCommanderRoleForSidebar_(commanderRole) {
   var selected = String(commanderRole || "").trim();
   if (selected) return selected;
