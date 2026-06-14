@@ -674,7 +674,7 @@
         html +=
           '<div class="vacations-muted vacations-problem-summary-hint">Відкрийте «Проблемні питання», щоб переглянути деталі та підібрати рішення.</div>' +
           '<div class="result-screen-actions">' +
-          '<button class="btn btn-secondary vacations-btn-sm" type="button" onclick="VacationModule.openTab(\'check\')">Проблемні питання</button>' +
+          '<button class="btn btn-secondary vacations-btn-sm" type="button" onclick="VacationModule.openTab(\'check\')">⚠️ Проблемні питання</button>' +
           "</div>";
       }
       html += "</div>";
@@ -697,8 +697,7 @@
             "</strong><span>людей</span></div></div>" +
             this.scheduleYearSelectorHtml() +
             '<div class="result-screen-actions">' +
-            '<button class="btn btn-primary" type="button" onclick="VacationModule.rebuildSchedule()">🔄 Оновити графік</button>' +
-            '<button class="btn btn-secondary" type="button" onclick="VacationModule.openUpdatedSchedule()">📅 Оновити і відкрити графік</button>' +
+            '<button class="btn btn-primary" type="button" onclick="VacationModule.openUpdatedSchedule()">📅 Оновити і відкрити графік</button>' +
             "</div>" +
             '<div id="vacationPlanList">' +
             this.vacationListHtml() +
@@ -816,10 +815,9 @@
             "</strong><span>людей</span></div></div>" +
             this.scheduleSummaryHtml() +
             '<div class="result-screen-actions">' +
-            '<button class="btn btn-primary" type="button" onclick="VacationModule.loadState()">Оновити стан</button>' +
-            '<button class="btn btn-primary" type="button" onclick="VacationModule.checkReminders()">🔔 Перевірити нагадування</button>' +
-            '<button class="btn btn-secondary" type="button" onclick="VacationModule.rebuildSchedule()">🔄 Оновити графік</button>' +
-            '<button class="btn btn-secondary" type="button" onclick="VacationModule.openUpdatedSchedule()">📅 Оновити і відкрити графік</button>' +
+            '<button class="btn btn-primary" type="button" onclick="VacationModule.openUpdatedSchedule()">📅 Оновити і відкрити графік</button>' +
+            '<button class="btn btn-secondary" type="button" onclick="VacationModule.checkReminders()">🔔 Перевірити нагадування</button>' +
+            '<button class="btn btn-secondary vacations-btn-sm" type="button" title="Оновлює дані бокової панелі з таблиці. Не перебудовує графік." onclick="VacationModule.loadState()">↻ Оновити дані</button>' +
             "</div>" +
             '<div id="vacationReminderResult">' +
             (s.remindersHtml || "") +
@@ -1043,41 +1041,6 @@
         this.setStatus("🏖️ Нагадування про відпустки перевірено", "success");
         logToConsole("🏖️ Нагадування про відпустки перевірено", "success");
         this.render();
-      } catch (error) {
-        this.showError(error);
-      } finally {
-        hideLoading();
-      }
-    },
-
-    async rebuildSchedule() {
-      showLoading();
-      try {
-        var year = this.getScheduleYear_();
-        this.state.scheduleYear = year;
-        var result = await runServerMethod_(
-          "rebuildVacationScheduleFromSidebar",
-          [{ year: year }],
-          "VacationModule.rebuildSchedule",
-        );
-        showToast("✓ Графік оновлено (" + year + ")");
-        logToConsole(
-          "✓ Графік відпусток оновлено (" +
-            year +
-            "): " +
-            (result.schedulePeople || 0) +
-            " людей, " +
-            (result.scheduleDays || 0) +
-            " днів",
-          "success",
-        );
-        if (result.scheduleYear) {
-          this.state.scheduleYear = Number(result.scheduleYear);
-        }
-        if (result.problemSummary) {
-          this.state.problemSummary = result.problemSummary;
-        }
-        await this.loadState();
       } catch (error) {
         this.showError(error);
       } finally {

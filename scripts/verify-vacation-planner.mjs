@@ -2321,12 +2321,20 @@ assert.doesNotMatch(
 assert.match(sidebarService, /scheduleYear:/);
 assert.match(jsVacations, /getScheduleYear_/);
 assert.match(jsVacations, /vacScheduleYear/);
-assert.match(jsVacations, /rebuildVacationScheduleFromSidebar[\s\S]*year:/);
+assert.match(jsVacations, /openUpdatedVacationScheduleFromSidebar[\s\S]*year:/);
 assert.match(jsVacations, /openUpdatedSchedule\(\)/);
 assert.match(jsVacations, /Оновити і відкрити графік/);
 assert.match(jsVacations, /openUpdatedVacationScheduleFromSidebar/);
 assert.match(jsVacations, /\[VacationModule\.openUpdatedSchedule\] clicked/);
+assert.doesNotMatch(jsVacations, /Оновити стан/);
+assert.match(jsVacations, /↻ Оновити дані/);
+assert.match(
+  jsVacations,
+  /title="Оновлює дані бокової панелі з таблиці\. Не перебудовує графік\."/,
+);
+assert.doesNotMatch(jsVacations, /🔄 Оновити графік/);
 assert.doesNotMatch(jsVacations, /Відкрити календар/);
+assert.doesNotMatch(jsVacations, /VacationModule\.rebuildSchedule\(\)/);
 assert.match(sidebarService, /openUpdatedVacationScheduleFromSidebar/);
 assert.match(sidebarService, /function openUpdatedSchedule\(formData\)/);
 assert.match(sidebarHtml, /id="btnVacations"/);
