@@ -60,7 +60,7 @@ const VacationSidebarService_ = (function () {
       .trim()
       .toLowerCase();
     if (text === "вд" || text.indexOf("додаткова") !== -1) return "ВД";
-    if (text === "со" || text.indexOf("сімейна") !== -1) return "СО";
+    if (text === "со" || text.indexOf("сімейн") !== -1) return "СО";
     return Number(vacation && vacation.vacationNumber) === 2 ? "В2" : "В1";
   }
 

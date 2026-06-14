@@ -81,7 +81,7 @@ const VacationOptionsWriter_ = (function () {
       .trim()
       .toLowerCase();
     if (text.indexOf("додаткова") !== -1 || text === "вд") return "ВД";
-    if (text.indexOf("сімейна") !== -1 || text === "со") return "СО";
+    if (text.indexOf("сімейн") !== -1 || text === "со") return "СО";
     return Number(item && item.vacationNumber) === 2 ? "В2" : "В1";
   }
 
@@ -418,7 +418,7 @@ const VacationOptionsWriter_ = (function () {
       .toLowerCase();
     const special =
       expectedText.indexOf("додаткова") !== -1 ||
-      expectedText.indexOf("сімейна") !== -1;
+      expectedText.indexOf("сімейн") !== -1;
     return special
       ? rowText === expectedText
       : _vacationNumber_(rowText) === expectedNumber;
