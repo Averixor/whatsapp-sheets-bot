@@ -1569,6 +1569,114 @@ const vacationClientModule = vm.runInContext(
   "VacationModule",
   vacationClientContext,
 );
+const vacationClientServerCalls = [];
+const vacationClientInputs = {
+  vacMoveVacation: "0",
+  vacMoveStart: "2026-08-01",
+  vacMoveDays: "15",
+};
+Object.assign(vacationClientContext, {
+  document: {
+    getElementById(id) {
+      return Object.prototype.hasOwnProperty.call(vacationClientInputs, id)
+        ? { value: vacationClientInputs[id] }
+        : null;
+    },
+  },
+  runServerMethod_(method, args, source) {
+    vacationClientServerCalls.push({ method, args, source });
+    if (method === "getVacationSidebarState") {
+      return Promise.resolve({
+        personnel: [],
+        vacations: [],
+        stats: { total: 0, activePeople: 0 },
+      });
+    }
+    return Promise.resolve({ warnings: [] });
+  },
+  showLoading() {},
+  hideLoading() {},
+  showToast() {},
+  logToConsole() {},
+  normalizeError(error) {
+    return error && error.message ? error.message : String(error);
+  },
+});
+vacationClientContext.window.confirm = () => true;
+vacationClientModule.state.vacations = [
+  {
+    requestId: "request-move-1",
+    personKey: "ALPHA",
+    fml: "Пелих Артем Андрійович",
+    vacationNumber: 2,
+    type: "В2",
+    sourceRow: 14,
+    sourceStartColumn: 8,
+    startDate: "2026-07-01",
+    endDate: "2026-07-15",
+    days: 15,
+    manageable: true,
+  },
+];
+await vacationClientModule.submitMove();
+const moveCall = vacationClientServerCalls.find(
+  (call) => call.method === "moveVacationFromSidebar",
+);
+assert.ok(moveCall, "submitMove must call moveVacationFromSidebar");
+assert.deepEqual(
+  moveCall.args[0],
+  {
+    requestId: "request-move-1",
+    personKey: "ALPHA",
+    fml: "Пелих Артем Андрійович",
+    vacationNumber: 2,
+    type: "В2",
+    sourceRow: 14,
+    sourceStartColumn: 8,
+    startDate: "2026-08-01",
+    days: 15,
+  },
+  "move payload must preserve request identity and source coordinates",
+);
+vacationClientModule.state.vacations = [
+  {
+    requestId: "request-cancel-1",
+    personKey: "BRAVO",
+    fml: "Скасувати Людина",
+    vacationNumber: 1,
+    type: "В1",
+    sourceRow: 21,
+    sourceStartColumn: 4,
+    startDate: "2026-09-01",
+    endDate: "2026-09-15",
+    days: 15,
+  },
+];
+vacationClientModule.cancelVacation(0);
+await new Promise((resolve) => setImmediate(resolve));
+const cancelCall = vacationClientServerCalls.find(
+  (call) => call.method === "cancelVacationFromSidebar",
+);
+assert.ok(cancelCall, "cancelVacation must call cancelVacationFromSidebar");
+assert.deepEqual(
+  {
+    requestId: cancelCall.args[0].requestId,
+    personKey: cancelCall.args[0].personKey,
+    sourceRow: cancelCall.args[0].sourceRow,
+    sourceStartColumn: cancelCall.args[0].sourceStartColumn,
+    vacationNumber: cancelCall.args[0].vacationNumber,
+    type: cancelCall.args[0].type,
+  },
+  {
+    requestId: "request-cancel-1",
+    personKey: "BRAVO",
+    sourceRow: 21,
+    sourceStartColumn: 4,
+    vacationNumber: 1,
+    type: "В1",
+  },
+  "cancel payload must preserve request identity and source coordinates",
+);
 vacationClientModule.state.vacations = [
   {
     fml: "Пелих Артем Андрійович",
@@ -1637,6 +1745,129 @@ const writerSource = fs.readFileSync(
 const engineSource = fs.readFileSync(
   path.join(repoRoot, "VacationEngine.gs"),
   "utf8",
+);
+const enginePhoneLookups = [];
+const engineContext = vm.createContext({
+  console,
+  Date,
+  Utilities: {
+    formatDate(value, _timeZone, pattern) {
+      assert.equal(pattern, "dd.MM.yyyy");
+      const d = new Date(value);
+      const dayPart = String(d.getDate()).padStart(2, "0");
+      const monthPart = String(d.getMonth() + 1).padStart(2, "0");
+      return `${dayPart}.${monthPart}.${d.getFullYear()}`;
+    },
+  },
+  DateUtils_: {
+    getTimeZone() {
+      return "Europe/Kyiv";
+    },
+  },
+  VacationsRepository_: {
+    listAll() {
+      return [
+        {
+          fml: "Approved Person",
+          personKey: "ALPHA",
+          startDate: date("2026-07-04"),
+          endDate: date("2026-07-18"),
+          vacationNo: 1,
+          active: true,
+          notify: true,
+        },
+        {
+          fml: "Fallback Person",
+          startDate: date("2026-07-02"),
+          endDate: date("2026-07-16"),
+          vacationNo: 2,
+          active: "TRUE",
+          notify: true,
+        },
+        {
+          fml: "Proposed Person",
+          personKey: "PROPOSED",
+          startDate: date("2026-07-04"),
+          endDate: date("2026-07-18"),
+          vacationNo: 1,
+          active: true,
+          notify: true,
+          reminderEligible: false,
+        },
+        {
+          fml: "Cancelled Person",
+          personKey: "CANCELLED",
+          startDate: date("2026-07-04"),
+          endDate: date("2026-07-18"),
+          vacationNo: 1,
+          active: false,
+          notify: true,
+        },
+      ];
+    },
+    getSourceMode() {
+      return "requests";
+    },
+    getSourceSheetName() {
+      return "VACATION_REQUESTS";
+    },
+  },
+  resolveMessageRecipient_() {
+    return {
+      phone: "380000000000",
+      role: "ГРАФ",
+      callsign: "ГРАФ",
+      source: "test",
+    };
+  },
+  findPhone_(query) {
+    enginePhoneLookups.push(query);
+    if (query.callsign === "ALPHA") return "380111111111";
+    if (query.fml === "Fallback Person") return "380222222222";
+    return "";
+  },
+  buildWhatsAppWebLink_(phone, message) {
+    return `https://wa.test/${phone}?text=${encodeURIComponent(message)}`;
+  },
+});
+vm.runInContext(engineSource, engineContext, { filename: "VacationEngine.gs" });
+const vacationEngineResult = vm.runInContext(
+  'runVacationEngine_(new Date(2026, 6, 1, 12, 0, 0), { commanderRole: "ГРАФ" })',
+  engineContext,
+);
+assert.equal(vacationEngineResult.debug.totalRows, 4);
+assert.equal(vacationEngineResult.debug.activeRows, 2);
+assert.equal(vacationEngineResult.debug.sourceMode, "requests");
+assert.deepEqual(
+  vacationEngineResult.soldierMessages.map((item) => item.fml),
+  ["Fallback Person", "Approved Person"],
+  "engine must emit only eligible active vacation reminders sorted by daysUntil",
+);
+assert.deepEqual(
+  vacationEngineResult.commanderMessages.map((item) => item.fml),
+  ["Fallback Person", "Approved Person"],
+);
+assert.deepEqual(
+  vacationEngineResult.soldierMessages.map((item) => item.phone),
+  ["380222222222", "380111111111"],
+  "engine must allow Callsign-first lookup with FML fallback",
+);
+assert.ok(
+  enginePhoneLookups.some(
+    (query) => query.callsign === "ALPHA" && query.fml === "Approved Person",
+  ),
+);
+assert.ok(
+  enginePhoneLookups.some(
+    (query) => query.callsign === "Fallback" && query.fml === "Fallback Person",
+  ),
+);
+assert.ok(
+  enginePhoneLookups.every(
+    (query) =>
+      query.fml !== "Proposed Person" && query.fml !== "Cancelled Person",
+  ),
+  "engine must not resolve phones for proposed or inactive vacations",
 );
 assert.doesNotMatch(code, /createMenu\("Відпустки"\)/);
 assert.doesNotMatch(code, /addSubMenu\(vacationMenu\)/);
