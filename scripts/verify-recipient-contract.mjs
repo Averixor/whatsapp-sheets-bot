@@ -86,7 +86,7 @@ function verifyResolverBehavior() {
 function verifyRecipientRoutingContract() {
   assertContains(
     "SidebarServer.gs",
-    /function prepareMessageToRecipientSidebar[\s\S]*_requireSidebarAccessGuard_\('assertCanUseWorkingActions'[\s\S]*resolveMessageRecipient_/,
+    /function prepareMessageToRecipientSidebar[\s\S]*_requireSidebarAccessGuard_\(['"]assertCanUseWorkingActions['"][\s\S]*resolveMessageRecipient_/,
     "prepared recipient links must be guarded and use the shared resolver",
   );
   assertContains(
