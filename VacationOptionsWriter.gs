@@ -80,8 +80,8 @@ const VacationOptionsWriter_ = (function () {
     )
       .trim()
       .toLowerCase();
-    if (text.indexOf("додатк") !== -1 || text === "вд") return "ВД";
-    if (text.indexOf("сімейн") !== -1 || text === "со") return "СО";
+    if (text.indexOf("додаткова") !== -1 || text === "вд") return "ВД";
+    if (text.indexOf("сімейна") !== -1 || text === "со") return "СО";
     return Number(item && item.vacationNumber) === 2 ? "В2" : "В1";
   }
 
@@ -417,8 +417,8 @@ const VacationOptionsWriter_ = (function () {
       .trim()
       .toLowerCase();
     const special =
-      expectedText.indexOf("додатк") !== -1 ||
-      expectedText.indexOf("сімейн") !== -1;
+      expectedText.indexOf("додаткова") !== -1 ||
+      expectedText.indexOf("сімейна") !== -1;
     return special
       ? rowText === expectedText
       : _vacationNumber_(rowText) === expectedNumber;
@@ -623,7 +623,7 @@ const VacationOptionsWriter_ = (function () {
     const existingRequests = VacationsRepository_.listRequests();
     if (!dryRun && existingRequests.length) {
       throw new Error(
-        "VACATION_REQUESTS вже містить дані. Міграція не перезаписує існуючі записи.",
+        "VACATION_REQUESTS вже містить дані. Міграція не перезаписує існуючи записи.",
       );
     }
 
@@ -987,7 +987,7 @@ const VacationOptionsWriter_ = (function () {
       "Код у місячному графіку не підтверджений планом",
     PLAN_WITHOUT_MONTHLY_VACATION: "План не відображений у місячному графіку",
     HIGH_LOAD_PERIOD: "Період на межі допустимого навантаження",
-    MONTH_BALANCE: "Перекос стартів відпусток у місяці",
+    MONTH_BALANCE: "Перекіс стартів відпусток у місяці",
     RIGHT_PANEL_LEGACY_DATA: "Дані у правій таблиці K:Q (не джерело істини)",
   };
 
@@ -997,8 +997,8 @@ const VacationOptionsWriter_ = (function () {
     PERSON_OVERLAP: "перетином відпусток однієї людини",
     START_TOO_CLOSE: "занадто близькими датами початку",
     START_GAP: "занадто близькими датами початку",
-    YEAR_LIMIT: "забагаттям відпусток у році",
-    MAX_PERSON_YEAR: "забагаттям відпусток у році",
+    YEAR_LIMIT: "забагато відпусток у році",
+    MAX_PERSON_YEAR: "забагато відпусток у році",
     MAX_CONCURRENT: "одночасною кількістю людей у відпустці",
     INVALID_DATE: "некоректними датами",
     INVALID_DURATION: "некоректною тривалістю",

@@ -32,7 +32,7 @@ const Stage7Triggers_ = (function () {
         jobName: cfg.JOBS.CLEANUP_CACHES,
         handler: "stage7JobCleanupCaches",
         kind: "timeBased",
-        description: "Технічне очищення кешів",
+        description: "Технічне очищення кешу",
       },
       staleOperationDetector: {
         jobName: cfg.JOBS.STALE_OPERATION_DETECTOR,
