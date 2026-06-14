@@ -138,7 +138,9 @@ const VacationOptionsWriter_ = (function () {
     if (panel && panel.startCol) {
       const rightHeader = sheet.getRange(1, panel.startCol);
       if (!String(rightHeader.getValue() || "").trim()) {
-        rightHeader.setValue(panel.headerLabel || "Представлення — не редагувати");
+        rightHeader.setValue(
+          panel.headerLabel || "Представлення — не редагувати",
+        );
       }
     }
     return sheet;
@@ -253,7 +255,8 @@ const VacationOptionsWriter_ = (function () {
     const expectedType = _vacationMarker_(option);
     return (
       _fmlKey_((row && row[2]) || "") === _fmlKey_(option && option.fml) &&
-      Number((row && row[4]) || 0) === Number(option && option.vacationNumber) &&
+      Number((row && row[4]) || 0) ===
+        Number(option && option.vacationNumber) &&
       String((row && row[5]) || "")
         .trim()
         .toUpperCase() === expectedType &&
@@ -434,7 +437,9 @@ const VacationOptionsWriter_ = (function () {
     const startRow = rangeCfg.startRow || 2;
     const lastRow = Math.max(sheet.getLastRow(), startRow);
     const rowCount = Math.max(lastRow - startRow + 1, 1);
-    const values = sheet.getRange(startRow, startCol, rowCount, width).getValues();
+    const values = sheet
+      .getRange(startRow, startCol, rowCount, width)
+      .getValues();
     const targetKey = _fmlKey_(option.fml);
     let targetRow = 0;
     let existingTravel = "";
@@ -498,9 +503,7 @@ const VacationOptionsWriter_ = (function () {
       "OK",
     ];
     sheet.getRange(targetRow, startCol, 1, width).setValues([rowData]);
-    sheet
-      .getRange(targetRow, startCol + 1, 1, 2)
-      .setNumberFormat("dd.MM.yyyy");
+    sheet.getRange(targetRow, startCol + 1, 1, 2).setNumberFormat("dd.MM.yyyy");
 
     return {
       sheetName: sheet.getName(),
@@ -512,7 +515,12 @@ const VacationOptionsWriter_ = (function () {
     };
   }
 
-  function _setLegacyVacationActive_(fml, vacationNumber, active, vacationType) {
+  function _setLegacyVacationActive_(
+    fml,
+    vacationNumber,
+    active,
+    vacationType,
+  ) {
     const sheet = _ensureSourceSheet_();
     const block = _block_(vacationNumber);
     const rangeCfg = _mainSourceRange_();
@@ -588,12 +596,7 @@ const VacationOptionsWriter_ = (function () {
           vacationType,
           locator,
         )
-      : _setLegacyVacationActive_(
-          fml,
-          vacationNumber,
-          active,
-          vacationType,
-        );
+      : _setLegacyVacationActive_(fml, vacationNumber, active, vacationType);
   }
 
   function migrateLegacyToRequests(options) {
@@ -720,6 +723,54 @@ const VacationOptionsWriter_ = (function () {
     );
   }
 
+  function buildVacationScheduleYearRange_(year) {
+    const y = Number(year);
+    if (!y || y < 1900 || y > 9999) {
+      throw new Error("Некоректний рік графіка: " + year);
+    }
+    return {
+      year: y,
+      startDate: new Date(y, 0, 1, 12, 0, 0, 0),
+      endDate: new Date(y, 11, 31, 12, 0, 0, 0),
+      shortTitle: "Графік відпусток на " + y + " рік",
+      title: "Графік відпусток: 01.01." + y + " – 31.12." + y,
+    };
+  }
+
+  function resolveScheduleYear_(options) {
+    const direct = Number(options && options.year);
+    if (direct >= 1900 && direct <= 9999) return direct;
+    try {
+      const stored = Number(
+        PropertiesService.getScriptProperties().getProperty(
+          "WASB_VACATION_SCHEDULE_YEAR",
+        ),
+      );
+      if (stored >= 1900 && stored <= 9999) return stored;
+    } catch (_) {}
+    return new Date().getFullYear();
+  }
+
+  function _persistScheduleYear_(year) {
+    try {
+      PropertiesService.getScriptProperties().setProperty(
+        "WASB_VACATION_SCHEDULE_YEAR",
+        String(year),
+      );
+    } catch (_) {}
+  }
+
+  function _vacationOverlapsYear_(item, year) {
+    const start = _date_(item.startDate);
+    const end = _date_(item.endDate);
+    if (!start || !end) return false;
+    const yearRange = buildVacationScheduleYearRange_(year);
+    return (
+      _dateOrdinal_(start) <= _dateOrdinal_(yearRange.endDate) &&
+      _dateOrdinal_(end) >= _dateOrdinal_(yearRange.startDate)
+    );
+  }
+
   function _dateKey_(value) {
     if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
       return value.trim();
@@ -731,28 +782,21 @@ const VacationOptionsWriter_ = (function () {
     return date.getFullYear() + "-" + month + "-" + day;
   }
 
-  function buildScheduleCalendar(schedule) {
+  function buildScheduleCalendar(schedule, options) {
+    const year = resolveScheduleYear_(options || {});
+    const yearRange = buildVacationScheduleYearRange_(year);
+    const minOrdinal = _dateOrdinal_(yearRange.startDate);
+    const maxOrdinal = _dateOrdinal_(yearRange.endDate);
     const list = (Array.isArray(schedule) ? schedule : []).filter(
       function (item) {
-        return item && _date_(item.startDate) && _date_(item.endDate);
+        return (
+          item &&
+          _date_(item.startDate) &&
+          _date_(item.endDate) &&
+          _vacationOverlapsYear_(item, year)
+        );
       },
     );
-    if (!list.length) {
-      return {
-        rows: [["QUANTITY", "FML"]],
-        dateCount: 0,
-        personCount: 0,
-      };
-    }
-
-    let minOrdinal = null;
-    let maxOrdinal = null;
-    list.forEach(function (item) {
-      const start = _dateOrdinal_(item.startDate);
-      const end = _dateOrdinal_(item.endDate);
-      if (minOrdinal === null || start < minOrdinal) minOrdinal = start;
-      if (maxOrdinal === null || end > maxOrdinal) maxOrdinal = end;
-    });
 
     const dates = [];
     for (let ordinal = minOrdinal; ordinal <= maxOrdinal; ordinal++) {
@@ -781,8 +825,8 @@ const VacationOptionsWriter_ = (function () {
         };
       }
       const marker = _vacationMarker_(item);
-      const start = _dateOrdinal_(item.startDate);
-      const end = _dateOrdinal_(item.endDate);
+      const start = Math.max(_dateOrdinal_(item.startDate), minOrdinal);
+      const end = Math.min(_dateOrdinal_(item.endDate), maxOrdinal);
       people[key].quantity += Number(item.days) || end - start + 1;
       for (let ordinal = start; ordinal <= end; ordinal++) {
         const index = ordinal - minOrdinal;
@@ -807,6 +851,13 @@ const VacationOptionsWriter_ = (function () {
       rows: rows,
       dateCount: dates.length,
       personCount: rows.length - 1,
+      year: year,
+      startDate: yearRange.startDate,
+      endDate: yearRange.endDate,
+      shortTitle: yearRange.shortTitle,
+      title: yearRange.title,
+      headerRow: 1,
+      dataStartRow: 2,
     };
   }
 
@@ -831,12 +882,12 @@ const VacationOptionsWriter_ = (function () {
   }
 
   function _formatScheduleCalendar_(sheet, calendar) {
-    const rowCount = calendar.personCount + 1;
     const dateCount = calendar.dateCount;
-    if (!dateCount || rowCount <= 1) return;
+    const dataRowCount = calendar.personCount;
+    const dataStartRow = calendar.dataStartRow || 2;
+    if (!dateCount || dataRowCount <= 0) return;
 
-    const dataRowCount = rowCount - 1;
-    const dataRange = sheet.getRange(2, 3, dataRowCount, dateCount);
+    const dataRange = sheet.getRange(dataStartRow, 3, dataRowCount, dateCount);
     const values = dataRange.getDisplayValues();
     const backgrounds = values.map(function (row) {
       return row.map(_scheduleCellColor_);
@@ -845,11 +896,14 @@ const VacationOptionsWriter_ = (function () {
   }
 
   function _applyMonthSeparators_(sheet, calendar) {
-    const rowCount = calendar.personCount + 1;
     const dateCount = calendar.dateCount;
-    if (!dateCount || rowCount <= 0) return;
+    const headerRow = calendar.headerRow || 1;
+    const rowSpan = calendar.personCount + 1;
+    if (!dateCount || rowSpan <= 0) return;
 
-    const headerValues = sheet.getRange(1, 3, 1, dateCount).getValues()[0];
+    const headerValues = sheet
+      .getRange(headerRow, 3, 1, dateCount)
+      .getValues()[0];
     for (let index = 0; index < headerValues.length - 1; index++) {
       const current = headerValues[index];
       const next = headerValues[index + 1];
@@ -862,7 +916,7 @@ const VacationOptionsWriter_ = (function () {
 
       const column = 3 + index;
       sheet
-        .getRange(1, column, rowCount, 1)
+        .getRange(headerRow, column, rowSpan, 1)
         .setBorder(
           null,
           null,
@@ -876,10 +930,18 @@ const VacationOptionsWriter_ = (function () {
     }
   }
 
-  function _writeSchedule_(schedule) {
+  function _writeSchedule_(schedule, options) {
+    const opts = options || {};
+    const year = resolveScheduleYear_(opts);
+    _persistScheduleYear_(year);
     const sheet = _ensureSheet_(VACATION_PLANNER_CONFIG.SHEETS.SCHEDULE);
-    const calendar = buildScheduleCalendar(schedule);
-    const rows = calendar.rows;
+    const calendar = buildScheduleCalendar(schedule, { year: year });
+    const titleRow = [calendar.shortTitle];
+    while (titleRow.length < calendar.rows[0].length) titleRow.push("");
+    const rows = [titleRow].concat(calendar.rows);
+    calendar.titleRow = 1;
+    calendar.headerRow = 2;
+    calendar.dataStartRow = 3;
     const width = rows[0].length;
     _ensureGridSize_(sheet, rows.length, width);
     return preserveUserConditionalFormatRules_(
@@ -887,14 +949,17 @@ const VacationOptionsWriter_ = (function () {
       function () {
         sheet.clear();
         sheet.getRange(1, 1, rows.length, width).setValues(rows);
+        sheet.getRange(1, 1, 1, width).setFontWeight("bold");
         sheet
-          .getRange(1, 1, 1, width)
+          .getRange(2, 1, 1, width)
           .setFontWeight("bold")
           .setBackground("#D9EAD3");
-        sheet.setFrozenRows(1);
+        sheet.setFrozenRows(2);
         sheet.setFrozenColumns(2);
         if (calendar.dateCount) {
-          sheet.getRange(1, 3, 1, calendar.dateCount).setNumberFormat("dd.MM");
+          sheet
+            .getRange(2, 3, 1, calendar.dateCount)
+            .setNumberFormat("dd.MM.yy");
           sheet.setColumnWidths(3, calendar.dateCount, 42);
         }
         _formatScheduleCalendar_(sheet, calendar);
@@ -918,12 +983,12 @@ const VacationOptionsWriter_ = (function () {
     INVALID_DATE: "Некоректна дата",
     INVALID_DURATION: "Некоректна тривалість",
     PERSONNEL_VACATION_WITHOUT_PLAN: "Статус PERSONNEL не підтверджений планом",
-    MONTHLY_VACATION_WITHOUT_PLAN: "Код у місячному графіку не підтверджений планом",
+    MONTHLY_VACATION_WITHOUT_PLAN:
+      "Код у місячному графіку не підтверджений планом",
     PLAN_WITHOUT_MONTHLY_VACATION: "План не відображений у місячному графіку",
     HIGH_LOAD_PERIOD: "Період на межі допустимого навантаження",
     MONTH_BALANCE: "Перекос стартів відпусток у місяці",
-    RIGHT_PANEL_LEGACY_DATA:
-      "Дані у правій таблиці K:Q (не джерело істини)",
+    RIGHT_PANEL_LEGACY_DATA: "Дані у правій таблиці K:Q (не джерело істини)",
   };
 
   const VACATION_RULE_SUMMARY_PHRASE = {
@@ -1244,7 +1309,8 @@ const VacationOptionsWriter_ = (function () {
         for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
           const callsign = String((callsigns[rowIndex] || [])[0] || "").trim();
           if (!callsign) continue;
-          const personnel = personnelByCallsign[_callsignKey_(callsign)] || null;
+          const personnel =
+            personnelByCallsign[_callsignKey_(callsign)] || null;
           const monthlyFml = String(
             (monthlyFmls[rowIndex] || [])[0] || "",
           ).trim();
@@ -1277,9 +1343,7 @@ const VacationOptionsWriter_ = (function () {
       new Date(),
     );
     audit.checks = audit.checks.concat(consistencyChecks);
-    if (
-      typeof VacationsRepository_.detectRightPanelManualData === "function"
-    ) {
+    if (typeof VacationsRepository_.detectRightPanelManualData === "function") {
       const rightPanel = VacationsRepository_.detectRightPanelManualData();
       if (rightPanel && rightPanel.hasData) {
         audit.checks.push({
@@ -1294,12 +1358,16 @@ const VacationOptionsWriter_ = (function () {
     return audit;
   }
 
-  function rebuildVacationSystem() {
+  function rebuildVacationSystem(options) {
+    const opts = options || {};
+    const year = resolveScheduleYear_(opts);
     const audit = _loadAudit_();
-    const calendar = _writeSchedule_(audit.schedule);
+    const calendar = _writeSchedule_(audit.schedule, { year: year });
     _writeChecks_(audit.checks);
     const problemSummary = _summarizeAuditProblems_(audit);
     return {
+      scheduleYear: year,
+      scheduleTitle: calendar.shortTitle || calendar.title || "",
       scheduleRows: audit.schedule.length,
       schedulePeople: calendar.personCount,
       scheduleDays: calendar.dateCount,
@@ -1385,6 +1453,8 @@ const VacationOptionsWriter_ = (function () {
     writeVacationToSource: writeVacationToSource,
     setVacationActive: setVacationActive,
     buildScheduleCalendar: buildScheduleCalendar,
+    buildVacationScheduleYearRange_: buildVacationScheduleYearRange_,
+    resolveScheduleYear: resolveScheduleYear_,
     normalizeChecks: normalizeChecks,
     normalizeProblems: normalizeProblems,
     summarizeVacationProblems: summarizeVacationProblems,
@@ -1397,6 +1467,10 @@ const VacationOptionsWriter_ = (function () {
     switchSourceMode: switchSourceMode,
   };
 })();
+
+function buildVacationScheduleYearRange_(year) {
+  return VacationOptionsWriter_.buildVacationScheduleYearRange_(year);
+}
 
 function migrateVacationsToRequests(options) {
   if (typeof _stage7AssertRole_ !== "function") {

@@ -59,8 +59,8 @@ const VacationSidebarService_ = (function () {
     )
       .trim()
       .toLowerCase();
-    if (text === "вд" || text.indexOf("додатк") !== -1) return "ВД";
-    if (text === "со" || text.indexOf("сімейн") !== -1) return "СО";
+    if (text === "вд" || text.indexOf("додаткова") !== -1) return "ВД";
+    if (text === "со" || text.indexOf("сімейна") !== -1) return "СО";
     return Number(vacation && vacation.vacationNumber) === 2 ? "В2" : "В1";
   }
 
@@ -165,16 +165,15 @@ const VacationSidebarService_ = (function () {
       days: Number(option.days) || 0,
       score: Number(option.score) || 0,
       status: accepted ? option.status : "REJECTED",
-      label:
-        compromise
-          ? "З попередженням"
-          : accepted && Number(option.rank) === 1
-            ? "Найкращий"
-            : accepted && Number(option.rank) === 2
-              ? "Допустимий"
-              : accepted
-                ? "Запасний"
-                : "Відхилено",
+      label: compromise
+        ? "З попередженням"
+        : accepted && Number(option.rank) === 1
+          ? "Найкращий"
+          : accepted && Number(option.rank) === 2
+            ? "Допустимий"
+            : accepted
+              ? "Запасний"
+              : "Відхилено",
       explanation: option.explanation || "",
     };
   }
@@ -268,8 +267,13 @@ const VacationSidebarService_ = (function () {
   function show() {
     _assertWorkingAccess_("showVacationSidebar");
     throw new Error(
-      "Окремий sidebar відпусток вимкнено. Відкрийте WASB → 📱 ПАНЕЛЬ → 🏖️ Відпустки.",
+      "Окремий sidebar відпусток вимкнено. Відкрийте WASB → Відкрити панель → 🏖️ Відпустки.",
     );
+  }
+
+  function _scheduleYearOptions_() {
+    const current = new Date().getFullYear();
+    return [current, current + 1, current + 2];
   }
 
   function getState() {
@@ -286,7 +290,10 @@ const VacationSidebarService_ = (function () {
         total: vacations.length,
         activePeople: Object.keys(people).length,
       },
+      scheduleYear: VacationOptionsWriter_.resolveScheduleYear({}),
+      scheduleYearOptions: _scheduleYearOptions_(),
       problemSummary: VacationOptionsWriter_.summarizeVacationProblems(),
+      rightPanelMigration: _rightPanelMigrationState_(),
     };
   }
 
@@ -434,10 +441,13 @@ const VacationSidebarService_ = (function () {
     };
   }
 
-  function rebuildSchedule() {
+  function rebuildSchedule(formData) {
     _assertWorkingAccess_("rebuildVacationScheduleFromSidebar");
     return _withDocumentLock_(function () {
-      return VacationOptionsWriter_.rebuildVacationSystem();
+      const year = Number(formData && formData.year);
+      return VacationOptionsWriter_.rebuildVacationSystem(
+        year >= 1900 && year <= 9999 ? { year: year } : {},
+      );
     });
   }
 
@@ -477,6 +487,49 @@ const VacationSidebarService_ = (function () {
     });
   }
 
+  function applyRightPanelMigration() {
+    _assertWorkingAccess_("applyRightPanelMigrationFromSidebar");
+    return _withDocumentLock_(function () {
+      if (typeof migrateRightVacationTableToMainSource_ !== "function") {
+        throw new Error("Міграцію правої таблиці недоступно");
+      }
+      const migration = migrateRightVacationTableToMainSource_();
+      let rebuild = null;
+      if (Number(migration && migration.migrated) > 0) {
+        rebuild = VacationOptionsWriter_.rebuildVacationSystem();
+      }
+      const vacations = _activeVacations_().map(_serializeVacation_);
+      const people = {};
+      vacations.forEach(function (vacation) {
+        people[String(vacation.fml || "").toUpperCase()] = true;
+      });
+      return {
+        migration: migration,
+        rebuild: rebuild,
+        vacations: vacations,
+        stats: {
+          total: vacations.length,
+          activePeople: Object.keys(people).length,
+        },
+        rightPanelMigration: _rightPanelMigrationState_(),
+        problemSummary: VacationOptionsWriter_.summarizeVacationProblems(),
+      };
+    });
+  }
+
+  function _rightPanelMigrationState_() {
+    if (typeof VacationsRepository_.detectRightPanelManualData !== "function") {
+      return { hasData: false, count: 0, fmlSummary: "", message: "" };
+    }
+    const panel = VacationsRepository_.detectRightPanelManualData();
+    return {
+      hasData: !!(panel && panel.hasData),
+      count: panel && panel.count ? panel.count : 0,
+      fmlSummary: (panel && panel.fmlSummary) || "",
+      message: (panel && panel.message) || "",
+    };
+  }
+
   return {
     show: show,
     getState: getState,
@@ -491,6 +544,7 @@ const VacationSidebarService_ = (function () {
     generateReport: generateReport,
     openSchedule: openSchedule,
     applyFixSuggestion: applyFixSuggestion,
+    applyRightPanelMigration: applyRightPanelMigration,
   };
 })();
 
@@ -534,8 +588,8 @@ function validateVacationDateFromSidebar(formData) {
   return VacationSidebarService_.validateDate(formData);
 }
 
-function rebuildVacationScheduleFromSidebar() {
-  return VacationSidebarService_.rebuildSchedule();
+function rebuildVacationScheduleFromSidebar(formData) {
+  return VacationSidebarService_.rebuildSchedule(formData);
 }
 
 function checkVacationRulesFromSidebar() {
@@ -552,4 +606,8 @@ function openVacationScheduleFromSidebar() {
 
 function applyVacationSuggestionFromSidebar(formData) {
   return VacationSidebarService_.applyFixSuggestion(formData);
+}
+
+function applyRightPanelMigrationFromSidebar() {
+  return VacationSidebarService_.applyRightPanelMigration();
 }

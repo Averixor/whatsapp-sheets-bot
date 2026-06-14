@@ -58,10 +58,12 @@
     INVALID_DATE: "Некоректна дата",
     INVALID_DURATION: "Некоректна тривалість",
     PERSONNEL_VACATION_WITHOUT_PLAN: "Статус PERSONNEL не підтверджений планом",
-    MONTHLY_VACATION_WITHOUT_PLAN: "Код у місячному графіку не підтверджений планом",
+    MONTHLY_VACATION_WITHOUT_PLAN:
+      "Код у місячному графіку не підтверджений планом",
     PLAN_WITHOUT_MONTHLY_VACATION: "План не відображений у місячному графіку",
     HIGH_LOAD_PERIOD: "Період на межі допустимого навантаження",
-    MONTH_BALANCE: "Перекос стартів відпусток у місяці",
+    MONTH_BALANCE: "Перекіс стартів відпусток у місяці",
+    RIGHT_PANEL_LEGACY_DATA: "Дані у правій таблиці K:Q (не джерело істини)",
   };
 
   function normalizeVacationRuleType_(type) {
@@ -154,6 +156,11 @@
         "Якщо план уже застосований — встановити код «Відпус» у місячному графіку.",
       ];
     }
+    if (type === "RIGHT_PANEL_LEGACY_DATA") {
+      return [
+        "Знайдено записи у K:Q. Натисніть, щоб перенести їх в основне джерело A:I.",
+      ];
+    }
     return [
       "Перевірити запис у джерелі плану відпусток.",
       "Спробувати перенести відпустку через модуль 🏖️ Відпустки.",
@@ -186,9 +193,7 @@
         var applyAction = item.canAutoApply
           ? '<div class="result-screen-actions">' +
             '<button class="btn btn-secondary vacations-btn-sm" type="button" onclick="VacationModule.applyFixSuggestion(' +
-            Number(
-              (problem && problem.__index) != null ? problem.__index : 0,
-            ) +
+            Number((problem && problem.__index) != null ? problem.__index : 0) +
             ", " +
             Number(suggestionIndex) +
             ')">Застосувати</button>' +
@@ -249,8 +254,16 @@
             ')">Підібрати нову дату</button>' +
             "</div>"
           : "";
+        var migrationAction =
+          type === "RIGHT_PANEL_LEGACY_DATA"
+            ? '<div class="vacations-muted">Знайдено записи у K:Q. Натисніть, щоб перенести їх в основне джерело A:I.</div>' +
+              '<div class="result-screen-actions">' +
+              '<button class="btn btn-primary vacations-btn-sm" type="button" onclick="VacationModule.applyRightPanelMigration()">Міграція K:Q → A:I</button>' +
+              "</div>"
+            : "";
         var monthLabel =
-          type === "MONTH_BALANCE" && String(item.date || "").match(/^\d{4}-\d{1,2}$/)
+          type === "MONTH_BALANCE" &&
+          String(item.date || "").match(/^\d{4}-\d{1,2}$/)
             ? '<div class="vacations-muted">Місяць: ' +
               escapeHtml(formatMonthLabelUa_(item.date)) +
               "</div>"
@@ -277,6 +290,7 @@
           "<ul>" +
           suggestions +
           "</ul>" +
+          migrationAction +
           findAction +
           "</div>"
         );
@@ -309,6 +323,8 @@
       personnel: [],
       vacations: [],
       stats: { total: 0, activePeople: 0 },
+      scheduleYear: new Date().getFullYear(),
+      scheduleYearOptions: [],
       activeTab: "overview",
       statusMessage: "",
       statusType: "info",
@@ -316,6 +332,7 @@
       checks: [],
       problemsLoaded: false,
       problemSummary: null,
+      rightPanelMigration: null,
       reportText: "",
       remindersHtml: "",
       moveIndex: "",
@@ -559,16 +576,79 @@
       return renderVacationProblems_(this.state.checks);
     },
 
+    rightPanelMigrationActionHtml() {
+      return (
+        '<div class="vacations-muted">Знайдено записи у K:Q. Натисніть, щоб перенести їх в основне джерело A:I.</div>' +
+        '<div class="result-screen-actions">' +
+        '<button class="btn btn-primary vacations-btn-sm" type="button" onclick="VacationModule.applyRightPanelMigration()">Міграція K:Q → A:I</button>' +
+        "</div>"
+      );
+    },
+
+    scheduleYearSelectorHtml() {
+      var options = Array.isArray(this.state.scheduleYearOptions)
+        ? this.state.scheduleYearOptions
+        : [];
+      if (!options.length) {
+        options = [
+          this.state.scheduleYear || new Date().getFullYear(),
+          (this.state.scheduleYear || new Date().getFullYear()) + 1,
+        ];
+      }
+      var selected = Number(this.state.scheduleYear) || options[0];
+      return (
+        '<div class="vacations-form vacations-form--inline">' +
+        "<label>Рік графіка</label>" +
+        '<select id="vacScheduleYear">' +
+        options
+          .map(function (year) {
+            var sel = Number(year) === selected ? " selected" : "";
+            return (
+              '<option value="' +
+              VacationModule.esc(year) +
+              '"' +
+              sel +
+              ">" +
+              VacationModule.esc(year) +
+              "</option>"
+            );
+          })
+          .join("") +
+        "</select></div>"
+      );
+    },
+
+    getScheduleYear_() {
+      var raw = this.read("vacScheduleYear");
+      var year = Number(raw);
+      if (year >= 1900 && year <= 9999) return year;
+      return Number(this.state.scheduleYear) || new Date().getFullYear();
+    },
+
     scheduleSummaryHtml() {
       var summary = this.state.problemSummary || {};
       var total = Number(this.state.stats.total || summary.scheduleRows || 0);
-      var problemCount = Number(summary.problemCount || summary.errorCount || 0);
+      var problemCount = Number(
+        summary.problemCount || summary.errorCount || 0,
+      );
+      var panel = this.state.rightPanelMigration || {};
+      var year = this.getScheduleYear_();
       var html =
         '<div class="vacations-card vacations-schedule-summary">' +
-        '<div class="vacations-card__head"><strong>🏖️ Графік відпусток</strong></div>' +
+        '<div class="vacations-card__head"><strong>🏖️ Графік відпусток на ' +
+        this.esc(year) +
+        " рік</strong></div>" +
+        this.scheduleYearSelectorHtml() +
         '<div class="vacation-problem-card__person">Активних відпусток: ' +
         this.esc(total) +
         "</div>";
+      if (panel.hasData) {
+        html +=
+          '<div class="vacations-problem-summary-warning">⚠️ Дані у правій таблиці K:Q (не джерело істини) — ' +
+          this.esc(panel.count || 0) +
+          "</div>";
+        html += this.rightPanelMigrationActionHtml();
+      }
       if (problemCount > 0) {
         html +=
           '<div class="vacations-problem-summary-warning">⚠️ Є ' +
@@ -615,6 +695,7 @@
             '<div class="vacations-stat"><strong>' +
             this.esc(s.stats.activePeople || 0) +
             "</strong><span>людей</span></div></div>" +
+            this.scheduleYearSelectorHtml() +
             '<div class="result-screen-actions">' +
             '<button class="btn btn-primary" type="button" onclick="VacationModule.rebuildSchedule()">🔄 Оновити графік</button>' +
             '<button class="btn btn-secondary" type="button" onclick="VacationModule.openScheduleSheet()">📅 Відкрити календар</button>' +
@@ -818,7 +899,15 @@
         this.state.personnel = result.personnel || [];
         this.state.vacations = result.vacations || [];
         this.state.stats = result.stats || { total: 0, activePeople: 0 };
+        this.state.scheduleYear =
+          Number(result.scheduleYear) || new Date().getFullYear();
+        this.state.scheduleYearOptions = Array.isArray(
+          result.scheduleYearOptions,
+        )
+          ? result.scheduleYearOptions
+          : [];
         this.state.problemSummary = result.problemSummary || null;
+        this.state.rightPanelMigration = result.rightPanelMigration || null;
         this.setStatus("", "info");
         this.render();
       } catch (error) {
@@ -850,6 +939,48 @@
       this.render();
     },
 
+    async applyRightPanelMigration() {
+      showLoading();
+      try {
+        var result = await runServerMethod_(
+          "applyRightPanelMigrationFromSidebar",
+          [],
+          "VacationModule.applyRightPanelMigration",
+        );
+        var migration = (result && result.migration) || result || {};
+        var message =
+          migration.message ||
+          (migration.migrated > 0
+            ? "Перенесено записів: " + migration.migrated
+            : "Міграцію правої таблиці завершено");
+        showToast("✓ " + message);
+        this.setStatus(message, migration.migrated > 0 ? "success" : "info");
+        if (result.problemSummary) {
+          this.state.problemSummary = result.problemSummary;
+        }
+        if (result.rightPanelMigration) {
+          this.state.rightPanelMigration = result.rightPanelMigration;
+        }
+        if (result.vacations) {
+          this.state.vacations = result.vacations;
+        }
+        if (result.stats) {
+          this.state.stats = result.stats;
+        }
+        await this.loadState();
+        if (this.state.problemsLoaded) {
+          await this.loadProblems();
+        } else {
+          this.render();
+        }
+        logToConsole("✓ " + message, "success");
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
     async applyFixSuggestion(problemIndex, suggestionIndex) {
       var problem = this.state.checks[Number(problemIndex)];
       var suggestion =
@@ -862,7 +993,8 @@
       }
       if (!suggestion.canAutoApply) {
         this.setStatus(
-          suggestion.autoApplyReason || "Цю пропозицію не можна застосувати автоматично",
+          suggestion.autoApplyReason ||
+            "Цю пропозицію не можна застосувати автоматично",
           "warning",
         );
         return;
@@ -921,20 +1053,27 @@
     async rebuildSchedule() {
       showLoading();
       try {
+        var year = this.getScheduleYear_();
+        this.state.scheduleYear = year;
         var result = await runServerMethod_(
           "rebuildVacationScheduleFromSidebar",
-          [],
+          [{ year: year }],
           "VacationModule.rebuildSchedule",
         );
-        showToast("✓ Графік оновлено");
+        showToast("✓ Графік оновлено (" + year + ")");
         logToConsole(
-          "✓ Графік відпусток оновлено: " +
+          "✓ Графік відпусток оновлено (" +
+            year +
+            "): " +
             (result.schedulePeople || 0) +
             " людей, " +
             (result.scheduleDays || 0) +
             " днів",
           "success",
         );
+        if (result.scheduleYear) {
+          this.state.scheduleYear = Number(result.scheduleYear);
+        }
         if (result.problemSummary) {
           this.state.problemSummary = result.problemSummary;
         }
@@ -1110,8 +1249,7 @@
         }
         this.setStatus(
           result.problemCount || result.errorCount
-            ? "Проблемних питань: " +
-                (result.problemCount || result.errorCount)
+            ? "Проблемних питань: " + (result.problemCount || result.errorCount)
             : "Проблемних питань не знайдено.",
           result.problemCount || result.errorCount ? "warning" : "success",
         );

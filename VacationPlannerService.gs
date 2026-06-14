@@ -1140,7 +1140,10 @@ const VacationPlannerService_ = (function () {
             return item.fml;
           })
           .join(", "),
-        details: "Стартів відпусток у місяці: " + items.length,
+        details:
+          "Стартів відпусток у місяці: " +
+          items.length +
+          (items.length >= 6 ? " (високий пріоритет)" : ""),
       });
     });
 

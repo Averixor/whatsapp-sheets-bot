@@ -280,7 +280,26 @@ const monthBalanceCheck = service.validateVacationOption(
 );
 assert.equal(monthBalanceCheck.isValid, true);
 assert.ok(
-  monthBalanceCheck.warnings.some((item) => item.rule === "MONTH_BALANCE"),
+  !monthBalanceCheck.warnings.some((item) => item.rule === "MONTH_BALANCE"),
+  "3 June starts must not trigger MONTH_BALANCE (threshold is 5)",
+);
+const monthBalanceFiveCheck = service.validateVacationOption(
+  {
+    fml: "П'ятий Старт",
+    vacationNumber: 1,
+    startDate: date("2026-06-25"),
+    endDate: date("2026-06-30"),
+  },
+  [
+    vacation("Перший Старт", "2026-06-01", "2026-06-05"),
+    vacation("Другий Старт", "2026-06-10", "2026-06-14"),
+    vacation("Третій Старт", "2026-06-15", "2026-06-19"),
+    vacation("Четвертий Старт", "2026-06-20", "2026-06-24"),
+  ],
+);
+assert.ok(
+  monthBalanceFiveCheck.warnings.some((item) => item.rule === "MONTH_BALANCE"),
+  "5 June starts must trigger MONTH_BALANCE",
 );
 
 const invalidDurationCheck = service.validateVacationOption(
@@ -574,7 +593,15 @@ class FakeRange {
     );
   }
 
-  setNumberFormat() {
+  setNumberFormat(format) {
+    this.sheet.numberFormats = this.sheet.numberFormats || [];
+    this.sheet.numberFormats.push({
+      row: this.row,
+      col: this.col,
+      numRows: this.numRows,
+      numCols: this.numCols,
+      format: format,
+    });
     return this;
   }
 
@@ -637,6 +664,7 @@ class FakeSheet {
     );
     this.backgrounds = [];
     this.borders = [];
+    this.numberFormats = [];
   }
 
   getName() {
@@ -714,6 +742,7 @@ class FakeSheet {
     );
     this.backgrounds = [];
     this.borders = [];
+    this.numberFormats = [];
     return this;
   }
 
@@ -1038,41 +1067,63 @@ assert.equal(reactivateSource.sourceSheet, "VACATION_REQUESTS");
 assert.equal(repository.getSourceMode(), "requests");
 writer.switchSourceMode("legacy");
 
-const calendar = writer.buildScheduleCalendar([
-  {
-    fml: "Перша Людина",
-    vacationNumber: 1,
-    vacationType: "перша відпустка",
-    startDate: date("2026-01-01"),
-    endDate: date("2026-01-02"),
-    days: 2,
-  },
-  {
-    fml: "Перша Людина",
-    vacationNumber: 2,
-    vacationType: "сімейні обставини",
-    startDate: date("2026-01-04"),
-    endDate: date("2026-01-04"),
-    days: 1,
-  },
-  {
-    fml: "Друга Людина",
-    vacationNumber: 2,
-    vacationType: "додаткова відпустка",
-    startDate: date("2026-01-02"),
-    endDate: date("2026-01-03"),
-    days: 2,
-  },
-]);
+const yearRange2026 = writer.buildVacationScheduleYearRange_(2026);
+assert.equal(yearRange2026.startDate.getFullYear(), 2026);
+assert.equal(yearRange2026.startDate.getMonth(), 0);
+assert.equal(yearRange2026.startDate.getDate(), 1);
+assert.equal(yearRange2026.endDate.getFullYear(), 2026);
+assert.equal(yearRange2026.endDate.getMonth(), 11);
+assert.equal(yearRange2026.endDate.getDate(), 31);
+assert.match(yearRange2026.title, /01\.01\.2026.*31\.12\.2026/);
+
+const calendar = writer.buildScheduleCalendar(
+  [
+    {
+      fml: "Перша Людина",
+      vacationNumber: 1,
+      vacationType: "перша відпустка",
+      startDate: date("2026-01-01"),
+      endDate: date("2026-01-02"),
+      days: 2,
+    },
+    {
+      fml: "Перша Людина",
+      vacationNumber: 2,
+      vacationType: "сімейні обставини",
+      startDate: date("2026-01-04"),
+      endDate: date("2026-01-04"),
+      days: 1,
+    },
+    {
+      fml: "Друга Людина",
+      vacationNumber: 2,
+      vacationType: "додаткова відпустка",
+      startDate: date("2026-01-02"),
+      endDate: date("2026-01-03"),
+      days: 2,
+    },
+  ],
+  { year: 2026 },
+);
 assert.equal(calendar.rows[0][0], "QUANTITY");
 assert.equal(calendar.rows[0][1], "FML");
-assert.equal(calendar.dateCount, 4);
+assert.equal(calendar.dateCount, 365);
+assert.equal(calendar.year, 2026);
 assert.equal(calendar.personCount, 2);
 const firstPersonRow = calendar.rows.find((row) => row[1] === "Перша Людина");
 const secondPersonRow = calendar.rows.find((row) => row[1] === "Друга Людина");
 assert.equal(firstPersonRow[0], 3);
-assert.deepEqual(Array.from(firstPersonRow.slice(2)), ["В1", "В1", "", "СО"]);
-assert.deepEqual(Array.from(secondPersonRow.slice(2)), ["", "ВД", "ВД", ""]);
+assert.deepEqual(Array.from(firstPersonRow.slice(2, 6)), [
+  "В1",
+  "В1",
+  "",
+  "СО",
+]);
+assert.deepEqual(Array.from(secondPersonRow.slice(2, 6)), ["", "ВД", "ВД", ""]);
+assert.equal(calendar.startDate.getMonth(), 0);
+assert.equal(calendar.startDate.getDate(), 1);
+assert.equal(calendar.endDate.getMonth(), 11);
+assert.equal(calendar.endDate.getDate(), 31);
 
 const normalizedChecks = writer.normalizeChecks([
   {
@@ -1215,6 +1266,15 @@ const dec2026Vacations = [
     },
   ),
   vacationWithMeta(
+    "Рябінін Сергій Олексійович",
+    "2027-06-03",
+    "2027-06-17",
+    1,
+    {
+      rowNumber: 16,
+    },
+  ),
+  vacationWithMeta(
     "Монько Дмитро Володимирович",
     "2026-12-21",
     "2027-01-04",
@@ -1252,6 +1312,17 @@ assert.equal(monkoSuggestion.oldStart, "21.12.2026");
 assert.equal(monkoSuggestion.oldEnd, "04.01.2027");
 assert.equal(monkoSuggestion.newStart, "04.01.2027");
 assert.equal(monkoSuggestion.newEnd, "18.01.2027");
+assert.equal(
+  monkoSuggestion.canAutoApply,
+  true,
+  "Monko move must be auto-applicable",
+);
+assert.ok(
+  overlapSuggestions.every(
+    (item) => item.oldStart !== "03.06.2027" && item.oldEnd !== "17.06.2027",
+  ),
+  "overlap suggestions must not move unrelated Ryabinin vacation in June 2027",
+);
 assert.equal(
   service.daysBetween(date("2026-12-21"), date("2027-01-04")) + 1,
   service.daysBetween(date("2027-01-04"), date("2027-01-18")) + 1,
@@ -1327,8 +1398,71 @@ const intervalSuggestions = suggestionsModule.suggestForMinInterval_(
 );
 assert.ok(intervalSuggestions.length >= 1, "interval suggestions must exist");
 assert.ok(
-  intervalSuggestions.some((item) => item.newStartIso >= "2027-01-16"),
-  "interval suggestion must start at previousEnd + 150 days",
+  intervalSuggestions.some((item) => item.newStartIso >= "2027-01-02"),
+  "interval suggestion must start at previousStart + 150 days",
+);
+
+const june2026Vacations = [
+  vacationWithMeta("A", "2026-06-01", "2026-06-05", 1),
+  vacationWithMeta("B", "2026-06-10", "2026-06-14", 1),
+  vacationWithMeta(
+    "Омелянський Олександр Юрійович",
+    "2026-06-02",
+    "2026-06-20",
+    1,
+    { rowNumber: 20 },
+  ),
+];
+const juneAudit = service.buildScheduleAudit(june2026Vacations);
+assert.ok(
+  !juneAudit.checks.some((item) => item.rule === "MONTH_BALANCE"),
+  "3 June starts must not create MONTH_BALANCE",
+);
+const july2026Vacations = june2026Vacations.concat([
+  vacationWithMeta("D", "2026-06-15", "2026-06-19", 1),
+]);
+assert.ok(
+  !service
+    .buildScheduleAudit(july2026Vacations)
+    .checks.some((item) => item.rule === "MONTH_BALANCE"),
+  "4 June starts must not create MONTH_BALANCE",
+);
+const juneSixVacations = july2026Vacations.concat([
+  vacationWithMeta("E", "2026-06-22", "2026-06-26", 1),
+  vacationWithMeta("F", "2026-06-25", "2026-06-29", 1),
+]);
+const juneSixAudit = service.buildScheduleAudit(juneSixVacations);
+assert.ok(
+  juneSixAudit.checks.some((item) => item.rule === "MONTH_BALANCE"),
+  "6 June starts must create MONTH_BALANCE",
+);
+const juneSixSuggestions = suggestionsModule.suggestForMonthStartSkew_(
+  {
+    rule: "MONTH_BALANCE",
+    date: "2026-06",
+    fml: "Омелянський Олександр Юрійович",
+  },
+  suggestionsModule.buildSuggestionContext_([], juneSixVacations),
+);
+assert.ok(
+  juneSixSuggestions.length >= 1,
+  "June 2026 skew must produce suggestions",
+);
+assert.ok(
+  juneSixSuggestions.every((item) => !item.newStartIso.startsWith("2026-06")),
+  "MONTH_BALANCE must not propose newStart in the same month",
+);
+assert.ok(
+  juneSixSuggestions.every(function (item) {
+    return (
+      !item.effect ||
+      !item.effect.some(function (line) {
+        return line.indexOf("Зменшує кількість стартів") !== -1;
+      }) ||
+      item.newStartIso.slice(0, 7) !== "2026-06"
+    );
+  }),
+  "month reduction effect must only appear when start count actually drops",
 );
 
 const monthIssue = {
@@ -1344,6 +1478,10 @@ const monthSuggestions = suggestionsModule.suggestForMonthStartSkew_(
   suggestionContext,
 );
 assert.ok(monthSuggestions.length >= 1, "month skew suggestions must exist");
+assert.ok(
+  monthSuggestions.every((item) => !item.newStartIso.startsWith("2026-12")),
+  "December MONTH_BALANCE must not propose same-month starts",
+);
 assert.equal(
   dec2026Vacations.filter(
     (item) =>
@@ -1379,6 +1517,28 @@ const mayMonthSuggestions = suggestionsModule.suggestForMonthStartSkew_(
   mayContext,
 );
 assert.ok(mayMonthSuggestions.length >= 1, "May 2027 must produce suggestions");
+assert.ok(
+  mayMonthSuggestions.every((item) => !item.newStartIso.startsWith("2027-05")),
+  "May 2027 suggestions must leave May",
+);
+
+const intervalHardApply = suggestionsModule.validateVacationCandidate_(
+  {
+    target: dec2026Vacations.find(
+      (item) =>
+        item.fml.includes("Рябінін") && item.startDate.getMonth() === 11,
+    ),
+    newStart: date("2026-12-25"),
+    newEnd: date("2027-01-08"),
+    days: 15,
+  },
+  suggestionContext,
+);
+assert.ok(
+  intervalHardApply.hardErrors.length > 0,
+  "candidate violating 150-day start gap must produce hard errors",
+);
+assert.equal(intervalHardApply.ok, false);
 
 const badCandidate = suggestionsModule.validateVacationCandidate_(
   {
@@ -1546,12 +1706,14 @@ function sourceVacationSheet(entries) {
 }
 
 function dateColumn(sheet, expected) {
-  const columnIndex = (sheet.rows[0] || []).findIndex((value) => {
-    if (!(value instanceof Date)) return false;
-    return value.toISOString().slice(0, 10) === expected;
-  });
-  assert.notEqual(columnIndex, -1, `schedule must contain ${expected}`);
-  return columnIndex + 1;
+  for (let rowIndex = 0; rowIndex < sheet.rows.length; rowIndex++) {
+    const columnIndex = (sheet.rows[rowIndex] || []).findIndex((value) => {
+      if (!(value instanceof Date)) return false;
+      return value.toISOString().slice(0, 10) === expected;
+    });
+    if (columnIndex !== -1) return columnIndex + 1;
+  }
+  assert.fail(`schedule must contain ${expected}`);
 }
 
 sourceSheet = new FakeSheet(
@@ -1596,9 +1758,12 @@ sourceSheet = new FakeSheet(
 );
 generatedSheets = {};
 const sourceBeforeRebuild = sourceSheet.rows.map((row) => row.slice());
-const multiMonthRebuild = writer.rebuildVacationSystem();
+const multiMonthRebuild = writer.rebuildVacationSystem({ year: 2026 });
 const scheduleSheet = generatedSheets.VACATION_SCHEDULE;
 assert.ok(scheduleSheet, "rebuild must create VACATION_SCHEDULE");
+assert.equal(multiMonthRebuild.scheduleYear, 2026);
+assert.equal(multiMonthRebuild.scheduleDays, 365);
+assert.match(String(scheduleSheet.rows[0][0]), /2026/);
 assert.deepEqual(Array.from(multiMonthRebuild.affectedSheets), [
   "VACATION_SCHEDULE",
   "VACATION_CHECK",
@@ -1636,13 +1801,18 @@ assert.equal(
   "",
   "A:B must not receive vacation backgrounds",
 );
-assert.deepEqual(
-  scheduleSheet.borders.map((border) => border.col),
-  [jan31Column, mar1Column - 1],
-  "every month transition must receive one separator",
+assert.ok(
+  scheduleSheet.borders.some((border) => border.col === jan31Column),
+  "month separator must appear at month boundary",
+);
+assert.ok(
+  (scheduleSheet.numberFormats || []).some(
+    (entry) => entry.format === "dd.MM.yy" && entry.row === 2,
+  ),
+  "date headers must use dd.MM.yy so year is visible",
 );
 scheduleSheet.borders.forEach((border) => {
-  assert.equal(border.row, 1);
+  assert.equal(border.row, 2);
   assert.equal(border.numRows, multiMonthRebuild.schedulePeople + 1);
   assert.equal(border.args[3], true);
   assert.equal(border.args[6], "#000000");
@@ -1662,21 +1832,28 @@ sourceSheet = new FakeSheet(
   ]),
 );
 generatedSheets = {};
-const singleMonthRebuild = writer.rebuildVacationSystem();
+const singleMonthRebuild = writer.rebuildVacationSystem({ year: 2026 });
 assert.equal(singleMonthRebuild.schedulePeople, 1);
-assert.equal(
-  generatedSheets.VACATION_SCHEDULE.borders.length,
-  0,
-  "single-month calendar must not add separators",
+assert.equal(singleMonthRebuild.scheduleDays, 365);
+assert.ok(
+  generatedSheets.VACATION_SCHEDULE.borders.length >= 11,
+  "full-year calendar must add month separators",
 );
 
 sourceSheet = new FakeSheet("VACATIONS", [Array(19).fill("")]);
 generatedSheets = {};
-const emptyRebuild = writer.rebuildVacationSystem();
+const emptyRebuild = writer.rebuildVacationSystem({ year: 2026 });
 assert.equal(emptyRebuild.schedulePeople, 0);
-assert.equal(emptyRebuild.scheduleDays, 0);
-assert.equal(generatedSheets.VACATION_SCHEDULE.borders.length, 0);
-assert.equal(generatedSheets.VACATION_SCHEDULE.backgrounds.length, 1);
+assert.equal(emptyRebuild.scheduleDays, 365);
+assert.match(
+  String(generatedSheets.VACATION_SCHEDULE.rows[0][0]),
+  /2026/,
+  "empty schedule must still show year title",
+);
+assert.ok(
+  generatedSheets.VACATION_SCHEDULE.borders.length >= 11,
+  "empty full-year calendar must still add month separators",
+);
 
 sourceSheet = new FakeSheet(
   "VACATIONS",
@@ -1923,6 +2100,10 @@ const sidebarService = fs.readFileSync(
   path.join(repoRoot, "VacationSidebarService.gs"),
   "utf8",
 );
+const sidebarServer = fs.readFileSync(
+  path.join(repoRoot, "SidebarServer.gs"),
+  "utf8",
+);
 const sidebar = fs.readFileSync(
   path.join(repoRoot, "VacationSidebar.html"),
   "utf8",
@@ -1935,9 +2116,22 @@ const engineSource = fs.readFileSync(
   path.join(repoRoot, "VacationEngine.gs"),
   "utf8",
 );
-assert.match(code, /createMenu\("Відпустки"\)/);
-assert.match(code, /migrateRightVacationTableFromMenu_/);
-assert.match(code, /addSubMenu\(vacationMenu\)/);
+assert.match(code, /openVacationsInMainSidebar_/);
+assert.match(code, /Відкрити панель/);
+assert.match(code, /Перейти до відпусток/);
+assert.doesNotMatch(code, /createMenu\("Відпустки"\)/);
+assert.doesNotMatch(code, /addSubMenu\(vacationMenu\)/);
+assert.match(sidebarServer, /getSidebarLaunchSection_/);
+assert.match(jsHelpers, /getSidebarLaunchSection_/);
+assert.match(jsHelpers, /launchSection === "vacations"/);
+assert.match(writerSource, /buildVacationScheduleYearRange_/);
+assert.match(writerSource, /new Date\(y, 0, 1/);
+assert.match(writerSource, /new Date\(y, 11, 31/);
+assert.match(writerSource, /dd\.MM\.yy/);
+assert.match(sidebarService, /scheduleYear:/);
+assert.match(jsVacations, /getScheduleYear_/);
+assert.match(jsVacations, /vacScheduleYear/);
+assert.match(jsVacations, /rebuildVacationScheduleFromSidebar[\s\S]*year:/);
 assert.match(sidebarHtml, /id="btnVacations"/);
 assert.match(sidebarHtml, /handleMenuAction\('vacations'\)/);
 assert.doesNotMatch(
@@ -1978,6 +2172,15 @@ assert.match(jsVacations, /function buildVacationProblemSuggestions_/);
 assert.match(jsVacations, /function renderVacationFixSuggestions_/);
 assert.match(jsVacations, /applyFixSuggestion\(/);
 assert.match(sidebarService, /applyVacationSuggestionFromSidebar/);
+assert.match(sidebarService, /applyRightPanelMigrationFromSidebar/);
+assert.match(jsVacations, /applyRightPanelMigrationFromSidebar/);
+assert.match(jsVacations, /applyRightPanelMigration\(\)/);
+assert.match(jsVacations, /Міграція K:Q → A:I/);
+assert.match(
+  jsVacations,
+  /RIGHT_PANEL_LEGACY_DATA[\s\S]*?Міграція K:Q → A:I/,
+  "right-panel problem card must expose migration action",
+);
 assert.match(
   fs.readFileSync(path.join(repoRoot, "Vacation_Suggestions.gs"), "utf8"),
   /function buildVacationFixSuggestions_/,
@@ -2069,7 +2272,10 @@ assert.match(
 );
 assert.match(writerSource, /function _formatScheduleCalendar_/);
 assert.match(writerSource, /function _applyMonthSeparators_/);
-assert.match(writerSource, /getRange\(2, 3, dataRowCount, dateCount\)/);
+assert.match(
+  writerSource,
+  /getRange\(dataStartRow, 3, dataRowCount, dateCount\)/,
+);
 assert.match(writerSource, /SpreadsheetApp\.BorderStyle\.SOLID_MEDIUM/);
 assert.match(writerSource, /function normalizeProblems/);
 assert.match(

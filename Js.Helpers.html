@@ -227,6 +227,36 @@
       }
 
       ensureCommanderRecipientFallback_();
+
+      try {
+        const launchResult = await withPromiseTimeout_(
+          runServerMethod_(
+            "getSidebarLaunchSection_",
+            [],
+            "initSidebar.launchSection",
+          ),
+          SIDEBAR_API_TIMEOUT_MS,
+          "getSidebarLaunchSection_",
+        );
+        const launchSection =
+          typeof launchResult === "string"
+            ? launchResult
+            : typeof launchResult?.data === "string"
+              ? launchResult.data
+              : "";
+        if (
+          launchSection === "vacations" &&
+          typeof showVacationsModule === "function"
+        ) {
+          await showVacationsModule();
+        }
+      } catch (launchErr) {
+        logToConsole(
+          `⚠ getSidebarLaunchSection_: ${normalizeError(launchErr)}`,
+          "warn",
+        );
+      }
+
       logToConsole("✓ Панель готова до роботи", "success");
     } catch (error) {
       showFatalSidebarError(error);

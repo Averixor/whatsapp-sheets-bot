@@ -24,7 +24,9 @@ const VacationSuggestions_ = (function () {
   };
   const MAX_SUGGESTIONS = 5;
   const SEARCH_FORWARD_DAYS = 90;
-  const SHIFT_OFFSETS = [1, 2, 3, 7, 14, 21, 28, 35, 42, 49, 56, 63, 70, 77, 84, 90];
+  const SHIFT_OFFSETS = [
+    1, 2, 3, 7, 14, 21, 28, 35, 42, 49, 56, 63, 70, 77, 84, 90,
+  ];
 
   function _trim_(value) {
     return String(value == null ? "" : value)
@@ -38,7 +40,8 @@ const VacationSuggestions_ = (function () {
   }
 
   function _service_() {
-    return typeof VacationPlannerService_ === "object" && VacationPlannerService_
+    return typeof VacationPlannerService_ === "object" &&
+      VacationPlannerService_
       ? VacationPlannerService_
       : null;
   }
@@ -52,9 +55,7 @@ const VacationSuggestions_ = (function () {
   }
 
   function _vacations_(context) {
-    return Array.isArray(context && context.vacations)
-      ? context.vacations
-      : [];
+    return Array.isArray(context && context.vacations) ? context.vacations : [];
   }
 
   function _schedule_(context) {
@@ -171,9 +172,7 @@ const VacationSuggestions_ = (function () {
     const start = _toDate_(startDate);
     const end = _toDate_(endDate);
     if (!start || !end) return 0;
-    return (
-      Math.round((end.getTime() - start.getTime()) / 86400000) + 1
-    );
+    return Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
   }
 
   function _normalized_(context) {
@@ -196,9 +195,7 @@ const VacationSuggestions_ = (function () {
           intervalCheck: _trim_(item.intervalCheck),
           status: _trim_(item.status),
           sourceRow:
-            item.sourceRow ||
-            (item._meta && item._meta.rowNumber) ||
-            "",
+            item.sourceRow || (item._meta && item._meta.rowNumber) || "",
           sourceStartColumn:
             item.sourceStartColumn ||
             (item._meta && item._meta.startColumn) ||
@@ -211,7 +208,9 @@ const VacationSuggestions_ = (function () {
         };
       })
       .filter(function (item) {
-        return item.fml && item.startDate && item.endDate && item.active !== false;
+        return (
+          item.fml && item.startDate && item.endDate && item.active !== false
+        );
       });
   }
 
@@ -230,7 +229,7 @@ const VacationSuggestions_ = (function () {
     const intervalCheck = String(item.intervalCheck || "").toUpperCase();
     if (
       intervalCheck === "LOCKED" ||
-      intervalCheck.indexOf("ЗАФІКС") !== -1 ||
+      intervalCheck.indexOf("ФІКСОВАНО") !== -1 ||
       intervalCheck.indexOf("FIXED") !== -1
     ) {
       return true;
@@ -239,13 +238,42 @@ const VacationSuggestions_ = (function () {
     return lockedKeys[_slotKey_(item)] === true;
   }
 
+  function _monthStartCount_(yearMonth, vacations) {
+    const prefix = String(yearMonth || "").slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(prefix)) return 0;
+    return vacations.filter(function (item) {
+      return _dateKey_(item.startDate).slice(0, 7) === prefix;
+    }).length;
+  }
+
+  function _findVacationCoveringDate_(fml, issueDate, context) {
+    const key = _trim_(fml).toUpperCase();
+    const issueKey = _dateKey_(issueDate);
+    if (!key || !issueKey) return null;
+    const matches = _normalized_(context).filter(function (item) {
+      if (item.fml.toUpperCase() !== key) return false;
+      const start = _dateKey_(item.startDate);
+      const end = _dateKey_(item.endDate);
+      return issueKey >= start && issueKey <= end;
+    });
+    if (!matches.length) return null;
+    return matches.sort(function (left, right) {
+      return _dateKey_(left.startDate).localeCompare(
+        _dateKey_(right.startDate),
+      );
+    })[0];
+  }
+
   function _findVacation_(fml, dates, context, vacationNumber) {
     const people = fml ? [_trim_(fml)] : [];
     const normalized = _normalized_(context);
     const targetKey = people.length ? people[0].toUpperCase() : "";
     const matches = normalized.filter(function (item) {
       if (targetKey && item.fml.toUpperCase() !== targetKey) return false;
-      if (vacationNumber && Number(item.vacationNumber) !== Number(vacationNumber)) {
+      if (
+        vacationNumber &&
+        Number(item.vacationNumber) !== Number(vacationNumber)
+      ) {
         return false;
       }
       if (!dates || !dates.length) return true;
@@ -255,9 +283,12 @@ const VacationSuggestions_ = (function () {
     });
     if (matches.length) {
       return matches.sort(function (left, right) {
-        return _dateKey_(left.startDate).localeCompare(_dateKey_(right.startDate));
+        return _dateKey_(left.startDate).localeCompare(
+          _dateKey_(right.startDate),
+        );
       })[matches.length - 1];
     }
+    if (dates && dates.length) return null;
     if (!targetKey) return null;
     return (
       normalized
@@ -265,7 +296,9 @@ const VacationSuggestions_ = (function () {
           return item.fml.toUpperCase() === targetKey;
         })
         .sort(function (left, right) {
-          return _dateKey_(left.startDate).localeCompare(_dateKey_(right.startDate));
+          return _dateKey_(left.startDate).localeCompare(
+            _dateKey_(right.startDate),
+          );
         })
         .pop() || null
     );
@@ -278,7 +311,9 @@ const VacationSuggestions_ = (function () {
         return item.fml.toUpperCase() === key;
       })
       .sort(function (left, right) {
-        return _dateKey_(left.startDate).localeCompare(_dateKey_(right.startDate));
+        return _dateKey_(left.startDate).localeCompare(
+          _dateKey_(right.startDate),
+        );
       });
   }
 
@@ -339,10 +374,12 @@ const VacationSuggestions_ = (function () {
     const hardErrors = [];
     const warnings = [];
     const explanation = [];
+    let disqualified = false;
 
     if (!service) {
       return {
         ok: false,
+        disqualified: true,
         hardErrors: ["Сервіс планувальника недоступний"],
         warnings: [],
         score: 9999,
@@ -395,7 +432,12 @@ const VacationSuggestions_ = (function () {
       hardErrors.push(item.message || item.rule);
     });
     (validation.warnings || []).forEach(function (item) {
-      warnings.push(item.message || item.rule);
+      const rule = String(item.rule || "").trim();
+      if (rule === "START_GAP" || rule === "MAX_CONCURRENT") {
+        hardErrors.push(item.message || item.rule);
+      } else if (rule !== "PERSON_GAP") {
+        warnings.push(item.message || item.rule);
+      }
     });
 
     const personVacations = _findPersonVacations_(target.fml, context).filter(
@@ -407,20 +449,68 @@ const VacationSuggestions_ = (function () {
         );
       },
     );
+    const newStartKey = _dateKey_(newStart);
+    const prevVacation = personVacations
+      .filter(function (item) {
+        return _dateKey_(item.startDate) < newStartKey;
+      })
+      .pop();
     const nextVacation = personVacations.find(function (item) {
-      return _dateKey_(item.startDate) > _dateKey_(newStart);
+      return _dateKey_(item.startDate) > newStartKey;
     });
-    if (nextVacation) {
-      const serviceGap = service.daysBetween
-        ? service.daysBetween(newEnd, nextVacation.startDate)
-        : null;
-      if (serviceGap !== null && serviceGap < rules.MIN_DAYS_GAP) {
-        warnings.push(
-          "Може потребувати перенесення наступної відпустки " +
+    if (prevVacation && service.daysBetween) {
+      const gap = service.daysBetween(prevVacation.startDate, newStart);
+      if (gap < rules.MIN_DAYS_GAP) {
+        hardErrors.push(
+          "Інтервал між відпустками " +
+            gap +
+            " днів, мінімум " +
+            rules.MIN_DAYS_GAP,
+        );
+      }
+    }
+    if (nextVacation && service.daysBetween) {
+      const gap = service.daysBetween(newStart, nextVacation.startDate);
+      if (gap < rules.MIN_DAYS_GAP) {
+        hardErrors.push(
+          "Не можна застосувати автоматично: порушується інтервал до наступної відпустки " +
             _formatUa_(_dateKey_(nextVacation.startDate)) +
             " – " +
             _formatUa_(_dateKey_(nextVacation.endDate)),
         );
+      }
+    }
+
+    if (candidate.reducesMonthSkew) {
+      const oldMonth = _dateKey_(target.startDate).slice(0, 7);
+      const newMonth = _dateKey_(newStart).slice(0, 7);
+      if (oldMonth === newMonth) {
+        disqualified = true;
+      } else {
+        const oldCount = _monthStartCount_(oldMonth, _normalized_(context));
+        const newCount = _monthStartCount_(oldMonth, modified);
+        if (newCount >= oldCount) {
+          disqualified = true;
+        }
+      }
+    }
+
+    if (candidate.fixesError && candidate.issueDate) {
+      const issueKey = _dateKey_(candidate.issueDate);
+      const beforeCount = _peopleOnDate_(
+        issueKey,
+        _normalized_(context),
+      ).length;
+      const afterCount = _peopleOnDate_(issueKey, modified).length;
+      if (afterCount > rules.MAX_CONCURRENT) {
+        hardErrors.push(
+          "Кандидат не виправляє перевищення одночасного навантаження",
+        );
+      } else if (
+        beforeCount > rules.MAX_CONCURRENT &&
+        afterCount >= beforeCount
+      ) {
+        disqualified = true;
       }
     }
 
@@ -430,7 +520,8 @@ const VacationSuggestions_ = (function () {
     explanation.push("Зсув старту: " + shiftDays + " дн.");
 
     return {
-      ok: hardErrors.length === 0,
+      ok: hardErrors.length === 0 && !disqualified,
+      disqualified: disqualified,
       hardErrors: hardErrors,
       warnings: warnings,
       score: calculateSuggestionScore_(
@@ -451,6 +542,7 @@ const VacationSuggestions_ = (function () {
         {
           hardErrors: hardErrors,
           warnings: warnings,
+          disqualified: disqualified,
         },
       ),
       explanation: explanation,
@@ -460,6 +552,9 @@ const VacationSuggestions_ = (function () {
   function calculateSuggestionScore_(candidate, context, validation) {
     let score = Number(candidate.shiftDays || 0);
     const validationResult = validation || {};
+    if (validationResult.disqualified) {
+      return 9999;
+    }
     if ((validationResult.hardErrors || []).length) {
       return 9999;
     }
@@ -469,6 +564,71 @@ const VacationSuggestions_ = (function () {
     if (candidate.reducesOverlap) score -= 60;
     if (candidate.crossesMonthBoundary) score -= 50;
     return Math.round(score);
+  }
+
+  function _buildSuggestionEffects_(
+    target,
+    newStart,
+    context,
+    meta,
+    validation,
+  ) {
+    const effects = [];
+    if (meta && meta.fixesError && meta.issueDate) {
+      (meta.effect || []).forEach(function (line) {
+        effects.push(line);
+      });
+    } else if (meta && meta.effect) {
+      meta.effect.forEach(function (line) {
+        effects.push(line);
+      });
+    }
+    if (meta && meta.reducesMonthSkew && !validation.disqualified) {
+      const oldMonth = _dateKey_(target.startDate).slice(0, 7);
+      const modified = _replaceVacation_(
+        _normalized_(context),
+        target,
+        _buildCandidate_(
+          target,
+          newStart,
+          _durationDays_(target.startDate, target.endDate),
+        ),
+      );
+      const oldCount = _monthStartCount_(oldMonth, _normalized_(context));
+      const newCount = _monthStartCount_(oldMonth, modified);
+      if (newCount < oldCount) {
+        effects.push("Зменшує кількість стартів у " + _monthLabel_(oldMonth));
+      }
+    }
+    if (
+      meta &&
+      meta.fixesError &&
+      meta.issueDate &&
+      _dateKey_(target.startDate).slice(0, 7) !==
+        _dateKey_(newStart).slice(0, 7)
+    ) {
+      const oldMonth = _dateKey_(target.startDate).slice(0, 7);
+      const modified = _replaceVacation_(
+        _normalized_(context),
+        target,
+        _buildCandidate_(
+          target,
+          newStart,
+          _durationDays_(target.startDate, target.endDate),
+        ),
+      );
+      const oldCount = _monthStartCount_(oldMonth, _normalized_(context));
+      const newCount = _monthStartCount_(oldMonth, modified);
+      if (
+        newCount < oldCount &&
+        effects.indexOf(
+          "Зменшує кількість стартів у " + _monthLabel_(oldMonth),
+        ) === -1
+      ) {
+        effects.push("Зменшує кількість стартів у " + _monthLabel_(oldMonth));
+      }
+    }
+    return effects;
   }
 
   function _makeSuggestion_(issue, target, newStart, newEnd, meta) {
@@ -486,24 +646,33 @@ const VacationSuggestions_ = (function () {
         reducesMonthSkew: !!(meta && meta.reducesMonthSkew),
         reducesOverlap: !!(meta && meta.reducesOverlap),
         crossesMonthBoundary: crossesMonthBoundary,
+        issueDate: meta && meta.issueDate,
+        issueRule: meta && meta.issueRule,
       },
       meta && meta.context ? meta.context : {},
     );
-    if (!validation.ok) return null;
+    if (validation.disqualified) return null;
 
+    const context = meta && meta.context ? meta.context : {};
     const canAutoApply =
-      ! _isLocked_(target, meta && meta.context ? meta.context : {}) &&
+      validation.hardErrors.length === 0 &&
+      !_isLocked_(target, context) &&
       target.writable !== false &&
       !!target.sourceRow &&
       !!target.sourceStartColumn;
+    const autoApplyReason = canAutoApply
+      ? ""
+      : validation.hardErrors.length
+        ? validation.hardErrors[0]
+        : _isLocked_(target, context)
+          ? "Відпустку позначено LOCKED"
+          : "Авто застосування недоступне для цього джерела";
 
     return {
       suggestionId:
         (meta && meta.suggestionId) ||
         Utilities.getUuid().slice(0, 12).toUpperCase(),
-      title:
-        (meta && meta.title) ||
-        "Перенести " + target.fml,
+      title: (meta && meta.title) || "Перенести " + target.fml,
       personName: target.fml,
       personKey: target.personKey || target.fml,
       vacationNumber: target.vacationNumber,
@@ -514,16 +683,18 @@ const VacationSuggestions_ = (function () {
       newEnd: _formatUa_(_dateKey_(newEnd)),
       newStartIso: _dateKey_(newStart),
       newEndIso: _dateKey_(newEnd),
-      effect: (meta && meta.effect) || [],
+      effect: _buildSuggestionEffects_(
+        target,
+        newStart,
+        context,
+        meta,
+        validation,
+      ),
       risks: validation.warnings || [],
       score: validation.score,
       crossesMonthBoundary: crossesMonthBoundary,
       canAutoApply: canAutoApply,
-      autoApplyReason: canAutoApply
-        ? ""
-        : _isLocked_(target, meta && meta.context ? meta.context : {})
-          ? "Відпустку позначено LOCKED"
-          : "Автозастосування недоступне для цього джерела",
+      autoApplyReason: autoApplyReason,
       sourceRow: target.sourceRow,
       sourceStartColumn: target.sourceStartColumn,
     };
@@ -532,7 +703,17 @@ const VacationSuggestions_ = (function () {
   function _collectCandidates_(target, startDates, context, meta) {
     const suggestions = [];
     const durationDays = _durationDays_(target.startDate, target.endDate);
-    startDates.forEach(function (startDate) {
+    const oldMonth = _dateKey_(target.startDate).slice(0, 7);
+    const dates = (Array.isArray(startDates) ? startDates : []).filter(
+      function (startDate) {
+        if (!startDate) return false;
+        if (meta && meta.reducesMonthSkew) {
+          return _dateKey_(startDate).slice(0, 7) !== oldMonth;
+        }
+        return true;
+      },
+    );
+    dates.forEach(function (startDate) {
       const endDate = _calculateEnd_(startDate, durationDays);
       const suggestion = _makeSuggestion_(null, target, startDate, endDate, {
         context: context,
@@ -540,6 +721,8 @@ const VacationSuggestions_ = (function () {
         fixesError: meta && meta.fixesError,
         reducesMonthSkew: meta && meta.reducesMonthSkew,
         reducesOverlap: meta && meta.reducesOverlap,
+        issueDate: meta && meta.issueDate,
+        issueRule: meta && meta.issueRule,
         title: meta && meta.title,
       });
       if (suggestion) suggestions.push(suggestion);
@@ -555,11 +738,7 @@ const VacationSuggestions_ = (function () {
     const seen = {};
     return suggestions.filter(function (item) {
       const key =
-        item.personName +
-        "|" +
-        item.newStartIso +
-        "|" +
-        item.newEndIso;
+        item.personName + "|" + item.newStartIso + "|" + item.newEndIso;
       if (seen[key]) return false;
       seen[key] = true;
       return true;
@@ -578,6 +757,9 @@ const VacationSuggestions_ = (function () {
     return Object.keys(byPerson)
       .map(function (key) {
         return byPerson[key];
+      })
+      .filter(function (item) {
+        return Number(item.score) < 9999;
       })
       .sort(function (left, right) {
         if (left.score !== right.score) return left.score - right.score;
@@ -599,8 +781,16 @@ const VacationSuggestions_ = (function () {
     if (overloaded.length <= rules.MAX_CONCURRENT) return [];
 
     overloaded.sort(function (leftName, rightName) {
-      const leftVacation = _findVacation_(leftName, [overlapDate], context);
-      const rightVacation = _findVacation_(rightName, [overlapDate], context);
+      const leftVacation = _findVacationCoveringDate_(
+        leftName,
+        overlapDate,
+        context,
+      );
+      const rightVacation = _findVacationCoveringDate_(
+        rightName,
+        overlapDate,
+        context,
+      );
       const leftStartsOnOverlap =
         leftVacation && _dateKey_(leftVacation.startDate) === overlapDate
           ? 0
@@ -617,7 +807,7 @@ const VacationSuggestions_ = (function () {
 
     const suggestions = [];
     overloaded.forEach(function (fml) {
-      const target = _findVacation_(fml, [overlapDate], context);
+      const target = _findVacationCoveringDate_(fml, overlapDate, context);
       if (!target || _isLocked_(target, context)) return;
 
       const durationDays = _durationDays_(target.startDate, target.endDate);
@@ -651,6 +841,8 @@ const VacationSuggestions_ = (function () {
       const collected = _collectCandidates_(target, startDates, context, {
         fixesError: true,
         reducesOverlap: true,
+        issueDate: overlapDate,
+        issueRule: "MAX_CONCURRENT",
         effect: [
           "Прибирає перевищення максимуму " +
             rules.MAX_CONCURRENT +
@@ -683,7 +875,7 @@ const VacationSuggestions_ = (function () {
     if (!later || !earlier) return [];
     if (_isLocked_(later, context)) return [];
 
-    const minStart = _addDays_(earlier.endDate, rules.MIN_DAYS_GAP);
+    const minStart = _addDays_(earlier.startDate, rules.MIN_DAYS_GAP);
     const startDates = [minStart];
     for (let offset = 1; offset <= SEARCH_FORWARD_DAYS; offset++) {
       startDates.push(_addDays_(minStart, offset));
@@ -693,7 +885,9 @@ const VacationSuggestions_ = (function () {
       _collectCandidates_(later, startDates, context, {
         fixesError: false,
         effect: [
-          "Виправляє інтервал " + rules.MIN_DAYS_GAP + " днів між відпустками",
+          "Виправляє інтервал " +
+            rules.MIN_DAYS_GAP +
+            " днів між стартами відпусток",
         ],
         title: "Перенести " + later.fml,
       }),
@@ -722,22 +916,18 @@ const VacationSuggestions_ = (function () {
     const suggestions = [];
     monthVacations.forEach(function (target) {
       if (_isLocked_(target, context)) return;
-      const durationDays = _durationDays_(target.startDate, target.endDate);
-      const startDates = [];
-      SHIFT_OFFSETS.forEach(function (offset) {
-        startDates.push(_addDays_(target.startDate, offset));
-      });
-      startDates.push(
+      const startDates = [
         _addDays_(new Date(year, month + 1, 1, 12, 0, 0, 0), 3),
-      );
+        _addDays_(new Date(year, month + 1, 1, 12, 0, 0, 0), 10),
+        _addDays_(new Date(year, month + 1, 1, 12, 0, 0, 0), 17),
+      ];
 
       suggestions.push.apply(
         suggestions,
         _collectCandidates_(target, startDates, context, {
           reducesMonthSkew: true,
-          effect: [
-            "Зменшує кількість стартів у " + _monthLabel_(monthKey),
-          ],
+          issueDate: monthKey,
+          issueRule: "MONTH_BALANCE",
           title: "Перенести " + target.fml,
         }),
       );
@@ -755,7 +945,8 @@ const VacationSuggestions_ = (function () {
     const leftFml = people[0] || _trim_(issue && issue.primaryFml);
     const rightFml = people[1] || leftFml;
     const left = _findVacation_(leftFml, dates.slice(0, 1), context);
-    const right = _findVacation_(rightFml, dates.slice(1, 2), context) ||
+    const right =
+      _findVacation_(rightFml, dates.slice(1, 2), context) ||
       _findVacation_(rightFml, dates, context);
     if (!left && !right) return [];
 
@@ -765,9 +956,7 @@ const VacationSuggestions_ = (function () {
       const startDates = SHIFT_OFFSETS.map(function (offset) {
         return _addDays_(target.startDate, offset);
       });
-      startDates.push(
-        _addDays_(target.startDate, rules.MIN_START_GAP_DAYS),
-      );
+      startDates.push(_addDays_(target.startDate, rules.MIN_START_GAP_DAYS));
       suggestions.push.apply(
         suggestions,
         _collectCandidates_(target, startDates, context, {
@@ -832,40 +1021,43 @@ const VacationSuggestions_ = (function () {
   }
 
   function attachSuggestionsToProblems_(problems, context) {
-    return (Array.isArray(problems) ? problems : []).map(function (problem, index) {
-      const enriched = Object.assign({}, problem);
-      const result = buildVacationFixSuggestions_(enriched, context);
-      enriched.issueId = result.issueId || "issue-" + index;
-      enriched.fixSuggestions = result.suggestions || [];
-      enriched.suggestionTexts = formatSuggestionTexts_(enriched.fixSuggestions);
-      return enriched;
-    });
+    return (Array.isArray(problems) ? problems : []).map(
+      function (problem, index) {
+        const enriched = Object.assign({}, problem);
+        const result = buildVacationFixSuggestions_(enriched, context);
+        enriched.issueId = result.issueId || "issue-" + index;
+        enriched.fixSuggestions = result.suggestions || [];
+        enriched.suggestionTexts = formatSuggestionTexts_(
+          enriched.fixSuggestions,
+        );
+        return enriched;
+      },
+    );
   }
 
   function formatSuggestionTexts_(suggestions) {
-    return (Array.isArray(suggestions) ? suggestions : []).map(function (
-      item,
-      index,
-    ) {
-      const lines = [
-        String(index + 1) + ". " + item.title,
-        "   Було: " + item.oldStart + " – " + item.oldEnd,
-        "   Стало: " + item.newStart + " – " + item.newEnd,
-      ];
-      if (item.effect && item.effect.length) {
-        lines.push("   Ефект:");
-        item.effect.forEach(function (effect) {
-          lines.push("   • " + effect);
-        });
-      }
-      if (item.risks && item.risks.length) {
-        lines.push("   Ризик:");
-        item.risks.forEach(function (risk) {
-          lines.push("   • " + risk);
-        });
-      }
-      return lines.join("\n");
-    });
+    return (Array.isArray(suggestions) ? suggestions : []).map(
+      function (item, index) {
+        const lines = [
+          String(index + 1) + ". " + item.title,
+          "   Було: " + item.oldStart + " – " + item.oldEnd,
+          "   Стало: " + item.newStart + " – " + item.newEnd,
+        ];
+        if (item.effect && item.effect.length) {
+          lines.push("   Ефект:");
+          item.effect.forEach(function (effect) {
+            lines.push("   • " + effect);
+          });
+        }
+        if (item.risks && item.risks.length) {
+          lines.push("   Ризик:");
+          item.risks.forEach(function (risk) {
+            lines.push("   • " + risk);
+          });
+        }
+        return lines.join("\n");
+      },
+    );
   }
 
   function formatIssueMonthLabel_(issue) {
@@ -959,7 +1151,10 @@ function applyVacationSuggestion_(suggestionId, payload) {
     const ss = SpreadsheetApp.getActive();
     if (ss && typeof ss.toast === "function") {
       ss.toast(
-        "Відпустку " + data.fml + " перенесено на " + (data.newStart || data.newStartIso),
+        "Відпустку " +
+          data.fml +
+          " перенесено на " +
+          (data.newStart || data.newStartIso),
         "WASB",
         5,
       );
