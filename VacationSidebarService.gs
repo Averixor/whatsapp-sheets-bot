@@ -464,6 +464,19 @@ const VacationSidebarService_ = (function () {
     return { sheetName: sheet.getName() };
   }
 
+  function applyFixSuggestion(formData) {
+    _assertWorkingAccess_("applyVacationSuggestionFromSidebar");
+    return _withDocumentLock_(function () {
+      if (typeof applyVacationSuggestion_ !== "function") {
+        throw new Error("Модуль пропозицій відпусток недоступний");
+      }
+      return applyVacationSuggestion_(
+        String((formData && formData.suggestionId) || ""),
+        formData || {},
+      );
+    });
+  }
+
   return {
     show: show,
     getState: getState,
@@ -477,6 +490,7 @@ const VacationSidebarService_ = (function () {
     checkViolations: checkViolations,
     generateReport: generateReport,
     openSchedule: openSchedule,
+    applyFixSuggestion: applyFixSuggestion,
   };
 })();
 
@@ -534,4 +548,8 @@ function generateVacationReportFromSidebar() {
 
 function openVacationScheduleFromSidebar() {
   return VacationSidebarService_.openSchedule();
+}
+
+function applyVacationSuggestionFromSidebar(formData) {
+  return VacationSidebarService_.applyFixSuggestion(formData);
 }

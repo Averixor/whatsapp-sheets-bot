@@ -1,26 +1,43 @@
 /**
  * VacationsRepository.gs — canonical vacation reads through a source adapter.
  *
- * Default: legacy VACATIONS A:I + K:S.
+ * Default: legacy VACATIONS A:I only (single source of truth).
+ * K:Q is presentation / migration only — never read as vacation source.
  * Opt-in: flat VACATION_REQUESTS when Script Property
  * WASB_VACATION_SOURCE=VACATION_REQUESTS.
  */
 
 const VacationsRepository_ = (function () {
-  function _blocks_() {
+  function _sourceRangeConfig_() {
     try {
       if (
         typeof VACATION_PLANNER_CONFIG === "object" &&
         VACATION_PLANNER_CONFIG &&
-        Array.isArray(VACATION_PLANNER_CONFIG.BLOCKS)
+        VACATION_PLANNER_CONFIG.SOURCE_RANGE
       ) {
-        return VACATION_PLANNER_CONFIG.BLOCKS;
+        return VACATION_PLANNER_CONFIG.SOURCE_RANGE;
       }
     } catch (_) {}
-    return [
-      { key: "first", vacationNumber: 1, startCol: 1 },
-      { key: "second", vacationNumber: 2, startCol: 11 },
-    ];
+    return { startCol: 1, width: 9, startRow: 2 };
+  }
+
+  function _rightPanelConfig_() {
+    try {
+      if (
+        typeof VACATION_PLANNER_CONFIG === "object" &&
+        VACATION_PLANNER_CONFIG &&
+        VACATION_PLANNER_CONFIG.RIGHT_PANEL
+      ) {
+        return VACATION_PLANNER_CONFIG.RIGHT_PANEL;
+      }
+    } catch (_) {}
+    return {
+      startCol: 11,
+      width: 9,
+      headerLabel: "Представлення — не редагувати",
+      warningMessage:
+        "Увага: знайдено дані у правій таблиці K:Q. Вона не є джерелом істини. Перенесіть ці записи в основний список A:I або очистіть праву таблицю.",
+    };
   }
 
   function _bool_(value, defaultValue) {
@@ -105,6 +122,31 @@ const VacationsRepository_ = (function () {
     } catch (_) {
       return "WASB_VACATION_SOURCE";
     }
+  }
+
+  function _dateKey_(dateValue, rawValue) {
+    if (dateValue instanceof Date && !isNaN(dateValue.getTime())) {
+      return Utilities.formatDate(dateValue, getTimeZone_(), "yyyy-MM-dd");
+    }
+    return String(rawValue == null ? "" : rawValue)
+      .trim()
+      .toLowerCase();
+  }
+
+  function _vacationRowKey_(item) {
+    const fmlKey =
+      typeof _normFml_ === "function"
+        ? _normFml_(item && item.fml)
+        : String((item && item.fml) || "")
+            .trim()
+            .toUpperCase();
+    return (
+      fmlKey +
+      "|" +
+      _dateKey_(item && item.startDate, item && item.startDateRaw) +
+      "|" +
+      _dateKey_(item && item.endDate, item && item.endDateRaw)
+    );
   }
 
   function getSourceMode() {
@@ -220,13 +262,11 @@ const VacationsRepository_ = (function () {
         VACATION_PLANNER_CONFIG &&
         Array.isArray(VACATION_PLANNER_CONFIG[configKey])
       ) {
-        statuses = VACATION_PLANNER_CONFIG[configKey].map(
-          function (value) {
-            return String(value || "")
-              .trim()
-              .toUpperCase();
-          },
-        );
+        statuses = VACATION_PLANNER_CONFIG[configKey].map(function (value) {
+          return String(value || "")
+            .trim()
+            .toUpperCase();
+        });
       }
     } catch (_) {}
     return statuses.indexOf(key) !== -1;
@@ -258,75 +298,319 @@ const VacationsRepository_ = (function () {
     ]);
   }
 
+  function _legacyHeaderMeta_(sheet) {
+    const rangeCfg = _sourceRangeConfig_();
+    const startCol = rangeCfg.startCol || 1;
+    const width = rangeCfg.width || 9;
+    let headers = [];
+    let headerFormulas = [];
+    try {
+      const headerRange = sheet.getRange(1, startCol, 1, width);
+      headers =
+        typeof headerRange.getDisplayValues === "function"
+          ? headerRange.getDisplayValues()[0]
+          : headerRange.getValues()[0];
+      headerFormulas =
+        typeof headerRange.getFormulas === "function"
+          ? headerRange.getFormulas()[0]
+          : [];
+    } catch (_) {}
+    const daysHeader = String(headers[6] || "")
+      .trim()
+      .toLowerCase();
+    const writable = [0, 1, 3].every(function (index) {
+      return !String(headerFormulas[index] || "").trim();
+    });
+    return {
+      daysHeader: daysHeader,
+      writable: writable,
+      startCol: startCol,
+    };
+  }
+
+  function readVacationSource() {
+    const sheet = DataAccess_.getSheet(_sourceSheetName_(), null, false);
+    if (!sheet || sheet.getLastRow() < 2) return [];
+
+    const rangeCfg = _sourceRangeConfig_();
+    const startCol = rangeCfg.startCol || 1;
+    const width = rangeCfg.width || 9;
+    const startRow = rangeCfg.startRow || 2;
+    const rowCount = sheet.getLastRow() - startRow + 1;
+    if (rowCount < 1) return [];
+
+    const rows = sheet.getRange(startRow, startCol, rowCount, width).getValues();
+    const out = [];
+    rows.forEach(function (row, index) {
+      const fml = String(row[0] || "").trim();
+      if (!fml) return;
+      out.push({
+        row: index + startRow,
+        fml: fml,
+        startDate: DateUtils_.parseDateAny(row[1]),
+        endDate: DateUtils_.parseDateAny(row[2]),
+        vacationNo: String(row[3] || "").trim(),
+        active: _bool_(row[4], false),
+        notify: _bool_(row[5], true),
+        daysLeft: Number(row[6]) || 0,
+        travel: String(row[7] || "").trim(),
+        intervalCheck: String(row[8] || "").trim(),
+        startDateRaw: row[1],
+        endDateRaw: row[2],
+      });
+    });
+    return out;
+  }
+
+  function readRightPanelRows() {
+    const sheet = DataAccess_.getSheet(_sourceSheetName_(), null, false);
+    if (!sheet || sheet.getLastRow() < 2) return [];
+
+    const panel = _rightPanelConfig_();
+    const startCol = panel.startCol || 11;
+    const width = panel.width || 9;
+    const rowCount = sheet.getLastRow() - 1;
+    if (rowCount < 1) return [];
+
+    const rows = sheet.getRange(2, startCol, rowCount, width).getValues();
+    const out = [];
+    rows.forEach(function (row, index) {
+      const fml = String(row[0] || "").trim();
+      if (!fml) return;
+      out.push({
+        row: index + 2,
+        fml: fml,
+        startDate: DateUtils_.parseDateAny(row[1]),
+        endDate: DateUtils_.parseDateAny(row[2]),
+        vacationNo: String(row[3] || "").trim(),
+        active: _bool_(row[4], false),
+        notify: _bool_(row[5], true),
+        daysLeft: Number(row[6]) || 0,
+        travel: String(row[7] || "").trim(),
+        intervalCheck: String(row[8] || "").trim(),
+        startDateRaw: row[1],
+        endDateRaw: row[2],
+      });
+    });
+    return out;
+  }
+
+  function detectRightPanelManualData() {
+    const rows = readRightPanelRows();
+    const panel = _rightPanelConfig_();
+    if (!rows.length) {
+      return {
+        hasData: false,
+        count: 0,
+        rows: [],
+        message: "",
+      };
+    }
+    return {
+      hasData: true,
+      count: rows.length,
+      rows: rows,
+      fmlSummary: rows
+        .map(function (item) {
+          return item.fml;
+        })
+        .slice(0, 5)
+        .join(", "),
+      message: panel.warningMessage,
+    };
+  }
+
   function listLegacy() {
     const sheet = DataAccess_.getSheet(_sourceSheetName_(), null, false);
     if (!sheet || sheet.getLastRow() < 2) return [];
 
-    const rowCount = sheet.getLastRow() - 1;
-    const out = [];
-    _blocks_().forEach(function (block) {
-      let headers = [];
-      let headerFormulas = [];
-      try {
-        const headerRange = sheet.getRange(1, block.startCol, 1, 9);
-        headers =
-          typeof headerRange.getDisplayValues === "function"
-            ? headerRange.getDisplayValues()[0]
-            : headerRange.getValues()[0];
-        headerFormulas =
-          typeof headerRange.getFormulas === "function"
-            ? headerRange.getFormulas()[0]
-            : [];
-      } catch (_) {}
-      const daysHeader = String(headers[6] || "")
-        .trim()
-        .toLowerCase();
-      const writable = [0, 1, 3].every(function (index) {
-        return !String(headerFormulas[index] || "").trim();
-      });
-      const rows = sheet
-        .getRange(2, block.startCol, rowCount, 9)
-        .getValues();
-      rows.forEach(function (row, index) {
-        const fml = String(row[0] || "").trim();
-        if (!fml) return;
-        const vacationNo = String(row[3] || "").trim();
-        const active = _bool_(row[4], false);
-        out.push({
-          fml: fml,
-          startDateRaw: row[1],
-          endDateRaw: row[2],
-          vacationNo: vacationNo,
-          vacationNumber:
-            Number(_vacationWordToNumber_(vacationNo)) ||
-            Number(block.vacationNumber) ||
-            0,
-          active: active,
-          isActive: active,
-          operationalActive: active,
-          factExpected: active,
-          reminderEligible: active,
-          notify: _bool_(row[5], true),
-          days: Number(row[6]) || 0,
-          declaredDurationDays:
-            daysHeader === "days" ? Number(row[6]) || 0 : 0,
-          daysMeaning: daysHeader || "",
-          travel: String(row[7] || "").trim(),
-          intervalCheck: String(row[8] || "").trim(),
-          startDate: DateUtils_.parseDateAny(row[1]),
-          endDate: DateUtils_.parseDateAny(row[2]),
-          _meta: {
-            schema: "vacations",
-            sheetName: sheet.getName(),
-            rowNumber: index + 2,
-            block: block.key,
-            startColumn: block.startCol,
-            writable: writable,
-          },
-        });
-      });
+    const headerMeta = _legacyHeaderMeta_(sheet);
+    return readVacationSource().map(function (item) {
+      const vacationNo = item.vacationNo;
+      const active = item.active;
+      return {
+        fml: item.fml,
+        startDateRaw: item.startDateRaw,
+        endDateRaw: item.endDateRaw,
+        vacationNo: vacationNo,
+        vacationNumber: Number(_vacationWordToNumber_(vacationNo)) || 0,
+        active: active,
+        isActive: active,
+        operationalActive: active,
+        factExpected: active,
+        reminderEligible: active,
+        notify: item.notify,
+        days: item.daysLeft,
+        declaredDurationDays:
+          headerMeta.daysHeader === "days" ? item.daysLeft : 0,
+        daysMeaning: headerMeta.daysHeader || "",
+        travel: item.travel,
+        intervalCheck: item.intervalCheck,
+        startDate: item.startDate,
+        endDate: item.endDate,
+        _meta: {
+          schema: "vacations",
+          sheetName: sheet.getName(),
+          rowNumber: item.row,
+          block: "main",
+          startColumn: headerMeta.startCol,
+          writable: headerMeta.writable,
+        },
+      };
     });
-    return out;
+  }
+
+  function _findNextMainSourceRow_(sheet, rangeCfg) {
+    const startRow = rangeCfg.startRow || 2;
+    const startCol = rangeCfg.startCol || 1;
+    const width = rangeCfg.width || 9;
+    const lastRow = Math.max(sheet.getLastRow(), startRow);
+    const rowCount = Math.max(lastRow - startRow + 1, 1);
+    const values = sheet
+      .getRange(startRow, startCol, rowCount, width)
+      .getValues();
+    for (let index = 0; index < values.length; index++) {
+      if (!String(values[index][0] || "").trim()) {
+        return index + startRow;
+      }
+    }
+    return lastRow + 1;
+  }
+
+  function _markRightPanelPresentation_(sheet) {
+    const panel = _rightPanelConfig_();
+    const startCol = panel.startCol || 11;
+    sheet.getRange(1, startCol).setValue(panel.headerLabel);
+  }
+
+  function migrateRightVacationTableToMainSource() {
+    const sheet = DataAccess_.getSheet(_sourceSheetName_(), null, false);
+    if (!sheet) {
+      throw new Error("Лист VACATIONS не знайдено");
+    }
+
+    const panel = _rightPanelConfig_();
+    const rangeCfg = _sourceRangeConfig_();
+    const startCol = rangeCfg.startCol || 1;
+    const width = rangeCfg.width || 9;
+    const rightRows = readRightPanelRows();
+    if (!rightRows.length) {
+      _markRightPanelPresentation_(sheet);
+      return {
+        migrated: 0,
+        skipped: 0,
+        cleared: false,
+        message: "У правій таблиці K:Q немає записів для переносу",
+      };
+    }
+
+    const existingKeys = {};
+    readVacationSource().forEach(function (item) {
+      existingKeys[_vacationRowKey_(item)] = true;
+    });
+
+    let migrated = 0;
+    let skipped = 0;
+    let targetRow = _findNextMainSourceRow_(sheet, rangeCfg);
+
+    rightRows.forEach(function (item) {
+      const key = _vacationRowKey_(item);
+      if (existingKeys[key]) {
+        skipped++;
+        return;
+      }
+      let vacationNo = String(item.vacationNo || "").trim();
+      if (!vacationNo) {
+        vacationNo =
+          Number(_vacationWordToNumber_(item.vacationNo)) === 2
+            ? "друга відпустка"
+            : "перша відпустка";
+      }
+      const rowData = [
+        item.fml,
+        item.startDateRaw || item.startDate,
+        item.endDateRaw || item.endDate,
+        vacationNo,
+        item.active,
+        item.notify,
+        item.daysLeft,
+        item.travel,
+        item.intervalCheck || "OK",
+      ];
+      sheet.getRange(targetRow, startCol, 1, width).setValues([rowData]);
+      sheet.getRange(targetRow, startCol + 1, 1, 2).setNumberFormat("dd.MM.yyyy");
+      existingKeys[key] = true;
+      migrated++;
+      targetRow++;
+    });
+
+    const rowCount = Math.max(sheet.getLastRow() - 1, 1);
+    sheet
+      .getRange(2, panel.startCol || 11, rowCount, panel.width || 9)
+      .clearContent();
+    _markRightPanelPresentation_(sheet);
+
+    return {
+      migrated: migrated,
+      skipped: skipped,
+      cleared: true,
+      message:
+        migrated > 0
+          ? "Перенесено записів: " +
+            migrated +
+            (skipped ? ", пропущено дублів: " + skipped : "")
+          : skipped > 0
+            ? "Усі записи вже були в основному списку A:I"
+            : "Немає записів для переносу",
+    };
+  }
+
+  function verifySingleVacationSource() {
+    const checks = [];
+    const issues = [];
+    let mainCount = 0;
+
+    try {
+      mainCount = readVacationSource().length;
+      checks.push("Основне джерело A:I читається (" + mainCount + " рядків)");
+    } catch (error) {
+      issues.push(
+        "Не вдалося прочитати A:I: " +
+          (error && error.message ? error.message : String(error)),
+      );
+    }
+
+    try {
+      const legacy = listLegacy();
+      const foreignColumns = legacy.filter(function (item) {
+        return item._meta && Number(item._meta.startColumn) !== 1;
+      });
+      if (foreignColumns.length) {
+        issues.push("listLegacy() читає дані поза основним діапазоном A:I");
+      } else {
+        checks.push("Валідатори отримують дані лише з A:I");
+      }
+    } catch (error) {
+      issues.push(
+        "listLegacy() недоступний: " +
+          (error && error.message ? error.message : String(error)),
+      );
+    }
+
+    const rightPanel = detectRightPanelManualData();
+    if (rightPanel.hasData) {
+      issues.push(rightPanel.message);
+    } else {
+      checks.push("У правій таблиці K:Q немає ручних записів відпусток");
+    }
+
+    return {
+      ok: issues.length === 0,
+      checks: checks,
+      issues: issues,
+      mainSourceRows: mainCount,
+      rightPanelRows: rightPanel.count || 0,
+    };
   }
 
   function listRequests(options) {
@@ -566,6 +850,11 @@ const VacationsRepository_ = (function () {
     listAll: listAll,
     listLegacy: listLegacy,
     listRequests: listRequests,
+    readVacationSource: readVacationSource,
+    readRightPanelRows: readRightPanelRows,
+    detectRightPanelManualData: detectRightPanelManualData,
+    migrateRightVacationTableToMainSource: migrateRightVacationTableToMainSource,
+    verifySingleVacationSource: verifySingleVacationSource,
     getSourceMode: getSourceMode,
     getSourceSheetName: getSourceSheetName,
     findByFml: findByFml,
@@ -573,3 +862,29 @@ const VacationsRepository_ = (function () {
     getNextForFml: getNextForFml,
   };
 })();
+
+function readVacationSource_() {
+  return VacationsRepository_.readVacationSource();
+}
+
+function migrateRightVacationTableToMainSource_() {
+  return VacationsRepository_.migrateRightVacationTableToMainSource();
+}
+
+function verifySingleVacationSource_() {
+  return VacationsRepository_.verifySingleVacationSource();
+}
+
+function migrateRightVacationTableFromMenu_() {
+  const result = migrateRightVacationTableToMainSource_();
+  const message =
+    result && result.message
+      ? result.message
+      : "Міграцію правої таблиці завершено";
+  try {
+    getWasbSpreadsheet_().toast(message, "WASB", 5);
+  } catch (_) {
+    SpreadsheetApp.getUi().alert(message);
+  }
+  return result;
+}

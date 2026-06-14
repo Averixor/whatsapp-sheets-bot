@@ -250,9 +250,16 @@ function getClientRuntimeContract_() {
 
 function onOpen(e) {
   try {
-    SpreadsheetApp.getUi()
-      .createMenu("WASB")
+    const ui = SpreadsheetApp.getUi();
+    const vacationMenu = ui
+      .createMenu("Відпустки")
+      .addItem(
+        "Міграція правої таблиці в основне джерело",
+        "migrateRightVacationTableFromMenu_",
+      );
+    ui.createMenu("WASB")
       .addItem("📱 ПАНЕЛЬ", "showSidebar")
+      .addSubMenu(vacationMenu)
       .addSeparator()
       .addItem("🔄 Оновити меню", "onOpen")
       .addToUi();

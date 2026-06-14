@@ -18,7 +18,7 @@ client `Js.Vacations.html`.
 ## Sources of truth
 
 - `PERSONNEL` — active people (`Callsign — FML` in selectors).
-- `VACATIONS` — default legacy source (`A:I` slot 1, `K:S` slot 2).
+- `VACATIONS` — default legacy source (`A:I` only; `K:Q` is presentation/migration only).
 - `VACATION_REQUESTS` — opt-in flat source with one request per row.
 - `VacationsRepository_.listAll()` hides the active physical source from the
   planner, sidebar, person cards, reports, and reminder engine.
@@ -68,21 +68,23 @@ Migration and rollback hold the document lock used by panel writes.
 
 ## Main panel tabs
 
-| Tab       | Actions                                                               |
-| --------- | --------------------------------------------------------------------- |
-| Огляд     | stats, refresh, **🔔 reminders**, rebuild, open calendar              |
-| План      | active plan, move/cancel, rebuild, open calendar                      |
-| Додати    | add В1/В2/ВД/СО                                                       |
-| Підібрати | planner top options + apply                                           |
-| Проблеми  | understandable problem cards, suggestions, jump to date picker        |
-| Звіт      | unit report                                                           |
+| Tab       | Actions                                                        |
+| --------- | -------------------------------------------------------------- |
+| Огляд     | stats, refresh, **🔔 reminders**, rebuild, open calendar       |
+| План      | active plan, move/cancel, rebuild, open calendar               |
+| Додати    | add В1/В2/ВД/СО                                                |
+| Підібрати | planner top options + apply                                    |
+| Проблеми  | understandable problem cards, suggestions, jump to date picker |
+| Звіт      | unit report                                                    |
 
 Reminders call `apiCheckVacationsAndBirthdays` inside the vacations screen
 (legacy `vacationReminder` action remains for tests only).
 
 `VACATION_CHECK` remains a technical audit sheet for administrators. End users
 see **Проблемні питання** with human-readable labels (never internal codes like
-`GAP_TOO_SHORT`), explanations, suggestions, and a safe jump to `Підібрати`.
+`GAP_TOO_SHORT`), explanations, concrete fix suggestions (`Vacation_Suggestions.gs`),
+and a safe jump to `Підібрати`. Each actionable suggestion shows old/new dates,
+expected effect, risks, and **Застосувати** when auto-apply is safe.
 Reports and the overview card point to **Проблемні питання** instead of the
 audit sheet.
 

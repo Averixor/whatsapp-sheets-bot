@@ -325,8 +325,7 @@ assert.ok(
 );
 assert.ok(
   audit.checks.some(
-    (item) =>
-      item.rule === "HIGH_LOAD_PERIOD" && item.severity === "WARNING",
+    (item) => item.rule === "HIGH_LOAD_PERIOD" && item.severity === "WARNING",
   ),
   "four concurrent people must produce a non-blocking load warning",
 );
@@ -387,24 +386,19 @@ const consistencyAudit = service.buildConsistencyAudit(
   ],
   date("2026-06-11"),
 );
-assert.deepEqual(
-  Array.from(consistencyAudit, (item) => item.rule).sort(),
-  [
-    "MONTHLY_VACATION_WITHOUT_PLAN",
-    "PERSONNEL_VACATION_WITHOUT_PLAN",
-    "PLAN_WITHOUT_MONTHLY_VACATION",
-  ],
-);
+assert.deepEqual(Array.from(consistencyAudit, (item) => item.rule).sort(), [
+  "MONTHLY_VACATION_WITHOUT_PLAN",
+  "PERSONNEL_VACATION_WITHOUT_PLAN",
+  "PLAN_WITHOUT_MONTHLY_VACATION",
+]);
 assert.equal(
-  consistencyAudit.find(
-    (item) => item.rule === "MONTHLY_VACATION_WITHOUT_PLAN",
-  ).date,
+  consistencyAudit.find((item) => item.rule === "MONTHLY_VACATION_WITHOUT_PLAN")
+    .date,
   "2026-06-10 / 2026-06-11",
 );
 assert.equal(
-  consistencyAudit.find(
-    (item) => item.rule === "PLAN_WITHOUT_MONTHLY_VACATION",
-  ).date,
+  consistencyAudit.find((item) => item.rule === "PLAN_WITHOUT_MONTHLY_VACATION")
+    .date,
   "2026-06-10 / 2026-06-11",
 );
 assert.ok(
@@ -558,7 +552,11 @@ class FakeRange {
   }
 
   clearContent() {
-    this.sheet.setValue(this.row, this.col, "");
+    for (let rowOffset = 0; rowOffset < this.numRows; rowOffset++) {
+      for (let colOffset = 0; colOffset < this.numCols; colOffset++) {
+        this.sheet.setValue(this.row + rowOffset, this.col + colOffset, "");
+      }
+    }
     return this;
   }
 
@@ -745,7 +743,7 @@ sourceRows[1].splice(
   "OK",
 );
 sourceRows[2].splice(
-  10,
+  0,
   9,
   "Друга Людина",
   date("2026-08-01"),
@@ -800,6 +798,25 @@ const ioContext = vm.createContext({
       requestIdSequence += 1;
       return `request-${requestIdSequence}`;
     },
+    formatDate(value, _tz, pattern) {
+      if (!(value instanceof Date) || isNaN(value.getTime())) {
+        return String(value || "");
+      }
+      const year = value.getFullYear();
+      const month = String(value.getMonth() + 1).padStart(2, "0");
+      const day = String(value.getDate()).padStart(2, "0");
+      if (pattern === "yyyy-MM-dd") return `${year}-${month}-${day}`;
+      if (pattern === "dd.MM.yyyy") return `${day}.${month}.${year}`;
+      return value.toISOString();
+    },
+  },
+  getTimeZone_() {
+    return "Europe/Kyiv";
+  },
+  getWasbSpreadsheet_() {
+    return {
+      toast() {},
+    };
   },
   DataAccess_: {
     getSheet() {
@@ -837,10 +854,10 @@ load(ioContext, "VacationPlannerService.gs");
 load(ioContext, "VacationsRepository.gs");
 const repository = vm.runInContext("VacationsRepository_", ioContext);
 const merged = repository.listAll();
-assert.equal(merged.length, 2, "repository must merge A:I and K:S");
+assert.equal(merged.length, 2, "repository must read all vacations from A:I");
 assert.equal(
   Array.from(merged, (item) => item._meta.startColumn).join(","),
-  "1,11",
+  "1,1",
 );
 const workingPropertiesService = ioContext.PropertiesService;
 ioContext.PropertiesService = {
@@ -855,8 +872,10 @@ assert.throws(
 );
 ioContext.PropertiesService = workingPropertiesService;
 
+load(ioContext, "Vacation_Suggestions.gs");
 load(ioContext, "VacationOptionsWriter.gs");
 const writer = vm.runInContext("VacationOptionsWriter_", ioContext);
+const suggestionsModule = vm.runInContext("VacationSuggestions_", ioContext);
 assert.equal(repository.getSourceMode(), "legacy");
 scriptProperties.WASB_VACATION_SOURCE = "REQUESTS";
 assert.throws(
@@ -908,9 +927,7 @@ requestSheet.rows[1][1] = "ALPHA";
 requestSheet.rows[1][2] = "Старе ПІБ";
 ioContext.PersonnelRepository_ = {
   getByFml(value) {
-    return value === "Нове ПІБ"
-      ? { callsign: "ALPHA", fml: "Нове ПІБ" }
-      : null;
+    return value === "Нове ПІБ" ? { callsign: "ALPHA", fml: "Нове ПІБ" } : null;
   },
 };
 assert.equal(
@@ -1127,6 +1144,257 @@ assert.equal(normalizedProblems[0].vacationNumber, 2);
 assert.equal(normalizedProblems[0].startDate, "2026-07-01");
 assert.equal(normalizedProblems[0].sourceRow, 7);
 assert.equal(normalizedProblems[0].sourceStartColumn, 11);
+assert.ok(Array.isArray(normalizedProblems[0].fixSuggestions));
+
+function vacationWithMeta(fml, start, end, vacationNumber, meta = {}) {
+  return {
+    fml,
+    personKey: fml,
+    startDate: date(start),
+    endDate: date(end),
+    vacationNumber,
+    active: true,
+    intervalCheck: meta.intervalCheck || "",
+    _meta: {
+      rowNumber: meta.rowNumber || vacationNumber + 10,
+      startColumn: meta.startColumn || 1,
+      writable: meta.writable !== false,
+    },
+  };
+}
+
+const dec2026Vacations = [
+  vacationWithMeta("Панасейко Денис Ігорович", "2026-12-04", "2026-12-18", 1, {
+    rowNumber: 10,
+  }),
+  vacationWithMeta(
+    "Омелянський Олександр Юрійович",
+    "2026-12-08",
+    "2026-12-22",
+    1,
+    {
+      rowNumber: 11,
+    },
+  ),
+  vacationWithMeta(
+    "Івченко Олександр Олександрович",
+    "2026-12-10",
+    "2026-12-24",
+    1,
+    {
+      rowNumber: 12,
+    },
+  ),
+  vacationWithMeta(
+    "Ковальчук Михайло Петрович",
+    "2026-12-14",
+    "2026-12-28",
+    1,
+    {
+      rowNumber: 13,
+    },
+  ),
+  vacationWithMeta(
+    "Рябінін Сергій Олексійович",
+    "2026-08-05",
+    "2026-08-19",
+    1,
+    {
+      rowNumber: 14,
+      intervalCheck: "LOCKED",
+    },
+  ),
+  vacationWithMeta(
+    "Рябінін Сергій Олексійович",
+    "2026-12-20",
+    "2027-01-03",
+    2,
+    {
+      rowNumber: 15,
+      startColumn: 1,
+    },
+  ),
+  vacationWithMeta(
+    "Монько Дмитро Володимирович",
+    "2026-12-21",
+    "2027-01-04",
+    1,
+    {
+      rowNumber: 15,
+    },
+  ),
+];
+
+const suggestionContext = suggestionsModule.buildSuggestionContext_(
+  [],
+  dec2026Vacations,
+);
+
+const overlapIssue = {
+  rule: "MAX_CONCURRENT",
+  date: "2026-12-21",
+  fml: "Омелянський Олександр Юрійович, Івченко Олександр Олександрович, Ковальчук Михайло Петрович, Рябінін Сергій Олексійович, Монько Дмитро Володимирович",
+  severity: "ERROR",
+};
+const overlapSuggestions = suggestionsModule.suggestForTooManyOverlaps_(
+  overlapIssue,
+  suggestionContext,
+);
+assert.ok(
+  overlapSuggestions.some((item) => item.personName.includes("Монько")),
+  "overlap suggestions must include Monko move",
+);
+const monkoSuggestion = overlapSuggestions.find((item) =>
+  item.personName.includes("Монько"),
+);
+assert.ok(monkoSuggestion, "Monko suggestion must exist");
+assert.equal(monkoSuggestion.oldStart, "21.12.2026");
+assert.equal(monkoSuggestion.oldEnd, "04.01.2027");
+assert.equal(monkoSuggestion.newStart, "04.01.2027");
+assert.equal(monkoSuggestion.newEnd, "18.01.2027");
+assert.equal(
+  service.daysBetween(date("2026-12-21"), date("2027-01-04")) + 1,
+  service.daysBetween(date("2027-01-04"), date("2027-01-18")) + 1,
+  "Monko move must preserve duration",
+);
+
+const overlapAfter = suggestionsModule.validateVacationCandidate_(
+  {
+    target: dec2026Vacations.find((item) => item.fml.includes("Монько")),
+    newStart: date("2027-01-04"),
+    newEnd: date("2027-01-18"),
+    days: 15,
+    fixesError: true,
+  },
+  suggestionContext,
+);
+assert.equal(overlapAfter.ok, true, "Monko candidate must validate");
+
+const modifiedDecVacations = dec2026Vacations.map(function (vacation) {
+  if (vacation.fml.includes("Монько")) {
+    return vacationWithMeta(
+      vacation.fml,
+      "2027-01-04",
+      "2027-01-18",
+      vacation.vacationNumber,
+      { rowNumber: 15 },
+    );
+  }
+  return vacation;
+});
+function countPeopleOnDate(vacations, dayKey) {
+  return vacations.filter(function (vacation) {
+    const startKey =
+      vacation.startDate.getFullYear() +
+      "-" +
+      String(vacation.startDate.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(vacation.startDate.getDate()).padStart(2, "0");
+    const endKey =
+      vacation.endDate.getFullYear() +
+      "-" +
+      String(vacation.endDate.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(vacation.endDate.getDate()).padStart(2, "0");
+    return dayKey >= startKey && dayKey <= endKey;
+  }).length;
+}
+assert.ok(
+  ["2026-12-21", "2026-12-22"].every(function (day) {
+    return countPeopleOnDate(modifiedDecVacations, day) <= 4;
+  }),
+  "after Monko move old overlap dates must have <=4 people",
+);
+
+const lockedSuggestions = overlapSuggestions.filter(
+  (item) => item.oldStart === "05.08.2026" && item.oldEnd === "19.08.2026",
+);
+assert.equal(
+  lockedSuggestions.length,
+  0,
+  "locked Ryabinin first vacation must not be suggested for move",
+);
+
+const intervalIssue = {
+  rule: "PERSON_GAP",
+  date: "2026-08-05 / 2026-12-20",
+  fml: "Рябінін Сергій Олексійович",
+  primaryFml: "Рябінін Сергій Олексійович",
+};
+const intervalSuggestions = suggestionsModule.suggestForMinInterval_(
+  intervalIssue,
+  suggestionContext,
+);
+assert.ok(intervalSuggestions.length >= 1, "interval suggestions must exist");
+assert.ok(
+  intervalSuggestions.some((item) => item.newStartIso >= "2027-01-16"),
+  "interval suggestion must start at previousEnd + 150 days",
+);
+
+const monthIssue = {
+  rule: "MONTH_BALANCE",
+  date: "2026-12",
+  fml: dec2026Vacations
+    .filter((item) => item.startDate.getMonth() === 11)
+    .map((item) => item.fml)
+    .join(", "),
+};
+const monthSuggestions = suggestionsModule.suggestForMonthStartSkew_(
+  monthIssue,
+  suggestionContext,
+);
+assert.ok(monthSuggestions.length >= 1, "month skew suggestions must exist");
+assert.equal(
+  dec2026Vacations.filter(
+    (item) =>
+      item.startDate.getFullYear() === 2026 && item.startDate.getMonth() === 11,
+  ).length,
+  6,
+  "December 2026 fixture must contain 6 starts",
+);
+
+const may2027Vacations = [
+  vacationWithMeta("A", "2027-05-01", "2027-05-15", 1),
+  vacationWithMeta("B", "2027-05-03", "2027-05-17", 1),
+  vacationWithMeta("C", "2027-05-05", "2027-05-19", 1),
+  vacationWithMeta("D", "2027-05-07", "2027-05-21", 1),
+  vacationWithMeta("E", "2027-05-09", "2027-05-23", 1),
+  vacationWithMeta("F", "2027-05-11", "2027-05-25", 1),
+];
+const mayContext = suggestionsModule.buildSuggestionContext_(
+  [],
+  may2027Vacations,
+);
+const mayAudit = service.buildScheduleAudit(may2027Vacations);
+assert.ok(
+  mayAudit.checks.some((item) => item.rule === "MONTH_BALANCE"),
+  "May 2027 fixture must trigger month skew",
+);
+const mayMonthSuggestions = suggestionsModule.suggestForMonthStartSkew_(
+  {
+    rule: "MONTH_BALANCE",
+    date: "2027-05",
+    fml: "A, B, C, D, E, F",
+  },
+  mayContext,
+);
+assert.ok(mayMonthSuggestions.length >= 1, "May 2027 must produce suggestions");
+
+const badCandidate = suggestionsModule.validateVacationCandidate_(
+  {
+    target: dec2026Vacations.find((item) => item.fml.includes("Монько")),
+    newStart: date("2026-12-21"),
+    newEnd: date("2027-01-04"),
+    days: 15,
+  },
+  suggestionContext,
+);
+assert.equal(badCandidate.ok, false, "candidate that keeps overlap must fail");
+
+assert.ok(
+  overlapSuggestions.every((item) => item.score < 9999),
+  "top overlap suggestions must not contain hard-error candidates",
+);
 
 const writeResult = writer.writeVacationToSource({
   fml: "Нова Друга",
@@ -1135,14 +1403,14 @@ const writeResult = writer.writeVacationToSource({
   endDate: date("2026-10-15"),
   days: 15,
 });
-assert.equal(writeResult.startColumn, 11);
+assert.equal(writeResult.startColumn, 1);
 assert.equal(
-  sourceSheet.valueAt(writeResult.rowNumber, 11),
+  sourceSheet.valueAt(writeResult.rowNumber, 1),
   "Нова Друга",
-  "second vacation must be written into K:S",
+  "second vacation must be written into A:I",
 );
 assert.equal(
-  sourceSheet.valueAt(writeResult.rowNumber, 14),
+  sourceSheet.valueAt(writeResult.rowNumber, 4),
   "друга відпустка",
   "vacation number must be stored as text",
 );
@@ -1155,7 +1423,7 @@ const replacementWrite = writer.writeVacationToSource({
   days: 15,
 });
 assert.equal(
-  sourceSheet.valueAt(replacementWrite.rowNumber, 18),
+  sourceSheet.valueAt(replacementWrite.rowNumber, 8),
   "Київ",
   "replacing a slot must preserve existing travel when no new value is supplied",
 );
@@ -1173,7 +1441,6 @@ const formulaHeaderValues = [
   "Interval check",
 ];
 formulaRows[0].splice(0, 9, ...formulaHeaderValues);
-formulaRows[0].splice(10, 9, ...formulaHeaderValues);
 formulaRows[1].splice(
   0,
   9,
@@ -1187,25 +1454,22 @@ formulaRows[1].splice(
   0,
   true,
 );
-formulaRows[1].splice(
-  10,
+formulaRows[2].splice(
+  0,
   9,
   "Генерована Людина",
   date("2026-03-01"),
-  "FORMULA_K_END",
+  date("2026-03-15"),
   "друга відпустка",
   true,
   true,
-  0,
+  15,
   0,
   true,
 );
 const formulaHeaders = [Array(19).fill("")];
 [2, 4, 5, 6, 8].forEach((index) => {
   formulaHeaders[0][index] = "=ARRAYFORMULA()";
-});
-[0, 1, 2, 3, 4, 5, 6, 8].forEach((index) => {
-  formulaHeaders[0][10 + index] = "=ARRAYFORMULA()";
 });
 sourceSheet = new FakeSheet("VACATIONS", formulaRows, formulaHeaders);
 const formulaMerged = repository.listAll();
@@ -1215,7 +1479,7 @@ assert.equal(
 );
 assert.equal(
   formulaMerged.find((item) => item.fml === "Генерована Людина")._meta.writable,
-  false,
+  true,
 );
 const formulaWrite = writer.writeVacationToSource({
   fml: "Формула Людина",
@@ -1251,36 +1515,34 @@ const generatedWrite = writer.writeVacationToSource({
   endDate: date("2026-04-15"),
   days: 15,
 });
-assert.equal(generatedWrite.requestedBlock, "second");
-assert.equal(
-  generatedWrite.startColumn,
-  1,
-  "formula-generated K:S must route writes into writable A:I",
-);
-assert.equal(sourceSheet.valueAt(2, 11), "Генерована Людина");
+assert.equal(generatedWrite.startColumn, 1);
+assert.equal(generatedWrite.rowNumber, 3);
+assert.equal(sourceSheet.valueAt(3, 1), "Генерована Людина");
 assert.equal(
   sourceSheet.valueAt(generatedWrite.rowNumber, 4),
   "друга відпустка",
 );
 
-function sourceVacationRow(entries) {
+function sourceVacationRow(entry) {
   const row = Array(19).fill("");
-  entries.forEach((entry) => {
-    row.splice(
-      entry.startColumn - 1,
-      9,
-      entry.fml,
-      date(entry.start),
-      date(entry.end),
-      entry.type,
-      true,
-      true,
-      entry.days,
-      "",
-      "OK",
-    );
-  });
+  row.splice(
+    0,
+    9,
+    entry.fml,
+    date(entry.start),
+    date(entry.end),
+    entry.type,
+    true,
+    true,
+    entry.days,
+    "",
+    "OK",
+  );
   return row;
+}
+
+function sourceVacationSheet(entries) {
+  return [Array(19).fill(""), ...entries.map(sourceVacationRow)];
 }
 
 function dateColumn(sheet, expected) {
@@ -1292,11 +1554,10 @@ function dateColumn(sheet, expected) {
   return columnIndex + 1;
 }
 
-sourceSheet = new FakeSheet("VACATIONS", [
-  Array(19).fill(""),
-  sourceVacationRow([
+sourceSheet = new FakeSheet(
+  "VACATIONS",
+  sourceVacationSheet([
     {
-      startColumn: 1,
       fml: "А Змішана",
       start: "2026-01-31",
       end: "2026-03-01",
@@ -1304,37 +1565,27 @@ sourceSheet = new FakeSheet("VACATIONS", [
       days: 30,
     },
     {
-      startColumn: 11,
       fml: "А Змішана",
       start: "2026-02-01",
       end: "2026-02-01",
       type: "друга відпустка",
       days: 1,
     },
-  ]),
-  sourceVacationRow([
     {
-      startColumn: 1,
       fml: "Б Додаткова",
       start: "2026-02-01",
       end: "2026-02-01",
       type: "додаткова відпустка",
       days: 1,
     },
-  ]),
-  sourceVacationRow([
     {
-      startColumn: 1,
       fml: "В Сімейна",
       start: "2026-03-01",
       end: "2026-03-01",
       type: "сімейні обставини",
       days: 1,
     },
-  ]),
-  sourceVacationRow([
     {
-      startColumn: 11,
       fml: "Г Друга",
       start: "2026-02-02",
       end: "2026-02-02",
@@ -1342,7 +1593,7 @@ sourceSheet = new FakeSheet("VACATIONS", [
       days: 1,
     },
   ]),
-]);
+);
 generatedSheets = {};
 const sourceBeforeRebuild = sourceSheet.rows.map((row) => row.slice());
 const multiMonthRebuild = writer.rebuildVacationSystem();
@@ -1355,7 +1606,7 @@ assert.deepEqual(Array.from(multiMonthRebuild.affectedSheets), [
 assert.deepEqual(
   sourceSheet.rows,
   sourceBeforeRebuild,
-  "calendar formatting must not mutate VACATIONS or its K:S block",
+  "calendar formatting must not mutate VACATIONS source rows",
 );
 
 const scheduleRowsByFml = new Map(
@@ -1398,11 +1649,10 @@ scheduleSheet.borders.forEach((border) => {
   assert.equal(border.args[7], "SOLID_MEDIUM");
 });
 
-sourceSheet = new FakeSheet("VACATIONS", [
-  Array(19).fill(""),
-  sourceVacationRow([
+sourceSheet = new FakeSheet(
+  "VACATIONS",
+  sourceVacationSheet([
     {
-      startColumn: 1,
       fml: "Один Місяць",
       start: "2026-04-01",
       end: "2026-04-15",
@@ -1410,7 +1660,7 @@ sourceSheet = new FakeSheet("VACATIONS", [
       days: 15,
     },
   ]),
-]);
+);
 generatedSheets = {};
 const singleMonthRebuild = writer.rebuildVacationSystem();
 assert.equal(singleMonthRebuild.schedulePeople, 1);
@@ -1428,11 +1678,10 @@ assert.equal(emptyRebuild.scheduleDays, 0);
 assert.equal(generatedSheets.VACATION_SCHEDULE.borders.length, 0);
 assert.equal(generatedSheets.VACATION_SCHEDULE.backgrounds.length, 1);
 
-sourceSheet = new FakeSheet("VACATIONS", [
-  Array(19).fill(""),
-  sourceVacationRow([
+sourceSheet = new FakeSheet(
+  "VACATIONS",
+  sourceVacationSheet([
     {
-      startColumn: 1,
       fml: "Гап Людина",
       start: "2026-01-01",
       end: "2026-01-15",
@@ -1440,7 +1689,6 @@ sourceSheet = new FakeSheet("VACATIONS", [
       days: 15,
     },
     {
-      startColumn: 11,
       fml: "Гап Людина",
       start: "2026-02-01",
       end: "2026-02-15",
@@ -1448,7 +1696,7 @@ sourceSheet = new FakeSheet("VACATIONS", [
       days: 15,
     },
   ]),
-]);
+);
 generatedSheets = {};
 const gapReport = writer.generateVacationReport();
 assert.equal(gapReport.errorCount, 0, "short gaps must not be blocking");
@@ -1466,6 +1714,55 @@ assert.match(
 );
 assert.equal(gapReport.adminSheet, "VACATION_CHECK");
 assert.match(gapReport.problemSummary.summaryLine, /Усі пов'язані із/);
+
+const rightPanelRows = [
+  Array(19).fill(""),
+  Array(19).fill(""),
+  Array(19).fill(""),
+];
+rightPanelRows[1].splice(
+  0,
+  9,
+  "Перша Людина",
+  date("2026-01-01"),
+  date("2026-01-15"),
+  "перша відпустка",
+  true,
+  true,
+  15,
+  "",
+  "OK",
+);
+rightPanelRows[2].splice(
+  10,
+  9,
+  "Права Людина",
+  date("2026-09-01"),
+  date("2026-09-15"),
+  "друга відпустка",
+  true,
+  true,
+  15,
+  "",
+  "OK",
+);
+sourceSheet = new FakeSheet("VACATIONS", rightPanelRows);
+const verifyBeforeMigration = repository.verifySingleVacationSource();
+assert.equal(verifyBeforeMigration.ok, false);
+assert.ok(
+  verifyBeforeMigration.issues.some((item) => item.includes("K:Q")),
+  "verifySingleVacationSource must warn about right-panel manual data",
+);
+const migrationResult = repository.migrateRightVacationTableToMainSource();
+assert.equal(migrationResult.migrated, 1);
+assert.equal(sourceSheet.valueAt(3, 1), "Права Людина");
+assert.equal(sourceSheet.valueAt(2, 11), "");
+assert.equal(sourceSheet.valueAt(1, 11), plannerConfig.RIGHT_PANEL.headerLabel);
+const verifyAfterMigration = repository.verifySingleVacationSource();
+assert.equal(verifyAfterMigration.ok, true);
+assert.equal(verifyAfterMigration.rightPanelRows, 0);
+const duplicateMigration = repository.migrateRightVacationTableToMainSource();
+assert.equal(duplicateMigration.migrated, 0);
 
 const code = fs.readFileSync(path.join(repoRoot, "Code.gs"), "utf8");
 const sidebarHtml = fs.readFileSync(
@@ -1638,8 +1935,9 @@ const engineSource = fs.readFileSync(
   path.join(repoRoot, "VacationEngine.gs"),
   "utf8",
 );
-assert.doesNotMatch(code, /createMenu\("Відпустки"\)/);
-assert.doesNotMatch(code, /addSubMenu\(vacationMenu\)/);
+assert.match(code, /createMenu\("Відпустки"\)/);
+assert.match(code, /migrateRightVacationTableFromMenu_/);
+assert.match(code, /addSubMenu\(vacationMenu\)/);
 assert.match(sidebarHtml, /id="btnVacations"/);
 assert.match(sidebarHtml, /handleMenuAction\('vacations'\)/);
 assert.doesNotMatch(
@@ -1677,6 +1975,13 @@ assert.doesNotMatch(
   /GAP_TOO_SHORT/,
 );
 assert.match(jsVacations, /function buildVacationProblemSuggestions_/);
+assert.match(jsVacations, /function renderVacationFixSuggestions_/);
+assert.match(jsVacations, /applyFixSuggestion\(/);
+assert.match(sidebarService, /applyVacationSuggestionFromSidebar/);
+assert.match(
+  fs.readFileSync(path.join(repoRoot, "Vacation_Suggestions.gs"), "utf8"),
+  /function buildVacationFixSuggestions_/,
+);
 assert.match(jsVacations, /function renderVacationProblems_/);
 assert.match(jsVacations, /Проблемні питання/);
 assert.match(jsVacations, /Знайти проблеми/);

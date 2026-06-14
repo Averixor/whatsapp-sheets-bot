@@ -2,9 +2,10 @@
  * VacationPlannerConfig.gs — configuration for the vacation scheduler (WASB).
  *
  * Source adapter:
- *   default = VACATIONS A:I + K:S (legacy)
+ *   default = VACATIONS A:I (single source of truth)
  *   opt-in  = flat VACATION_REQUESTS
  *
+ * K:Q/K:S on VACATIONS is presentation-only, never a read source.
  * `VacationsRepository_.listAll()` hides the active physical source.
  */
 
@@ -30,9 +31,34 @@ const VACATION_PLANNER_CONFIG = Object.freeze({
     "Vacation №",
     "Active",
     "Notify",
-    "Days",
+    "Days left",
     "Travel",
     "Interval check",
+  ]),
+
+  /** Canonical legacy source range on VACATIONS. */
+  SOURCE_RANGE: Object.freeze({
+    startCol: 1,
+    width: 9,
+    startRow: 2,
+  }),
+
+  /** Legacy right-side panel — presentation / migration source only. */
+  RIGHT_PANEL: Object.freeze({
+    startCol: 11,
+    width: 9,
+    headerLabel: "Представлення — не редагувати",
+    warningMessage:
+      "Увага: знайдено дані у правій таблиці K:Q. Вона не є джерелом істини. Перенесіть ці записи в основний список A:I або очистіть праву таблицю.",
+  }),
+
+  BLOCKS: Object.freeze([
+    Object.freeze({
+      key: "main",
+      label: "Основне джерело",
+      vacationNumber: 0,
+      startCol: 1,
+    }),
   ]),
 
   REQUEST_HEADERS: Object.freeze([
@@ -58,21 +84,6 @@ const VACATION_PLANNER_CONFIG = Object.freeze({
   REQUEST_OPERATIONAL_STATUSES: Object.freeze(["Approved", "Applied"]),
   REQUEST_FACT_STATUSES: Object.freeze(["Applied"]),
   REQUEST_REMINDER_STATUSES: Object.freeze(["Approved", "Applied"]),
-
-  BLOCKS: Object.freeze([
-    Object.freeze({
-      key: "first",
-      label: "Перша відпустка",
-      vacationNumber: 1,
-      startCol: 1,
-    }),
-    Object.freeze({
-      key: "second",
-      label: "Друга відпустка",
-      vacationNumber: 2,
-      startCol: 11,
-    }),
-  ]),
 
   RULES: Object.freeze({
     MAX_VACATIONS_PER_PERSON_YEAR: 2,

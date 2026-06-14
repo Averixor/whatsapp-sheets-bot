@@ -87,11 +87,26 @@ const VacationOptionsWriter_ = (function () {
 
   function _block_(vacationNumber) {
     const number = Number(vacationNumber);
-    const match = VACATION_PLANNER_CONFIG.BLOCKS.filter(function (block) {
-      return block.vacationNumber === number;
-    })[0];
-    if (!match) throw new Error("Номер відпустки має бути 1 або 2");
-    return match;
+    if (number !== 1 && number !== 2) {
+      throw new Error("Номер відпустки має бути 1 або 2");
+    }
+    const main = VACATION_PLANNER_CONFIG.BLOCKS[0];
+    return {
+      key: main.key,
+      label: main.label,
+      startCol: main.startCol,
+      vacationNumber: number,
+    };
+  }
+
+  function _mainSourceRange_() {
+    return (
+      (VACATION_PLANNER_CONFIG && VACATION_PLANNER_CONFIG.SOURCE_RANGE) || {
+        startCol: 1,
+        width: 9,
+        startRow: 2,
+      }
+    );
   }
 
   function _ensureSheet_(name) {
@@ -101,25 +116,31 @@ const VacationOptionsWriter_ = (function () {
 
   function _ensureSourceSheet_() {
     const sheet = _ensureSheet_(VACATION_PLANNER_CONFIG.SHEETS.SOURCE);
-    VACATION_PLANNER_CONFIG.BLOCKS.forEach(function (block) {
-      const headerRange = sheet.getRange(
-        1,
-        block.startCol,
-        1,
-        VACATION_PLANNER_CONFIG.SOURCE_HEADERS.length,
-      );
-      const headers = headerRange.getValues()[0];
-      let changed = false;
-      VACATION_PLANNER_CONFIG.SOURCE_HEADERS.forEach(function (header, index) {
-        if (!String(headers[index] || "").trim()) {
-          headers[index] = header;
-          changed = true;
-        }
-      });
-      if (changed) {
-        headerRange.setValues([headers]);
+    const rangeCfg = _mainSourceRange_();
+    const headerRange = sheet.getRange(
+      1,
+      rangeCfg.startCol,
+      1,
+      VACATION_PLANNER_CONFIG.SOURCE_HEADERS.length,
+    );
+    const headers = headerRange.getValues()[0];
+    let changed = false;
+    VACATION_PLANNER_CONFIG.SOURCE_HEADERS.forEach(function (header, index) {
+      if (!String(headers[index] || "").trim()) {
+        headers[index] = header;
+        changed = true;
       }
     });
+    if (changed) {
+      headerRange.setValues([headers]);
+    }
+    const panel = VACATION_PLANNER_CONFIG.RIGHT_PANEL;
+    if (panel && panel.startCol) {
+      const rightHeader = sheet.getRange(1, panel.startCol);
+      if (!String(rightHeader.getValue() || "").trim()) {
+        rightHeader.setValue(panel.headerLabel || "Представлення — не редагувати");
+      }
+    }
     return sheet;
   }
 
@@ -375,35 +396,6 @@ const VacationOptionsWriter_ = (function () {
     }
   }
 
-  function _hasFormulaInputs_(sheet, block) {
-    try {
-      const range = sheet.getRange(
-        1,
-        block.startCol,
-        1,
-        VACATION_PLANNER_CONFIG.SOURCE_HEADERS.length,
-      );
-      if (typeof range.getFormulas !== "function") return false;
-      const formulas = range.getFormulas()[0] || [];
-      return [0, 1, 3].some(function (index) {
-        return !!String(formulas[index] || "").trim();
-      });
-    } catch (_) {
-      return false;
-    }
-  }
-
-  function _writableBlock_(sheet, preferredBlock) {
-    if (!_hasFormulaInputs_(sheet, preferredBlock)) return preferredBlock;
-    const fallback = VACATION_PLANNER_CONFIG.BLOCKS.filter(function (block) {
-      return !_hasFormulaInputs_(sheet, block);
-    })[0];
-    if (!fallback) {
-      throw new Error("У VACATIONS немає доступного для запису блоку");
-    }
-    return fallback;
-  }
-
   function _isTrue_(value) {
     if (value === true) return true;
     return (
@@ -435,18 +427,14 @@ const VacationOptionsWriter_ = (function () {
 
   function _writeVacationToLegacy_(option) {
     const sheet = _ensureSourceSheet_();
-    const requestedBlock = _block_(option.vacationNumber);
-    const block = _writableBlock_(sheet, requestedBlock);
-    const lastRow = Math.max(sheet.getLastRow(), 2);
-    const rowCount = Math.max(lastRow - 1, 1);
-    const values = sheet
-      .getRange(
-        2,
-        block.startCol,
-        rowCount,
-        VACATION_PLANNER_CONFIG.SOURCE_HEADERS.length,
-      )
-      .getValues();
+    const block = _block_(option.vacationNumber);
+    const rangeCfg = _mainSourceRange_();
+    const startCol = rangeCfg.startCol || 1;
+    const width = rangeCfg.width || 9;
+    const startRow = rangeCfg.startRow || 2;
+    const lastRow = Math.max(sheet.getLastRow(), startRow);
+    const rowCount = Math.max(lastRow - startRow + 1, 1);
+    const values = sheet.getRange(startRow, startCol, rowCount, width).getValues();
     const targetKey = _fmlKey_(option.fml);
     let targetRow = 0;
     let existingTravel = "";
@@ -457,7 +445,7 @@ const VacationOptionsWriter_ = (function () {
         _isTrue_(values[i][4]) &&
         _rowMatchesOption_(values[i], option)
       ) {
-        targetRow = i + 2;
+        targetRow = i + startRow;
         existingTravel = String(values[i][7] || "").trim();
         break;
       }
@@ -465,7 +453,7 @@ const VacationOptionsWriter_ = (function () {
     if (!targetRow) {
       for (let i = 0; i < values.length; i++) {
         if (!String(values[i][0] || "").trim()) {
-          targetRow = i + 2;
+          targetRow = i + startRow;
           break;
         }
       }
@@ -479,21 +467,21 @@ const VacationOptionsWriter_ = (function () {
         : isFinite(durationAdjustment)
           ? durationAdjustment
           : existingTravel;
-      sheet.getRange(targetRow, block.startCol).setValue(option.fml);
+      sheet.getRange(targetRow, startCol).setValue(option.fml);
       sheet
-        .getRange(targetRow, block.startCol + 1)
+        .getRange(targetRow, startCol + 1)
         .setValue(_date_(option.startDate))
         .setNumberFormat("dd.MM.yyyy");
       sheet
-        .getRange(targetRow, block.startCol + 3)
+        .getRange(targetRow, startCol + 3)
         .setValue(_sourceVacationText_(option));
-      sheet.getRange(targetRow, block.startCol + 7).setValue(travel);
+      sheet.getRange(targetRow, startCol + 7).setValue(travel);
       return {
         sheetName: sheet.getName(),
         rowNumber: targetRow,
         block: block.key,
-        startColumn: block.startCol,
-        requestedBlock: requestedBlock.key,
+        startColumn: startCol,
+        requestedBlock: block.key,
         formulaDriven: true,
       };
     }
@@ -509,34 +497,29 @@ const VacationOptionsWriter_ = (function () {
       option.travel || existingTravel,
       "OK",
     ];
+    sheet.getRange(targetRow, startCol, 1, width).setValues([rowData]);
     sheet
-      .getRange(
-        targetRow,
-        block.startCol,
-        1,
-        VACATION_PLANNER_CONFIG.SOURCE_HEADERS.length,
-      )
-      .setValues([rowData]);
-    sheet
-      .getRange(targetRow, block.startCol + 1, 1, 2)
+      .getRange(targetRow, startCol + 1, 1, 2)
       .setNumberFormat("dd.MM.yyyy");
 
     return {
       sheetName: sheet.getName(),
       rowNumber: targetRow,
       block: block.key,
-      startColumn: block.startCol,
-      requestedBlock: requestedBlock.key,
+      startColumn: startCol,
+      requestedBlock: block.key,
       formulaDriven: false,
     };
   }
 
   function _setLegacyVacationActive_(fml, vacationNumber, active, vacationType) {
     const sheet = _ensureSourceSheet_();
-    const requestedBlock = _block_(vacationNumber);
-    const block = _writableBlock_(sheet, requestedBlock);
-    const rowCount = Math.max(sheet.getLastRow() - 1, 1);
-    const values = sheet.getRange(2, block.startCol, rowCount, 9).getValues();
+    const block = _block_(vacationNumber);
+    const rangeCfg = _mainSourceRange_();
+    const startCol = rangeCfg.startCol || 1;
+    const startRow = rangeCfg.startRow || 2;
+    const rowCount = Math.max(sheet.getLastRow() - startRow + 1, 1);
+    const values = sheet.getRange(startRow, startCol, rowCount, 9).getValues();
     const targetKey = _fmlKey_(fml);
     const option = {
       vacationNumber: vacationNumber,
@@ -550,9 +533,9 @@ const VacationOptionsWriter_ = (function () {
       ) {
         continue;
       }
-      const rowNumber = index + 2;
+      const rowNumber = index + startRow;
       if (_isFormulaDrivenBlock_(sheet, block)) {
-        const startRange = sheet.getRange(rowNumber, block.startCol + 1);
+        const startRange = sheet.getRange(rowNumber, startCol + 1);
         if (active === true) {
           throw new Error(
             "Для відновлення відпустки вкажіть нову дату початку",
@@ -563,20 +546,20 @@ const VacationOptionsWriter_ = (function () {
           sheetName: sheet.getName(),
           rowNumber: rowNumber,
           block: block.key,
-          requestedBlock: requestedBlock.key,
+          requestedBlock: block.key,
           active: false,
           formulaDriven: true,
         };
       }
-      sheet.getRange(rowNumber, block.startCol + 4).setValue(active === true);
+      sheet.getRange(rowNumber, startCol + 4).setValue(active === true);
       sheet
-        .getRange(rowNumber, block.startCol + 8)
+        .getRange(rowNumber, startCol + 8)
         .setValue(active === true ? "OK" : "CANCELLED");
       return {
         sheetName: sheet.getName(),
         rowNumber: rowNumber,
         block: block.key,
-        requestedBlock: requestedBlock.key,
+        requestedBlock: block.key,
         active: active === true,
         formulaDriven: false,
       };
@@ -939,6 +922,8 @@ const VacationOptionsWriter_ = (function () {
     PLAN_WITHOUT_MONTHLY_VACATION: "План не відображений у місячному графіку",
     HIGH_LOAD_PERIOD: "Період на межі допустимого навантаження",
     MONTH_BALANCE: "Перекос стартів відпусток у місяці",
+    RIGHT_PANEL_LEGACY_DATA:
+      "Дані у правій таблиці K:Q (не джерело істини)",
   };
 
   const VACATION_RULE_SUMMARY_PHRASE = {
@@ -1106,7 +1091,7 @@ const VacationOptionsWriter_ = (function () {
   }
 
   function normalizeProblems(checks, schedule) {
-    return (Array.isArray(checks) ? checks : []).map(function (item) {
+    const problems = (Array.isArray(checks) ? checks : []).map(function (item) {
       const type = String((item && (item.rule || item.type)) || "").trim();
       const match = _findProblemScheduleItem_(item, schedule);
       const startDate =
@@ -1141,6 +1126,21 @@ const VacationOptionsWriter_ = (function () {
           "",
       };
     });
+    if (
+      typeof VacationSuggestions_ === "object" &&
+      VacationSuggestions_ &&
+      typeof VacationSuggestions_.attachSuggestionsToProblems_ === "function"
+    ) {
+      const context = VacationSuggestions_.buildSuggestionContext_(
+        schedule,
+        null,
+      );
+      return VacationSuggestions_.attachSuggestionsToProblems_(
+        problems,
+        context,
+      );
+    }
+    return problems;
   }
 
   function _writeChecks_(checks) {
@@ -1277,6 +1277,20 @@ const VacationOptionsWriter_ = (function () {
       new Date(),
     );
     audit.checks = audit.checks.concat(consistencyChecks);
+    if (
+      typeof VacationsRepository_.detectRightPanelManualData === "function"
+    ) {
+      const rightPanel = VacationsRepository_.detectRightPanelManualData();
+      if (rightPanel && rightPanel.hasData) {
+        audit.checks.push({
+          rule: "RIGHT_PANEL_LEGACY_DATA",
+          severity: "WARNING",
+          fml: rightPanel.fmlSummary || "—",
+          date: "",
+          description: rightPanel.message || "",
+        });
+      }
+    }
     return audit;
   }
 
