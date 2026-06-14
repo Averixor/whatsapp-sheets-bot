@@ -1624,7 +1624,7 @@ const moveCall = vacationClientServerCalls.find(
 );
 assert.ok(moveCall, "submitMove must call moveVacationFromSidebar");
 assert.deepEqual(
-  moveCall.args[0],
+  JSON.parse(JSON.stringify(moveCall.args[0])),
   {
     requestId: "request-move-1",
     personKey: "ALPHA",
