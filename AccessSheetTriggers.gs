@@ -3,7 +3,7 @@
  *
  * Simple spreadsheet triggers for ACCESS UI helpers and best-effort security audit.
  *
- * Принципы:
+ * Принципи:
  * - мінімум логування в production;
  * - рання фільтрація подій;
  * - без сумнівних евристик по event object;

@@ -47,6 +47,20 @@ function main() {
     errors.push(`duplicate includes: ${Array.from(new Set(dupes)).join(', ')}`);
   }
 
+  fs.readdirSync(repoRoot)
+    .filter((name) => name.endsWith('.html'))
+    .forEach((name) => {
+      const text = fs.readFileSync(path.join(repoRoot, name), 'utf8');
+      if (/^\uFEFF?\s*```/.test(text)) {
+        errors.push(
+          `${name} starts with a markdown code fence; file must begin with <!doctype html>`,
+        );
+      }
+      if (/\n```\s*$/.test(text)) {
+        errors.push(`${name} ends with a markdown code fence`);
+      }
+    });
+
   if (errors.length) {
     console.error('verify-client-includes: FAIL');
     errors.forEach((line) => console.error(`  - ${line}`));

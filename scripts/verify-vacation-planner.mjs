@@ -2113,6 +2113,15 @@ const sidebarHtml = fs.readFileSync(
   path.join(repoRoot, "Sidebar.html"),
   "utf8",
 );
+assert.ok(
+  sidebarHtml.split(/\r?\n/).length >= 520,
+  "Sidebar.html must stay expanded (>=520 lines); disable HTML format-on-save",
+);
+assert.match(
+  sidebarHtml,
+  /<button\s*\n\s+type="button"/,
+  "Sidebar.html is compressed by HTML formatter; reload from disk and do not format-on-save",
+);
 const jsVacations = fs.readFileSync(
   path.join(repoRoot, "Js.Vacations.html"),
   "utf8",
@@ -2120,6 +2129,15 @@ const jsVacations = fs.readFileSync(
 const stylesPersonnel = fs.readFileSync(
   path.join(repoRoot, "Styles_30_Personnel.html"),
   "utf8",
+);
+assert.ok(
+  stylesPersonnel.split(/\r?\n/).length >= 500,
+  "Styles_30_Personnel.html must stay expanded (>=500 lines); disable HTML format-on-save for Styles_*.html",
+);
+assert.doesNotMatch(
+  stylesPersonnel,
+  /\} \.[a-z#]/,
+  "Styles_30_Personnel.html is minified; use CSS mode (not HTML) and avoid clasp pull over local edits",
 );
 const jsVacationsScript = jsVacations.match(/<script>([\s\S]*?)<\/script>/i);
 assert.ok(jsVacationsScript, "Js.Vacations must contain a client script");
@@ -2333,7 +2351,37 @@ assert.match(
   /title="Оновлює дані бокової панелі з таблиці\. Не перебудовує графік\."/,
 );
 assert.doesNotMatch(jsVacations, /🔄 Оновити графік/);
+assert.doesNotMatch(jsVacations, /Оновити графік/);
+assert.doesNotMatch(jsVacations, /Відкрити графік/);
 assert.doesNotMatch(jsVacations, /Відкрити календар/);
+assert.doesNotMatch(sidebar, /Відкрити календар/);
+assert.doesNotMatch(sidebar, /data-panel="/);
+assert.doesNotMatch(sidebar, /Оновити графік/);
+assert.doesNotMatch(sidebar, /Відкрити графік/);
+assert.doesNotMatch(sidebar, /rebuildVacationScheduleFromSidebar/);
+assert.doesNotMatch(sidebar, /openVacationScheduleFromSidebar/);
+assert.match(
+  sidebar,
+  /Розділ «Відпустки» перенесено[\s\S]*Відкрити панель → 🏖️ Відпустки/,
+);
+assert.match(sidebarService, /Окремий sidebar відпусток вимкнено/);
+assert.doesNotMatch(
+  fs.readFileSync(path.join(repoRoot, "Code.gs"), "utf8"),
+  /showVacationSidebar/,
+);
+const allGsSources = fs
+  .readdirSync(repoRoot)
+  .filter((name) => name.endsWith(".gs"))
+  .map((name) => fs.readFileSync(path.join(repoRoot, name), "utf8"))
+  .join("\n");
+assert.doesNotMatch(
+  allGsSources,
+  /createTemplateFromFile\("VacationSidebar"\)/,
+);
+assert.doesNotMatch(
+  allGsSources,
+  /createHtmlOutputFromFile\("VacationSidebar"\)/,
+);
 assert.doesNotMatch(jsVacations, /VacationModule\.rebuildSchedule\(\)/);
 assert.match(sidebarService, /openUpdatedVacationScheduleFromSidebar/);
 assert.match(sidebarService, /function openUpdatedSchedule\(formData\)/);
@@ -2423,10 +2471,10 @@ assert.match(
   "vacation type badge must be a single span without split text",
 );
 assert.doesNotMatch(jsVacations, /vacation-card-badge">В\s/);
-assert.match(
+assert.doesNotMatch(
   sidebar,
-  /\.badge[\s\S]*?flex:\s*0\s+0\s+auto[\s\S]*?white-space:\s*nowrap/,
-  "legacy VacationSidebar badge must not wrap",
+  /\.badge[\s\S]*?flex:\s*0\s+0\s+auto/,
+  "legacy VacationSidebar must not ship standalone badge UI",
 );
 assert.doesNotMatch(sidebarService, /\bclass\s+VacationSidebarService/);
 assert.match(sidebarService, /const VacationSidebarService_ = \(function \(\)/);
@@ -2492,15 +2540,11 @@ assert.doesNotMatch(
   /setFrozenRows\([^)]*\)\.setFrozenColumns/,
   "GAS Sheet.setFrozenRows does not support chaining",
 );
-const sidebarScript = sidebar.match(/<script>([\s\S]*?)<\/script>/i);
-assert.ok(sidebarScript, "VacationSidebar must contain a client script");
-assert.doesNotThrow(
-  () => new vm.Script(sidebarScript[1], { filename: "VacationSidebar.html" }),
-  "VacationSidebar client script must parse",
+assert.doesNotMatch(
+  sidebar,
+  /<script[\s>]/i,
+  "legacy VacationSidebar must not ship client UI",
 );
-["schedule", "add", "find", "move", "check", "report"].forEach((tab) => {
-  assert.match(sidebar, new RegExp(`data-panel="${tab}"`));
-});
 assert.equal(
   fs.existsSync(path.join(repoRoot, "VacationPlannerDialog.html")),
   false,

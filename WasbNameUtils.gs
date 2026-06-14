@@ -4,36 +4,36 @@
  */
 
 /**
- * Нормализует ФИО/имя человека для сравнения:
- * - убирает лишние пробелы;
- * - приводит неразрывные пробелы к обычным;
- * - унифицирует апострофы;
- * - приводит строку к нижнему регистру.
+ * Normalizes a person's name/FML for comparison:
+ * - trims excess whitespace;
+ * - converts non-breaking spaces to regular spaces;
+ * - unifies apostrophe variants;
+ * - lowercases the string.
  *
  * @param {*} value
  * @return {string}
  */
 function normalizeHumanName_(value) {
   if (value === null || value === undefined) {
-    return '';
+    return "";
   }
 
   var text = String(value)
-    .replace(/\u00A0/g, ' ')
+    .replace(/\u00A0/g, " ")
     .replace(/[ʼ’`´]/g, "'")
-    .replace(/\s+/g, ' ')
-    .replace(/\s*-\s*/g, '-')
+    .replace(/\s+/g, " ")
+    .replace(/\s*-\s*/g, "-")
     .trim();
 
   if (!text) {
-    return '';
+    return "";
   }
 
   return text.toLowerCase();
 }
 
 /**
- * Публично-безопасный алиас для модулей, где нужен такой же результат.
+ * Public-safe alias for modules that need the same result.
  *
  * @param {*} value
  * @return {string}

@@ -1,8 +1,8 @@
 /**
  * Actions.gs — stage 5 thin spreadsheet/menu wrappers.
  *
- * Новая логика сюда больше не растёт. Этот файл только перенаправляет
- * меню/manual сценарии в канонический spreadsheet action API и presenter-слой.
+ * New logic no longer belongs here. This file only routes menu/manual scenarios
+ * to the canonical spreadsheet action API and presenter layer.
  * 
  * Важливо: всі функції перевіряють права доступу перед виконанням.
  */

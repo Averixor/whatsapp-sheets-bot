@@ -1,14 +1,14 @@
 /**
  * AlertsRepository.gs — structured alerts journal.
  *
- * Принципы:
- * - без setTimeout / in-memory очередей;
- * - быстрый single insert через setValues;
- * - batch insert через setValues;
- * - автоочистка по количеству строк;
- * - ручная очистка по возрасту;
- * - чтение последних записей с конца;
- * - защита от ручной сортировки при clearAlerts().
+ * Principles:
+ * - no setTimeout / in-memory queues;
+ * - fast single insert via setValues;
+ * - batch insert via setValues;
+ * - auto-trim by row count;
+ * - manual cleanup by age;
+ * - read latest entries from the end;
+ * - guard against manual sorting in clearAlerts().
  */
 
   // ==================== CONSTANTS ====================

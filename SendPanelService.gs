@@ -1,8 +1,8 @@
 /**
  * SendPanelService.gs — stage 7 domain service for SEND_PANEL.
  *
- * Тонкий сервисный слой поверх repository/legacy-ядра.
- * С ленивой проверкой зависимостей, разделением на обязательные и опциональные.
+ * Thin service layer over repository/legacy core.
+ * Lazy dependency check; required and optional deps are split.
  */
 
 const SendPanelService_ = (function() {

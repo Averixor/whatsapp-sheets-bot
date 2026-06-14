@@ -1,15 +1,15 @@
-<!doctype html>
+```html
+<!DOCTYPE html>
 <html lang="uk-UA">
   <head>
     <title>WASB</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta
       name="description"
-      content="Панель керування WASB (WhatsApp-Sheets-Bot)."
-    />
+      content="Панель керування WASB (WhatsApp-Sheets-Bot).">
     <?!= includeTemplate('Styles'); ?>
-    <base target="_top" />
+    <base target="_top">
     <style>
       .header-content {
         position: relative;
@@ -440,32 +440,32 @@
               >
                 📋
               </button>
+              
               <button
                 class="console-btn"
                 type="button"
                 onclick="SidebarApp.clearConsole()"
                 title="Очистити консоль"
                 aria-label="Очистити консоль"
-              >
-                🗑️
+              >🗑️
               </button>
+              
               <button
                 class="console-btn"
                 type="button"
                 onclick="SidebarApp.scrollConsole('top')"
                 title="Прокрутити вгору"
                 aria-label="Прокрутити консоль вгору"
-              >
-                ↥
+              >↥
               </button>
+              
               <button
                 class="console-btn"
                 type="button"
                 onclick="SidebarApp.scrollConsole('bottom')"
                 title="Прокрутити вниз"
                 aria-label="Прокрутити консоль вниз"
-              >
-                ↧
+              >↧
               </button>
             </div>
           </div>
@@ -542,7 +542,7 @@
               placeholder="Пошук позивного..."
               aria-describedby="personnelModalCount"
               autocomplete="off"
-            />
+            >
           </div>
           <div class="personnel-modal__body">
             <h3 class="sr-only" id="personnelGridTitle">
@@ -568,3 +568,4 @@
     <?!= includeTemplate('JavaScript'); ?>
   </body>
 </html>
+```

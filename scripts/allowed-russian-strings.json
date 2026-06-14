@@ -1,0 +1,25 @@
+{
+  "allowedSubstrings": [
+    {
+      "value": "фио",
+      "reason": "Legacy spreadsheet header alias for FML/full name matching",
+      "files": ["Stage7PhoneDictPayloadShims.gs"]
+    },
+    {
+      "value": "да",
+      "reason": "Legacy DICT_SUM showZero boolean parsing (Russian yes in sheet cells)",
+      "files": ["SummaryDictSumShim.gs"]
+    },
+    {
+      "value": "ДА",
+      "reason": "Legacy spreadsheet yes/no cell values",
+      "files": ["VacationEngine.gs"]
+    },
+    {
+      "value": "НЕТ",
+      "reason": "Legacy spreadsheet yes/no cell values",
+      "files": ["VacationEngine.gs"]
+    }
+  ],
+  "allowedRegex": []
+}

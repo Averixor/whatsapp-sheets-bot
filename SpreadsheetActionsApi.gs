@@ -1,13 +1,13 @@
 /**
  * SpreadsheetActionsApi.gs
- * Полная исправленная версия для WASB.
+ * Full corrected version for WASB.
  *
- * Ожидает, что в проекте уже существуют:
+ * Expects these to exist in the project:
  * - WorkflowOrchestrator_
  * - SelectionActionService_
  * - PreviewLinkService_
  * - CONFIG
- * - getBotMonthSheetName_()   // если нет — будет использован текущий месяц
+ * - getBotMonthSheetName_()   // if missing, current month is used
  */
 
 // ==================== INTERNAL HELPERS ====================
