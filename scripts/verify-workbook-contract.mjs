@@ -82,6 +82,10 @@ class FakeRange {
       ),
     );
   }
+
+  getValues() {
+    return this.getDisplayValues();
+  }
 }
 
 class FakeSheet {
@@ -99,7 +103,7 @@ class FakeSheet {
   }
 
   getLastColumn() {
-    return Math.max(...this.rows.map((row) => row.length - 1));
+    return Math.max(0, ...this.rows.map((row) => row.length - 1));
   }
 
   valueAt(row, col) {
@@ -121,10 +125,9 @@ class FakeSheet {
   }
 }
 
-function buildCompactJuneSheet() {
-  const rows = Array.from({ length: 45 }, () => Array(33).fill(""));
-  rows[1][1] = "BRDays";
-  rows[1][2] = "Callsign";
+function buildCompactJuneSheet(options = {}) {
+  const rows = Array.from({ length: 46 }, () => Array(34).fill(""));
+  rows[1][2] = "Позивний";
   for (let col = 3; col <= 32; col++) {
     rows[1][col] = `${String(col - 2).padStart(2, "0")}.06.2026`;
   }
@@ -133,24 +136,29 @@ function buildCompactJuneSheet() {
     rows[row][1] = row % 3 === 0 ? 0 : 10;
     rows[row][2] = `CALLSIGN_${String(row - 1).padStart(2, "0")}`;
     rows[row][3] = "Резерв";
+    rows[row][16] = "Резерв";
   }
 
-  [
-    "За_списком",
-    "В_наявності",
-    "Гусачівка",
-    "Відпустка",
-    "ППД",
-    "КП",
-    "БР",
-    "Відкомандеровані",
-    "БЗВП",
-    "Лікарняний",
-    "СЗЧ",
-  ].forEach((label, index) => {
+  if (options.includeSummaryBlock === false) {
+    return new FakeSheet("06", rows);
+  }
+
+  const summaryRows = [
+    { label: "За_штатом", value: 30 },
+    { label: "За_списком", value: 29 },
+    { label: "В_наявності", value: 23 },
+    { label: "У_відрядженні", value: 2 },
+    { label: "У_відпустці", value: 1 },
+    { label: "Гусачівка", value: 3 },
+    options.omitDroneCamp ? null : { label: "Drone Camp", value: 0 },
+    { label: "ППД", value: 9 },
+    { label: "КП", value: 2 },
+    { label: "БР", value: 5 },
+  ].filter(Boolean);
+  summaryRows.forEach((item, index) => {
     const row = 34 + index;
-    rows[row][2] = label;
-    rows[row][3] = index === 0 ? 29 : index;
+    rows[row][2] = item.label;
+    rows[row][16] = item.value;
   });
 
   return new FakeSheet("06", rows);
@@ -172,11 +180,16 @@ function loadWorkbookFunctions() {
         return String(displayValue || "");
       },
     },
+    getTemplateText_: () => "",
     getWasbSpreadsheet_: () => null,
     FULL_NAMES: {
       ОС: "Особовий склад",
       Black: "Екіпаж Чорний",
       Roland: "Екіпаж Роланд",
+      БР: "Бойове розпорядження",
+      КП: "Командний пункт",
+      Відряд: "У відрядженні",
+      Відпус: "У відпустці",
       Резерв: "Резерв",
       DC: "Drone Camp",
       Київ: "ППД Київ",
@@ -187,6 +200,10 @@ function loadWorkbookFunctions() {
       Резерв: ["Резерв"],
       Black: ["Black"],
       Roland: ["Roland"],
+      БР: ["БР"],
+      КП: ["КП"],
+      Відряд: ["Відряд"],
+      Відпус: ["Відпус"],
       DC: ["DC"],
       Київ: ["Київ"],
       Вибув: ["Вибув"],
@@ -196,6 +213,9 @@ function loadWorkbookFunctions() {
   for (const file of [
     "SummaryDictSumShim.gs",
     "SheetSchemas.gs",
+    "Report_SummaryData.gs",
+    "Report_DailySimple.gs",
+    "Report_DailyDetailed.gs",
     "Summaries.gs",
   ]) {
     vm.runInContext(
@@ -206,6 +226,7 @@ function loadWorkbookFunctions() {
       },
     );
   }
+
   return context;
 }
 
@@ -216,14 +237,125 @@ const layout = context.detectMonthlyLayoutFromSheet_(sheet);
 assert.equal(layout.layout, "compact");
 assert.equal(layout.codeRangeA1, "C2:AF30");
 assert.equal(
-  context.countMonthlyScheduleRowsForColumn_(sheet, 3),
+  context.countMonthlyScheduleRowsForColumn_(sheet, 16),
   29,
   "compact monthly footer rows must not be counted as personnel",
 );
 
-const summary = context.buildDaySummaryForColumn_(sheet, 3);
-assert.match(summary, /Особовий склад — 29/);
-assert.doesNotMatch(summary, /Особовий склад — 40/);
+assert.equal(context.findDateColumnInMonthSheet_(sheet, "14.06.2026"), 16);
+
+const summary = context.buildDaySummaryForColumn_(sheet, 16);
+assert.match(summary, /^14\.06\n\nЗа списком: 29/);
+assert.match(summary, /В наявності: 23/);
+assert.match(summary, /У відрядженні: 2/);
+assert.match(summary, /У відпустці: 1/);
+assert.match(summary, /Гусачівка: 3/);
+assert.match(summary, /Drone Camp: 0/);
+assert.match(summary, /ППД: 9/);
+assert.match(summary, /КП: 2/);
+assert.match(summary, /БР: 5/);
+assert.doesNotMatch(summary, /За_списком/);
+assert.doesNotMatch(summary, /В_наявності/);
+assert.doesNotMatch(summary, /У_відрядженні/);
+assert.doesNotMatch(summary, /У_відпустці/);
+assert.doesNotMatch(summary, /Drone_Camp/);
+assert.doesNotMatch(summary, /За_штатом/);
+assert.doesNotMatch(summary, /Особовий склад —/);
+
+assert.equal(context.parseSummaryNumber_("29"), 29);
+assert.equal(context.parseSummaryNumber_("29 осіб"), 29);
+assert.equal(context.parseSummaryNumber_("  29  "), 29);
+assert.equal(context.parseSummaryNumber_("—"), 0);
+
+const location = context.findSummaryBlockLocation_(sheet);
+assert.equal(location.labelCol, 2);
+assert.equal(location.startRow, 35);
+
+const block = context.readDailySummaryFromFormulaBlockForSheet_(
+  sheet,
+  "14.06.2026",
+  0,
+);
+assert.equal(block.monthSheetName, "06");
+assert.equal(block.dateColumn, 16);
+assert.equal(block.values.За_списком, 29);
+assert.equal(block.values.Drone_Camp, 0);
+assert.equal(block.values.За_штатом, undefined);
+
+const missingValueSummary = context.buildDaySummaryForColumn_(
+  buildCompactJuneSheet({ omitDroneCamp: true }),
+  16,
+);
+assert.match(missingValueSummary, /Drone Camp: 0/);
+
+assert.throws(
+  () =>
+    context.readDailySummaryFromFormulaBlockForSheet_(sheet, "15.07.2026", 0),
+  /Не знайдено колонку дати/,
+);
+assert.throws(
+  () =>
+    context.readDailySummaryFromFormulaBlockForSheet_(
+      buildCompactJuneSheet({ includeSummaryBlock: false }),
+      "14.06.2026",
+      0,
+    ),
+  /Не знайдено формульний блок зведення/,
+);
+
+const originalGetEntries = context.getMonthlyScheduleEntriesForColumn_;
+const originalPersonnelMap = context.getPersonnelMapByCallsignAll_;
+const originalResolveFml = context.resolveSummaryPersonFml_;
+
+context.getMonthlyScheduleEntriesForColumn_ = function (_sheet, _col) {
+  return [
+    { rowIndex: 2, callsign: "CALLSIGN_01", code: "БР" },
+    { rowIndex: 3, callsign: "CALLSIGN_02", code: "КП" },
+    { rowIndex: 4, callsign: "CALLSIGN_03", code: "Відпус" },
+    { rowIndex: 5, callsign: "CALLSIGN_04", code: "Відряд" },
+    { rowIndex: 6, callsign: "CALLSIGN_05", code: "БР" },
+  ];
+};
+context.getPersonnelMapByCallsignAll_ = function () {
+  return {
+    CALLSIGN_01: { fml: "Іваненко Іван Іванович" },
+    CALLSIGN_02: { fml: "Петренко Петро Петрович" },
+    CALLSIGN_03: { fml: "Сидоренко Сидір Сидорович" },
+    CALLSIGN_04: { fml: "Коваль Костянтин Костянтинович" },
+    CALLSIGN_05: { fml: "Шевченко Тарас Григорович" },
+  };
+};
+context.resolveSummaryPersonFml_ = function (
+  _sheet,
+  _rowIndex,
+  callsign,
+  personnelByCallsign,
+) {
+  const key = String(callsign || "").trim();
+  const rec = personnelByCallsign && personnelByCallsign[key];
+  return String((rec && rec.fml) || "").trim();
+};
+
+const people = context.collectPeopleDetailed_(sheet, 16);
+assert.equal(people.length, 5);
+assert.ok(people.some((p) => p.code === "БР"));
+assert.ok(people.some((p) => p.code === "КП"));
+assert.ok(people.some((p) => p.code === "Відпус"));
+assert.ok(people.some((p) => p.code === "Відряд"));
+
+const detailed = context.formatDetailedSummary_("14.06.2026", people);
+assert.match(detailed, /\*Бойове розпорядження\* — 2/);
+assert.match(detailed, /\*Командний пункт\* — 1/);
+assert.match(detailed, /\*У відпустці\* — 1/);
+assert.match(detailed, /\*У відрядженні\* — 1/);
+assert.ok(
+  detailed.indexOf("Бойове розпорядження") < detailed.indexOf("Командний пункт"),
+  "DICT_SUM order must keep БР before КП",
+);
+
+context.getMonthlyScheduleEntriesForColumn_ = originalGetEntries;
+context.getPersonnelMapByCallsignAll_ = originalPersonnelMap;
+context.resolveSummaryPersonFml_ = originalResolveFml;
 
 const dictSumRules = context.getDefaultDictSumRules_();
 const dictSumCodes = dictSumRules.map((rule) => rule.code);

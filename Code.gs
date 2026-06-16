@@ -259,6 +259,11 @@ function onOpen(e) {
   try {
     const ui = SpreadsheetApp.getUi();
     ui.createMenu("WASB").addItem("Відкрити панель", "showSidebar").addToUi();
+    ui
+      .createMenu("Звіти")
+      .addItem("Показати звичайне зведення", "uiShowSimpleDaySummary")
+      .addItem("Показати детальне зведення", "uiShowDetailedDaySummary")
+      .addToUi();
   } catch (err) {
     console.error("onOpen menu error:", err);
   }
@@ -286,6 +291,52 @@ function onOpen(e) {
     }
   } catch (err2) {
     console.error("onOpen refreshAccessSheetUi error:", err2);
+  }
+}
+
+function uiShowSimpleDaySummary(dateStr) {
+  try {
+    const ctx =
+      typeof SummaryService_ === "object" && SummaryService_
+        ? SummaryService_.buildDay(dateStr || _todayStr_())
+        : null;
+    const date = (ctx && ctx.date) || dateStr || _todayStr_();
+    const text = (ctx && ctx.summary) || "";
+
+    if (typeof showDetailedSummaryDialog_ === "function") {
+      showDetailedSummaryDialog_(date, text);
+      return { ok: true, date: date };
+    }
+
+    SpreadsheetApp.getUi().alert(text || "(порожнє зведення)");
+    return { ok: true, date: date };
+  } catch (e) {
+    const msg = e && e.message ? e.message : String(e);
+    SpreadsheetApp.getUi().alert("Помилка: " + msg);
+    return { ok: false, error: msg };
+  }
+}
+
+function uiShowDetailedDaySummary(dateStr) {
+  try {
+    const ctx =
+      typeof SummaryService_ === "object" && SummaryService_
+        ? SummaryService_.buildDetailed(dateStr || _todayStr_())
+        : null;
+    const date = (ctx && ctx.date) || dateStr || _todayStr_();
+    const text = (ctx && ctx.summary) || "";
+
+    if (typeof showDetailedSummaryDialog_ === "function") {
+      showDetailedSummaryDialog_(date, text);
+      return { ok: true, date: date };
+    }
+
+    SpreadsheetApp.getUi().alert(text || "(порожнє зведення)");
+    return { ok: true, date: date };
+  } catch (e) {
+    const msg = e && e.message ? e.message : String(e);
+    SpreadsheetApp.getUi().alert("Помилка: " + msg);
+    return { ok: false, error: msg };
   }
 }
 

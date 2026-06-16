@@ -70,7 +70,7 @@
       "_writeChecks_"
     ],
     "SendPanel.gs": ["ensureSendPanelStructure_"],
-    "Summaries.gs": ["createDetailedSheet_"]
+    "Report_DailyDetailed.gs": ["createDetailedSheet_"]
   },
   "monthlyScheduleCopyPaths": ["MonthSheets.gs", "UseCases.MonthOps.gs"],
   "protectedPriorityOrder": ["MANUAL", "UNKNOWN", "ADOPTED", "WASB_MANAGED"],

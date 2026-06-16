@@ -183,6 +183,12 @@ function _personnelState_() {
     root.__WASB_PERSONNEL_REPO_STATE__ = {
       rowsCache: null,
       warnings: [],
+      byId: null,
+      byCallsign: null,
+      byCallsignAll: null,
+      byFmlActive: null,
+      byFmlAll: null,
+      activeRowsCache: null,
     };
   }
   return root.__WASB_PERSONNEL_REPO_STATE__;
@@ -192,6 +198,62 @@ function invalidatePersonnelCache_() {
   var state = _personnelState_();
   state.rowsCache = null;
   state.warnings = [];
+  state.byId = null;
+  state.byCallsign = null;
+  state.byCallsignAll = null;
+  state.byFmlActive = null;
+  state.byFmlAll = null;
+  state.activeRowsCache = null;
+}
+
+function _personnelBuildMaps_() {
+  var state = _personnelState_();
+  if (state.byCallsign) return;
+
+  var rows = _personnelGetLoaded_();
+  var byId = Object.create(null);
+  var byCallsign = Object.create(null);
+  var byCallsignAll = Object.create(null);
+  var byFmlActive = Object.create(null);
+  var byFmlAll = Object.create(null);
+  var activeRows = [];
+
+  rows.forEach(function (row) {
+    if (!row) return;
+
+    var id = String(row.id || "").trim();
+    if (id) byId[id] = row;
+
+    var callsign = String(row.callsign || "").trim();
+    if (callsign) {
+      var csKey =
+        typeof _normCallsignKey_ === "function"
+          ? _normCallsignKey_(callsign)
+          : callsign.toUpperCase();
+      byCallsignAll[csKey] = row;
+      if (row.active === true) byCallsign[csKey] = row;
+    }
+
+    var fmlKey =
+      typeof _normFml_ === "function"
+        ? _normFml_(row.fml)
+        : String(row.fml || "")
+            .trim()
+            .toLowerCase();
+    if (fmlKey) {
+      byFmlAll[fmlKey] = row;
+      if (row.active === true) byFmlActive[fmlKey] = row;
+    }
+
+    if (row.active === true) activeRows.push(row);
+  });
+
+  state.byId = byId;
+  state.byCallsign = byCallsign;
+  state.byCallsignAll = byCallsignAll;
+  state.byFmlActive = byFmlActive;
+  state.byFmlAll = byFmlAll;
+  state.activeRowsCache = activeRows;
 }
 
 function _personnelNormalizeStatusKey_(raw) {
@@ -612,34 +674,19 @@ function getPersonnelRows_() {
 
 /** Лише активні Status (див. PERSONNEL_ACTIVE_STATUSES_) — графік, телефони, картки. */
 function getPersonnelActiveRows_() {
-  return getPersonnelRows_().filter(function (row) {
-    return row && row.active === true;
-  });
+  _personnelBuildMaps_();
+  return (_personnelState_().activeRowsCache || []).slice();
 }
 
 function getPersonnelMapById_() {
-  var map = Object.create(null);
-  getPersonnelRows_().forEach(function (row) {
-    var id = String(row.id || "").trim();
-    if (!id) return;
-    map[id] = row;
-  });
-  return map;
+  _personnelBuildMaps_();
+  return _personnelState_().byId;
 }
 
 /** Карта лише активних бійців з позивним (основний lookup для графіка). */
 function getPersonnelMapByCallsign_() {
-  var map = Object.create(null);
-  getPersonnelActiveRows_().forEach(function (row) {
-    var callsign = String(row.callsign || "").trim();
-    if (!callsign) return;
-    var key =
-      typeof _normCallsignKey_ === "function"
-        ? _normCallsignKey_(callsign)
-        : callsign.toUpperCase();
-    map[key] = row;
-  });
-  return map;
+  _personnelBuildMaps_();
+  return _personnelState_().byCallsign;
 }
 
 /** Опційний ID Армія+ (не системний ключ). */
@@ -662,17 +709,8 @@ function getPersonnelByCallsign_(callsign) {
 
 /** Карта всіх рядків PERSONNEL з позивним (будь-який Status) — для зведень за графіком. */
 function getPersonnelMapByCallsignAll_() {
-  var map = Object.create(null);
-  getPersonnelRows_().forEach(function (row) {
-    var callsign = String(row.callsign || "").trim();
-    if (!callsign) return;
-    var key =
-      typeof _normCallsignKey_ === "function"
-        ? _normCallsignKey_(callsign)
-        : callsign.toUpperCase();
-    map[key] = row;
-  });
-  return map;
+  _personnelBuildMaps_();
+  return _personnelState_().byCallsignAll;
 }
 
 /** Lookup за позивним без фільтра Status (зведення, відображення ПІБ). */
@@ -698,18 +736,10 @@ function getPersonnelByFml_(fml, options) {
           .toLowerCase();
   if (!target) return null;
 
-  var rows = activeOnly ? getPersonnelActiveRows_() : getPersonnelRows_();
-  for (var i = 0; i < rows.length; i++) {
-    var row = rows[i];
-    var rowKey =
-      typeof _normFml_ === "function"
-        ? _normFml_(row.fml)
-        : String(row.fml || "")
-            .trim()
-            .toLowerCase();
-    if (rowKey && rowKey === target) return row;
-  }
-  return null;
+  _personnelBuildMaps_();
+  var state = _personnelState_();
+  var map = activeOnly ? state.byFmlActive : state.byFmlAll;
+  return (map && map[target]) || null;
 }
 
 function getPersonnelCallsignsList_() {

@@ -57,24 +57,26 @@ const SendPanelFastPaths_ = (function() {
     const rowCount = ref.getNumRows();
     const dateCol = ctx.col;
 
-    const codeValues = source.getRange(startRow, dateCol, rowCount, 1).getDisplayValues();
     const callsignCol = getMonthlyCallsignColForSheet_(source);
-    const callsignValues = source
-      .getRange(startRow, callsignCol, rowCount, 1)
+    const brCol = Number(monthlySchema.columns.brDays) || 1;
+    const minCol = Math.min(dateCol, callsignCol, brCol);
+    const maxCol = Math.max(dateCol, callsignCol, brCol);
+    const blockWidth = maxCol - minCol + 1;
+    const blockValues = source
+      .getRange(startRow, minCol, rowCount, blockWidth)
       .getDisplayValues();
-    const brValues = source
-      .getRange(startRow, monthlySchema.columns.brDays, rowCount, 1)
-      .getDisplayValues();
+    const codeIdx = dateCol - minCol;
+    const callsignIdx = callsignCol - minCol;
+    const brIdx = brCol - minCol;
 
     const phonesIndex = DictionaryRepository_.getPhonesIndex();
     const dictMap = DictionaryRepository_.getDictMap();
     const rows = [];
 
     for (var i = 0; i < rowCount; i++) {
-      var code = String(codeValues[i] && codeValues[i][0] || '').trim();
-      var rowCallsign = String(
-        callsignValues[i] && callsignValues[i][0] || '',
-      ).trim();
+      var blockRow = blockValues[i] || [];
+      var code = String(blockRow[codeIdx] || '').trim();
+      var rowCallsign = String(blockRow[callsignIdx] || '').trim();
       if (!code || !rowCallsign) continue;
 
       try {
@@ -104,7 +106,7 @@ const SendPanelFastPaths_ = (function() {
         var place = dict && dict.place ? String(dict.place).trim() : '';
         var tasks = dict && dict.tasks ? String(dict.tasks).trim() : '';
 
-        var brRaw = String(brValues[i] && brValues[i][0] || '').trim();
+        var brRaw = String(blockRow[brIdx] || '').trim();
         var brDays = brRaw ? (Number(String(brRaw).replace(',', '.')) || 0) : 0;
         var msg = buildMessage_({
           reportDate: ctx.dateStr,
@@ -218,6 +220,10 @@ const SendPanelFastPaths_ = (function() {
       meta.appliedChangesCount = Number(stats.totalCount || 0);
     }
 
+    if (typeof finalizeServerResponseDuration_ === 'function') {
+      meta = finalizeServerResponseDuration_(meta, contextExtras && contextExtras.startedAt);
+    }
+
     return buildServerResponse_(
       true,
       message,
@@ -232,6 +238,7 @@ const SendPanelFastPaths_ = (function() {
   }
 
   function buildSendPanelFast(dateStr) {
+    var startedAt = Date.now();
     var safeDate = _normalizeDate_(dateStr);
     _assertAccess_('buildSendPanelFast', { requestedDate: safeDate });
 
@@ -285,7 +292,8 @@ const SendPanelFastPaths_ = (function() {
         scenario: 'buildSendPanelFast',
         route: 'sidebar.buildSendPanelFast',
         fastPath: true,
-        appliedChangesCount: finalRows.length
+        appliedChangesCount: finalRows.length,
+        startedAt: startedAt
       }
     );
   }

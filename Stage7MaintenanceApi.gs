@@ -54,6 +54,8 @@ function _stage7BuildMaintenanceResponse_(
       ? safeReport.dryRun === true
       : meta.dryRun === true;
 
+  meta = finalizeServerResponseDuration_(meta, safeExtraMeta.startedAt);
+
   return buildServerResponse_(
     success !== false,
     message,
@@ -650,6 +652,7 @@ function runDiagnosticsByMode_(options) {
 }
 
 function apiStage7QuickHealthCheck(options) {
+  const startedAt = Date.now();
   _stage7AssertRole_("maintainer", "quick health check");
   const opts = Object.assign({}, options || {}, {
     mode: "quick",
@@ -666,6 +669,7 @@ function apiStage7QuickHealthCheck(options) {
     report,
     "stage7QuickHealthCheck",
     report.warnings || [],
+    { startedAt: startedAt },
   );
 }
 

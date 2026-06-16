@@ -98,6 +98,19 @@ function mergeServerResponseTopLevelMeta_(source, targetMeta) {
   return meta;
 }
 
+function finalizeServerResponseDuration_(meta, startedAt) {
+  var out = meta && typeof meta === "object" ? Object.assign({}, meta) : {};
+  if (
+    startedAt !== undefined &&
+    startedAt !== null &&
+    !isNaN(Number(startedAt))
+  ) {
+    out.durationMs = Math.max(0, Date.now() - Number(startedAt));
+  }
+  delete out.startedAt;
+  return out;
+}
+
 function toServerResponseCount_(value, fallback) {
   if (value === undefined || value === null || value === "") {
     return Number(fallback || 0);

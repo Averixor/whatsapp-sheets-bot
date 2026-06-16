@@ -30,8 +30,19 @@ appsscript.smoke.json
 !*.gs
 !*.html
 
-# Smoke-only API is deployed through the separate smoke project.
+# Tests / debug / local diagnostics (after !*.gs so these stay excluded)
+Stage7TestRunner*.gs
+DomainTests.gs
+AccessE2ETests.gs
+DebugManualTests.gs
+Diagnostics.Debug.gs
 GasRuntimeSmoke.gs
+
+# Local tooling / python env
+.venv_xlsx/**
+.venv/**
+dist/**
+coverage/**
 
 # Generated/debug client bundle - do not push
 _combined_client_debug.*

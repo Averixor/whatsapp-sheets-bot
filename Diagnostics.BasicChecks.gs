@@ -374,3 +374,70 @@ function runTestsCheck() {
 function runFullDiagnostics() {
   return runDiagnostics();
 }
+
+function _benchEnvelopeDurationMs_(response) {
+  try {
+    if (
+      response &&
+      response.data &&
+      response.data.meta &&
+      response.data.meta.durationMs !== undefined &&
+      response.data.meta.durationMs !== null
+    ) {
+      return Number(response.data.meta.durationMs);
+    }
+  } catch (e) {}
+  return null;
+}
+
+/**
+ * Post-optimization benchmark — run twice in GAS editor (cold, then warm cache).
+ * benchDate: optional UA date string for SEND_PANEL fast build (defaults to today).
+ */
+function benchAfterOptimizations_(benchDate) {
+  var dateStr =
+    String(benchDate || "").trim() ||
+    (typeof _todayStr_ === "function" ? _todayStr_() : "");
+  var runs = [];
+
+  function runOne_(label, fn) {
+    var wallStarted = Date.now();
+    var response = null;
+    var error = "";
+    try {
+      response = fn();
+    } catch (e) {
+      error = e && e.message ? e.message : String(e);
+    }
+    var wallMs = Date.now() - wallStarted;
+    var envelopeMs = _benchEnvelopeDurationMs_(response);
+    Logger.log(
+      label +
+        " wall ms: " +
+        wallMs +
+        (envelopeMs !== null && !isNaN(envelopeMs)
+          ? " | envelope durationMs: " + envelopeMs
+          : "") +
+        (error ? " | ERROR: " + error : ""),
+    );
+    runs.push({
+      label: label,
+      wallMs: wallMs,
+      envelopeDurationMs: envelopeMs,
+      error: error,
+    });
+    return response;
+  }
+
+  runOne_("bootstrap", function () {
+    return apiStage7BootstrapSidebar();
+  });
+  runOne_("send panel fast build", function () {
+    return SendPanelFastPaths_.buildSendPanelFast(dateStr);
+  });
+  runOne_("health", function () {
+    return apiStage7QuickHealthCheck();
+  });
+
+  return { benchDate: dateStr, runs: runs };
+}

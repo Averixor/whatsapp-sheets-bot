@@ -110,7 +110,7 @@ function verifyRecipientRoutingContract() {
     "spreadsheet commander preview must use the shared resolver",
   );
   assertContains(
-    "Summaries.gs",
+    "Report_DailyDetailed.gs",
     /function sendDetailedSummaryToCommander[\s\S]*resolveMessageRecipient_/,
     "legacy detailed summary send must use the shared resolver",
   );

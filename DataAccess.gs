@@ -164,14 +164,30 @@ const DataAccess_ = (function () {
     const opts = options || {};
     const schema = SheetSchemas_.get(schemaKey);
     const sheet = getSheet(schemaKey, opts.sheetName, true);
-    Object.keys(valuesByField || {}).forEach(function (field) {
+    const fields = Object.keys(valuesByField || {});
+    if (!fields.length) return true;
+
+    fields.forEach(function (field) {
       if (!(field in schema.columns)) {
         throw new Error(`Поле "${field}" відсутнє у схемі ${schemaKey}`);
       }
-      sheet
-        .getRange(Number(rowNumber), schema.columns[field])
-        .setValue(valuesByField[field]);
     });
+
+    const cols = fields.map(function (field) {
+      return Number(schema.columns[field]);
+    });
+    const minCol = Math.min.apply(null, cols);
+    const maxCol = Math.max.apply(null, cols);
+    const width = maxCol - minCol + 1;
+    const rowNum = Number(rowNumber);
+    const range = sheet.getRange(rowNum, minCol, 1, width);
+    const rowValues = range.getValues()[0];
+
+    fields.forEach(function (field) {
+      rowValues[Number(schema.columns[field]) - minCol] = valuesByField[field];
+    });
+
+    range.setValues([rowValues]);
     return true;
   }
 

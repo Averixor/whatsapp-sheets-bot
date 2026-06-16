@@ -489,22 +489,10 @@ function resolveMessageRecipient_(options) {
   };
 }
 
-function loadDictMap_() {
-  var ss = getWasbSpreadsheet_();
-  var sheetName =
-    typeof CONFIG !== "undefined" && CONFIG && CONFIG.DICT_SHEET
-      ? CONFIG.DICT_SHEET
-      : "DICT";
-  var sheet = ss.getSheetByName(sheetName);
+function _buildDictMapFromValues_(values) {
   var map = {};
-
-  if (!sheet || sheet.getLastRow() < 2) {
-    return map;
-  }
-
-  var values = sheet.getDataRange().getDisplayValues();
-  var headers = values[0] || [];
-  var rows = values.slice(1);
+  var headers = (values && values[0]) || [];
+  var rows = (values || []).slice(1);
 
   var codeCol = _stage7ShimFindHeaderCol_(headers, ["code", "код"], 0);
   var labelCol = _stage7ShimFindHeaderCol_(
@@ -535,6 +523,45 @@ function loadDictMap_() {
       message: taskCol >= 0 ? String(row[taskCol] || "").trim() : "",
     };
   });
+
+  return map;
+}
+
+function loadDictMap_() {
+  var cacheKey =
+    typeof cacheKeyDict_ === "function" ? cacheKeyDict_() : "DICT_MAP_V1";
+  var ttl =
+    typeof CONFIG !== "undefined" && CONFIG && Number(CONFIG.CACHE_TTL_SEC)
+      ? Number(CONFIG.CACHE_TTL_SEC)
+      : 300;
+
+  try {
+    var cache = CacheService.getScriptCache();
+    var cached = cache.get(cacheKey);
+    if (cached) {
+      var parsed = JSON.parse(cached);
+      if (parsed && typeof parsed === "object") return parsed;
+    }
+  } catch (e) {}
+
+  var ss = getWasbSpreadsheet_();
+  var sheetName =
+    typeof CONFIG !== "undefined" && CONFIG && CONFIG.DICT_SHEET
+      ? CONFIG.DICT_SHEET
+      : "DICT";
+  var sheet = ss.getSheetByName(sheetName);
+  var map = {};
+
+  if (sheet && sheet.getLastRow() >= 2) {
+    map = _buildDictMapFromValues_(sheet.getDataRange().getDisplayValues());
+  }
+
+  try {
+    var json = JSON.stringify(map);
+    if (json.length < 90000) {
+      CacheService.getScriptCache().put(cacheKey, json, ttl);
+    }
+  } catch (e) {}
 
   return map;
 }

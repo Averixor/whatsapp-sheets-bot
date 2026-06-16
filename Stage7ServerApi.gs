@@ -18,29 +18,41 @@ function _stage7FastContext_(scenario) {
   };
 }
 
+function _stage7FastStartedAt_() {
+  return Date.now();
+}
+
 function _stage7FastMeta_(scenario, extraMeta) {
-  return Object.assign(
-    {
-      stage:
-        typeof getProjectBundleMetadata_ === "function"
-          ? getProjectBundleMetadata_().stageVersion
-          : "7.0.0",
-      scenario: scenario,
-      operationId:
-        typeof stage7UniqueId_ === "function"
-          ? stage7UniqueId_(scenario)
-          : scenario + "_" + Date.now(),
-      affectedSheets: [],
-      affectedEntities: [],
-      appliedChangesCount: 0,
-      skippedChangesCount: 0,
-      dryRun: true,
-      partial: false,
-      retrySafe: true,
-      lockUsed: false,
-      lockRequired: false,
-    },
-    extraMeta || {},
+  var raw = extraMeta || {};
+  var startedAt = raw.startedAt;
+  var cleaned = Object.assign({}, raw);
+  delete cleaned.startedAt;
+
+  return finalizeServerResponseDuration_(
+    Object.assign(
+      {
+        stage:
+          typeof getProjectBundleMetadata_ === "function"
+            ? getProjectBundleMetadata_().stageVersion
+            : "7.0.0",
+        scenario: scenario,
+        operationId:
+          typeof stage7UniqueId_ === "function"
+            ? stage7UniqueId_(scenario)
+            : scenario + "_" + Date.now(),
+        affectedSheets: [],
+        affectedEntities: [],
+        appliedChangesCount: 0,
+        skippedChangesCount: 0,
+        dryRun: true,
+        partial: false,
+        retrySafe: true,
+        lockUsed: false,
+        lockRequired: false,
+      },
+      cleaned,
+    ),
+    startedAt,
   );
 }
 
@@ -60,6 +72,7 @@ function _stage7FastResponse_(scenario, message, result, warnings, extraMeta) {
 }
 
 function apiStage7GetAccessDescriptorLite() {
+  const startedAt = _stage7FastStartedAt_();
   const descriptor =
     typeof AccessControl_ === "object" &&
     AccessControl_ &&
@@ -90,6 +103,7 @@ function apiStage7GetAccessDescriptorLite() {
       : "Доступ визначено",
     descriptor,
     warnings,
+    { startedAt: startedAt },
   );
 }
 
@@ -131,6 +145,7 @@ function _repairOptionalBusinessSheets_() {
 }
 
 function apiStage7BootstrapSidebar() {
+  const startedAt = _stage7FastStartedAt_();
   const descriptor =
     typeof AccessControl_ === "object" &&
     AccessControl_ &&
@@ -226,7 +241,10 @@ function apiStage7BootstrapSidebar() {
       }),
     },
     warnings,
-    { affectedSheets: months.concat([CONFIG.PERSONNEL_SHEET || "PERSONNEL"]) },
+    {
+      startedAt: startedAt,
+      affectedSheets: months.concat([CONFIG.PERSONNEL_SHEET || "PERSONNEL"]),
+    },
   );
 }
 
@@ -254,6 +272,7 @@ function _stage7AssertCanViewSidebarPersonnel_(actionName, descriptorOpt) {
 }
 
 function apiStage7ListPersonnelCallsigns() {
+  const startedAt = _stage7FastStartedAt_();
   _stage7AssertCanViewSidebarPersonnel_("listPersonnelCallsigns");
   var callsigns = [];
   var sheetWarnings = [];
@@ -274,7 +293,10 @@ function apiStage7ListPersonnelCallsigns() {
       "Не вдалося прочитати PERSONNEL",
       { callsigns: [], count: 0, warnings: [] },
       [e && e.message ? e.message : String(e)],
-      { affectedSheets: [CONFIG.PERSONNEL_SHEET || "PERSONNEL"] },
+      {
+        startedAt: startedAt,
+        affectedSheets: [CONFIG.PERSONNEL_SHEET || "PERSONNEL"],
+      },
     );
   }
 
@@ -289,11 +311,15 @@ function apiStage7ListPersonnelCallsigns() {
       warnings: sheetWarnings,
     },
     sheetWarnings,
-    { affectedSheets: [CONFIG.PERSONNEL_SHEET || "PERSONNEL"] },
+    {
+      startedAt: startedAt,
+      affectedSheets: [CONFIG.PERSONNEL_SHEET || "PERSONNEL"],
+    },
   );
 }
 
 function apiStage7GetMonthsList() {
+  const startedAt = _stage7FastStartedAt_();
   const ss = getWasbSpreadsheet_();
   const months = ss
     .getSheets()
@@ -311,7 +337,7 @@ function apiStage7GetMonthsList() {
     "Місяці завантажено",
     { months: months, current: current },
     [],
-    { affectedSheets: months },
+    { startedAt: startedAt, affectedSheets: months },
   );
 }
 
@@ -342,6 +368,7 @@ function _stage7LoadSidebarPersonnelForSession_(
 }
 
 function apiStage7GetSidebarData(dateStr) {
+  const startedAt = _stage7FastStartedAt_();
   const descriptor = _stage7AssertCanViewSidebarPersonnel_("getSidebarData");
   const sidebar = _stage7LoadSidebarPersonnelForSession_(
     dateStr,
@@ -354,11 +381,15 @@ function apiStage7GetSidebarData(dateStr) {
     "Дані дня завантажено",
     sidebar,
     [],
-    { affectedSheets: [sidebar.month || getBotMonthSheetName_()] },
+    {
+      startedAt: startedAt,
+      affectedSheets: [sidebar.month || getBotMonthSheetName_()],
+    },
   );
 }
 
 function apiStage7GetSendPanelData() {
+  const startedAt = _stage7FastStartedAt_();
   _stage7AssertRole_("maintainer", "get send panel data");
 
   const rows = SendPanelRepository_.readRows();
@@ -379,6 +410,7 @@ function apiStage7GetSendPanelData() {
     },
     [],
     {
+      startedAt: startedAt,
       affectedSheets: [CONFIG.SEND_PANEL_SHEET, getBotMonthSheetName_()].filter(
         Boolean,
       ),
@@ -504,6 +536,7 @@ function apiBuildDetailedSummary(dateStr) {
 }
 
 function apiOpenPersonCard(callsign, dateStr) {
+  const startedAt = _stage7FastStartedAt_();
   const info = validatePersonLookupPayload_({
     callsign: callsign || "",
     date: dateStr || _todayStr_(),
@@ -533,6 +566,7 @@ function apiOpenPersonCard(callsign, dateStr) {
     person,
     warnings,
     {
+      startedAt: startedAt,
       affectedSheets: [person.sheet || getBotMonthSheetName_()].filter(Boolean),
       affectedEntities: [person.callsign || person.fml || ""].filter(Boolean),
     },
@@ -544,6 +578,7 @@ function apiLoadCalendarDay(dateStr) {
 }
 
 function apiCheckVacationsAndBirthdays(dateOrOptions) {
+  const startedAt = _stage7FastStartedAt_();
   _stage7AssertRole_("admin", "check vacations and birthdays");
   const options =
     dateOrOptions && typeof dateOrOptions === "object"
@@ -589,6 +624,7 @@ function apiCheckVacationsAndBirthdays(dateOrOptions) {
     },
     [],
     {
+      startedAt: startedAt,
       affectedSheets: [getBotMonthSheetName_(), CONFIG.PHONES_SHEET].filter(
         Boolean,
       ),
@@ -607,6 +643,7 @@ function apiRunReconciliation(options) {
 }
 
 function apiStage7ReportClientAccessSignal(actionName, details) {
+  const startedAt = _stage7FastStartedAt_();
   const result =
     typeof AccessEnforcement_ === "object" &&
     AccessEnforcement_.reportClientAccessSignal
@@ -628,6 +665,7 @@ function apiStage7ReportClientAccessSignal(actionName, details) {
     result,
     [],
     {
+      startedAt: startedAt,
       affectedSheets: [appGetCore("ALERTS_LOG_SHEET", "ALERTS_LOG")].filter(
         Boolean,
       ),
