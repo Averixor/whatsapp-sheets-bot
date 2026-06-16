@@ -83,6 +83,8 @@
 
 ## UI / запуск
 
-- API: `apiBuildDaySummary`, `apiBuildDetailedSummary`
-- Меню: окреме меню `Звіти` з пунктами показу короткого та детального зведення.
+- **Основний інтерфейс:** бокова панель WASB → кнопки `Зведення дня` та `Детальне зведення` (календар → вибір дати → результат у панелі).
+- API: `apiBuildDaySummary`, `apiBuildDetailedSummary` (викликаються з `Stage7Api.buildDaySummary` / `buildDetailedSummary`).
+- Верхнє меню `WASB` містить лише `Відкрити панель`.
+- `uiShowSimpleDaySummary()` / `uiShowDetailedDaySummary()` — server-side обгортки для модального діалогу (за потреби з GAS editor або інших точок входу).
 

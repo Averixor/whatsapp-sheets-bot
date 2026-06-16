@@ -259,11 +259,6 @@ function onOpen(e) {
   try {
     const ui = SpreadsheetApp.getUi();
     ui.createMenu("WASB").addItem("Відкрити панель", "showSidebar").addToUi();
-    ui
-      .createMenu("Звіти")
-      .addItem("Показати звичайне зведення", "uiShowSimpleDaySummary")
-      .addItem("Показати детальне зведення", "uiShowDetailedDaySummary")
-      .addToUi();
   } catch (err) {
     console.error("onOpen menu error:", err);
   }
