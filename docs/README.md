@@ -4,19 +4,19 @@ Markdown files are excluded from `clasp push` by `.claspignore`. Keep operationa
 truth in the documents below; do not add one-off audits or production workbook
 snapshots to the repository.
 
-| File                                                       | Source-of-truth responsibility                            |
-| ---------------------------------------------------------- | --------------------------------------------------------- |
-| [README.md](../README.md)                                  | Project overview, quick start, documentation map          |
-| [ARCHITECTURE.md](../ARCHITECTURE.md)                      | Runtime layers, data flow, canonical APIs                 |
-| [RUNBOOK.md](../RUNBOOK.md)                                | Bootstrap, deployment, production checks, troubleshooting |
-| [SECURITY.md](../SECURITY.md)                              | Identity, RBAC, lockout, protected data                   |
-| [CHANGELOG.md](../CHANGELOG.md)                            | Durable release history                                   |
-| [WASB_RELEASE_AUDIT.md](../WASB_RELEASE_AUDIT.md)          | Production release verdict (CLOSED 2026-06-07)            |
-| [CONTRIBUTING.md](../CONTRIBUTING.md)                      | Local workflow, CI, change policy                         |
-| [AGENTS.md](../AGENTS.md)                                  | Automation-agent instructions                             |
-| [vacation-planner.md](./vacation-planner.md)               | Vacation planner workflow, source blocks, and rules       |
-| [daily-summary-architecture.md](./daily-summary-architecture.md) | Short/detailed day summary modules, formula block, UI flow |
-| [format-rules-governance.md](./format-rules-governance.md) | Manual conditional-format registry and rebuild protection |
+| File                                                             | Source-of-truth responsibility                              |
+| ---------------------------------------------------------------- | ----------------------------------------------------------- |
+| [README.md](../README.md)                                        | Project overview, quick start, documentation map            |
+| [ARCHITECTURE.md](../ARCHITECTURE.md)                            | Runtime layers, data flow, canonical APIs                   |
+| [RUNBOOK.md](../RUNBOOK.md)                                      | Bootstrap, deployment, production checks, troubleshooting   |
+| [SECURITY.md](../SECURITY.md)                                    | Identity, RBAC, lockout, protected data                     |
+| [CHANGELOG.md](../CHANGELOG.md)                                  | Durable release history                                     |
+| [WASB_RELEASE_AUDIT.md](../WASB_RELEASE_AUDIT.md)                | Production release verdict (CLOSED 2026-06-07)              |
+| [CONTRIBUTING.md](../CONTRIBUTING.md)                            | Local workflow, CI, change policy                           |
+| [AGENTS.md](../AGENTS.md)                                        | Automation-agent instructions                               |
+| [vacation-planner.md](./vacation-planner.md)                     | Vacation planner workflow, source blocks, and rules         |
+| [daily-summary-architecture.md](./daily-summary-architecture.md) | Short/detailed day summary modules, formula block, UI flow  |
+| [format-rules-governance.md](./format-rules-governance.md)       | Manual conditional-format registry and rebuild protection   |
 
 ## Refactor Planning
 
