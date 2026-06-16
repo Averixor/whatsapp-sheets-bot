@@ -81,6 +81,18 @@ Or one command: `npm run deploy:prod` (local CI + production push). Run
 - After every production deploy or PERSONNEL edits: run **`apiStage7ClearPhoneCache()`** in GAS (mandatory).
 - See `.cursor/rules/personnel-data-keys.mdc`.
 
+### Daily summaries (do not regress)
+
+- **Short summary** reads the lower **formula block** on month sheets (`01`…`12`);
+  do not reintroduce manual PERSONNEL/DICT_SUM counting for short summary.
+- Modules: `Report_SummaryData.gs`, `Report_DailySimple.gs`, `Report_DailyDetailed.gs`,
+  `Summaries.gs` (legacy `buildDaySummaryForColumn_` only delegates).
+- Output order includes **`За штатом`** first; labels in report text must have **no `_`**.
+- **UI:** sidebar buttons **Зведення дня** / **Детальне зведення** only; top menu =
+  `WASB` → `Відкрити панель` (no `Звіти` menu).
+- Design doc: [`docs/daily-summary-architecture.md`](./docs/daily-summary-architecture.md).
+- Local contract: `scripts/verify-workbook-contract.mjs`.
+
 ### Key gotchas
 
 - The `&&` chain in `npm run ci` may fail under restricted `cmd.exe` on Windows; use individual `node scripts/...` commands as fallback.

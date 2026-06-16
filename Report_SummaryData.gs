@@ -3,6 +3,7 @@
  */
 
 const SIMPLE_DAILY_SUMMARY_ORDER = Object.freeze([
+  "За_штатом",
   "За_списком",
   "В_наявності",
   "У_відрядженні",
@@ -15,6 +16,7 @@ const SIMPLE_DAILY_SUMMARY_ORDER = Object.freeze([
 ]);
 
 const SIMPLE_DAILY_SUMMARY_LABELS = Object.freeze({
+  За_штатом: "За штатом",
   За_списком: "За списком",
   В_наявності: "В наявності",
   У_відрядженні: "У відрядженні",
@@ -27,9 +29,7 @@ const SIMPLE_DAILY_SUMMARY_LABELS = Object.freeze({
 });
 
 const SUMMARY_BLOCK_ANCHOR_KEY_ = "За_списком";
-const SUMMARY_BLOCK_SKIP_KEYS_ = Object.freeze({
-  За_штатом: true,
-});
+const SUMMARY_BLOCK_STAFF_KEY_ = "За_штатом";
 
 function normalizeText_(value) {
   return String(value == null ? "" : value)
@@ -171,8 +171,17 @@ function findSummaryBlockLocation_(sheet) {
     return null;
   }
 
-  const startRow = anchor.anchorRow;
   const labelCol = anchor.labelCol;
+  let startRow = anchor.anchorRow;
+  if (startRow > 1) {
+    const prevKey = normalizeSummaryKey_(
+      sheet.getRange(startRow - 1, labelCol).getDisplayValue(),
+    );
+    if (prevKey === SUMMARY_BLOCK_STAFF_KEY_) {
+      startRow = startRow - 1;
+    }
+  }
+
   let endRow = startRow;
   for (let row = startRow; row <= lastRow; row++) {
     const label = normalizeText_(sheet.getRange(row, labelCol).getDisplayValue());
@@ -302,7 +311,7 @@ function readDailySummaryFromFormulaBlockForSheet_(sheet, dateStr, dateCol) {
   const values = {};
   for (let i = 0; i < labelValues.length; i++) {
     const key = normalizeSummaryKey_(labelValues[i][0]);
-    if (!key || SUMMARY_BLOCK_SKIP_KEYS_[key]) continue;
+    if (!key) continue;
     values[key] = parseSummaryNumber_(dateValues[i][0]);
   }
 

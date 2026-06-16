@@ -144,7 +144,7 @@ function buildCompactJuneSheet(options = {}) {
   }
 
   const summaryRows = [
-    { label: "За_штатом", value: 30 },
+    options.omitStaff ? null : { label: "За_штатом", value: 30 },
     { label: "За_списком", value: 29 },
     { label: "В_наявності", value: 23 },
     { label: "У_відрядженні", value: 2 },
@@ -245,7 +245,8 @@ assert.equal(
 assert.equal(context.findDateColumnInMonthSheet_(sheet, "14.06.2026"), 16);
 
 const summary = context.buildDaySummaryForColumn_(sheet, 16);
-assert.match(summary, /^14\.06\n\nЗа списком: 29/);
+assert.match(summary, /^14\.06\n\nЗа штатом: 30/);
+assert.match(summary, /За списком: 29/);
 assert.match(summary, /В наявності: 23/);
 assert.match(summary, /У відрядженні: 2/);
 assert.match(summary, /У відпустці: 1/);
@@ -269,7 +270,7 @@ assert.equal(context.parseSummaryNumber_("—"), 0);
 
 const location = context.findSummaryBlockLocation_(sheet);
 assert.equal(location.labelCol, 2);
-assert.equal(location.startRow, 35);
+assert.equal(location.startRow, 34);
 
 const block = context.readDailySummaryFromFormulaBlockForSheet_(
   sheet,
@@ -278,15 +279,21 @@ const block = context.readDailySummaryFromFormulaBlockForSheet_(
 );
 assert.equal(block.monthSheetName, "06");
 assert.equal(block.dateColumn, 16);
+assert.equal(block.values.За_штатом, 30);
 assert.equal(block.values.За_списком, 29);
 assert.equal(block.values.Drone_Camp, 0);
-assert.equal(block.values.За_штатом, undefined);
 
 const missingValueSummary = context.buildDaySummaryForColumn_(
   buildCompactJuneSheet({ omitDroneCamp: true }),
   16,
 );
 assert.match(missingValueSummary, /Drone Camp: 0/);
+
+const missingStaffSummary = context.buildDaySummaryForColumn_(
+  buildCompactJuneSheet({ omitStaff: true }),
+  16,
+);
+assert.match(missingStaffSummary, /^14\.06\n\nЗа штатом: 0/);
 
 assert.throws(
   () =>

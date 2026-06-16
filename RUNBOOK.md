@@ -257,7 +257,7 @@ Local equivalent: **`npm run ci`**.
 |--------|---------|
 | `ci-gas-sanity.mjs` | Syntax check all `.gs` files |
 | `verify-personnel-status-contract.mjs` | PERSONNEL Status dropdown/active/inactive lists vs `PersonnelRepository.gs` |
-| `verify-workbook-contract.mjs` | Compact monthly workbook geometry and personnel count |
+| `verify-workbook-contract.mjs` | Monthly layout geometry, formula-block short summary, detailed summary grouping |
 | `verify-recipient-contract.mjs` | Recipient routing and dark-select UI contract |
 | `audit-function-graph.mjs` | Bound entrypoint refs vs definitions |
 | `verify-client-includes.mjs` | `JavaScript.html` include order |
@@ -518,3 +518,44 @@ source is opt-in and must be migrated explicitly by a sysadmin.
 The migration refuses to overwrite a non-empty `VACATION_REQUESTS`. Roll back
 reads and writes with `rollbackVacationRequestsToLegacy()`; migrated rows remain
 intact for diagnosis. Do not delete `VACATIONS` during the compatibility period.
+
+## 22. Daily summaries (зведення дня)
+
+Коротке та детальне зведення запускаються з **бокової панелі WASB** (кнопки
+**Зведення дня** / **Детальне зведення** → календар → результат у панелі).
+Верхнє меню містить лише **`WASB` → `Відкрити панель`**.
+
+Повний опис модулів: [`docs/daily-summary-architecture.md`](./docs/daily-summary-architecture.md).
+
+### Коротке зведення
+
+- Джерело даних: **нижній формульний блок** на місячному листі (`01`…`12`), не
+  перерахунок у Apps Script.
+- Модулі: `Report_SummaryData.gs` (читання) → `Report_DailySimple.gs`
+  (форматування) → `Summaries.gs` (`buildDaySummaryForColumn_`).
+- Показники (порядок): За штатом, За списком, В наявності, У відрядженні, У
+  відпустці, Гусачівка, Drone Camp, ППД, КП, БР.
+- У таблиці метки можуть бути з `_`; у тексті звіту — без `_`.
+- Відсутній показник у блоці → `0` у звіті.
+
+### Детальне зведення
+
+- Окрема логіка: `Report_DailyDetailed.gs` + `PERSONNEL` + `DICT_SUM` + коди
+  графіка за обраний день.
+- Роль `operator` і вище (див. `SECURITY.md`); `viewer` не має доступу.
+
+### Типові помилки
+
+| Повідомлення | Причина |
+| ------------ | ------- |
+| `Не знайдено колонку дати … на аркуші …` | Дата відсутня в рядку дат місячного листа |
+| `Не знайдено формульний блок зведення на аркуші …` | Немає рядка `За_списком` / `За списком` під графіком |
+| `Некоректна дата зведення` | Невалідний формат дати в запиті |
+
+### Перевірка після деплою
+
+1. Відкрити панель → **Зведення дня** → порівняти цифри з нижнім блоком на
+   листі `06` (або поточному місяці).
+2. Переконатися, що перший рядок — `За штатом: …`.
+3. **Детальне зведення** → перевірити групи людей.
+4. Локально: `node scripts/verify-workbook-contract.mjs` (частина `npm run ci`).

@@ -42,7 +42,8 @@ unless their registry row explicitly says `DeleteAllowed`.
 Preserve-safe rebuilds take a native snapshot before destructive formatting,
 run the rebuild, then restore protected rules above exact WASB-managed rules.
 Current protected paths include vacation outputs, `SEND_PANEL`, and the
-detailed-summary output sheet. Monthly-sheet creation copies the source sheet
+detailed-summary output sheet (`DAILY_SUMMARIES`, `Report_DailyDetailed.gs`
+`createDetailedSheet_`). Monthly-sheet creation copies the source sheet
 and does not clear its formatting.
 
 ## Move Policies

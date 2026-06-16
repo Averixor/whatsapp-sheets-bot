@@ -109,6 +109,11 @@ Key repositories and services:
 - `PersonsRepository.gs`
 - `SendPanelRepository.gs`
 - `SummaryRepository.gs`
+- `SummaryService.gs`
+- `Report_SummaryData.gs` — read short-summary values from monthly formula block
+- `Report_DailySimple.gs` — format short daily summary text
+- `Report_DailyDetailed.gs` — detailed daily summary (people + DICT_SUM groups)
+- `Summaries.gs` — legacy entrypoints (`buildDaySummaryForColumn_`, summary dialogs)
 - `VacationsRepository.gs`
 - `AlertsRepository.gs`
 - `LogsRepository.gs`
@@ -206,7 +211,7 @@ Spreadsheet audit handlers (`stage7SecurityAuditOnEdit`, `stage7SecurityAuditOnC
 
 Main operational sheets typically include:
 
-- month sheets (`01`..`12`) — schedule codes only (позивний + графік по датах)
+- month sheets (`01`..`12`) — schedule codes (позивний + графік по датах); **нижній формульний блок** на кожному листі дає показники короткого зведення дня (див. [`docs/daily-summary-architecture.md`](./docs/daily-summary-architecture.md))
 - `PERSONNEL` — **canonical** personal data (header-based via `PersonnelRepository.gs`). **Schedule key: Callsign** (monthly sheets). **Lookup: Callsign → FML**. `ID` = optional Армія+ (not a system key). `Position` = org slot, not person key. **Status dropdown (9 UA values):** `В наявності`, `У відрядженні`, `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`. Runtime-active: all except **Вибув** / **СЗЧ**; empty defaults to **В наявності**. Contract: `contracts/personnel-status.contract.json`.
 - `PHONES` — legacy fallback when `PERSONNEL` is empty/unavailable (`loadPhonesIndex_` prefers `PERSONNEL`)
 - `DICT`
@@ -239,6 +244,28 @@ Protected / service sheets include:
 | `Заявки`     | `ProjectRequests.gs` (`ensureRequestsSheet_`)          | same                                |
 
 Тригер входу: **`apiStage7BootstrapSidebar()`** → **`_ensureOptionalBusinessSheetsQuiet_()`** in `Stage7ServerApi.gs`. Деталі колонок і шаблонних рядків — **`RUNBOOK.md` §20**.
+
+## 7.1 Daily summaries (short and detailed)
+
+**Short summary** reads precomputed values from the **lower formula block** on the
+active month sheet (`01`..`12`). Apps Script does not recount personnel or
+DICT_SUM for the short summary.
+
+**Detailed summary** is separate: monthly sheet column + PERSONNEL + DICT_SUM +
+schedule codes, grouped by dictionary rules.
+
+| Layer | Module | Role |
+| ----- | ------ | ---- |
+| Read | `Report_SummaryData.gs` | Find date column and formula block; parse indicator values |
+| Format | `Report_DailySimple.gs` | Build short summary text (`За штатом` … `БР`) |
+| Detailed | `Report_DailyDetailed.gs` | People lists per code/group |
+| Repository | `SummaryRepository.gs` | `buildDaySummary` / `buildDetailedSummary` |
+| API | `Stage7ServerApi.gs` | `apiBuildDaySummary`, `apiBuildDetailedSummary` |
+| UI | Sidebar (`Js.Render.Calendar.html`) | Buttons **Зведення дня** / **Детальне зведення** |
+
+Top spreadsheet menu: **`WASB` → `Відкрити панель` only** (no separate `Звіти` menu).
+
+Full design: [`docs/daily-summary-architecture.md`](./docs/daily-summary-architecture.md).
 
 ## 8. Sidebar runtime principles
 

@@ -93,6 +93,7 @@ The workflow does not deploy to Apps Script. Deployment remains local via
 | [`CONTRIBUTING.md`](./CONTRIBUTING.md) | Local workflow, CI, clasp, commit policy |
 | [`AGENTS.md`](./AGENTS.md)             | Cursor / cloud agent instructions        |
 | [`docs/README.md`](./docs/README.md)   | Documentation index and ownership rules  |
+| [`docs/daily-summary-architecture.md`](./docs/daily-summary-architecture.md) | Short/detailed day summary: formula block, modules, sidebar flow |
 
 Contracts and snapshots are machine-readable governance artifacts under
 `contracts/` and `scripts/snapshots/`. Do not commit one-off audits, production
