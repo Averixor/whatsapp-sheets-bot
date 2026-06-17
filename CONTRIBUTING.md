@@ -65,7 +65,8 @@ Then in the spreadsheet: close the sidebar → open it again → open a person c
 The repository runs a lightweight CI workflow on push and pull requests to **`main`** (also **`workflow_dispatch`**).
 
 It runs the complete `npm run ci` contract suite: GAS sanity, workbook and
-recipient contracts, function graph, client parsing/layers/XSS, response
+recipient contracts, **vacation planner** (`verify-vacation-planner.mjs`),
+function graph, client parsing/layers/XSS, response
 envelope, facade/snapshot/bridge governance, access API policy, OAuth scopes,
 and jsconfig verification.
 

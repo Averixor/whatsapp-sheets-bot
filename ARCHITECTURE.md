@@ -115,6 +115,8 @@ Key repositories and services:
 - `Report_DailyDetailed.gs` — detailed daily summary (people + DICT_SUM groups)
 - `Summaries.gs` — legacy entrypoints (`buildDaySummaryForColumn_`, summary dialogs)
 - `VacationsRepository.gs`
+- `VacationPlannerService.gs`, `VacationMonthCalendar.gs`, `Vacation_Suggestions.gs`
+- `VacationSidebarService.gs`
 - `AlertsRepository.gs`
 - `LogsRepository.gs`
 - `JobRuntimeRepository.gs`
@@ -266,6 +268,27 @@ schedule codes, grouped by dictionary rules.
 Top spreadsheet menu: **`WASB` → `Відкрити панель` only** (no separate `Звіти` menu).
 
 Full design: [`docs/daily-summary-architecture.md`](./docs/daily-summary-architecture.md).
+
+## 7.2 Vacation planner and mini-calendar
+
+Vacation planning runs in the sidebar **Відпустки** tab (`Js.Vacations.html`).
+Source adapter: `VacationsRepository.gs` (default `VACATIONS` `A:I`).
+
+| Layer | Module | Role |
+| ----- | ------ | ---- |
+| Config | `VacationPlannerConfig.gs` | Rules (`MAX_CONCURRENT: 3`, overload 4/3d, min 15 days, …) |
+| Logic | `VacationPlannerService.gs` | Validate options, build schedule audit |
+| Calendar | `VacationMonthCalendar.gs` | Month grid, day `loadLevel`, previews |
+| Suggestions | `Vacation_Suggestions.gs` | Safe move proposals per issue |
+| API | `VacationSidebarService.gs` | Sidebar entrypoints |
+| UI | `Js.Vacations.html` | Tabs, mini-calendar, problems, bulk fix |
+
+Mini-calendar: count-only cells, informative tooltip (`buildVacationDayTooltip_`),
+day details via `getVacationCalendarDayDetailsFromSidebar`. Footer shows only
+**Проблемних дат** / **Навантажених днів**.
+
+Full design: [`docs/vacation-planner.md`](./docs/vacation-planner.md). Contract:
+`scripts/verify-vacation-planner.mjs`.
 
 ## 8. Sidebar runtime principles
 

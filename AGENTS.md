@@ -93,6 +93,17 @@ Or one command: `npm run deploy:prod` (local CI + production push). Run
 - Design doc: [`docs/daily-summary-architecture.md`](./docs/daily-summary-architecture.md).
 - Local contract: `scripts/verify-workbook-contract.mjs`.
 
+### Vacation planner and mini-calendar (do not regress)
+
+- Concurrent load: **max 3** normal; **4** only as short overload ≤3 consecutive days; **5+** always error.
+- Rules source: `VacationPlannerConfig.gs` (`MAX_CONCURRENT`, `OVERLOAD_*`, `MIN_VACATION_DAYS`, `MIN_DAYS_GAP`, `MIN_START_GAP_DAYS`).
+- Mini-calendar cells: day number + divider + count only (no names in grid).
+- Footer summary: **Проблемних дат** / **Навантажених днів** only (no static rule lines).
+- Navigation ◀/▶ must pass explicit `{ year, month }` to `loadMonthCalendar` (see `Js.Vacations.html`).
+- Modules: `VacationMonthCalendar.gs`, `Vacation_Suggestions.gs`, `Js.Vacations.html`.
+- Design doc: [`docs/vacation-planner.md`](./docs/vacation-planner.md).
+- Local contract: `scripts/verify-vacation-planner.mjs` (`npm run ci:vacations`).
+
 ### Key gotchas
 
 - The `&&` chain in `npm run ci` may fail under restricted `cmd.exe` on Windows; use individual `node scripts/...` commands as fallback.

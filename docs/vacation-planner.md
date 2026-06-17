@@ -11,9 +11,20 @@ There is no separate top-level `WASB → Відпустки` menu and no second
 `HtmlService.showSidebar()` for vacations. `VacationSidebar.html` is legacy
 only (deprecated).
 
-Runtime modules: `VacationPlannerConfig.gs`, `VacationPlannerService.gs`,
-`VacationOptionsWriter.gs`, `VacationSidebarService.gs`, `VacationsRepository.gs`,
-client `Js.Vacations.html`.
+## Runtime modules
+
+| Module | Role |
+| ------ | ---- |
+| `VacationPlannerConfig.gs` | Rules, sheet names, source headers |
+| `VacationPlannerService.gs` | Validation, audit, scoring |
+| `VacationOptionsWriter.gs` | Schedule/check rebuild, reports |
+| `VacationSidebarService.gs` | Sidebar entrypoints |
+| `VacationsRepository.gs` | Active source adapter |
+| `VacationMonthCalendar.gs` | Month mini-calendar payload |
+| `Vacation_Suggestions.gs` | Fix suggestions for audit issues |
+| `VacationBulkFix.gs` | Bulk fix plan/apply |
+| `Js.Vacations.html` | Vacations tab UI |
+| `Styles_30_Personnel.html` | Mini-calendar styles |
 
 ## Sources of truth
 
@@ -70,8 +81,8 @@ Migration and rollback hold the document lock used by panel writes.
 
 | Tab       | Actions                                                        |
 | --------- | -------------------------------------------------------------- |
-| Огляд     | stats, refresh, **🔔 reminders**, rebuild, open calendar       |
-| План      | active plan, move/cancel, rebuild, open calendar               |
+| Огляд     | stats, refresh, **🔔 reminders**, rebuild, mini-calendar       |
+| План      | active plan, move/cancel, rebuild, mini-calendar               |
 | Додати    | add В1/В2/ВД/СО                                                |
 | Підібрати | planner top options + apply                                    |
 | Проблеми  | understandable problem cards, suggestions, jump to date picker |
@@ -94,76 +105,130 @@ The audit is non-mutating and also reconciles plan and fact:
 - `PERSONNEL.Status = Відпустка` without a current approved/applied plan record;
 - monthly `Відпус` codes without a matching approved/applied plan record;
 - `Applied` plan dates without `Відпус` where that person/date exists in a
-  monthly sheet.
+  monthly sheet;
+- active `PERSONNEL` without any planned vacation in the audit year (`MIN_PERSON_YEAR`).
 
 Missing future monthly sheets do not produce false positives. The audit never
 changes `PERSONNEL`, monthly sheets, reminders, or `Calculation_OS`.
 
-## Blocking rules and warnings
+## Planner rules (`VACATION_PLANNER_CONFIG.RULES`)
 
-Blocking rules prevent a write: invalid option/date/duration, a person's own
-overlap, more than two vacations per person/year, and exceeding the hard
-concurrent limit (**5+ people** on one day, or **4 people for more than 3
-consecutive days**).
+Canonical values in `VacationPlannerConfig.gs`:
 
-Warnings remain visible but allow the write: a short preferred gap, close start
-dates, **exactly 3 people** (borderline load), **4 people for up to 3 consecutive
-days** (short overload), and three or more vacation starts in one month.
-Main-panel actions explicitly report when a vacation was applied with warnings.
+| Rule | Value | Meaning |
+| ---- | ----- | ------- |
+| `MAX_CONCURRENT` | 3 | Normal maximum people on vacation at once |
+| `OVERLOAD_CONCURRENT` | 4 | Short overload allowed up to `OVERLOAD_MAX_CONSECUTIVE_DAYS` |
+| `OVERLOAD_MAX_CONSECUTIVE_DAYS` | 3 | Max consecutive days with 4 people |
+| `ABSOLUTE_MAX_CONCURRENT` | 5 | Always an error |
+| `MIN_VACATION_DAYS` | 15 | Minimum duration of one vacation |
+| `MIN_VACATIONS_PER_PERSON_YEAR` | 1 | Each active person needs ≥1 vacation/year |
+| `MAX_VACATIONS_PER_PERSON_YEAR` | 2 | Maximum vacations per person per year |
+| `MIN_DAYS_GAP` | 150 | Minimum gap between vacations of the same person (~5 months) |
+| `MIN_START_GAP_DAYS` | 2 | Minimum gap between start dates of different people |
+| `MONTH_START_WARNING` | 5 | Warning when ≥5 vacation starts in one month |
 
-Normal concurrent load: **up to 3 people** at once.
+### Blocking writes (`BLOCKING_RULES`)
+
+Invalid option/date/duration, person overlap, interval too short (`PERSON_GAP`),
+start dates too close (`START_GAP`), no vacation in audit year (`MIN_PERSON_YEAR`),
+more than two vacations per person/year (`MAX_PERSON_YEAR`), **5+ people** on one
+day (`MAX_CONCURRENT`), **4 people for more than 3 consecutive days**
+(`OVERLOAD_STREAK`).
+
+### Warnings (`WARNING_RULES`)
+
+Borderline load (`HIGH_LOAD_PERIOD`): exactly 3 people, or 4 people within the
+short-overload window. Month balance (`MONTH_BALANCE`): many starts in one month.
+Warnings are visible but do not block the write.
 
 ## Month mini-calendar (Огляд / План)
 
-The sidebar mini-calendar reads the same `A:I` vacation source as the planner.
-Cells show **only the day number and how many people are on vacation** — no
-callsigns or truncated names inside the grid.
+The sidebar mini-calendar reads the same `A:I` vacation source as the planner
+(`VacationMonthCalendar.gs` → `readVacationSource_()`).
 
-| Count in cell | Meaning |
-| ------------- | ------- |
-| 0–2 | normal load |
-| 3 | maximum allowed load |
-| ⚠ 4 | short overload (allowed up to 3 consecutive days) |
-| ❌ 5+ | error |
+### Cell layout
 
-Navigation: **◀ / ▶**, year/month selectors, **Показати місяць**. Cross-month
-vacations appear in every month they touch.
+Cells show **only**:
 
-Click a day to open details: full name list, vacation ranges, problem text, and
-up to five validated move suggestions from `Vacation_Suggestions.gs`
-(`getVacationCalendarDayDetailsFromSidebar`).
+```text
+22        ← day number
+────────  ← divider
+2         ← people count (⚠ / ❌ prefix when warning/error)
+```
 
-Annual audit checks active `PERSONNEL` rows against the selected audit year:
-every active person must have at least one planned vacation, and no person may
-have more than two.
+No callsigns, FML, or truncated names inside the grid.
 
-Footer summary under the grid shows only dynamic month stats:
+| Count / prefix | `loadLevel` | Meaning |
+| -------------- | ----------- | ------- |
+| 0–2 | `normal` | normal load |
+| 3 | `max` | maximum allowed load |
+| ⚠ 4 | `warning` | short overload (≤3 consecutive days) |
+| ❌ 5+ | `error` | rule violation |
+
+CSS classes: `--max`, `--warning`, `--overload`.
+
+### Navigation
+
+- **◀ / ▶** — previous/next month (passes explicit `{ year, month }` to the
+  server; does not re-read stale select values).
+- **Рік** / **Місяць** selectors + **Показати місяць**.
+- Cross-month vacations appear in every month they touch.
+
+### Footer summary
+
+Only dynamic month stats (no static rule text):
 
 ```text
 Проблемних дат: …
 Навантажених днів: …
 ```
 
-Day cells use a divider between day number and count. Tooltip shows human-readable
-load/status text (not ISO-only). Navigation `◀` / `▶` loads the adjacent month
-via explicit year/month state, not stale select values.
+### Tooltip (hover)
 
-Modules: `VacationMonthCalendar.gs`, client `Js.Vacations.html`,
-`Styles_30_Personnel.html`.
+Built client-side by `buildVacationDayTooltip_()` in `Js.Vacations.html`.
+Shows human-readable date, people count, problems count, status label, optional
+`peoplePreview` / `problemsPreview`, and click hint. ISO date alone is not used
+as the tooltip.
+
+### Click (day details)
+
+`getVacationCalendarDayDetailsFromSidebar` returns full name list, vacation
+ranges, problems, and up to five validated move suggestions from
+`Vacation_Suggestions.gs`.
+
+### Day payload (server)
+
+Each calendar day includes at minimum:
+
+```js
+{
+  isoDate: "2026-12-22",
+  dateIso: "2026-12-22",
+  day: 22,
+  vacationsCount: 2,
+  loadLevel: "normal",
+  problemsCount: 0,
+  peoplePreview: [{ name, startText, endText, … }],
+  problemsPreview: [{ type, message }]
+}
+```
 
 `VACATION_SCHEDULE` keeps `QUANTITY | FML` in columns `A:B`. Only calendar
 cells from `C2` are colored: `В1`, `В2`, `ВД`, `СО`, and mixed markers use
 distinct fills, while blanks stay white. A medium right border marks every
 month transition across the full calendar height.
 
-## Server entrypoints (unchanged)
+## Server entrypoints (sidebar)
 
 `getVacationSidebarState`, `addVacationFromSidebar`, `findVacationSidebarOptions`,
 `applyVacationOptionFromSidebar`, `moveVacationFromSidebar`, `cancelVacationFromSidebar`,
 `rebuildVacationScheduleFromSidebar`, `checkVacationRulesFromSidebar`,
 `validateVacationDateFromSidebar`, `generateVacationReportFromSidebar`,
-`openVacationScheduleFromSidebar`, `getVacationMonthCalendarFromSidebar`,
-`getVacationCalendarDayDetailsFromSidebar`.
+`openVacationScheduleFromSidebar`, `openUpdatedVacationScheduleFromSidebar`,
+`applyVacationSuggestionFromSidebar`, `buildVacationBulkFixPlanFromSidebar`,
+`applyVacationBulkFixPlanFromSidebar`, `getVacationMonthCalendarFromSidebar`,
+`getVacationCalendarDayDetailsFromSidebar`, `applyRightPanelMigrationFromSidebar`.
 
 Client: `SidebarApp.handleMenuAction('vacations')` → `showVacationsModule()`.
 
@@ -173,3 +238,10 @@ Client: `SidebarApp.handleMenuAction('vacations')` → `showVacationsModule()`.
 npm run ci:vacations
 npm run ci
 ```
+
+Contract checks in `scripts/verify-vacation-planner.mjs` cover rules, calendar
+payload, tooltip helpers, cell layout, navigation, and absence of static rule
+text in the footer summary.
+
+Manual check after deploy: **WASB → ПАНЕЛЬ → Відпустки → Огляд/План** —
+◀/▶ month switch, tooltip content, day click details, problem highlighting.

@@ -14,7 +14,7 @@ snapshots to the repository.
 | [WASB_RELEASE_AUDIT.md](../WASB_RELEASE_AUDIT.md)                | Production release verdict (CLOSED 2026-06-07)              |
 | [CONTRIBUTING.md](../CONTRIBUTING.md)                            | Local workflow, CI, change policy                           |
 | [AGENTS.md](../AGENTS.md)                                        | Automation-agent instructions                               |
-| [vacation-planner.md](./vacation-planner.md)                     | Vacation planner workflow, source blocks, and rules         |
+| [vacation-planner.md](./vacation-planner.md)                     | Vacation planner, concurrent rules, mini-calendar UX        |
 | [daily-summary-architecture.md](./daily-summary-architecture.md) | Short/detailed day summary modules, formula block, UI flow  |
 | [format-rules-governance.md](./format-rules-governance.md)       | Manual conditional-format registry and rebuild protection   |
 
