@@ -52,6 +52,7 @@
     PERSON_OVERLAP: "Відпустки однієї людини перетинаються",
     START_TOO_CLOSE: "Дати початку занадто близько",
     START_GAP: "Дати початку занадто близько",
+    MIN_PERSON_YEAR: "Немає відпустки у році",
     YEAR_LIMIT: "Забагато відпусток у році",
     MAX_PERSON_YEAR: "Забагато відпусток у році",
     MAX_CONCURRENT: "Забагато людей одночасно у відпустці",
@@ -105,6 +106,12 @@
       return [
         "Скасувати або перенести одну з відпусток цієї людини на інший рік.",
         "Перевірити, чи не дублюється запис у джерелі плану відпусток.",
+      ];
+    }
+    if (type === "MIN_PERSON_YEAR") {
+      return [
+        "Додати першу відпустку для цієї людини у плані відпусток.",
+        "Скористатися підбором дат, щоб знайти безпечний період без нових конфліктів.",
       ];
     }
     if (type === "PERSON_OVERLAP") {
@@ -356,55 +363,55 @@
         "</div>";
     });
     weeks.forEach(function (week) {
-      week.forEach(function (day, dayIndex) {
+      week.forEach(function (day) {
         var classes = ["vacations-mini-calendar__day"];
         if (!day.inMonth) classes.push("vacations-mini-calendar__day--outside");
         if (day.isWeekend) classes.push("vacations-mini-calendar__day--weekend");
-        if (day.overload) classes.push("vacations-mini-calendar__day--overload");
-        else if (day.full) classes.push("vacations-mini-calendar__day--full");
-        var people = Array.isArray(day.vacations) ? day.vacations : [];
-        var visible = people.slice(0, 2);
-        var more = people.length - visible.length;
+        var loadLevel = String(day.loadLevel || "");
+        if (loadLevel === "error" || day.overload) {
+          classes.push("vacations-mini-calendar__day--overload");
+        } else if (loadLevel === "warning") {
+          classes.push("vacations-mini-calendar__day--warning");
+        } else if (loadLevel === "max" || day.full) {
+          classes.push("vacations-mini-calendar__day--max");
+        }
+        var count = Number(day.vacationsCount) || 0;
+        var countLabel = String(count);
+        if (loadLevel === "warning") countLabel = "⚠ " + count;
+        else if (loadLevel === "error" || day.overload) countLabel = "❌ " + count;
         html +=
           '<button type="button" class="' +
           classes.join(" ") +
+          '" title="' +
+          escapeHtml(day.dateIso || "") +
           '" onclick="VacationModule.showCalendarDayDetails(\'' +
           String(day.dateIso || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'") +
           "')\">" +
           '<div class="vacations-mini-calendar__day-number">' +
           escapeHtml(day.day) +
-          "</div>";
-        if (people.length >= 4) {
-          html +=
-            '<div class="vacations-muted">' +
-            escapeHtml(people.length) +
-            " відп.</div>";
-        } else if (people.length) {
-          visible.forEach(function (person) {
-            html +=
-              '<div class="vacations-mini-calendar__person">' +
-              escapeHtml(person.shortLabel || person.callsign || person.fml) +
-              "</div>";
-          });
-          if (more > 0) {
-            html +=
-              '<div class="vacations-mini-calendar__more">+' +
-              escapeHtml(more) +
-              "</div>";
-          }
-        }
-        html += "</button>";
+          "</div>" +
+          '<div class="vacations-mini-calendar__count">' +
+          escapeHtml(countLabel) +
+          "</div>" +
+          "</button>";
       });
     });
     html += "</div>";
     if (calendar.summary) {
       html +=
-        '<div class="vacations-muted vacations-problem-summary-line">Макс. одночасно: ' +
-        escapeHtml(calendar.summary.maxConcurrent || 0) +
-        ", перевантажених днів: " +
-        escapeHtml(calendar.summary.overloadedDays || 0) +
-        ", навантажених (4): " +
-        escapeHtml(calendar.summary.fullDays || 0) +
+        '<div class="vacations-muted vacations-problem-summary-line">' +
+        "Макс. одночасно: " +
+        escapeHtml(
+          calendar.summary.allowedMaxConcurrent ||
+            (calendar.rules && calendar.rules.normalMax) ||
+            3,
+        ) +
+        "<br>Коротке перевантаження: " +
+        escapeHtml(calendar.summary.overloadRule || "4 особи до 3 днів") +
+        "<br>Проблемних дат: " +
+        escapeHtml(calendar.summary.problemDays || 0) +
+        "<br>Навантажених днів: " +
+        escapeHtml(calendar.summary.loadedDays || 0) +
         "</div>";
     }
     html += "</div>";
@@ -826,8 +833,17 @@
         { value: 11, label: "Листопад" },
         { value: 12, label: "Грудень" },
       ];
+      var monthLabel =
+        (months.find(function (item) {
+          return Number(item.value) === month;
+        }) || {}).label || String(month);
       return (
-        '<div class="vacations-form vacations-form--inline vacations-form--spaced">' +
+        '<div class="vacations-form vacations-form--inline vacations-form--spaced vacations-calendar-nav">' +
+        '<button type="button" class="btn btn-secondary vacations-btn-sm" onclick="VacationModule.shiftMonthCalendar(-1)" aria-label="Попередній місяць">◀</button>' +
+        '<span class="vacations-calendar-nav__label">' +
+        this.esc(monthLabel + " " + year) +
+        "</span>" +
+        '<button type="button" class="btn btn-secondary vacations-btn-sm" onclick="VacationModule.shiftMonthCalendar(1)" aria-label="Наступний місяць">▶</button>' +
         "<label for=\"vacCalendarYear\">Рік</label>" +
         '<select id="vacCalendarYear">' +
         years
@@ -1689,49 +1705,100 @@
       this.render();
     },
 
-    showCalendarDayDetails(dateIso) {
-      var calendar = this.state.monthCalendar;
-      if (!calendar || !calendar.success || !dateIso) return;
-      var day = null;
-      (calendar.weeks || []).forEach(function (week) {
-        week.forEach(function (item) {
-          if (item.dateIso === dateIso) day = item;
-        });
-      });
-      if (!day) return;
-      var lines = ["<strong>" + this.fmtDate(day.dateIso) + "</strong>"];
-      if (day.vacationsCount) {
-        lines.push("У відпустці:");
-        (day.vacations || []).forEach(
-          function (item) {
-            lines.push(
-              "- " +
-                this.esc(item.shortLabel || item.fml) +
-                ": " +
-                this.fmtDate(item.startIso) +
-                "–" +
-                this.fmtDate(item.endIso),
-            );
-          }.bind(this),
-        );
-      } else {
+    shiftMonthCalendar(delta) {
+      var year = Number(this.state.calendarYear) || new Date().getFullYear();
+      var month = Number(this.state.calendarMonth) || new Date().getMonth() + 1;
+      month += Number(delta) || 0;
+      while (month < 1) {
+        month += 12;
+        year -= 1;
+      }
+      while (month > 12) {
+        month -= 12;
+        year += 1;
+      }
+      this.state.calendarYear = year;
+      this.state.calendarMonth = month;
+      this.loadMonthCalendar();
+    },
+
+    formatCalendarDayDetailsHtml_(details) {
+      if (!details || !details.success) {
+        return '<div class="vacations-empty">Деталі недоступні.</div>';
+      }
+      var lines = [
+        "<strong>" + this.esc(details.dateLabel || details.dateIso) + "</strong>",
+        "У відпустці: " + this.esc(details.vacationsCount || 0),
+      ];
+      (details.vacations || []).forEach(
+        function (item, index) {
+          lines.push(
+            String(index + 1) +
+              ". " +
+              this.esc(item.fml || item.shortLabel || "") +
+              " — " +
+              this.fmtDate(item.startIso) +
+              "–" +
+              this.fmtDate(item.endIso),
+          );
+        }.bind(this),
+      );
+      if (!details.vacationsCount) {
         lines.push("У відпустці нікого.");
       }
-      if (day.problems && day.problems.length) {
-        lines.push("Проблеми:");
-        day.problems.forEach(
+      if (details.problems && details.problems.length) {
+        lines.push("<strong>Проблема:</strong>");
+        details.problems.forEach(
           function (problem) {
-            lines.push(
-              "- " +
-                this.esc(problem.rule || "—") +
-                ": " +
-                this.esc(problem.message || ""),
-            );
+            lines.push(this.esc(problem.message || problem.rule || "—"));
+            if (problem.explanation) {
+              lines.push(this.esc(problem.explanation));
+            }
           }.bind(this),
         );
       }
-      this.state.calendarDayDetails = lines.join("<br>");
+      var suggestions = Array.isArray(details.fixSuggestions)
+        ? details.fixSuggestions
+        : [];
+      if (suggestions.length) {
+        lines.push("<strong>Варіанти вирішення:</strong>");
+        suggestions.slice(0, 5).forEach(function (item, index) {
+          lines.push(
+            String(index + 1) +
+              ". " +
+              VacationModule.esc(item.title || item.personName || "Перенос") +
+              " — " +
+              VacationModule.esc(item.newStart || "") +
+              "–" +
+              VacationModule.esc(item.newEnd || ""),
+          );
+        });
+      }
+      return lines.join("<br>");
+    },
+
+    async showCalendarDayDetails(dateIso) {
+      var calendar = this.state.monthCalendar;
+      if (!calendar || !calendar.success || !dateIso) return;
+      this.state.calendarDayDetails =
+        '<div class="vacations-muted">Завантаження деталей…</div>';
       this.render();
+      try {
+        showLoading();
+        var details = await runServerMethod_(
+          "getVacationCalendarDayDetailsFromSidebar",
+          [{ dateIso: dateIso }],
+          "VacationModule.showCalendarDayDetails",
+        );
+        this.state.calendarDayDetails = this.formatCalendarDayDetailsHtml_(
+          details,
+        );
+        this.render();
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
     },
 
     async checkDate() {

@@ -638,9 +638,22 @@
   border: 1px solid var(--border-color);
   border-radius: 8px;
   cursor: pointer;
-  min-height: 72px;
+  min-height: 56px;
   padding: 4px;
-  text-align: left;
+  text-align: center;
+}
+
+.vacations-calendar-nav {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vacations-calendar-nav__label {
+  font-size: 14px;
+  font-weight: 700;
+  min-width: 120px;
+  text-align: center;
 }
 
 .vacations-mini-calendar__day--outside {
@@ -651,7 +664,13 @@
   background: var(--bg-secondary);
 }
 
-.vacations-mini-calendar__day--full {
+.vacations-mini-calendar__day--full,
+.vacations-mini-calendar__day--max {
+  background: var(--info-soft-bg, var(--bg-secondary));
+  border-color: var(--accent-color, var(--border-color));
+}
+
+.vacations-mini-calendar__day--warning {
   background: var(--warning-soft-bg);
   border-color: var(--warning-color);
 }
@@ -664,6 +683,14 @@
 .vacations-mini-calendar__day-number {
   font-size: 12px;
   font-weight: 700;
+}
+
+.vacations-mini-calendar__count {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 4px;
 }
 
 .vacations-mini-calendar__person {

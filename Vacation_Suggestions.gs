@@ -459,7 +459,7 @@ const VacationSuggestions_ = (function () {
       return _dateKey_(item.startDate) > newStartKey;
     });
     if (prevVacation && service.daysBetween) {
-      const gap = service.daysBetween(prevVacation.startDate, newStart);
+      const gap = service.daysBetween(prevVacation.endDate, newStart);
       if (gap < rules.MIN_DAYS_GAP) {
         hardErrors.push(
           "Інтервал між відпустками " +
@@ -470,7 +470,7 @@ const VacationSuggestions_ = (function () {
       }
     }
     if (nextVacation && service.daysBetween) {
-      const gap = service.daysBetween(newStart, nextVacation.startDate);
+      const gap = service.daysBetween(newEnd, nextVacation.startDate);
       if (gap < rules.MIN_DAYS_GAP) {
         hardErrors.push(
           "Не можна застосувати автоматично: порушується інтервал до наступної відпустки " +
@@ -502,12 +502,28 @@ const VacationSuggestions_ = (function () {
         _normalized_(context),
       ).length;
       const afterCount = _peopleOnDate_(issueKey, modified).length;
-      if (afterCount > rules.MAX_CONCURRENT) {
+      const errorAt =
+        Number(rules.ABSOLUTE_MAX_CONCURRENT) ||
+        Number(rules.OVERLOAD_CONCURRENT) + 1 ||
+        5;
+      const overloadAt =
+        Number(rules.OVERLOAD_CONCURRENT) ||
+        Number(rules.MAX_CONCURRENT) + 1 ||
+        4;
+      if (afterCount >= errorAt) {
         hardErrors.push(
           "Кандидат не виправляє перевищення одночасного навантаження",
         );
+      } else if (beforeCount >= errorAt && afterCount >= beforeCount) {
+        disqualified = true;
+      } else if (
+        beforeCount > overloadAt &&
+        afterCount >= beforeCount
+      ) {
+        disqualified = true;
       } else if (
         beforeCount > rules.MAX_CONCURRENT &&
+        afterCount > rules.MAX_CONCURRENT &&
         afterCount >= beforeCount
       ) {
         disqualified = true;
@@ -749,18 +765,7 @@ const VacationSuggestions_ = (function () {
   }
 
   function _topSuggestions_(suggestions) {
-    const byPerson = {};
-    _dedupeSuggestions_(suggestions).forEach(function (item) {
-      const key = item.personName || item.title || "";
-      if (!key) return;
-      if (!byPerson[key] || item.score < byPerson[key].score) {
-        byPerson[key] = item;
-      }
-    });
-    return Object.keys(byPerson)
-      .map(function (key) {
-        return byPerson[key];
-      })
+    return _dedupeSuggestions_(suggestions)
       .filter(function (item) {
         return Number(item.score) < 9999;
       })
@@ -878,7 +883,7 @@ const VacationSuggestions_ = (function () {
     if (!later || !earlier) return [];
     if (_isLocked_(later, context)) return [];
 
-    const minStart = _addDays_(earlier.startDate, rules.MIN_DAYS_GAP);
+    const minStart = _addDays_(earlier.endDate, rules.MIN_DAYS_GAP);
     const startDates = [minStart];
     for (let offset = 1; offset <= SEARCH_FORWARD_DAYS; offset++) {
       startDates.push(_addDays_(minStart, offset));

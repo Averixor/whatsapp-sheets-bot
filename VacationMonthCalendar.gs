@@ -24,6 +24,21 @@ const VacationMonthCalendar_ = (function () {
       .trim();
   }
 
+  function _rules_() {
+    const rules =
+      (typeof VACATION_PLANNER_CONFIG === "object" &&
+        VACATION_PLANNER_CONFIG &&
+        VACATION_PLANNER_CONFIG.RULES) ||
+      {};
+    return {
+      normalMax: Number(rules.MAX_CONCURRENT) || 3,
+      overloadCount: Number(rules.OVERLOAD_CONCURRENT) || 4,
+      overloadMaxStreak: Number(rules.OVERLOAD_MAX_CONSECUTIVE_DAYS) || 3,
+      errorMin: Number(rules.ABSOLUTE_MAX_CONCURRENT) || 5,
+      minStartGapDays: Number(rules.MIN_START_GAP_DAYS) || 2,
+    };
+  }
+
   function _timeZone_() {
     try {
       if (typeof getTimeZone_ === "function") return getTimeZone_();
@@ -152,10 +167,209 @@ const VacationMonthCalendar_ = (function () {
     return copy;
   }
 
+  function _addDaysFromIso_(dateIso, amount) {
+    const parsed = _parseDate_(dateIso);
+    if (!parsed) return null;
+    return _addDays_(parsed, amount);
+  }
+
   function _vacationsOnDate_(dateIso, vacations) {
     return vacations.filter(function (item) {
       return dateIso >= item.startIso && dateIso <= item.endIso;
     });
+  }
+
+  function _buildDailyCounts_(vacations) {
+    const counts = {};
+    vacations.forEach(function (item) {
+      let cursor = new Date(item.startDate.getTime());
+      const end = item.endDate;
+      let guard = 0;
+      while (cursor.getTime() <= end.getTime() && guard < 730) {
+        const key = _dateKey_(cursor);
+        counts[key] = (counts[key] || 0) + 1;
+        cursor = _addDays_(cursor, 1);
+        guard++;
+      }
+    });
+    return counts;
+  }
+
+  function _buildFourPersonStreakByDate_(dailyCounts, overloadCount) {
+    const streakByDate = {};
+    const dates = Object.keys(dailyCounts).sort();
+    let streakStart = "";
+    let streakLen = 0;
+
+    function flushStreak() {
+      if (!streakStart || streakLen <= 0) return;
+      for (let offset = 0; offset < streakLen; offset++) {
+        const day = _addDaysFromIso_(streakStart, offset);
+        const key = _dateKey_(day);
+        if (key) streakByDate[key] = streakLen;
+      }
+    }
+
+    dates.forEach(function (dateIso) {
+      if (Number(dailyCounts[dateIso]) === overloadCount) {
+        if (!streakStart) {
+          streakStart = dateIso;
+          streakLen = 1;
+        } else {
+          streakLen++;
+        }
+      } else {
+        flushStreak();
+        streakStart = "";
+        streakLen = 0;
+      }
+    });
+    flushStreak();
+    return streakByDate;
+  }
+
+  function _classifyDayLoad_(count, fourStreakLen, rules) {
+    if (count >= rules.errorMin) {
+      return {
+        loadLevel: "error",
+        severity: "ERROR",
+        rule: "MAX_CONCURRENT",
+        message:
+          count +
+          " осіб одночасно у відпустці. Допускається максимум " +
+          rules.normalMax +
+          ".",
+        explanation:
+          "Одночасно " +
+          count +
+          " людей — це завжди порушення (ліміт " +
+          rules.normalMax +
+          ", коротке перевантаження лише " +
+          rules.overloadCount +
+          " особи до " +
+          rules.overloadMaxStreak +
+          " днів).",
+      };
+    }
+    if (count === rules.overloadCount) {
+      if (fourStreakLen > rules.overloadMaxStreak) {
+        return {
+          loadLevel: "error",
+          severity: "ERROR",
+          rule: "OVERLOAD_STREAK",
+          message:
+            rules.overloadCount +
+            " особи одночасно більше " +
+            rules.overloadMaxStreak +
+            " днів підряд.",
+          explanation:
+            rules.overloadCount +
+            " особи дозволено лише як коротке перевантаження до " +
+            rules.overloadMaxStreak +
+            " днів.",
+        };
+      }
+      return {
+        loadLevel: "warning",
+        severity: "WARNING",
+        rule: "HIGH_LOAD_PERIOD",
+        message:
+          rules.overloadCount +
+          " особи одночасно (коротке перевантаження до " +
+          rules.overloadMaxStreak +
+          " днів).",
+        explanation:
+          "Допускається максимум " +
+          rules.normalMax +
+          " людини. " +
+          rules.overloadCount +
+          " особи — лише до " +
+          rules.overloadMaxStreak +
+          " днів.",
+      };
+    }
+    if (count === rules.normalMax) {
+      return {
+        loadLevel: "max",
+        severity: "INFO",
+        rule: "",
+        message: count + " особи — граничне навантаження.",
+        explanation: "Максимальна допустима одночасна навантаження.",
+      };
+    }
+    return {
+      loadLevel: "normal",
+      severity: "INFO",
+      rule: "",
+      message: "",
+      explanation: "",
+    };
+  }
+
+  function _daysBetweenIso_(leftIso, rightIso) {
+    const left = _parseDate_(leftIso);
+    const right = _parseDate_(rightIso);
+    if (!left || !right) return NaN;
+    return Math.round((right.getTime() - left.getTime()) / 86400000);
+  }
+
+  function _startsTooCloseProblems_(dateIso, vacations, rules) {
+    const problems = [];
+    const starters = vacations.filter(function (item) {
+      return item.startIso === dateIso;
+    });
+    if (!starters.length) return problems;
+
+    const closeNames = {};
+    starters.forEach(function (starter) {
+      vacations.forEach(function (other) {
+        if (starter === other) return;
+        if (_trim_(starter.fml).toUpperCase() === _trim_(other.fml).toUpperCase()) {
+          return;
+        }
+        const gap = Math.abs(_daysBetweenIso_(starter.startIso, other.startIso));
+        if (Number.isFinite(gap) && gap < rules.minStartGapDays) {
+          closeNames[starter.fml] = true;
+          closeNames[other.fml] = true;
+        }
+      });
+    });
+
+    const people = Object.keys(closeNames);
+    if (people.length < 2) return problems;
+    problems.push({
+      rule: "START_GAP",
+      severity: "ERROR",
+      message:
+        "Старт відпусток ближче ніж " +
+        rules.minStartGapDays +
+        " дні: " +
+        people.join(", ") +
+        ".",
+      explanation:
+        "Між стартами різних людей має бути не менше " +
+        rules.minStartGapDays +
+        " днів.",
+      fml: people.join(" / "),
+    });
+    return problems;
+  }
+
+  function _buildDayProblems_(dateIso, dayVacations, loadInfo, rules, vacations) {
+    const problems = [];
+    if (loadInfo.rule && loadInfo.loadLevel !== "normal" && loadInfo.loadLevel !== "max") {
+      problems.push({
+        rule: loadInfo.rule,
+        severity: loadInfo.severity,
+        message: loadInfo.message,
+        explanation: loadInfo.explanation,
+      });
+    }
+    problems.push.apply(
+      problems,
+      _startsTooCloseProblems_(dateIso, vacations, rules),
+    );
+    return problems;
   }
 
   function getVacationMonthCalendar_(options) {
@@ -176,12 +390,13 @@ const VacationMonthCalendar_ = (function () {
       };
     }
 
-    const maxConcurrent =
-      (VACATION_PLANNER_CONFIG &&
-        VACATION_PLANNER_CONFIG.RULES &&
-        VACATION_PLANNER_CONFIG.RULES.MAX_CONCURRENT) ||
-      4;
+    const rules = _rules_();
     const vacations = _normalizeSourceVacations_();
+    const dailyCounts = _buildDailyCounts_(vacations);
+    const fourStreakByDate = _buildFourPersonStreakByDate_(
+      dailyCounts,
+      rules.overloadCount,
+    );
     const monthStart = new Date(year, month - 1, 1, 12, 0, 0, 0);
     const monthEnd = new Date(year, month, 0, 12, 0, 0, 0);
     const monthStartIso = _dateKey_(monthStart);
@@ -197,10 +412,10 @@ const VacationMonthCalendar_ = (function () {
     );
 
     const weeks = [];
-    let totalVacationDays = 0;
+    let loadedDays = 0;
     let maxConcurrentCount = 0;
-    let overloadedDays = 0;
-    let fullDays = 0;
+    let problemDays = 0;
+    let warningDays = 0;
     let cursor = new Date(gridStart.getTime());
 
     while (cursor.getTime() <= gridEnd.getTime()) {
@@ -210,29 +425,31 @@ const VacationMonthCalendar_ = (function () {
         const inMonth =
           cursor.getFullYear() === year && cursor.getMonth() === month - 1;
         const dayVacations = _vacationsOnDate_(dateIso, monthVacations);
-        const vacationsCount = dayVacations.length;
-        const full = vacationsCount === maxConcurrent;
-        const overload = vacationsCount > maxConcurrent;
-        const problems = [];
-        if (overload) {
-          problems.push({
-            rule: "MAX_CONCURRENT",
-            message: vacationsCount + "/" + maxConcurrent,
-          });
-        } else if (full) {
-          problems.push({
-            rule: "HIGH_LOAD_PERIOD",
-            message: vacationsCount + "/" + maxConcurrent,
-          });
-        }
+        const vacationsCount = Number(dailyCounts[dateIso] || dayVacations.length);
+        const fourStreakLen = Number(fourStreakByDate[dateIso] || 0);
+        const loadInfo = _classifyDayLoad_(vacationsCount, fourStreakLen, rules);
+        const problems = _buildDayProblems_(
+          dateIso,
+          dayVacations,
+          loadInfo,
+          rules,
+          monthVacations,
+        );
+        const overload = loadInfo.loadLevel === "error";
+        const full = loadInfo.loadLevel === "max";
 
-        if (inMonth && vacationsCount > 0) {
-          totalVacationDays += vacationsCount;
+        if (inMonth) {
+          if (vacationsCount > 0) loadedDays++;
           if (vacationsCount > maxConcurrentCount) {
             maxConcurrentCount = vacationsCount;
           }
-          if (overload) overloadedDays++;
-          if (full) fullDays++;
+          const hasBlockingProblem =
+            overload ||
+            problems.some(function (item) {
+              return item.rule === "START_GAP";
+            });
+          if (hasBlockingProblem) problemDays++;
+          else if (loadInfo.loadLevel === "warning") warningDays++;
         }
 
         week.push({
@@ -241,8 +458,10 @@ const VacationMonthCalendar_ = (function () {
           inMonth: inMonth,
           isWeekend: cursor.getDay() === 0 || cursor.getDay() === 6,
           vacationsCount: vacationsCount,
+          loadLevel: loadInfo.loadLevel,
           overload: overload,
           full: full,
+          fourPersonStreak: fourStreakLen,
           vacations: dayVacations.map(function (item) {
             return {
               fml: item.fml,
@@ -267,18 +486,135 @@ const VacationMonthCalendar_ = (function () {
       monthLabel: MONTHS_UA[month - 1] + " " + year,
       source: "A:I",
       weeks: weeks,
-      summary: {
-        totalVacationDays: totalVacationDays,
-        maxConcurrent: maxConcurrentCount,
-        overloadedDays: overloadedDays,
-        fullDays: fullDays,
-        vacationRecords: monthVacations.length,
+      rules: {
+        normalMax: rules.normalMax,
+        overloadCount: rules.overloadCount,
+        overloadMaxStreak: rules.overloadMaxStreak,
       },
+      summary: {
+        allowedMaxConcurrent: rules.normalMax,
+        overloadRule:
+          rules.overloadCount +
+          " особи до " +
+          rules.overloadMaxStreak +
+          " днів",
+        maxConcurrent: maxConcurrentCount,
+        problemDays: problemDays,
+        warningDays: warningDays,
+        loadedDays: loadedDays,
+        vacationRecords: monthVacations.length,
+        overloadedDays: problemDays,
+        fullDays: warningDays,
+        totalVacationDays: loadedDays,
+      },
+    };
+  }
+
+  function _findDayInCalendar_(calendar, dateIso) {
+    if (!calendar || !calendar.success || !dateIso) return null;
+    let found = null;
+    (calendar.weeks || []).forEach(function (week) {
+      week.forEach(function (day) {
+        if (day.dateIso === dateIso) found = day;
+      });
+    });
+    return found;
+  }
+
+  function _formatUaDate_(dateIso) {
+    const match = String(dateIso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return dateIso;
+    return match[3] + "." + match[2] + "." + match[1];
+  }
+
+  function _primaryIssueForDay_(day) {
+    if (!day || !Array.isArray(day.problems) || !day.problems.length) {
+      return null;
+    }
+    const priority = ["MAX_CONCURRENT", "OVERLOAD_STREAK", "HIGH_LOAD_PERIOD", "START_GAP"];
+    for (let i = 0; i < priority.length; i++) {
+      const match = day.problems.find(function (item) {
+        return item.rule === priority[i];
+      });
+      if (match) {
+        return {
+          rule: match.rule === "OVERLOAD_STREAK" ? "MAX_CONCURRENT" : match.rule,
+          date: day.dateIso,
+          fml: match.fml || (day.vacations || [])
+            .map(function (item) {
+              return item.fml;
+            })
+            .join(", "),
+          severity: match.severity,
+          details: match.message,
+        };
+      }
+    }
+    return null;
+  }
+
+  function getVacationCalendarDayDetails_(options) {
+    const opts = options || {};
+    const dateIso = _trim_(opts.dateIso);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateIso)) {
+      return { success: false, message: "Некоректна дата." };
+    }
+
+    const parts = dateIso.split("-");
+    const calendar = getVacationMonthCalendar_({
+      year: Number(parts[0]),
+      month: Number(parts[1]),
+    });
+    if (!calendar.success) return calendar;
+
+    const day = _findDayInCalendar_(calendar, dateIso);
+    if (!day) {
+      return { success: false, message: "Дату не знайдено в календарі." };
+    }
+
+    const issue = _primaryIssueForDay_(day);
+    let fixSuggestions = [];
+    if (
+      issue &&
+      typeof VacationSuggestions_ === "object" &&
+      VacationSuggestions_ &&
+      typeof VacationSuggestions_.buildVacationFixSuggestions_ === "function" &&
+      typeof VacationSuggestions_.buildSuggestionContext_ === "function"
+    ) {
+      const context = VacationSuggestions_.buildSuggestionContext_(
+        [],
+        _normalizeSourceVacations_(),
+      );
+      const result = VacationSuggestions_.buildVacationFixSuggestions_(
+        issue,
+        context,
+      );
+      fixSuggestions = Array.isArray(result && result.suggestions)
+        ? result.suggestions
+        : [];
+    }
+
+    return {
+      success: true,
+      dateIso: dateIso,
+      dateLabel: _formatUaDate_(dateIso),
+      vacationsCount: day.vacationsCount,
+      loadLevel: day.loadLevel,
+      vacations: day.vacations,
+      problems: day.problems,
+      fixSuggestions: fixSuggestions,
+      suggestionTexts:
+        typeof VacationSuggestions_ === "object" &&
+        VacationSuggestions_ &&
+        typeof VacationSuggestions_.formatSuggestionTexts_ === "function"
+          ? VacationSuggestions_.formatSuggestionTexts_(fixSuggestions)
+          : [],
     };
   }
 
   return {
     getVacationMonthCalendar_: getVacationMonthCalendar_,
+    getVacationCalendarDayDetails_: getVacationCalendarDayDetails_,
   };
 })();
 
@@ -288,4 +624,12 @@ function getVacationMonthCalendarFromSidebar(formData) {
 
 function getVacationMonthCalendar_(options) {
   return VacationMonthCalendar_.getVacationMonthCalendar_(options || {});
+}
+
+function getVacationCalendarDayDetailsFromSidebar(formData) {
+  return VacationMonthCalendar_.getVacationCalendarDayDetails_(formData || {});
+}
+
+function getVacationCalendarDayDetails_(options) {
+  return VacationMonthCalendar_.getVacationCalendarDayDetails_(options || {});
 }

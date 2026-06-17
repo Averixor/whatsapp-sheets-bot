@@ -556,6 +556,21 @@ const VacationSidebarService_ = (function () {
     return VacationMonthCalendar_.getVacationMonthCalendar_(formData || {});
   }
 
+  function getCalendarDayDetails(formData) {
+    _assertWorkingAccess_("getVacationCalendarDayDetailsFromSidebar");
+    if (
+      typeof VacationMonthCalendar_ !== "object" ||
+      !VacationMonthCalendar_ ||
+      typeof VacationMonthCalendar_.getVacationCalendarDayDetails_ !==
+        "function"
+    ) {
+      throw new Error("Деталі дня календаря недоступні");
+    }
+    return VacationMonthCalendar_.getVacationCalendarDayDetails_(
+      formData || {},
+    );
+  }
+
   function applyRightPanelMigration() {
     _assertWorkingAccess_("applyRightPanelMigrationFromSidebar");
     return _withDocumentLock_(function () {
@@ -617,6 +632,7 @@ const VacationSidebarService_ = (function () {
     buildBulkFixPlan: buildBulkFixPlan,
     applyBulkFixPlan: applyBulkFixPlan,
     getMonthCalendar: getMonthCalendar,
+    getCalendarDayDetails: getCalendarDayDetails,
     applyRightPanelMigration: applyRightPanelMigration,
   };
 })();
@@ -695,6 +711,10 @@ function applyVacationBulkFixPlanFromSidebar(formData) {
 
 function getVacationMonthCalendarFromSidebar(formData) {
   return VacationSidebarService_.getMonthCalendar(formData);
+}
+
+function getVacationCalendarDayDetailsFromSidebar(formData) {
+  return VacationSidebarService_.getCalendarDayDetails(formData);
 }
 
 function applyRightPanelMigrationFromSidebar() {

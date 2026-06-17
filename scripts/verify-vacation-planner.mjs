@@ -90,9 +90,10 @@ const startGapCheck = service.validateVacationOption(
   },
   [vacation("Інша Людина", "2026-07-11", "2026-07-25")],
 );
-assert.equal(startGapCheck.isValid, true);
-assert.ok(startGapCheck.warnings.some((item) => item.rule === "START_GAP"));
-assert.equal(startGapCheck.blockingViolations.length, 0);
+assert.equal(startGapCheck.isValid, false);
+assert.ok(
+  startGapCheck.blockingViolations.some((item) => item.rule === "START_GAP"),
+);
 
 const concurrent = ["A", "B", "C", "D"].map((fml) =>
   vacation(fml, "2026-07-01", "2026-07-31"),
@@ -150,9 +151,10 @@ const personGapCheck = service.validateVacationOption(
   },
   [vacation("Своя Людина", "2026-01-01", "2026-01-15", 1)],
 );
-assert.equal(personGapCheck.isValid, true);
-assert.ok(personGapCheck.warnings.some((item) => item.rule === "PERSON_GAP"));
-assert.equal(personGapCheck.blockingViolations.length, 0);
+assert.equal(personGapCheck.isValid, false);
+assert.ok(
+  personGapCheck.blockingViolations.some((item) => item.rule === "PERSON_GAP"),
+);
 
 const requestSourceVacation = {
   ...vacation("Заявка За ID", "2026-05-01", "2026-05-15", 1),
@@ -164,7 +166,7 @@ const newSameSlotRequest = service.validateVacationOption(
     fml: "Заявка За ID",
     vacationNumber: 1,
     startDate: date("2026-05-10"),
-    endDate: date("2026-05-20"),
+    endDate: date("2026-05-24"),
   },
   [requestSourceVacation],
 );
@@ -196,7 +198,7 @@ const renamedPersonOverlap = service.validateVacationOption(
     fml: "Нове ПІБ",
     vacationNumber: 2,
     startDate: date("2026-05-10"),
-    endDate: date("2026-05-20"),
+    endDate: date("2026-05-24"),
   },
   [
     {
@@ -225,6 +227,11 @@ const unitLoad = [
   vacation("B", "2026-07-01", "2026-07-31"),
   vacation("C", "2026-07-01", "2026-07-31"),
 ];
+const shortUnitLoad = [
+  vacation("A", "2026-07-10", "2026-07-17"),
+  vacation("B", "2026-07-11", "2026-07-17"),
+  vacation("C", "2026-07-12", "2026-07-17"),
+];
 const quietOption = {
   fml: requestBase.fml,
   vacationNumber: 1,
@@ -239,10 +246,20 @@ const busyOption = {
 };
 const quietValidation = service.validateVacationOption(quietOption, unitLoad);
 const busyValidation = service.validateVacationOption(busyOption, unitLoad);
+const shortBusyValidation = service.validateVacationOption(
+  busyOption,
+  shortUnitLoad,
+);
 assert.equal(quietValidation.isValid, true);
-assert.equal(busyValidation.isValid, true);
 assert.ok(
-  busyValidation.warnings.some((item) => item.rule === "HIGH_LOAD_PERIOD"),
+  busyValidation.blockingViolations.some(
+    (item) => item.rule === "OVERLOAD_STREAK",
+  ),
+  "4 people for more than 3 consecutive days must be blocking",
+);
+assert.equal(shortBusyValidation.isValid, true);
+assert.ok(
+  shortBusyValidation.warnings.some((item) => item.rule === "HIGH_LOAD_PERIOD"),
 );
 const quietScore = service.scoreVacationOption(
   quietOption,
@@ -252,13 +269,13 @@ const quietScore = service.scoreVacationOption(
 );
 const busyScore = service.scoreVacationOption(
   busyOption,
-  unitLoad,
+  shortUnitLoad,
   requestBase,
-  busyValidation,
+  shortBusyValidation,
 );
 assert.ok(
   quietScore < busyScore,
-  "scheduler must prefer lower unit load over higher peak periods",
+  "scheduler must prefer lower unit load over short overload periods",
 );
 const compromiseOptions = service.suggestVacationOptions(
   {
@@ -268,7 +285,7 @@ const compromiseOptions = service.suggestVacationOptions(
     durationDays: 15,
     searchWindow: 0,
   },
-  unitLoad,
+  shortUnitLoad,
 );
 assert.equal(compromiseOptions[0].status, "COMPROMISE");
 assert.match(compromiseOptions[0].explanation, /Попередження:/);
@@ -277,7 +294,7 @@ const monthBalanceCheck = service.validateVacationOption(
   {
     fml: "Третій Старт",
     vacationNumber: 1,
-    startDate: date("2026-06-20"),
+    startDate: date("2026-06-16"),
     endDate: date("2026-06-30"),
   },
   [
@@ -295,7 +312,7 @@ const monthBalanceFiveCheck = service.validateVacationOption(
     fml: "П'ятий Старт",
     vacationNumber: 1,
     startDate: date("2026-06-25"),
-    endDate: date("2026-06-30"),
+    endDate: date("2026-07-09"),
   },
   [
     vacation("Перший Старт", "2026-06-01", "2026-06-05"),
@@ -347,7 +364,7 @@ const audit = service.buildScheduleAudit(concurrent);
 assert.equal(audit.schedule.length, 4);
 assert.ok(
   !audit.checks.some((item) => item.rule === "MAX_CONCURRENT"),
-  "four concurrent people are allowed",
+  "exactly four concurrent people are not an absolute max violation",
 );
 assert.ok(
   audit.checks.some(
@@ -355,13 +372,17 @@ assert.ok(
   ),
   "four concurrent people must produce a non-blocking load warning",
 );
+assert.ok(
+  audit.checks.some((item) => item.rule === "OVERLOAD_STREAK"),
+  "four concurrent people for a whole month must exceed short overload streak",
+);
 const overloadedAudit = service.buildScheduleAudit([
   ...concurrent,
   vacation("E", "2026-07-01", "2026-07-31"),
 ]);
 assert.ok(
   overloadedAudit.checks.some((item) => item.rule === "MAX_CONCURRENT"),
-  "rebuild audit must report more than four concurrent people",
+  "rebuild audit must report five or more concurrent people",
 );
 const overlapAudit = service.buildScheduleAudit([
   vacation("Перетин Людини", "2026-01-01", "2026-01-15", 1),
@@ -438,6 +459,25 @@ assert.ok(
       item.date.includes("2026-06-12"),
   ),
   "dates absent from monthly sheets must not produce false positives",
+);
+
+const annualMinimumAudit = service.buildConsistencyAudit(
+  [vacation("Запланована Людина", "2026-08-01", "2026-08-15")],
+  [
+    { fml: "Запланована Людина", active: true, status: "В наявності" },
+    { fml: "Без Плану", active: true, status: "В наявності" },
+    { fml: "Неактивна Людина", active: false, status: "Вибув" },
+  ],
+  [],
+  date("2026-06-11"),
+);
+assert.deepEqual(
+  Array.from(
+    annualMinimumAudit.filter((item) => item.rule === "MIN_PERSON_YEAR"),
+    (item) => item.fml,
+  ),
+  ["Без Плану"],
+  "active PERSONNEL rows without an annual vacation plan must be reported",
 );
 
 const requestStatusAudit = service.buildConsistencyAudit(
@@ -1382,8 +1422,8 @@ const dec2026Vacations = [
   ),
   vacationWithMeta(
     "Рябінін Сергій Олексійович",
-    "2027-06-03",
-    "2027-06-17",
+    "2027-09-03",
+    "2027-09-17",
     1,
     {
       rowNumber: 16,
@@ -1439,9 +1479,9 @@ assert.equal(
 );
 assert.ok(
   overlapSuggestions.every(
-    (item) => item.oldStart !== "03.06.2027" && item.oldEnd !== "17.06.2027",
+    (item) => item.oldStart !== "03.09.2027" && item.oldEnd !== "17.09.2027",
   ),
-  "overlap suggestions must not move unrelated Ryabinin vacation in June 2027",
+  "overlap suggestions must not move unrelated Ryabinin vacation in September 2027",
 );
 assert.equal(
   service.daysBetween(date("2026-12-21"), date("2027-01-04")) + 1,
@@ -1518,8 +1558,8 @@ const intervalSuggestions = suggestionsModule.suggestForMinInterval_(
 );
 assert.ok(intervalSuggestions.length >= 1, "interval suggestions must exist");
 assert.ok(
-  intervalSuggestions.some((item) => item.newStartIso >= "2027-01-02"),
-  "interval suggestion must start at previousStart + 150 days",
+  intervalSuggestions.some((item) => item.newStartIso >= "2027-01-16"),
+  "interval suggestion must start at previousEnd + 150 days",
 );
 
 const june2026Vacations = [
@@ -2048,8 +2088,8 @@ sourceSheet = new FakeSheet(
 );
 generatedSheets = {};
 const gapReport = writer.generateVacationReport();
-assert.equal(gapReport.errorCount, 0, "short gaps must not be blocking");
-assert.ok(gapReport.warningCount > 0, "gap report must include warnings");
+assert.ok(gapReport.errorCount > 0, "short gaps must be blocking");
+assert.equal(gapReport.warningCount, 0, "short gap report must not include warnings");
 assert.ok(gapReport.problemCount > 0, "gap report must include problems");
 assert.match(gapReport.summary, /⚠️ Проблемні питання: \d+/);
 assert.match(gapReport.summary, /• Замалий інтервал між відпустками —/);
@@ -2187,6 +2227,7 @@ const problemSuggestions = vm.runInContext(
 const problemTypes = [
   "INVALID_DATE",
   "INVALID_DURATION",
+  "MIN_PERSON_YEAR",
   "MAX_PERSON_YEAR",
   "PERSON_OVERLAP",
   "PERSON_GAP",
@@ -2458,7 +2499,9 @@ assert.match(jsVacations, /Застосувати пакетне рішення/
 assert.match(jsVacations, /buildVacationBulkFixPlanFromSidebar/);
 assert.match(jsVacations, /applyVacationBulkFixPlanFromSidebar/);
 assert.match(jsVacations, /getVacationMonthCalendarFromSidebar/);
+assert.match(jsVacations, /getVacationCalendarDayDetailsFromSidebar/);
 assert.match(jsVacations, /loadMonthCalendar\(/);
+assert.match(jsVacations, /shiftMonthCalendar\(/);
 assert.match(jsVacations, /renderMonthCalendar\(/);
 assert.match(jsVacations, /showCalendarDayDetails\(/);
 assert.match(jsVacations, /for=\\"vacCalendarYear\\"/);
@@ -2469,10 +2512,26 @@ assert.match(jsVacations, /for=\\"vacCheckDays\\"/);
 assert.match(sidebarService, /buildVacationBulkFixPlanFromSidebar/);
 assert.match(sidebarService, /applyVacationBulkFixPlanFromSidebar/);
 assert.match(sidebarService, /getVacationMonthCalendarFromSidebar/);
+assert.match(sidebarService, /getVacationCalendarDayDetailsFromSidebar/);
 assert.match(
   stylesPersonnel,
-  /\.vacations-mini-calendar__day--full/,
-  "mini calendar must style full days",
+  /\.vacations-mini-calendar__day--warning/,
+  "mini calendar must style warning days",
+);
+assert.match(
+  stylesPersonnel,
+  /\.vacations-mini-calendar__day--max/,
+  "mini calendar must style max-load days",
+);
+assert.match(
+  stylesPersonnel,
+  /\.vacations-mini-calendar__count/,
+  "mini calendar must render count-only cells",
+);
+assert.doesNotMatch(
+  jsVacations,
+  /vacations-mini-calendar__person/,
+  "mini calendar cells must not render person labels",
 );
 assert.match(
   stylesPersonnel,
@@ -2629,7 +2688,8 @@ assert.match(bulkFixSource, /function buildVacationBulkFixPlanFromSidebar/);
 assert.match(bulkFixSource, /function applyVacationBulkFixPlanFromSidebar/);
 assert.match(bulkFixSource, /function validateVacationBulkFixPlan_/);
 assert.match(bulkFixSource, /vacation\.bulk_plan\.stale/);
-assert.match(monthCalendarSource, /function getVacationMonthCalendarFromSidebar/);
+assert.match(monthCalendarSource, /function getVacationCalendarDayDetailsFromSidebar/);
+assert.match(monthCalendarSource, /loadLevel/);
 assert.match(monthCalendarSource, /readVacationSource_\(\)/);
 assert.doesNotMatch(monthCalendarSource, /readRightPanelRows/);
 
@@ -2736,16 +2796,22 @@ assert.ok(
   decemberDays.some((item) => item.dateIso === "2027-01-01" && item.inMonth === false),
   "January spillover day stays outside selected month grid cell",
 );
-assert.equal(dec20.full, true);
+assert.equal(dec20.loadLevel, "warning");
 assert.equal(dec20.overload, false);
 assert.equal(dec20.vacationsCount, 4);
 const overloadDay = decemberDays.find((item) => item.dateIso === "2026-12-21");
 assert.ok(overloadDay, "Dec 21 must exist in calendar grid");
+assert.equal(overloadDay.loadLevel, "error");
 assert.equal(overloadDay.overload, true);
 assert.equal(overloadDay.vacationsCount, 5);
-const fullDay = decemberDays.find((item) => item.dateIso === "2026-12-24");
-assert.ok(fullDay, "Dec 24 must exist in calendar grid");
-assert.equal(fullDay.full, true, "day with 4 vacations must be full");
-assert.equal(fullDay.overload, false, "day with exactly 4 vacations must not be overload");
+const warningDay = decemberDays.find((item) => item.dateIso === "2026-12-24");
+assert.ok(warningDay, "Dec 24 must exist in calendar grid");
+assert.equal(warningDay.loadLevel, "warning");
+assert.equal(warningDay.overload, false);
+assert.equal(warningDay.vacationsCount, 4);
+assert.ok(
+  december.summary.problemDays >= 1,
+  "December must report at least one problem day",
+);
 
 console.log("verify-vacation-planner: OK");

@@ -103,12 +103,51 @@ changes `PERSONNEL`, monthly sheets, reminders, or `Calculation_OS`.
 
 Blocking rules prevent a write: invalid option/date/duration, a person's own
 overlap, more than two vacations per person/year, and exceeding the hard
-concurrent limit.
+concurrent limit (**5+ people** on one day, or **4 people for more than 3
+consecutive days**).
 
 Warnings remain visible but allow the write: a short preferred gap, close start
-dates, reaching (without exceeding) the concurrent limit, and three or more
-vacation starts in one month. Main-panel actions explicitly report when a
-vacation was applied with warnings.
+dates, **exactly 3 people** (borderline load), **4 people for up to 3 consecutive
+days** (short overload), and three or more vacation starts in one month.
+Main-panel actions explicitly report when a vacation was applied with warnings.
+
+Normal concurrent load: **up to 3 people** at once.
+
+## Month mini-calendar (Огляд / План)
+
+The sidebar mini-calendar reads the same `A:I` vacation source as the planner.
+Cells show **only the day number and how many people are on vacation** — no
+callsigns or truncated names inside the grid.
+
+| Count in cell | Meaning |
+| ------------- | ------- |
+| 0–2 | normal load |
+| 3 | maximum allowed load |
+| ⚠ 4 | short overload (allowed up to 3 consecutive days) |
+| ❌ 5+ | error |
+
+Navigation: **◀ / ▶**, year/month selectors, **Показати місяць**. Cross-month
+vacations appear in every month they touch.
+
+Click a day to open details: full name list, vacation ranges, problem text, and
+up to five validated move suggestions from `Vacation_Suggestions.gs`
+(`getVacationCalendarDayDetailsFromSidebar`).
+
+Annual audit checks active `PERSONNEL` rows against the selected audit year:
+every active person must have at least one planned vacation, and no person may
+have more than two.
+
+Footer summary under the grid:
+
+```text
+Макс. одночасно: 3
+Коротке перевантаження: 4 особи до 3 днів
+Проблемних дат: …
+Навантажених днів: …
+```
+
+Modules: `VacationMonthCalendar.gs`, client `Js.Vacations.html`,
+`Styles_30_Personnel.html`.
 
 `VACATION_SCHEDULE` keeps `QUANTITY | FML` in columns `A:B`. Only calendar
 cells from `C2` are colored: `В1`, `В2`, `ВД`, `СО`, and mixed markers use
@@ -121,7 +160,8 @@ month transition across the full calendar height.
 `applyVacationOptionFromSidebar`, `moveVacationFromSidebar`, `cancelVacationFromSidebar`,
 `rebuildVacationScheduleFromSidebar`, `checkVacationRulesFromSidebar`,
 `validateVacationDateFromSidebar`, `generateVacationReportFromSidebar`,
-`openVacationScheduleFromSidebar`.
+`openVacationScheduleFromSidebar`, `getVacationMonthCalendarFromSidebar`,
+`getVacationCalendarDayDetailsFromSidebar`.
 
 Client: `SidebarApp.handleMenuAction('vacations')` → `showVacationsModule()`.
 
