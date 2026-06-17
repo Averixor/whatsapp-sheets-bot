@@ -137,14 +137,16 @@ Annual audit checks active `PERSONNEL` rows against the selected audit year:
 every active person must have at least one planned vacation, and no person may
 have more than two.
 
-Footer summary under the grid:
+Footer summary under the grid shows only dynamic month stats:
 
 ```text
-Макс. одночасно: 3
-Коротке перевантаження: 4 особи до 3 днів
 Проблемних дат: …
 Навантажених днів: …
 ```
+
+Day cells use a divider between day number and count. Tooltip shows human-readable
+load/status text (not ISO-only). Navigation `◀` / `▶` loads the adjacent month
+via explicit year/month state, not stale select values.
 
 Modules: `VacationMonthCalendar.gs`, client `Js.Vacations.html`,
 `Styles_30_Personnel.html`.

@@ -306,6 +306,35 @@ const VacationMonthCalendar_ = (function () {
     };
   }
 
+  function _formatShortDate_(dateIso) {
+    const match = String(dateIso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return String(dateIso || "");
+    return match[3] + "." + match[2];
+  }
+
+  function _buildPeoplePreview_(dayVacations) {
+    return dayVacations.slice(0, 5).map(function (item) {
+      return {
+        name: item.fml,
+        callsign: item.callsign,
+        startText: _formatShortDate_(item.startIso),
+        endText: _formatShortDate_(item.endIso),
+        startIso: item.startIso,
+        endIso: item.endIso,
+      };
+    });
+  }
+
+  function _buildProblemsPreview_(problems) {
+    return (Array.isArray(problems) ? problems : []).slice(0, 3).map(
+      function (item) {
+        return {
+          type: item.rule || "",
+          message: item.message || "",
+        };
+      },
+    );
+  }
   function _daysBetweenIso_(leftIso, rightIso) {
     const left = _parseDate_(leftIso);
     const right = _parseDate_(rightIso);
@@ -453,15 +482,19 @@ const VacationMonthCalendar_ = (function () {
         }
 
         week.push({
+          isoDate: dateIso,
           dateIso: dateIso,
           day: cursor.getDate(),
           inMonth: inMonth,
           isWeekend: cursor.getDay() === 0 || cursor.getDay() === 6,
           vacationsCount: vacationsCount,
           loadLevel: loadInfo.loadLevel,
+          problemsCount: problems.length,
           overload: overload,
           full: full,
           fourPersonStreak: fourStreakLen,
+          peoplePreview: _buildPeoplePreview_(dayVacations),
+          problemsPreview: _buildProblemsPreview_(problems),
           vacations: dayVacations.map(function (item) {
             return {
               fml: item.fml,

@@ -643,6 +643,22 @@
   text-align: center;
 }
 
+.vacations-mini-calendar__day-card {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  justify-content: center;
+  min-height: 46px;
+}
+
+.vacations-mini-calendar__day-divider {
+  background: color-mix(in srgb, var(--text-secondary) 35%, transparent);
+  border-radius: 1px;
+  height: 1px;
+  width: 65%;
+}
+
 .vacations-calendar-nav {
   align-items: center;
   flex-wrap: wrap;
@@ -681,16 +697,16 @@
 }
 
 .vacations-mini-calendar__day-number {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
+  line-height: 1;
 }
 
 .vacations-mini-calendar__count {
   color: var(--text-secondary);
   font-size: 12px;
-  font-weight: 700;
-  line-height: 1.2;
-  margin-top: 4px;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .vacations-mini-calendar__person {

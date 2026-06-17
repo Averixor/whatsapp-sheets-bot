@@ -2501,8 +2501,27 @@ assert.match(jsVacations, /applyVacationBulkFixPlanFromSidebar/);
 assert.match(jsVacations, /getVacationMonthCalendarFromSidebar/);
 assert.match(jsVacations, /getVacationCalendarDayDetailsFromSidebar/);
 assert.match(jsVacations, /loadMonthCalendar\(/);
-assert.match(jsVacations, /shiftMonthCalendar\(/);
-assert.match(jsVacations, /renderMonthCalendar\(/);
+assert.match(jsVacations, /buildVacationDayTooltip_/);
+assert.match(jsVacations, /getVacationLoadLevelLabel_/);
+assert.match(jsVacations, /vacations-mini-calendar__day-divider/);
+assert.match(jsVacations, /vacations-mini-calendar__day-card/);
+assert.match(jsVacations, /Проблемних дат:/);
+assert.match(jsVacations, /loadMonthCalendar\(\{ year: year, month: month \}\)/);
+assert.doesNotMatch(
+  jsVacations,
+  /Макс\. одночасно:/,
+  "mini calendar summary must not show static rule text",
+);
+assert.doesNotMatch(
+  jsVacations,
+  /Коротке перевантаження:/,
+  "mini calendar summary must not show static overload rule text",
+);
+assert.match(
+  stylesPersonnel,
+  /\.vacations-mini-calendar__day-divider/,
+  "mini calendar day cell must include divider",
+);
 assert.match(jsVacations, /showCalendarDayDetails\(/);
 assert.match(jsVacations, /for=\\"vacCalendarYear\\"/);
 assert.match(jsVacations, /for=\\"vacCalendarMonth\\"/);
@@ -2690,6 +2709,10 @@ assert.match(bulkFixSource, /function validateVacationBulkFixPlan_/);
 assert.match(bulkFixSource, /vacation\.bulk_plan\.stale/);
 assert.match(monthCalendarSource, /function getVacationCalendarDayDetailsFromSidebar/);
 assert.match(monthCalendarSource, /loadLevel/);
+assert.match(monthCalendarSource, /isoDate/);
+assert.match(monthCalendarSource, /problemsCount/);
+assert.match(monthCalendarSource, /peoplePreview/);
+assert.match(monthCalendarSource, /problemsPreview/);
 assert.match(monthCalendarSource, /readVacationSource_\(\)/);
 assert.doesNotMatch(monthCalendarSource, /readRightPanelRows/);
 
@@ -2799,6 +2822,9 @@ assert.ok(
 assert.equal(dec20.loadLevel, "warning");
 assert.equal(dec20.overload, false);
 assert.equal(dec20.vacationsCount, 4);
+assert.equal(dec20.isoDate, "2026-12-20");
+assert.ok(Array.isArray(dec20.peoplePreview));
+assert.ok(Number.isFinite(Number(dec20.problemsCount)));
 const overloadDay = decemberDays.find((item) => item.dateIso === "2026-12-21");
 assert.ok(overloadDay, "Dec 21 must exist in calendar grid");
 assert.equal(overloadDay.loadLevel, "error");
