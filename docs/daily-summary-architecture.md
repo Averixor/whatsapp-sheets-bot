@@ -84,9 +84,9 @@ Drone Camp: 0
 | Файл | Роль |
 | ---- | ---- |
 | `Report_SummaryData.gs` | Читання: константи, нормалізація, пошук блоку/дати, `readDailySummaryFromFormulaBlock*` |
-| `Report_DailySimple.gs` | Форматування короткого зведення: `formatSimpleDailySummary_`, `buildSimpleDailySummaryFromFormulaBlock_` |
+| `reports/Report_DailySimple.gs` | Форматування короткого зведення: `formatSimpleDailySummary_`, `buildSimpleDailySummaryFromFormulaBlock_` |
 | `Report_DailyDetailed.gs` | Детальне зведення: `collectPeopleDetailed_`, `formatDetailedSummary_`, `sendDetailedSummaryToCommander` |
-| `Summaries.gs` | Legacy-точка входу `buildDaySummaryForColumn_()` → делегує в `Report_DailySimple.gs`; UI-діалог `showDetailedSummaryDialog_` |
+| `Summaries.gs` | Legacy-точка входу `buildDaySummaryForColumn_()` → делегує в `reports/Report_DailySimple.gs`; UI-діалог `showDetailedSummaryDialog_` |
 | `SummaryRepository.gs` | Канонічна збірка: `buildDaySummary`, `buildDetailedSummary` |
 | `SummaryService.gs` | Domain service для меню/GAS editor: `buildDay`, `buildDetailed` |
 | `UseCases.Summaries.gs` | Use-case + RBAC: `buildDaySummary`, `buildDetailedSummary` |
