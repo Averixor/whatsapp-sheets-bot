@@ -7,14 +7,14 @@ WASB is a spreadsheet-bound Google Apps Script application.
 ### Server runtime
 
 - Google Apps Script V8
-- `.gs` server modules live at the repository root and in ADR-approved domain folders (`reports/`, `vacations/`); GAS loads them into one global namespace regardless of folder
+- `.gs` server modules live in purpose-named folders (`api/`, `core/`, `sheets/`, domain folders, etc.); GAS loads them into one global namespace regardless of folder
 - spreadsheet remains the primary data store and operational surface
 
 ### Client runtime
 
-- `Sidebar.html` is the sidebar shell
-- `JavaScript.html` aggregates the modular client runtime
-- `Styles.html` bundles CSS partials via GAS `include()` (see partials `Styles_*.html`)
+- `ui/Sidebar.html` is the sidebar shell
+- `ui/JavaScript.html` aggregates the modular client runtime
+- `ui/Styles.html` bundles CSS partials via GAS `include()` (see partials `ui/Styles_*.html`)
 - active JS include chain (via `JavaScript.html`):
   - `Js.Core.html`
   - `Js.State.html`
@@ -40,7 +40,7 @@ WASB is a spreadsheet-bound Google Apps Script application.
 
 ### Packaging policy
 
-- GAS runtime (`.gs`, `.html`, `appsscript.json`) deploys from the repository root and domain folders via `clasp`; see [`docs/module-map.md`](./docs/module-map.md)
+- GAS runtime (`.gs`, `.html`, `appsscript.json`) deploys from purpose-named folders plus the root manifest via `clasp`; see [`docs/module-map.md`](./docs/module-map.md)
 - Markdown is excluded from `clasp push` by `.claspignore`
 - Git operational docs are the human source of truth; contracts are machine-readable policy
 - one-off audits, production workbook snapshots, and transitional notes are not kept in the repository

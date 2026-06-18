@@ -5,7 +5,10 @@ import { findFileByBasename, walkHtmlFiles } from './lib/gas-files.mjs';
 import { loadContract, repoRoot } from './lib/load-contract.mjs';
 
 const includesContract = loadContract('client-includes.contract.json');
-const loaderPath = path.join(repoRoot, includesContract.loaderFile);
+const loaderRel =
+  findFileByBasename(repoRoot, path.basename(includesContract.loaderFile), ['.html']) ||
+  includesContract.loaderFile;
+const loaderPath = path.join(repoRoot, loaderRel);
 const EXPECTED = includesContract.expected || [];
 
 function parseIncludes(text) {

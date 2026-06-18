@@ -4,13 +4,16 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { findFileByBasename, readRepoFileByBasename } from './lib/gas-files.mjs';
 import { loadContract, repoRoot } from './lib/load-contract.mjs';
 
 const registry = loadContract('bridge-flags.registry.json');
 const strict = process.env.BRIDGE_STRICT === '1';
 
 function read(rel) {
-  return fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+  return readRepoFileByBasename(repoRoot, rel, {
+    errorPrefix: 'verify-bridge-flags',
+  });
 }
 
 function parseFlagDefault(source, flagName, expected) {
@@ -45,7 +48,8 @@ function main() {
 
   for (const [flagName, meta] of Object.entries(registry.flags || {})) {
     const sourceFile = meta.sourceFile || 'Js.Core.html';
-    const sourcePath = path.join(repoRoot, sourceFile);
+    const sourceRel = findFileByBasename(repoRoot, path.basename(sourceFile), ['.html']) || sourceFile;
+    const sourcePath = path.join(repoRoot, sourceRel);
     if (!fs.existsSync(sourcePath)) {
       errors.push(`${flagName}: source file missing: ${sourceFile}`);
       continue;

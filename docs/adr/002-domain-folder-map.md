@@ -10,7 +10,7 @@ Accepted
 
 ## Context
 
-WASB has ~125 `.gs` and ~33 `.html` runtime files, mostly at the repository root with growing domain folders (`reports/`, `vacations/`). Navigation and onboarding cost grows with flat layout. [ADR-001](./001-structural-changes.md) allows **mechanical** moves when API contracts, guards, and CI stay green.
+WASB has ~125 `.gs` and ~33 `.html` runtime files. Runtime files now live in purpose-named folders instead of a flat repository root. [ADR-001](./001-structural-changes.md) allows **mechanical** moves when API contracts, guards, and CI stay green.
 
 Pilot `reports/` (#23, #28) and clasp nested-push fixes (#25–#29) proved the pipeline. The next domain moves must follow a fixed map and checklist so PRs stay mechanical—not mixed with CI repair debates, merge proposals, or clasp regressions.
 
@@ -26,11 +26,12 @@ Each domain move is one PR: `git mv` + governance/doc path updates + CI green.
 
 | Phase | Folders | When |
 | ----- | ------- | ---- |
-| **1** | `reports/` (done), `vacations/`, `sendpanel/`, `maintenance/`, `diagnostics/` | Now — low cross-domain risk |
-| **2** | `access/` | Only after Phase 1 pattern is stable |
-| **3** | `ui/` | Only after HTML `include()` chain is reviewed |
+| **1** | `reports/`, `vacations/`, `sendpanel/`, `maintenance/`, `diagnostics/` | Done |
+| **2** | `access/`, `personnel/` | Done |
+| **3** | `ui/` | Done — HTML `include()` chain reviewed and basename-compatible |
+| **4** | `api/`, `core/`, `data/`, `sheets/`, `usecases/`, `ui-server/`, `security/`, `operations/`, `smoke/` | Done — root runtime files removed |
 
-Phase 1 HTML (`Js.Vacations.html`, `VacationSidebar.html`, `Sidebar.html`, …) **stays at root** until Phase 3.
+HTML (`Js.Vacations.html`, `VacationSidebar.html`, `Sidebar.html`, …) lives in `ui/` after Phase 3. Runtime callers may still pass legacy basenames such as `include("Sidebar")`.
 
 ### Invariants (every move PR)
 
@@ -66,4 +67,4 @@ Merge/split of large modules: separate ADR/review per [ADR-001](./001-structural
 
 - Root file count drops toward ~40–60 without reducing total module count.
 - `readRepoFileByBasename` / recursive CI scans remain basename-first; verify scripts with hardcoded `path.join(repoRoot, …)` must be updated in the same PR as the move (known: `verify-vacation-planner.mjs`).
-- Phase 3 (`ui/`) touches `JavaScript.html` includes and client contracts—highest technical risk.
+- Phase 3 (`ui/`) keeps `JavaScript.html` include order unchanged and uses basename-compatible `include()` resolution.

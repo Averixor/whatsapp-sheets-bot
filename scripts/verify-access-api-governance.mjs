@@ -5,13 +5,15 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { buildApiFunctionIndex } from './lib/gas-files.mjs';
+import { buildApiFunctionIndex, readRepoFileByBasename } from './lib/gas-files.mjs';
 import { loadContract, repoRoot } from './lib/load-contract.mjs';
 
 const contract = loadContract('access-api.contract.json');
 
 function read(rel) {
-  return fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+  return readRepoFileByBasename(repoRoot, rel, {
+    errorPrefix: 'verify-access-api-governance',
+  });
 }
 
 function unique(values) {

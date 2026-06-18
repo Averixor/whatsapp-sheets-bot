@@ -159,7 +159,7 @@
     "requireCoverage": true,
     "files": [
       {
-        "path": "SidebarServer.gs",
+        "path": "ui-server/SidebarServer.gs",
         "rationale": "HtmlService sidebar shell only; dynamic content comes from reviewed Sidebar/JavaScript/Styles includes"
       },
       {
@@ -171,7 +171,7 @@
         "rationale": "Person-card HtmlService host and PersonCalendar template loader; data is injected through template variables"
       },
       {
-        "path": "PersonCalendar.html",
+        "path": "ui/PersonCalendar.html",
         "rationale": "Standalone calendar grid uses numeric day/month/year values generated locally"
       },
       {
@@ -179,7 +179,7 @@
         "rationale": "Test-runner modal output is generated from internal test report HTML"
       },
       {
-        "path": "MonthSheets.gs",
+        "path": "sheets/MonthSheets.gs",
         "rationale": "Month switcher dialog uses static markup and controlled month sheet names"
       },
       {
@@ -187,11 +187,11 @@
         "rationale": "Standalone WhatsApp sender dialog escapes row data before innerHTML insertion"
       },
       {
-        "path": "DialogTemplates.gs",
+        "path": "ui-server/DialogTemplates.gs",
         "rationale": "Dialog template markup is static shell content"
       },
       {
-        "path": "Code.gs",
+        "path": "core/Code.gs",
         "rationale": "GAS include/template helpers load repository files by local filename only"
       },
       {
@@ -213,24 +213,24 @@
     "esc"
   ],
   "targetFiles": [
-    "Js.Core.html",
-    "Js.Render.Panel.html",
-    "Js.Render.Calendar.html",
-    "Js.Render.Results.html",
-    "Js.Vacations.html",
-    "Js.Diagnostics.html",
-    "Js.Actions.html",
-    "Js.Helpers.html",
-    "Js.Security.Boot.html",
-    "Js.Security.Util.html",
-    "Js.Security.Access.html",
-    "Js.Security.Debug.html",
-    "Js.Security.Login.html",
-    "Js.Security.DebugView.html",
-    "Js.Security.Policy.html",
-    "Js.Security.Guards.html",
-    "Js.Security.Forms.html",
-    "Js.Security.Exports.html"
+    "ui/Js.Core.html",
+    "ui/Js.Render.Panel.html",
+    "ui/Js.Render.Calendar.html",
+    "ui/Js.Render.Results.html",
+    "ui/Js.Vacations.html",
+    "ui/Js.Diagnostics.html",
+    "ui/Js.Actions.html",
+    "ui/Js.Helpers.html",
+    "ui/Js.Security.Boot.html",
+    "ui/Js.Security.Util.html",
+    "ui/Js.Security.Access.html",
+    "ui/Js.Security.Debug.html",
+    "ui/Js.Security.Login.html",
+    "ui/Js.Security.DebugView.html",
+    "ui/Js.Security.Policy.html",
+    "ui/Js.Security.Guards.html",
+    "ui/Js.Security.Forms.html",
+    "ui/Js.Security.Exports.html"
   ],
   "patterns": [
     "^escapeHtml\\s*\\(",

@@ -177,6 +177,25 @@ function highlightActiveMonthTab_(activeName) {
 
 /************ Include функції для HTML ************/
 
+function resolveHtmlTemplateName_(filename) {
+  const name = String(filename || "").trim();
+  if (!name) return "";
+
+  const candidates = name.indexOf("/") === -1 ? [name, "ui/" + name] : [name];
+  let lastError = null;
+
+  for (let i = 0; i < candidates.length; i++) {
+    try {
+      HtmlService.createHtmlOutputFromFile(candidates[i]).getContent();
+      return candidates[i];
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError;
+}
+
 function include(filename) {
   filename = String(filename || "").trim();
 
@@ -187,7 +206,7 @@ function include(filename) {
     );
   }
 
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+  return HtmlService.createHtmlOutputFromFile(resolveHtmlTemplateName_(filename)).getContent();
 }
 
 function includeTemplate(filename) {
@@ -200,7 +219,9 @@ function includeTemplate(filename) {
     );
   }
 
-  return HtmlService.createTemplateFromFile(filename).evaluate().getContent();
+  return HtmlService.createTemplateFromFile(resolveHtmlTemplateName_(filename))
+    .evaluate()
+    .getContent();
 }
 
 function testIncludeSidebar() {
