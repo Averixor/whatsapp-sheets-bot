@@ -110,9 +110,9 @@ Key repositories and services:
 - `SendPanelRepository.gs`
 - `SummaryRepository.gs`
 - `SummaryService.gs`
-- `reports/Report_SummaryData.gs` — read short-summary values from monthly formula block
+- `Report_SummaryData.gs` — read short-summary values from monthly formula block
 - `reports/Report_DailySimple.gs` — format short daily summary text
-- `reports/Report_DailyDetailed.gs` — detailed daily summary (people + DICT_SUM groups)
+- `Report_DailyDetailed.gs` — detailed daily summary (people + DICT_SUM groups)
 - `Summaries.gs` — legacy entrypoints (`buildDaySummaryForColumn_`, summary dialogs)
 - `VacationsRepository.gs`
 - `VacationPlannerService.gs`, `VacationMonthCalendar.gs`, `Vacation_Suggestions.gs`
@@ -258,9 +258,9 @@ schedule codes, grouped by dictionary rules.
 
 | Layer | Module | Role |
 | ----- | ------ | ---- |
-| Read | `reports/Report_SummaryData.gs` | Find date column and formula block; parse indicator values |
+| Read | `Report_SummaryData.gs` | Find date column and formula block; parse indicator values |
 | Format | `reports/Report_DailySimple.gs` | Build short summary text (`За штатом` … `БР`) |
-| Detailed | `reports/Report_DailyDetailed.gs` | People lists per code/group |
+| Detailed | `Report_DailyDetailed.gs` | People lists per code/group |
 | Repository | `SummaryRepository.gs` | `buildDaySummary` / `buildDetailedSummary` |
 | API | `Stage7ServerApi.gs` | `apiBuildDaySummary`, `apiBuildDetailedSummary` |
 | UI | Sidebar (`Js.Render.Calendar.html`) | Buttons **Зведення дня** / **Детальне зведення** |
