@@ -85,7 +85,7 @@ Or one command: `npm run deploy:prod` (local CI + production push). Run
 
 - **Short summary** reads the lower **formula block** on month sheets (`01`…`12`);
   do not reintroduce manual PERSONNEL/DICT_SUM counting for short summary.
-- Modules: `Report_SummaryData.gs`, `reports/Report_DailySimple.gs`, `Report_DailyDetailed.gs`,
+- Modules: `reports/Report_SummaryData.gs`, `reports/Report_DailySimple.gs`, `reports/Report_DailyDetailed.gs`,
   `Summaries.gs` (legacy `buildDaySummaryForColumn_` only delegates).
 - Output order includes **`За штатом`** first; labels in report text must have **no `_`**.
 - **UI:** sidebar buttons **Зведення дня** / **Детальне зведення** only; top menu =

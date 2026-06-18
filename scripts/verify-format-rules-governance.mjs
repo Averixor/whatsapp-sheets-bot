@@ -9,12 +9,14 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { loadContract, repoRoot } from "./lib/load-contract.mjs";
-import { walkGasFiles } from "./lib/gas-files.mjs";
+import { readRepoFileByBasename, walkGasFiles } from "./lib/gas-files.mjs";
 
 const contract = loadContract("manual-format-rules.contract.json");
 
 function read(file) {
-  return fs.readFileSync(path.join(repoRoot, file), "utf8");
+  return readRepoFileByBasename(repoRoot, file, {
+    errorPrefix: "verify-format-rules-governance",
+  });
 }
 
 function load(context, file) {
