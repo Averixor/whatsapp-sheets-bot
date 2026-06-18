@@ -114,9 +114,9 @@ Key repositories and services:
 - `reports/Report_DailySimple.gs` — format short daily summary text
 - `reports/Report_DailyDetailed.gs` — detailed daily summary (people + DICT_SUM groups)
 - `Summaries.gs` — legacy entrypoints (`buildDaySummaryForColumn_`, summary dialogs)
-- `VacationsRepository.gs`
-- `VacationPlannerService.gs`, `VacationMonthCalendar.gs`, `Vacation_Suggestions.gs`
-- `VacationSidebarService.gs`
+- `vacations/VacationsRepository.gs`
+- `vacations/VacationPlannerService.gs`, `vacations/VacationMonthCalendar.gs`, `vacations/Vacation_Suggestions.gs`
+- `vacations/VacationSidebarService.gs`
 - `AlertsRepository.gs`
 - `LogsRepository.gs`
 - `JobRuntimeRepository.gs`
@@ -272,15 +272,15 @@ Full design: [`docs/daily-summary-architecture.md`](./docs/daily-summary-archite
 ## 7.2 Vacation planner and mini-calendar
 
 Vacation planning runs in the sidebar **Відпустки** tab (`Js.Vacations.html`).
-Source adapter: `VacationsRepository.gs` (default `VACATIONS` `A:I`).
+Source adapter: `vacations/VacationsRepository.gs` (default `VACATIONS` `A:I`).
 
 | Layer | Module | Role |
 | ----- | ------ | ---- |
-| Config | `VacationPlannerConfig.gs` | Rules (`MAX_CONCURRENT: 3`, overload 4/3d, min 15 days, …) |
-| Logic | `VacationPlannerService.gs` | Validate options, build schedule audit |
-| Calendar | `VacationMonthCalendar.gs` | Month grid, day `loadLevel`, previews |
-| Suggestions | `Vacation_Suggestions.gs` | Safe move proposals per issue |
-| API | `VacationSidebarService.gs` | Sidebar entrypoints |
+| Config | `vacations/VacationPlannerConfig.gs` | Rules (`MAX_CONCURRENT: 3`, overload 4/3d, min 15 days, …) |
+| Logic | `vacations/VacationPlannerService.gs` | Validate options, build schedule audit |
+| Calendar | `vacations/VacationMonthCalendar.gs` | Month grid, day `loadLevel`, previews |
+| Suggestions | `vacations/Vacation_Suggestions.gs` | Safe move proposals per issue |
+| API | `vacations/VacationSidebarService.gs` | Sidebar entrypoints |
 | UI | `Js.Vacations.html` | Tabs, mini-calendar, problems, bulk fix |
 
 Mini-calendar: count-only cells, informative tooltip (`buildVacationDayTooltip_`),

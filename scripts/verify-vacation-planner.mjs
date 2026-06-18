@@ -9,15 +9,22 @@ import path from "node:path";
 import vm from "node:vm";
 import {
   findFileByBasename,
+  readRepoFileByBasename,
   walkGasFiles,
   walkHtmlFiles,
 } from "./lib/gas-files.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 
+function readRepo(file) {
+  return readRepoFileByBasename(repoRoot, file, {
+    errorPrefix: "verify-vacation-planner",
+  });
+}
+
 function load(context, file) {
-  vm.runInContext(fs.readFileSync(path.join(repoRoot, file), "utf8"), context, {
-    filename: file,
+  vm.runInContext(readRepo(file), context, {
+    filename: path.basename(file),
   });
 }
 
@@ -2332,10 +2339,7 @@ const includesContract = JSON.parse(
     "utf8",
   ),
 );
-const sidebarService = fs.readFileSync(
-  path.join(repoRoot, "VacationSidebarService.gs"),
-  "utf8",
-);
+const sidebarService = readRepo("VacationSidebarService.gs");
 const sidebarServer = fs.readFileSync(
   path.join(repoRoot, "SidebarServer.gs"),
   "utf8",
@@ -2344,18 +2348,9 @@ const sidebar = fs.readFileSync(
   path.join(repoRoot, "VacationSidebar.html"),
   "utf8",
 );
-const writerSource = fs.readFileSync(
-  path.join(repoRoot, "VacationOptionsWriter.gs"),
-  "utf8",
-);
-const plannerServiceSource = fs.readFileSync(
-  path.join(repoRoot, "VacationPlannerService.gs"),
-  "utf8",
-);
-const engineSource = fs.readFileSync(
-  path.join(repoRoot, "VacationEngine.gs"),
-  "utf8",
-);
+const writerSource = readRepo("VacationOptionsWriter.gs");
+const plannerServiceSource = readRepo("VacationPlannerService.gs");
+const engineSource = readRepo("VacationEngine.gs");
 const onOpenMenuBlock = code.match(
   /createMenu\("WASB"\)([\s\S]*?)\.addToUi\(\)/,
 );
@@ -2486,7 +2481,7 @@ assert.match(
   "right-panel problem card must expose migration action",
 );
 assert.match(
-  fs.readFileSync(path.join(repoRoot, "Vacation_Suggestions.gs"), "utf8"),
+  readRepo("Vacation_Suggestions.gs"),
   /function buildVacationFixSuggestions_/,
 );
 assert.match(jsVacations, /function renderVacationProblems_/);
@@ -2627,7 +2622,7 @@ assert.doesNotMatch(
     engineSource,
     sidebarService,
     writerSource,
-    fs.readFileSync(path.join(repoRoot, "VacationPlannerService.gs"), "utf8"),
+    readRepo("VacationPlannerService.gs"),
   ].join("\n"),
   /Calculation_OS/,
   "vacation runtime must not depend on Calculation_OS",
@@ -2697,14 +2692,8 @@ assert.match(
 );
 assert.match(reminderMailSource, /input\.trigger === true \|\| input\.isSystemTrigger === true/);
 
-const bulkFixSource = fs.readFileSync(
-  path.join(repoRoot, "VacationBulkFix.gs"),
-  "utf8",
-);
-const monthCalendarSource = fs.readFileSync(
-  path.join(repoRoot, "VacationMonthCalendar.gs"),
-  "utf8",
-);
+const bulkFixSource = readRepo("VacationBulkFix.gs");
+const monthCalendarSource = readRepo("VacationMonthCalendar.gs");
 assert.match(bulkFixSource, /function buildVacationBulkFixPlanFromSidebar/);
 assert.match(bulkFixSource, /function applyVacationBulkFixPlanFromSidebar/);
 assert.match(bulkFixSource, /function validateVacationBulkFixPlan_/);
