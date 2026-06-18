@@ -93,6 +93,8 @@ The workflow does not deploy to Apps Script. Deployment remains local via
 | [`CONTRIBUTING.md`](./CONTRIBUTING.md) | Local workflow, CI, clasp, commit policy |
 | [`AGENTS.md`](./AGENTS.md)             | Cursor / cloud agent instructions        |
 | [`docs/README.md`](./docs/README.md)   | Documentation index and ownership rules  |
+| [`docs/developer-guide.md`](./docs/developer-guide.md) | First-week maintainer map: layers, safe zones |
+| [`docs/adr/README.md`](./docs/adr/README.md) | ADR index (structural vs functional changes) |
 | [`docs/daily-summary-architecture.md`](./docs/daily-summary-architecture.md) | Short/detailed day summary: formula block, modules, sidebar flow |
 | [`docs/vacation-planner.md`](./docs/vacation-planner.md) | Vacation planner, rules (3/4/5 load), mini-calendar UX |
 

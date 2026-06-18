@@ -9,6 +9,8 @@ snapshots to the repository.
 | [README.md](../README.md)                                        | Project overview, quick start, documentation map            |
 | [ARCHITECTURE.md](../ARCHITECTURE.md)                            | Runtime layers, data flow, canonical APIs                   |
 | [RUNBOOK.md](../RUNBOOK.md)                                      | Bootstrap, deployment, production checks, troubleshooting   |
+| [developer-guide.md](./developer-guide.md)                       | First-week map: layers, safe zones, how to think about changes |
+| [adr/README.md](./adr/README.md)                                 | Architecture Decision Records (structural change rules)       |
 | [SECURITY.md](../SECURITY.md)                                    | Identity, RBAC, lockout, protected data                     |
 | [CHANGELOG.md](../CHANGELOG.md)                                  | Durable release history                                     |
 | [WASB_RELEASE_AUDIT.md](../WASB_RELEASE_AUDIT.md)                | Production release verdict (CLOSED 2026-06-07)              |

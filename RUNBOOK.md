@@ -11,6 +11,7 @@ This runbook covers:
 - protections and health checks
 - routine maintenance checks
 - safe rollback rules
+- debug decision tree for incidents (see §9)
 
 ## 2. First import into GAS
 
@@ -180,7 +181,261 @@ Manual replay from maintenance API: `apiRunStage7Job(jobName, { trigger: false }
 - send-panel data loads when requested
 - login errors do not block the form itself
 
-## 9. Troubleshooting cheatsheet
+## 9. Troubleshooting
+
+Операційна карта для maintainer: [developer-guide.md](./docs/developer-guide.md) (шари системи, перший тиждень). Нижче — маршрут під час інциденту та вузькі сценарії.
+
+### Debug decision tree: швидкий маршрут під час інциденту
+
+Цей підрозділ потрібен, коли система поводиться неправильно, а часу на повний аналіз немає. Мета — швидко визначити шар: UI, `api*`, `AccessEnforcement_`, `AccessControl_`, дані в аркушах або deploy/config.
+
+#### Базове правило
+
+Не починати з випадкового редагування ACCESS, PERSONNEL або коду. Спочатку — симптом → шар → файл або аркуш.
+
+```
+Симптом
+  ↓
+Який api* / сценарій викликано?
+  ↓
+Це проблема дозволу дії чи розпізнавання користувача?
+  ↓
+Перевірити відповідний шар:
+  - UI / Sidebar
+  - api* endpoint
+  - AccessEnforcement_
+  - AccessControl_
+  - ACCESS / PERSONNEL / місячний аркуш
+  - Script Properties / deploy / cache
+```
+
+#### 1. Користувач не входить / бачить guest / не розпізнається
+
+**Ймовірний шар:** `AccessControl_` + аркуш ACCESS.
+
+**Не починати з:** `AccessEnforcement_`, sidebar-кнопок, ручного переписування ролей у коді.
+
+**Перевірити:**
+
+- чи є користувач в ACCESS;
+- чи коректний ключ / phone / callsign;
+- чи немає помилки в статусі або ролі;
+- чи не застарів cache після deploy;
+- чи коректні Script Properties.
+
+**Типовий маршрут:**
+
+```
+guest / login fail
+  → AccessControl_
+  → AuthResolver / ACCESS lookup
+  → ACCESS row
+  → cache / script properties
+```
+
+**Команди / дії:** `npm run ci` (локально, якщо підозра на код). У GAS: `apiStage7DebugAccess()`, `apiStage7QuickHealthCheck()`.
+
+#### 2. Користувач входить, але дія заборонена
+
+Приклад: бачить систему, але не може відкрити картку, зведення, send panel або дію з персоналом.
+
+**Ймовірний шар:** `api*` + `AccessEnforcement_`.
+
+**Не починати з:** зміни ролі в ACCESS, зміни UI, видалення guard'ів, ручного обходу перевірок.
+
+**Перевірити:**
+
+- який саме сценарій викликано;
+- який `api*` відповідає за дію;
+- який guard / assertion на endpoint;
+- чи дія дозволена цій ролі;
+- чи це не очікувана поведінка (UI приховав правильно).
+
+**Типовий маршрут:**
+
+```
+"Недостатньо прав"
+  → визначити api*
+  → AccessEnforcement_
+  → assertCan... (картка, send panel, summary)
+  → role/action policy
+  → тільки потім ACCESS
+```
+
+**Важливо:** якщо UI приховав кнопку — це не обов'язково баг. Server-side guard залишається джерелом правди.
+
+#### 3. Кнопки немає в sidebar
+
+**Ймовірний шар:** UI / `Js.*` + server permissions.
+
+**Не починати з:** зміни `AccessControl_`, обхідного endpoint, ручного відкриття забороненої дії.
+
+**Перевірити:**
+
+- чи роль повинна бачити кнопку;
+- чи UI отримав context (`apiStage7GetAccessDescriptorLite`, bootstrap);
+- чи endpoint у `contracts/access-api.contract.json`;
+- чи server guard дозволяє дію;
+- чи не зламані client includes (`npm run ci:client`).
+
+**Типовий маршрут:**
+
+```
+немає кнопки
+  → Js.* / sidebar rendering
+  → user context
+  → api* contract
+  → AccessEnforcement_
+```
+
+#### 4. Дані неправильні: ПІБ, телефон, callsign, статус
+
+**Ймовірний шар:** PERSONNEL + cache.
+
+**Не починати з:** `AccessEnforcement_`, зміни endpoint, зміни guard marker.
+
+**Перевірити:**
+
+- рядок у PERSONNEL (Callsign / TEMPLATE, Status українською);
+- телефон / `2_Phone`;
+- після змін даних або deploy — **`apiStage7ClearPhoneCache()`**.
+
+**Типовий маршрут:**
+
+```
+не той телефон / ПІБ / callsign
+  → PERSONNEL
+  → нормалізація ключів
+  → phone cache
+  → повторна перевірка UI
+```
+
+#### 5. Зведення дня неправильне
+
+**Ймовірний шар:** `Report_*` + формульний блок на місячному аркуші.
+
+**Не починати з:** ручного PERSONNEL без потреби, зміни AccessControl, зміни sidebar.
+
+**Перевірити:**
+
+- правильна дата і колонка дня;
+- формульний блок, рядок `За_списком`, `За_штатом` над ним;
+- порядок labels;
+- `npm run ci:workbook`.
+
+**Типовий маршрут:**
+
+```
+неправильне зведення
+  → Report_SummaryData / Report_DailySimple
+  → дата / колонка
+  → formula block
+  → verify-workbook-contract
+```
+
+Деталі: [daily-summary-architecture.md](./docs/daily-summary-architecture.md).
+
+#### 6. Відпустки / міні-календар працюють неправильно
+
+**Ймовірний шар:** Vacation modules + `VACATIONS` / `VACATION_CHECK` / `VACATION_SCHEDULE`.
+
+**Перевірити:**
+
+- обраний місяць у UI (навігація ◀/▶ передає `{ year, month }`);
+- обмеження одночасних відпусток (max 3, overload ≤3 дні);
+- проблемні / навантажені дати;
+- `npm run ci:vacations`.
+
+**Типовий маршрут:**
+
+```
+помилка у відпустках
+  → vacation UI (Js.Vacations)
+  → selected month
+  → VACATIONS / VACATION_REQUESTS
+  → planner suggestions
+```
+
+Деталі: [vacation-planner.md](./docs/vacation-planner.md).
+
+#### 7. Після deploy усе «раптово зламалось»
+
+**Ймовірний шар:** deploy / config / cache.
+
+**Не починати з:** масового редагування коду, переписування ACCESS, видалення guards.
+
+**Перевірити (у такому порядку):**
+
+1. `npm run ci` локально.
+2. `clasp status` — правильний script project.
+3. Script Properties: `WASB_SPREADSHEET_ID`, `WASB_OWNER_EMAIL`.
+4. ACCESS bootstrap не зламаний.
+5. **`apiStage7ClearPhoneCache()`** після кожного production deploy.
+6. `apiStage7QuickHealthCheck()` / `apiStage7HealthCheck()`.
+7. contract parity (`verify-access-api-governance` у CI).
+
+**Типовий маршрут:**
+
+```
+після deploy все зламалось
+  → npm run ci
+  → clasp / remote
+  → Script Properties
+  → ACCESS bootstrap
+  → apiStage7ClearPhoneCache()
+  → health check
+```
+
+Повний checklist: §12–§13.
+
+#### 8. Додали новий `api*`, CI впав
+
+**Ймовірний шар:** governance / contracts.
+
+**Перевірити:**
+
+- public чи excluded (`contracts/access-api.contract.json`);
+- server-side guard marker для non-guest endpoints;
+- немає дубля endpoint;
+- `npm run ci` зелений (recursive `api*` scan).
+
+**Типовий маршрут:**
+
+```
+новий api* → CI fail
+  → public або excluded + reason
+  → оновити contract + ProjectMetadata role policy
+  → guard marker
+  → npm run ci
+```
+
+#### 9. Коротка таблиця «симптом → шар»
+
+| Симптом | Перший шар | Не чіпати першим |
+| -------- | ----------- | ----------------- |
+| Guest / не входить | `AccessControl_`, ACCESS | `AccessEnforcement_` |
+| «Недостатньо прав» | `api*`, `AccessEnforcement_` | PERSONNEL |
+| Немає кнопки | UI / `Js.*`, user context | ролі в коді |
+| Не той телефон / ПІБ | PERSONNEL, phone cache | guards |
+| Неправильне зведення | `Report_*`, formula block | ACCESS |
+| Проблеми з відпустками | Vacation modules, vacation sheets | access layer |
+| Після deploy усе зламалось | config, clasp, properties, cache | масовий refactor |
+| CI впав на `api*` | contract parity, guard markers | runtime logic |
+
+#### 10. Правило зупинки
+
+Якщо причина не знайдена за 15–20 хвилин — не робити хаотичні правки. Зафіксувати:
+
+1. Симптом
+2. Хто користувач / роль
+3. Який сценарій
+4. Який `api*`
+5. Який guard
+6. Який аркуш зачеплено
+7. Що вже перевірено
+8. Останній deploy / commit
+
+Продовжувати від конкретного шару, а не «перекопувати весь проєкт».
 
 ### Scheduled job fires `WASB SECURITY ATTENTION` as guest
 
