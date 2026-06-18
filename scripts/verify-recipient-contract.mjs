@@ -4,14 +4,10 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 
-import { readRepoFileByBasename } from "./lib/gas-files.mjs";
-
 const repoRoot = path.resolve(import.meta.dirname, "..");
 
 function read(file) {
-  return readRepoFileByBasename(repoRoot, file, {
-    errorPrefix: "verify-recipient-contract",
-  });
+  return fs.readFileSync(path.join(repoRoot, file), "utf8");
 }
 
 function assertContains(file, pattern, message) {

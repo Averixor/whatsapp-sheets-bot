@@ -27,8 +27,8 @@ appsscript.smoke.json
 .clasp.smokeignore
 
 !appsscript.json
-!**/*.gs
-!**/*.html
+!*.gs
+!*.html
 
 # Tests / debug / local diagnostics (after !*.gs so these stay excluded)
 Stage7TestRunner*.gs

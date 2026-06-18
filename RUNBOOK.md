@@ -786,7 +786,7 @@ intact for diagnosis. Do not delete `VACATIONS` during the compatibility period.
 
 - Джерело даних: **нижній формульний блок** на місячному листі (`01`…`12`), не
   перерахунок у Apps Script.
-- Модулі: `reports/Report_SummaryData.gs` (читання) → `reports/Report_DailySimple.gs`
+- Модулі: `Report_SummaryData.gs` (читання) → `reports/Report_DailySimple.gs`
   (форматування) → `Summaries.gs` (`buildDaySummaryForColumn_`).
 - Показники (порядок): За штатом, За списком, В наявності, У відрядженні, У
   відпустці, Гусачівка, Drone Camp, ППД, КП, БР.
@@ -795,7 +795,7 @@ intact for diagnosis. Do not delete `VACATIONS` during the compatibility period.
 
 ### Детальне зведення
 
-- Окрема логіка: `reports/Report_DailyDetailed.gs` + `PERSONNEL` + `DICT_SUM` + коди
+- Окрема логіка: `Report_DailyDetailed.gs` + `PERSONNEL` + `DICT_SUM` + коди
   графіка за обраний день.
 - Роль `operator` і вище (див. `SECURITY.md`); `viewer` не має доступу.
 

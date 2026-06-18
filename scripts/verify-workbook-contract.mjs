@@ -6,14 +6,16 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
-import { readRepoFileByBasename } from "./lib/gas-files.mjs";
+import { findFileByBasename } from "./lib/gas-files.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 
-function readGasByBasename(fileName) {
-  return readRepoFileByBasename(repoRoot, fileName, {
-    errorPrefix: "verify-workbook-contract",
-  });
+function readGasByBasename(basename) {
+  const rel = findFileByBasename(repoRoot, basename, [".gs"]);
+  if (!rel) {
+    throw new Error(`verify-workbook-contract: missing GAS file: ${basename}`);
+  }
+  return fs.readFileSync(path.join(repoRoot, rel), "utf8");
 }
 
 function columnNumberToLetter(value) {
