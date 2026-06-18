@@ -30,6 +30,9 @@ appsscript.smoke.json
 !**/*.gs
 !**/*.html
 
+# Re-exclude after nested un-ignore (negation above would otherwise include node_modules)
+node_modules/**
+
 # Tests / debug / local diagnostics (after !*.gs so these stay excluded)
 Stage7TestRunner*.gs
 DomainTests.gs
