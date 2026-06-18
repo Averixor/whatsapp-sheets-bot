@@ -9,12 +9,20 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { loadContract, repoRoot } from "./lib/load-contract.mjs";
-import { walkGasFiles } from "./lib/gas-files.mjs";
+import { findFileByBasename, walkGasFiles } from "./lib/gas-files.mjs";
 
 const contract = loadContract("manual-format-rules.contract.json");
 
 function read(file) {
-  return fs.readFileSync(path.join(repoRoot, file), "utf8");
+  const basename = path.basename(file);
+  const ext = path.extname(basename);
+  const extensions = ext ? [ext] : [".gs", ".html"];
+  const rel = findFileByBasename(repoRoot, basename, extensions) || file;
+  const fullPath = path.join(repoRoot, rel);
+  if (!fs.existsSync(fullPath)) {
+    throw new Error(`verify-format-rules-governance: missing file: ${file}`);
+  }
+  return fs.readFileSync(fullPath, "utf8");
 }
 
 function load(context, file) {

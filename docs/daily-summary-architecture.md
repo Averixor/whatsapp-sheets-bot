@@ -58,7 +58,7 @@ Drone Camp: 0
 
 ## Пошук нижнього формульного блоку
 
-Реалізація: `findSummaryBlockLocation_()` у `Report_SummaryData.gs`.
+Реалізація: `findSummaryBlockLocation_()` у `reports/Report_SummaryData.gs`.
 
 1. Визначити кінець зони графіка (`getMonthlyCodeRangeA1ForSheet_()` / `MONTHLY_CONFIG.LAST_DATA_ROW`).
 2. Нижче цієї зони просканувати колонки меток: мінімум `B:C`, для широкого лейауту — `A:D`.
@@ -83,9 +83,9 @@ Drone Camp: 0
 
 | Файл | Роль |
 | ---- | ---- |
-| `Report_SummaryData.gs` | Читання: константи, нормалізація, пошук блоку/дати, `readDailySummaryFromFormulaBlock*` |
+| `reports/Report_SummaryData.gs` | Читання: константи, нормалізація, пошук блоку/дати, `readDailySummaryFromFormulaBlock*` |
 | `reports/Report_DailySimple.gs` | Форматування короткого зведення: `formatSimpleDailySummary_`, `buildSimpleDailySummaryFromFormulaBlock_` |
-| `Report_DailyDetailed.gs` | Детальне зведення: `collectPeopleDetailed_`, `formatDetailedSummary_`, `sendDetailedSummaryToCommander` |
+| `reports/Report_DailyDetailed.gs` | Детальне зведення: `collectPeopleDetailed_`, `formatDetailedSummary_`, `sendDetailedSummaryToCommander` |
 | `Summaries.gs` | Legacy-точка входу `buildDaySummaryForColumn_()` → делегує в `reports/Report_DailySimple.gs`; UI-діалог `showDetailedSummaryDialog_` |
 | `SummaryRepository.gs` | Канонічна збірка: `buildDaySummary`, `buildDetailedSummary` |
 | `SummaryService.gs` | Domain service для меню/GAS editor: `buildDay`, `buildDetailed` |
@@ -102,7 +102,7 @@ Drone Camp: 0
 | Кнопка | Клієнт | Сервер | Результат |
 | ------ | ------ | ------ | --------- |
 | **Зведення дня** | `handleMenuAction('daySummary')` → календар → `Stage7Api.buildDaySummary()` | `apiBuildDaySummary` → `UseCases.Summaries` → `SummaryRepository_.buildDaySummary` → `buildDaySummaryForColumn_` → формульний блок | текст у панелі |
-| **Детальне зведення** | `handleMenuAction('detailedDay')` → календар → `Stage7Api.buildDetailedSummary()` | `apiBuildDetailedSummary` → `Report_DailyDetailed.gs` | текст у панелі |
+| **Детальне зведення** | `handleMenuAction('detailedDay')` → календар → `Stage7Api.buildDetailedSummary()` | `apiBuildDetailedSummary` → `reports/Report_DailyDetailed.gs` | текст у панелі |
 
 Верхнє меню Google Sheets:
 
