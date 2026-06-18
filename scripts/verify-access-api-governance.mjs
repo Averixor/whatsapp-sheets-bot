@@ -5,6 +5,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { buildApiFunctionIndex } from './lib/gas-files.mjs';
 import { loadContract, repoRoot } from './lib/load-contract.mjs';
 
 const contract = loadContract('access-api.contract.json');
@@ -111,20 +112,39 @@ function rolePolicyMatches(actual, expected) {
   );
 }
 
-function buildApiFunctionIndex() {
-  const index = {};
-  const files = fs
-    .readdirSync(repoRoot)
-    .filter((name) => name.endsWith('.gs'))
-    .sort();
+function assertApiContractParity(apiIndex, publicSet, excluded, errors) {
+  const apiNamesInCode = Object.keys(apiIndex).sort();
+  const excludedNames = new Set([...excluded.keys()]);
+  const expectedApiCount = publicSet.size + excludedNames.size;
 
-  for (const file of files) {
-    const text = read(file);
-    for (const match of text.matchAll(/^function\s+(api[A-Za-z0-9_]+)\s*\(/gm)) {
-      (index[match[1]] ||= []).push(file);
+  if (apiNamesInCode.length !== expectedApiCount) {
+    errors.push(
+      `api* count mismatch: code=${apiNamesInCode.length}, contract public+excluded=${expectedApiCount} (public=${publicSet.size}, excluded=${excludedNames.size})`,
+    );
+  }
+
+  for (const name of [...publicSet].sort()) {
+    const files = apiIndex[name] || [];
+    if (!files.length) {
+      errors.push(`contract public endpoint missing from code: ${name}`);
     }
   }
-  return index;
+
+  for (const name of apiNamesInCode) {
+    if (publicSet.has(name) || excludedNames.has(name)) continue;
+    errors.push(
+      `api* in code but not in contract publicEndpoints or excludedEntrypoints: ${name} (${(apiIndex[name] || []).join(', ')})`,
+    );
+  }
+
+  for (const name of [...excludedNames].sort()) {
+    if (!apiIndex[name] || !apiIndex[name].length) {
+      errors.push(`excluded api entrypoint does not exist: ${name}`);
+    }
+    if (publicSet.has(name)) {
+      errors.push(`excluded api entrypoint is also public: ${name}`);
+    }
+  }
 }
 
 function extractFunctionBody(fileRel, fnName) {
@@ -177,7 +197,12 @@ function main() {
   const publicSet = new Set(publicFromContract);
   const rolePolicy = extractRolePolicyMap(metaText);
   const contractRolePolicy = buildContractRolePolicy(errors, publicSet);
-  const apiIndex = buildApiFunctionIndex();
+  const apiIndex = buildApiFunctionIndex(repoRoot);
+  const excluded = new Map(
+    (contract.excludedEntrypoints || []).map((item) => [item.name, item]),
+  );
+
+  assertApiContractParity(apiIndex, publicSet, excluded, errors);
 
   for (const duplicate of findDuplicates(publicFromMetadata)) {
     errors.push(`duplicate endpoint in public metadata: ${duplicate}`);
@@ -256,24 +281,9 @@ function main() {
     }
   }
 
-  const excluded = new Map(
-    (contract.excludedEntrypoints || []).map((item) => [item.name, item]),
-  );
-  for (const [name, files] of Object.entries(apiIndex)) {
-    if (publicSet.has(name)) continue;
-    const disposition = excluded.get(name);
-    if (!disposition) {
-      errors.push(`unclassified api entrypoint: ${name} (${files.join(', ')})`);
-    } else if (!String(disposition.reason || '').trim()) {
+  for (const [name, disposition] of excluded) {
+    if (!String(disposition.reason || '').trim()) {
       errors.push(`excluded api entrypoint lacks reason: ${name}`);
-    }
-  }
-  for (const [name] of excluded) {
-    if (!apiIndex[name]) {
-      errors.push(`excluded api entrypoint does not exist: ${name}`);
-    }
-    if (publicSet.has(name)) {
-      errors.push(`excluded api entrypoint is also public: ${name}`);
     }
   }
 
@@ -361,9 +371,14 @@ function main() {
     process.exit(1);
   }
 
+  const apiNamesInCode = Object.keys(apiIndex);
   console.log('verify-access-api-governance: OK');
+  console.log(`  api* in codebase (recursive): ${apiNamesInCode.length}`);
   console.log(`  public endpoints: ${publicFromContract.length}`);
   console.log(`  explicitly excluded entrypoints: ${excluded.size}`);
+  console.log(
+    `  contract parity: public+excluded=${publicFromContract.length + excluded.size}`,
+  );
   console.log(`  client-reachable endpoints: ${clientRuns.length}`);
 }
 

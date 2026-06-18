@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import { findFileByBasename } from './lib/gas-files.mjs';
 import { loadContract, repoRoot } from './lib/load-contract.mjs';
 
 const includesContract = loadContract('client-includes.contract.json');
@@ -45,7 +46,9 @@ function loadCombinedClientJs() {
   const chunks = [`// WASB combined client bundle\n`];
 
   order.forEach((name) => {
-    const filePath = path.join(repoRoot, `${name}.html`);
+    const htmlRel =
+      findFileByBasename(repoRoot, `${name}.html`, ['.html']) || `${name}.html`;
+    const filePath = path.join(repoRoot, htmlRel);
     if (!fs.existsSync(filePath)) {
       throw new Error(`missing ${name}.html`);
     }

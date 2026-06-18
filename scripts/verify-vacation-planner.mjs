@@ -7,6 +7,11 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
+import {
+  findFileByBasename,
+  walkGasFiles,
+  walkHtmlFiles,
+} from "./lib/gas-files.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 
@@ -2417,9 +2422,7 @@ assert.doesNotMatch(
   fs.readFileSync(path.join(repoRoot, "Code.gs"), "utf8"),
   /showVacationSidebar/,
 );
-const allGsSources = fs
-  .readdirSync(repoRoot)
-  .filter((name) => name.endsWith(".gs"))
+const allGsSources = walkGasFiles(repoRoot)
   .map((name) => fs.readFileSync(path.join(repoRoot, name), "utf8"))
   .join("\n");
 assert.doesNotMatch(
@@ -2657,21 +2660,20 @@ assert.doesNotMatch(
   "legacy VacationSidebar must not ship client UI",
 );
 assert.equal(
-  fs.existsSync(path.join(repoRoot, "VacationPlannerDialog.html")),
+  findFileByBasename(repoRoot, "VacationPlannerDialog.html", [".html"]) !== null,
   false,
 );
 assert.equal(
-  fs.existsSync(path.join(repoRoot, "VacationValidateDialog.html")),
+  findFileByBasename(repoRoot, "VacationValidateDialog.html", [".html"]) !== null,
   false,
 );
 assert.equal(
-  fs.existsSync(path.join(repoRoot, "VacationPlannerApi.gs")),
+  findFileByBasename(repoRoot, "VacationPlannerApi.gs", [".gs"]) !== null,
   false,
 );
 
-const vacationSources = fs
-  .readdirSync(repoRoot)
-  .filter((name) => /^Vacation.*\.(gs|html)$/.test(name))
+const vacationSources = [...walkGasFiles(repoRoot), ...walkHtmlFiles(repoRoot)]
+  .filter((rel) => /^Vacation.*\.(gs|html)$/.test(path.basename(rel)))
   .map((name) => fs.readFileSync(path.join(repoRoot, name), "utf8"))
   .join("\n");
 assert.doesNotMatch(vacationSources, /VACATION_DATA/);

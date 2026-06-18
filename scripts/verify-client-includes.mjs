@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
+import { findFileByBasename, walkHtmlFiles } from './lib/gas-files.mjs';
 import { loadContract, repoRoot } from './lib/load-contract.mjs';
 
 const includesContract = loadContract('client-includes.contract.json');
@@ -36,7 +37,9 @@ function main() {
         `order mismatch at index ${index}: expected ${name}, got ${includes[index] || '(missing)'}`,
       );
     }
-    const filePath = path.join(repoRoot, `${name}.html`);
+    const htmlRel =
+      findFileByBasename(repoRoot, `${name}.html`, ['.html']) || `${name}.html`;
+    const filePath = path.join(repoRoot, htmlRel);
     if (!fs.existsSync(filePath)) {
       errors.push(`missing file: ${name}.html`);
     }
@@ -47,10 +50,9 @@ function main() {
     errors.push(`duplicate includes: ${Array.from(new Set(dupes)).join(', ')}`);
   }
 
-  fs.readdirSync(repoRoot)
-    .filter((name) => name.endsWith('.html'))
-    .forEach((name) => {
-      const text = fs.readFileSync(path.join(repoRoot, name), 'utf8');
+  for (const htmlRel of walkHtmlFiles(repoRoot)) {
+    const name = path.basename(htmlRel);
+    const text = fs.readFileSync(path.join(repoRoot, htmlRel), 'utf8');
       if (/^\uFEFF?\s*```/.test(text)) {
         errors.push(
           `${name} starts with a markdown code fence; file must begin with <!doctype html>`,
@@ -58,8 +60,8 @@ function main() {
       }
       if (/\n```\s*$/.test(text)) {
         errors.push(`${name} ends with a markdown code fence`);
-      }
-    });
+    }
+  }
 
   if (errors.length) {
     console.error('verify-client-includes: FAIL');

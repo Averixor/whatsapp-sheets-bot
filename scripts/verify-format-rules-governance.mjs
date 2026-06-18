@@ -9,6 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { loadContract, repoRoot } from "./lib/load-contract.mjs";
+import { walkGasFiles } from "./lib/gas-files.mjs";
 
 const contract = loadContract("manual-format-rules.contract.json");
 
@@ -576,19 +577,18 @@ assert.match(
   "adopted source must document runtime write prohibition",
 );
 
-const gsFiles = fs
-  .readdirSync(repoRoot)
-  .filter((name) => name.endsWith(".gs"))
-  .sort();
+const gsFiles = walkGasFiles(repoRoot);
 for (const file of gsFiles) {
   const source = read(file);
+  const fileBase = path.basename(file);
   if (source.includes(".setConditionalFormatRules(")) {
     assert.ok(
-      contract.directConditionalRuleWriter.allowedFiles.includes(file),
+      contract.directConditionalRuleWriter.allowedFiles.includes(file) ||
+        contract.directConditionalRuleWriter.allowedFiles.includes(fileBase),
       `${file} must not call setConditionalFormatRules directly`,
     );
   }
-  if (/Stage7TestRunner|SmokeTests|DebugManualTests/.test(file)) continue;
+  if (/Stage7TestRunner|SmokeTests|DebugManualTests/.test(fileBase)) continue;
   const destructiveFormatting =
     /\b(?:sheet|sh|panel)\.clear\(\)/.test(source) ||
     /\.(?:clearFormat|clearFormats|clearConditionalFormatRules)\(\)/.test(
@@ -600,7 +600,11 @@ for (const file of gsFiles) {
       Object.prototype.hasOwnProperty.call(
         contract.destructiveFormattingIntegrations,
         file,
-      ),
+      ) ||
+        Object.prototype.hasOwnProperty.call(
+          contract.destructiveFormattingIntegrations,
+          fileBase,
+        ),
       `${file} destructive formatting operation lacks governance contract`,
     );
   }

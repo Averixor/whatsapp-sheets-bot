@@ -4,6 +4,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { findFileByBasename } from './lib/gas-files.mjs';
 import { loadContract, repoRoot } from './lib/load-contract.mjs';
 
 const layersContract = loadContract('client-layers.contract.json');
@@ -16,7 +17,9 @@ function stripScript(html) {
 }
 
 function readClientSource(fileStem) {
-  const filePath = path.join(repoRoot, `${fileStem}.html`);
+  const htmlRel =
+    findFileByBasename(repoRoot, `${fileStem}.html`, ['.html']) || `${fileStem}.html`;
+  const filePath = path.join(repoRoot, htmlRel);
   if (!fs.existsSync(filePath)) {
     throw new Error(`missing ${fileStem}.html`);
   }
