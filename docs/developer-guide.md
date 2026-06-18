@@ -60,7 +60,7 @@ Google Sheets       — ACCESS, PERSONNEL, місячні листи, …
 
 Якщо додаєш або змінюєш `api*`, зміна **не завершена**, поки не проходить `verify-access-api-governance` (recursive scan, contract parity, guard markers).
 
-Структурні зміни (move/split/merge): [ADR-001](./adr/001-structural-changes.md).
+Структурні зміни (move/split/merge): [ADR-001](./adr/001-structural-changes.md). План папок по доменах: [ADR-002](./adr/002-domain-folder-map.md), [module-map.md](./module-map.md).
 
 ## Правило для refactor
 
