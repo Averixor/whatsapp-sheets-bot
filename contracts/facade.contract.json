@@ -11,7 +11,7 @@
     "registryPrefix": "Stage7UseCases_."
   },
   "domainFiles": [
-    ["UseCases.SendPanel.gs", "var UseCasesSendPanel_ = (function () {"],
+    ["sendpanel/UseCases.SendPanel.gs", "var UseCasesSendPanel_ = (function () {"],
     ["UseCases.Summaries.gs", "var UseCasesSummaries_ = (function () {"],
     ["UseCases.Calendar.gs", "var UseCasesCalendar_ = (function () {"],
     ["UseCases.Maintenance.gs", "var UseCasesMaintenance_ = (function () {"],

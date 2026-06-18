@@ -103,24 +103,20 @@ This layer is used for heavier or sensitive workflows. Lightweight read-only rou
 
 ## 3. Repository and service layer
 
-Key repositories and services:
+Key repositories and services (domain folders — see [`docs/module-map.md`](./docs/module-map.md)):
 
-- `PersonnelRepository.gs`
-- `PersonsRepository.gs`
-- `SendPanelRepository.gs`
-- `SummaryRepository.gs`
-- `SummaryService.gs`
+- `personnel/PersonnelRepository.gs`, `personnel/PersonsRepository.gs`, `personnel/PersonCards.gs`, `personnel/AlertsRepository.gs`
+- `sendpanel/SendPanelRepository.gs`, `sendpanel/SendPanelService.gs`, `sendpanel/SelectionActionService.gs`
+- `reports/SummaryRepository.gs`, `reports/SummaryService.gs`
 - `reports/Report_SummaryData.gs` — read short-summary values from monthly formula block
 - `reports/Report_DailySimple.gs` — format short daily summary text
 - `reports/Report_DailyDetailed.gs` — detailed daily summary (people + DICT_SUM groups)
-- `Summaries.gs` — legacy entrypoints (`buildDaySummaryForColumn_`, summary dialogs)
+- `reports/Summaries.gs` — legacy entrypoints (`buildDaySummaryForColumn_`, summary dialogs)
 - `vacations/VacationsRepository.gs`
 - `vacations/VacationPlannerService.gs`, `vacations/VacationMonthCalendar.gs`, `vacations/Vacation_Suggestions.gs`
 - `vacations/VacationSidebarService.gs`
-- `AlertsRepository.gs`
 - `LogsRepository.gs`
-- `JobRuntimeRepository.gs`
-- `SelectionActionService.gs`
+- `maintenance/JobRuntimeRepository.gs`
 - `PreviewLinkService.gs`
 
 The repository layer is the boundary between domain/application logic and spreadsheet storage details.
@@ -133,7 +129,7 @@ Primary identity is `Session.getTemporaryActiveUserKey()`.
 
 That value is treated as the session identity anchor. The project stores **hashes** of it inside `ACCESS`, not raw keys.
 
-The `ACCESS` bootstrap creates the full header set from `SHEET_HEADERS` in `AccessControl.Core.gs` (including `registration_status` and extended registration columns). Operational docs list the minimum admin-facing subset in **`README.md`** and **`RUNBOOK.md`**.
+The `ACCESS` bootstrap creates the full header set from `SHEET_HEADERS` in `access/AccessControl.Core.gs` (including `registration_status` and extended registration columns). Operational docs list the minimum admin-facing subset in **`README.md`** and **`RUNBOOK.md`**.
 
 ### Resolution order
 
@@ -214,7 +210,7 @@ Spreadsheet audit handlers (`stage7SecurityAuditOnEdit`, `stage7SecurityAuditOnC
 Main operational sheets typically include:
 
 - month sheets (`01`..`12`) — schedule codes (позивний + графік по датах); **нижній формульний блок** на кожному листі дає показники короткого зведення дня (див. [`docs/daily-summary-architecture.md`](./docs/daily-summary-architecture.md))
-- `PERSONNEL` — **canonical** personal data (header-based via `PersonnelRepository.gs`). **Schedule key: Callsign** (monthly sheets). **Lookup: Callsign → FML**. `ID` = optional Армія+ (not a system key). `Position` = org slot, not person key. **Status dropdown (9 UA values):** `В наявності`, `У відрядженні`, `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`. Runtime-active: all except **Вибув** / **СЗЧ**; empty defaults to **В наявності**. Contract: `contracts/personnel-status.contract.json`.
+- `PERSONNEL` — **canonical** personal data (header-based via `personnel/PersonnelRepository.gs`). **Schedule key: Callsign** (monthly sheets). **Lookup: Callsign → FML**. `ID` = optional Армія+ (not a system key). `Position` = org slot, not person key. **Status dropdown (9 UA values):** `В наявності`, `У відрядженні`, `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`. Runtime-active: all except **Вибув** / **СЗЧ**; empty defaults to **В наявності**. Contract: `contracts/personnel-status.contract.json`.
 - `PHONES` — legacy fallback when `PERSONNEL` is empty/unavailable (`loadPhonesIndex_` prefers `PERSONNEL`)
 - `DICT`
 - `DICT_SUM`

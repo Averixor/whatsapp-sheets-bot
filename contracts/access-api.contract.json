@@ -12,7 +12,7 @@
   "smokeManifestFile": "appsscript.smoke.json",
   "smokeExecutionApiAccess": "ANYONE",
   "productionClaspIgnoreFile": ".claspignore",
-  "smokeOnlyFiles": ["GasRuntimeSmoke.gs"],
+  "smokeOnlyFiles": ["tests/**"],
   "publicEndpoints": [
     "apiStage7GetAccessDescriptorLite",
     "apiStage7BootstrapSidebar",
