@@ -68,6 +68,10 @@ Or one command: `npm run deploy:prod` (local CI + production push). Run
 4. Confirm production `appsscript.json` remains `"executionApi": { "access": "MYSELF" }`.
 5. Re-run `npm run gas:smoke:push`, then create or refresh an **API executable** deployment in the smoke project if the Apps Script UI prompts for it.
 
+### Structural moves (ADR-002)
+
+Domain folders (`reports/`, `vacations/`, …) are mechanical moves only. Before a folder PR: read [`docs/module-map.md`](./docs/module-map.md), run domain CI (`npm run ci:vacations`, etc.), update verify scripts that hardcode paths, and check `npx clasp status`.
+
 ### PERSONNEL keys (do not regress)
 
 - Monthly schedule row key: **Callsign**; personal fields from `PERSONNEL` by Callsign (fallback **FML**).

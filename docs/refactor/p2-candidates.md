@@ -14,7 +14,7 @@ The current largest WASB-owned modules are:
 | `AccessControl.AuthResolver.gs` | 1560 | identity / login / bind | P2 |
 | `SmokeTests.gs` | 1490 | regression and smoke tests | P2 |
 
-Together they contain 4659 lines, roughly 10% of the root GAS codebase.
+Together they contain 4659 lines, roughly 10% of the flat GAS codebase (root + domain folders).
 This is not a release blocker; the production release is CLOSED.
 
 ## Refactor Principles

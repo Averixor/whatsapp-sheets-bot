@@ -10,7 +10,7 @@ Accepted
 
 ## Context
 
-WASB has ~125 `.gs` and ~33 `.html` runtime files at the repository root. Navigation and onboarding cost grows with flat layout. [ADR-001](./001-structural-changes.md) allows **mechanical** moves when API contracts, guards, and CI stay green.
+WASB has ~125 `.gs` and ~33 `.html` runtime files, mostly at the repository root with growing domain folders (`reports/`, `vacations/`). Navigation and onboarding cost grows with flat layout. [ADR-001](./001-structural-changes.md) allows **mechanical** moves when API contracts, guards, and CI stay green.
 
 Pilot `reports/` (#23, #28) and clasp nested-push fixes (#25–#29) proved the pipeline. The next domain moves must follow a fixed map and checklist so PRs stay mechanical—not mixed with CI repair debates, merge proposals, or clasp regressions.
 
