@@ -111,7 +111,7 @@ Key repositories and services:
 - `SummaryRepository.gs`
 - `SummaryService.gs`
 - `Report_SummaryData.gs` — read short-summary values from monthly formula block
-- `Report_DailySimple.gs` — format short daily summary text
+- `reports/Report_DailySimple.gs` — format short daily summary text
 - `Report_DailyDetailed.gs` — detailed daily summary (people + DICT_SUM groups)
 - `Summaries.gs` — legacy entrypoints (`buildDaySummaryForColumn_`, summary dialogs)
 - `VacationsRepository.gs`
@@ -259,7 +259,7 @@ schedule codes, grouped by dictionary rules.
 | Layer | Module | Role |
 | ----- | ------ | ---- |
 | Read | `Report_SummaryData.gs` | Find date column and formula block; parse indicator values |
-| Format | `Report_DailySimple.gs` | Build short summary text (`За штатом` … `БР`) |
+| Format | `reports/Report_DailySimple.gs` | Build short summary text (`За штатом` … `БР`) |
 | Detailed | `Report_DailyDetailed.gs` | People lists per code/group |
 | Repository | `SummaryRepository.gs` | `buildDaySummary` / `buildDetailedSummary` |
 | API | `Stage7ServerApi.gs` | `apiBuildDaySummary`, `apiBuildDetailedSummary` |

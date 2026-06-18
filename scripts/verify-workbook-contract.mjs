@@ -6,8 +6,17 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
+import { findFileByBasename } from "./lib/gas-files.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
+
+function readGasByBasename(basename) {
+  const rel = findFileByBasename(repoRoot, basename, [".gs"]);
+  if (!rel) {
+    throw new Error(`verify-workbook-contract: missing GAS file: ${basename}`);
+  }
+  return fs.readFileSync(path.join(repoRoot, rel), "utf8");
+}
 
 function columnNumberToLetter(value) {
   let n = Number(value);
@@ -218,13 +227,9 @@ function loadWorkbookFunctions() {
     "Report_DailyDetailed.gs",
     "Summaries.gs",
   ]) {
-    vm.runInContext(
-      fs.readFileSync(path.join(repoRoot, file), "utf8"),
-      context,
-      {
-        filename: file,
-      },
-    );
+    vm.runInContext(readGasByBasename(file), context, {
+      filename: file,
+    });
   }
 
   return context;

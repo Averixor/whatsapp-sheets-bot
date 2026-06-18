@@ -327,7 +327,7 @@ guest / login fail
 
 ```
 неправильне зведення
-  → Report_SummaryData / Report_DailySimple
+  → Report_SummaryData / reports/Report_DailySimple
   → дата / колонка
   → formula block
   → verify-workbook-contract
@@ -786,7 +786,7 @@ intact for diagnosis. Do not delete `VACATIONS` during the compatibility period.
 
 - Джерело даних: **нижній формульний блок** на місячному листі (`01`…`12`), не
   перерахунок у Apps Script.
-- Модулі: `Report_SummaryData.gs` (читання) → `Report_DailySimple.gs`
+- Модулі: `Report_SummaryData.gs` (читання) → `reports/Report_DailySimple.gs`
   (форматування) → `Summaries.gs` (`buildDaySummaryForColumn_`).
 - Показники (порядок): За штатом, За списком, В наявності, У відрядженні, У
   відпустці, Гусачівка, Drone Camp, ППД, КП, БР.
