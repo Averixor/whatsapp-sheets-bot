@@ -12,7 +12,7 @@ Accepted
 
 WASB has grown from a compact Apps Script project into a multi-domain operational system with access control, reports, vacations, personnel cards, sidebar UI, workbook governance, and CI checks.
 
-The current repository may remain flat for some time, but future maintainers may want to move files into folders, split large modules, or merge small modules.
+The current repository may remain mostly flat for some time, but maintainers may move files into domain folders (`reports/`, `vacations/` — see [ADR-002](../adr/002-domain-folder-map.md)), split large modules, or merge small modules.
 
 These changes are useful only if they remain mechanical. The main risk is silent degradation:
 

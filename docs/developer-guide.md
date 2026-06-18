@@ -29,8 +29,8 @@ Google Sheets       — ACCESS, PERSONNEL, місячні листи, …
 | ACCESS | Доступи, ролі, bootstrap, lockout |
 | PERSONNEL | Люди, Callsign, Status (UA), телефони |
 | Місячні аркуші (`01`…`12`) | Добовий графік, формульний блок |
-| `Report_*` | Зведення дня (short з formula block, detailed окремо) |
-| Vacation modules | Відпустки, перевірки, міні-календар |
+| `Report_*` | Зведення дня (short з formula block, detailed окремо) — modules in `reports/` |
+| Vacation modules | Відпустки, перевірки, міні-календар — server modules in `vacations/` |
 | `contracts/` + `scripts/verify-*` | Захист від тихої деградації (governance CI) |
 
 Детальніша архітектура: [ARCHITECTURE.md](../ARCHITECTURE.md). Доступ і RBAC: [SECURITY.md](../SECURITY.md).
@@ -61,6 +61,10 @@ Google Sheets       — ACCESS, PERSONNEL, місячні листи, …
 Якщо додаєш або змінюєш `api*`, зміна **не завершена**, поки не проходить `verify-access-api-governance` (recursive scan, contract parity, guard markers).
 
 Структурні зміни (move/split/merge): [ADR-001](./adr/001-structural-changes.md). План папок по доменах: [ADR-002](./adr/002-domain-folder-map.md), [module-map.md](./module-map.md).
+
+## Де лежать файли
+
+Коротка таблиця domain → folder → CI: [module-map.md](./module-map.md). Зараз у підпапках: `reports/` (3 модулі), `vacations/` (11 модулів). Решта runtime — у root до наступних фаз ADR-002.
 
 ## Правило для refactor
 

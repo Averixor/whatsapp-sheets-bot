@@ -7,7 +7,7 @@ WASB is a spreadsheet-bound Google Apps Script application.
 ### Server runtime
 
 - Google Apps Script V8
-- root `.gs` files are the canonical server bundle
+- `.gs` server modules live at the repository root and in ADR-approved domain folders (`reports/`, `vacations/`); GAS loads them into one global namespace regardless of folder
 - spreadsheet remains the primary data store and operational surface
 
 ### Client runtime
@@ -40,9 +40,9 @@ WASB is a spreadsheet-bound Google Apps Script application.
 
 ### Packaging policy
 
-- runtime files stay in the repository root for easy GAS web-editor import
+- GAS runtime (`.gs`, `.html`, `appsscript.json`) deploys from the repository root and domain folders via `clasp`; see [`docs/module-map.md`](./docs/module-map.md)
 - Markdown is excluded from `clasp push` by `.claspignore`
-- root operational docs are the human source of truth; contracts are machine-readable policy
+- Git operational docs are the human source of truth; contracts are machine-readable policy
 - one-off audits, production workbook snapshots, and transitional notes are not kept in the repository
 
 ## 2. Canonical server layers

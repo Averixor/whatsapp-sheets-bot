@@ -1,7 +1,8 @@
 # WASB documentation index
 
-Markdown files are excluded from `clasp push` by `.claspignore`. Keep operational
-truth in the documents below; do not add one-off audits or production workbook
+Markdown files are excluded from `clasp push` by `.claspignore`. GAS runtime
+includes root `.gs` / `.html` plus domain folders (`reports/`, `vacations/`).
+Keep operational truth in the documents below; do not add one-off audits or production workbook
 snapshots to the repository.
 
 | File                                                             | Source-of-truth responsibility                              |
@@ -26,7 +27,6 @@ snapshots to the repository.
 | File                                            | Purpose                                                            |
 | ----------------------------------------------- | ------------------------------------------------------------------ |
 | [p2-candidates.md](./refactor/p2-candidates.md) | Post-release, non-blocking candidates for mechanical module splits |
-| [module-map.md](./module-map.md)                | Domain folder map and CI pointers (see ADR-002)                    |
 
 Machine-readable policy belongs in [`contracts/`](../contracts/). Snapshot
 changes are governed by `scripts/verify-snapshot-governance.mjs` and must be

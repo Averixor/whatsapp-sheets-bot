@@ -4,7 +4,7 @@ Thank you for helping improve this project.
 
 This repository contains a Google Apps Script and Google Sheets automation project. Changes should be careful, focused, testable, and easy to review.
 
-New maintainers: start with [`docs/developer-guide.md`](./docs/developer-guide.md) (system layers, first-week safe zones). Incident routing: [`RUNBOOK.md`](./RUNBOOK.md) §9. Structural changes: [`docs/adr/README.md`](./docs/adr/README.md).
+New maintainers: start with [`docs/developer-guide.md`](./docs/developer-guide.md) (system layers, first-week safe zones). File locations: [`docs/module-map.md`](./docs/module-map.md). Incident routing: [`RUNBOOK.md`](./RUNBOOK.md) §9. Structural changes: [`docs/adr/README.md`](./docs/adr/README.md).
 
 ## Local workflow (source of truth)
 
@@ -32,6 +32,8 @@ descriptive enough.
 npx clasp status
 npx clasp push
 ```
+
+Confirm **Tracked files** includes `reports/*.gs` and `vacations/*.gs`, and excludes `node_modules/*.gs`. See [`docs/module-map.md`](./docs/module-map.md) and [ADR-002](docs/adr/002-domain-folder-map.md).
 
 Or run `npm run deploy:prod` for CI + production push. Production keeps
 `executionApi.access = MYSELF`; it does not run remote smoke.

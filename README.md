@@ -4,7 +4,7 @@ WASB is a spreadsheet-bound Google Apps Script bundle for personnel tracking, da
 
 This repository is packaged for Google Apps Script through `clasp`:
 
-- runtime files stay in the repository root (`.gs`, `.html`, `appsscript.json`)
+- runtime files live in the repository root and ADR-approved domain folders (`reports/`, `vacations/`)
 - operational documentation stays in Git and is excluded from `clasp push`
 
 ## Active release baseline
@@ -14,7 +14,7 @@ This repository is packaged for Google Apps Script through `clasp`:
 - **Identity model:** strict user-key access based on `Session.getTemporaryActiveUserKey()`
 - **Current access flow:** automatic key recognition first, self-bind login by **email/phone + callsign** only when the current key is not registered
 - **Runtime style:** modular HtmlService sidebar (`Sidebar.html` → `JavaScript.html` → `Js.*` chain)
-- **Packaging policy:** Markdown is excluded from `clasp push`; root docs are the operational source of truth
+- **Packaging policy:** Markdown is excluded from `clasp push`; Git docs are the operational source of truth; nested `.gs` deploy via `!**/*.gs` in `.claspignore` (see [`docs/module-map.md`](./docs/module-map.md))
 
 ## What is active in this release
 
@@ -94,7 +94,8 @@ The workflow does not deploy to Apps Script. Deployment remains local via
 | [`AGENTS.md`](./AGENTS.md)             | Cursor / cloud agent instructions        |
 | [`docs/README.md`](./docs/README.md)   | Documentation index and ownership rules  |
 | [`docs/developer-guide.md`](./docs/developer-guide.md) | First-week maintainer map: layers, safe zones |
-| [`docs/adr/README.md`](./docs/adr/README.md) | ADR index (structural vs functional changes) |
+| [`docs/module-map.md`](./docs/module-map.md) | Domain folders: where GAS modules live, which CI guards them |
+| [`docs/adr/002-domain-folder-map.md`](./docs/adr/002-domain-folder-map.md) | Phased folder moves (ADR-002) |
 | [`docs/daily-summary-architecture.md`](./docs/daily-summary-architecture.md) | Short/detailed day summary: formula block, modules, sidebar flow |
 | [`docs/vacation-planner.md`](./docs/vacation-planner.md) | Vacation planner, rules (3/4/5 load), mini-calendar UX |
 
@@ -106,7 +107,9 @@ workbook exports, personal data, or local workbook paths.
 
 ```text
 .
-├── *.gs / *.html / appsscript.json   # GAS runtime files
+├── *.gs / *.html / appsscript.json   # root GAS runtime files
+├── reports/                          # daily summary GAS runtime modules
+├── vacations/                        # vacation planner GAS runtime modules
 ├── README.md                         # ops docs (see Documentation map)
 ├── ARCHITECTURE.md
 ├── RUNBOOK.md
@@ -118,11 +121,13 @@ workbook exports, personal data, or local workbook paths.
 └── no _extras/ in compact GAS release ZIP
 ```
 
+Domain moves follow [ADR-002](docs/adr/002-domain-folder-map.md). Most `.gs` / `.html` still live at repo root; more folders arrive in later phases (`sendpanel/`, `access/`, `ui/`).
+
 ## Quick import checklist
 
 1. Open the spreadsheet-bound Apps Script project.
-2. Upload all root `.gs`, `.html`, and `appsscript.json` files.
-3. Import only the root runtime files shipped in this ZIP; no `_extras/` files are required for GAS.
+2. Upload root `.gs`, `.html`, `appsscript.json`, and domain folders `reports/`, `vacations/` (or use `clasp push` from this repository).
+3. Import only GAS runtime files from this repository; no `_extras/` folder is required.
 4. Run `apiStage7BootstrapRuntimeAndAlertsSheets()` once.
 5. Run `apiStage7BootstrapAccessSheet()` once.
 6. Fill the `ACCESS` sheet.

@@ -16,8 +16,8 @@ This runbook covers:
 ## 2. First import into GAS
 
 1. Open the target spreadsheet-bound Apps Script project.
-2. Upload all root `.gs`, `.html`, and `appsscript.json` files.
-3. Import only root runtime files from this repository; there is no `_extras/` folder in the compact bundle.
+2. Upload root `.gs`, `.html`, `appsscript.json`, and domain folders `reports/`, `vacations/` (or deploy with `clasp push` from this repository).
+3. Import only GAS runtime files from this repository; there is no `_extras/` folder in the compact bundle.
 4. Save the project.
 5. Reload the Apps Script editor once to make sure all files are visible.
 
@@ -327,7 +327,7 @@ guest / login fail
 
 ```
 неправильне зведення
-  → Report_SummaryData / reports/Report_DailySimple
+  → reports/Report_SummaryData.gs / reports/Report_DailySimple.gs
   → дата / колонка
   → formula block
   → verify-workbook-contract
@@ -350,7 +350,8 @@ guest / login fail
 
 ```
 помилка у відпустках
-  → vacation UI (Js.Vacations)
+  → vacation UI (Js.Vacations.html)
+  → vacations/VacationPlannerService.gs, vacations/VacationMonthCalendar.gs
   → selected month
   → VACATIONS / VACATION_REQUESTS
   → planner suggestions
@@ -581,7 +582,7 @@ spreadsheet, grant the smoke executor the required ACCESS role, then run:
 npm run deploy:smoke
 ```
 
-`deploy:smoke` stages root GAS source plus `appsscript.smoke.json` in
+`deploy:smoke` stages the full GAS tree (root + domain folders such as `reports/`, `vacations/`) plus `appsscript.smoke.json` in
 `/tmp/wasb-smoke-bundle`, pushes only to `.clasp.smoke.json`, and runs
 `apiRunSmokeChecks`. Never point `.clasp.smoke.json` at production.
 
