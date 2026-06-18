@@ -15,14 +15,14 @@ only (deprecated).
 
 | Module | Role |
 | ------ | ---- |
-| `VacationPlannerConfig.gs` | Rules, sheet names, source headers |
-| `VacationPlannerService.gs` | Validation, audit, scoring |
-| `VacationOptionsWriter.gs` | Schedule/check rebuild, reports |
-| `VacationSidebarService.gs` | Sidebar entrypoints |
-| `VacationsRepository.gs` | Active source adapter |
-| `VacationMonthCalendar.gs` | Month mini-calendar payload |
-| `Vacation_Suggestions.gs` | Fix suggestions for audit issues |
-| `VacationBulkFix.gs` | Bulk fix plan/apply |
+| `vacations/VacationPlannerConfig.gs` | Rules, sheet names, source headers |
+| `vacations/VacationPlannerService.gs` | Validation, audit, scoring |
+| `vacations/VacationOptionsWriter.gs` | Schedule/check rebuild, reports |
+| `vacations/VacationSidebarService.gs` | Sidebar entrypoints |
+| `vacations/VacationsRepository.gs` | Active source adapter |
+| `vacations/VacationMonthCalendar.gs` | Month mini-calendar payload |
+| `vacations/Vacation_Suggestions.gs` | Fix suggestions for audit issues |
+| `vacations/VacationBulkFix.gs` | Bulk fix plan/apply |
 | `Js.Vacations.html` | Vacations tab UI |
 | `Styles_30_Personnel.html` | Mini-calendar styles |
 
@@ -113,7 +113,7 @@ changes `PERSONNEL`, monthly sheets, reminders, or `Calculation_OS`.
 
 ## Planner rules (`VACATION_PLANNER_CONFIG.RULES`)
 
-Canonical values in `VacationPlannerConfig.gs`:
+Canonical values in `vacations/VacationPlannerConfig.gs`:
 
 | Rule | Value | Meaning |
 | ---- | ----- | ------- |
@@ -145,7 +145,7 @@ Warnings are visible but do not block the write.
 ## Month mini-calendar (Огляд / План)
 
 The sidebar mini-calendar reads the same `A:I` vacation source as the planner
-(`VacationMonthCalendar.gs` → `readVacationSource_()`).
+(`vacations/VacationMonthCalendar.gs` → `readVacationSource_()`).
 
 ### Cell layout
 

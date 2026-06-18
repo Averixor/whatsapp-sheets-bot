@@ -5,7 +5,7 @@ Practical index: **where to look** and **what CI proves it**. Structural rules: 
 | Domain | Folder | Main files | CI / verification | Notes |
 | ------ | ------ | ---------- | ----------------- | ----- |
 | Reports | `reports/` | `Report_DailySimple.gs`, `Report_SummaryData.gs`, `Report_DailyDetailed.gs`, `Summaries.gs` (root) | `npm run ci`, `npm run ci:workbook` | **Moved** (pilot). Summary repos/services still root until a later PR. |
-| Vacations | `vacations/` (planned) | `Vacation*.gs` (11 modules) | `npm run ci:vacations` | **Next pilot.** `Js.Vacations.html`, `VacationSidebar.html` stay root until `ui/` phase. Update hardcoded paths in `verify-vacation-planner.mjs`. |
+| Vacations | `vacations/` | `Vacation*.gs` (11 modules) | `npm run ci:vacations` | **Moved.** `Js.Vacations.html`, `VacationSidebar.html` stay root until `ui/` phase. |
 | Send panel | root → `sendpanel/` (planned) | `SendPanel*.gs`, `SelectionActionService.gs`, `UseCases.SendPanel.gs` | `npm run ci`, `npm run ci:recipients` | After vacations pattern stable. |
 | Maintenance / formats | root → `maintenance/` (planned) | `ConditionalFormat*.gs`, `SystemSheetsSelfHeal.gs` | `npm run ci:format-rules` | Low risk; no PERSONNEL key logic. |
 | Diagnostics | root → `diagnostics/` (planned) | `Diagnostics.*.gs` | `npm run ci` | Runtime diagnostics only. `Stage7TestRunner*`, `*Tests.gs` — repo folder OK; stay **clasp-excluded**. |
