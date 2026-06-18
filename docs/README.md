@@ -11,6 +11,7 @@ snapshots to the repository.
 | [RUNBOOK.md](../RUNBOOK.md)                                      | Bootstrap, deployment, production checks, troubleshooting   |
 | [developer-guide.md](./developer-guide.md)                       | First-week map: layers, safe zones, how to think about changes |
 | [adr/README.md](./adr/README.md)                                 | Architecture Decision Records (structural change rules)       |
+| [module-map.md](./module-map.md)                                 | Domain folders: where modules live, which CI guards them      |
 | [SECURITY.md](../SECURITY.md)                                    | Identity, RBAC, lockout, protected data                     |
 | [CHANGELOG.md](../CHANGELOG.md)                                  | Durable release history                                     |
 | [WASB_RELEASE_AUDIT.md](../WASB_RELEASE_AUDIT.md)                | Production release verdict (CLOSED 2026-06-07)              |
@@ -25,6 +26,7 @@ snapshots to the repository.
 | File                                            | Purpose                                                            |
 | ----------------------------------------------- | ------------------------------------------------------------------ |
 | [p2-candidates.md](./refactor/p2-candidates.md) | Post-release, non-blocking candidates for mechanical module splits |
+| [module-map.md](./module-map.md)                | Domain folder map and CI pointers (see ADR-002)                    |
 
 Machine-readable policy belongs in [`contracts/`](../contracts/). Snapshot
 changes are governed by `scripts/verify-snapshot-governance.mjs` and must be
