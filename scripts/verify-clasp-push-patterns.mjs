@@ -1,28 +1,64 @@
 #!/usr/bin/env node
 /**
- * Ensure clasp ignore files allow nested .gs/.html (reports/, future folders).
+ * Ensure clasp ignore files allow nested .gs/.html (reports/, future folders)
+ * and re-exclude dependency/local trees after the recursive allowlist.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { repoRoot } from './lib/load-contract.mjs';
 
-const TARGETS = [
-  { file: '.claspignore', required: ['!**/*.gs', '!**/*.html'] },
-  { file: '.clasp.smokeignore', required: ['!**/*.gs', '!**/*.html'] },
+const NESTED_INCLUDE_PATTERNS = ['!**/*.gs', '!**/*.html'];
+
+const POST_NESTED_EXCLUDE_PATTERNS = [
+  'node_modules/**',
+  '.git/**',
+  '_backup*/**',
 ];
+
+const TARGETS = [{ file: '.claspignore' }, { file: '.clasp.smokeignore' }];
 
 function main() {
   const errors = [];
-  for (const { file, required } of TARGETS) {
-    const abs = path.join(repoRoot, file);
+  for (const target of TARGETS) {
+    const abs = path.join(repoRoot, target.file);
     if (!fs.existsSync(abs)) {
-      errors.push(`missing ${file}`);
+      errors.push(`missing ${target.file}`);
       continue;
     }
-    const text = fs.readFileSync(abs, 'utf8');
-    for (const pattern of required) {
-      if (!text.split(/\r?\n/).some((line) => line.trim() === pattern)) {
-        errors.push(`${file} must include ${pattern} for nested GAS files`);
+    const lines = fs
+      .readFileSync(abs, 'utf8')
+      .split(/\r?\n/)
+      .map((line) => line.trim());
+
+    for (const pattern of NESTED_INCLUDE_PATTERNS) {
+      if (!lines.some((line) => line === pattern)) {
+        errors.push(`${target.file} must include ${pattern} for nested GAS files`);
+      }
+    }
+
+    const nestedIdx = Math.max(
+      ...NESTED_INCLUDE_PATTERNS.map((pattern) => lines.lastIndexOf(pattern)),
+    );
+
+    if (nestedIdx === -1) {
+      errors.push(`${target.file}: missing nested GAS include patterns`);
+      continue;
+    }
+
+    for (const pattern of POST_NESTED_EXCLUDE_PATTERNS) {
+      const excludeIdx = lines.lastIndexOf(pattern);
+
+      if (excludeIdx === -1) {
+        errors.push(
+          `${target.file}: must re-exclude ${pattern} after nested GAS includes`,
+        );
+        continue;
+      }
+
+      if (excludeIdx < nestedIdx) {
+        errors.push(
+          `${target.file}: ${pattern} must appear after nested GAS includes`,
+        );
       }
     }
   }
