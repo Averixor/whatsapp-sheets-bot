@@ -9,7 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { loadContract, repoRoot } from "./lib/load-contract.mjs";
-import { readRepoFileByBasename, walkGasFiles } from "./lib/gas-files.mjs";
+import { readRepoFileByBasename, walkGasFiles, findFileByBasename } from "./lib/gas-files.mjs";
 
 const contract = loadContract("manual-format-rules.contract.json");
 
@@ -36,7 +36,10 @@ function functionWindow(source, name, size = 5000) {
 }
 
 for (const file of contract.sourceFiles) {
-  assert.ok(fs.existsSync(path.join(repoRoot, file)), `${file} must exist`);
+  assert.ok(
+    findFileByBasename(repoRoot, path.basename(file), [".gs"]) !== null,
+    `${file} must exist`,
+  );
 }
 
 const registrySource = read("ConditionalFormatRegistry.gs");

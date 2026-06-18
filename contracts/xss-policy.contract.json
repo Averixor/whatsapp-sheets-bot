@@ -163,11 +163,11 @@
         "rationale": "HtmlService sidebar shell only; dynamic content comes from reviewed Sidebar/JavaScript/Styles includes"
       },
       {
-        "path": "Summaries.gs",
+        "path": "reports/Summaries.gs",
         "rationale": "Modal output built from server summary renderer; no client-side user interpolation sink"
       },
       {
-        "path": "PersonCards.gs",
+        "path": "personnel/PersonCards.gs",
         "rationale": "Person-card HtmlService host and PersonCalendar template loader; data is injected through template variables"
       },
       {
@@ -175,7 +175,7 @@
         "rationale": "Standalone calendar grid uses numeric day/month/year values generated locally"
       },
       {
-        "path": "Stage7TestRunner.Ui.gs",
+        "path": "tests/Stage7TestRunner.Ui.gs",
         "rationale": "Test-runner modal output is generated from internal test report HTML"
       },
       {
@@ -183,7 +183,7 @@
         "rationale": "Month switcher dialog uses static markup and controlled month sheet names"
       },
       {
-        "path": "SendPanel.gs",
+        "path": "sendpanel/SendPanel.gs",
         "rationale": "Standalone WhatsApp sender dialog escapes row data before innerHTML insertion"
       },
       {
@@ -195,7 +195,7 @@
         "rationale": "GAS include/template helpers load repository files by local filename only"
       },
       {
-        "path": "MonthlyReport.gs",
+        "path": "reports/MonthlyReport.gs",
         "rationale": "Monthly report HTML uses local esc() for dynamic sheet/person/status values"
       }
     ]

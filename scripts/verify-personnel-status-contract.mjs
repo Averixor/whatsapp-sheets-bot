@@ -7,12 +7,12 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { loadContract, repoRoot } from "./lib/load-contract.mjs";
+import { readRepoFileByBasename } from "./lib/gas-files.mjs";
 
 const contract = loadContract("personnel-status.contract.json");
-const source = fs.readFileSync(
-  path.join(repoRoot, "PersonnelRepository.gs"),
-  "utf8",
-);
+const source = readRepoFileByBasename(repoRoot, "PersonnelRepository.gs", {
+  errorPrefix: "verify-personnel-status-contract",
+});
 
 const IN_TRIP_UNICODE = contract.inTripStatusUnicode || "";
 const IN_TRIP_CANON = IN_TRIP_UNICODE ? JSON.parse(`"${IN_TRIP_UNICODE}"`) : "";
