@@ -238,6 +238,38 @@ function _runPersonnelRepositoryDomainTests_(report) {
       return "header-alias-record-ok";
     },
   );
+
+  _domainPush_(
+    report,
+    "personnel.materialize helper calculations",
+    function () {
+      var today = new Date(2026, 5, 18, 12, 0, 0, 0);
+      var birthday = new Date(1990, 2, 17, 12, 0, 0, 0);
+      var futureBirthday = new Date(2030, 0, 1, 12, 0, 0, 0);
+
+      _domainAssertEqual_(calcAge_(birthday, today), 36, "full years");
+      _domainAssertEqual_(calcAge_(futureBirthday, today), 0, "future birthday");
+      _domainAssertEqual_(calcAge_("", today), "", "empty birthday");
+      _domainAssertEqual_(
+        calcPersonnelCallsign_("  Alpha  ", "Beta Gamma"),
+        "Alpha",
+        "template wins",
+      );
+      _domainAssertEqual_(
+        calcPersonnelCallsign_("", "Beta Gamma"),
+        "Beta",
+        "first word from FML",
+      );
+      _domainAssertEqual_(calcPersonnelCallsign_("", ""), "", "empty callsign");
+
+      var daysUntil = calcDaysUntilBirthday_(birthday, today);
+      _domainAssert_(
+        typeof daysUntil === "number" && daysUntil >= 0,
+        "days until birthday is a non-negative number",
+      );
+      return "materialize-calc-ok";
+    },
+  );
 }
 
 function _runMonthlyLayoutDomainTests_(report) {
