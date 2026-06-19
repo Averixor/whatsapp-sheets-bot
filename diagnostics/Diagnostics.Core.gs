@@ -62,6 +62,7 @@ function _userFacingSheetLabel_(name) {
   return labels[key] || key;
 }
 
+function _pushCheck_(report, check) {
   report.checks.push(check);
 
   if (check.status === 'ERROR') {
