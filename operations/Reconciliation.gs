@@ -284,7 +284,7 @@ const Reconciliation_ = (function () {
 
   function _setPanelStatus(row, value) {
     const panel = DataAccess_.getSheet("SEND_PANEL", null, true);
-    ensureSendPanelStatusFormula_(panel);
+    panel.getRange(row, 5).setValue(value || "");
     normalizeSendPanelDailyState_(panel);
   }
 
@@ -306,16 +306,15 @@ const Reconciliation_ = (function () {
       expectedRow.tasks || "",
     );
 
-    panel
-      .getRange(nextRow, 1, 1, 4)
-      .setValues([
-        [
-          expectedRow.fml || "",
-          formattedPhone || "",
-          expectedRow.code || "",
-          expectedRow.tasks || "",
-        ],
-      ]);
+    panel.getRange(nextRow, 1, 1, 5).setValues([
+      [
+        expectedRow.fml || "",
+        formattedPhone || "",
+        expectedRow.code || "",
+        expectedRow.tasks || "",
+        status,
+      ],
+    ]);
 
     panel
       .getRange(nextRow, 6, 1, 2)
@@ -332,17 +331,7 @@ const Reconciliation_ = (function () {
         ],
       ]);
 
-    if (
-      nextRow <=
-      ((typeof MONTHLY_CONFIG !== "undefined" &&
-        Number(MONTHLY_CONFIG.LAST_DATA_ROW)) ||
-        40)
-    ) {
-      ensureSendPanelStatusFormula_(panel);
-      normalizeSendPanelDailyState_(panel);
-    } else {
-      panel.getRange(nextRow, 5).setValue(status);
-    }
+    normalizeSendPanelDailyState_(panel);
 
     return nextRow;
   }
