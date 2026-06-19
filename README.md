@@ -4,7 +4,7 @@ WASB is a spreadsheet-bound Google Apps Script bundle for personnel tracking, da
 
 This repository is packaged for Google Apps Script through `clasp`:
 
-- runtime files live in the repository root and ADR-approved domain folders (`reports/`, `vacations/`)
+- runtime files live in purpose-named folders (`api/`, `core/`, `sheets/`, `reports/`, `vacations/`, `ui/`, etc.); the repository root is for manifests and tooling config
 - operational documentation stays in Git and is excluded from `clasp push`
 
 ## Active release baseline
@@ -13,7 +13,7 @@ This repository is packaged for Google Apps Script through `clasp`:
 - **Release label:** Stage 7 — Maintenance & repository hygiene
 - **Identity model:** strict user-key access based on `Session.getTemporaryActiveUserKey()`
 - **Current access flow:** automatic key recognition first, self-bind login by **email/phone + callsign** only when the current key is not registered
-- **Runtime style:** modular HtmlService sidebar (`Sidebar.html` → `JavaScript.html` → `Js.*` chain)
+- **Runtime style:** modular HtmlService sidebar (`ui/Sidebar.html` → `ui/JavaScript.html` → `ui/Js.*` chain)
 - **Packaging policy:** Markdown is excluded from `clasp push`; Git docs are the operational source of truth; nested `.gs` deploy via `!**/*.gs` in `.claspignore` (see [`docs/module-map.md`](./docs/module-map.md))
 
 ## What is active in this release

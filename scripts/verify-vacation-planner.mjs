@@ -2165,11 +2165,8 @@ assert.equal(verifyAfterMigration.rightPanelRows, 0);
 const duplicateMigration = repository.migrateRightVacationTableToMainSource();
 assert.equal(duplicateMigration.migrated, 0);
 
-const code = fs.readFileSync(path.join(repoRoot, "Code.gs"), "utf8");
-const sidebarHtml = fs.readFileSync(
-  path.join(repoRoot, "Sidebar.html"),
-  "utf8",
-);
+const code = readRepo("Code.gs");
+const sidebarHtml = readRepo("Sidebar.html");
 assert.ok(
   sidebarHtml.split(/\r?\n/).length >= 520,
   "Sidebar.html must stay expanded (>=520 lines); disable HTML format-on-save",
@@ -2179,14 +2176,8 @@ assert.match(
   /<button\s*\n\s+type="button"/,
   "Sidebar.html is compressed by HTML formatter; reload from disk and do not format-on-save",
 );
-const jsVacations = fs.readFileSync(
-  path.join(repoRoot, "Js.Vacations.html"),
-  "utf8",
-);
-const stylesPersonnel = fs.readFileSync(
-  path.join(repoRoot, "Styles_30_Personnel.html"),
-  "utf8",
-);
+const jsVacations = readRepo("Js.Vacations.html");
+const stylesPersonnel = readRepo("Styles_30_Personnel.html");
 assert.ok(
   stylesPersonnel.split(/\r?\n/).length >= 500,
   "Styles_30_Personnel.html must stay expanded (>=500 lines); disable HTML format-on-save for Styles_*.html",
@@ -2329,10 +2320,7 @@ vacationClientModule.state.checks = [
 vacationClientModule.openFindFromProblem(0);
 assert.equal(vacationClientModule.state.activeTab, "find");
 assert.equal(vacationClientModule.state.statusType, "warning");
-const jsHelpers = fs.readFileSync(
-  path.join(repoRoot, "Js.Helpers.html"),
-  "utf8",
-);
+const jsHelpers = readRepo("Js.Helpers.html");
 const includesContract = JSON.parse(
   fs.readFileSync(
     path.join(repoRoot, "contracts/client-includes.contract.json"),
@@ -2340,14 +2328,8 @@ const includesContract = JSON.parse(
   ),
 );
 const sidebarService = readRepo("VacationSidebarService.gs");
-const sidebarServer = fs.readFileSync(
-  path.join(repoRoot, "SidebarServer.gs"),
-  "utf8",
-);
-const sidebar = fs.readFileSync(
-  path.join(repoRoot, "VacationSidebar.html"),
-  "utf8",
-);
+const sidebarServer = readRepo("SidebarServer.gs");
+const sidebar = readRepo("VacationSidebar.html");
 const writerSource = readRepo("VacationOptionsWriter.gs");
 const plannerServiceSource = readRepo("VacationPlannerService.gs");
 const engineSource = readRepo("VacationEngine.gs");
@@ -2414,7 +2396,7 @@ assert.match(
 );
 assert.match(sidebarService, /Окремий sidebar відпусток вимкнено/);
 assert.doesNotMatch(
-  fs.readFileSync(path.join(repoRoot, "Code.gs"), "utf8"),
+  readRepo("Code.gs"),
   /showVacationSidebar/,
 );
 const allGsSources = walkGasFiles(repoRoot)
@@ -2673,14 +2655,8 @@ const vacationSources = [...walkGasFiles(repoRoot), ...walkHtmlFiles(repoRoot)]
   .join("\n");
 assert.doesNotMatch(vacationSources, /VACATION_DATA/);
 
-const maintenanceSource = fs.readFileSync(
-  path.join(repoRoot, "UseCases.Maintenance.gs"),
-  "utf8",
-);
-const reminderMailSource = fs.readFileSync(
-  path.join(repoRoot, "LeaveBirthdayReminderMail.gs"),
-  "utf8",
-);
+const maintenanceSource = readRepo("UseCases.Maintenance.gs");
+const reminderMailSource = readRepo("LeaveBirthdayReminderMail.gs");
 assert.match(
   maintenanceSource,
   /sendLeaveBirthdayReminderDigestEmail_\(/,

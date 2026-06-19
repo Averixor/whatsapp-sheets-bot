@@ -6,7 +6,9 @@ import { findFileByBasename } from './lib/gas-files.mjs';
 import { loadContract, repoRoot } from './lib/load-contract.mjs';
 
 const includesContract = loadContract('client-includes.contract.json');
-const loaderPath = path.join(repoRoot, includesContract.loaderFile || 'JavaScript.html');
+const loaderFile = includesContract.loaderFile || 'JavaScript.html';
+const loaderRel = findFileByBasename(repoRoot, path.basename(loaderFile), ['.html']) || loaderFile;
+const loaderPath = path.join(repoRoot, loaderRel);
 const EXPECTED = includesContract.expected || [];
 
 function parseIncludes(text) {

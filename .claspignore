@@ -36,12 +36,12 @@ node_modules/**
 _backup*/**
 
 # Tests / debug / local diagnostics (after !*.gs so these stay excluded)
-Stage7TestRunner*.gs
-DomainTests.gs
-AccessE2ETests.gs
-DebugManualTests.gs
-Diagnostics.Debug.gs
-GasRuntimeSmoke.gs
+tests/Stage7TestRunner*.gs
+tests/DomainTests.gs
+tests/AccessE2ETests.gs
+tests/DebugManualTests.gs
+tests/Diagnostics.Debug.gs
+tests/GasRuntimeSmoke.gs
 
 # Local tooling / python env
 .venv_xlsx/**

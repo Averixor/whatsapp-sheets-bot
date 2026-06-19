@@ -7,7 +7,7 @@
 WASB — не випадковий набір `.gs` файлів, а **шари**. Перед зміною зрозумій, який шар відповідає за задачу.
 
 ```
-Sidebar / Client UI (Js.*, Sidebar.html)
+Sidebar / Client UI (ui/Js.*, ui/Sidebar.html)
   ↓
 api* server endpoints (Stage7ServerApi, SpreadsheetActionsApi, …)
   ↓
@@ -22,7 +22,7 @@ Google Sheets       — ACCESS, PERSONNEL, місячні листи, …
 
 | Шар | За що відповідає |
 | ----- | ----------------- |
-| Sidebar / `Js.*` | Що бачить користувач у UI |
+| Sidebar / `ui/Js.*` | Що бачить користувач у UI |
 | `api*` | Який server-side сценарій викликано |
 | `AccessEnforcement_` | Чи дозволена конкретна дія (картка, send panel, summary) |
 | `AccessControl_` | Хто користувач, яка роль, ключ у ACCESS |
