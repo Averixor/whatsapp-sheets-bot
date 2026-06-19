@@ -764,7 +764,9 @@ function openPersonCardByCallsignAndDate_(callsign, dateStr) {
 }
 
 function openPersonCalendar_(callsign) {
-  const t = HtmlService.createTemplateFromFile("PersonCalendar");
+  const t = HtmlService.createTemplateFromFile(
+    resolveHtmlTemplateName_("PersonCalendar"),
+  );
   t.callsign = String(callsign || "").trim();
   t.today = _todayStr_();
   const html = t.evaluate().setTitle(`📅 ${callsign}`);

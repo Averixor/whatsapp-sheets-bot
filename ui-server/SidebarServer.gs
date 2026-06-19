@@ -7,7 +7,7 @@
  */
 
 function showSidebar() {
-  const html = HtmlService.createTemplateFromFile("Sidebar")
+  const html = HtmlService.createTemplateFromFile(resolveHtmlTemplateName_("Sidebar"))
     .evaluate()
     .setTitle("\u00A0\u00A0\u00A0WhatsApp-Sheets-Bot");
   SpreadsheetApp.getUi().showSidebar(html);

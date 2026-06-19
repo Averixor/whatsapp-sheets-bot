@@ -25,6 +25,7 @@
     "gas:smoke": "npm run gas:smoke:prepare && npx clasp -P .clasp.smoke.json -I .clasp.smokeignore run apiRunSmokeChecks",
     "deploy:smoke": "npm run gas:smoke:push && npm run gas:smoke",
     "deploy:prod": "npm run ci && npx clasp push",
+    "release": "node scripts/release.mjs",
     "gas status": "npx clasp status",
     "gas pull": "npx clasp pull",
     "gas push": "npx clasp push",
