@@ -156,7 +156,7 @@
         : [];
     }
 
-    throw new Error(result?.error || "Не вдалося перечитати SEND_PANEL");
+    throw new Error(result?.error || "Не вдалося оновити панель надсилання");
   }
 
   function getReadyPanelItems(panelData = STATE.currentPanelData) {
@@ -181,7 +181,7 @@
       : [];
     if (!panelData.length) {
       sendBtn.disabled = false;
-      sendBtn.title = "Перечитати SEND_PANEL або створити панель";
+      sendBtn.title = "Оновити панель надсилання або створити панель";
       return;
     }
 
@@ -219,7 +219,7 @@
 
         if (!result?.success) {
           lastFailure = new Error(
-            result?.error || "Не вдалося перечитати SEND_PANEL",
+            result?.error || "Не вдалося оновити панель надсилання",
           );
           break;
         }
@@ -240,7 +240,7 @@
           setCurrentPanelData(rows);
 
           if (!silent) {
-            logToConsole(`⟲ SEND_PANEL синхронізовано (${reason})`, "info");
+            logToConsole(`⟲ Панель надсилання синхронізовано (${reason})`, "info");
           }
 
           return result;
@@ -249,7 +249,7 @@
         if (attempt < retries) {
           if (!silent) {
             logToConsole(
-              `⏳ SEND_PANEL ще перебудовується, повторна спроба ${attempt + 2}/${retries + 1}`,
+              `⏳ Панель надсилання ще перебудовується, повторна спроба ${attempt + 2}/${retries + 1}`,
               "warning",
             );
           }
@@ -268,7 +268,7 @@
 
         if (!silent) {
           logToConsole(
-            "⚠ Сервер тимчасово повернув порожній SEND_PANEL — залишаю останні непорожні дані",
+            "⚠ Сервер тимчасово повернув порожню панель надсилання — залишаю останні непорожні дані",
             "warning",
           );
         }
@@ -280,7 +280,7 @@
         });
       }
 
-      throw lastFailure || new Error("Не вдалося перечитати SEND_PANEL");
+      throw lastFailure || new Error("Не вдалося оновити панель надсилання");
     } finally {
       if (refreshToken === STATE.panelRefreshSeq) {
         STATE.panelRefreshInProgress = false;

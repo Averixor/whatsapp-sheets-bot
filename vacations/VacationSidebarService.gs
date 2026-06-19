@@ -111,7 +111,7 @@ const VacationSidebarService_ = (function () {
     }
     const person = PersonnelRepository_.getByFml(fml, { activeOnly: true });
     if (!person) {
-      throw new Error("Активну людину не знайдено в PERSONNEL");
+      throw new Error("Активну людину не знайдено в особовому складі");
     }
     return person;
   }
