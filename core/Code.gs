@@ -36,6 +36,8 @@ const CONFIG = {
   SEND_PANEL_TITLE_ROWS: 1,
   SEND_PANEL_HEADER_ROW: 2,
   SEND_PANEL_DATA_START_ROW: 3,
+  /** Legacy clear corridor A3:G40 — keep tail cleanup through this row. */
+  SEND_PANEL_LEGACY_END_ROW: 40,
 
   // Налаштування бокової панелі
   SIDEBAR_WIDTH: 350,

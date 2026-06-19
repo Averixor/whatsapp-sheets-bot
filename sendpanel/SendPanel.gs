@@ -203,16 +203,60 @@ function cleanupOldSendPanelSentState_(keepDays) {
   return cleanupOldSendPanelStateMaps_(keepDays);
 }
 
+function calcSendPanelDataEndRow_(options) {
+  const opts = options || {};
+  const startRow =
+    Number(
+      opts.sendPanelDataStartRow != null
+        ? opts.sendPanelDataStartRow
+        : CONFIG.SEND_PANEL_DATA_START_ROW,
+    ) || 3;
+  const monthlyFirst =
+    Number(
+      opts.monthlyFirstDataRow != null
+        ? opts.monthlyFirstDataRow
+        : typeof MONTHLY_CONFIG !== 'undefined' && MONTHLY_CONFIG.FIRST_DATA_ROW,
+    ) || 2;
+  const monthlyLast =
+    Number(
+      opts.monthlyLastDataRow != null
+        ? opts.monthlyLastDataRow
+        : typeof MONTHLY_CONFIG !== 'undefined' && MONTHLY_CONFIG.LAST_DATA_ROW,
+    ) || 30;
+  const legacyEndRow =
+    Number(
+      opts.sendPanelLegacyEndRow != null
+        ? opts.sendPanelLegacyEndRow
+        : CONFIG.SEND_PANEL_LEGACY_END_ROW,
+    ) || 40;
+
+  const monthlyRows = Math.max(0, monthlyLast - monthlyFirst + 1);
+  const expectedEndRow = startRow + monthlyRows - 1;
+
+  return Math.max(startRow, expectedEndRow, legacyEndRow);
+}
+
 function getSendPanelDataBounds_(panel) {
   const sheet = panel || getWasbSpreadsheet_().getSheetByName(CONFIG.SEND_PANEL_SHEET);
   const startRow = Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3;
-  const endRow =
-    (typeof MONTHLY_CONFIG !== 'undefined' && Number(MONTHLY_CONFIG.LAST_DATA_ROW)) ||
-    40;
+  const endRow = calcSendPanelDataEndRow_();
   return {
     sheet: sheet,
     startRow: startRow,
-    endRow: Math.max(startRow, endRow)
+    endRow: endRow,
+    expectedEndRow:
+      startRow +
+      Math.max(
+        0,
+        (Number(
+          typeof MONTHLY_CONFIG !== 'undefined' && MONTHLY_CONFIG.LAST_DATA_ROW,
+        ) || 30) -
+          (Number(
+            typeof MONTHLY_CONFIG !== 'undefined' && MONTHLY_CONFIG.FIRST_DATA_ROW,
+          ) || 2) +
+          1,
+      ) -
+      1,
   };
 }
 
@@ -337,8 +381,8 @@ function rebuildSendPanelStructureUnsafe_(panel, botMonth, panelDate) {
     .setBackground(null);
 
   const startRow = Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3;
-  const lastRow = (typeof MONTHLY_CONFIG !== 'undefined' && Number(MONTHLY_CONFIG.LAST_DATA_ROW)) || 40;
-  const rowCount = Math.max(1, lastRow - startRow + 1);
+  const endRow = calcSendPanelDataEndRow_();
+  const rowCount = Math.max(1, endRow - startRow + 1);
   panel.getRange(startRow, 1, rowCount, 7).setBackground(null);
 
   setSendPanelMetadata_(panel, safeMonth, safeDate);
