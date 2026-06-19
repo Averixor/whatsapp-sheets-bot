@@ -1,6 +1,6 @@
 # Module map
 
-Practical index: **where to look** and **what CI proves it**. Structural rules: [ADR-002](./adr/002-domain-folder-map.md). Mechanical change rules: [ADR-001](./adr/001-structural-changes.md).
+Practical index: **where to look** and **what CI proves it**. Structural rules: [ADR-003](./adr/003-working-domain-layout.md) (working layout), [ADR-002](./adr/002-domain-folder-map.md) (phased history), [ADR-001](./adr/001-structural-changes.md) (mechanical moves).
 
 | Domain | Folder | Main files | CI / verification | Notes |
 | ------ | ------ | ---------- | ----------------- | ----- |

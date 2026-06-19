@@ -16,6 +16,8 @@ Pilot `reports/` (#23, #28) and clasp nested-push fixes (#25–#29) proved the p
 
 See [module-map.md](../module-map.md) for the live folder table.
 
+**Update (2026-06):** Phases 1–3 from the table below were largely completed in PR #34. The **current working layout** (all runtime folders, zero root `.gs`) is documented in [ADR-003](./003-working-domain-layout.md). This ADR remains the historical record of the phased rollout and invariants.
+
 ## Decision
 
 Move domain-owned `.gs` files into stable top-level folders **without renaming, merging, or behavior changes**.

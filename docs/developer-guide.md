@@ -60,11 +60,11 @@ Google Sheets       — ACCESS, PERSONNEL, місячні листи, …
 
 Якщо додаєш або змінюєш `api*`, зміна **не завершена**, поки не проходить `verify-access-api-governance` (recursive scan, contract parity, guard markers).
 
-Структурні зміни (move/split/merge): [ADR-001](./adr/001-structural-changes.md). План папок по доменах: [ADR-002](./adr/002-domain-folder-map.md), [module-map.md](./module-map.md).
+Структурні зміни (move/split/merge): [ADR-001](./adr/001-structural-changes.md). **Робоча** карта папок: [ADR-003](./adr/003-working-domain-layout.md), [module-map.md](./module-map.md). Історичні фази: [ADR-002](./adr/002-domain-folder-map.md).
 
 ## Де лежать файли
 
-Коротка таблиця domain → folder → CI: [module-map.md](./module-map.md). Зараз у підпапках: `reports/` (3 модулі), `vacations/` (11 модулів). Решта runtime — у root до наступних фаз ADR-002.
+Коротка таблиця domain → folder → CI: [module-map.md](./module-map.md). Після PR #34 усі runtime `.gs` / `.html` у доменних папках (`core/`, `api/`, `ui/`, `reports/`, `vacations/`, …); у корені лишаються конфіг і документація. Структура **робоча**, не фінальна — уточнення через ADR-003.
 
 ## Правило для refactor
 
