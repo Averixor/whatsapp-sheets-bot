@@ -270,8 +270,10 @@ const SendPanelFastPaths_ = (function() {
       ];
     });
 
-    panel.getRange(Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3, 1, finalRows.length, 7).setValues(finalRows);
-    panel.getRange(Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3, 5, finalRows.length, 2).setHorizontalAlignment('center');
+    writeSendPanelDataRows_(panel, finalRows);
+    panel
+      .getRange(Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3, 5, finalRows.length, 2)
+      .setHorizontalAlignment('center');
     panel.getRange(Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3, 1, finalRows.length, 7).setBackground(null);
 
     var mappedRows = _mapStoredRowsFromMatrix_(finalRows, Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3, built.date);

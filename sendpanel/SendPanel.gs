@@ -203,32 +203,104 @@ function cleanupOldSendPanelSentState_(keepDays) {
   return cleanupOldSendPanelStateMaps_(keepDays);
 }
 
-function getSendPanelStatusFormula_() {
-  return '=ARRAYFORMULA(IF(A3:A40&B3:B40&C3:C40&D3:D40="";"";IF((A3:A40<>"")*(B3:B40<>"")*(C3:C40<>"")*(D3:D40<>"");"✔";"✘")))';
+function getSendPanelDataBounds_(panel) {
+  const sheet = panel || getWasbSpreadsheet_().getSheetByName(CONFIG.SEND_PANEL_SHEET);
+  const startRow = Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3;
+  const endRow =
+    (typeof MONTHLY_CONFIG !== 'undefined' && Number(MONTHLY_CONFIG.LAST_DATA_ROW)) ||
+    40;
+  return {
+    sheet: sheet,
+    startRow: startRow,
+    endRow: Math.max(startRow, endRow)
+  };
+}
+
+function clearSendPanelDataRange_(panel) {
+  const bounds = getSendPanelDataBounds_(panel);
+  if (!bounds.sheet) return false;
+
+  const rowCount = bounds.endRow - bounds.startRow + 1;
+  bounds.sheet.getRange(bounds.startRow, 1, rowCount, 7).clearContent();
+  return true;
+}
+
+function clearSendPanelDataTail_(panel, rowsWritten) {
+  const bounds = getSendPanelDataBounds_(panel);
+  if (!bounds.sheet || !Number.isFinite(rowsWritten)) return false;
+
+  const tailStart = bounds.startRow + Number(rowsWritten);
+  if (tailStart > bounds.endRow) return true;
+
+  const tailCount = bounds.endRow - tailStart + 1;
+  bounds.sheet.getRange(tailStart, 1, tailCount, 7).clearContent();
+  return true;
+}
+
+function calcSendPanelRowStatus_(fml, phone, code, tasks) {
+  const values = [fml, phone, code, tasks].map(function(value) {
+    return String(value || '').trim();
+  });
+  const filled = values.filter(function(value) {
+    return value !== '';
+  }).length;
+
+  if (filled === 0) return '';
+  return filled === values.length
+    ? getSendPanelReadyStatus_()
+    : getSendPanelBlockedStatus_();
 }
 
 function deriveSendPanelStatusFromInputs_(fml, phone, code, tasks) {
-  const values = [fml, phone, code, tasks].map(function(item) {
-    return String(item || '').trim();
-  });
-  return values.every(Boolean) ? getSendPanelReadyStatus_() : getSendPanelBlockedStatus_();
+  return calcSendPanelRowStatus_(fml, phone, code, tasks);
 }
 
-function ensureSendPanelStatusFormula_(panel) {
-  const sheet = panel || getWasbSpreadsheet_().getSheetByName(CONFIG.SEND_PANEL_SHEET);
-  if (!sheet) return false;
+function materializeSendPanelStatusColumn_(panel, rowCount) {
+  const bounds = getSendPanelDataBounds_(panel);
+  if (!bounds.sheet) return false;
 
-  const startRow = Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3;
-  const lastRow = (typeof MONTHLY_CONFIG !== 'undefined' && Number(MONTHLY_CONFIG.LAST_DATA_ROW)) || 40;
-  const rowCount = Math.max(1, lastRow - startRow + 1);
-  const statusRange = sheet.getRange(startRow, 5, rowCount, 1);
+  const count =
+    Number.isFinite(rowCount) && rowCount > 0
+      ? rowCount
+      : Math.max(0, bounds.sheet.getLastRow() - bounds.startRow + 1);
+  if (count <= 0) return true;
 
+  const inputs = bounds.sheet
+    .getRange(bounds.startRow, 1, count, 4)
+    .getDisplayValues();
+  const statuses = inputs.map(function(row) {
+    return [calcSendPanelRowStatus_(row[0], row[1], row[2], row[3])];
+  });
+
+  const statusRange = bounds.sheet.getRange(bounds.startRow, 5, count, 1);
   statusRange.clearDataValidations();
   statusRange.clearContent();
-  sheet.getRange(startRow, 5).setFormula(getSendPanelStatusFormula_());
+  statusRange.setValues(statuses);
   statusRange.setHorizontalAlignment('center');
-
   return true;
+}
+
+function writeSendPanelDataRows_(panel, rows) {
+  const bounds = getSendPanelDataBounds_(panel);
+  if (!bounds.sheet) return 0;
+
+  const safeRows = Array.isArray(rows) ? rows : [];
+  clearSendPanelDataRange_(bounds.sheet);
+
+  if (!safeRows.length) return 0;
+
+  bounds.sheet
+    .getRange(bounds.startRow, 1, safeRows.length, 7)
+    .setValues(safeRows);
+  clearSendPanelDataTail_(bounds.sheet, safeRows.length);
+  return safeRows.length;
+}
+
+/**
+ * Legacy name kept for callers; status is materialized as values, not ARRAYFORMULA.
+ */
+function ensureSendPanelStatusFormula_(panel, rowCount) {
+  return materializeSendPanelStatusColumn_(panel, rowCount);
 }
 
 function ensureSendPanelStructure_(panel, botMonth, panelDate) {
@@ -442,8 +514,7 @@ function rebuildSendPanelCore_() {
     throw new Error('На сьогодні немає даних для панелі надсилання');
   }
 
-  panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 1, rows.length, 7).setValues(rows);
-  ensureSendPanelStatusFormula_(panel);
+  writeSendPanelDataRows_(panel, rows);
   applyColumnWidthsStandardsToSheet_(panel);
   panel.setFrozenRows(CONFIG.SEND_PANEL_HEADER_ROW);
   normalizeSendPanelDailyState_(panel);
