@@ -233,21 +233,23 @@ function _personnelMaterializeClearColumnTail_(sheet, startRow, colIndex, rowsWr
     .clearContent();
 }
 
-function materializePersonnelHelperColumns_(sheet) {
+function materializePersonnelHelperColumns_(sheet, builtArg) {
   sheet = sheet || _personnelGetSheet_(false);
   if (!sheet) {
     return { ok: false, reason: "personnel sheet missing", rowsWritten: 0 };
   }
 
-  var built;
-  try {
-    built = _personnelMaterializeBuildSourceRows_(sheet);
-  } catch (e) {
-    return {
-      ok: false,
-      reason: e && e.message ? e.message : String(e),
-      rowsWritten: 0,
-    };
+  var built = builtArg;
+  if (!built) {
+    try {
+      built = _personnelMaterializeBuildSourceRows_(sheet);
+    } catch (e) {
+      return {
+        ok: false,
+        reason: e && e.message ? e.message : String(e),
+        rowsWritten: 0,
+      };
+    }
   }
 
   var col = built.col;
@@ -545,7 +547,7 @@ function materializePersonnelDerivedSheets_(options) {
     };
   }
 
-  var personnelResult = materializePersonnelHelperColumns_(personnelSheet);
+  var personnelResult = materializePersonnelHelperColumns_(personnelSheet, built);
   var phonesResult = materializePhonesSheet_(null, built.rows, options || {});
   var birthdayResult = materializeBirthdayHelperSheet_(null, built.rows, options || {});
 

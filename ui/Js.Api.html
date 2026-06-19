@@ -292,6 +292,10 @@
       adaptStage4UtilityResponse(await Api.run("apiStage7ClearLog")),
     clearPhoneCache: async () =>
       adaptStage4UtilityResponse(await Api.run("apiStage7ClearPhoneCache")),
+    materializeComputedData: async () =>
+      adaptStage4UtilityResponse(
+        await Api.run("apiStage7MaterializeComputedData"),
+      ),
     restartBot: async () =>
       adaptStage4UtilityResponse(await Api.run("apiStage7RestartBot")),
     setupVacationTriggers: async () =>
@@ -417,6 +421,7 @@
     clearCache: MaintenanceApi.clearCache,
     clearLog: MaintenanceApi.clearLog,
     clearPhoneCache: MaintenanceApi.clearPhoneCache,
+    materializeComputedData: MaintenanceApi.materializeComputedData,
     restartBot: MaintenanceApi.restartBot,
     setupVacationTriggers: MaintenanceApi.setupVacationTriggers,
     cleanupDuplicateTriggers: MaintenanceApi.cleanupDuplicateTriggers,

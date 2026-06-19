@@ -371,9 +371,10 @@ guest / login fail
 2. `clasp status` — правильний script project.
 3. Script Properties: `WASB_SPREADSHEET_ID`, `WASB_OWNER_EMAIL`.
 4. ACCESS bootstrap не зламаний.
-5. **`apiStage7ClearPhoneCache()`** після кожного production deploy.
-6. `apiStage7QuickHealthCheck()` / `apiStage7HealthCheck()`.
-7. contract parity (`verify-access-api-governance` у CI).
+5. **`apiStage7MaterializeComputedData()`** після змін PERSONNEL / PHONES / Birthday / VACATIONS або коли потрібно оновити вік, дні до ДН, відпусткові колонки.
+6. **`apiStage7ClearPhoneCache()`** після кожного production deploy (лише інвалідація кешу телефонів).
+7. `apiStage7QuickHealthCheck()` / `apiStage7HealthCheck()`.
+8. contract parity (`verify-access-api-governance` у CI).
 
 **Типовий маршрут:**
 
@@ -383,6 +384,7 @@ guest / login fail
   → clasp / remote
   → Script Properties
   → ACCESS bootstrap
+  → apiStage7MaterializeComputedData()   # якщо змінювали довідники / відпустки
   → apiStage7ClearPhoneCache()
   → health check
 ```
@@ -621,7 +623,8 @@ Run from the Apps Script editor when relevant after a deploy or config change:
 - `apiStage7DebugAccess()` — access debug payload
 - `runAccessPolicyChecks()` — access policy assertions
 - `runSmokeTests()` — smoke bundle
-- `apiStage7ClearPhoneCache()` — invalidate phone/profile/PERSONNEL caches (required after every production deploy and after **PERSONNEL** or **PHONES** edits)
+- `apiStage7MaterializeComputedData()` — пересборка обчислюваних колонок (PERSONNEL helper, PHONES, Birthday, VACATIONS, Status панелі); sidebar: **Оновити обчислювані дані**
+- `apiStage7ClearPhoneCache()` — invalidate phone/profile caches (після кожного production deploy; **не** замінює materialize)
 
 ## 14. PERSONNEL sheet (canonical people data)
 
@@ -689,7 +692,7 @@ Do **not** hardcode production spreadsheet IDs in source files; use Script prope
 
 Runtime prefers **`PERSONNEL`** for phones/profiles when the sheet has data; **PHONES** remains a legacy fallback.
 
-After editing **PERSONNEL**, **PHONES**, or birthday logic, run **`apiStage7ClearPhoneCache()`**, then reopen the sidebar and verify person cards (**ДН** / phone).
+After editing **PERSONNEL**, **PHONES**, or birthday logic, run **`apiStage7MaterializeComputedData()`**, then **`apiStage7ClearPhoneCache()`**, then reopen the sidebar and verify person cards (**ДН** / phone).
 
 Operational detail: **`loadPhonesIndex_()`** builds from **PERSONNEL** (active rows) when available (`personnel/PersonnelRepository.gs`); otherwise from **PHONES** headers (`sendpanel/Stage7PhoneDictPayloadShims.gs`).
 
