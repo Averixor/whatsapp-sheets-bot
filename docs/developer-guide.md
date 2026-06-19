@@ -9,7 +9,7 @@ WASB — не випадковий набір `.gs` файлів, а **шари*
 ```
 Sidebar / Client UI (ui/Js.*, ui/Sidebar.html)
   ↓
-api* server endpoints (Stage7ServerApi, SpreadsheetActionsApi, …)
+api* server endpoints (`api/Stage7ServerApi.gs`, `api/SpreadsheetActionsApi.gs`, …)
   ↓
 AccessEnforcement_  — чи дозволена конкретна дія
   ↓

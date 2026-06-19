@@ -58,4 +58,4 @@ PERSONNEL_INACTIVE_STATUSES_; // ['Вибув', 'СЗЧ']
 
 ## Референс
 
-- `PersonnelRepository.gs` — `normalizePersonnelStatus_`, `getPersonnelActiveRows_`, `applyPersonnelStatusColumnValidation_`
+- `personnel/PersonnelRepository.gs` — `normalizePersonnelStatus_`, `getPersonnelActiveRows_`, `applyPersonnelStatusColumnValidation_`

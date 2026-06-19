@@ -63,11 +63,13 @@ Full workflow, release checklist, and post-deploy checks: **`CONTRIBUTING.md`** 
 
 The repository runs a lightweight CI workflow on **`push`** and **`pull_request`** to **`main`**, and **`workflow_dispatch`**.
 
-It runs 18 checks via `npm run ci`, including:
+It runs the full **`npm run ci`** suite (**24** Node verify scripts after `npm run precheck` — see `package.json` and **RUNBOOK.md** §12), including:
 
-- GAS source sanity, workbook + recipient + personnel-status contracts, function graph audit
-- Client includes / JS / layer deps, XSS, envelope compat
-- UseCase facade, snapshot governance, bridge flags, access API governance, OAuth scopes, jsconfig
+- GAS sanity, clasp push patterns, **Ukrainian/Russian language** (`verify-no-russian-text.mjs`), **user-facing copy** (`verify-user-facing-copy.mjs`)
+- Workbook, vacation planner, recipient, personnel-status, format-rules contracts
+- Function graph audit; client includes, HTML labels, JS parse, layer deps, XSS, envelope compat
+- UseCase facade, snapshot governance, bridge flags, access API governance, access hotfixes
+- OAuth scopes, jsconfig
 
 See [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) (Node 24, `actions/checkout@v5`, `actions/setup-node@v5`).
 
@@ -97,7 +99,10 @@ The workflow does not deploy to Apps Script. Deployment remains local via
 | [`docs/module-map.md`](./docs/module-map.md) | Domain folders: where GAS modules live, which CI guards them |
 | [`docs/adr/002-domain-folder-map.md`](./docs/adr/002-domain-folder-map.md) | Phased folder moves (ADR-002) |
 | [`docs/daily-summary-architecture.md`](./docs/daily-summary-architecture.md) | Short/detailed day summary: formula block, modules, sidebar flow |
-| [`docs/vacation-planner.md`](./docs/vacation-planner.md) | Vacation planner, rules (3/4/5 load), mini-calendar UX |
+| [`docs/vacation-planner.md`](./docs/vacation-planner.md) | Vacation planner, concurrent rules, mini-calendar UX |
+| [`docs/user-facing-copy.md`](./docs/user-facing-copy.md) | UX copy policy; enforced by `verify-user-facing-copy.mjs` |
+| [`docs/format-rules-governance.md`](./docs/format-rules-governance.md) | Manual conditional-format registry |
+| [`docs/adr/003-working-domain-layout.md`](./docs/adr/003-working-domain-layout.md) | Working domain folder layout (post-#34) |
 
 Contracts and snapshots are machine-readable governance artifacts under
 `contracts/` and `scripts/snapshots/`. Do not commit one-off audits, production
@@ -107,27 +112,25 @@ workbook exports, personal data, or local workbook paths.
 
 ```text
 .
-├── *.gs / *.html / appsscript.json   # root GAS runtime files
-├── reports/                          # daily summary GAS runtime modules
-├── vacations/                        # vacation planner GAS runtime modules
-├── README.md                         # ops docs (see Documentation map)
-├── ARCHITECTURE.md
-├── RUNBOOK.md
-├── SECURITY.md
-├── CHANGELOG.md
-├── docs/README.md                    # documentation index (Git only)
-├── contracts/                        # machine-readable policy/contracts
-├── scripts/                          # local CI and governance checks
-└── no _extras/ in compact GAS release ZIP
+├── appsscript.json                   # GAS manifest (repo root only)
+├── core/ api/ data/ sheets/ usecases/ ui-server/   # server runtime
+├── reports/ vacations/ sendpanel/ access/ personnel/
+├── maintenance/ diagnostics/ security/ operations/ smoke/
+├── ui/                               # all .html (Sidebar, JavaScript, Js.*, Styles*)
+├── tests/                            # local-only (excluded from clasp push)
+├── docs/ contracts/ scripts/         # Git-only tooling and documentation
+└── README.md RUNBOOK.md ARCHITECTURE.md …
 ```
 
-Domain moves follow [ADR-002](docs/adr/002-domain-folder-map.md). Most `.gs` / `.html` still live at repo root; more folders arrive in later phases (`sendpanel/`, `access/`, `ui/`).
+Runtime layout is documented in [`docs/module-map.md`](docs/module-map.md) and
+[ADR-003](docs/adr/003-working-domain-layout.md). After PR #34 there are **0**
+runtime `.gs` at repo root; all `.html` live in `ui/`.
 
 ## Quick import checklist
 
 1. Open the spreadsheet-bound Apps Script project.
-2. Upload root `.gs`, `.html`, `appsscript.json`, and domain folders `reports/`, `vacations/` (or use `clasp push` from this repository).
-3. Import only GAS runtime files from this repository; no `_extras/` folder is required.
+2. Deploy with **`clasp push`** from this repository (nested `!**/*.gs` and `!**/*.html` from all domain folders per `.claspignore`), or upload the same tree in the GAS editor.
+3. Import only GAS runtime files from this repository; there is no `_extras/` folder in the compact bundle.
 4. Run `apiStage7BootstrapRuntimeAndAlertsSheets()` once.
 5. Run `apiStage7BootstrapAccessSheet()` once.
 6. Fill the `ACCESS` sheet.
@@ -176,7 +179,7 @@ Notes:
   `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`.
   Runtime-active (schedule, phones, cards): all except **`Вибув`** and **`СЗЧ`**.
   Empty status defaults to **`В наявності`**. Legacy labels (`Дієвий`, `Active`,
-  `Відрядження`, EN) map on read only — see `PersonnelRepository.gs`.
+  `Відрядження`, EN) map on read only — see `personnel/PersonnelRepository.gs`.
 - Runtime reads by header names and supports documented aliases (split names, TEMPLATE, OSH 4, etc.). After edits,
   run `apiStage7ClearPhoneCache()`.
 
@@ -208,7 +211,7 @@ Turn it back off immediately after the needed keys are registered.
 - `apiRunStage7RegressionTests()` — regression suite entrypoint
 - `apiStage7ApplyProtections()` — spreadsheet protections
 - `apiStage7BootstrapSidebar()` — sidebar bootstrap + optional business sheets
-- `apiStage7BootstrapRuntimeAndAlertsSheets()` — service sheet bootstrap (`ServiceSheetsBootstrap.gs`)
+- `apiStage7BootstrapRuntimeAndAlertsSheets()` — service sheet bootstrap (`sheets/ServiceSheetsBootstrap.gs`)
 - `apiStage7BootstrapAccessSheet()` — `ACCESS` bootstrap
 
 ## Non-goals for this bundle

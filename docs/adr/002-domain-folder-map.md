@@ -67,6 +67,6 @@ Merge/split of large modules: separate ADR/review per [ADR-001](./001-structural
 
 ## Consequences
 
-- Root file count drops toward ~40–60 without reducing total module count.
+- Root file count: **0** runtime `.gs` at repo root after Phase 4 / PR #34; all `.html` in `ui/`.
 - `readRepoFileByBasename` / recursive CI scans remain basename-first; verify scripts with hardcoded `path.join(repoRoot, …)` must be updated in the same PR as the move (known: `verify-vacation-planner.mjs`).
 - Phase 3 (`ui/`) keeps `JavaScript.html` include order unchanged and uses basename-compatible `include()` resolution.

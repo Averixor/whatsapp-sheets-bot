@@ -16,7 +16,7 @@ This runbook covers:
 ## 2. First import into GAS
 
 1. Open the target spreadsheet-bound Apps Script project.
-2. Upload root `.gs`, `.html`, `appsscript.json`, and domain folders `reports/`, `vacations/` (or deploy with `clasp push` from this repository).
+2. Deploy with **`clasp push`** from this repository (all domain `**/*.gs` and `ui/**/*.html` per `.claspignore`), or upload the same tree in the GAS editor.
 3. Import only GAS runtime files from this repository; there is no `_extras/` folder in the compact bundle.
 4. Save the project.
 5. Reload the Apps Script editor once to make sure all files are visible.
@@ -25,8 +25,8 @@ This runbook covers:
 
 Run these in order:
 
-1. `apiStage7BootstrapRuntimeAndAlertsSheets()` — `ServiceSheetsBootstrap.gs`
-2. `apiStage7BootstrapAccessSheet()` — `AccessControl.PublicApi.gs`
+1. `apiStage7BootstrapRuntimeAndAlertsSheets()` — `sheets/ServiceSheetsBootstrap.gs`
+2. `apiStage7BootstrapAccessSheet()` — `access/AccessControl.PublicApi.gs`
 3. fill `ACCESS`
 4. `apiStage7ApplyProtections({ dryRun: true })`
 5. fix any issues found by the dry run
@@ -155,7 +155,7 @@ After migration:
 
 ### Managed trigger jobs (Stage 7)
 
-Installed by `Stage7Triggers_.installManagedTriggers()` (`Triggers.gs`):
+Installed by `Stage7Triggers_.installManagedTriggers()` (`operations/Triggers.gs`):
 
 | Handler                               | Schedule     | Purpose                                    |
 | ------------------------------------- | ------------ | ------------------------------------------ |
@@ -350,7 +350,7 @@ guest / login fail
 
 ```
 помилка у відпустках
-  → vacation UI (Js.Vacations.html)
+  → vacation UI (`ui/Js.Vacations.html`)
   → vacations/VacationPlannerService.gs, vacations/VacationMonthCalendar.gs
   → selected month
   → VACATIONS / VACATION_REQUESTS
@@ -449,7 +449,7 @@ Check:
 - guarded use cases (e.g. `checkVacationsAndBirthdays`) receive descriptor from `AccessEnforcement_.buildSystemTriggerAccessDescriptor`
 - **`WASB_SPREADSHEET_ID`** is set for headless runs
 
-Fix path: redeploy `Triggers.gs`, `AccessEnforcement.gs`, `UseCases.Maintenance.gs`; re-run `stage7JobDailyVacationsAndBirthdays()` from the GAS editor.
+Fix path: redeploy `operations/Triggers.gs`, `access/AccessEnforcement.gs`, `usecases/UseCases.Maintenance.gs`; re-run `stage7JobDailyVacationsAndBirthdays()` from the GAS editor.
 
 ### User is seen as guest but should not be
 
@@ -509,24 +509,32 @@ The repository runs CI automatically on **`push`** and **`pull_request`** to **`
 Local equivalent: **`npm run ci`**.
 
 | Script | Purpose |
-
 |--------|---------|
+| `verify-node-version.mjs` | Node 24 engine gate (`precheck`) |
 | `ci-gas-sanity.mjs` | Syntax check all `.gs` files |
-| `verify-personnel-status-contract.mjs` | PERSONNEL Status dropdown/active/inactive lists vs `PersonnelRepository.gs` |
+| `verify-clasp-push-patterns.mjs` | `.claspignore` / push patterns |
+| `verify-no-russian-text.mjs` | Ban Russian markers in project text |
+| `verify-user-facing-copy.mjs` | Ban technical tokens in user-visible copy (`contracts/user-facing-copy.contract.json`) |
 | `verify-workbook-contract.mjs` | Monthly layout geometry, formula-block short summary, detailed summary grouping |
+| `verify-vacation-planner.mjs` | Vacation planner rules, calendar, repository contracts |
 | `verify-recipient-contract.mjs` | Recipient routing and dark-select UI contract |
+| `verify-personnel-status-contract.mjs` | PERSONNEL Status dropdown/active/inactive vs `personnel/PersonnelRepository.gs` |
+| `verify-format-rules-governance.mjs` | Manual conditional-format registry |
 | `audit-function-graph.mjs` | Bound entrypoint refs vs definitions |
-| `verify-client-includes.mjs` | `JavaScript.html` include order |
+| `verify-client-includes.mjs` | `ui/JavaScript.html` include order |
+| `verify-html-label-for.mjs` | HTML `label for=` hygiene |
 | `verify-client-js.mjs` | Combined sidebar client parse-check |
-| `verify-client-deps.mjs` | Client layer graph / cross-layer refs (`contracts/client-layers.contract.json`) |
+| `verify-client-deps.mjs` | Client layer graph (`contracts/client-layers.contract.json`) |
 | `audit-client-xss.mjs` | Unsafe `innerHTML` / `setHtml` interpolations |
 | `audit-envelope-compat.mjs` | Server envelope + client adapters + transport bridge |
 | `verify-usecase-facade.mjs` | `Stage7UseCases_` contract vs snapshot |
-| `verify-snapshot-governance.mjs` | Snapshot mutations require `contracts/SNAPSHOT_CHANGELOG.md` + metadata |
-| `verify-bridge-flags.mjs` | `USE_NEW_API_PATH` registry vs codebase (`contracts/bridge-flags.registry.json`) |
-| `verify-access-api-governance.mjs` | Access endpoints, role policies, and client routes |
+| `verify-snapshot-governance.mjs` | Snapshot mutations require `contracts/SNAPSHOT_CHANGELOG.md` |
+| `verify-bridge-flags.mjs` | `USE_NEW_API_PATH` registry (`contracts/bridge-flags.registry.json`) |
+| `verify-access-api-governance.mjs` | Access endpoints, role policies, client routes |
+| `verify-access-autofill-hotfix.mjs` | ACCESS row autofill hotfix contract |
+| `verify-access-temp-password-reissue.mjs` | Temporary password reissue flow |
 | `verify-oauth-scopes.mjs` | Manifest scopes vs allowlist |
-| `verify-jsconfig.mjs` | `jsconfig.json` include/exclude globs resolve to tsserver inputs |
+| `verify-jsconfig.mjs` | `jsconfig.json` include/exclude globs |
 
 There is **no** Apps Script deployment in CI (`clasp` is local only). See `.github/workflows/ci.yml`.
 
@@ -582,7 +590,7 @@ spreadsheet, grant the smoke executor the required ACCESS role, then run:
 npm run deploy:smoke
 ```
 
-`deploy:smoke` stages the full GAS tree (root + domain folders such as `reports/`, `vacations/`) plus `appsscript.smoke.json` in
+`deploy:smoke` stages the full GAS tree (all domain folders per `docs/module-map.md`) plus `appsscript.smoke.json` in
 `/tmp/wasb-smoke-bundle`, pushes only to `.clasp.smoke.json`, and runs
 `apiRunSmokeChecks`. Never point `.clasp.smoke.json` at production.
 
@@ -683,7 +691,7 @@ Runtime prefers **`PERSONNEL`** for phones/profiles when the sheet has data; **P
 
 After editing **PERSONNEL**, **PHONES**, or birthday logic, run **`apiStage7ClearPhoneCache()`**, then reopen the sidebar and verify person cards (**ДН** / phone).
 
-Operational detail: **`loadPhonesIndex_()`** builds from **PERSONNEL** (active rows) when available (`PersonnelRepository.gs`); otherwise from **PHONES** headers (`Stage7PhoneDictPayloadShims.gs`).
+Operational detail: **`loadPhonesIndex_()`** builds from **PERSONNEL** (active rows) when available (`personnel/PersonnelRepository.gs`); otherwise from **PHONES** headers (`sendpanel/Stage7PhoneDictPayloadShims.gs`).
 
 ## 17. Contract and snapshot governance
 
@@ -701,8 +709,8 @@ Operational detail: **`loadPhonesIndex_()`** builds from **PERSONNEL** (active r
 
 `LegacyApiAliases.gs`, `LegacyMaintenanceAliases.gs`, and `Stage7LegacyFunctionShims.gs` were **removed**. Canonical surface:
 
-- Application / maintenance: `apiStage7*` in `Stage7ServerApi.gs` / `Stage7MaintenanceApi.gs`
-- Sidebar `google.script.run` entry points: `SidebarServer.gs` (`getMonthsList`, `generateSendPanelSidebar`, …)
+- Application / maintenance: `apiStage7*` in `api/Stage7ServerApi.gs` / `api/Stage7MaintenanceApi.gs`
+- Sidebar `google.script.run` entry points: `ui-server/SidebarServer.gs` (`getMonthsList`, `generateSendPanelSidebar`, …)
 - Removed-global inventory: `DeprecatedRegistry.gs` → `findPresentLegacyApiGlobals_()`, `getRemovedLegacyApiNames_()`
 
 Do **not** reintroduce `apiStage4*` / `apiGet*` globals. Before adding any alias, verify **all** of the following:
@@ -728,8 +736,8 @@ For day-to-day operations, prefer calling **`apiStage7*`** and documented Stage7
 | Location                         | Usage                                                                                                                                | Role                               | Risk                                        | Decision                                                                          |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------- |
 | **`Stage7TestRunner.gs`**        | ~~`eval(name)`~~ removed; explicit registry **`getStage7TestRunnerExplicitRegistry_()`** + **`globalThis[name]`** for discovery only | Manual / menu test runner          | Was **medium** (string eval); now **lower** | **DONE (P2.e)** — registered task names bind to real functions; no runtime `eval` |
-| **`SmokeTests.gs`**              | `Function("return this")()` only if `globalThis` is unavailable                                                                      | Smoke / symbol resolution fallback | Low in V8 (branch rarely taken)             | **DEFER** — replace only if a zero-`Function` pattern is validated on all hosts   |
-| **`Diagnostics.Core.gs`**        | `_global_()` → `Function('return this')()`                                                                                           | Diagnostics global scope           | Low                                         | **DEFER**                                                                         |
+| **`smoke/SmokeTests.gs`**              | `Function("return this")()` only if `globalThis` is unavailable                                                                      | Smoke / symbol resolution fallback | Low in V8 (branch rarely taken)             | **DEFER** — replace only if a zero-`Function` pattern is validated on all hosts   |
+| **`diagnostics/Diagnostics.Core.gs`**        | `_global_()` → `Function('return this')()`                                                                                           | Diagnostics global scope           | Low                                         | **DEFER**                                                                         |
 | **`Diagnostics.Stage7.Core.gs`** | `_diagGlobal_()` → same pattern after `globalThis`                                                                                   | Stage7 diagnostics                 | Low                                         | **DEFER**                                                                         |
 
 Do **not** reintroduce `eval` for resolving test or handler names; extend **`getStage7TestRunnerExplicitRegistry_()`** when adding fixed registry tasks.
@@ -738,25 +746,25 @@ Do **not** reintroduce `eval` for resolving test or handler names; extend **`get
 
 Ці три аркуші **не** створюються «ядром» bootstrap сервісних таблиць (`apiStage7BootstrapRuntimeAndAlertsSheets`). Вони підтягуються окремо:
 
-- **`apiStage7BootstrapSidebar()`** (`Stage7ServerApi.gs`) викликає **`_ensureOptionalBusinessSheetsQuiet_()`**: якщо аркуша немає — вставляє його; якщо аркуш **повністю порожній** (`getLastRow() < 1`) — записує заголовки, один шаблонний рядок і базове оформлення (frozen row 1, жирний заголовок, фон `#eef2ff`, `autoResizeColumns` де можливо).
+- **`apiStage7BootstrapSidebar()`** (`api/Stage7ServerApi.gs`) викликає **`_ensureOptionalBusinessSheetsQuiet_()`**: якщо аркуша немає — вставляє його; якщо аркуш **повністю порожній** (`getLastRow() < 1`) — записує заголовки, один шаблонний рядок і базове оформлення (frozen row 1, жирний заголовок, фон `#eef2ff`, `autoResizeColumns` де можливо).
 
 Якщо аркуш уже існує і містить хоч один рядок даних, **`ensure*`** його **не перезаписує** — правити структуру доведеться вручну або через окремі утиліти.
 
-### «Дані» (`MonthlyReport.gs`, `MonthlyReport_.ensureDataSheet_`)
+### «Дані» (`reports/MonthlyReport.gs`, `MonthlyReport_.ensureDataSheet_`)
 
 Заголовки колонок: **Дата**, **Подія / опис**, **Проєкт**, **Категорія**, **Кількість / години**, **Примітки**. Шаблонний другий рядок містить дату **01.01.2000**, щоб вона не потрапляла в звичні місячні вікна звітів.
 
-### «Проєкти» (`ProjectRequests_.ensureProjectsSheet_`)
+### «Проєкти» (`operations/ProjectRequests.gs`, `ProjectRequests_.ensureProjectsSheet_`)
 
 Заголовки: **id**, **проєкт**, **активний**, **email менеджера**. Шаблон другого рядка має **`активний = false`**, тому **`readProjects_`** його не показує у сайдбарі, доки не заміниш дані й не увімкнеш активність.
 
-### «Заявки» (`ProjectRequests_.ensureRequestsSheet_`)
+### «Заявки» (`operations/ProjectRequests.gs`, `ProjectRequests_.ensureRequestsSheet_`)
 
 Заголовки рядка 1 збігаються з порядком **`appendRow`** у **`apiSubmitRequest`**: **timestamp**, **user_email**, **project_id**, **project_name**, **title**, **details**, **dedupe_key**, **status**. Шаблон: **`dedupe_key`** = `wasb-template-row-v1`, **`status`** = `template`; **`findDuplicate_`** сканує колонку dedupe по всіх даних рядках до останнього заповненого рядка.
 
 ### Перевірка
 
-У **`runSmokeTests()`** є крок **«Optional business sheets ensured …»** (`SmokeTests.gs`): ті самі **`ensure*`** потім перевіряють, що всі три назви існують (`skipOnError`).
+У **`runSmokeTests()`** (`smoke/SmokeTests.gs`) є крок **«Optional business sheets ensured …»**: ті самі **`ensure*`** потім перевіряють, що всі три назви існують (`skipOnError`).
 
 ## 21. Vacation source migration
 
@@ -788,7 +796,7 @@ intact for diagnosis. Do not delete `VACATIONS` during the compatibility period.
 - Джерело даних: **нижній формульний блок** на місячному листі (`01`…`12`), не
   перерахунок у Apps Script.
 - Модулі: `reports/Report_SummaryData.gs` (читання) → `reports/Report_DailySimple.gs`
-  (форматування) → `Summaries.gs` (`buildDaySummaryForColumn_`).
+  (форматування) → `reports/Summaries.gs` (`buildDaySummaryForColumn_`).
 - Показники (порядок): За штатом, За списком, В наявності, У відрядженні, У
   відпустці, Гусачівка, Drone Camp, ППД, КП, БР.
 - У таблиці метки можуть бути з `_`; у тексті звіту — без `_`.
@@ -818,7 +826,7 @@ intact for diagnosis. Do not delete `VACATIONS` during the compatibility period.
 
 ## 23. Vacation mini-calendar (міні-календар відпусток)
 
-Панель: **WASB → ПАНЕЛЬ → Відпустки → Огляд або План**.
+Панель: **WASB → Відкрити панель → 🏖️ Відпустки → Огляд або План**.
 
 Повний опис: [`docs/vacation-planner.md`](./docs/vacation-planner.md).
 

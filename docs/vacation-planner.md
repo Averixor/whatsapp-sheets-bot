@@ -3,7 +3,7 @@
 WASB vacation workflow is embedded in the main sidebar:
 
 ```text
-WASB → 📱 ПАНЕЛЬ → 🏖️ Відпустки
+WASB → Відкрити панель → 🏖️ Відпустки
 PERSONNEL → active vacation source → planner/checks → VACATION_SCHEDULE / VACATION_CHECK
 ```
 
@@ -23,8 +23,8 @@ only (deprecated).
 | `vacations/VacationMonthCalendar.gs` | Month mini-calendar payload |
 | `vacations/Vacation_Suggestions.gs` | Fix suggestions for audit issues |
 | `vacations/VacationBulkFix.gs` | Bulk fix plan/apply |
-| `Js.Vacations.html` | Vacations tab UI |
-| `Styles_30_Personnel.html` | Mini-calendar styles |
+| `ui/Js.Vacations.html` | Vacations tab UI |
+| `ui/Styles_30_Personnel.html` | Mini-calendar styles |
 
 ## Sources of truth
 
@@ -243,5 +243,5 @@ Contract checks in `scripts/verify-vacation-planner.mjs` cover rules, calendar
 payload, tooltip helpers, cell layout, navigation, and absence of static rule
 text in the footer summary.
 
-Manual check after deploy: **WASB → ПАНЕЛЬ → Відпустки → Огляд/План** —
+Manual check after deploy: **WASB → Відкрити панель → 🏖️ Відпустки → Огляд/План** —
 ◀/▶ month switch, tooltip content, day click details, problem highlighting.
