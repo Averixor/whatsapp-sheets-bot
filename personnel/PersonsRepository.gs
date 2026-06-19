@@ -192,7 +192,7 @@ var PersonsRepository_ =
       if (!personnel && typeof isPersonnelSheetAvailable_ === "function") {
         if (isPersonnelSheetAvailable_()) {
           throw new Error(
-            `Позивний "${callsign}" не знайдено в аркуші PERSONNEL`,
+            `Позивний "${callsign}" не знайдено в особовому складі`,
           );
         }
       }

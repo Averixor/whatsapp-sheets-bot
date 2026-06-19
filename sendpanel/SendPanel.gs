@@ -439,7 +439,7 @@ function rebuildSendPanelCore_() {
   }
 
   if (!rows.length) {
-    throw new Error('На сьогодні немає даних для SEND_PANEL');
+    throw new Error('На сьогодні немає даних для панелі надсилання');
   }
 
   panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 1, rows.length, 7).setValues(rows);

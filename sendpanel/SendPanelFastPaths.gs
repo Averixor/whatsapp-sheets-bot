@@ -144,7 +144,7 @@ const SendPanelFastPaths_ = (function() {
     }
 
     if (!rows.length) {
-      throw new Error('На вибрану дату немає даних для SEND_PANEL');
+      throw new Error('На вибрану дату немає даних для панелі надсилання');
     }
 
     return {
@@ -278,7 +278,7 @@ const SendPanelFastPaths_ = (function() {
     var stats = SendPanelRepository_.buildStats(mappedRows);
 
     return _buildResponse_(
-      'SEND_PANEL згенеровано швидким маршрутом',
+      'Панель надсилання згенеровано',
       {
         rows: mappedRows,
         stats: stats,
@@ -302,7 +302,7 @@ const SendPanelFastPaths_ = (function() {
     var meta = getSendPanelMetadata_(panel);
     var safeExpected = expectedDate ? _normalizeDate_(expectedDate) : '';
     if (safeExpected && meta && meta.date && meta.date !== safeExpected) {
-      throw new Error('SEND_PANEL вже прив\'язано до іншої дати: ' + meta.date + '. Спочатку перечитайте або пересоберіть панель.');
+      throw new Error('Панель надсилання вже прив\'язана до іншої дати: ' + meta.date + '. Спочатку оновіть або пересоберіть панель.');
     }
     return meta;
   }
@@ -374,7 +374,7 @@ const SendPanelFastPaths_ = (function() {
   function markRowSentFast(rowNum, dateStr) {
     var row = Number(rowNum);
     if (!Number.isFinite(row) || row <= 0) {
-      throw new Error('Не передано коректний rowNum SEND_PANEL');
+      throw new Error('Не передано коректний номер рядка панелі надсилання');
     }
 
     var panel = _getPanel_(true);
@@ -384,7 +384,7 @@ const SendPanelFastPaths_ = (function() {
     var dataStartRow = Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3;
     var lastRow = panel.getLastRow();
     if (row < dataStartRow || row > lastRow) {
-      throw new Error('Рядок SEND_PANEL не існує');
+      throw new Error('Рядок панелі надсилання не існує');
     }
 
     var values = panel.getRange(row, 1, 1, 7).getDisplayValues()[0] || [];
@@ -392,7 +392,7 @@ const SendPanelFastPaths_ = (function() {
     var item = _rowToObject_(values, row, formula, meta.date || '');
 
     if (!item.fml && !item.code && item.phone === '—') {
-      throw new Error('Рядок SEND_PANEL порожній');
+      throw new Error('Рядок панелі надсилання порожній');
     }
 
     if (item.sent === true) {
@@ -420,7 +420,7 @@ const SendPanelFastPaths_ = (function() {
     }
 
     if (!shouldTreatRowAsReadyToOpen_(item)) {
-      throw new Error('Немає готових рядків SEND_PANEL для позначення як відправлені');
+      throw new Error('Немає готових рядків панелі надсилання для позначення як відправлені');
     }
 
     panel.getRange(row, 6).setValue(getSendPanelSentMark_());

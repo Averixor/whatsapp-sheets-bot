@@ -487,7 +487,7 @@ function clearLogCore_() {
 
 function clearLogSheet() {
   const ui = SpreadsheetApp.getUi();
-  if (ui.alert("🧹 Очистити LOG?", ui.ButtonSet.YES_NO) !== ui.Button.YES)
+  if (ui.alert("🧹 Очистити журнал дій?", ui.ButtonSet.YES_NO) !== ui.Button.YES)
     return;
   const result = clearLogCore_();
   if (result && result.cleared) ui.alert("✓ Логи очищено");

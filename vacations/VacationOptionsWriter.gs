@@ -983,7 +983,7 @@ const VacationOptionsWriter_ = (function () {
     MAX_CONCURRENT: "Забагато людей одночасно у відпустці",
     INVALID_DATE: "Некоректна дата",
     INVALID_DURATION: "Некоректна тривалість",
-    PERSONNEL_VACATION_WITHOUT_PLAN: "Статус PERSONNEL не підтверджений планом",
+    PERSONNEL_VACATION_WITHOUT_PLAN: "Статус особового складу не підтверджений планом",
     MONTHLY_VACATION_WITHOUT_PLAN:
       "Код у місячному графіку не підтверджений планом",
     PLAN_WITHOUT_MONTHLY_VACATION: "План не відображений у місячному графіку",
@@ -1004,7 +1004,7 @@ const VacationOptionsWriter_ = (function () {
     MAX_CONCURRENT: "одночасною кількістю людей у відпустці",
     INVALID_DATE: "некоректними датами",
     INVALID_DURATION: "некоректною тривалістю",
-    PERSONNEL_VACATION_WITHOUT_PLAN: "неузгодженим статусом PERSONNEL",
+    PERSONNEL_VACATION_WITHOUT_PLAN: "неузгодженим статусом особового складу",
     MONTHLY_VACATION_WITHOUT_PLAN: "кодом «Відпус» без плану",
     PLAN_WITHOUT_MONTHLY_VACATION: "планом без коду «Відпус»",
     HIGH_LOAD_PERIOD: "граничним навантаженням періоду",

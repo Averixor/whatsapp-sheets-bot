@@ -290,7 +290,7 @@ function apiStage7ListPersonnelCallsigns() {
   } catch (e) {
     return _stage7FastResponse_(
       "listPersonnelCallsigns",
-      "Не вдалося прочитати PERSONNEL",
+      "Не вдалося прочитати особовий склад",
       { callsigns: [], count: 0, warnings: [] },
       [e && e.message ? e.message : String(e)],
       {
@@ -303,8 +303,8 @@ function apiStage7ListPersonnelCallsigns() {
   return _stage7FastResponse_(
     "listPersonnelCallsigns",
     callsigns.length
-      ? "Список позивних з PERSONNEL отримано"
-      : "PERSONNEL порожній або без позивних",
+      ? "Список позивних з особового складу отримано"
+      : "Особовий склад порожній або без позивних",
     {
       callsigns: callsigns,
       count: callsigns.length,
@@ -401,7 +401,7 @@ function apiStage7GetSendPanelData() {
 
   return _stage7FastResponse_(
     "getSendPanelData",
-    "SEND_PANEL перечитано",
+    "Панель надсилання оновлено",
     {
       rows: rows,
       stats: stats,
@@ -472,7 +472,7 @@ function apiMarkPanelRowsAsSentFast(rowNumbers, options) {
 
   const rows = _sanitizeFastSendPanelRows_(rowNumbers);
   if (!rows.length) {
-    throw new Error("Не передано коректні рядки SEND_PANEL");
+    throw new Error("Не передано коректні рядки панелі надсилання");
   }
 
   if (

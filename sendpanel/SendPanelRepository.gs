@@ -239,7 +239,7 @@ const SendPanelRepository_ = (function() {
     });
 
     if (!rows.length) {
-      throw new Error('На вибрану дату немає даних для SEND_PANEL');
+      throw new Error('На вибрану дату немає даних для панелі надсилання');
     }
 
     panel.getRange(CONFIG.SEND_PANEL_DATA_START_ROW, 1, rows.length, 7).setValues(rows);
@@ -303,7 +303,7 @@ const SendPanelRepository_ = (function() {
     const panel = getPanelSheet(true);
     const schema = SheetSchemas_.get('SEND_PANEL');
     const validRows = getValidRows_(panel, rows);
-    if (!validRows.length) throw new Error('Передано некоректні рядки SEND_PANEL');
+    if (!validRows.length) throw new Error('Передано некоректні рядки панелі надсилання');
 
     const beforeRows = readRowsByNumbers_(panel, validRows);
     const byRow = {};
@@ -312,7 +312,7 @@ const SendPanelRepository_ = (function() {
     const eligibleRows = validRows.filter(function(row) {
       return shouldTreatRowAsReadyToOpen_(byRow[row] || {});
     });
-    if (!eligibleRows.length) throw new Error('Немає готових рядків SEND_PANEL для позначення як відправлені');
+    if (!eligibleRows.length) throw new Error('Немає готових рядків панелі надсилання для позначення як відправлені');
 
     eligibleRows.forEach(function(row) {
       const item = byRow[row] || {};
@@ -372,7 +372,7 @@ const SendPanelRepository_ = (function() {
     const panel = getPanelSheet(true);
     const schema = SheetSchemas_.get('SEND_PANEL');
     const validRows = getValidRows_(panel, rows);
-    if (!validRows.length) throw new Error('Передано некоректні рядки SEND_PANEL');
+    if (!validRows.length) throw new Error('Передано некоректні рядки панелі надсилання');
 
     const beforeRows = readRows().filter(function(item) {
       return validRows.indexOf(item.row) !== -1;

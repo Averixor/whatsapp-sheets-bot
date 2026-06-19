@@ -176,7 +176,7 @@ function _stage7BuildSendPanelWarnings_(stats) {
 
   if (errorCount > 0) {
     warnings.push(
-      `У SEND_PANEL є рядки, не готові до відправки: ${errorCount}`,
+      `У панелі надсилання є рядки, не готові до відправки: ${errorCount}`,
     );
   }
 

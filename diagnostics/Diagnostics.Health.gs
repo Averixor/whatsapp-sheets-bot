@@ -87,14 +87,14 @@ function healthCheck() {
       status: hasConfig ? "OK" : "FAIL",
       details: hasConfig
         ? `TARGET_SHEET=${CONFIG.TARGET_SHEET}, PHONES=${CONFIG.PHONES_SHEET}, LOG=${CONFIG.LOG_SHEET}`
-        : "CONFIG не визначено",
+        : "Налаштування системи не визначено",
       howTo: hasConfig
         ? ""
-        : "Перевірте, чи CONFIG оголошений до запуску healthCheck()",
+        : "Перевірте, чи налаштування системи оголошені до запуску healthCheck()",
     };
   });
 
-  _runHealthCheckItem_(report, "PERSONNEL", "CRITICAL", function () {
+  _runHealthCheckItem_(report, "Особовий склад", "CRITICAL", function () {
     const activeRows =
       typeof getPersonnelActiveRows_ === "function"
         ? getPersonnelActiveRows_()
@@ -114,14 +114,14 @@ function healthCheck() {
         : activeRows.length
           ? "OK"
           : "WARN",
-      details: `Активних у PERSONNEL: ${activeRows.length}${
+      details: `Активних у особовому складі: ${activeRows.length}${
         warnings.length ? "; " + warnings.join("; ") : ""
       }`,
       howTo: duplicateActiveCallsigns
-        ? "Виправте дублікати позивних серед активних записів PERSONNEL"
+        ? "Виправте дублікати позивних серед активних записів особового складу"
         : activeRows.length
           ? ""
-          : "Заповніть PERSONNEL (Callsign + FML, Status=В наявності або порожньо)",
+          : "Заповніть особовий склад (позивний, ПІБ, статус «В наявності» або порожньо)",
     };
   });
 
@@ -156,7 +156,7 @@ function healthCheck() {
     };
   });
 
-  _runHealthCheckItem_(report, "Аркуш SEND_PANEL", "WARN", function () {
+  _runHealthCheckItem_(report, "Панель надсилання", "WARN", function () {
     const ensured = _ensureSendPanelTechnicalSheet_();
     const sh = ensured.sheet;
 
@@ -164,19 +164,19 @@ function healthCheck() {
       status: sh ? "OK" : "WARN",
       severity: "WARN",
       details: ensured.created
-        ? `Аркуш ${CONFIG.SEND_PANEL_SHEET} був відсутній і створений автоматично`
-        : `Аркуш ${CONFIG.SEND_PANEL_SHEET} існує`,
+        ? "Аркуш панелі надсилання був відсутній і створений автоматично"
+        : "Аркуш панелі надсилання існує",
       howTo: "",
     };
   });
 
-  _runHealthCheckItem_(report, "Статуси SEND_PANEL", "WARN", function () {
+  _runHealthCheckItem_(report, "Статуси панелі надсилання", "WARN", function () {
     const sh = getWasbSpreadsheet_().getSheetByName(CONFIG.SEND_PANEL_SHEET);
     if (!sh || sh.getLastRow() < 3) {
       return {
         status: "WARN",
         severity: "WARN",
-        details: "Немає рядків даних для перевірки статусів SEND_PANEL",
+        details: "Немає рядків даних для перевірки статусів панелі надсилання",
         howTo: "Спочатку згенеруйте панель відправки",
       };
     }

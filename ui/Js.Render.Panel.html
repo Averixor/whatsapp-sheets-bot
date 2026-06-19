@@ -84,8 +84,8 @@
         <div class="result-label">Керування панеллю</div>
         <div class="result-value">
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
-            <button class="result-link" onclick="rebuildCurrentSendPanel()" title="Пересобрати SEND_PANEL заново з канонічних джерел" style="flex:1 1 180px;">Пересобрати панель</button>
-            <button class="result-link" onclick="reloadSendPanelFromServer()" title="Перечитати поточні рядки SEND_PANEL без пересборки" style="flex:1 1 180px;">Перечитати SEND_PANEL</button>
+            <button class="result-link" onclick="rebuildCurrentSendPanel()" title="Пересобрати панель надсилання заново з основних джерел" style="flex:1 1 180px;">Пересобрати панель</button>
+            <button class="result-link" onclick="reloadSendPanelFromServer()" title="Перечитати поточні рядки панелі надсилання без пересборки" style="flex:1 1 180px;">Оновити панель</button>
             ${sentItems.length > 0 ? `<button class="result-link" onclick="resetAllSentFromPanel()" title="Повернути всі позначені як відправлені рядки у стан не відправлено" style="flex:1 1 220px;">Скинути відправлені (${sentItems.length})</button>` : ""}
           </div>
         </div>
@@ -95,10 +95,10 @@
     if (!data.length) {
       html += `
         <div class="result-item">
-          <div class="result-label">⚠ SEND_PANEL порожній у sidebar</div>
+          <div class="result-label">⚠ Панель надсилання порожня</div>
           <div class="result-value">
             <p>Лист може містити рядки, але клієнтський стан зараз порожній.</p>
-            <button class="result-link" onclick="SidebarApp.reloadSendPanelFromServer()" title="Перечитати поточний вміст SEND_PANEL з таблиці" style="width:100%; margin-top:8px;">Перечитати SEND_PANEL</button>
+            <button class="result-link" onclick="SidebarApp.reloadSendPanelFromServer()" title="Перечитати поточний вміст панелі надсилання з таблиці" style="width:100%; margin-top:8px;">Оновити панель</button>
           </div>
         </div>
       `;
@@ -253,7 +253,7 @@
 
   function isReadyRowMismatchError_(error) {
     const message = normalizeError(error);
-    return /Немає готових рядків SEND_PANEL для позначення як відправлені/i.test(
+    return /Немає готових рядків панелі надсилання для позначення як відправлені/i.test(
       message,
     );
   }
@@ -515,7 +515,7 @@
       if (phase === "commit" && isReadyRowMismatchError_(error)) {
         hideSendPanelBusyScreen_();
         logToConsole(
-          "Рядок уже не готовий у SEND_PANEL. Оновлюю список у фоні — якщо потрібно, натисніть «Пересобрати панель».",
+          "Рядок уже не готовий у панелі надсилання. Оновлюю список у фоні — якщо потрібно, натисніть «Пересобрати панель».",
           "warning",
         );
         scheduleBackgroundPanelRefresh_({

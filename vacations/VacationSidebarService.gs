@@ -79,7 +79,7 @@ const VacationSidebarService_ = (function () {
       !PersonnelRepository_ ||
       typeof PersonnelRepository_.getActiveRows !== "function"
     ) {
-      throw new Error("PERSONNEL repository недоступний");
+      throw new Error("Довідник особового складу недоступний");
     }
     return PersonnelRepository_.getActiveRows()
       .filter(function (person) {
@@ -107,11 +107,11 @@ const VacationSidebarService_ = (function () {
       !PersonnelRepository_ ||
       typeof PersonnelRepository_.getByFml !== "function"
     ) {
-      throw new Error("PERSONNEL repository недоступний");
+      throw new Error("Довідник особового складу недоступний");
     }
     const person = PersonnelRepository_.getByFml(fml, { activeOnly: true });
     if (!person) {
-      throw new Error("Активну людину не знайдено в PERSONNEL");
+      throw new Error("Активну людину не знайдено в особовому складі");
     }
     return person;
   }
