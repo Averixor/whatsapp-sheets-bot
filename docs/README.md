@@ -21,6 +21,7 @@ snapshots to the repository.
 | [vacation-planner.md](./vacation-planner.md)                     | Vacation planner, concurrent rules, mini-calendar UX        |
 | [daily-summary-architecture.md](./daily-summary-architecture.md) | Short/detailed day summary modules, formula block, UI flow  |
 | [format-rules-governance.md](./format-rules-governance.md)       | Manual conditional-format registry and rebuild protection   |
+| [user-facing-copy.md](./user-facing-copy.md)                     | UX copy: UA UI text, no technical names in user-facing strings |
 
 ## Refactor Planning
 

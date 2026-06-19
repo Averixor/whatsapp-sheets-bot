@@ -108,6 +108,12 @@ Domain folders (`reports/`, `vacations/`, …) are mechanical moves only. Before
 - Design doc: [`docs/vacation-planner.md`](./docs/vacation-planner.md).
 - Local contract: `scripts/verify-vacation-planner.mjs` (`npm run ci:vacations`).
 
+### User-facing copy (do not regress)
+
+- Sidebar, menus, dialogs, health UI: **Ukrainian only**, no technical sheet keys (`SEND_PANEL`, `PERSONNEL`, …) in strings users see.
+- Physical tab names in `CONFIG` / `SheetSchemas_` may stay technical until a dedicated sheet-rename migration.
+- Policy: [`docs/user-facing-copy.md`](./docs/user-facing-copy.md). Russian markers: `npm run ci` → `verify-no-russian-text.mjs`.
+
 ### Key gotchas
 
 - The `&&` chain in `npm run ci` may fail under restricted `cmd.exe` on Windows; use individual `node scripts/...` commands as fallback.

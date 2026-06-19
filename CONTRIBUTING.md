@@ -170,6 +170,7 @@ Update documentation when changing:
 - Project workflow
 - **`SHEET_HEADERS` / ACCESS schema** — keep **`README.md`**, **`RUNBOOK.md`**, **`ARCHITECTURE.md`** in sync
 - **Daily summaries** — keep **`docs/daily-summary-architecture.md`**, **`ARCHITECTURE.md` §7.1**, **`RUNBOOK.md` §22** aligned when changing `Report_*.gs`, `Summaries.gs`, or sidebar summary flow
+- **User-facing copy** — keep **`docs/user-facing-copy.md`** aligned when changing sidebar labels, menus, dialogs, health messages, or sheet titles shown to users
 - **Script properties** — keep **`README.md`**, **`RUNBOOK.md` §14**, **`SECURITY.md`**, **`CONTRIBUTING.md`** aligned with `DataAccess.gs`
 
 ## Review principles
