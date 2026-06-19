@@ -54,6 +54,11 @@
     }
   }
 
+  function isPersonnelModalOpen_() {
+    const modal = $id("personnelModal");
+    return !!(modal && modal.classList.contains("open") && !modal.hidden);
+  }
+
   function syncConsoleOverlayState_() {
     const wrapper = $id("consoleWrapper");
     const overlay = $id("loadingOverlay");
@@ -63,7 +68,9 @@
       !overlay.classList.contains("wasb-is-hidden") &&
       getComputedStyle(overlay).display !== "none";
     const isOpen = $id("consoleSection")?.classList.contains("open");
-    wrapper.classList.toggle("console--overlay", !!(isLoading && isOpen));
+    const needsOverlay = !!(isOpen && (isLoading || isPersonnelModalOpen_()));
+    wrapper.classList.toggle("console--overlay", needsOverlay);
+    wrapper.classList.toggle("console--elevated", isOpen);
   }
 
   function applyConsoleFilter_() {

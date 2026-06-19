@@ -90,6 +90,12 @@
   }
 
   /* LOADING */
+  /* LOADING — sidebar: absolute within panel (fixed escapes narrow GAS sidebar) */
+  .sidebar-container > .loading-overlay {
+    position: absolute;
+    inset: 0;
+  }
+
   .loading-overlay {
     position: fixed;
     inset: 0;
@@ -200,6 +206,12 @@
   }
 
   /* PERSONNEL MODAL */
+  .sidebar-container > .personnel-modal {
+    position: absolute;
+    inset: 0;
+    z-index: 9000;
+  }
+
   .personnel-modal {
     position: fixed;
     inset: 0;

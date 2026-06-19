@@ -917,6 +917,10 @@
       modal.classList.add("open");
       btnOpen.setAttribute("aria-expanded", "true");
 
+      if (typeof syncConsoleOverlayState_ === "function") {
+        syncConsoleOverlayState_();
+      }
+
       setTimeout(() => {
         try {
           searchInput.focus();
@@ -929,6 +933,10 @@
       modal.classList.remove("open");
       modal.hidden = true;
       btnOpen.setAttribute("aria-expanded", "false");
+
+      if (typeof syncConsoleOverlayState_ === "function") {
+        syncConsoleOverlayState_();
+      }
 
       try {
         btnOpen.focus();
@@ -1161,6 +1169,7 @@
     cleanupTriggers,
     debugPhones,
     clearPhoneCache,
+    materializeComputedData,
     restartBot,
     setupTrigger,
     showPendingRepairs,
