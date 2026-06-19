@@ -869,6 +869,7 @@ const ioContext = vm.createContext({
   console,
   Date,
   Math,
+  globalThis: null,
   PropertiesService: {
     getScriptProperties() {
       return {
@@ -937,9 +938,60 @@ const ioContext = vm.createContext({
     },
   },
 });
+ioContext.globalThis = ioContext;
 load(ioContext, "VacationPlannerConfig.gs");
 load(ioContext, "VacationPlannerService.gs");
 load(ioContext, "VacationsRepository.gs");
+load(ioContext, "VacationsMaterialize.gs");
+const materializeFns = {
+  calcVacationEndDate_: vm.runInContext("calcVacationEndDate_", ioContext),
+  calcVacationDaysLeft_: vm.runInContext("calcVacationDaysLeft_", ioContext),
+  calcVacationNotify_: vm.runInContext("calcVacationNotify_", ioContext),
+  calcVacationActive_: vm.runInContext("calcVacationActive_", ioContext),
+  calcVacationIntervalCheck_: vm.runInContext(
+    "calcVacationIntervalCheck_",
+    ioContext,
+  ),
+};
+const materializeEnd = materializeFns.calcVacationEndDate_(date("2026-01-10"), 2);
+assert.equal(materializeEnd.getFullYear(), 2026);
+assert.equal(materializeEnd.getMonth(), 0);
+assert.equal(materializeEnd.getDate(), 26, "end date must use start + 14 + travel days");
+assert.equal(
+  materializeFns.calcVacationDaysLeft_(date("2026-03-01"), date("2026-02-01")),
+  28,
+);
+assert.equal(
+  materializeFns.calcVacationDaysLeft_(date("2026-01-01"), date("2026-02-01")),
+  0,
+);
+assert.equal(
+  materializeFns.calcVacationNotify_(date("2026-03-01"), date("2026-02-01")),
+  true,
+);
+assert.equal(
+  materializeFns.calcVacationActive_(date("2026-03-01"), date("2026-02-01")),
+  true,
+);
+assert.equal(
+  materializeFns.calcVacationIntervalCheck_(
+    [
+      {
+        fio: "Тест",
+        start: date("2026-01-01"),
+        finish: date("2026-01-15"),
+        vacationType: "перша відпустка",
+      },
+    ],
+    {
+      fio: "Тест",
+      start: date("2026-06-01"),
+      finish: date("2026-06-15"),
+      vacationType: "друга відпустка",
+    },
+  ),
+  true,
+);
 const repository = vm.runInContext("VacationsRepository_", ioContext);
 const merged = repository.listAll();
 assert.equal(merged.length, 2, "repository must read all vacations from A:I");
@@ -1822,7 +1874,11 @@ const formulaWrite = writer.writeVacationToSource({
   days: 19,
 });
 assert.equal(formulaWrite.formulaDriven, true);
-assert.equal(sourceSheet.valueAt(2, 3), "FORMULA_END");
+const formulaEnd = sourceSheet.valueAt(formulaWrite.rowNumber, 3);
+assert.ok(formulaEnd instanceof Date, "computed end date must be materialized");
+assert.equal(formulaEnd.getFullYear(), 2026);
+assert.equal(formulaEnd.getMonth(), 1);
+assert.equal(formulaEnd.getDate(), 19);
 assert.equal(
   sourceSheet.valueAt(formulaWrite.rowNumber, 4),
   "додаткова відпустка",
@@ -1837,7 +1893,7 @@ const formulaCancel = writer.setVacationActive(
 );
 assert.equal(formulaCancel.formulaDriven, true);
 assert.equal(sourceSheet.valueAt(formulaWrite.rowNumber, 2), "");
-assert.equal(sourceSheet.valueAt(2, 3), "FORMULA_END");
+assert.equal(sourceSheet.valueAt(formulaWrite.rowNumber, 3), "");
 sourceSheet.setValue(formulaWrite.rowNumber, 5, false);
 
 const generatedWrite = writer.writeVacationToSource({
