@@ -21,7 +21,7 @@ function runStage3HealthCheck_(options) {
           : `Активний місячний лист "${sheetName}" не знайдено`,
         sheet
           ? ""
-          : "Перевірте CONFIG.TARGET_SHEET або active bot month property",
+          : "Перевірте активний місяць або перемкніть місяць у панелі",
       );
       return;
     }
@@ -36,7 +36,7 @@ function runStage3HealthCheck_(options) {
       `Schema ${schema.key}`,
       status,
       details,
-      sheet ? "" : "Створіть лист або перевірте CONFIG",
+      sheet ? "" : "Створіть аркуш або перевірте налаштування системи",
     );
   });
 

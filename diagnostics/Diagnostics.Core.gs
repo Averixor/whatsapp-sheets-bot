@@ -45,7 +45,23 @@ function _safeErr_(e) {
 
 /************ HEALTH CHECK ************/
 
-function _pushCheck_(report, check) {
+function _userFacingSheetLabel_(name) {
+  const labels = {
+    PERSONNEL: "Особовий склад",
+    PHONES: "Телефони",
+    DICT: "Довідник",
+    DICT_SUM: "Довідник підсумків",
+    LOG: "Журнал дій",
+    VACATIONS: "Відпустки",
+    VACATION_REQUESTS: "Заявки на відпустку",
+    TEMPLATES: "Шаблони",
+    SEND_PANEL: "Панель надсилання",
+    ACCESS: "Список доступу",
+  };
+  const key = String(name || "").trim();
+  return labels[key] || key;
+}
+
   report.checks.push(check);
 
   if (check.status === 'ERROR') {

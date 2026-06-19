@@ -27,10 +27,10 @@ function checkSheets() {
         name: item.name,
         status: exists ? "OK" : item.required ? "ERROR" : "WARN",
         message: exists
-          ? '✓ Лист "' + item.name + '" знайдено'
+          ? '✓ Аркуш "' + _userFacingSheetLabel_(item.name) + '" знайдено'
           : item.required
-            ? "✕ Обов'язковий лист \"" + item.name + '" не знайдено'
-            : '⚠ Лист "' + item.name + '" не знайдено',
+            ? "✕ Обов'язковий аркуш \"" + _userFacingSheetLabel_(item.name) + '" не знайдено'
+            : '⚠ Аркуш "' + _userFacingSheetLabel_(item.name) + '" не знайдено',
       });
     });
 
@@ -116,7 +116,7 @@ function checkDuplicates() {
         type: "duplicates_skip",
         name: "PHONES",
         status: "WARN",
-        message: "⚠ Лист PHONES не знайдено або порожній",
+        message: "⚠ Аркуш телефонів не знайдено або порожній",
       });
 
       DIAGNOSTICS.results.duplicates = report;

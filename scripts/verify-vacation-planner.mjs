@@ -1113,7 +1113,7 @@ const preparedRequestSheet = requestSheet;
 requestSheet = null;
 assert.throws(
   () => repository.listAll(),
-  /Активне джерело VACATION_REQUESTS не знайдено/,
+  /Активне джерело заявок на відпустку не знайдено/,
   "active request mode must fail explicitly instead of falling back",
 );
 requestSheet = preparedRequestSheet;

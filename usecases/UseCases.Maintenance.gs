@@ -500,8 +500,8 @@ var UseCasesMaintenance_ = (function () {
             return {
               success: success,
               message: success
-                ? "Діагностику PHONES виконано"
-                : "Діагностика PHONES завершилась з помилкою",
+                ? "Діагностику телефонів виконано"
+                : "Діагностика телефонів завершилась з помилкою",
               result: Object.assign({ type: "debugPhones" }, debug || {}),
               changes: [],
               affectedSheets: [CONFIG.PHONES_SHEET],

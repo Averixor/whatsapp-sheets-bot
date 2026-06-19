@@ -1,0 +1,20 @@
+{
+  "description": "Allowlist for verify-user-facing-copy: code identifiers and legacy keys not shown as raw UI text.",
+  "identifierLiteralPattern": "^[A-Z][A-Z0-9_]*(-[A-Za-z0-9-]+)*$",
+  "allowedSubstrings": [
+    {
+      "value": "compatibility / legacy",
+      "files": ["ui/Js.Diagnostics.html"]
+    }
+  ],
+  "allowedRegex": [
+    {
+      "pattern": "^ACCESS(-[a-z0-9-]+)?$",
+      "files": ["ui/Js.Security.Debug.html"]
+    },
+    {
+      "pattern": "^PERSONNEL_VACATION_WITHOUT_PLAN$",
+      "files": ["ui/Js.Vacations.html"]
+    }
+  ]
+}
