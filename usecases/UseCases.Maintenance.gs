@@ -37,6 +37,17 @@ var UseCasesMaintenance_ = (function () {
         return { payload: info.payload, warnings: [] };
       },
       execute: function (input) {
+        if (typeof materializeAllComputedData_ === "function") {
+          materializeAllComputedData_({ source: "dailyJob" });
+        } else {
+          if (typeof materializePersonnelDerivedSheets_ === "function") {
+            materializePersonnelDerivedSheets_({ source: "dailyJob" });
+          }
+          if (typeof materializeVacationComputedColumns_ === "function") {
+            materializeVacationComputedColumns_();
+          }
+        }
+
         const targetDate =
           DateUtils_.parseUaDate(input.dateStr || input.date) || new Date();
         const vacations = runVacationEngine_(targetDate, input) || {};
@@ -267,6 +278,7 @@ var UseCasesMaintenance_ = (function () {
       cleanupCaches: true,
       clearLog: true,
       clearPhoneCache: true,
+      materializeComputedData: true,
       restartBot: true,
       setupVacationTriggers: true,
       cleanupDuplicateTriggers: true,
@@ -340,12 +352,7 @@ var UseCasesMaintenance_ = (function () {
           }
 
           case "clearPhoneCache": {
-            var materializeResult = null;
-            if (typeof materializePersonnelDerivedSheets_ === "function") {
-              materializeResult = materializePersonnelDerivedSheets_({
-                source: "clearPhoneCache",
-              });
-            } else if (typeof invalidatePersonnelCache_ === "function") {
+            if (typeof invalidatePersonnelCache_ === "function") {
               invalidatePersonnelCache_();
             }
             const keys = [
@@ -355,16 +362,6 @@ var UseCasesMaintenance_ = (function () {
               "PHONES_PROFILES_v4",
             ];
             CacheService.getScriptCache().removeAll(keys);
-            var affectedSheets = [];
-            if (materializeResult && materializeResult.personnel && materializeResult.personnel.sheet) {
-              affectedSheets.push(materializeResult.personnel.sheet);
-            }
-            if (materializeResult && materializeResult.phones && materializeResult.phones.sheet) {
-              affectedSheets.push(materializeResult.phones.sheet);
-            }
-            if (materializeResult && materializeResult.birthday && materializeResult.birthday.sheet) {
-              affectedSheets.push(materializeResult.birthday.sheet);
-            }
             return {
               success: true,
               message: "Кеш телефонів очищено",
@@ -372,13 +369,44 @@ var UseCasesMaintenance_ = (function () {
                 cleaned: true,
                 type: "clearPhoneCache",
                 keys: keys,
-                materialize: materializeResult,
               },
               changes: [{ type: "clearPhoneCache", keys: keys }],
-              affectedSheets: affectedSheets,
+              affectedSheets: [],
               affectedEntities: [],
               appliedChangesCount: 1,
               skippedChangesCount: 0,
+              partial: false,
+            };
+          }
+
+          case "materializeComputedData": {
+            var materializeResult =
+              typeof materializeAllComputedData_ === "function"
+                ? materializeAllComputedData_({
+                    source:
+                      (input && input.source) ||
+                      (context && context.trigger ? "maintenanceTrigger" : "maintenance"),
+                  })
+                : { ok: false, reason: "materializeAllComputedData_ missing" };
+            var affectedSheets = materializeAllComputedDataAffectedSheets_(
+              materializeResult,
+            );
+            return {
+              success: !!(materializeResult && materializeResult.ok !== false),
+              message:
+                materializeResult && materializeResult.ok !== false
+                  ? "Обчислювані дані оновлено"
+                  : "Не вдалося оновити обчислювані дані",
+              result: Object.assign(
+                { type: "materializeComputedData" },
+                materializeResult || {},
+              ),
+              changes: [{ type: "materializeComputedData" }],
+              affectedSheets: affectedSheets,
+              affectedEntities: [],
+              appliedChangesCount: affectedSheets.length,
+              skippedChangesCount:
+                materializeResult && materializeResult.ok !== false ? 0 : 1,
               partial: false,
             };
           }

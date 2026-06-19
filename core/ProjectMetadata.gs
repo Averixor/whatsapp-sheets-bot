@@ -75,6 +75,7 @@ const PROJECT_STAGE7_CANONICAL_API_MAP_ = Object.freeze({
     "apiStage7ClearCache",
     "apiStage7ClearLog",
     "apiStage7ClearPhoneCache",
+    "apiStage7MaterializeComputedData",
     "apiStage7RestartBot",
     "apiStage7SetupVacationTriggers",
     "apiStage7CleanupDuplicateTriggers",
@@ -250,6 +251,10 @@ const PROJECT_STAGE7_ACCESS_API_ROLE_POLICY_ = Object.freeze({
   apiStage7ClearPhoneCache: Object.freeze({
     guestAllowed: false,
     minRole: "sysadmin",
+  }),
+  apiStage7MaterializeComputedData: Object.freeze({
+    guestAllowed: false,
+    minRole: "maintainer",
   }),
   apiStage7RestartBot: Object.freeze({
     guestAllowed: false,
@@ -438,6 +443,7 @@ const PROJECT_STAGE7_CLIENT_ROUTING_POLICY_ = Object.freeze({
   clearCache: "apiStage7ClearCache",
   clearLog: "apiStage7ClearLog",
   clearPhoneCache: "apiStage7ClearPhoneCache",
+  materializeComputedData: "apiStage7MaterializeComputedData",
   restartBot: "apiStage7RestartBot",
   setupTrigger: "apiStage7SetupVacationTriggers",
   cleanupTriggers: "apiStage7CleanupDuplicateTriggers",
@@ -487,6 +493,7 @@ const PROJECT_STAGE7_CLIENT_ROUTING_GROUPS_ = Object.freeze({
     clearCache: "apiStage7ClearCache",
     clearLog: "apiStage7ClearLog",
     clearPhoneCache: "apiStage7ClearPhoneCache",
+    materializeComputedData: "apiStage7MaterializeComputedData",
     restartBot: "apiStage7RestartBot",
     setupTrigger: "apiStage7SetupVacationTriggers",
     cleanupTriggers: "apiStage7CleanupDuplicateTriggers",

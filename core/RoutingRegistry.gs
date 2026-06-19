@@ -427,6 +427,20 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ =
         verifyAfterWrite: false,
       }),
 
+      materializeComputedData: Object.freeze({
+        routeName: "maintenance.materializeComputedData",
+        publicApiMethod: "apiStage7MaterializeComputedData",
+        useCase: "Stage7UseCases_.runMaintenanceScenario",
+        category: "maintenance",
+        compatibilityStatus: "canonical",
+        mode: "write",
+        lockRequired: true,
+        dryRunSupported: false,
+        uiAllowed: true,
+        clientActionAliases: ["materializeComputedData"],
+        verifyAfterWrite: false,
+      }),
+
       restartBot: Object.freeze({
         routeName: "maintenance.restartBot",
         publicApiMethod: "apiStage7RestartBot",
