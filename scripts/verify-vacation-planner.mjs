@@ -974,6 +974,16 @@ assert.equal(
   true,
 );
 assert.equal(
+  materializeFns.calcVacationActive_(date("2026-03-01"), date("2026-03-01")),
+  true,
+  "Active=true on last vacation day (end date inclusive)",
+);
+assert.equal(
+  materializeFns.calcVacationActive_(date("2026-03-01"), date("2026-03-02")),
+  false,
+  "Active=false after end date",
+);
+assert.equal(
   materializeFns.calcVacationIntervalCheck_(
     [
       {
