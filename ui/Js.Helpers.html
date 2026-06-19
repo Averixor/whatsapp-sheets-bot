@@ -6,54 +6,267 @@
   // CONSOLE
   // =========================
 
-  function toggleConsole() {
-    const consoleSection = $id("consoleSection");
-    const toggle = $id("consoleToggle");
-    const arrow = $id("consoleArrow");
+  var CONSOLE_MAX_BUFFER = 500;
+  var CONSOLE_FILTER_KEY = "wasb.consoleFilter";
 
-    if (!consoleSection || !toggle || !arrow) return;
+  function ensureConsoleBuffer_() {
+    if (!window.__wasbConsoleBuffer__) window.__wasbConsoleBuffer__ = [];
+    if (typeof window.__wasbConsoleUnread !== "number") {
+      window.__wasbConsoleUnread = 0;
+    }
+    if (typeof window.__wasbConsolePaused !== "boolean") {
+      window.__wasbConsolePaused = false;
+    }
+  }
 
-    consoleSection.classList.toggle("open");
-    toggle.classList.toggle("open");
-    arrow.textContent = consoleSection.classList.contains("open") ? "▲" : "▼";
+  function formatLogArgsPreview_(args) {
+    if (!args || !args.length) return "";
+    try {
+      const preview = JSON.stringify(args.length === 1 ? args[0] : args);
+      if (!preview || preview === "{}" || preview === "[]") return "";
+      return preview.length > 140 ? preview.slice(0, 137) + "…" : preview;
+    } catch (_) {
+      return args.length + " арг.";
+    }
+  }
 
-    localStorage.setItem(
-      "consoleOpen",
-      consoleSection.classList.contains("open"),
+  function formatApiResultSummary_(result) {
+    if (!result || result.success === false) {
+      return String(result?.message || result?.error || "помилка").slice(0, 100);
+    }
+    const msg = String(result.message || "").trim();
+    if (msg) return msg.length > 80 ? msg.slice(0, 77) + "…" : msg;
+    return "";
+  }
+
+  window.formatLogArgsPreview_ = formatLogArgsPreview_;
+  window.formatApiResultSummary_ = formatApiResultSummary_;
+
+  function updateConsoleFabBadge_() {
+    const badge = $id("consoleFabBadge");
+    if (!badge) return;
+    const unread = Number(window.__wasbConsoleUnread || 0);
+    if (unread > 0) {
+      badge.textContent = unread > 99 ? "99+" : String(unread);
+      badge.classList.remove("wasb-is-hidden");
+    } else {
+      badge.classList.add("wasb-is-hidden");
+    }
+  }
+
+  function syncConsoleOverlayState_() {
+    const wrapper = $id("consoleWrapper");
+    const overlay = $id("loadingOverlay");
+    if (!wrapper) return;
+    const isLoading =
+      overlay &&
+      !overlay.classList.contains("wasb-is-hidden") &&
+      getComputedStyle(overlay).display !== "none";
+    const isOpen = $id("consoleSection")?.classList.contains("open");
+    wrapper.classList.toggle("console--overlay", !!(isLoading && isOpen));
+  }
+
+  function applyConsoleFilter_() {
+    const filter = String(STATE.consoleFilter || "all");
+    const output = $id("consoleOutput");
+    if (!output) return;
+    output.querySelectorAll(".log-entry").forEach((el) => {
+      const type = el.getAttribute("data-log-type") || "info";
+      const show =
+        filter === "all" ||
+        (filter === "error" &&
+          (type === "error" || type === "warning")) ||
+        (filter === "server" && type === "server") ||
+        (filter === "action" && type === "action");
+      el.classList.toggle("log-hidden", !show);
+    });
+  }
+
+  function setConsoleFilter(filter) {
+    STATE.consoleFilter = filter || "all";
+    try {
+      localStorage.setItem(CONSOLE_FILTER_KEY, STATE.consoleFilter);
+    } catch (_) {}
+    document.querySelectorAll("[data-console-filter]").forEach((btn) => {
+      btn.classList.toggle(
+        "active",
+        btn.getAttribute("data-console-filter") === STATE.consoleFilter,
+      );
+    });
+    applyConsoleFilter_();
+  }
+
+  function renderConsoleEntry_(entry) {
+    const consoleEl = $id("consoleOutput");
+    if (!consoleEl || !entry) return;
+
+    const timestamp = new Date(entry.ts || Date.now()).toLocaleTimeString(
+      "uk-UA",
+      {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      },
     );
+
+    const type = entry.type || "info";
+    const logEntry = document.createElement("div");
+    logEntry.className = "log-entry log-" + type;
+    logEntry.setAttribute("data-log-type", type);
+    logEntry.innerHTML =
+      '<span class="log-time">[' +
+      escapeHtml(timestamp) +
+      "]</span> " +
+      escapeHtml(entry.message);
+
+    consoleEl.appendChild(logEntry);
+    applyConsoleFilter_();
+
+    const isOpen = $id("consoleSection")?.classList.contains("open");
+    if (!isOpen) {
+      window.__wasbConsoleUnread = Number(window.__wasbConsoleUnread || 0) + 1;
+      updateConsoleFabBadge_();
+    }
+
+    if (!window.__wasbConsolePaused) {
+      consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
   }
 
   function logToConsole(message, type = "info") {
-    const consoleEl = $id("consoleOutput");
-    if (!consoleEl) return;
+    if (typeof window.__wasbPushConsoleLog__ === "function") {
+      window.__wasbPushConsoleLog__(message, type);
+      return;
+    }
+    renderConsoleEntry_({
+      message: String(message == null ? "" : message),
+      type: type || "info",
+      ts: Date.now(),
+    });
+  }
 
-    const timestamp = new Date().toLocaleTimeString("uk-UA", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
+  function bindConsoleScrollPause_() {
+    const consoleEl = $id("consoleOutput");
+    if (!consoleEl || consoleEl.__wasbScrollBound) return;
+    consoleEl.__wasbScrollBound = true;
+    consoleEl.addEventListener("scroll", function () {
+      const nearBottom =
+        consoleEl.scrollHeight - consoleEl.scrollTop - consoleEl.clientHeight <
+        28;
+      window.__wasbConsolePaused = !nearBottom;
+      consoleEl.classList.toggle("console-paused", window.__wasbConsolePaused);
+    });
+  }
+
+  function flushConsoleBuffer_() {
+    ensureConsoleBuffer_();
+    (window.__wasbConsoleBuffer__ || []).forEach(function (entry) {
+      renderConsoleEntry_(entry);
+    });
+  }
+
+  function initConsoleUi_() {
+    if (STATE.consoleInitialized) return;
+    ensureConsoleBuffer_();
+    window.__wasbConsoleRenderEntry__ = renderConsoleEntry_;
+
+    try {
+      STATE.consoleFilter = localStorage.getItem(CONSOLE_FILTER_KEY) || "all";
+    } catch (_) {
+      STATE.consoleFilter = "all";
+    }
+
+    const consoleOpen = localStorage.getItem("consoleOpen") === "true";
+    if (consoleOpen) {
+      $id("consoleSection")?.classList.add("open");
+      $id("consoleToggle")?.classList.add("open");
+      $id("consoleFab")?.classList.add("open");
+      const arrow = $id("consoleArrow");
+      if (arrow) arrow.textContent = "▲";
+      const toggle = $id("consoleToggle");
+      if (toggle) toggle.setAttribute("aria-expanded", "true");
+      window.__wasbConsoleUnread = 0;
+      updateConsoleFabBadge_();
+    }
+
+    document.querySelectorAll("[data-console-filter]").forEach((btn) => {
+      btn.addEventListener("click", function () {
+        setConsoleFilter(btn.getAttribute("data-console-filter"));
+      });
+      btn.classList.toggle(
+        "active",
+        btn.getAttribute("data-console-filter") === STATE.consoleFilter,
+      );
     });
 
-    const logEntry = document.createElement("div");
-    logEntry.className = `log-entry log-${type}`;
-    logEntry.innerHTML = `<span class="log-time">[${escapeHtml(timestamp)}]</span> ${escapeHtml(message)}`;
+    bindConsoleScrollPause_();
+    flushConsoleBuffer_();
 
-    consoleEl.appendChild(logEntry);
-    consoleEl.scrollTop = consoleEl.scrollHeight;
+    if (!(window.__wasbConsoleBuffer__ || []).length) {
+      logToConsole("Консоль готова до роботи", "info");
+    }
+
+    syncConsoleOverlayState_();
+    STATE.consoleInitialized = true;
+    STATE.consoleSessionStartedAt = Date.now();
+  }
+
+  window.syncConsoleOverlayState_ = syncConsoleOverlayState_;
+
+  function toggleConsole(forceOpen) {
+    const consoleSection = $id("consoleSection");
+    const toggle = $id("consoleToggle");
+    const fab = $id("consoleFab");
+    const arrow = $id("consoleArrow");
+    if (!consoleSection) return;
+
+    const shouldOpen =
+      typeof forceOpen === "boolean"
+        ? forceOpen
+        : !consoleSection.classList.contains("open");
+
+    consoleSection.classList.toggle("open", shouldOpen);
+    toggle?.classList.toggle("open", shouldOpen);
+    fab?.classList.toggle("open", shouldOpen);
+    if (arrow) arrow.textContent = shouldOpen ? "▲" : "▼";
+    if (toggle) toggle.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+    if (fab) fab.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+
+    if (shouldOpen) {
+      window.__wasbConsoleUnread = 0;
+      updateConsoleFabBadge_();
+      window.__wasbConsolePaused = false;
+      const consoleEl = $id("consoleOutput");
+      if (consoleEl) {
+        consoleEl.classList.remove("console-paused");
+        consoleEl.scrollTop = consoleEl.scrollHeight;
+      }
+    }
+
+    try {
+      localStorage.setItem("consoleOpen", shouldOpen ? "true" : "false");
+    } catch (_) {}
+
+    syncConsoleOverlayState_();
   }
 
   function clearConsole() {
     const consoleEl = $id("consoleOutput");
-    if (!consoleEl) return;
-
-    consoleEl.innerHTML = "";
+    if (consoleEl) consoleEl.innerHTML = "";
+    window.__wasbConsoleBuffer__ = [];
+    window.__wasbConsoleUnread = 0;
+    updateConsoleFabBadge_();
     logToConsole("🧹 Консоль очищено", "info");
   }
 
   function scrollConsole(direction) {
     const consoleEl = $id("consoleOutput");
     if (!consoleEl) return;
-
     consoleEl.scrollTop = direction === "top" ? 0 : consoleEl.scrollHeight;
+    if (direction === "bottom") {
+      window.__wasbConsolePaused = false;
+      consoleEl.classList.remove("console-paused");
+    }
   }
 
   // =========================
@@ -147,21 +360,12 @@
   // =========================
 
   async function initSidebar() {
+    initConsoleUi_();
     startSidebarBootTimeout(SIDEBAR_BOOT_TIMEOUT_MS);
     showLoading("Завантаження...");
     hidePersonCard();
 
     try {
-      const consoleOpen = localStorage.getItem("consoleOpen") === "true";
-      if (consoleOpen && !STATE.consoleInitialized) {
-        $id("consoleSection")?.classList?.add("open");
-        $id("consoleToggle")?.classList?.add("open");
-
-        const arrow = $id("consoleArrow");
-        if (arrow) arrow.textContent = "▲";
-
-        STATE.consoleInitialized = true;
-      }
 
       let boot = null;
       try {
@@ -388,20 +592,30 @@
     const output = $id("consoleOutput");
     const month = STATE.currentMonth || "—";
     const dateText = new Date().toLocaleString("uk-UA");
-    const body = output
-      ? Array.from(output.querySelectorAll(".log-entry"))
-          .map((el) => (el.innerText || "").trim())
-          .filter(Boolean)
-          .join("\n")
-      : "";
+    const entries = output
+      ? Array.from(output.querySelectorAll(".log-entry:not(.log-hidden)"))
+      : [];
+    const body = entries
+      .map((el) => (el.innerText || "").trim())
+      .filter(Boolean)
+      .join("\n");
+    const sessionMs = STATE.consoleSessionStartedAt
+      ? Date.now() - STATE.consoleSessionStartedAt
+      : 0;
     const text = [
       "Журнал виконання WASB",
       "=================",
       "Час: " + dateText,
       "Активний місяць: " + month,
+      "Записів: " + entries.length,
+      sessionMs > 0
+        ? "Тривалість сесії: " + Math.round(sessionMs / 1000) + " с"
+        : "",
       "",
       body || "Лог порожній",
-    ].join("\n");
+    ]
+      .filter(Boolean)
+      .join("\n");
     copyResultText(text);
   }
 

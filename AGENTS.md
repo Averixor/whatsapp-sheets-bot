@@ -48,7 +48,8 @@ After local CI and deploy:
 fish_add_path $HOME/.local/node-v24.16.0/bin   # if Node 22 is default
 npm run ci
 npx clasp push
-apiStage7ClearPhoneCache() # run in the production GAS editor
+apiStage7MaterializeComputedData()  # after PERSONNEL / PHONES / VACATIONS edits
+apiStage7ClearPhoneCache()          # run in the production GAS editor after deploy
 ```
 
 Or one command: `npm run deploy:prod` (local CI + production push). Run
@@ -82,7 +83,7 @@ Domain folders (`reports/`, `vacations/`, `core/`, `ui/`, …) are mechanical mo
   Runtime-active: all except `Вибув` and `СЗЧ`; empty = `В наявності`. Legacy
   (`Дієвий`, `Active`, `Відрядження`, EN) mapped on read only.
 - Final (logical) headers: `ID | FML | … | Unit | Status`. Physical in reference "Книга Взводу Охорони.xlsx": split `Last name` / `First name` / `Patronymic` (FML synthesized), `TEMPLATE` as callsign value, `OSH 4`, `Rank`. Code reads by **header names only** (aliases cover variants). See `RUNBOOK.md` §14.
-- After every production deploy or PERSONNEL edits: run **`apiStage7ClearPhoneCache()`** in GAS (mandatory).
+- After every production deploy or PERSONNEL edits: run **`apiStage7MaterializeComputedData()`** when derived columns may be stale; run **`apiStage7ClearPhoneCache()`** for phone cache invalidation (mandatory after deploy).
 - See `.cursor/rules/personnel-data-keys.mdc`.
 
 ### Daily summaries (do not regress)

@@ -66,6 +66,8 @@
     _linkOpenGuard: { url: "", openedAt: 0 },
 
     consoleInitialized: false,
+    consoleFilter: "all",
+    consoleSessionStartedAt: 0,
     DIAG_TEST_MODE: !!window.DIAG_TEST_MODE,
 
     panelRefreshSeq: 0,
@@ -393,8 +395,27 @@
     });
   }
 
+  function _consoleLog_(message, type) {
+    try {
+      if (typeof logToConsole === "function") {
+        logToConsole(message, type);
+        return;
+      }
+      if (typeof window.__wasbPushConsoleLog__ === "function") {
+        window.__wasbPushConsoleLog__(message, type);
+      }
+    } catch (_) {}
+  }
+
   var Api = {
     run(method, ...args) {
+      const started = Date.now();
+      const previewFn = window.formatLogArgsPreview_;
+      const argsPreview =
+        typeof previewFn === "function" ? previewFn(args) : "";
+      const argsSuffix = argsPreview ? " " + argsPreview : "";
+      _consoleLog_("→ Сервер: " + method + argsSuffix, "server");
+
       return new Promise((resolve, reject) => {
         try {
           let runner = google.script.run
@@ -412,26 +433,48 @@
         } catch (err) {
           reject(normalizeError(err));
         }
-      }).then((result) => {
-        if (result && result.success === false) {
-          try {
-            console.warn(
-              JSON.stringify({
-                area: "Js.Core",
-                caller: "Api.run",
-                method: method,
-                severity: "warn",
-                ok: false,
-                message: result.message || result.error || "",
-              }),
+      })
+        .then((result) => {
+          const ms = Date.now() - started;
+          const summaryFn = window.formatApiResultSummary_;
+          const summary =
+            typeof summaryFn === "function" ? summaryFn(result) : "";
+          const summarySuffix = summary ? " — " + summary : "";
+
+          if (result && result.success === false) {
+            _consoleLog_(
+              "✕ Сервер: " + method + " (" + ms + " мс)" + summarySuffix,
+              "error",
             );
-          } catch (_) {}
-        }
-        if (Array.isArray(result?.warnings) && result.warnings.length) {
-          console.warn(`[${method}] warnings:`, result.warnings);
-        }
-        return result;
-      });
+          } else {
+            const logType = ms >= 15000 ? "warning" : "success";
+            _consoleLog_(
+              "✓ Сервер: " + method + " (" + ms + " мс)" + summarySuffix,
+              logType,
+            );
+          }
+
+          if (Array.isArray(result?.warnings) && result.warnings.length) {
+            result.warnings.forEach(function (w) {
+              _consoleLog_("⚠ " + method + ": " + String(w), "warning");
+            });
+          }
+
+          return result;
+        })
+        .catch((err) => {
+          const ms = Date.now() - started;
+          _consoleLog_(
+            "✕ Сервер: " +
+              method +
+              " (" +
+              ms +
+              " мс) — " +
+              normalizeError(err),
+            "error",
+          );
+          throw err;
+        });
     },
   };
 

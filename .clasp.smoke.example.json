@@ -1,0 +1,5 @@
+{
+  "scriptId": "PUT_SEPARATE_SMOKE_SCRIPT_ID_HERE",
+  "projectId": "PUT_SMOKE_GCP_PROJECT_ID_HERE",
+  "rootDir": "/tmp/wasb-smoke-bundle"
+}

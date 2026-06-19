@@ -411,6 +411,14 @@ function apiStage7ClearPhoneCache() {
   return Stage7UseCases_.runMaintenanceScenario({ type: "clearPhoneCache" });
 }
 
+function apiStage7MaterializeComputedData() {
+  _stage7AssertRole_("maintainer", "materialize computed data");
+  return Stage7UseCases_.runMaintenanceScenario({
+    type: "materializeComputedData",
+    source: "api",
+  });
+}
+
 function apiStage7RestartBot() {
   _stage7AssertRole_("sysadmin", "restart bot");
   return Stage7UseCases_.runMaintenanceScenario({ type: "restartBot" });

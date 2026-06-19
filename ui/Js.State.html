@@ -76,6 +76,17 @@
   var ActionDispatcher = {
     async run(methodName, handler, options = {}) {
       const opts = options || {};
+      const label =
+        (typeof getActionName === "function"
+          ? getActionName(methodName)
+          : null) || String(methodName || "дія");
+
+      try {
+        if (typeof logToConsole === "function") {
+          logToConsole("▶ Дія: " + label, "action");
+        }
+      } catch (_) {}
+
       if (opts.showLoader !== false) LoaderService.show();
 
       try {
@@ -91,8 +102,32 @@
           ToastService.success(opts.successMessage);
         }
 
+        try {
+          if (typeof logToConsole === "function") {
+            if (result?.success === false) {
+              logToConsole(
+                "✕ Дія: " +
+                  label +
+                  " — " +
+                  String(result?.error || result?.message || "помилка"),
+                "error",
+              );
+            } else {
+              logToConsole("■ Дія: " + label + " — завершено", "success");
+            }
+          }
+        } catch (_) {}
+
         return result;
       } catch (error) {
+        try {
+          if (typeof logToConsole === "function") {
+            logToConsole(
+              "✕ Дія: " + label + " — " + normalizeError(error),
+              "error",
+            );
+          }
+        } catch (_) {}
         ErrorPresenter.present(error);
         throw error;
       } finally {
@@ -516,6 +551,12 @@
   }
 
   function showMenu() {
+    try {
+      if (typeof logToConsole === "function") {
+        logToConsole("🖥 Екран: Головне меню", "info");
+      }
+    } catch (_) {}
+
     flashScreenTransition_("Повернення до меню...");
 
     $id("menuSection")?.classList?.add("active");
@@ -527,6 +568,12 @@
   }
 
   function showResult(title) {
+    try {
+      if (typeof logToConsole === "function") {
+        logToConsole("🖥 Екран: " + String(title || "Результат"), "info");
+      }
+    } catch (_) {}
+
     flashScreenTransition_("Завантаження екрана...");
 
     $id("menuSection")?.classList?.remove("active");
@@ -607,22 +654,47 @@
   function showLoading(message, options = {}) {
     const opts = options || {};
     const overlay = $id("loadingOverlay");
+    const text = String(message || "Завантаження...");
 
-    setLoadingOverlayText(message);
+    setLoadingOverlayText(text);
 
     if (typeof STATE === "object" && STATE) {
       STATE._loadingToken = Number(STATE._loadingToken || 0) + 1;
+      if (!opts.overlayOnly) {
+        STATE._loadingDepth = Number(STATE._loadingDepth || 0) + 1;
+        if (STATE._loadingDepth === 1) {
+          STATE._loadingStartedAt = Date.now();
+        }
+      }
     }
 
     if (overlay) {
       overlay.classList.toggle("is-transition", opts.kind === "transition");
-      overlay.setAttribute("aria-label", String(message || "Завантаження..."));
+      overlay.setAttribute("aria-label", text);
+    }
+
+    if (!opts.overlayOnly && !opts.silentLog) {
+      try {
+        if (typeof logToConsole === "function") {
+          const depth = Number(STATE._loadingDepth || 1);
+          if (depth <= 1) {
+            logToConsole("⏳ " + text, "loading");
+          } else {
+            logToConsole("  ↳ " + text, "loading");
+          }
+        }
+      } catch (_) {}
     }
 
     show("loadingOverlay", "flex");
+
+    if (typeof syncConsoleOverlayState_ === "function") {
+      syncConsoleOverlayState_();
+    }
   }
 
-  function hideLoading() {
+  function hideLoading(options = {}) {
+    const opts = options || {};
     const overlay = $id("loadingOverlay");
     setLoadingOverlayText("Завантаження...");
     if (overlay) {
@@ -630,19 +702,44 @@
       overlay.removeAttribute("aria-label");
     }
     hide("loadingOverlay");
+
+    if (typeof STATE === "object" && STATE && !opts.overlayOnly) {
+      const depth = Number(STATE._loadingDepth || 0);
+      if (depth > 0) STATE._loadingDepth = depth - 1;
+
+      if (Number(STATE._loadingDepth || 0) <= 0) {
+        STATE._loadingDepth = 0;
+        const started = Number(STATE._loadingStartedAt || 0);
+        const ms = started ? Date.now() - started : 0;
+        const suffix = ms > 0 ? " (" + ms + " мс)" : "";
+        try {
+          if (typeof logToConsole === "function") {
+            logToConsole("✓ Завантаження завершено" + suffix, "success");
+          }
+        } catch (_) {}
+        STATE._loadingStartedAt = 0;
+      }
+    }
+
+    if (typeof syncConsoleOverlayState_ === "function") {
+      syncConsoleOverlayState_();
+    }
   }
 
   function flashScreenTransition_(message, durationMs) {
     if (!$id("loadingOverlay")) return;
 
     const ms = Math.max(120, Math.min(420, Number(durationMs || 220)));
-    showLoading(message || "Завантаження екрана...", { kind: "transition" });
+    showLoading(message || "Завантаження екрана...", {
+      kind: "transition",
+      overlayOnly: true,
+    });
 
     const token = STATE && Number(STATE._loadingToken || 0);
     clearTimeout(window.__wasbScreenTransitionTimer__);
     window.__wasbScreenTransitionTimer__ = setTimeout(function () {
       if (!STATE || Number(STATE._loadingToken || 0) === token) {
-        hideLoading();
+        hideLoading({ overlayOnly: true });
       }
     }, ms);
   }

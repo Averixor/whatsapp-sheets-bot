@@ -119,6 +119,42 @@
     }
   }
 
+  async function materializeComputedData() {
+    assertAdminAction_("materializeComputedData");
+    if (!confirm("Оновити обчислювані дані (вік, дні до ДН, відпустки, статус панелі)?")) {
+      return;
+    }
+
+    logToConsole("Оновлення обчислюваних даних...", "info");
+
+    try {
+      const result = await ActionDispatcher.run(
+        "materializeComputedData",
+        () => MaintenanceApi.materializeComputedData(),
+      );
+      if (!result?.success) {
+        showToast("" + (result?.error || result?.message || "Помилка"));
+        return;
+      }
+
+      showToast("Обчислювані дані оновлено");
+      showStandardResult("Обчислювані дані");
+      logToConsole("✓ " + (result.message || "Обчислювані дані оновлено"), "success");
+
+      setHtml(
+        "resultContent",
+        `
+        <div class="result-item">
+          <div class="result-label" style="color: var(--success-color);">Успішно</div>
+          <div class="result-value">${escapeHtml(result.message || "Обчислювані дані оновлено")}</div>
+        </div>
+      `,
+      );
+    } catch (error) {
+      showToast("" + normalizeError(error));
+    }
+  }
+
   async function setupTrigger() {
     assertAdminAction_("setupTrigger");
     if (!confirm("Створити щоденні тригери для відпусток і ДН?")) return;

@@ -132,9 +132,15 @@
       syncCalendarAnchor_(STATE.currentCalendarDate);
     }
 
-    showStandardResult(
-      action === "daySummary" ? "Зведення дня" : "Детальне зведення",
-    );
+    const title =
+      action === "daySummary" ? "Зведення дня" : "Детальне зведення";
+    try {
+      if (typeof logToConsole === "function") {
+        logToConsole("🖥 Екран: " + title, "info");
+      }
+    } catch (_) {}
+
+    showStandardResult(title);
     renderCalendar(action);
   }
 

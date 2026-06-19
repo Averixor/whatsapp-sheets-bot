@@ -1483,7 +1483,6 @@
     },
 
     async openUpdatedSchedule() {
-      console.log("[VacationModule.openUpdatedSchedule] clicked");
       showLoading();
       showToast("Оновлюю графік відпусток...");
       try {
@@ -1494,9 +1493,22 @@
           [{ year: year }],
           "VacationModule.openUpdatedSchedule",
         );
+        var rebuild = result && result.rebuild ? result.rebuild : {};
+        var problemSummary = rebuild.problemSummary || {};
+        var counts = problemSummary.counts || {};
         logToConsole(
-          "[VacationModule.openUpdatedSchedule] success " +
-            JSON.stringify(result || {}),
+          "✓ Графік відпусток: " +
+            JSON.stringify({
+              ok: !!(result && result.ok),
+              scheduleYear: rebuild.scheduleYear || year,
+              activePeople: rebuild.activePeopleCount,
+              vacationCount: rebuild.vacationCount,
+              problemCount:
+                problemSummary.total || rebuild.problemCount || 0,
+              errors: counts.ERROR || 0,
+              warnings: counts.WARNING || 0,
+              message: result && result.message,
+            }),
           "success",
         );
         showToast(
