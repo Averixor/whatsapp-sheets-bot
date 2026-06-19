@@ -81,12 +81,12 @@ function healthCheck() {
     checks: [],
   };
 
-  _runHealthCheckItem_(report, "CONFIG об'єкт", "CRITICAL", function () {
+  _runHealthCheckItem_(report, "Налаштування системи", "CRITICAL", function () {
     const hasConfig = typeof CONFIG === "object" && CONFIG !== null;
     return {
       status: hasConfig ? "OK" : "FAIL",
       details: hasConfig
-        ? `TARGET_SHEET=${CONFIG.TARGET_SHEET}, PHONES=${CONFIG.PHONES_SHEET}, LOG=${CONFIG.LOG_SHEET}`
+        ? "Основні налаштування таблиці доступні"
         : "Налаштування системи не визначено",
       howTo: hasConfig
         ? ""
@@ -145,14 +145,15 @@ function healthCheck() {
     ].filter(Boolean);
 
     const missing = required.filter((name) => !sheets.includes(name));
+    const missingLabels = missing.map(_userFacingSheetLabel_);
 
     return {
       status: missing.length === 0 ? "OK" : "FAIL",
       details:
         missing.length === 0
           ? `Усі обов'язкові аркуші знайдено (${required.length})`
-          : `Відсутні: ${missing.join(", ")}`,
-      howTo: missing.length ? `Створіть аркуші: ${missing.join(", ")}` : "",
+          : `Відсутні: ${missingLabels.join(", ")}`,
+      howTo: missing.length ? `Створіть аркуші: ${missingLabels.join(", ")}` : "",
     };
   });
 
@@ -287,14 +288,14 @@ function healthCheck() {
     },
   );
 
-  _runHealthCheckItem_(report, "PHONES — дані", "CRITICAL", function () {
+  _runHealthCheckItem_(report, "Телефони — дані", "CRITICAL", function () {
     const ss = getWasbSpreadsheet_();
     const sh = ss.getSheetByName(CONFIG.PHONES_SHEET);
     if (!sh) {
       return {
         status: "FAIL",
-        details: `Аркуш ${CONFIG.PHONES_SHEET} не знайдено`,
-        howTo: `Створіть аркуш ${CONFIG.PHONES_SHEET}`,
+        details: "Аркуш телефонів не знайдено",
+        howTo: "Створіть аркуш телефонів",
       };
     }
 
@@ -303,13 +304,16 @@ function healthCheck() {
     return {
       status: rows > 0 ? "OK" : "FAIL",
       details: `Рядків з даними: ${rows}`,
-      howTo: rows > 0 ? "" : "Заповніть PHONES: A=Callsign, B=Phone, C=Phone 2",
+      howTo:
+        rows > 0
+          ? ""
+          : "Заповніть аркуш телефонів: колонка A — позивний, B — телефон, C — другий телефон",
     };
   });
 
   _runHealthCheckItem_(
     report,
-    "Завантаження phonesMap",
+    "Завантаження телефонів",
     "CRITICAL",
     function () {
       const map = loadPhonesMap_();
@@ -317,8 +321,8 @@ function healthCheck() {
 
       return {
         status: count > 0 ? "OK" : "FAIL",
-        details: `Ключів у phonesMap: ${count}`,
-        howTo: count > 0 ? "" : "Перевірте PHONES та очистить кеш телефонів",
+        details: `Записів у карті телефонів: ${count}`,
+        howTo: count > 0 ? "" : "Перевірте аркуш телефонів та очистіть кеш телефонів",
       };
     },
   );
@@ -353,17 +357,17 @@ function healthCheck() {
     return {
       status: phone ? "OK" : "FAIL",
       details: phone
-        ? `${CONFIG.COMMANDER_ROLE}: ${phone}`
-        : `Позивний "${CONFIG.COMMANDER_ROLE}" не знайдено в PHONES`,
+        ? `Командир: ${phone}`
+        : `Позивний командира не знайдено в аркуші телефонів`,
       howTo: phone
         ? ""
-        : `У PHONES в колонці A має бути позивний "${CONFIG.COMMANDER_ROLE}"`,
+        : "У аркуші телефонів у колонці A має бути позивний командира",
     };
   });
 
   _runHealthCheckItem_(
     report,
-    "Функція writeLogsBatch_",
+    "Запис у журнал дій",
     "CRITICAL",
     function () {
       const exists = _fnExists_("writeLogsBatch_");
@@ -371,9 +375,9 @@ function healthCheck() {
       return {
         status: exists ? "OK" : "FAIL",
         details: exists
-          ? "Функція writeLogsBatch_ знайдена"
-          : "Функція writeLogsBatch_ відсутня",
-        howTo: exists ? "" : "Додайте функцію writeLogsBatch_ у проєкт",
+          ? "Функцію запису в журнал знайдено"
+          : "Функцію запису в журнал не знайдено",
+        howTo: exists ? "" : "Додайте функцію запису журналу у проєкт",
       };
     },
   );
@@ -460,12 +464,12 @@ function healthCheck() {
     },
   );
 
-  _runHealthCheckItem_(report, "Журнал ALERTS", "WARN", function () {
+  _runHealthCheckItem_(report, "Журнал сповіщень", "WARN", function () {
     if (!_fnExists_("getAlertsStatistics") || !_fnExists_("getRecentAlerts")) {
       return {
         status: "FAIL",
-        details: "Відсутні getAlertsStatistics / getRecentAlerts",
-        howTo: "Перевірте AlertsRepository.gs",
+        details: "Відсутні функції перегляду сповіщень",
+        howTo: "Перевірте модуль сповіщень у проєкті",
       };
     }
 
@@ -492,9 +496,9 @@ function healthCheck() {
     return {
       status: "OK",
       details:
-        "ALERTS stats: total=" +
-        (total == null ? "n/a" : total) +
-        ", recent=" +
+        "Сповіщення: всього=" +
+        (total == null ? "н/д" : total) +
+        ", останні=" +
         recentCount,
       howTo: "",
     };
@@ -557,7 +561,7 @@ function healthCheck() {
 
   _runHealthCheckItem_(
     report,
-    "Script Property WASB_OWNER_EMAIL",
+    "Script Property email власника",
     "WARN",
     function () {
       var diag =
@@ -571,7 +575,7 @@ function healthCheck() {
       if (diag.ownerEmailConfigured) {
         return {
           status: "OK",
-          details: "WASB_OWNER_EMAIL заданий і схожий на email",
+          details: "Email власника скрипта заданий і схожий на email",
           howTo: "",
         };
       }
@@ -579,9 +583,9 @@ function healthCheck() {
       return {
         status: "WARN",
         severity: "WARN",
-        details: diag.warning || "WASB_OWNER_EMAIL не заданий",
+        details: diag.warning || "Email власника скрипта не заданий",
         howTo:
-          "Apps Script → Project settings → Script properties → WASB_OWNER_EMAIL=owner@example.com",
+          "Apps Script → Project settings → Script properties → додайте email власника",
       };
     },
   );

@@ -183,7 +183,7 @@ const VacationsRepository_ = (function () {
         _sourceModeProperty_() +
         ": " +
         configured +
-        ". Дозволено VACATIONS або VACATION_REQUESTS",
+        ". Дозволені джерела: аркуш відпусток або заявки на відпустку",
     );
   }
 
@@ -486,7 +486,7 @@ const VacationsRepository_ = (function () {
   function migrateRightVacationTableToMainSource() {
     const sheet = DataAccess_.getSheet(_sourceSheetName_(), null, false);
     if (!sheet) {
-      throw new Error("Лист VACATIONS не знайдено");
+      throw new Error("Аркуш відпусток не знайдено");
     }
 
     const panel = _rightPanelConfig_();
@@ -619,14 +619,14 @@ const VacationsRepository_ = (function () {
     if (!sheet) {
       if (opts.required === true) {
         throw new Error(
-          "Активне джерело VACATION_REQUESTS не знайдено. Поверніть WASB_VACATION_SOURCE=VACATIONS або виконайте міграцію.",
+          "Активне джерело заявок на відпустку не знайдено. Поверніть джерело відпусток у налаштуваннях або виконайте міграцію.",
         );
       }
       return [];
     }
     if (sheet.getLastRow() < 1) {
       if (opts.required === true) {
-        throw new Error("Активне джерело VACATION_REQUESTS порожнє");
+        throw new Error("Активне джерело заявок на відпустку порожнє");
       }
       return [];
     }

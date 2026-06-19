@@ -408,7 +408,7 @@ function _buildUnknownDescriptor_(context, policy) {
 
   if (currentKeyHash && policy.strictUserKeyMode) {
     reasonCode = REASON_CODES.DENIED_UNREGISTERED_KEY;
-    reasonMessage = "Ключ не зареєстровано в ACCESS. Строгий режим.";
+    reasonMessage = "Ключ не зареєстровано в списку доступу. Строгий режим.";
   } else if (currentKeyHash && !policy.strictUserKeyMode) {
     reasonCode = REASON_CODES.DENIED_BRIDGE_NOT_ALLOWED;
     reasonMessage =
@@ -1271,7 +1271,7 @@ function submitAccessKeyRequest(payload) {
           success: false,
           code: "access.registration.access_sheet_protected",
           message:
-            "Не вдалося зберегти заявку: лист ACCESS захищено від запису для цього користувача. Адміністратор має увімкнути для ACCESS режим «лише попередження» (не блокувати) або повторно застосувати захист службових листів.",
+            "Не вдалося зберегти заявку: список доступу захищено від запису для цього користувача. Адміністратор має увімкнути для нього режим «лише попередження» (не блокувати) або повторно застосувати захист службових листів.",
         };
       }
       throw writeError;
@@ -1749,7 +1749,7 @@ function registerAccessWithTemporaryPassword(payload) {
           success: false,
           code: "access.registration.access_sheet_protected",
           message:
-            "Не вдалося активувати доступ: лист ACCESS захищено від запису для цього користувача. Попросіть адміністратора увімкнути для ACCESS режим «лише попередження».",
+            "Не вдалося активувати доступ: список доступу захищено від запису для цього користувача. Попросіть адміністратора увімкнути режим «лише попередження».",
         };
       }
       throw writeError;

@@ -198,15 +198,15 @@
 
   async function debugPhones() {
     assertAdminAction_("debugPhones");
-    logToConsole("Діагностика PHONES...", "info");
-    showStandardResult("Діагностика PHONES");
+    logToConsole("Діагностика телефонів...", "info");
+    showStandardResult("Діагностика телефонів");
 
     setHtml(
       "resultContent",
       `
       <div class="result-item">
-        <div class="result-label">Діагностика PHONES</div>
-        <div class="result-value">Аналізую аркуш PHONES...</div>
+        <div class="result-label">Діагностика телефонів</div>
+        <div class="result-value">Аналізую аркуш телефонів...</div>
       </div>
     `,
     );
@@ -219,7 +219,7 @@
       );
       if (!result?.success) {
         throw new Error(
-          result?.error || "Не вдалося виконати діагностику PHONES",
+          result?.error || "Не вдалося виконати діагностику телефонів",
         );
       }
 
@@ -262,12 +262,12 @@
         `
         <div class="result-item">
           <div class="result-label" style="color: var(--success-color);">Результат</div>
-          <div class="result-value">${escapeHtml(result.message || "Діагностику PHONES виконано")}</div>
+          <div class="result-value">${escapeHtml(result.message || "Діагностику телефонів виконано")}</div>
         </div>
 
         <div class="result-item">
           <div class="result-label">Аркуш</div>
-          <div class="result-value">${escapeHtml(result.sheetName || "PHONES")}</div>
+          <div class="result-value">${escapeHtml(result.sheetName || "Телефони")}</div>
         </div>
 
         <div class="result-item">
@@ -285,9 +285,9 @@
       `,
       );
 
-      showToast("Діагностику PHONES завершено");
+      showToast("Діагностику телефонів завершено");
       logToConsole(
-        `Діагностика PHONES завершена: ${Number(stats.total || contacts.length || 0)} записів`,
+        `Діагностика телефонів завершена: ${Number(stats.total || contacts.length || 0)} записів`,
         "success",
       );
     } catch (error) {
@@ -302,7 +302,7 @@
       `,
       );
       showToast("✕ " + message);
-      logToConsole("Діагностика PHONES: " + message, "error");
+      logToConsole("Діагностика телефонів: " + message, "error");
     }
   }
 

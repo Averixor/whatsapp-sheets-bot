@@ -449,7 +449,7 @@ function debugPhones() {
     if (!sheet) {
       return {
         success: false,
-        error: `Аркуш ${CONFIG.PHONES_SHEET} не знайдено`,
+        error: "Аркуш телефонів не знайдено",
       };
     }
 
