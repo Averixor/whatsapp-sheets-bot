@@ -469,7 +469,7 @@
               });
             } catch (error) {
               logToConsole(
-                `✕ Не вдалося перечитати SEND_PANEL: ${normalizeError(error)}`,
+                `✕ Не вдалося оновити панель надсилання: ${normalizeError(error)}`,
                 "error",
               );
               showSendPanel();
@@ -478,7 +478,7 @@
           }
           if (!Array.isArray(panelRows) || panelRows.length === 0) {
             logToConsole(
-              "⚠ SEND_PANEL порожній навіть після перечитування",
+              "⚠ Панель надсилання порожня навіть після оновлення",
               "warning",
             );
           }

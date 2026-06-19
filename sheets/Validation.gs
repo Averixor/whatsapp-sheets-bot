@@ -88,7 +88,7 @@ function validatePanelRowSelection_(rowNumbers, options) {
     .filter(function(v) { return Number.isFinite(v); });
 
   const uniqueRows = [...new Set(rows)].sort(function(a, b) { return a - b; });
-  _stage7Assert_(uniqueRows.length > 0, 'validatePanelRowSelection_', {}, 'Не передано жодного рядка SEND_PANEL');
+  _stage7Assert_(uniqueRows.length > 0, 'validatePanelRowSelection_', {}, 'Не передано жодного рядка панелі надсилання');
   _stage7Assert_(uniqueRows.length <= (Number(opts.maxRows) || STAGE7_CONFIG.MAX_BATCH_ROWS), 'validatePanelRowSelection_', { count: uniqueRows.length }, `Забагато рядків для batch-операції: ${uniqueRows.length}`);
 
   const panel = DataAccess_.getSheet('SEND_PANEL', null, false);
@@ -97,7 +97,7 @@ function validatePanelRowSelection_(rowNumbers, options) {
     const minRow = Number(schema.dataStartRow) || 3;
     const maxRow = Math.max(panel.getLastRow(), minRow - 1);
     const validRows = uniqueRows.filter(function(row) { return row >= minRow && row <= maxRow; });
-    _stage7Assert_(validRows.length > 0, 'validatePanelRowSelection_', { count: uniqueRows.length }, 'Усі рядки поза межами SEND_PANEL');
+    _stage7Assert_(validRows.length > 0, 'validatePanelRowSelection_', { count: uniqueRows.length }, 'Усі рядки поза межами панелі надсилання');
     return {
       rows: validRows,
       warnings: validRows.length !== uniqueRows.length ? ['Частина рядків була відкинута як некоректна'] : []

@@ -65,8 +65,8 @@ var UseCasesSendPanel_ = (function () {
         return {
           success: true,
           message: input.dryRun
-            ? "SEND_PANEL перевірено без запису"
-            : "SEND_PANEL згенеровано",
+            ? "Панель надсилання перевірено без запису"
+            : "Панель надсилання згенеровано",
           result: built,
           changes: input.dryRun
             ? []
@@ -166,14 +166,14 @@ var UseCasesSendPanel_ = (function () {
           const lastDate = reports[reports.length - 1].date;
           persisted = SendPanelRepository_.rebuild(lastDate);
           warnings.push(
-            "Фізично записано лише останню дату діапазону, бо SEND_PANEL — один аркуш",
+            "Фізично записано лише останню дату діапазону, бо панель надсилання — один аркуш",
           );
         }
 
         return {
           success: true,
           message: input.dryRun
-            ? `Dry-run генерації SEND_PANEL для ${reports.length} дат`
+            ? `Перевірка генерації панелі надсилання для ${reports.length} дат`
             : `Підготовлено ${reports.length} дат, записано останню`,
           result: {
             range: {
@@ -644,7 +644,7 @@ var UseCasesSendPanel_ = (function () {
             : { month: getBotMonthSheetName_(), date: "" };
         return {
           success: true,
-          message: "SEND_PANEL перечитано",
+          message: "Панель надсилання оновлено",
           result: {
             rows: rows,
             stats: stats,

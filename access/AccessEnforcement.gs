@@ -513,7 +513,7 @@ var AccessEnforcement_ =
         detailedSummaryDenied: "Відмовлено у формуванні детального зведення",
         checkVacationsAndBirthdays:
           "Відмовлено у перевірці відпусток і днів народження",
-        sendPanelDenied: "Відмовлено у доступі до SEND_PANEL",
+        sendPanelDenied: "Відмовлено у доступі до панелі надсилання",
         workingActionDenied: "Відмовлено у виконанні робочої дії",
       };
 
@@ -527,12 +527,12 @@ var AccessEnforcement_ =
         "access.self_bind.identifier_mismatch":
           "Невідповідність ідентифікатора при спробі самостійної привʼязки доступу",
         "access.self_bind.identifier_not_found":
-          "Ідентифікатор не знайдено в ACCESS",
+          "Ідентифікатор не знайдено в списку доступу",
         "access.self_bind.call_sign_occupied":
           "Позивний уже привʼязаний до іншого ключа",
         "access.denied_unknown_user": "Користувача не знайдено в системі",
         "access.denied_unregistered_key":
-          "Ключ користувача не зареєстровано в ACCESS",
+          "Ключ користувача не зареєстровано в списку доступу",
         "access.denied_key_unavailable": "Ключ користувача недоступний",
       };
 
@@ -1279,7 +1279,7 @@ var AccessEnforcement_ =
         descriptor,
       );
 
-      throw new Error("Недостатньо прав для SEND_PANEL.");
+      throw new Error("Недостатньо прав для панелі надсилання.");
     }
 
     function describeEditActorByEmail(email) {

@@ -1060,13 +1060,13 @@
         reason: "manual-reload",
       });
       logToConsole(
-        `SEND_PANEL перечитано: ${Array.isArray(rows) ? rows.length : 0} рядків`,
+        `Панель надсилання оновлено: ${Array.isArray(rows) ? rows.length : 0} рядків`,
         "success",
       );
       showSendPanel();
     } catch (error) {
       logToConsole(
-        `Не вдалося перечитати SEND_PANEL: ${normalizeError(error)}`,
+        `Не вдалося оновити панель надсилання: ${normalizeError(error)}`,
         "error",
       );
       showSendPanel();
