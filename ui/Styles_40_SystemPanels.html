@@ -614,6 +614,117 @@
     border-left-color: var(--log-info);
   }
 
+  .log-server {
+    color: #7dd3fc;
+    border-left-color: #38bdf8;
+  }
+
+  .log-action {
+    color: #c4b5fd;
+    border-left-color: #a78bfa;
+  }
+
+  .log-loading {
+    color: #fcd34d;
+    border-left-color: #fbbf24;
+  }
+
+  .log-hidden {
+    display: none;
+  }
+
+  .console-content.console-paused::after {
+    content: "⏸";
+    position: sticky;
+    bottom: 0;
+    float: right;
+    margin-top: -1.4rem;
+    padding: 0 6px;
+    font-size: 0.75rem;
+    color: var(--console-muted);
+    pointer-events: none;
+  }
+
+  .console-wrapper.console--overlay {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10002;
+    border-top: 2px solid rgba(56, 189, 248, 0.45);
+    box-shadow: 0 -10px 36px rgba(0, 0, 0, 0.48);
+  }
+
+  .console-wrapper.console--overlay .console-section.open {
+    height: min(46vh, 340px);
+  }
+
+  .console-btn--filter {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    min-width: 2rem;
+    padding: 2px 6px;
+  }
+
+  .console-btn--filter.active {
+    background: rgba(56, 189, 248, 0.22);
+    color: #e0f2fe;
+  }
+
+  .console-fab {
+    position: fixed;
+    right: 14px;
+    bottom: 14px;
+    z-index: 10001;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 2px solid rgba(56, 189, 248, 0.55);
+    background: linear-gradient(145deg, #0f172a, #1e293b);
+    color: #e2e8f0;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.38);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+
+  .console-fab:hover,
+  .console-fab:focus-visible {
+    transform: scale(1.06);
+    border-color: #38bdf8;
+    box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.18);
+  }
+
+  .console-fab.open {
+    border-color: #38bdf8;
+    box-shadow: 0 0 0 5px rgba(56, 189, 248, 0.24);
+  }
+
+  .console-fab__icon {
+    font-size: 1.35rem;
+    line-height: 1;
+  }
+
+  .console-fab__badge {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 9px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  }
+
   .commander-recipient {
     display: flex;
     align-items: center;

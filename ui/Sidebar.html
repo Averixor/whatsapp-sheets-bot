@@ -431,6 +431,27 @@
             </h2>
             <div class="console-actions">
               <button
+                class="console-btn console-btn--filter active"
+                type="button"
+                data-console-filter="all"
+                title="Усі записи"
+                aria-label="Фільтр: усі записи"
+              >Все</button>
+              <button
+                class="console-btn console-btn--filter"
+                type="button"
+                data-console-filter="error"
+                title="Лише помилки та попередження"
+                aria-label="Фільтр: помилки"
+              >⚠</button>
+              <button
+                class="console-btn console-btn--filter"
+                type="button"
+                data-console-filter="server"
+                title="Лише серверні виклики"
+                aria-label="Фільтр: сервер"
+              >→</button>
+              <button
                 class="console-btn"
                 type="button"
                 onclick="SidebarApp.copyConsole()"
@@ -473,14 +494,23 @@
             role="log"
             aria-live="polite"
             aria-relevant="additions text"
-          >
-            <div class="log-entry log-info">
-              <span class="log-time">[ініціалізація]</span> Консоль готова до
-              роботи
-            </div>
-          </div>
+          ></div>
         </div>
       </section>
+
+      <button
+        type="button"
+        class="console-fab"
+        id="consoleFab"
+        onclick="SidebarApp.toggleConsole()"
+        aria-label="Журнал виконання"
+        title="Журнал виконання"
+        aria-controls="consoleSection"
+        aria-expanded="false"
+      >
+        <span class="console-fab__icon" aria-hidden="true">👾</span>
+        <span class="console-fab__badge wasb-is-hidden" id="consoleFabBadge">0</span>
+      </button>
 
       <div
         class="loading-overlay wasb-is-hidden"

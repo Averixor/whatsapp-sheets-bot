@@ -2439,7 +2439,12 @@ assert.match(jsVacations, /openUpdatedVacationScheduleFromSidebar[\s\S]*year:/);
 assert.match(jsVacations, /openUpdatedSchedule\(\)/);
 assert.match(jsVacations, /Оновити і відкрити графік/);
 assert.match(jsVacations, /openUpdatedVacationScheduleFromSidebar/);
-assert.match(jsVacations, /\[VacationModule\.openUpdatedSchedule\] clicked/);
+assert.match(jsVacations, /✓ Графік відпусток:/);
+assert.doesNotMatch(
+  jsVacations,
+  /JSON\.stringify\(result \|\| \{\}\)/,
+  "openUpdatedSchedule must not dump full result JSON to console",
+);
 assert.doesNotMatch(jsVacations, /Оновити стан/);
 assert.match(jsVacations, /↻ Оновити дані/);
 assert.match(

@@ -73,10 +73,35 @@
     };
   }
 
-  if (typeof window.logToConsole !== "function") {
-    window.logToConsole = function (message) {
-      console.log(message);
+  if (!window.__wasbConsoleBuffer__) {
+    window.__wasbConsoleBuffer__ = [];
+  }
+  if (typeof window.__wasbConsoleUnread !== "number") {
+    window.__wasbConsoleUnread = 0;
+  }
+
+  window.__wasbPushConsoleLog__ = function (message, type) {
+    var entry = {
+      message: String(message == null ? "" : message),
+      type: type || "info",
+      ts: Date.now(),
     };
+    window.__wasbConsoleBuffer__.push(entry);
+    if (window.__wasbConsoleBuffer__.length > 500) {
+      window.__wasbConsoleBuffer__.shift();
+    }
+    try {
+      console.log("[WASB]", entry.message);
+    } catch (_) {}
+    if (typeof window.__wasbConsoleRenderEntry__ === "function") {
+      try {
+        window.__wasbConsoleRenderEntry__(entry);
+      } catch (_) {}
+    }
+  };
+
+  if (typeof window.logToConsole !== "function") {
+    window.logToConsole = window.__wasbPushConsoleLog__;
   }
 
   if (typeof window.showToast !== "function") {
