@@ -123,7 +123,8 @@
     "stopSending",
     "$id",
     "showProgressBar",
-    "hideProgressBar"
+    "hideProgressBar",
+    "syncConsoleOverlayState_"
   ],
   "builtins": [
     "undefined",

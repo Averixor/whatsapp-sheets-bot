@@ -150,7 +150,7 @@ function calcVacationActive_(endDate, today) {
   var end = _vacationMaterializeStripTime_(endDate);
   var now = _vacationMaterializeStripTime_(today);
   if (!end || !now) return "";
-  return end.getTime() > now.getTime();
+  return end.getTime() >= now.getTime();
 }
 
 function findMaxFinishBefore_(records, fio, vacationType, beforeStart) {

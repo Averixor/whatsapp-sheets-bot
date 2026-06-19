@@ -164,7 +164,7 @@ const SendPanelFastPaths_ = (function() {
     var safeDate = _normalizeDate_(panelDate || _todayStr_());
     var headerRow = Number(CONFIG.SEND_PANEL_HEADER_ROW) || 2;
     var dataStartRow = Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3;
-    var dataLastRow = (typeof MONTHLY_CONFIG !== 'undefined' && Number(MONTHLY_CONFIG.LAST_DATA_ROW)) || 40;
+    var dataLastRow = calcSendPanelDataEndRow_();
     var clearUntilRow = Math.max(Number(panel.getLastRow() || 0), dataLastRow, dataStartRow);
 
     try { panel.getRange(1, 1, 1, 7).breakApart(); } catch (_) {}

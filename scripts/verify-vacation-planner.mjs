@@ -974,6 +974,16 @@ assert.equal(
   true,
 );
 assert.equal(
+  materializeFns.calcVacationActive_(date("2026-03-01"), date("2026-03-01")),
+  true,
+  "Active=true on last vacation day (end date inclusive)",
+);
+assert.equal(
+  materializeFns.calcVacationActive_(date("2026-03-01"), date("2026-03-02")),
+  false,
+  "Active=false after end date",
+);
+assert.equal(
   materializeFns.calcVacationIntervalCheck_(
     [
       {
@@ -2429,7 +2439,12 @@ assert.match(jsVacations, /openUpdatedVacationScheduleFromSidebar[\s\S]*year:/);
 assert.match(jsVacations, /openUpdatedSchedule\(\)/);
 assert.match(jsVacations, /Оновити і відкрити графік/);
 assert.match(jsVacations, /openUpdatedVacationScheduleFromSidebar/);
-assert.match(jsVacations, /\[VacationModule\.openUpdatedSchedule\] clicked/);
+assert.match(jsVacations, /✓ Графік відпусток:/);
+assert.doesNotMatch(
+  jsVacations,
+  /JSON\.stringify\(result \|\| \{\}\)/,
+  "openUpdatedSchedule must not dump full result JSON to console",
+);
 assert.doesNotMatch(jsVacations, /Оновити стан/);
 assert.match(jsVacations, /↻ Оновити дані/);
 assert.match(
