@@ -49,7 +49,7 @@ WASB is a spreadsheet-bound Google Apps Script application.
 
 ### Application API
 
-- file: `Stage7ServerApi.gs`
+- file: `api/Stage7ServerApi.gs`
 - purpose: user-facing application routes for sidebar and spreadsheet-driven work
 
 Representative entrypoints:
@@ -65,11 +65,11 @@ Representative entrypoints:
 - `apiOpenPersonCard()`
 - `apiLoadCalendarDay()`
 - `apiCheckVacationsAndBirthdays()`
-- `apiGetActiveProjects()` / `apiSubmitRequest()` — sidebar projects & requests (`ProjectRequests.gs`)
+- `apiGetActiveProjects()` / `apiSubmitRequest()` — sidebar projects & requests (`operations/ProjectRequests.gs`)
 
 ### Maintenance API
 
-- file: `Stage7MaintenanceApi.gs`
+- file: `api/Stage7MaintenanceApi.gs`
 - purpose: diagnostics, access administration, protections, triggers, cache/system maintenance, repair flows
 
 Representative entrypoints:
@@ -87,17 +87,17 @@ Representative entrypoints:
 
 ### Compatibility facade
 
-- file: `SidebarServer.gs`
+- file: `ui-server/SidebarServer.gs`
 - purpose: historical callers and compatibility shims
 - rule: compatibility wrappers may exist, but they are not the canonical path
 
 ### Use-case and orchestration layer
 
-- `UseCases.gs`
-- `WorkflowOrchestrator.gs`
-- `Validation.gs`
-- `AuditTrail.gs`
-- `Reconciliation.gs`
+- `usecases/UseCases.gs`
+- `core/WorkflowOrchestrator.gs`
+- `sheets/Validation.gs`
+- `security/AuditTrail.gs`
+- `operations/Reconciliation.gs`
 
 This layer is used for heavier or sensitive workflows. Lightweight read-only routes should not be forced through the heaviest orchestration path unless they truly need it.
 
@@ -105,23 +105,23 @@ This layer is used for heavier or sensitive workflows. Lightweight read-only rou
 
 Key repositories and services:
 
-- `PersonnelRepository.gs`
-- `PersonsRepository.gs`
-- `SendPanelRepository.gs`
-- `SummaryRepository.gs`
-- `SummaryService.gs`
+- `personnel/PersonnelRepository.gs`
+- `personnel/PersonsRepository.gs`
+- `sendpanel/SendPanelRepository.gs`
+- `reports/SummaryRepository.gs`
+- `reports/SummaryService.gs`
 - `reports/Report_SummaryData.gs` — read short-summary values from monthly formula block
 - `reports/Report_DailySimple.gs` — format short daily summary text
 - `reports/Report_DailyDetailed.gs` — detailed daily summary (people + DICT_SUM groups)
-- `Summaries.gs` — legacy entrypoints (`buildDaySummaryForColumn_`, summary dialogs)
+- `reports/Summaries.gs` — legacy entrypoints (`buildDaySummaryForColumn_`, summary dialogs)
 - `vacations/VacationsRepository.gs`
 - `vacations/VacationPlannerService.gs`, `vacations/VacationMonthCalendar.gs`, `vacations/Vacation_Suggestions.gs`
 - `vacations/VacationSidebarService.gs`
-- `AlertsRepository.gs`
-- `LogsRepository.gs`
-- `JobRuntimeRepository.gs`
-- `SelectionActionService.gs`
-- `PreviewLinkService.gs`
+- `personnel/AlertsRepository.gs`
+- `data/LogsRepository.gs`
+- `maintenance/JobRuntimeRepository.gs`
+- `sendpanel/SelectionActionService.gs`
+- `ui-server/PreviewLinkService.gs`
 
 The repository layer is the boundary between domain/application logic and spreadsheet storage details.
 
@@ -133,7 +133,7 @@ Primary identity is `Session.getTemporaryActiveUserKey()`.
 
 That value is treated as the session identity anchor. The project stores **hashes** of it inside `ACCESS`, not raw keys.
 
-The `ACCESS` bootstrap creates the full header set from `SHEET_HEADERS` in `AccessControl.Core.gs` (including `registration_status` and extended registration columns). Operational docs list the minimum admin-facing subset in **`README.md`** and **`RUNBOOK.md`**.
+The `ACCESS` bootstrap creates the full header set from `SHEET_HEADERS` in `access/AccessControl.Core.gs` (including `registration_status` and extended registration columns). Operational docs list the minimum admin-facing subset in **`README.md`** and **`RUNBOOK.md`**.
 
 ### Resolution order
 
@@ -189,7 +189,7 @@ This bundle applies server-side checks to:
 
 Scheduled jobs run **without** a sidebar UI session. They must **not** fall through user-key resolution as `guest`.
 
-Managed jobs (`Triggers.gs` → `Stage7Triggers_.runJob`) attach an explicit system context when `trigger: true`:
+Managed jobs (`operations/Triggers.gs` → `Stage7Triggers_.runJob`) attach an explicit system context when `trigger: true`:
 
 - `actorRole: "system"`, `role: "system"`
 - `allowSystem: true`, `isSystemTrigger: true`
@@ -207,14 +207,14 @@ Maintenance jobs routed through `runMaintenanceScenario` (`healthCheck`, `cleanu
 
 Manual job launch from the GAS editor (`apiRunStage7Job` with `trigger: false`) **does not** inherit system context; it requires the sysadmin session that invoked the API.
 
-Spreadsheet audit handlers (`stage7SecurityAuditOnEdit`, `stage7SecurityAuditOnChange`) are also installed by `Triggers.gs`, but they do **not** use the system actor to bypass checks. They resolve the editor from the Apps Script event and log suspicious protected-sheet edits or structural changes when the actor is not allowed.
+Spreadsheet audit handlers (`stage7SecurityAuditOnEdit`, `stage7SecurityAuditOnChange`) are also installed by `operations/Triggers.gs`, but they do **not** use the system actor to bypass checks. They resolve the editor from the Apps Script event and log suspicious protected-sheet edits or structural changes when the actor is not allowed.
 
 ## 7. Data and service sheets
 
 Main operational sheets typically include:
 
 - month sheets (`01`..`12`) — schedule codes (позивний + графік по датах); **нижній формульний блок** на кожному листі дає показники короткого зведення дня (див. [`docs/daily-summary-architecture.md`](./docs/daily-summary-architecture.md))
-- `PERSONNEL` — **canonical** personal data (header-based via `PersonnelRepository.gs`). **Schedule key: Callsign** (monthly sheets). **Lookup: Callsign → FML**. `ID` = optional Армія+ (not a system key). `Position` = org slot, not person key. **Status dropdown (9 UA values):** `В наявності`, `У відрядженні`, `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`. Runtime-active: all except **Вибув** / **СЗЧ**; empty defaults to **В наявності**. Contract: `contracts/personnel-status.contract.json`.
+- `PERSONNEL` — **canonical** personal data (header-based via `personnel/PersonnelRepository.gs`). **Schedule key: Callsign** (monthly sheets). **Lookup: Callsign → FML**. `ID` = optional Армія+ (not a system key). `Position` = org slot, not person key. **Status dropdown (9 UA values):** `В наявності`, `У відрядженні`, `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`. Runtime-active: all except **Вибув** / **СЗЧ**; empty defaults to **В наявності**. Contract: `contracts/personnel-status.contract.json`.
 - `PHONES` — legacy fallback when `PERSONNEL` is empty/unavailable (`loadPhonesIndex_` prefers `PERSONNEL`)
 - `DICT`
 - `DICT_SUM`
@@ -241,11 +241,11 @@ Protected / service sheets include:
 
 | Sheet (name) | Primary module                                         | Seeded when                         |
 | ------------ | ------------------------------------------------------ | ----------------------------------- |
-| `Дані`       | `MonthlyReport.gs` (`MonthlyReport_.ensureDataSheet_`) | Sidebar bootstrap; empty sheet only |
-| `Проєкти`    | `ProjectRequests.gs` (`ensureProjectsSheet_`)          | same                                |
-| `Заявки`     | `ProjectRequests.gs` (`ensureRequestsSheet_`)          | same                                |
+| `Дані`       | `reports/MonthlyReport.gs` (`MonthlyReport_.ensureDataSheet_`) | Sidebar bootstrap; empty sheet only |
+| `Проєкти`    | `operations/ProjectRequests.gs` (`ensureProjectsSheet_`)          | same                                |
+| `Заявки`     | `operations/ProjectRequests.gs` (`ensureRequestsSheet_`)          | same                                |
 
-Тригер входу: **`apiStage7BootstrapSidebar()`** → **`_ensureOptionalBusinessSheetsQuiet_()`** in `Stage7ServerApi.gs`. Деталі колонок і шаблонних рядків — **`RUNBOOK.md` §20**.
+Тригер входу: **`apiStage7BootstrapSidebar()`** → **`_ensureOptionalBusinessSheetsQuiet_()`** in `api/Stage7ServerApi.gs`. Деталі колонок і шаблонних рядків — **`RUNBOOK.md` §20**.
 
 ## 7.1 Daily summaries (short and detailed)
 
@@ -261,9 +261,9 @@ schedule codes, grouped by dictionary rules.
 | Read | `reports/Report_SummaryData.gs` | Find date column and formula block; parse indicator values |
 | Format | `reports/Report_DailySimple.gs` | Build short summary text (`За штатом` … `БР`) |
 | Detailed | `reports/Report_DailyDetailed.gs` | People lists per code/group |
-| Repository | `SummaryRepository.gs` | `buildDaySummary` / `buildDetailedSummary` |
-| API | `Stage7ServerApi.gs` | `apiBuildDaySummary`, `apiBuildDetailedSummary` |
-| UI | Sidebar (`Js.Render.Calendar.html`) | Buttons **Зведення дня** / **Детальне зведення** |
+| Repository | `reports/SummaryRepository.gs` | `buildDaySummary` / `buildDetailedSummary` |
+| API | `api/Stage7ServerApi.gs` | `apiBuildDaySummary`, `apiBuildDetailedSummary` |
+| UI | Sidebar (`ui/Js.Render.Calendar.html`) | Buttons **Зведення дня** / **Детальне зведення** |
 
 Top spreadsheet menu: **`WASB` → `Відкрити панель` only** (no separate `Звіти` menu).
 
@@ -271,7 +271,7 @@ Full design: [`docs/daily-summary-architecture.md`](./docs/daily-summary-archite
 
 ## 7.2 Vacation planner and mini-calendar
 
-Vacation planning runs in the sidebar **Відпустки** tab (`Js.Vacations.html`).
+Vacation planning runs in the sidebar **Відпустки** tab (`ui/Js.Vacations.html`).
 Source adapter: `vacations/VacationsRepository.gs` (default `VACATIONS` `A:I`).
 
 | Layer | Module | Role |
@@ -281,7 +281,7 @@ Source adapter: `vacations/VacationsRepository.gs` (default `VACATIONS` `A:I`).
 | Calendar | `vacations/VacationMonthCalendar.gs` | Month grid, day `loadLevel`, previews |
 | Suggestions | `vacations/Vacation_Suggestions.gs` | Safe move proposals per issue |
 | API | `vacations/VacationSidebarService.gs` | Sidebar entrypoints |
-| UI | `Js.Vacations.html` | Tabs, mini-calendar, problems, bulk fix |
+| UI | `ui/Js.Vacations.html` | Tabs, mini-calendar, problems, bulk fix |
 
 Mini-calendar: count-only cells, informative tooltip (`buildVacationDayTooltip_`),
 day details via `getVacationCalendarDayDetailsFromSidebar`. Footer shows only
@@ -306,15 +306,15 @@ Main validation tools:
 - `apiStage7HealthCheck()`
 - `apiRunStage7Diagnostics()`
 - `apiRunStage7RegressionTests()`
-- `SmokeTests.gs`
-- `AccessE2ETests.gs`
-- `DomainTests.gs`
+- `smoke/SmokeTests.gs`
+- `tests/AccessE2ETests.gs`
+- `tests/DomainTests.gs`
 
 Diagnostics are for verification, not as a replacement for server-side enforcement.
 
 ## 10. Script properties and spreadsheet binding
 
-Canonical resolver: **`DataAccess.gs`**.
+Canonical resolver: **`data/DataAccess.gs`**.
 
 | Property                                 | Purpose                                                                              |
 | ---------------------------------------- | ------------------------------------------------------------------------------------ |
@@ -323,7 +323,7 @@ Canonical resolver: **`DataAccess.gs`**.
 | `WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`     | Emergency email bridge; off in normal operation                                      |
 | `WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP` | Legacy plaintext temp-password lookup during migration only; off in normal operation |
 
-Service sheet bootstrap: **`ServiceSheetsBootstrap.gs`** → `apiStage7BootstrapRuntimeAndAlertsSheets()`.
+Service sheet bootstrap: **`sheets/ServiceSheetsBootstrap.gs`** → `apiStage7BootstrapRuntimeAndAlertsSheets()`.
 
 Never hardcode production spreadsheet IDs in source files.
 

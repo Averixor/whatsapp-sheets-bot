@@ -2,7 +2,7 @@
 
 Політика UX-копірайту для WASB: що бачить користувач у sidebar, меню, діалогах, health-звітах і назвах аркушів. Технічні ідентифікатори в коді (`CONFIG`, `SheetSchemas_`, `DataAccess_.getSheet`) — окремо від цього документа.
 
-Пов’язано: [`verify-no-russian-text.mjs`](../scripts/verify-no-russian-text.mjs) (заборона російських маркерів у проєктних текстах), [`.cursor/rules/user-facing-copy.mdc`](../.cursor/rules/user-facing-copy.mdc) (правило для агентів).
+Пов’язано: [`verify-no-russian-text.mjs`](../scripts/verify-no-russian-text.mjs) (заборона російських маркерів у проєктних текстах), [`verify-user-facing-copy.mjs`](../scripts/verify-user-facing-copy.mjs) (заборона технічних токенів у користувацьких рядках; `npm run ci` після `verify-no-russian-text`), [`.cursor/rules/user-facing-copy.mdc`](../.cursor/rules/user-facing-copy.mdc) (правило для агентів).
 
 ---
 
@@ -190,11 +190,11 @@
 | Область | Зараз | Ціль |
 | ------- | ----- | ---- |
 | Фізичні назви вкладок | `PERSONNEL`, `SEND_PANEL`, `DICT_SUM`, … у `CONFIG` / `SheetSchemas_` | Технічні ключі в коді можуть лишатися; **перейменування вкладок** — окрема міграція з аудитом формул і CI |
-| Sidebar / `Js.*.html` | Переважно UA; є витоки (`PERSONNEL` у vacation hints, `SEND_PANEL` у кнопках) | Замінити на формулювання з §4 |
-| Health / diagnostics UI | Часто `PERSONNEL`, `SEND_PANEL` у заголовках перевірок | `Особовий склад`, `Панель надсилання` |
+| Sidebar / `ui/Js.*.html` | UA copy; CI guard `verify-user-facing-copy.mjs` (#37) | Тримати без технічних витоків |
+| Health / diagnostics UI | UA titles/details (`diagnostics/Diagnostics.Health.gs`, …) | Без `CONFIG`/`PHONES` у текстах для оператора |
 | Меню таблиці | `WASB` → `Відкрити панель` — ок | Без технічних підменю |
 | Зведення дня | Підписи без `_` (див. `AGENTS.md`) | Тримати |
 
-**Файли з користувацьким текстом (пріоритет рев’ю):** `Sidebar.html`, `JavaScript.html`, `Js.*.html`, `Styles*.html`, `Code.gs` (меню/alert), `reports/Summaries.gs`, `sendpanel/SendPanel.gs`, health renderers у `diagnostics/`.
+**Файли з користувацьким текстом (пріоритет рев’ю):** `ui/Sidebar.html`, `ui/JavaScript.html`, `ui/Js.*.html`, `ui/Styles*.html`, `core/Code.gs` (меню/alert), `reports/Summaries.gs`, `sendpanel/SendPanel.gs`, health renderers у `diagnostics/`.
 
 **Не чіпати без окремого ADR:** глобальне перейменування `CONFIG.*_SHEET`, `SheetSchemas_` keys, посилання в формулах на вкладках `01`…`12`.

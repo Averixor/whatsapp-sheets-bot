@@ -30,3 +30,4 @@ alwaysApply: false
 1. Не додавати нових технічних назв у рядки для `innerHTML`, `alert`, `toast`, `setTitle`, `button`, `label`.
 2. Помилки — людською мовою; `String(error)` з GAS — обгортати, не показувати сирим.
 3. Перейменування **вкладок** таблиці — окрема задача: формули, `CONFIG`, CI, RUNBOOK.
+4. Після змін UI-текстів: `npm run ci` (у т.ч. `verify-user-facing-copy.mjs`; allowlist — `scripts/allowed-user-facing-technical-strings.json`).

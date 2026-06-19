@@ -12,9 +12,9 @@ WASB is a Google Apps Script (GAS) bundle bound to a Google Spreadsheet. There i
 npm run ci
 ```
 
-This runs all static analysis scripts (GAS sanity, function graph audit, client verification, XSS audit, envelope compat, usecase facade, snapshot governance, bridge flags, access API governance, OAuth scopes, jsconfig verification). All checks are Node.js-based and do not require any Google credentials or network access.
+This runs all static analysis scripts (GAS sanity, clasp patterns, language/copy guards, workbook and domain contracts, function graph audit, client verification, XSS audit, envelope compat, usecase facade, snapshot governance, bridge flags, access API governance, OAuth scopes, jsconfig verification). All checks are Node.js-based and do not require any Google credentials or network access.
 
-Individual subscripts: `npm run ci:gas`, `npm run ci:client`, `npm run audit:functions`.
+Individual subscripts: `npm run ci:gas`, `npm run ci:client`, `npm run ci:copy`, `npm run ci:language`, `npm run audit:functions`.
 
 ### Node.js version
 
@@ -33,7 +33,7 @@ This project cannot be "run" locally in the traditional sense. There is no dev s
 
 ### Testing
 
-- **Local (automated):** `npm run ci` — 17 static checks, no Google credentials.
+- **Local (automated):** `npm run ci` — **24** verify scripts (+ `precheck`), no Google credentials.
 - **Remote smoke (separate non-production project):** `npm run deploy:smoke` — `apiRunSmokeChecks` via `.clasp.smoke.json`.
 - **Remote (manual):** `apiRunStage7RegressionTests()` in GAS editor.
 
@@ -90,7 +90,7 @@ Domain folders (`reports/`, `vacations/`, `core/`, `ui/`, …) are mechanical mo
 - **Short summary** reads the lower **formula block** on month sheets (`01`…`12`);
   do not reintroduce manual PERSONNEL/DICT_SUM counting for short summary.
 - Modules: `reports/Report_SummaryData.gs`, `reports/Report_DailySimple.gs`, `reports/Report_DailyDetailed.gs`,
-  `Summaries.gs` (legacy `buildDaySummaryForColumn_` only delegates).
+  `reports/Summaries.gs` (legacy `buildDaySummaryForColumn_` only delegates).
 - Output order includes **`За штатом`** first; labels in report text must have **no `_`**.
 - **UI:** sidebar buttons **Зведення дня** / **Детальне зведення** only; top menu =
   `WASB` → `Відкрити панель` (no `Звіти` menu).
@@ -103,8 +103,8 @@ Domain folders (`reports/`, `vacations/`, `core/`, `ui/`, …) are mechanical mo
 - Rules source: `vacations/VacationPlannerConfig.gs` (`MAX_CONCURRENT`, `OVERLOAD_*`, `MIN_VACATION_DAYS`, `MIN_DAYS_GAP`, `MIN_START_GAP_DAYS`).
 - Mini-calendar cells: day number + divider + count only (no names in grid).
 - Footer summary: **Проблемних дат** / **Навантажених днів** only (no static rule lines).
-- Navigation ◀/▶ must pass explicit `{ year, month }` to `loadMonthCalendar` (see `Js.Vacations.html`).
-- Modules: `vacations/VacationMonthCalendar.gs`, `vacations/Vacation_Suggestions.gs`, `Js.Vacations.html`.
+- Navigation ◀/▶ must pass explicit `{ year, month }` to `loadMonthCalendar` (see `ui/Js.Vacations.html`).
+- Modules: `vacations/VacationMonthCalendar.gs`, `vacations/Vacation_Suggestions.gs`, `ui/Js.Vacations.html`.
 - Design doc: [`docs/vacation-planner.md`](./docs/vacation-planner.md).
 - Local contract: `scripts/verify-vacation-planner.mjs` (`npm run ci:vacations`).
 
@@ -112,7 +112,7 @@ Domain folders (`reports/`, `vacations/`, `core/`, `ui/`, …) are mechanical mo
 
 - Sidebar, menus, dialogs, health UI: **Ukrainian only**, no technical sheet keys (`SEND_PANEL`, `PERSONNEL`, …) in strings users see.
 - Physical tab names in `CONFIG` / `SheetSchemas_` may stay technical until a dedicated sheet-rename migration.
-- Policy: [`docs/user-facing-copy.md`](./docs/user-facing-copy.md). Russian markers: `npm run ci` → `verify-no-russian-text.mjs`.
+- Policy: [`docs/user-facing-copy.md`](./docs/user-facing-copy.md). CI: `verify-no-russian-text.mjs`, `verify-user-facing-copy.mjs` (`npm run ci:language`, `npm run ci:copy`).
 
 ### Key gotchas
 

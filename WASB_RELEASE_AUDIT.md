@@ -14,7 +14,7 @@
 | Check | Result |
 |-------|--------|
 | Manual run in GAS UI | **PASS** — 2026-06-07 11:55 |
-| `apiRunProductionSmokeChecks` | `ok: true` |
+| `apiRunProductionSmokeChecks` (historical name; current remote smoke: `apiRunSmokeChecks` in `tests/GasRuntimeSmoke.gs`) | `ok: true` |
 | Access policy checks | **23/23 OK** |
 
 Clean Git code was pushed to GAS after CI; any temporary `manualSmokePrint()` added only in the Apps Script UI was overwritten and is **not** in production code.

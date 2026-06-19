@@ -33,7 +33,7 @@ npx clasp status
 npx clasp push
 ```
 
-Confirm **Tracked files** includes `reports/*.gs` and `vacations/*.gs`, and excludes `node_modules/*.gs`. See [`docs/module-map.md`](./docs/module-map.md) and [ADR-002](docs/adr/002-domain-folder-map.md).
+Confirm **Tracked files** includes all domain `**/*.gs` and `ui/**/*.html`, and excludes `tests/`, `node_modules/`, `*.md`. See [`docs/module-map.md`](./docs/module-map.md) and [ADR-003](docs/adr/003-working-domain-layout.md).
 
 Or run `npm run deploy:prod` for CI + production push. Production keeps
 `executionApi.access = MYSELF`; it does not run remote smoke.
@@ -68,11 +68,13 @@ Then in the spreadsheet: close the sidebar → open it again → open a person c
 
 The repository runs a lightweight CI workflow on push and pull requests to **`main`** (also **`workflow_dispatch`**).
 
-It runs the complete `npm run ci` contract suite: GAS sanity, workbook and
+It runs the complete `npm run ci` contract suite (**24** verify scripts after `precheck`): GAS sanity, clasp patterns, **Ukrainian/Russian language** and **user-facing copy** guards, workbook and
 recipient contracts, **vacation planner** (`verify-vacation-planner.mjs`),
-function graph, client parsing/layers/XSS, response
-envelope, facade/snapshot/bridge governance, access API policy, OAuth scopes,
-and jsconfig verification.
+personnel-status and format-rules contracts, function graph, client
+parsing/layers/XSS, response envelope, facade/snapshot/bridge governance, access
+API policy and hotfixes, OAuth scopes, and jsconfig verification.
+
+Shortcuts: `npm run ci:copy`, `npm run ci:language`, `npm run ci:vacations`.
 
 The workflow does **not** deploy to Apps Script. Deployment stays local
 (`npx clasp push` / `npm run deploy:prod`). No Google secrets.
@@ -169,9 +171,9 @@ Update documentation when changing:
 - Configuration files
 - Project workflow
 - **`SHEET_HEADERS` / ACCESS schema** — keep **`README.md`**, **`RUNBOOK.md`**, **`ARCHITECTURE.md`** in sync
-- **Daily summaries** — keep **`docs/daily-summary-architecture.md`**, **`ARCHITECTURE.md` §7.1**, **`RUNBOOK.md` §22** aligned when changing `Report_*.gs`, `Summaries.gs`, or sidebar summary flow
-- **User-facing copy** — keep **`docs/user-facing-copy.md`** aligned when changing sidebar labels, menus, dialogs, health messages, or sheet titles shown to users
-- **Script properties** — keep **`README.md`**, **`RUNBOOK.md` §14**, **`SECURITY.md`**, **`CONTRIBUTING.md`** aligned with `DataAccess.gs`
+- **Daily summaries** — keep **`docs/daily-summary-architecture.md`**, **`ARCHITECTURE.md` §7.1**, **`RUNBOOK.md` §22** aligned when changing `reports/Report_*.gs`, `reports/Summaries.gs`, or sidebar summary flow
+- **User-facing copy** — keep **`docs/user-facing-copy.md`** aligned when changing sidebar labels, menus, dialogs, health messages, or sheet titles shown to users; run **`npm run ci:copy`** after UI text edits
+- **Script properties** — keep **`README.md`**, **`RUNBOOK.md` §15**, **`SECURITY.md`**, **`CONTRIBUTING.md`** aligned with `data/DataAccess.gs`
 
 ## Review principles
 

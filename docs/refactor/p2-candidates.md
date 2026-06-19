@@ -10,11 +10,11 @@ The current largest WASB-owned modules are:
 
 | Module | Lines | Domain | Priority |
 |--------|------:|--------|----------|
-| `AccessEnforcement.gs` | 1609 | RBAC / security enforcement | P2 |
-| `AccessControl.AuthResolver.gs` | 1560 | identity / login / bind | P2 |
-| `SmokeTests.gs` | 1490 | regression and smoke tests | P2 |
+| `access/AccessEnforcement.gs` | 1609 | RBAC / security enforcement | P2 |
+| `access/AccessControl.AuthResolver.gs` | 1560 | identity / login / bind | P2 |
+| `smoke/SmokeTests.gs` | 1490 | regression and smoke tests | P2 |
 
-Together they contain 4659 lines, roughly 10% of the flat GAS codebase (root + domain folders).
+Together they contain 4659 lines, roughly 10% of the GAS codebase across domain folders.
 This is not a release blocker; the production release is CLOSED.
 
 ## Refactor Principles
@@ -105,7 +105,7 @@ Important entrypoints that must remain stable:
 - `runStage5ScenarioTests`
 - `runRegressionTestSuite`
 - `apiRunStage7RegressionTests`
-- `apiRunProductionSmokeChecks`
+- `apiRunSmokeChecks` (remote smoke; historical alias `apiRunProductionSmokeChecks`)
 
 ## Not in Scope
 
