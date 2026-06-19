@@ -820,5 +820,13 @@ function ensureAllSystemSheets_() {
     }
   }
 
+  try {
+    if (typeof materializePersonnelDerivedSheets_ === "function") {
+      materializePersonnelDerivedSheets_({ source: "ensureAllSystemSheets" });
+    }
+  } catch (e) {
+    _sshLog_("materializePersonnelDerivedSheets_", e);
+  }
+
   return results;
 }

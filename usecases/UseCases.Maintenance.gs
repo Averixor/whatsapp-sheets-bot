@@ -340,7 +340,12 @@ var UseCasesMaintenance_ = (function () {
           }
 
           case "clearPhoneCache": {
-            if (typeof invalidatePersonnelCache_ === "function") {
+            var materializeResult = null;
+            if (typeof materializePersonnelDerivedSheets_ === "function") {
+              materializeResult = materializePersonnelDerivedSheets_({
+                source: "clearPhoneCache",
+              });
+            } else if (typeof invalidatePersonnelCache_ === "function") {
               invalidatePersonnelCache_();
             }
             const keys = [
@@ -350,6 +355,16 @@ var UseCasesMaintenance_ = (function () {
               "PHONES_PROFILES_v4",
             ];
             CacheService.getScriptCache().removeAll(keys);
+            var affectedSheets = [];
+            if (materializeResult && materializeResult.personnel && materializeResult.personnel.sheet) {
+              affectedSheets.push(materializeResult.personnel.sheet);
+            }
+            if (materializeResult && materializeResult.phones && materializeResult.phones.sheet) {
+              affectedSheets.push(materializeResult.phones.sheet);
+            }
+            if (materializeResult && materializeResult.birthday && materializeResult.birthday.sheet) {
+              affectedSheets.push(materializeResult.birthday.sheet);
+            }
             return {
               success: true,
               message: "Кеш телефонів очищено",
@@ -357,9 +372,10 @@ var UseCasesMaintenance_ = (function () {
                 cleaned: true,
                 type: "clearPhoneCache",
                 keys: keys,
+                materialize: materializeResult,
               },
               changes: [{ type: "clearPhoneCache", keys: keys }],
-              affectedSheets: [],
+              affectedSheets: affectedSheets,
               affectedEntities: [],
               appliedChangesCount: 1,
               skippedChangesCount: 0,

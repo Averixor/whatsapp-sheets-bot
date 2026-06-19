@@ -496,7 +496,9 @@ function clearLogSheet() {
 
 function clearPhoneCache() {
   try {
-    if (typeof invalidatePersonnelCache_ === "function") {
+    if (typeof materializePersonnelDerivedSheets_ === "function") {
+      materializePersonnelDerivedSheets_({ source: "clearPhoneCache" });
+    } else if (typeof invalidatePersonnelCache_ === "function") {
       invalidatePersonnelCache_();
     }
     CacheService.getScriptCache().removeAll([
