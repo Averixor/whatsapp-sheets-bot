@@ -828,5 +828,13 @@ function ensureAllSystemSheets_() {
     _sshLog_("materializePersonnelDerivedSheets_", e);
   }
 
+  try {
+    if (typeof materializeVacationComputedColumns_ === "function") {
+      materializeVacationComputedColumns_();
+    }
+  } catch (e) {
+    _sshLog_("materializeVacationComputedColumns_", e);
+  }
+
   return results;
 }

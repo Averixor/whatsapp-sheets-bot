@@ -381,6 +381,40 @@ const VacationOptionsWriter_ = (function () {
     throw new Error("Відпустку для скасування не знайдено");
   }
 
+  function _resolveVacationMaterializeFn_() {
+    var root = null;
+    try {
+      if (typeof globalThis !== "undefined") root = globalThis;
+    } catch (_) {}
+    if (!root) {
+      try {
+        root = Function("return this")();
+      } catch (_) {}
+    }
+    if (
+      root &&
+      typeof root.materializeVacationComputedColumns_ === "function"
+    ) {
+      return root.materializeVacationComputedColumns_;
+    }
+    try {
+      if (typeof materializeVacationComputedColumns_ === "function") {
+        return materializeVacationComputedColumns_;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  function _materializeVacationSheetIfManaged_(sheet, rowNumbers) {
+    var materializeFn = _resolveVacationMaterializeFn_();
+    if (!materializeFn) return null;
+    var options = null;
+    if (Array.isArray(rowNumbers) && rowNumbers.length) {
+      options = { rows: rowNumbers };
+    }
+    return materializeFn(sheet, options);
+  }
+
   function _isFormulaDrivenBlock_(sheet, block) {
     try {
       const range = sheet.getRange(
@@ -397,6 +431,14 @@ const VacationOptionsWriter_ = (function () {
     } catch (_) {
       return false;
     }
+  }
+
+  function _usesPartialVacationSourceWrite_(sheet, block) {
+    if (_isFormulaDrivenBlock_(sheet, block)) return true;
+    return (
+      typeof isVacationComputedColumnsManaged_ === "function" &&
+      isVacationComputedColumnsManaged_()
+    );
   }
 
   function _isTrue_(value) {
@@ -481,6 +523,7 @@ const VacationOptionsWriter_ = (function () {
         .getRange(targetRow, startCol + 3)
         .setValue(_sourceVacationText_(option));
       sheet.getRange(targetRow, startCol + 7).setValue(travel);
+      _materializeVacationSheetIfManaged_(sheet, [targetRow]);
       return {
         sheetName: sheet.getName(),
         rowNumber: targetRow,
@@ -504,6 +547,7 @@ const VacationOptionsWriter_ = (function () {
     ];
     sheet.getRange(targetRow, startCol, 1, width).setValues([rowData]);
     sheet.getRange(targetRow, startCol + 1, 1, 2).setNumberFormat("dd.MM.yyyy");
+    _materializeVacationSheetIfManaged_(sheet);
 
     return {
       sheetName: sheet.getName(),
@@ -550,6 +594,7 @@ const VacationOptionsWriter_ = (function () {
           );
         }
         startRange.clearContent();
+        _materializeVacationSheetIfManaged_(sheet, [rowNumber]);
         return {
           sheetName: sheet.getName(),
           rowNumber: rowNumber,
@@ -563,6 +608,7 @@ const VacationOptionsWriter_ = (function () {
       sheet
         .getRange(rowNumber, startCol + 8)
         .setValue(active === true ? "OK" : "CANCELLED");
+      _materializeVacationSheetIfManaged_(sheet);
       return {
         sheetName: sheet.getName(),
         rowNumber: rowNumber,
