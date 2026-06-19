@@ -70,7 +70,7 @@ Or one command: `npm run deploy:prod` (local CI + production push). Run
 
 ### Structural moves (ADR-002)
 
-Domain folders (`reports/`, `vacations/`, …) are mechanical moves only. Before a folder PR: read [`docs/module-map.md`](./docs/module-map.md), run domain CI (`npm run ci:vacations`, etc.), update verify scripts that hardcode paths, and check `npx clasp status`.
+Domain folders (`reports/`, `vacations/`, `core/`, `ui/`, …) are mechanical moves only. Working layout: [`docs/adr/003-working-domain-layout.md`](./docs/adr/003-working-domain-layout.md), live table [`docs/module-map.md`](./docs/module-map.md). Before a folder PR: run domain CI, update verify scripts that hardcode paths, `npx clasp status`.
 
 ### PERSONNEL keys (do not regress)
 

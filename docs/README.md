@@ -13,6 +13,7 @@ snapshots to the repository.
 | [developer-guide.md](./developer-guide.md)                       | First-week map: layers, safe zones, how to think about changes |
 | [adr/README.md](./adr/README.md)                                 | Architecture Decision Records (structural change rules)       |
 | [module-map.md](./module-map.md)                                 | Domain folders: where modules live, which CI guards them      |
+| [adr/003-working-domain-layout.md](./adr/003-working-domain-layout.md) | Working domain folder agreement (not final architecture)   |
 | [SECURITY.md](../SECURITY.md)                                    | Identity, RBAC, lockout, protected data                     |
 | [CHANGELOG.md](../CHANGELOG.md)                                  | Durable release history                                     |
 | [WASB_RELEASE_AUDIT.md](../WASB_RELEASE_AUDIT.md)                | Production release verdict (CLOSED 2026-06-07)              |
