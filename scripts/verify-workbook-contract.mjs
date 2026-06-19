@@ -93,12 +93,35 @@ class FakeRange {
   getValues() {
     return this.getDisplayValues();
   }
+
+  setValues(values) {
+    values.forEach((sourceRow, rowOffset) => {
+      sourceRow.forEach((value, colOffset) => {
+        this.sheet.setValue(this.row + rowOffset, this.col + colOffset, value);
+      });
+    });
+    return this;
+  }
+
+  clearContent() {
+    for (let rowOffset = 0; rowOffset < this.numRows; rowOffset++) {
+      for (let colOffset = 0; colOffset < this.numCols; colOffset++) {
+        this.sheet.setValue(this.row + rowOffset, this.col + colOffset, "");
+      }
+    }
+    return this;
+  }
+
+  getFormula() {
+    return this.sheet.formulaAt(this.row, this.col);
+  }
 }
 
 class FakeSheet {
   constructor(name, rows) {
     this.name = name;
     this.rows = rows;
+    this.formulas = {};
   }
 
   getName() {
@@ -115,6 +138,26 @@ class FakeSheet {
 
   valueAt(row, col) {
     return (this.rows[row] || [])[col];
+  }
+
+  formulaAt(row, col) {
+    return this.formulas[`${row}:${col}`] || "";
+  }
+
+  setFormula(row, col, formula) {
+    this.formulas[`${row}:${col}`] = formula;
+  }
+
+  setValue(row, col, value) {
+    while (this.rows.length <= row) {
+      this.rows.push([]);
+    }
+    const rowRef = this.rows[row];
+    while (rowRef.length <= col) {
+      rowRef.push("");
+    }
+    rowRef[col] = value;
+    delete this.formulas[`${row}:${col}`];
   }
 
   getRange(rowOrA1, col, numRows, numCols) {
@@ -382,6 +425,75 @@ assert.ok(
 assert.equal(dictSumRules.find((rule) => rule.code === "Black").order, 10);
 assert.equal(dictSumRules.find((rule) => rule.code === "2УРБпАК").order, 100);
 assert.equal(dictSumRules.find((rule) => rule.code === "Вибув").order, 333);
+
+const dictMaterializeHolder = { dictSheet: null, dictSumSheet: null };
+const dictMaterializeContext = vm.createContext({
+  console,
+  CONFIG: {
+    DICT_SHEET: "DICT",
+    DICT_SUM_SHEET: "DICT_SUM",
+  },
+  CacheService: {
+    getScriptCache() {
+      return { remove() {} };
+    },
+  },
+  cacheKeyDict_: () => "DICT_TEST",
+  DataAccess_: {
+    getSheet(schemaKey) {
+      if (schemaKey === "dict") return dictMaterializeHolder.dictSheet;
+      if (schemaKey === "dictSum") return dictMaterializeHolder.dictSumSheet;
+      return null;
+    },
+  },
+});
+vm.runInContext(readGasByBasename("DictMaterialize.gs"), dictMaterializeContext, {
+  filename: "DictMaterialize.gs",
+});
+
+const dictSumSheet = new FakeSheet("DICT_SUM", [
+  [],
+  ["", "Код", "Назва", "Порядок"],
+  ["", "БР", "Бойове розпорядження", "20"],
+  ["", "КП", "Командний пункт", "105"],
+]);
+const dictSheet = new FakeSheet("DICT", [
+  [],
+  ["", "Код", "Вид служби", "Місце", "Завдання"],
+  ["", "STALE_A", "STALE_B", "Kyiv", "Task 1"],
+  ["", "TAIL_A", "TAIL_B", "Lviv", "Task 2"],
+  ["", "TAIL2_A", "TAIL2_B", "", ""],
+]);
+dictSheet.setFormula(1, 1, "=ARRAYFORMULA(DICT_SUM!A1:A)");
+dictSheet.setFormula(1, 2, "=ARRAYFORMULA(DICT_SUM!B1:B)");
+
+dictMaterializeHolder.dictSheet = dictSheet;
+dictMaterializeHolder.dictSumSheet = dictSumSheet;
+
+const dictMaterializeResult =
+  dictMaterializeContext.materializeDictFromDictSum_();
+assert.equal(dictMaterializeResult.ok, true);
+assert.equal(dictMaterializeResult.rowsWritten, 3);
+
+assert.equal(dictSheet.valueAt(1, 1), "Код");
+assert.equal(dictSheet.valueAt(1, 2), "Назва");
+assert.equal(dictSheet.valueAt(2, 1), "БР");
+assert.equal(dictSheet.valueAt(2, 2), "Бойове розпорядження");
+assert.equal(dictSheet.valueAt(3, 1), "КП");
+assert.equal(dictSheet.valueAt(3, 2), "Командний пункт");
+assert.equal(dictSheet.valueAt(4, 1), "");
+assert.equal(dictSheet.valueAt(4, 2), "");
+assert.equal(dictSheet.formulaAt(1, 1), "");
+assert.equal(dictSheet.formulaAt(1, 2), "");
+assert.equal(dictSheet.valueAt(2, 3), "Kyiv", "DICT place column must stay intact");
+assert.equal(dictSheet.valueAt(2, 4), "Task 1", "DICT tasks column must stay intact");
+
+const mirrored = dictMaterializeContext.readDictSumMirrorValues_(dictSumSheet);
+assert.deepEqual(mirrored, [
+  ["Код", "Назва"],
+  ["БР", "Бойове розпорядження"],
+  ["КП", "Командний пункт"],
+]);
 
 console.log(
   `verify-workbook-contract: OK (${sheet.getName()} ${layout.codeRangeA1}, personnel=29)`,

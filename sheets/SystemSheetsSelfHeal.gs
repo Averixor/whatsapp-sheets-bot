@@ -836,5 +836,13 @@ function ensureAllSystemSheets_() {
     _sshLog_("materializeVacationComputedColumns_", e);
   }
 
+  try {
+    if (typeof materializeDictFromDictSum_ === "function") {
+      materializeDictFromDictSum_();
+    }
+  } catch (e) {
+    _sshLog_("materializeDictFromDictSum_", e);
+  }
+
   return results;
 }
