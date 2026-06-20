@@ -83,7 +83,7 @@
 
       try {
         if (typeof logToConsole === "function") {
-          logToConsole("▶ Дія: " + label, "action");
+          logToConsole("▶ Дія: " + label, "action", { channel: "action" });
         }
       } catch (_) {}
 
@@ -111,9 +111,12 @@
                   " — " +
                   String(result?.error || result?.message || "помилка"),
                 "error",
+                { channel: "action" },
               );
             } else {
-              logToConsole("■ Дія: " + label + " — завершено", "success");
+              logToConsole("■ Дія: " + label + " — завершено", "success", {
+                channel: "action",
+              });
             }
           }
         } catch (_) {}
@@ -125,6 +128,7 @@
             logToConsole(
               "✕ Дія: " + label + " — " + normalizeError(error),
               "error",
+              { channel: "action" },
             );
           }
         } catch (_) {}

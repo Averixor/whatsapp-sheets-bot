@@ -397,12 +397,13 @@
 
   function _consoleLog_(message, type) {
     try {
+      const meta = { channel: "server" };
       if (typeof logToConsole === "function") {
-        logToConsole(message, type);
+        logToConsole(message, type, meta);
         return;
       }
       if (typeof window.__wasbPushConsoleLog__ === "function") {
-        window.__wasbPushConsoleLog__(message, type);
+        window.__wasbPushConsoleLog__(message, type, meta);
       }
     } catch (_) {}
   }

@@ -80,11 +80,17 @@
     window.__wasbConsoleUnread = 0;
   }
 
-  window.__wasbPushConsoleLog__ = function (message, type) {
+  window.__wasbPushConsoleLog__ = function (message, type, meta) {
     var entry = {
       message: String(message == null ? "" : message),
       type: type || "info",
       ts: Date.now(),
+      channel:
+        meta && meta.channel
+          ? String(meta.channel)
+          : typeof inferConsoleLogChannel_ === "function"
+            ? inferConsoleLogChannel_(type || "info", message)
+            : "",
     };
     window.__wasbConsoleBuffer__.push(entry);
     if (window.__wasbConsoleBuffer__.length > 500) {

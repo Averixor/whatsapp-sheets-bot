@@ -65,6 +65,10 @@ const MONTHLY_CONFIG = {
     11: "Листопад",
     12: "Грудень",
   },
+  /** Monthly sheet column A (slot/BR) width in pixels. */
+  SLOT_COL_WIDTH: 30,
+  /** Monthly sheet width for columns B..last. */
+  DATA_COL_WIDTH: 110,
 };
 
 /************ ГРУПИ ТА НАЗВИ ************/

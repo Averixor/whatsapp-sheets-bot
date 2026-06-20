@@ -15,8 +15,11 @@ const allowlistPath = path.join(
 const allowlist = JSON.parse(fs.readFileSync(allowlistPath, "utf8"));
 const contract = loadContract("user-facing-copy.contract.json");
 
+// ReDoS-safe: hyphen suffixes are single alphanumeric segments (no nested '-' in +).
+const DEFAULT_IDENTIFIER_LITERAL_PATTERN =
+  "^[A-Z][A-Z0-9_]*(?:-[A-Za-z0-9]+)*$";
 const identifierRe = new RegExp(
-  allowlist.identifierLiteralPattern || "^[A-Z][A-Z0-9_]*(-[A-Za-z0-9-]+)*$",
+  allowlist.identifierLiteralPattern || DEFAULT_IDENTIFIER_LITERAL_PATTERN,
 );
 const bannedRes = (contract.bannedTokens || []).map((token) => {
   const escaped = String(token).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

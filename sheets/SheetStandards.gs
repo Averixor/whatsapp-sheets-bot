@@ -178,27 +178,69 @@ function applyFreezeStandardsToSheet_(sheet) {
   }
 }
 
+function _sheetStandardsGetMonthlySlotColWidth_() {
+  try {
+    if (typeof MONTHLY_CONFIG !== "undefined" && MONTHLY_CONFIG) {
+      var fromMonthly = Number(MONTHLY_CONFIG.SLOT_COL_WIDTH);
+      if (isFinite(fromMonthly) && fromMonthly > 0) return fromMonthly;
+    }
+  } catch (e) {}
+  return 30;
+}
+
+function _sheetStandardsGetMonthlyDataColWidth_() {
+  try {
+    if (typeof MONTHLY_CONFIG !== "undefined" && MONTHLY_CONFIG) {
+      var fromMonthly = Number(MONTHLY_CONFIG.DATA_COL_WIDTH);
+      if (isFinite(fromMonthly) && fromMonthly > 0) return fromMonthly;
+    }
+  } catch (e) {}
+  return 110;
+}
+
 function applyColumnWidthsStandardsToSheet_(sheet) {
   try {
     if (!sheet) return;
 
-    var isSendPanel = _sheetStandardsIsSendPanelSheet_(sheet.getName());
+    var sheetName = String(sheet.getName() || "").trim();
     var maxCols = Number(sheet.getMaxColumns()) || 0;
-    var widths = isSendPanel
-      ? [320, 120, 80, 150, 80, 80, 120]
-      : [110, 110, 110, 110, 150, 40, 315];
+    if (maxCols < 1) return;
 
-    for (var i = 0; i < Math.min(widths.length, maxCols); i++) {
-      if (Number(widths[i]) > 0) {
+    if (_sheetStandardsIsSendPanelSheet_(sheetName)) {
+      var sendPanelWidths = [320, 120, 80, 150, 80, 80, 120];
+      for (var i = 0; i < Math.min(sendPanelWidths.length, maxCols); i++) {
+        if (Number(sendPanelWidths[i]) > 0) {
+          try {
+            sheet.setColumnWidth(i + 1, sendPanelWidths[i]);
+          } catch (e) {
+            _sheetStandardsLog_(
+              "Column width apply error on column " + (i + 1),
+              e,
+            );
+          }
+        }
+      }
+      return;
+    }
+
+    if (_sheetStandardsIsMonthlySheet_(sheetName)) {
+      var slotWidth = _sheetStandardsGetMonthlySlotColWidth_();
+      var dataWidth = _sheetStandardsGetMonthlyDataColWidth_();
+      try {
+        sheet.setColumnWidth(1, slotWidth);
+      } catch (e) {
+        _sheetStandardsLog_("Column width apply error on column 1", e);
+      }
+      for (var col = 2; col <= maxCols; col++) {
         try {
-          sheet.setColumnWidth(i + 1, widths[i]);
+          sheet.setColumnWidth(col, dataWidth);
         } catch (e) {
-          _sheetStandardsLog_('Column width apply error on column ' + (i + 1), e);
+          _sheetStandardsLog_("Column width apply error on column " + col, e);
         }
       }
     }
   } catch (e) {
-    _sheetStandardsLog_('Column widths apply error', e);
+    _sheetStandardsLog_("Column widths apply error", e);
   }
 }
 

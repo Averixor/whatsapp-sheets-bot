@@ -73,20 +73,65 @@
     wrapper.classList.toggle("console--elevated", isOpen);
   }
 
+  function inferConsoleLogChannel_(type, message) {
+    const msg = String(message == null ? "" : message);
+    const logType = String(type || "info");
+    if (
+      logType === "server" ||
+      msg.indexOf("→ Сервер:") === 0 ||
+      msg.indexOf("✓ Сервер:") === 0 ||
+      msg.indexOf("✕ Сервер:") === 0 ||
+      (logType === "warning" && msg.indexOf("⚠ ") === 0 && /[A-Za-z0-9_]+:/.test(msg))
+    ) {
+      return "server";
+    }
+    if (
+      logType === "action" ||
+      msg.indexOf("▶ Дія:") === 0 ||
+      msg.indexOf("■ Дія:") === 0 ||
+      msg.indexOf("➡️ Виконання:") === 0
+    ) {
+      return "action";
+    }
+    return "ui";
+  }
+
+  function matchesConsoleFilter_(filter, type, message, channel) {
+    const active = String(filter || "all");
+    const resolvedChannel =
+      String(channel || "") ||
+      inferConsoleLogChannel_(type, message);
+    if (active === "all") return true;
+    if (active === "error") {
+      return type === "error" || type === "warning";
+    }
+    if (active === "server") return resolvedChannel === "server";
+    if (active === "action") return resolvedChannel === "action";
+    return true;
+  }
+
   function applyConsoleFilter_() {
     const filter = String(STATE.consoleFilter || "all");
     const output = $id("consoleOutput");
     if (!output) return;
     output.querySelectorAll(".log-entry").forEach((el) => {
       const type = el.getAttribute("data-log-type") || "info";
-      const show =
-        filter === "all" ||
-        (filter === "error" &&
-          (type === "error" || type === "warning")) ||
-        (filter === "server" && type === "server") ||
-        (filter === "action" && type === "action");
+      const channel = el.getAttribute("data-log-channel") || "";
+      const message = el.getAttribute("data-log-message") || "";
+      const show = matchesConsoleFilter_(filter, type, message, channel);
       el.classList.toggle("log-hidden", !show);
     });
+    updateConsoleFilterHint_();
+  }
+
+  function updateConsoleFilterHint_() {
+    const title = $id("consoleSectionTitle");
+    if (!title) return;
+    const label = title.querySelector(".console-title__label");
+    if (!label) return;
+    const filter = String(STATE.consoleFilter || "all");
+    label.textContent =
+      filter === "all" ? "Лог виконання" : "Лог виконання · фільтр";
   }
 
   function setConsoleFilter(filter) {
@@ -117,9 +162,13 @@
     );
 
     const type = entry.type || "info";
+    const channel =
+      entry.channel || inferConsoleLogChannel_(type, entry.message);
     const logEntry = document.createElement("div");
     logEntry.className = "log-entry log-" + type;
     logEntry.setAttribute("data-log-type", type);
+    logEntry.setAttribute("data-log-channel", channel);
+    logEntry.setAttribute("data-log-message", String(entry.message || ""));
     logEntry.innerHTML =
       '<span class="log-time">[' +
       escapeHtml(timestamp) +
@@ -140,14 +189,15 @@
     }
   }
 
-  function logToConsole(message, type = "info") {
+  function logToConsole(message, type = "info", meta) {
     if (typeof window.__wasbPushConsoleLog__ === "function") {
-      window.__wasbPushConsoleLog__(message, type);
+      window.__wasbPushConsoleLog__(message, type, meta);
       return;
     }
     renderConsoleEntry_({
       message: String(message == null ? "" : message),
       type: type || "info",
+      channel: meta && meta.channel,
       ts: Date.now(),
     });
   }
@@ -214,6 +264,7 @@
     }
 
     syncConsoleOverlayState_();
+    updateConsoleFilterHint_();
     STATE.consoleInitialized = true;
     STATE.consoleSessionStartedAt = Date.now();
   }
@@ -661,7 +712,9 @@
   }
 
   async function handleMenuAction(action) {
-    logToConsole(`➡️ Виконання: ${getActionName(action)}`, "info");
+    logToConsole(`➡️ Виконання: ${getActionName(action)}`, "info", {
+      channel: "action",
+    });
 
     try {
       if (!(await assertActionAccess_(action))) return;

@@ -1,6 +1,6 @@
 {
   "description": "Allowlist for verify-user-facing-copy: code identifiers and legacy keys not shown as raw UI text.",
-  "identifierLiteralPattern": "^[A-Z][A-Z0-9_]*(-[A-Za-z0-9-]+)*$",
+  "identifierLiteralPattern": "^[A-Z][A-Z0-9_]*(?:-[A-Za-z0-9]+)*$",
   "allowedSubstrings": [
     {
       "value": "compatibility / legacy",
