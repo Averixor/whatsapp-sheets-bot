@@ -251,7 +251,13 @@
               class="health-actions wasb-u-grid-span-2 wasb-is-hidden"
               data-role-min="maintainer"
             >
-              <div class="health-actions-grid">
+              <details class="health-actions-details" id="healthActionsDetails">
+                <summary class="health-actions-summary">
+                  <span class="health-actions-summary__icon" aria-hidden="true">⚙</span>
+                  <span class="health-actions-summary__label">Системні дії</span>
+                  <span class="health-actions-summary__chevron" aria-hidden="true">▼</span>
+                </summary>
+                <div class="health-actions-grid">
                 <button
                   class="btn btn-secondary health-actions-btn health-actions-btn--wide"
                   data-role-min="maintainer"
@@ -369,7 +375,8 @@
                 >
                   📋 Копія звіту
                 </button>
-              </div>
+                </div>
+              </details>
             </div>
           </div>
         </section>
@@ -413,7 +420,7 @@
           id="consoleToggle"
           type="button"
           onclick="SidebarApp.toggleConsole()"
-          title="Показати або приховати консоль"
+          title="Розгорнути консоль на ⅓ екрана"
           aria-controls="consoleSection"
           aria-expanded="false"
         >
@@ -424,6 +431,7 @@
             >👾
           </span>
           <span>Консоль</span>
+          <span class="console-toggle-mode wasb-is-hidden" id="consoleModeHint"></span>
           <span
             class="console-toggle-arrow"
             id="consoleArrow"
@@ -438,70 +446,88 @@
               <span class="console-icon" aria-hidden="true">✓</span>
               <span class="console-title__label">Лог виконання</span>
             </h2>
-            <div class="console-actions">
-              <button
-                class="console-btn console-btn--filter active"
-                type="button"
-                data-console-filter="all"
-                title="Усі записи: дії, екрани, сервер"
-                aria-label="Фільтр: усі записи"
-              >Все</button>
-              <button
-                class="console-btn console-btn--filter"
-                type="button"
-                data-console-filter="action"
-                title="Дії меню та sidebar"
-                aria-label="Фільтр: дії"
-              >▶</button>
-              <button
-                class="console-btn console-btn--filter"
-                type="button"
-                data-console-filter="error"
-                title="Лише помилки та попередження"
-                aria-label="Фільтр: помилки"
-              >⚠</button>
-              <button
-                class="console-btn console-btn--filter"
-                type="button"
-                data-console-filter="server"
-                title="Серверні виклики: запит → відповідь (✓/✕)"
-                aria-label="Фільтр: сервер"
-              >→</button>
-              <button
-                class="console-btn"
-                type="button"
-                onclick="SidebarApp.copyConsole()"
-                title="Скопіювати лог із заголовком, датою та активним місяцем"
-                aria-label="Скопіювати лог"
-              > 📋
-              </button>
-
-              <button
-                class="console-btn"
-                type="button"
-                onclick="SidebarApp.clearConsole()"
-                title="Очистити консоль"
-                aria-label="Очистити консоль"
-              > 🗑️
-              </button>
-
-              <button
-                class="console-btn"
-                type="button"
-                onclick="SidebarApp.scrollConsole('top')"
-                title="Прокрутити вгору"
-                aria-label="Прокрутити консоль вгору"
-              > ↥
-              </button>
-
-              <button
-                class="console-btn"
-                type="button"
-                onclick="SidebarApp.scrollConsole('bottom')"
-                title="Прокрутити вниз"
-                aria-label="Прокрутити консоль вниз"
-              > ↧
-              </button>
+            <div class="console-toolbar">
+              <div class="console-toolbar__filters">
+                <button
+                  class="console-btn console-btn--filter active"
+                  type="button"
+                  data-console-filter="all"
+                  title="Усі записи"
+                  aria-label="Фільтр: усі"
+                >Все</button>
+                <button
+                  class="console-btn console-btn--filter"
+                  type="button"
+                  data-console-filter="action"
+                  title="Дії"
+                  aria-label="Фільтр: дії"
+                >▶</button>
+                <button
+                  class="console-btn console-btn--filter"
+                  type="button"
+                  data-console-filter="error"
+                  title="Помилки"
+                  aria-label="Фільтр: помилки"
+                >⚠</button>
+                <button
+                  class="console-btn console-btn--filter"
+                  type="button"
+                  data-console-filter="server"
+                  title="Сервер"
+                  aria-label="Фільтр: сервер"
+                >→</button>
+              </div>
+              <div class="console-toolbar__tools">
+                <button
+                  class="console-btn console-btn--size"
+                  type="button"
+                  data-console-size="collapsed"
+                  title="Згорнути"
+                  aria-label="Згорнути консоль"
+                >▁</button>
+                <button
+                  class="console-btn console-btn--size"
+                  type="button"
+                  data-console-size="third"
+                  title="⅓ екрана"
+                  aria-label="Консоль на третину екрана"
+                >▢</button>
+                <button
+                  class="console-btn console-btn--size"
+                  type="button"
+                  data-console-size="full"
+                  title="На весь екран"
+                  aria-label="Консоль на весь екран"
+                >⛶</button>
+                <button
+                  class="console-btn"
+                  type="button"
+                  onclick="SidebarApp.copyConsole()"
+                  title="Копіювати"
+                  aria-label="Копіювати лог"
+                >📋</button>
+                <button
+                  class="console-btn"
+                  type="button"
+                  onclick="SidebarApp.clearConsole()"
+                  title="Очистити"
+                  aria-label="Очистити консоль"
+                >🗑</button>
+                <button
+                  class="console-btn"
+                  type="button"
+                  onclick="SidebarApp.scrollConsole('top')"
+                  title="Вгору"
+                  aria-label="Вгору"
+                >↥</button>
+                <button
+                  class="console-btn"
+                  type="button"
+                  onclick="SidebarApp.scrollConsole('bottom')"
+                  title="Вниз"
+                  aria-label="Вниз"
+                >↧</button>
+              </div>
             </div>
           </div>
           <div

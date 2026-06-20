@@ -136,7 +136,7 @@
       action === "daySummary" ? "Зведення дня" : "Детальне зведення";
     try {
       if (typeof logToConsole === "function") {
-        logToConsole("🖥 Екран: " + title, "info");
+        logToConsole("🖥 Екран: " + title, "info", { channel: "ui" });
       }
     } catch (_) {}
 

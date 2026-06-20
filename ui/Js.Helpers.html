@@ -8,6 +8,31 @@
 
   var CONSOLE_MAX_BUFFER = 500;
   var CONSOLE_FILTER_KEY = "wasb.consoleFilter";
+  var CONSOLE_MODE_KEY = "wasb.consoleMode";
+  var CONSOLE_MODES = ["collapsed", "third", "full"];
+
+  function normalizeConsoleMode_(mode) {
+    const value = String(mode || "").toLowerCase();
+    if (CONSOLE_MODES.indexOf(value) !== -1) return value;
+    return "collapsed";
+  }
+
+  function readConsoleMode_() {
+    try {
+      const stored = localStorage.getItem(CONSOLE_MODE_KEY);
+      if (stored) return normalizeConsoleMode_(stored);
+      if (localStorage.getItem("consoleOpen") === "true") return "third";
+    } catch (_) {}
+    return "collapsed";
+  }
+
+  function getConsoleMode_() {
+    return normalizeConsoleMode_(STATE.consoleMode || readConsoleMode_());
+  }
+
+  function isConsoleExpanded_() {
+    return getConsoleMode_() !== "collapsed";
+  }
 
   function ensureConsoleBuffer_() {
     if (!window.__wasbConsoleBuffer__) window.__wasbConsoleBuffer__ = [];
@@ -63,19 +88,139 @@
     const wrapper = $id("consoleWrapper");
     const overlay = $id("loadingOverlay");
     if (!wrapper) return;
+    const mode = getConsoleMode_();
+    const isOpen = mode !== "collapsed";
     const isLoading =
       overlay &&
       !overlay.classList.contains("wasb-is-hidden") &&
       getComputedStyle(overlay).display !== "none";
-    const isOpen = $id("consoleSection")?.classList.contains("open");
     const needsOverlay = !!(isOpen && (isLoading || isPersonnelModalOpen_()));
     wrapper.classList.toggle("console--overlay", needsOverlay);
     wrapper.classList.toggle("console--elevated", isOpen);
+    wrapper.classList.toggle("console-mode-third", mode === "third");
+    wrapper.classList.toggle("console-mode-full", mode === "full");
+    syncSidebarConsoleLayout_(mode);
   }
 
-  function inferConsoleLogChannel_(type, message) {
+  function syncSidebarConsoleLayout_(mode) {
+    const normalized = normalizeConsoleMode_(
+      mode != null ? mode : getConsoleMode_(),
+    );
+    const container = document.querySelector(".sidebar-container");
+    if (container) {
+      container.classList.remove(
+        "console-mode-collapsed",
+        "console-mode-third",
+        "console-mode-full",
+        "console-panel-open",
+      );
+      container.classList.add("console-mode-" + normalized);
+    }
+    const details = $id("healthActionsDetails");
+    if (details && normalized !== "collapsed") {
+      details.open = false;
+    }
+    updateConsoleSizeButtons_(normalized);
+  }
+
+  function updateConsoleSizeButtons_(mode) {
+    const normalized = normalizeConsoleMode_(mode);
+    document.querySelectorAll("[data-console-size]").forEach(function (btn) {
+      btn.classList.toggle(
+        "active",
+        btn.getAttribute("data-console-size") === normalized,
+      );
+    });
+  }
+
+  function updateConsoleModeUi_(mode) {
+    const normalized = normalizeConsoleMode_(mode);
+    const consoleSection = $id("consoleSection");
+    const toggle = $id("consoleToggle");
+    const fab = $id("consoleFab");
+    const arrow = $id("consoleArrow");
+    const modeHint = $id("consoleModeHint");
+    const expanded = normalized !== "collapsed";
+
+    consoleSection?.classList.remove("console-section--third", "console-section--full");
+    if (normalized === "third") {
+      consoleSection?.classList.add("console-section--third");
+    } else if (normalized === "full") {
+      consoleSection?.classList.add("console-section--full");
+    }
+
+    toggle?.classList.toggle("open", expanded);
+    toggle?.classList.toggle("console-toggle--third", normalized === "third");
+    toggle?.classList.toggle("console-toggle--full", normalized === "full");
+    fab?.classList.toggle("open", expanded);
+    fab?.classList.toggle("console-fab--full", normalized === "full");
+
+    if (arrow) {
+      arrow.textContent = expanded ? "▲" : "▼";
+    }
+    if (toggle) {
+      toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+      toggle.title =
+        normalized === "collapsed"
+          ? "Розгорнути консоль на ⅓ екрана"
+          : normalized === "third"
+            ? "Розгорнути консоль на весь екран"
+            : "Згорнути консоль";
+    }
+    if (fab) {
+      fab.setAttribute("aria-expanded", expanded ? "true" : "false");
+      fab.title = toggle ? toggle.title : "Журнал виконання";
+    }
+    if (modeHint) {
+      modeHint.textContent =
+        normalized === "third" ? "⅓" : normalized === "full" ? "⛶" : "";
+      modeHint.classList.toggle("wasb-is-hidden", normalized === "collapsed");
+    }
+  }
+
+  function setConsoleMode(mode, options) {
+    const opts = options || {};
+    const normalized = normalizeConsoleMode_(mode);
+    STATE.consoleMode = normalized;
+    updateConsoleModeUi_(normalized);
+    if (normalized !== "collapsed") {
+      window.__wasbConsoleUnread = 0;
+      updateConsoleFabBadge_();
+      if (opts.scrollToBottom !== false) {
+        window.__wasbConsolePaused = false;
+        const consoleEl = $id("consoleOutput");
+        if (consoleEl) {
+          consoleEl.classList.remove("console-paused");
+          consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+      }
+    }
+    if (opts.persist !== false) {
+      try {
+        localStorage.setItem(CONSOLE_MODE_KEY, normalized);
+        localStorage.removeItem("consoleOpen");
+      } catch (_) {}
+    }
+    syncConsoleOverlayState_();
+    return normalized;
+  }
+
+  function cycleConsoleMode() {
+    const current = getConsoleMode_();
+    const idx = CONSOLE_MODES.indexOf(current);
+    const next = CONSOLE_MODES[(idx + 1) % CONSOLE_MODES.length];
+    return setConsoleMode(next);
+  }
+
+  window.setConsoleMode = setConsoleMode;
+  window.cycleConsoleMode = cycleConsoleMode;
+  window.getConsoleMode_ = getConsoleMode_;
+  window.syncSidebarConsoleLayout_ = syncSidebarConsoleLayout_;
+
+  function inferConsoleLogChannel_(type, message, channelHint) {
     const msg = String(message == null ? "" : message);
     const logType = String(type || "info");
+    if (channelHint === "dev") return "dev";
     if (
       logType === "server" ||
       msg.indexOf("→ Сервер:") === 0 ||
@@ -93,7 +238,19 @@
     ) {
       return "action";
     }
+    if (
+      logType === "debug" ||
+      msg.indexOf("· ") === 0
+    ) {
+      return "dev";
+    }
     return "ui";
+  }
+
+  function installWasbNativeConsoleBridge_() {
+    if (typeof window.__wasbInstallNativeConsoleBridge__ === "function") {
+      window.__wasbInstallNativeConsoleBridge__();
+    }
   }
 
   function matchesConsoleFilter_(filter, type, message, channel) {
@@ -163,9 +320,13 @@
 
     const type = entry.type || "info";
     const channel =
-      entry.channel || inferConsoleLogChannel_(type, entry.message);
+      entry.channel ||
+      inferConsoleLogChannel_(type, entry.message, entry.channel);
     const logEntry = document.createElement("div");
     logEntry.className = "log-entry log-" + type;
+    if (channel === "dev") {
+      logEntry.classList.add("log-dev");
+    }
     logEntry.setAttribute("data-log-type", type);
     logEntry.setAttribute("data-log-channel", channel);
     logEntry.setAttribute("data-log-message", String(entry.message || ""));
@@ -178,7 +339,7 @@
     consoleEl.appendChild(logEntry);
     applyConsoleFilter_();
 
-    const isOpen = $id("consoleSection")?.classList.contains("open");
+    const isOpen = isConsoleExpanded_();
     if (!isOpen) {
       window.__wasbConsoleUnread = Number(window.__wasbConsoleUnread || 0) + 1;
       updateConsoleFabBadge_();
@@ -225,6 +386,7 @@
   function initConsoleUi_() {
     if (STATE.consoleInitialized) return;
     ensureConsoleBuffer_();
+    installWasbNativeConsoleBridge_();
     window.__wasbConsoleRenderEntry__ = renderConsoleEntry_;
 
     try {
@@ -233,18 +395,14 @@
       STATE.consoleFilter = "all";
     }
 
-    const consoleOpen = localStorage.getItem("consoleOpen") === "true";
-    if (consoleOpen) {
-      $id("consoleSection")?.classList.add("open");
-      $id("consoleToggle")?.classList.add("open");
-      $id("consoleFab")?.classList.add("open");
-      const arrow = $id("consoleArrow");
-      if (arrow) arrow.textContent = "▲";
-      const toggle = $id("consoleToggle");
-      if (toggle) toggle.setAttribute("aria-expanded", "true");
-      window.__wasbConsoleUnread = 0;
-      updateConsoleFabBadge_();
-    }
+    const consoleOpen = readConsoleMode_();
+    setConsoleMode(consoleOpen, { persist: false, scrollToBottom: false });
+
+    document.querySelectorAll("[data-console-size]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        setConsoleMode(btn.getAttribute("data-console-size"));
+      });
+    });
 
     document.querySelectorAll("[data-console-filter]").forEach((btn) => {
       btn.addEventListener("click", function () {
@@ -271,41 +429,14 @@
 
   window.syncConsoleOverlayState_ = syncConsoleOverlayState_;
 
-  function toggleConsole(forceOpen) {
-    const consoleSection = $id("consoleSection");
-    const toggle = $id("consoleToggle");
-    const fab = $id("consoleFab");
-    const arrow = $id("consoleArrow");
-    if (!consoleSection) return;
-
-    const shouldOpen =
-      typeof forceOpen === "boolean"
-        ? forceOpen
-        : !consoleSection.classList.contains("open");
-
-    consoleSection.classList.toggle("open", shouldOpen);
-    toggle?.classList.toggle("open", shouldOpen);
-    fab?.classList.toggle("open", shouldOpen);
-    if (arrow) arrow.textContent = shouldOpen ? "▲" : "▼";
-    if (toggle) toggle.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
-    if (fab) fab.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
-
-    if (shouldOpen) {
-      window.__wasbConsoleUnread = 0;
-      updateConsoleFabBadge_();
-      window.__wasbConsolePaused = false;
-      const consoleEl = $id("consoleOutput");
-      if (consoleEl) {
-        consoleEl.classList.remove("console-paused");
-        consoleEl.scrollTop = consoleEl.scrollHeight;
-      }
+  function toggleConsole(forceMode) {
+    if (typeof forceMode === "boolean") {
+      return setConsoleMode(forceMode ? "third" : "collapsed");
     }
-
-    try {
-      localStorage.setItem("consoleOpen", shouldOpen ? "true" : "false");
-    } catch (_) {}
-
-    syncConsoleOverlayState_();
+    if (typeof forceMode === "string") {
+      return setConsoleMode(forceMode);
+    }
+    return cycleConsoleMode();
   }
 
   function clearConsole() {
@@ -427,13 +558,19 @@
 
       let boot = null;
       try {
+        logToConsole("⟳ bootstrapSidebar…", "info", { channel: "ui" });
         boot = await withPromiseTimeout_(
           Stage7Api.bootstrapSidebar(),
           SIDEBAR_API_TIMEOUT_MS,
           "bootstrapSidebar",
         );
+        if (boot?.success) {
+          logToConsole("✓ bootstrapSidebar", "success", { channel: "ui" });
+        }
       } catch (bootErr) {
-        logToConsole(`⚠ bootstrapSidebar: ${normalizeError(bootErr)}`, "warn");
+        logToConsole(`⚠ bootstrapSidebar: ${normalizeError(bootErr)}`, "warning", {
+          channel: "server",
+        });
       }
 
       if (boot?.success) {

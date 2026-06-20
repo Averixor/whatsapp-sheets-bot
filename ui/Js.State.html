@@ -37,6 +37,18 @@
       const syncMeta = meta?.sync || meta || {};
       const refresh = Array.isArray(syncMeta.refresh) ? syncMeta.refresh : [];
 
+      if (refresh.length) {
+        try {
+          if (typeof logToConsole === "function") {
+            logToConsole(
+              "↻ sync: " + refresh.join(", "),
+              "info",
+              { channel: "ui" },
+            );
+          }
+        } catch (_) {}
+      }
+
       if (syncMeta.currentMonth) {
         UiState.patch({ currentMonth: syncMeta.currentMonth });
         updateMonthBadge(syncMeta.currentMonth);

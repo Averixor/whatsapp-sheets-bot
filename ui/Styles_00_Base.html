@@ -503,27 +503,88 @@
     margin-top: var(--space-sm);
   }
 
-  .wasb-is-hidden {
-    display: none !important;
+  .health-actions-details {
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    overflow: hidden;
   }
 
-  .wasb-u-grid-span-2 {
-    grid-column: span 2;
+  .health-actions-summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    list-style: none;
+    user-select: none;
+  }
+
+  .health-actions-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .health-actions-summary__chevron {
+    margin-left: auto;
+    font-size: 0.65rem;
+    opacity: 0.7;
+    transition: transform 0.2s ease;
+  }
+
+  .health-actions-details[open] .health-actions-summary__chevron {
+    transform: rotate(180deg);
+  }
+
+  .health-actions-details[open] .health-actions-summary {
+    border-bottom: 1px solid var(--border-color);
   }
 
   .health-actions-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 6px;
-    margin-bottom: 8px;
+    gap: 5px;
+    margin: 0;
+    padding: 6px;
+    max-height: min(42vh, 320px);
+    overflow-y: auto;
+    scrollbar-width: thin;
   }
 
   .health-actions-btn {
-    padding: 6px;
-    font-size: 0.72rem;
+    padding: 5px 4px;
+    font-size: 0.68rem;
+    line-height: 1.2;
+    white-space: normal;
+    word-break: break-word;
+    min-height: 2.4rem;
   }
 
   .health-actions-btn--wide {
+    grid-column: span 2;
+  }
+
+  .sidebar-container.console-mode-third .menu-item {
+    min-height: 76px;
+    padding: var(--space-sm) var(--space-xs);
+  }
+
+  .sidebar-container.console-mode-third .menu-icon {
+    font-size: 1.5rem;
+  }
+
+  .sidebar-container.console-mode-third .health-actions-grid {
+    max-height: min(28vh, 220px);
+  }
+
+  .wasb-is-hidden {
+    display: none !important;
+  }
+
+  .wasb-u-grid-span-2 {
     grid-column: span 2;
   }
 

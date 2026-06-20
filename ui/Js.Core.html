@@ -366,7 +366,13 @@
   function withPromiseTimeout_(promise, ms, label) {
     var timeoutMs = Math.max(1000, Number(ms) || 15000);
     var name = String(label || "operation");
-    return new Promise(function (resolve, reject) {
+    var started = Date.now();
+    try {
+      if (typeof logToConsole === "function") {
+        logToConsole("⏱ " + name + "…", "loading", { channel: "ui" });
+      }
+    } catch (_) {}
+    var wrapped = new Promise(function (resolve, reject) {
       var settled = false;
       var timer = setTimeout(function () {
         if (settled) return;
@@ -392,6 +398,18 @@
           reject(err);
         },
       );
+    });
+    return wrapped.then(function (value) {
+      try {
+        if (typeof logToConsole === "function") {
+          logToConsole(
+            "⏱ " + name + " (" + (Date.now() - started) + " мс)",
+            "success",
+            { channel: "ui" },
+          );
+        }
+      } catch (_) {}
+      return value;
     });
   }
 

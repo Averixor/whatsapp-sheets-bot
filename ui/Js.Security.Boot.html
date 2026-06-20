@@ -97,7 +97,10 @@
       window.__wasbConsoleBuffer__.shift();
     }
     try {
-      console.log("[WASB]", entry.message);
+      if (!window.__wasbNativeConsoleLog__) {
+        window.__wasbNativeConsoleLog__ = console.log.bind(console);
+      }
+      window.__wasbNativeConsoleLog__("[WASB]", entry.message);
     } catch (_) {}
     if (typeof window.__wasbConsoleRenderEntry__ === "function") {
       try {
@@ -105,6 +108,68 @@
       } catch (_) {}
     }
   };
+
+  window.__wasbInstallNativeConsoleBridge__ = function () {
+    if (window.__wasbNativeConsoleBridgeInstalled__) return;
+    window.__wasbNativeConsoleBridgeInstalled__ = true;
+
+    if (!window.__wasbNativeConsoleLog__) {
+      window.__wasbNativeConsoleLog__ = console.log.bind(console);
+    }
+
+    function formatArgs(args) {
+      return (args || []).map(function (arg) {
+        if (arg === undefined) return "undefined";
+        if (arg === null) return "null";
+        if (typeof arg === "string") return arg;
+        if (arg instanceof Error) {
+          return arg.stack || arg.message || String(arg);
+        }
+        try {
+          var text = JSON.stringify(arg);
+          if (text && text.length > 280) return text.slice(0, 277) + "…";
+          return text;
+        } catch (_) {
+          return String(arg);
+        }
+      }).join(" ");
+    }
+
+    ["log", "info", "debug", "warn", "error"].forEach(function (level) {
+      var key = "__wasbNativeConsole" + level + "__";
+      var native = window[key];
+      if (!native) {
+        if (level === "log" && window.__wasbNativeConsoleLog__) {
+          native = window.__wasbNativeConsoleLog__;
+        } else if (typeof console[level] === "function") {
+          native = console[level].bind(console);
+        }
+        window[key] = native;
+      }
+      if (typeof native !== "function") return;
+      console[level] = function () {
+        var args = Array.prototype.slice.call(arguments);
+        var formatted = formatArgs(args);
+        if (
+          formatted.indexOf("[WASB]") !== 0 &&
+          formatted.indexOf("[TOAST]") !== 0 &&
+          typeof window.__wasbPushConsoleLog__ === "function"
+        ) {
+          var type =
+            level === "error"
+              ? "error"
+              : level === "warn"
+                ? "warning"
+                : "info";
+          window.__wasbPushConsoleLog__("· " + formatted, type, {
+            channel: "dev",
+          });
+        }
+        return native.apply(console, args);
+      };
+    });
+  };
+  window.__wasbInstallNativeConsoleBridge__();
 
   if (typeof window.logToConsole !== "function") {
     window.logToConsole = window.__wasbPushConsoleLog__;
