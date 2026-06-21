@@ -241,6 +241,48 @@ function _runPersonnelRepositoryDomainTests_(report) {
 
   _domainPush_(
     report,
+    "personnel.display callsign uses last name fallback",
+    function () {
+      var headers = [
+        "Last name",
+        "First name",
+        "Patronymic",
+        "Birthday",
+        "Phone",
+        "Callsign",
+        "Rank",
+        "Position",
+        "OSH 4",
+        "Status",
+      ];
+      var col = _personnelBuildHeaderColIndex_(headers);
+      var record = _personnelRowToRecord_(
+        [
+          "Петренко",
+          "Іван",
+          "Іванович",
+          "17.03.1990",
+          "+380661111111",
+          "",
+          "солдат",
+          "стрілець",
+          "4",
+          "",
+        ],
+        2,
+        col,
+      );
+      _domainAssertEqual_(
+        record.callsign,
+        "Петренко",
+        "empty Callsign must use Last name",
+      );
+      return "display-callsign-fallback-ok";
+    },
+  );
+
+  _domainPush_(
+    report,
     "personnel.materialize helper calculations",
     function () {
       var today = new Date(2026, 5, 18, 12, 0, 0, 0);
@@ -251,22 +293,35 @@ function _runPersonnelRepositoryDomainTests_(report) {
       _domainAssertEqual_(calcAge_(futureBirthday, today), 0, "future birthday");
       _domainAssertEqual_(calcAge_("", today), "", "empty birthday");
       _domainAssertEqual_(
-        calcPersonnelCallsign_("  Alpha  ", "Beta Gamma"),
-        "Alpha",
-        "template wins",
+        formatBirthdayCell_("20.09.2000"),
+        "20.09.2000р.",
+        "birthday display format",
+      );
+      _domainAssertEqual_(formatAgeCell_(25), "25р.", "age display format");
+      _domainAssertEqual_(
+        calculateBirthdayCountdownUa_("20.09.2000", today),
+        "3м.",
+        "birthday countdown format",
       );
       _domainAssertEqual_(
-        calcPersonnelCallsign_("", "Beta Gamma"),
-        "Beta",
-        "first word from FML",
+        calculateBirthdayCountdownUa_(
+          "20.06.2000",
+          new Date(2026, 5, 20, 12, 0, 0, 0),
+        ),
+        "Сьогодні",
+        "birthday today label",
       );
-      _domainAssertEqual_(calcPersonnelCallsign_("", ""), "", "empty callsign");
-
-      var daysUntil = calcDaysUntilBirthday_(birthday, today);
-      _domainAssert_(
-        typeof daysUntil === "number" && daysUntil >= 0,
-        "days until birthday is a non-negative number",
+      _domainAssertEqual_(
+        resolvePersonnelDisplayCallsign_("Alpha", "Beta"),
+        "Alpha",
+        "callsign wins",
       );
+      _domainAssertEqual_(
+        resolvePersonnelDisplayCallsign_("", "Петренко"),
+        "Петренко",
+        "last name fallback",
+      );
+      _domainAssertEqual_(resolvePersonnelDisplayCallsign_("", ""), "", "empty");
       return "materialize-calc-ok";
     },
   );

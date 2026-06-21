@@ -112,6 +112,25 @@
     word-break: break-word;
   }
 
+  .project-test-progress-track {
+    width: 100%;
+    height: 7px;
+    margin-top: var(--space-xs);
+    border-radius: 999px;
+    background: var(--health-chip-bg);
+    overflow: hidden;
+  }
+
+  .project-test-progress-fill {
+    display: block;
+    height: 100%;
+    width: 0;
+    min-width: 0;
+    border-radius: inherit;
+    background: var(--google-blue);
+    transition: width 0.25s ease;
+  }
+
   .how-to-box {
     margin-top: var(--space-xs);
     padding: var(--space-xs);

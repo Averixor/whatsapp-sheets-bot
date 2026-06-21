@@ -464,8 +464,13 @@
   /* CONSOLE */
   .console-wrapper {
     flex-shrink: 0;
-    border-top: 1px solid var(--border-color);
-    background: var(--console-bg);
+    border-top: none;
+    background: transparent;
+  }
+
+  .sidebar-container.console-mode-collapsed .console-wrapper {
+    height: 0;
+    overflow: visible;
   }
 
   .console-wrapper.console--elevated {
@@ -474,6 +479,7 @@
   }
 
   .console-toggle {
+    position: relative;
     width: 100%;
     padding: var(--space-sm) var(--space-md);
     background: var(--console-bg);
@@ -532,6 +538,21 @@
     font-weight: 700;
     color: #7dd3fc;
     margin-left: 4px;
+  }
+
+  .console-toggle-badge {
+    margin-left: 6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+    flex-shrink: 0;
   }
 
   .console-toggle--full .console-toggle-mode,
@@ -765,7 +786,7 @@
     position: absolute;
     right: 12px;
     bottom: 12px;
-    z-index: 10005;
+    z-index: 10006;
     width: 50px;
     height: 50px;
     border-radius: 50%;
@@ -790,6 +811,15 @@
   .console-fab.open {
     border-color: #38bdf8;
     box-shadow: 0 0 0 5px rgba(56, 189, 248, 0.24);
+  }
+
+  .console-fab--third {
+    border-color: #a78bfa;
+  }
+
+  .console-fab--full {
+    border-color: #34d399;
+    box-shadow: 0 0 0 5px rgba(52, 211, 153, 0.22);
   }
 
   .console-fab__icon {

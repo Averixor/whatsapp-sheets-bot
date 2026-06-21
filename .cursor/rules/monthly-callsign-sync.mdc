@@ -1,0 +1,32 @@
+---
+description: Місячний графік — колонка «Позивні» з PERSONNEL (Callsign → Last name)
+globs: "**/*.{gs,html,mjs}"
+alwaysApply: true
+---
+
+# Місячний лист — колонка «Позивні»
+
+## Правило (джерело — PERSONNEL)
+
+Єдине правило відображення позивного на **всіх** аркушах з колонкою Callsign / «Позивні» (місяці `01`…`12`, PHONES, BIRTHDAY тощо):
+
+1. Беремо **Callsign** з PERSONNEL.
+2. Якщо Callsign **порожній** (після trim) — підставляємо **Last name** / **Прізвище** з того ж рядка PERSONNEL.
+3. **TEMPLATE не використовується** для відображення.
+
+Функція: `resolvePersonnelDisplayCallsign_` у `personnel/PersonnelRepository.gs` (обгортка на місячних листах: `monthlyCallsignValueFromPersonnelRow_`).
+
+На PERSONNEL **не** materialize-ити Callsign з інших колонок — derived sheets читають Callsign + Last name при materialize/sync.
+
+## Реалізація
+
+- `sheets/MonthlyCallsignSync.gs` — `syncMonthlyCallsignsFromPersonnel_`, `syncAllMonthlyCallsignsFromPersonnel_`
+- `personnel/PersonnelMaterialize.gs` — PHONES + BIRTHDAY через `resolvePersonnelDisplayCallsign_`; після materialize — sync усіх місячних аркушів `01`…`12`
+- Виклики: `usecases/UseCases.MonthOps.gs`, `sheets/MonthSheets.gs`
+- Контракт: `scripts/verify-monthly-callsign-sync.mjs`
+
+## Не регресувати
+
+- Не повертати формулу / materialize **M→L, D→L** на PERSONNEL для Callsign.
+- Не змішувати TEMPLATE у monthly sync замість явного Callsign + Last name fallback.
+- Колонку на місячному листі шукати за заголовком (`позивн`, `позывной`, `callsign`), не лише за фіксованою літерою.

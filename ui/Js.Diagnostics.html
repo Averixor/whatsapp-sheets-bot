@@ -191,21 +191,35 @@
 
     function renderProgress(currentOffset, total, label) {
       const knownTotal = Number(total || 0);
-      const pct = knownTotal > 0 ? Math.min(100, Math.round((Number(currentOffset || 0) / knownTotal) * 100)) : 0;
-      setHtml('resultContent', `
-        <div class="health-wrap">
-          <div class="health-item warn sev-medium">
-            <div class="health-title">⏳ Пакетний запуск тестів</div>
-            <div class="health-details">
-              ${escapeHtml(label || 'Виконую тести частинами, щоб не впертися у ліміт Google Apps Script.')}<br>
-              Прогрес: ${escapeHtml(String(currentOffset || 0))}${knownTotal ? ' / ' + escapeHtml(String(knownTotal)) : ''} · ${escapeHtml(String(pct))}%
-              <div style="height:7px; margin-top:8px; border-radius:999px; background:var(--health-chip-bg); overflow:hidden;">
-                <div style="height:7px; width:${pct}%; background:var(--google-blue);"></div>
+      const pct = knownTotal > 0
+        ? Math.min(100, Math.round((Number(currentOffset || 0) / knownTotal) * 100))
+        : 0;
+      const progressText = knownTotal
+        ? `${String(currentOffset || 0)} / ${String(knownTotal)} · ${String(pct)}%`
+        : `${String(currentOffset || 0)} · ${String(pct)}%`;
+
+      if (!$id('projectTestProgressFill')) {
+        setHtml('resultContent', `
+          <div class="health-wrap">
+            <div class="health-item warn sev-medium">
+              <div class="health-title">⏳ Пакетний запуск тестів</div>
+              <div class="health-details">
+                <div id="projectTestProgressLabel">${escapeHtml(label || 'Виконую тести частинами, щоб не впертися у ліміт Google Apps Script.')}</div>
+                <div id="projectTestProgressText">Прогрес: ${escapeHtml(progressText)}</div>
+                <div class="project-test-progress-track" aria-hidden="true">
+                  <div id="projectTestProgressFill" class="project-test-progress-fill"></div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      `);
+        `);
+      } else {
+        setText('projectTestProgressLabel', label || 'Виконую тести частинами, щоб не впертися у ліміт Google Apps Script.');
+        setText('projectTestProgressText', `Прогрес: ${progressText}`);
+      }
+
+      const fill = $id('projectTestProgressFill');
+      if (fill) fill.style.width = pct + '%';
     }
 
     renderProgress(0, 0, 'Стартую перший пакет тестів...');

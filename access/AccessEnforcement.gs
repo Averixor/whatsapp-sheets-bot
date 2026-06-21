@@ -365,6 +365,7 @@ var AccessEnforcement_ =
         "VACATION_CHECK",
         "VACATION_OPTIONS",
         _configValue_("SEND_PANEL_SHEET", "SEND_PANEL"),
+        _configValue_("PERSONNEL_SHEET", "PERSONNEL"),
         _configValue_("PHONES_SHEET", "PHONES"),
       ]);
     }
@@ -1615,6 +1616,7 @@ function _getProtectedSheetsForTrigger_() {
     _configValueForTrigger_("DICT_SUM_SHEET", "DICT_SUM"),
     _configValueForTrigger_("LOG_SHEET", "LOG"),
     _configValueForTrigger_("SEND_PANEL_SHEET", "SEND_PANEL"),
+    _configValueForTrigger_("PERSONNEL_SHEET", "PERSONNEL"),
     _configValueForTrigger_("PHONES_SHEET", "PHONES"),
     "AUDIT_LOG",
     "JOB_RUNTIME_LOG",

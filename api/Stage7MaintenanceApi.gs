@@ -31,7 +31,7 @@ function _stage7BuildMaintenanceResponse_(
       ? safeReport.dryRun === true
       : true;
 
-  const meta = Object.assign(
+  let meta = Object.assign(
     {
       stage:
         typeof getProjectBundleMetadata_ === "function"
@@ -732,6 +732,22 @@ function apiRunStage7RegressionTests(options) {
   );
 }
 
+function _invokeProjectTestChunk_(options) {
+  if (
+    typeof Stage7TestRunner !== "undefined" &&
+    Stage7TestRunner &&
+    typeof Stage7TestRunner.runProjectTestChunk === "function"
+  ) {
+    return Stage7TestRunner.runProjectTestChunk(options || {});
+  }
+  if (typeof runProjectTestChunk === "function") {
+    return runProjectTestChunk(options || {});
+  }
+  throw new Error(
+    "Модуль тестів проєкту недоступний. Виконайте clasp push (tests/Stage7TestRunner*.gs має бути в deploy).",
+  );
+}
+
 function apiRunStage7AllProjectTests(options) {
   _stage7AssertRole_("admin", "run all project tests");
   const opts = Object.assign({}, options || {}, {
@@ -743,7 +759,7 @@ function apiRunStage7AllProjectTests(options) {
     timeoutMs: Math.min(Number((options || {}).timeoutMs || 240000), 240000),
   });
 
-  const report = runProjectTestChunk(
+  const report = _invokeProjectTestChunk_(
     Object.assign({}, opts, {
       offset: Number(opts.offset || 0),
       limit: Number(opts.limit || 4),
@@ -777,7 +793,7 @@ function apiRunStage7ProjectTestChunk(options) {
     ),
   });
 
-  const report = runProjectTestChunk(opts);
+  const report = _invokeProjectTestChunk_(opts);
 
   return _stage7BuildMaintenanceResponse_(
     true,

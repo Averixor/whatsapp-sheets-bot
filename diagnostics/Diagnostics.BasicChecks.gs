@@ -1,3 +1,16 @@
+function _healthCheckVacationRequestsSheetRequired_() {
+  try {
+    if (
+      typeof VacationsRepository_ === "object" &&
+      VacationsRepository_ &&
+      typeof VacationsRepository_.getSourceMode === "function"
+    ) {
+      return VacationsRepository_.getSourceMode() === "requests";
+    }
+  } catch (_) {}
+  return false;
+}
+
 function checkSheets() {
   const report = _makeReport_("📄 ПЕРЕВІРКА ЛИСТІВ");
 
@@ -7,6 +20,8 @@ function checkSheets() {
       return s.getName();
     });
 
+    const vacationRequestsRequired = _healthCheckVacationRequestsSheetRequired_();
+
     const requiredSheets = [
       { name: CONFIG.TARGET_SHEET || "02", required: true },
       { name: CONFIG.PERSONNEL_SHEET || "PERSONNEL", required: true },
@@ -15,9 +30,12 @@ function checkSheets() {
       { name: CONFIG.DICT_SUM_SHEET || "DICT_SUM", required: true },
       { name: CONFIG.LOG_SHEET || "LOG", required: false },
       { name: "VACATIONS", required: false },
-      { name: "VACATION_REQUESTS", required: false },
       { name: "TEMPLATES", required: false },
     ];
+
+    if (vacationRequestsRequired) {
+      requiredSheets.push({ name: "VACATION_REQUESTS", required: true });
+    }
 
     requiredSheets.forEach(function (item) {
       const exists = sheets.indexOf(item.name) !== -1;

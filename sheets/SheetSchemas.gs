@@ -264,7 +264,10 @@ function detectMonthlyLayoutFromSheet_(sheet) {
   var colB = _monthlyLayoutHeaderNorm_(row1[1]);
   var isPhoneHeaderA =
     colA.indexOf("тел") !== -1 || colA.indexOf("phone") !== -1;
-  var isCallsignB = colB.indexOf("позивн") !== -1 || colB === "callsign";
+  var isCallsignB =
+    colB.indexOf("позивн") !== -1 ||
+    colB.indexOf("\u043f\u043e\u0437\u044b\u0432\u043d") !== -1 ||
+    colB === "callsign";
   var firstDateCol = 3;
   var cIsDate = _looksLikeMonthlyDateHeader_(row1[firstDateCol - 1]);
 
@@ -602,6 +605,7 @@ function _ssBuildPersonnelSchema_() {
     ],
     optionalHeaders: [
       "ID",
+      "ID_VS",
       "Age",
       "Days_until_birthday",
       "Unit",
@@ -609,6 +613,9 @@ function _ssBuildPersonnelSchema_() {
       "Title",
       "Rank",
       "TEMPLATE",
+      "LastName",
+      "FirstName",
+      "Patronymic",
     ],
     canonicalHeaderOrder: [
       "ID",
@@ -627,7 +634,7 @@ function _ssBuildPersonnelSchema_() {
       "Status",
     ],
     notes:
-      "Єдине джерело даних людини. Місячний графік: Callsign. Status dropdown (9 UA): В наявності … СЗЧ — див. PersonnelRepository.gs / personnel-status.contract.json.",
+      "Єдине джерело даних людини. Еталон «Книга Взводу Охорони»: Cells/ID v/s + split names + Callsign (L) + Rank + OSH 4 + Status — contracts/reference-workbook-layout.contract.json. Місячний графік: Callsign. Status dropdown (9 UA): В наявності … СЗЧ.",
   });
 }
 

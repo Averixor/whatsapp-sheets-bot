@@ -263,7 +263,8 @@ const WorkflowOrchestrator_ = (function() {
     const route = routeForTrace;
     const lockRequired = cfg.lock !== false && !!cfg.write;
     const lockScope = _resolveLockScope(cfg, rawScenario);
-    const retrySafe = cfg.retrySafe !== false;
+    const idempotencyEnabled = cfg.idempotency !== false;
+    const retrySafe = cfg.retrySafe !== false || !idempotencyEnabled;
 
     let operationId = (typeof OperationRepository_ === 'object')
       ? OperationRepository_.makeOperationId(rawScenario, payload, payload.operationId)
@@ -341,7 +342,8 @@ const WorkflowOrchestrator_ = (function() {
           initiator: resolvedInitiator,
           runSource: resolvedRunSource,
           startNote: startNote,
-          lockHolder: lock ? 'document-lock' : ''
+          lockHolder: lock ? 'document-lock' : '',
+          skipDuplicateCheck: !idempotencyEnabled
         });
 
         diagnostics.idempotencyFingerprint = lifecycle.fingerprint || '';

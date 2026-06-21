@@ -1,11 +1,18 @@
 # Changelog
 
+## 2026-06-20 — Reference workbook layout contract ("Книга Взводу Охорони.xlsx")
+
+- **Contract:** `contracts/reference-workbook-layout.contract.json` — headers for PERSONNEL, PHONES, BIRTHDAY, DICT, DICT_SUM, month `02`/`06`, VACATIONS extracted from the reference xlsx.
+- **Code:** `PersonnelRepository.gs` — aliases `ID v/s` → `ID_VS`, ignore `Cells`; comments corrected: reference uses **Callsign column L**, not TEMPLATE.
+- **Docs:** `RUNBOOK.md` §14, `AGENTS.md`, `README.md`, `docs/README.md`, `.cursor/rules/personnel-data-keys.mdc` aligned with the reference file.
+- **CI:** `scripts/verify-reference-workbook-layout.mjs` guards contract vs aliases and docs.
+
 ## 2026-06-13 — Sync to reference workbook "Книга Взводу Охорони.xlsx"
 
 - **Code:** PersonnelRepository now fully supports the physical PERSONNEL layout from the reference xlsx:
   - Split name columns `Last name` / `First name` / `Patronymic` → synthesized `FML`
-  - `TEMPLATE` column preferred as callsign value (for PERSONNEL rows)
-  - Aliases extended for split names; FML requirement relaxed when name parts present; name-part columns defaulted
+  - **`Callsign` column L** holds working callsign values (reference has no TEMPLATE column)
+  - Aliases extended for split names and `ID v/s`; FML requirement relaxed when name parts present
   - Monthly sheets in the xlsx use `ПОЗИВНИЙ` (Callsign) + `П.І.Б.` / codes — compatible with existing SheetSchemas / lookup by Callsign
 - **Docs:** Updated `README.md`, `RUNBOOK.md` §14, `AGENTS.md`, `CHANGELOG.md` to describe logical vs physical columns, reference xlsx support, and post-sync state. All documents aligned with project + the provided table.
 - **Verification:** `npm run ci` (guardrails for personnel-status, workbook, recipient, client, etc.) re-checked after changes.

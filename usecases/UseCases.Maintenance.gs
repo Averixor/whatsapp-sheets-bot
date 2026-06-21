@@ -289,6 +289,8 @@ var UseCasesMaintenance_ = (function () {
       scenario: "runMaintenanceScenario",
       payload: payload,
       write: !!writeTypes[type],
+      idempotency: type !== "materializeComputedData",
+      retrySafe: type === "materializeComputedData" || undefined,
       validate: function (input) {
         if (String(input.type || "") === "postCreateMonth" && input.month) {
           validateMonthSwitch_(input.month);

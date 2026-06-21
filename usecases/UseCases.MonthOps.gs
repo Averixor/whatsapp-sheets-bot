@@ -42,6 +42,14 @@ function _stage7CreateNextMonthCore_(payload) {
     applyGlobalSheetStandards_();
   } catch (_) {}
 
+  try {
+    if (typeof syncMonthlyCallsignsFromPersonnel_ === "function") {
+      syncMonthlyCallsignsFromPersonnel_(newSheet);
+    }
+  } catch (syncErr) {
+    console.error(syncErr);
+  }
+
   if (payload.switchToNewMonth !== false) {
     setBotMonthSheetName_(nextName);
   } else {

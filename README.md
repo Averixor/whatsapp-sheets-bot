@@ -173,14 +173,14 @@ Notes:
 ## PERSONNEL model
 
 - Monthly sheets store **Callsign + schedule**; `PERSONNEL` stores person fields.
-- `Callsign` is the schedule/lookup key. `FML` is the fallback display identity (synthesized from `Last name` + `First name` + `Patronymic` when the reference workbook "Книга Взводу Охорони.xlsx" layout is used; `TEMPLATE` column supplies the callsign value).
+- `Callsign` is the schedule/lookup key (reference xlsx: column **L** on PERSONNEL, values like `ГРАФ`). `FML` is the fallback display identity (synthesized from `Last name` + `First name` + `Patronymic`). `TEMPLATE` is legacy-only (not in the reference workbook).
 - `ID` is optional Армія+ data; `Position` is not a person key.
 - Active UA statuses (dropdown, 9 values): `В наявності`, `У відрядженні`,
   `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`.
   Runtime-active (schedule, phones, cards): all except **`Вибув`** and **`СЗЧ`**.
   Empty status defaults to **`В наявності`**. Legacy labels (`Дієвий`, `Active`,
   `Відрядження`, EN) map on read only — see `personnel/PersonnelRepository.gs`.
-- Runtime reads by header names and supports documented aliases (split names, TEMPLATE, OSH 4, etc.). After edits,
+- Runtime reads by header names and supports documented aliases (split names, `ID v/s`, OSH 4, legacy TEMPLATE, etc.). After edits,
   run `apiStage7ClearPhoneCache()`.
 
 ## Identity and login in one minute

@@ -67,6 +67,17 @@
   window.formatLogArgsPreview_ = formatLogArgsPreview_;
   window.formatApiResultSummary_ = formatApiResultSummary_;
 
+  function isConsoleAlertLogType_(type) {
+    const value = String(type || "").toLowerCase();
+    return value === "error" || value === "warning" || value === "warn";
+  }
+
+  function bumpConsoleAlertBadge_(type) {
+    if (!isConsoleAlertLogType_(type) || isConsoleExpanded_()) return;
+    window.__wasbConsoleUnread = Number(window.__wasbConsoleUnread || 0) + 1;
+    updateConsoleFabBadge_();
+  }
+
   function updateConsoleFabBadge_() {
     const badge = $id("consoleFabBadge");
     if (!badge) return;
@@ -136,10 +147,7 @@
   function updateConsoleModeUi_(mode) {
     const normalized = normalizeConsoleMode_(mode);
     const consoleSection = $id("consoleSection");
-    const toggle = $id("consoleToggle");
     const fab = $id("consoleFab");
-    const arrow = $id("consoleArrow");
-    const modeHint = $id("consoleModeHint");
     const expanded = normalized !== "collapsed";
 
     consoleSection?.classList.remove("console-section--third", "console-section--full");
@@ -149,32 +157,18 @@
       consoleSection?.classList.add("console-section--full");
     }
 
-    toggle?.classList.toggle("open", expanded);
-    toggle?.classList.toggle("console-toggle--third", normalized === "third");
-    toggle?.classList.toggle("console-toggle--full", normalized === "full");
     fab?.classList.toggle("open", expanded);
+    fab?.classList.toggle("console-fab--third", normalized === "third");
     fab?.classList.toggle("console-fab--full", normalized === "full");
 
-    if (arrow) {
-      arrow.textContent = expanded ? "▲" : "▼";
-    }
-    if (toggle) {
-      toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
-      toggle.title =
+    if (fab) {
+      fab.setAttribute("aria-expanded", expanded ? "true" : "false");
+      fab.title =
         normalized === "collapsed"
           ? "Розгорнути консоль на ⅓ екрана"
           : normalized === "third"
             ? "Розгорнути консоль на весь екран"
             : "Згорнути консоль";
-    }
-    if (fab) {
-      fab.setAttribute("aria-expanded", expanded ? "true" : "false");
-      fab.title = toggle ? toggle.title : "Журнал виконання";
-    }
-    if (modeHint) {
-      modeHint.textContent =
-        normalized === "third" ? "⅓" : normalized === "full" ? "⛶" : "";
-      modeHint.classList.toggle("wasb-is-hidden", normalized === "collapsed");
     }
   }
 
@@ -339,11 +333,7 @@
     consoleEl.appendChild(logEntry);
     applyConsoleFilter_();
 
-    const isOpen = isConsoleExpanded_();
-    if (!isOpen) {
-      window.__wasbConsoleUnread = Number(window.__wasbConsoleUnread || 0) + 1;
-      updateConsoleFabBadge_();
-    }
+    bumpConsoleAlertBadge_(type);
 
     if (!window.__wasbConsolePaused) {
       consoleEl.scrollTop = consoleEl.scrollHeight;

@@ -84,15 +84,35 @@ function stage7TestRunnerBuildAccessTasks_(taskFn, optArgFn) {
 }
 
 function stage7TestRunnerExplicitRegistryAccess_() {
-  return {
-    runAccessPolicyChecks: runAccessPolicyChecks,
-    runAllPolicyChecks: runAllPolicyChecks,
-    runAccessSecurityE2ETests_: runAccessSecurityE2ETests_,
-    runAccessE2ETests: runAccessE2ETests,
-    runAccessDiagnostics: runAccessDiagnostics,
-    testWasbAccessControl: testWasbAccessControl,
-    testAccessControl_: testAccessControl_,
-    smokeTestAccessControl_: smokeTestAccessControl_,
-    testDiagnostics: testDiagnostics,
-  };
+  var registry = {};
+
+  if (typeof runAccessPolicyChecks === "function") {
+    registry.runAccessPolicyChecks = runAccessPolicyChecks;
+  }
+  if (typeof runAllPolicyChecks === "function") {
+    registry.runAllPolicyChecks = runAllPolicyChecks;
+  }
+  if (typeof runAccessSecurityE2ETests_ === "function") {
+    registry.runAccessSecurityE2ETests_ = runAccessSecurityE2ETests_;
+  }
+  if (typeof runAccessE2ETests === "function") {
+    registry.runAccessE2ETests = runAccessE2ETests;
+  }
+  if (typeof runAccessDiagnostics === "function") {
+    registry.runAccessDiagnostics = runAccessDiagnostics;
+  }
+  if (typeof testWasbAccessControl === "function") {
+    registry.testWasbAccessControl = testWasbAccessControl;
+  }
+  if (typeof testAccessControl_ === "function") {
+    registry.testAccessControl_ = testAccessControl_;
+  }
+  if (typeof smokeTestAccessControl_ === "function") {
+    registry.smokeTestAccessControl_ = smokeTestAccessControl_;
+  }
+  if (typeof testDiagnostics === "function") {
+    registry.testDiagnostics = testDiagnostics;
+  }
+
+  return registry;
 }

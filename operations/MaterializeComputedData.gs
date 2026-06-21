@@ -12,6 +12,17 @@ function materializeAllComputedDataAffectedSheets_(result) {
         sheets.push(personnelBlock[key].sheet);
       }
     });
+    if (personnelBlock.monthlyCallsigns && personnelBlock.monthlyCallsigns.sheet) {
+      sheets.push(personnelBlock.monthlyCallsigns.sheet);
+    }
+    if (
+      personnelBlock.monthlyCallsigns &&
+      Array.isArray(personnelBlock.monthlyCallsigns.sheets)
+    ) {
+      personnelBlock.monthlyCallsigns.sheets.forEach(function (item) {
+        if (item && item.sheet) sheets.push(item.sheet);
+      });
+    }
   }
   if (safe.vacations && safe.vacations.sheet) sheets.push(safe.vacations.sheet);
   if (safe.panel && safe.panel.sheet) sheets.push(safe.panel.sheet);

@@ -119,12 +119,121 @@
     }
   }
 
-  async function materializeComputedData() {
-    assertAdminAction_("materializeComputedData");
-    if (!confirm("Оновити обчислювані дані (вік, дні до ДН, відпустки, статус панелі)?")) {
-      return;
+  function formatMonthlyCallsignSyncSummary_(monthlySync) {
+    if (!monthlySync || typeof monthlySync !== "object") {
+      return {
+        logLevel: "warn",
+        logText: "⚠ Позивні (телефони, дні народження, місяці): дані синхронізації не отримано",
+        sheet: "",
+        rowsWritten: 0,
+        error: "",
+        warnings: [],
+      };
     }
 
+    const nestedSheets = Array.isArray(monthlySync.sheets) ? monthlySync.sheets : [];
+    if (nestedSheets.length) {
+      const failed = nestedSheets.filter((item) => item && item.ok === false);
+      const rowsWritten = Number(monthlySync.rowsWritten || 0);
+      const warnings = Array.isArray(monthlySync.warnings)
+        ? monthlySync.warnings.filter(Boolean)
+        : [];
+      if (failed.length) {
+        const errorText = failed
+          .map((item) => String(item.sheet || "?") + ": " + String(item.error || "помилка"))
+          .join("; ");
+        return {
+          logLevel: "warn",
+          logText: "⚠ Позивні: " + errorText,
+          sheet: "",
+          rowsWritten: rowsWritten,
+          error: errorText,
+          warnings: warnings,
+        };
+      }
+      let logText =
+        "✓ Позивні оновлено на " +
+        String(monthlySync.sheetCount || nestedSheets.length) +
+        " аркушах (" +
+        rowsWritten +
+        " рядків)";
+      if (warnings.length) {
+        logText += " — " + warnings.join("; ");
+      }
+      return {
+        logLevel: warnings.length ? "warn" : "success",
+        logText: logText,
+        sheet: "",
+        rowsWritten: rowsWritten,
+        error: "",
+        warnings: warnings,
+      };
+    }
+
+    if (monthlySync.ok === false) {
+      const errorText = String(monthlySync.error || "помилка синхронізації");
+      return {
+        logLevel: "warn",
+        logText: "⚠ Позивні: " + errorText,
+        sheet: "",
+        rowsWritten: 0,
+        error: errorText,
+        warnings: [],
+      };
+    }
+    const sheet = String(monthlySync.sheet || "").trim();
+    const rowsWritten = Number(monthlySync.rowsWritten || 0);
+    const warnings = Array.isArray(monthlySync.warnings)
+      ? monthlySync.warnings.filter(Boolean)
+      : [];
+    let logText =
+      "✓ Позивні" + (sheet ? " (" + sheet + ")" : "") + ": " + rowsWritten + " рядків";
+    if (warnings.length) {
+      logText += " — " + warnings.join("; ");
+    }
+    return {
+      logLevel: warnings.length ? "warn" : "success",
+      logText: logText,
+      sheet: sheet,
+      rowsWritten: rowsWritten,
+      error: "",
+      warnings: warnings,
+    };
+  }
+
+  function renderMaterializeComputedDataConfirm_() {
+    showStandardResult("Обчислювані дані");
+    setHtml(
+      "resultContent",
+      `
+      <div class="result-screen month-switcher-card">
+        <div class="result-screen-title">Підтвердження</div>
+        <div class="month-switcher-hint">
+          Оновити обчислювані дані (вік, дні до дня народження, позивні на графіку, відпустки, статус панелі)?
+        </div>
+        <div class="month-switcher-actions">
+          <button
+            type="button"
+            class="result-link"
+            onclick="SidebarApp.runMaterializeComputedData_()"
+          >
+            Оновити
+          </button>
+          <button
+            type="button"
+            class="result-link result-link--secondary"
+            onclick="SidebarApp.showMenu()"
+          >
+            Скасувати
+          </button>
+        </div>
+      </div>
+    `,
+    );
+  }
+
+  async function runMaterializeComputedData_() {
+    assertAdminAction_("materializeComputedData");
     logToConsole("Оновлення обчислюваних даних...", "info");
 
     try {
@@ -135,6 +244,55 @@
       if (!result?.success) {
         showToast("" + (result?.error || result?.message || "Помилка"));
         return;
+      }
+
+      const suppressedMaterialize =
+        !result.personnel &&
+        (String(result.message || "").indexOf("подавлено") !== -1 ||
+          Number(
+            (result.meta && result.meta.skippedChangesCount) ||
+              result.skippedChangesCount ||
+              0,
+          ) > 0);
+      if (suppressedMaterialize) {
+        showToast(result.message || "Повторний запуск не виконав оновлення");
+        logToConsole(result.message || "Повторний запуск не виконав оновлення", "warn");
+        showStandardResult("Обчислювані дані");
+        setHtml(
+          "resultContent",
+          `
+          <div class="result-item">
+            <div class="result-label" style="color: var(--warn-color, #d97706);">Не оновлено</div>
+            <div class="result-value">${escapeHtml(
+              result.message ||
+                "Операцію подавлено як повторний запуск. Спробуйте ще раз через кілька хвилин.",
+            )}</div>
+          </div>
+        `,
+        );
+        return;
+      }
+
+      const monthlySummary = formatMonthlyCallsignSyncSummary_(
+        result.personnel && result.personnel.monthlyCallsigns,
+      );
+      logToConsole(monthlySummary.logText, monthlySummary.logLevel);
+
+      const personnelBlock =
+        (result.personnel && result.personnel.personnel) ||
+        (result.data &&
+          result.data.result &&
+          result.data.result.personnel &&
+          result.data.result.personnel.personnel) ||
+        null;
+      const ageBirthdayRows = Number(
+        personnelBlock && personnelBlock.birthdayColumnsFormattedRows,
+      );
+      if (ageBirthdayRows > 0) {
+        logToConsole(
+          "✓ Дані ДН відформатовано: " + String(ageBirthdayRows) + " рядків",
+          "success",
+        );
       }
 
       showToast("Обчислювані дані оновлено");
@@ -148,11 +306,42 @@
           <div class="result-label" style="color: var(--success-color);">Успішно</div>
           <div class="result-value">${escapeHtml(result.message || "Обчислювані дані оновлено")}</div>
         </div>
+        <div class="result-item">
+          <div class="result-label">День народження (особовий склад)</div>
+          <div class="result-value">${escapeHtml(
+            ageBirthdayRows > 0
+              ? "Відформатовано " + String(ageBirthdayRows) + " рядків"
+              : "Колонки не оновлено",
+          )}</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Позивні (телефони, дні народження, місяці)</div>
+          <div class="result-value">${escapeHtml(
+            monthlySummary.error ||
+              (monthlySummary.sheet
+                ? "Аркуш " +
+                  monthlySummary.sheet +
+                  ": " +
+                  String(monthlySummary.rowsWritten) +
+                  " рядків"
+                : "Оновлено " +
+                  String(monthlySummary.rowsWritten) +
+                  " рядків на телефонах, днях народження та місячних аркушах") +
+              (monthlySummary.warnings.length
+                ? ". " + monthlySummary.warnings.join("; ")
+                : ""),
+          )}</div>
+        </div>
       `,
       );
     } catch (error) {
       showToast("" + normalizeError(error));
     }
+  }
+
+  async function materializeComputedData() {
+    assertAdminAction_("materializeComputedData");
+    renderMaterializeComputedDataConfirm_();
   }
 
   async function setupTrigger() {

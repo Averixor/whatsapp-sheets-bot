@@ -760,7 +760,11 @@ function _veParseBirthdayParts_(birthday) {
     }
   }
 
-  const s = String(birthday || "").trim();
+  const sRaw = String(birthday || "").trim();
+  let s = sRaw;
+  while (/р\.$/.test(s)) {
+    s = s.replace(/р\.$/, "").trim();
+  }
 
   if (!s) return null;
 

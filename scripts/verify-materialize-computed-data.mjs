@@ -27,10 +27,23 @@ assert.match(orchestrator, /function materializeAllComputedData_/);
 assert.match(orchestrator, /materializePersonnelDerivedSheets_/);
 assert.match(orchestrator, /materializeVacationComputedColumns_/);
 assert.match(orchestrator, /ensureSendPanelStatusFormula_/);
+assert.match(
+  readRepoFileByBasename(repoRoot, "PersonnelMaterialize.gs", {
+    errorPrefix: "verify-materialize-computed-data",
+  }),
+  /syncAllMonthlyCallsignsFromPersonnel_/,
+);
+assert.match(
+  readRepoFileByBasename(repoRoot, "PersonnelMaterialize.gs", {
+    errorPrefix: "verify-materialize-computed-data",
+  }),
+  /formatBirthdayCell_|calculateBirthdayCountdownUa_|birthdayColumnsFormattedRows/,
+);
 
 assert.match(maintenanceApi, /function apiStage7MaterializeComputedData/);
 assert.match(maintenanceApi, /materializeComputedData/);
 
+assert.match(useCases, /idempotency: type !== "materializeComputedData"/);
 assert.match(useCases, /case "materializeComputedData"/);
 assert.match(
   useCases,

@@ -36,9 +36,7 @@ node_modules/**
 _backup*/**
 
 # Tests / debug / local diagnostics (after !*.gs so these stay excluded)
-tests/Stage7TestRunner*.gs
-tests/DomainTests.gs
-tests/AccessE2ETests.gs
+# Stage7TestRunner*.gs + DomainTests.gs + AccessE2ETests.gs — deploy for sidebar «Всі тести проєкту».
 tests/DebugManualTests.gs
 tests/Diagnostics.Debug.gs
 tests/GasRuntimeSmoke.gs

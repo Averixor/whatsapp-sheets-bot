@@ -198,6 +198,16 @@ function _sheetStandardsGetMonthlyDataColWidth_() {
   return 110;
 }
 
+function _sheetStandardsGetMonthlyCallsignColWidth_() {
+  try {
+    if (typeof MONTHLY_CONFIG !== "undefined" && MONTHLY_CONFIG) {
+      var fromMonthly = Number(MONTHLY_CONFIG.CALLSIGN_COL_WIDTH);
+      if (isFinite(fromMonthly) && fromMonthly > 0) return fromMonthly;
+    }
+  } catch (e) {}
+  return 150;
+}
+
 function applyColumnWidthsStandardsToSheet_(sheet) {
   try {
     if (!sheet) return;
@@ -225,13 +235,21 @@ function applyColumnWidthsStandardsToSheet_(sheet) {
 
     if (_sheetStandardsIsMonthlySheet_(sheetName)) {
       var slotWidth = _sheetStandardsGetMonthlySlotColWidth_();
+      var callsignWidth = _sheetStandardsGetMonthlyCallsignColWidth_();
       var dataWidth = _sheetStandardsGetMonthlyDataColWidth_();
       try {
         sheet.setColumnWidth(1, slotWidth);
       } catch (e) {
         _sheetStandardsLog_("Column width apply error on column 1", e);
       }
-      for (var col = 2; col <= maxCols; col++) {
+      if (maxCols >= 2) {
+        try {
+          sheet.setColumnWidth(2, callsignWidth);
+        } catch (e) {
+          _sheetStandardsLog_("Column width apply error on column 2", e);
+        }
+      }
+      for (var col = 3; col <= maxCols; col++) {
         try {
           sheet.setColumnWidth(col, dataWidth);
         } catch (e) {

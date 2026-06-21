@@ -304,7 +304,7 @@ const OperationRepository_ = (function() {
     var runSource = String(cfg.runSource || cfg.source || initiator || 'manual');
     var parentOperationId = _normalizeOperationId(cfg.parentOperationId || payload.parentOperationId || '');
 
-    if (!cfg.dryRun) {
+    if (!cfg.dryRun && !cfg.skipDuplicateCheck) {
       var duplicateActive = _findDuplicateInActive(fingerprint, operationId);
       if (duplicateActive) {
         return { suppressed: true, reason: 'duplicate_active_execution', previous: duplicateActive, operationId: operationId, fingerprint: fingerprint, scenario: canonical };
@@ -313,7 +313,9 @@ const OperationRepository_ = (function() {
       if (recentCommitted) {
         return { suppressed: true, reason: 'duplicate_recent_success', previous: recentCommitted, operationId: operationId, fingerprint: fingerprint, scenario: canonical };
       }
+    }
 
+    if (!cfg.dryRun) {
       var startedText = _iso(startedAt);
       var expiresAt = _expiresAtText(rawScenario, payload, startedAt);
       _appendRow(_sheet(SHEETS.OPS, OPS_HEADERS), [

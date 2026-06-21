@@ -73,6 +73,13 @@ function createNextMonthSheet() {
     newSheet.getRange(getMonthlyCodeRangeA1ForSheet_(newSheet)).clearContent();
 
     applyGlobalSheetStandards_();
+    try {
+      if (typeof syncMonthlyCallsignsFromPersonnel_ === "function") {
+        syncMonthlyCallsignsFromPersonnel_(newSheet);
+      }
+    } catch (syncErr) {
+      console.error(syncErr);
+    }
     newSheet.activate();
     highlightActiveMonthTab_(nextName);
 

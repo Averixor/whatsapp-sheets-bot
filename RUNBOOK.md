@@ -296,7 +296,7 @@ guest / login fail
 
 **Перевірити:**
 
-- рядок у PERSONNEL (Callsign / TEMPLATE, Status українською);
+- рядок у PERSONNEL (Callsign у колонці L, Status українською);
 - телефон / `2_Phone`;
 - після змін даних або deploy — **`apiStage7ClearPhoneCache()`**.
 
@@ -636,13 +636,35 @@ Logical (canonical): `ID | FML | Birthday | Age | Days_until_birthday | Phone | 
 
 **Reference workbook "Книга Взводу Охорони" physical layout (supported):**
 
-- Name parts: `Last name`, `First name`, `Patronymic` (code synthesizes `FML` = "Last First Patronymic")
-- Callsign carrier: `TEMPLATE` column (preferred; the `Callsign` header cell may contain a formula)
-- `ID` / `ID v/s`, `Rank` (instead of/ + Title), `OSH 4` (space ok), `Status`
-- Code reads **exclusively by header names** (with aliases for UA/EN/split variants) — column index is ignored.
+Contract: `contracts/reference-workbook-layout.contract.json` (headers extracted from the reference xlsx).
 
-Required (logical): `FML` (or split name parts), `Birthday`, `Phone`, `Callsign` (or TEMPLATE), `Position`, `OSH_4` (or "OSH 4"), `Status`.
-`ID`, `Age`, `Days_until_birthday`, `2_Phone`/`Phone 2`, `Title`/`Rank`, `TEMPLATE`, `Unit`, and split name columns are optional; computed helpers are tolerated.
+**PERSONNEL (row 1, columns A–P):**
+
+| Col | Header | Role |
+| --- | --- | --- |
+| A | Cells | Ignored (sheet row marker) |
+| B | ID v/s | Optional internal id (`ID_VS`) |
+| C | ID | Армія+ (optional data) |
+| D–F | Last name / First name / Patronymic | Code synthesizes `FML` |
+| G–I | Birthday / Age / Days until birthday | Birthday helpers (materialized) |
+| J–K | Phone / Phone 2 | Phones |
+| **L** | **Callsign** | **Working callsign** (e.g. `ГРАФ`) — schedule key |
+| M | Rank | Rank (instead of Title) |
+| N | Position | Position |
+| O | OSH 4 | OSH_4 (space ok) |
+| P | Status | UA dropdown (9 values) |
+
+**Monthly sheets:**
+
+- **06 (compact):** A = БР (formula), **B = Позивний**, dates from **C** (`C2:AF30` code range).
+- **02–05 (standard):** A = ТЕЛЕФОН, **B = ПОЗИВНИЙ**, dates from **H**.
+
+**Monthly «Позивні» sync:** `Callsign` from PERSONNEL → monthly callsign column; empty Callsign → `Last name` (row-aligned). See `sheets/MonthlyCallsignSync.gs`.
+
+`TEMPLATE` column is supported only in **legacy** workbooks (not in the reference xlsx). Code reads **exclusively by header names** (aliases for UA/EN/split variants).
+
+Required (logical): `FML` (or split name parts), `Birthday`, `Phone`, `Callsign`, `Position`, `OSH_4` (or "OSH 4"), `Status`, `Title` or `Rank`.
+`ID`, `Age`, `Days_until_birthday`, `2_Phone`/`Phone 2`, `ID v/s`, `TEMPLATE`, `Unit`, and split name columns are optional; computed helpers are tolerated.
 
 ### One-time / migration in the spreadsheet
 
