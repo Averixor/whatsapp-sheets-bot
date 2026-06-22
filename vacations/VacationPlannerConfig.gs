@@ -43,11 +43,9 @@ const VACATION_PLANNER_CONFIG = Object.freeze({
     startRow: 2,
   }),
 
-  /** Legacy right-side panel — presentation / migration source only. */
   RIGHT_PANEL: Object.freeze({
     startCol: 11,
     width: 9,
-    headerLabel: "Представлення — не редагувати",
     warningMessage:
       "Увага: знайдено дані у правій таблиці K:Q. Вона не є джерелом істини. Перенесіть ці записи в основний список A:I або очистіть праву таблицю.",
   }),

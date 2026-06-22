@@ -5,7 +5,7 @@
  * [{ code, label, order, showZero }]
  *
  * Expected DICT_SUM headers:
- * Код | Назва (або Вид служби) | Порядок
+ * Код | Вид служби (або Назва) | Порядок
  * Legacy Label/Order/ShowZero headers are still accepted.
  */
 function readDictSum_() {
@@ -103,7 +103,6 @@ function readDictSum_() {
 
 function getDefaultDictSumRules_() {
   const entries = [
-    { code: "ОС", order: 1 },
     { code: "Black", order: 10 },
     { code: "Roland", order: 15 },
     { code: "БР", order: 20 },
@@ -120,11 +119,11 @@ function getDefaultDictSumRules_() {
     { code: "*2РБпАК", order: 160 },
     { code: "*1УРБпАК", order: 165 },
     { code: "*2УРБпАК", order: 200 },
-    { code: "Відряд", order: 205 },
-    { code: "Відпус", order: 210 },
-    { code: "Лікарн", order: 215 },
-    { code: "Київ", order: 220 },
-    { code: "Гусачі", order: 225 },
+    { code: "Відрядження", order: 205 },
+    { code: "Відпустка", order: 210 },
+    { code: "Лікарняний", order: 215 },
+    { code: "ППД Київ", order: 220 },
+    { code: "Гусачівка", order: 225 },
     { code: "DC", order: 230 },
     { code: "БЗВП", order: 245 },
     { code: "СЗЧ", order: 300 },

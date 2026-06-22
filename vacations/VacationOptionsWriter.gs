@@ -134,15 +134,6 @@ const VacationOptionsWriter_ = (function () {
     if (changed) {
       headerRange.setValues([headers]);
     }
-    const panel = VACATION_PLANNER_CONFIG.RIGHT_PANEL;
-    if (panel && panel.startCol) {
-      const rightHeader = sheet.getRange(1, panel.startCol);
-      if (!String(rightHeader.getValue() || "").trim()) {
-        rightHeader.setValue(
-          panel.headerLabel || "Представлення — не редагувати",
-        );
-      }
-    }
     return sheet;
   }
 
@@ -1145,6 +1136,40 @@ const VacationOptionsWriter_ = (function () {
     };
   }
 
+  function _readCachedChecks_() {
+    const sheet = _spreadsheet_().getSheetByName(
+      VACATION_PLANNER_CONFIG.SHEETS.CHECK,
+    );
+    if (!sheet || sheet.getLastRow() < 2) return [];
+
+    const lastRow = sheet.getLastRow();
+    const values = sheet.getRange(2, 1, lastRow - 1, 5).getValues();
+    const checks = [];
+
+    values.forEach(function (row) {
+      const severity = String(row[4] || "")
+        .trim()
+        .toUpperCase();
+      const typeLabel = String(row[1] || "").trim();
+      if (!typeLabel || severity === "OK" || typeLabel === "ALL_RULES") return;
+      checks.push({
+        rule: typeLabel,
+        severity: severity,
+        fml: String(row[2] || "").trim(),
+        date: String(row[0] || "").trim(),
+        details: String(row[3] || "").trim(),
+      });
+    });
+
+    return checks;
+  }
+
+  function summarizeVacationProblemsFromCache_() {
+    const checks = _readCachedChecks_();
+    if (!checks.length) return null;
+    return _summarizeAuditProblems_({ checks: checks, schedule: [] });
+  }
+
   function summarizeVacationProblems() {
     return _summarizeAuditProblems_(_loadAudit_());
   }
@@ -1506,6 +1531,7 @@ const VacationOptionsWriter_ = (function () {
     normalizeChecks: normalizeChecks,
     normalizeProblems: normalizeProblems,
     summarizeVacationProblems: summarizeVacationProblems,
+    summarizeVacationProblemsFromCache_: summarizeVacationProblemsFromCache_,
     humanRuleLabel: _humanRuleLabel_,
     rebuildVacationSystem: rebuildVacationSystem,
     checkVacationScheduleOnly: checkVacationScheduleOnly,

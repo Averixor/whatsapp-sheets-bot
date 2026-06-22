@@ -253,15 +253,20 @@
     async switchMonth(month) {
       const response = await Api.run("apiStage7SwitchBotToMonth", month || "");
       const result = unwrapStage4Result(response) || {};
+      const meta = unwrapStage4Meta(response);
+      const resolvedMonth =
+        result.month ||
+        meta?.sync?.currentMonth ||
+        String(month || "").trim();
       return {
         success: !!response?.success,
         message: response?.message || "",
         error: response?.error || null,
         data: result,
-        month: result.month || "",
+        month: resolvedMonth,
         warnings: Array.isArray(response?.warnings) ? response.warnings : [],
         context: response?.context || null,
-        meta: unwrapStage4Meta(response),
+        meta,
         raw: response,
       };
     },

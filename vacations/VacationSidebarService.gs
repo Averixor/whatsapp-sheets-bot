@@ -292,7 +292,7 @@ const VacationSidebarService_ = (function () {
       },
       scheduleYear: VacationOptionsWriter_.resolveScheduleYear({}),
       scheduleYearOptions: _scheduleYearOptions_(),
-      problemSummary: VacationOptionsWriter_.summarizeVacationProblems(),
+      problemSummary: VacationOptionsWriter_.summarizeVacationProblemsFromCache_(),
       rightPanelMigration: _rightPanelMigrationState_(),
     };
   }
@@ -596,7 +596,7 @@ const VacationSidebarService_ = (function () {
           activePeople: Object.keys(people).length,
         },
         rightPanelMigration: _rightPanelMigrationState_(),
-        problemSummary: VacationOptionsWriter_.summarizeVacationProblems(),
+        problemSummary: VacationOptionsWriter_.summarizeVacationProblemsFromCache_(),
       };
     });
   }

@@ -441,7 +441,7 @@ function _sshBuildRegistry_() {
     {
       name: _sshConfigValue_("DICT_SUM_SHEET", "DICT_SUM"),
       schemaKey: "dictSum",
-      headers: ["Код", "Назва", "Порядок"],
+      headers: ["Код", "Вид служби", "Порядок"],
       minRows: 2,
     },
 

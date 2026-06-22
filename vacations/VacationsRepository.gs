@@ -34,7 +34,6 @@ const VacationsRepository_ = (function () {
     return {
       startCol: 11,
       width: 9,
-      headerLabel: "Представлення — не редагувати",
       warningMessage:
         "Увага: знайдено дані у правій таблиці K:Q. Вона не є джерелом істини. Перенесіть ці записи в основний список A:I або очистіть праву таблицю.",
     };
@@ -477,12 +476,6 @@ const VacationsRepository_ = (function () {
     return lastRow + 1;
   }
 
-  function _markRightPanelPresentation_(sheet) {
-    const panel = _rightPanelConfig_();
-    const startCol = panel.startCol || 11;
-    sheet.getRange(1, startCol).setValue(panel.headerLabel);
-  }
-
   function migrateRightVacationTableToMainSource() {
     const sheet = DataAccess_.getSheet(_sourceSheetName_(), null, false);
     if (!sheet) {
@@ -495,7 +488,6 @@ const VacationsRepository_ = (function () {
     const width = rangeCfg.width || 9;
     const rightRows = readRightPanelRows();
     if (!rightRows.length) {
-      _markRightPanelPresentation_(sheet);
       return {
         migrated: 0,
         skipped: 0,
@@ -548,7 +540,6 @@ const VacationsRepository_ = (function () {
     sheet
       .getRange(2, panel.startCol || 11, rowCount, panel.width || 9)
       .clearContent();
-    _markRightPanelPresentation_(sheet);
 
     return {
       migrated: migrated,

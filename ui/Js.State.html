@@ -566,14 +566,163 @@
     }, 1400);
   }
 
-  function showMenu() {
+  function isUiElementVisible_(id) {
+    const el = $id(id);
+    if (!el) return false;
+    return !el.classList.contains("wasb-is-hidden");
+  }
+
+  if (!Array.isArray(STATE.navigationStack)) STATE.navigationStack = [];
+  if (typeof STATE.currentScreen !== "string") STATE.currentScreen = "main";
+
+  var __navUiFlags_ = {
+    goingBack: false,
+    suppressNextResultPushFor: "",
+  };
+
+  function captureNavigationState_() {
+    const resultContent = $id("resultContent");
+    const personCard = $id("personCardContainer");
+    const menuSection = $id("menuSection");
+    const menuActive = !!menuSection?.classList?.contains("active");
+
+    return {
+      id: String(STATE.currentScreen || (menuActive ? "main" : "result")),
+      menuActive: menuActive,
+      title: String($id("resultTitle")?.textContent || "").trim(),
+      resultContentHtml: resultContent ? resultContent.innerHTML : "",
+      resultContentVisible: isUiElementVisible_("resultContent"),
+      personCardHtml: personCard ? personCard.innerHTML : "",
+      personCardVisible: isUiElementVisible_("personCardContainer"),
+    };
+  }
+
+  function pushCurrentNavigationState_() {
+    const snap = captureNavigationState_();
+    if (!snap.id) snap.id = snap.menuActive ? "main" : "result";
+    const stack = STATE.navigationStack;
+    const last = stack.length ? stack[stack.length - 1] : null;
+    if (
+      last &&
+      last.id === snap.id &&
+      last.menuActive === snap.menuActive &&
+      last.title === snap.title &&
+      last.resultContentHtml === snap.resultContentHtml &&
+      last.personCardHtml === snap.personCardHtml &&
+      last.resultContentVisible === snap.resultContentVisible &&
+      last.personCardVisible === snap.personCardVisible
+    ) {
+      return;
+    }
+    stack.push(snap);
+  }
+
+  function restoreNavigationState_(snap) {
+    const state = snap || { menuActive: true, id: "main" };
+
+    if (state.menuActive) {
+      $id("menuSection")?.classList?.add("active");
+      $id("resultSection")?.classList?.remove("active");
+      stopSending();
+      hidePersonCard();
+      show("resultContent", "block");
+      STATE.currentScreen = "main";
+      try {
+        if (typeof logToConsole === "function") {
+          logToConsole("🖥 Екран: Головне меню", "info");
+        }
+      } catch (_) {}
+      return;
+    }
+
+    $id("menuSection")?.classList?.remove("active");
+    $id("resultSection")?.classList?.add("active");
+    if (state.title) setText("resultTitle", state.title);
+
+    const resultContent = $id("resultContent");
+    const personCard = $id("personCardContainer");
+
+    if (state.personCardVisible) {
+      hide("resultContent");
+      show("personCardContainer", "block");
+      if (personCard) personCard.innerHTML = state.personCardHtml || "";
+    } else {
+      hidePersonCard();
+      show("resultContent", "block");
+      if (resultContent) resultContent.innerHTML = state.resultContentHtml || "";
+    }
+
+    STATE.currentScreen = state.id || "result";
+    try {
+      if (typeof logToConsole === "function" && state.title) {
+        logToConsole("🖥 Екран: " + state.title, "info");
+      }
+    } catch (_) {}
+  }
+
+  function resetNavigationStack_() {
+    STATE.navigationStack = [];
+    STATE.currentScreen = "main";
+    __navUiFlags_.suppressNextResultPushFor = "";
+  }
+
+  function navigateTo(screenName, openFn) {
+    const target = String(screenName || "result").trim() || "result";
+    __navUiFlags_.goingBack = false;
+    __navUiFlags_.suppressNextResultPushFor = target;
+
+    if (String(STATE.currentScreen || "main") !== target) {
+      pushCurrentNavigationState_();
+    }
+
+    STATE.currentScreen = target;
+
+    if (typeof openFn === "function") {
+      const result = openFn();
+      if (result && typeof result.then === "function") {
+        result.then(
+          function () {
+            if (__navUiFlags_.suppressNextResultPushFor === target) {
+              __navUiFlags_.suppressNextResultPushFor = "";
+            }
+          },
+          function () {
+            if (__navUiFlags_.suppressNextResultPushFor === target) {
+              __navUiFlags_.suppressNextResultPushFor = "";
+            }
+          },
+        );
+      }
+      return result;
+    }
+
+    return undefined;
+  }
+
+  function goBack() {
+    __navUiFlags_.suppressNextResultPushFor = "";
+    const stack = STATE.navigationStack;
+    if (!stack.length) {
+      showMenuInternal();
+      return;
+    }
+
+    __navUiFlags_.goingBack = true;
+    try {
+      const previous = stack.pop();
+      restoreNavigationState_(previous);
+    } finally {
+      __navUiFlags_.goingBack = false;
+    }
+  }
+
+  function showMenuInternal() {
+    resetNavigationStack_();
     try {
       if (typeof logToConsole === "function") {
         logToConsole("🖥 Екран: Головне меню", "info");
       }
     } catch (_) {}
-
-    flashScreenTransition_("Повернення до меню...");
 
     $id("menuSection")?.classList?.add("active");
     $id("resultSection")?.classList?.remove("active");
@@ -583,18 +732,35 @@
     show("resultContent", "block");
   }
 
+  function showMenu() {
+    goBack();
+  }
+
   function showResult(title) {
+    const suppressedScreen = __navUiFlags_.suppressNextResultPushFor;
+    const shouldSuppressPush =
+      !!suppressedScreen && suppressedScreen === String(STATE.currentScreen || "");
+
+    if (!__navUiFlags_.goingBack && !shouldSuppressPush) {
+      pushCurrentNavigationState_();
+    }
+
+    const screenTitle = title || "Результат";
+    if (shouldSuppressPush) {
+      __navUiFlags_.suppressNextResultPushFor = "";
+    } else {
+      STATE.currentScreen = "result:" + screenTitle;
+    }
+
     try {
       if (typeof logToConsole === "function") {
-        logToConsole("🖥 Екран: " + String(title || "Результат"), "info");
+        logToConsole("🖥 Екран: " + String(screenTitle), "info");
       }
     } catch (_) {}
 
-    flashScreenTransition_("Завантаження екрана...");
-
     $id("menuSection")?.classList?.remove("active");
     $id("resultSection")?.classList?.add("active");
-    setText("resultTitle", title || "Результат");
+    setText("resultTitle", screenTitle);
   }
 
   function showStandardResult(title) {
@@ -609,8 +775,8 @@
     showResult(title);
   }
 
-  var SIDEBAR_BOOT_TIMEOUT_MS = 20000;
-  var SIDEBAR_API_TIMEOUT_MS = 15000;
+  var SIDEBAR_BOOT_TIMEOUT_MS = 90000;
+  var SIDEBAR_API_TIMEOUT_MS = 60000;
   var __wasbSidebarBootTimeoutId = null;
   var __wasbSidebarBootGeneration = 0;
 

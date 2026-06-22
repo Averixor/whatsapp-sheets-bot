@@ -5,27 +5,28 @@
   // =========================
 
   async function showMonthSwitcher() {
-    if (!STATE.monthsList.length) {
-      try {
-        const data = await Stage7Api.getMonths();
+    try {
+      const data = await Stage7Api.getMonths();
 
-        if (data?.months) {
-          STATE.monthsList = data.months;
-          renderMonthSwitcher();
-        } else {
-          showMenu();
-        }
-      } catch (error) {
-        logToConsole(`${normalizeError(error)}`, "error");
-        showMenu();
+      if (data?.success && Array.isArray(data.months)) {
+        STATE.monthsList = data.months;
+        if (data.current) STATE.currentMonth = data.current;
+        renderMonthSwitcher();
+      } else if (STATE.monthsList.length) {
+        renderMonthSwitcher();
+      } else {
+        goBack();
       }
-
+    } catch (error) {
+      logToConsole(`${normalizeError(error)}`, "error");
+      if (STATE.monthsList.length) {
+        renderMonthSwitcher();
+      } else {
+        goBack();
+      }
+    } finally {
       hideLoading();
-      return;
     }
-
-    renderMonthSwitcher();
-    hideLoading();
   }
 
   function renderMonthSwitcher() {
@@ -57,7 +58,7 @@
 
         <div class="month-switcher-actions">
           <button type="button" class="result-link" onclick="SidebarApp.switchToSelectedMonth()">Перемкнути</button>
-          <button type="button" class="result-link result-link--secondary" onclick="SidebarApp.showMenu()">Скасувати</button>
+          <button type="button" class="result-link result-link--secondary" onclick="SidebarApp.goBack()">Скасувати</button>
         </div>
       </div>
     `,
@@ -73,10 +74,11 @@
         Stage7Api.switchMonth(select.value),
       );
       if (result?.success) {
-        STATE.currentMonth = result.month;
+        const switchedMonth = String(result.month || select.value || "").trim();
+        STATE.currentMonth = switchedMonth;
         updateMonthBadge(STATE.currentMonth);
         logToConsole(`✓ Перемкнено на ${STATE.currentMonth}`, "success");
-        showMenu();
+        goBack();
       } else {
         displayInResult("error", {
           error: result?.error || "Невідома помилка",
@@ -222,7 +224,7 @@
           <button
             type="button"
             class="result-link result-link--secondary"
-            onclick="SidebarApp.showMenu()"
+            onclick="SidebarApp.goBack()"
           >
             Скасувати
           </button>

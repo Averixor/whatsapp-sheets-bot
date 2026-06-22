@@ -24,22 +24,76 @@ function _inferMonthYearFromSheet_(sheet) {
   return { month: now.getMonth() + 1, year: now.getFullYear() };
 }
 
+function _monthSheetColumnToLetter_(col) {
+  var n = Number(col) || 0;
+  var out = "";
+  while (n > 0) {
+    var rem = (n - 1) % 26;
+    out = String.fromCharCode(65 + rem) + out;
+    n = Math.floor((n - 1) / 26);
+  }
+  return out || "A";
+}
+
+function _monthSheetRangeA1_(startCol, startRow, endCol, endRow) {
+  return (
+    _monthSheetColumnToLetter_(startCol) +
+    startRow +
+    ":" +
+    _monthSheetColumnToLetter_(endCol) +
+    endRow
+  );
+}
+
+function _ensureMonthDateColumns_(sheet, lastRequiredCol) {
+  if (!sheet || !lastRequiredCol) return;
+
+  var maxCols = 0;
+  try {
+    maxCols = Number(sheet.getMaxColumns()) || 0;
+  } catch (e) {}
+
+  if (maxCols && lastRequiredCol > maxCols) {
+    sheet.insertColumnsAfter(maxCols, lastRequiredCol - maxCols);
+  }
+}
+
 function _setMonthDatesRow_(sheet, month, year) {
   const ref = sheet.getRange(getMonthlyCodeRangeA1ForSheet_(sheet));
   const row = Number(CONFIG.DATE_ROW) || 1;
   const startCol = ref.getColumn();
-  const width = ref.getLastColumn() - startCol + 1;
+  const currentWidth = ref.getLastColumn() - startCol + 1;
+  const startDataRow =
+    typeof ref.getRow === "function" ? Number(ref.getRow()) || 2 : 2;
+  const dataRows =
+    typeof ref.getNumRows === "function" ? Number(ref.getNumRows()) || 1 : 1;
 
   const daysInMonth = new Date(year, month, 0).getDate();
+  const width = Math.max(currentWidth, daysInMonth);
+  const endCol = startCol + width - 1;
+  const endDataRow = startDataRow + dataRows - 1;
   const out = new Array(width).fill('');
 
-  const n = Math.min(width, daysInMonth);
-  for (let d = 1; d <= n; d++) {
+  _ensureMonthDateColumns_(sheet, endCol);
+
+  for (let d = 1; d <= daysInMonth; d++) {
     out[d - 1] = new Date(year, month - 1, d);
   }
 
+  _resetMonthDateHeaderStyle_(sheet, row, startCol, width);
   sheet.getRange(row, startCol, 1, width).setValues([out]);
-colorWeekendDateHeaders_(sheet, row, startCol, daysInMonth, year, month);
+  colorWeekendDateHeaders_(sheet, row, startCol, daysInMonth, year, month);
+
+  return {
+    daysInMonth: daysInMonth,
+    dateRangeA1: _monthSheetRangeA1_(startCol, row, endCol, row),
+    clearRangeA1: _monthSheetRangeA1_(
+      startCol,
+      startDataRow,
+      endCol,
+      endDataRow,
+    ),
+  };
 }
 
 function createNextMonthSheet() {
@@ -69,8 +123,8 @@ function createNextMonthSheet() {
     const targetMonth = nextNum;
     const targetYear = (targetMonth < srcMY.month) ? (srcMY.year + 1) : srcMY.year;
 
-    _setMonthDatesRow_(newSheet, targetMonth, targetYear);
-    newSheet.getRange(getMonthlyCodeRangeA1ForSheet_(newSheet)).clearContent();
+    const monthGrid = _setMonthDatesRow_(newSheet, targetMonth, targetYear);
+    newSheet.getRange(monthGrid.clearRangeA1).clearContent();
 
     applyGlobalSheetStandards_();
     try {
@@ -133,22 +187,32 @@ function switchBotToMonth_(monthSheetName) {
   SpreadsheetApp.getUi().toast(`Бот активний: ${monthSheetName}`, ' WhatsApp-Sheets-Bot', 3);
 }
 
+function _resetMonthDateHeaderStyle_(sheet, dateRow, startCol, rangeWidth) {
+  if (!sheet || !dateRow || !startCol || !rangeWidth) return;
+
+  sheet
+    .getRange(dateRow, startCol, 1, rangeWidth)
+    .setBackground(null)
+    .setFontColor("#000000");
+}
+
 function colorWeekendDateHeaders_(sheet, dateRow, startCol, daysInMonth, year, month) {
   if (!sheet || !dateRow || !startCol || !daysInMonth || !year || !month) return;
 
-  var weekendBg = '#f4cccc';
-  var weekendFont = '#cc0000';
+  var weekendBg = "#f4cccc";
+  var defaultFont = "#000000";
 
   for (var day = 1; day <= daysInMonth; day++) {
     var date = new Date(year, month - 1, day);
     var weekDay = date.getDay();
+    var cell = sheet.getRange(dateRow, startCol + day - 1);
+
+    cell.setFontColor(defaultFont);
 
     if (weekDay === 0 || weekDay === 6) {
-      sheet
-        .getRange(dateRow, startCol + day - 1)
-        .setBackground(weekendBg)
-        .setFontColor(weekendFont);
+      cell.setBackground(weekendBg);
+    } else {
+      cell.setBackground(null);
     }
   }
 }
-

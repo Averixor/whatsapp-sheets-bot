@@ -197,6 +197,10 @@
       {
         "path": "reports/MonthlyReport.gs",
         "rationale": "Monthly report HTML uses local esc() for dynamic sheet/person/status values"
+      },
+      {
+        "path": "ui/Js.State.html",
+        "rationale": "Navigation history restores previously rendered sidebar HTML snapshots; dynamic rendering remains covered by reviewed render fragments"
       }
     ]
   },

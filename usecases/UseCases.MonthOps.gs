@@ -35,8 +35,8 @@ function _stage7CreateNextMonthCore_(payload) {
   const targetMonth = nextNum;
   const targetYear = targetMonth < srcMY.month ? srcMY.year + 1 : srcMY.year;
 
-  _setMonthDatesRow_(newSheet, targetMonth, targetYear);
-  newSheet.getRange(getMonthlyCodeRangeA1ForSheet_(newSheet)).clearContent();
+  const monthGrid = _setMonthDatesRow_(newSheet, targetMonth, targetYear);
+  newSheet.getRange(monthGrid.clearRangeA1).clearContent();
 
   try {
     applyGlobalSheetStandards_();
@@ -78,6 +78,7 @@ var UseCasesMonthOps_ = (function () {
       scenario: "switchBotToMonth",
       payload: payload,
       write: true,
+      idempotency: false,
       validate: function (input) {
         const validated = validateMonthSwitch_(
           input.month || input.monthSheetName || input.sheetName || "",
@@ -97,6 +98,11 @@ var UseCasesMonthOps_ = (function () {
       },
       execute: function (input) {
         setBotMonthSheetName_(input.month);
+        try {
+          const ss = getWasbSpreadsheet_();
+          const sh = ss.getSheetByName(input.month);
+          if (sh) sh.activate();
+        } catch (_) {}
         return {
           success: true,
           message: "Активний місяць перемкнуто",

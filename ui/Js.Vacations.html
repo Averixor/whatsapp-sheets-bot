@@ -615,6 +615,9 @@
       activeTab: "overview",
       statusMessage: "",
       statusType: "info",
+      isStateLoading: false,
+      isProblemsLoading: false,
+      isCalendarLoading: false,
       options: [],
       checks: [],
       problemsLoaded: false,
@@ -862,6 +865,9 @@
     },
 
     checksHtml() {
+      if (this.state.isProblemsLoading) {
+        return '<div class="vacations-card vacations-empty">Перевіряю графік…</div>';
+      }
       if (!this.state.problemsLoaded) {
         return (
           '<div class="vacations-card vacations-empty">Натисніть «Знайти проблеми», щоб перевірити графік.</div>' +
@@ -984,14 +990,21 @@
     },
 
     monthCalendarHtml() {
+      var calendarBody = "";
+      if (this.state.isCalendarLoading) {
+        calendarBody = '<div class="vacations-empty">Завантажую календар…</div>';
+      } else if (this.state.monthCalendar) {
+        calendarBody = renderVacationMonthCalendar_(this.state.monthCalendar);
+      } else {
+        calendarBody =
+          '<div class="vacations-empty">Оберіть місяць і натисніть «Показати місяць».</div>';
+      }
       return (
         '<div class="vacations-card">' +
         '<div class="vacations-card__head"><strong>Міні-календар відпусток</strong></div>' +
         this.monthCalendarControlsHtml() +
         '<div id="vacationMonthCalendar">' +
-        (this.state.monthCalendar
-          ? renderVacationMonthCalendar_(this.state.monthCalendar)
-          : '<div class="vacations-empty">Оберіть місяць і натисніть «Показати місяць».</div>') +
+        calendarBody +
         (this.state.calendarDayDetails
           ? '<div class="vacations-card vacations-calendar-day-details">' +
             this.state.calendarDayDetails +
@@ -1227,9 +1240,13 @@
             "</pre></div>"
           );
         default:
+          var loadingState = s.isStateLoading
+            ? '<div class="vacations-status vacations-status--info">Завантажую дані відпусток…</div>'
+            : "";
           return (
             '<div class="result-screen">' +
             '<div class="result-screen-title">Огляд відпусток</div>' +
+            loadingState +
             '<div class="vacations-stats">' +
             '<div class="vacations-stat"><strong>' +
             this.esc(s.stats.total || 0) +
@@ -1308,14 +1325,15 @@
       this.state.activeTab = "overview";
       this.setStatus("Завантаження…", "info");
       this.render();
-      var self = this;
-      this.loadState().then(function () {
-        return self.loadMonthCalendar();
-      });
+      this.loadState({ silent: true });
     },
 
-    async loadState() {
-      showLoading();
+    async loadState(options) {
+      var silent = !!(options && options.silent);
+      if (this.state.isStateLoading) return;
+      this.state.isStateLoading = true;
+      if (silent) this.render();
+      if (!silent) showLoading();
       try {
         var result = await runServerMethod_(
           "getVacationSidebarState",
@@ -1339,7 +1357,9 @@
       } catch (error) {
         this.showError(error);
       } finally {
-        hideLoading();
+        this.state.isStateLoading = false;
+        if (!silent) hideLoading();
+        this.render();
       }
     },
 
@@ -1348,10 +1368,10 @@
       this.setStatus("", "info");
       this.render();
       if (tab === "overview" && !this.state.monthCalendar) {
-        this.loadMonthCalendar();
+        this.render();
       }
       if (tab === "check" && !this.state.problemsLoaded) {
-        this.loadProblems();
+        this.render();
       }
     },
 
@@ -1659,6 +1679,9 @@
     },
 
     async loadProblems() {
+      if (this.state.isProblemsLoading) return;
+      this.state.isProblemsLoading = true;
+      this.render();
       showLoading();
       try {
         var result = await runServerMethod_(
@@ -1697,7 +1720,9 @@
       } catch (error) {
         this.showError(error);
       } finally {
+        this.state.isProblemsLoading = false;
         hideLoading();
+        this.render();
       }
     },
 
@@ -1794,7 +1819,9 @@
       return { year: year, month: month };
     },
 
-    async loadMonthCalendar(preferredYearMonth) {
+    async loadMonthCalendar(preferredYearMonth, options) {
+      var opts = options || {};
+      var silent = !!opts.silent;
       var ym;
       if (
         preferredYearMonth &&
@@ -1811,7 +1838,10 @@
       } else {
         ym = this.getCalendarYearMonth_();
       }
-      showLoading();
+      if (this.state.isCalendarLoading) return;
+      this.state.isCalendarLoading = true;
+      this.render();
+      if (!silent) showLoading();
       try {
         var calendar = await runServerMethod_(
           "getVacationMonthCalendarFromSidebar",
@@ -1822,7 +1852,9 @@
       } catch (error) {
         this.showError(error);
       } finally {
-        hideLoading();
+        this.state.isCalendarLoading = false;
+        if (!silent) hideLoading();
+        this.render();
       }
     },
 

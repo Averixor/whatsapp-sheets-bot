@@ -551,7 +551,7 @@
         logToConsole("⟳ bootstrapSidebar…", "info", { channel: "ui" });
         boot = await withPromiseTimeout_(
           Stage7Api.bootstrapSidebar(),
-          SIDEBAR_API_TIMEOUT_MS,
+          90000,
           "bootstrapSidebar",
         );
         if (boot?.success) {
@@ -577,6 +577,7 @@
           applyPersonnelCallsignsFromServer_(boot.personnelCallsigns);
         }
         applyCommanderRecipientFromBootstrap_(boot);
+        stopSidebarBootTimeout();
       } else {
         try {
           await withPromiseTimeout_(
@@ -584,6 +585,7 @@
             SIDEBAR_API_TIMEOUT_MS,
             "loadAccessDescriptor",
           );
+          stopSidebarBootTimeout();
         } catch (accessErr) {
           logToConsole(
             `⚠ loadAccessDescriptor: ${normalizeError(accessErr)}`,
@@ -851,7 +853,7 @@
           const result = await ActionDispatcher.run("generatePanel", () =>
             Stage7Api.generatePanelForDate({ date: _todayStr_() }),
           );
-          await displayPanelResult(result);
+          navigateTo("generatePanel", () => displayPanelResult(result));
           break;
         }
 
@@ -873,7 +875,7 @@
                 `✕ Не вдалося оновити панель надсилання: ${normalizeError(error)}`,
                 "error",
               );
-              showSendPanel();
+              navigateTo("sendPanel", () => showSendPanel());
               return;
             }
           }
@@ -883,16 +885,16 @@
               "warning",
             );
           }
-          showSendPanel();
+          navigateTo("sendPanel", () => showSendPanel());
           break;
         }
 
         case "daySummary":
-          showCalendar(action);
+          navigateTo("daySummary", () => showCalendar(action));
           break;
 
         case "detailedDay":
-          showCalendar(action);
+          navigateTo("detailedDay", () => showCalendar(action));
           break;
 
         case "createNextMonth": {
@@ -901,18 +903,21 @@
           );
           if (result?.success) {
             logToConsole(`✓ ${result.message}`, "success");
-            showStandardResult("Створення місяця");
-            displayInResult("createMonth", result);
+            navigateTo("createNextMonth", () => {
+              displayInResult("createMonth", result);
+            });
           } else {
-            displayInResult("error", {
-              error: result?.error || "Невідома помилка",
+            navigateTo("createNextMonth", () => {
+              displayInResult("error", {
+                error: result?.error || "Невідома помилка",
+              });
             });
           }
           break;
         }
 
         case "vacations":
-          await showVacationsModule();
+          navigateTo("vacations", () => showVacationsModule());
           break;
 
         case "vacationReminder": {
@@ -925,17 +930,20 @@
               }),
           );
           if (result?.success) {
-            showStandardResult("Нагадування про відпустки");
-            displayInResult(
-              "vacationResult",
-              Object.assign({}, result.vacations || {}, {
-                message: result.message || "",
-              }),
-            );
+            navigateTo("vacationReminder", () => {
+              displayInResult(
+                "vacationResult",
+                Object.assign({}, result.vacations || {}, {
+                  message: result.message || "",
+                }),
+              );
+            });
             logToConsole("🏖️ Нагадування про відпустки перевірено", "success");
           } else {
-            displayInResult("error", {
-              error: result?.error || "Невідома помилка",
+            navigateTo("vacationReminder", () => {
+              displayInResult("error", {
+                error: result?.error || "Невідома помилка",
+              });
             });
           }
           break;
@@ -949,31 +957,37 @@
             }),
           );
           if (result?.success) {
-            showStandardResult("🎂 Дні Народження");
-            displayBirthdayResult(result.birthdays || {});
+            navigateTo("birthdayCheck", () => {
+              showStandardResult("🎂 Дні Народження");
+              displayBirthdayResult(result.birthdays || {});
+            });
             logToConsole("🎂 Перевірка ДН виконана", "success");
           } else {
-            displayInResult("error", {
-              error: result?.error || "Невідома помилка",
+            navigateTo("birthdayCheck", () => {
+              displayInResult("error", {
+                error: result?.error || "Невідома помилка",
+              });
             });
           }
           break;
         }
 
         case "switchMonth":
-          await showMonthSwitcher();
+          navigateTo("switchMonth", () => showMonthSwitcher());
           break;
 
         case "debugAccess": {
-          showStandardResult("Перевірка доступу");
-          setHtml(
-            "resultContent",
-            `
+          navigateTo("debugAccess", () => {
+            showStandardResult("Перевірка доступу");
+            setHtml(
+              "resultContent",
+              `
             <div class="result-item">
               <div class="result-value">Перевіряю доступ...</div>
             </div>
           `,
-          );
+            );
+          });
 
           const result = await ActionDispatcher.run(
             "debugAccess",
@@ -1022,11 +1036,11 @@
         }
 
         case "healthCheck":
-          showHealthCheckPanel();
+          navigateTo("healthCheck", () => showHealthCheckPanel());
           break;
 
         case "pendingRepairs":
-          await showPendingRepairs();
+          navigateTo("pendingRepairs", () => showPendingRepairs());
           break;
 
         case "restartBot":
@@ -1054,7 +1068,7 @@
           break;
 
         case "requests":
-          await SidebarApp.showRequestsForm();
+          navigateTo("requests", () => SidebarApp.showRequestsForm());
           break;
 
         default:
