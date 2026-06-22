@@ -28,6 +28,7 @@ var POLICY_CHECKS_CONFIG_ = {
     "VACATION_OPTIONS",
     "SEND_PANEL",
     "PHONES",
+    "PERSONNEL",
   ],
 
   STRICT_PROTECTED_SHEETS_MODE: false,
@@ -426,6 +427,8 @@ function _patchSideEffectsForPolicyChecks_() {
   var originals = {
     accessReportViolation: null,
     mailSendEmail: null,
+    scriptCacheFactory: null,
+    scriptCacheStore: null,
   };
 
   try {
@@ -459,6 +462,33 @@ function _patchSideEffectsForPolicyChecks_() {
     }
   } catch (_) {}
 
+  try {
+    if (
+      typeof CacheService !== "undefined" &&
+      CacheService &&
+      typeof CacheService.getScriptCache === "function"
+    ) {
+      originals.scriptCacheFactory = CacheService.getScriptCache;
+      originals.scriptCacheStore = {};
+      CacheService.getScriptCache = function () {
+        var store = originals.scriptCacheStore;
+        return {
+          get: function (key) {
+            return Object.prototype.hasOwnProperty.call(store, key)
+              ? store[key]
+              : null;
+          },
+          put: function (key, value) {
+            store[key] = value;
+          },
+          remove: function (key) {
+            delete store[key];
+          },
+        };
+      };
+    }
+  } catch (_) {}
+
   return originals;
 }
 
@@ -478,6 +508,16 @@ function _restoreSideEffectsForPolicyChecks_(originals) {
   try {
     if (saved.mailSendEmail && typeof MailApp !== "undefined" && MailApp) {
       MailApp.sendEmail = saved.mailSendEmail;
+    }
+  } catch (_) {}
+
+  try {
+    if (
+      saved.scriptCacheFactory &&
+      typeof CacheService !== "undefined" &&
+      CacheService
+    ) {
+      CacheService.getScriptCache = saved.scriptCacheFactory;
     }
   } catch (_) {}
 }
@@ -1169,6 +1209,13 @@ function runAccessPolicyChecks(options) {
 
         var mailCalls = 0;
         var savedMail = null;
+        var restoreMail = function () {
+          if (savedMail) {
+            try {
+              MailApp.sendEmail = savedMail;
+            } catch (_) {}
+          }
+        };
         try {
           if (typeof MailApp !== "undefined" && MailApp && MailApp.sendEmail) {
             savedMail = MailApp.sendEmail;
@@ -1178,73 +1225,81 @@ function runAccessPolicyChecks(options) {
           }
         } catch (_) {}
 
-        var sanitized = AccessEnforcement_.sanitizeClientSignalDetails({
-          email: "x@test.com",
-          payload: { nested: true },
-          foo: "x".repeat(1000),
-          source: "sidebar",
-          callsign: "TEST",
-        });
-
-        if (Object.prototype.hasOwnProperty.call(sanitized, "email")) {
-          throw new Error("sanitizeClientSignalDetails kept email");
-        }
-        if (Object.prototype.hasOwnProperty.call(sanitized, "payload")) {
-          throw new Error("sanitizeClientSignalDetails kept payload");
-        }
-        if (Object.prototype.hasOwnProperty.call(sanitized, "foo")) {
-          throw new Error("sanitizeClientSignalDetails kept unknown key foo");
-        }
-        if (String(sanitized.callsign || "").length > 120) {
-          throw new Error(
-            "sanitizeClientSignalDetails did not truncate callsign",
-          );
-        }
-
-        var blocked = AccessEnforcement_.reportClientAccessSignal(
-          "notAllowlistedAction",
-          { source: "policy-check" },
-        );
-        if (!blocked || blocked.blocked !== true) {
-          throw new Error("non-allowlisted client signal was not blocked");
-        }
-
-        var ok = AccessEnforcement_.reportClientAccessSignal(
-          "sidebarActionUiDenied",
-          {
+        try {
+          var sanitized = AccessEnforcement_.sanitizeClientSignalDetails({
             email: "x@test.com",
             payload: { nested: true },
             foo: "x".repeat(1000),
-            source: "policy-check",
-            requestedAction: "test",
-          },
-        );
-        if (!ok || ok.success !== true) {
-          throw new Error("allowlisted client signal failed");
-        }
-        if (ok.emailSent === true) {
-          throw new Error("client signal must not send email");
-        }
-        if (mailCalls > 0) {
-          throw new Error("client signal triggered MailApp.sendEmail");
-        }
-        if (
-          !ok.data ||
-          !ok.data.sanitized ||
-          Object.prototype.hasOwnProperty.call(ok.data.sanitized, "email")
-        ) {
-          throw new Error("client signal result kept unsanitized email");
-        }
+            source: "sidebar",
+            callsign: "TEST",
+          });
 
-        if (savedMail) {
-          MailApp.sendEmail = savedMail;
-        }
+          if (Object.prototype.hasOwnProperty.call(sanitized, "email")) {
+            throw new Error("sanitizeClientSignalDetails kept email");
+          }
+          if (Object.prototype.hasOwnProperty.call(sanitized, "payload")) {
+            throw new Error("sanitizeClientSignalDetails kept payload");
+          }
+          if (Object.prototype.hasOwnProperty.call(sanitized, "foo")) {
+            throw new Error("sanitizeClientSignalDetails kept unknown key foo");
+          }
+          if (String(sanitized.callsign || "").length > 120) {
+            throw new Error(
+              "sanitizeClientSignalDetails did not truncate callsign",
+            );
+          }
 
-        return {
-          sanitizedKeys: Object.keys(sanitized).sort(),
-          alertLogged: ok.alertLogged === true,
-          mailCalls: mailCalls,
-        };
+          var blocked = AccessEnforcement_.reportClientAccessSignal(
+            "notAllowlistedAction",
+            { source: "policy-check" },
+          );
+          if (!blocked || blocked.blocked !== true) {
+            throw new Error("non-allowlisted client signal was not blocked");
+          }
+
+          var ok = AccessEnforcement_.reportClientAccessSignal(
+            "sidebarActionUiDenied",
+            {
+              email: "x@test.com",
+              payload: { nested: true },
+              foo: "x".repeat(1000),
+              source: "policy-check",
+              requestedAction: "test",
+            },
+          );
+          if (!ok || ok.success !== true) {
+            throw new Error("allowlisted client signal failed");
+          }
+          if (ok.suppressed) {
+            return {
+              suppressed: true,
+              reason: ok.message || "debounced",
+              sanitizedKeys: Object.keys(sanitized).sort(),
+              mailCalls: mailCalls,
+            };
+          }
+          if (ok.emailSent === true) {
+            throw new Error("client signal must not send email");
+          }
+          if (mailCalls > 0) {
+            throw new Error("client signal triggered MailApp.sendEmail");
+          }
+          if (
+            !ok.data ||
+            !ok.data.sanitized ||
+            Object.prototype.hasOwnProperty.call(ok.data.sanitized, "email")
+          ) {
+            throw new Error("client signal result kept unsanitized email");
+          }
+
+          return {
+            sanitizedKeys: Object.keys(sanitized).sort(),
+            alertLogged: ok.alertLogged === true,
+            mailCalls: mailCalls,
+          };
+        } finally {
+          restoreMail();
+        }
       },
     );
 

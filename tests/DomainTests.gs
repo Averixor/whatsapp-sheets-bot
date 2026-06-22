@@ -285,7 +285,7 @@ function _runPersonnelRepositoryDomainTests_(report) {
     report,
     "personnel.materialize helper calculations",
     function () {
-      var today = new Date(2026, 5, 18, 12, 0, 0, 0);
+      var today = new Date(2026, 5, 20, 12, 0, 0, 0);
       var birthday = new Date(1990, 2, 17, 12, 0, 0, 0);
       var futureBirthday = new Date(2030, 0, 1, 12, 0, 0, 0);
 

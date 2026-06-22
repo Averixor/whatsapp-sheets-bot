@@ -779,6 +779,10 @@ var AccessEnforcement_ =
               : "Client access signal debounced",
           emailSent: false,
           alertLogged: false,
+          data: {
+            action: action,
+            sanitized: {},
+          },
         };
       }
 
