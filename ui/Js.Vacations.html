@@ -1769,9 +1769,11 @@
         return;
       }
       if (
-        !window.confirm(
-          "Застосувати " + plan.moves.length + " перенесень відпусток?",
-        )
+        !(await showConfirmModal({
+          title: "Пакетне рішення",
+          message:
+            "Застосувати " + plan.moves.length + " перенесень відпусток?",
+        }))
       ) {
         return;
       }
@@ -2017,10 +2019,17 @@
       }
     },
 
-    cancelVacation(index) {
+    async cancelVacation(index) {
       var vacation = this.state.vacations[index];
       if (!vacation) return;
-      if (!window.confirm("Скасувати відпустку: " + vacation.fml + "?")) return;
+      if (
+        !(await showConfirmModal({
+          title: "Скасування відпустки",
+          message: "Скасувати відпустку: " + vacation.fml + "?",
+          danger: true,
+        }))
+      )
+        return;
       showLoading();
       runServerMethod_(
         "cancelVacationFromSidebar",

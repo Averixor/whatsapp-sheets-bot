@@ -1,0 +1,212 @@
+<script>
+  // Js.Modals — sidebar-scoped modal dialogs (alert, confirm, input).
+
+  (function () {
+    "use strict";
+
+    var __wasbModalResolver = null;
+    var __wasbModalKeyHandler = null;
+
+    function wasbModalEl_(id) {
+      return document.getElementById(id);
+    }
+
+    function wasbModalEscape_(value) {
+      if (typeof escapeHtml === "function") {
+        return escapeHtml(value);
+      }
+      return String(value == null ? "" : value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function detachModalKeyHandler_() {
+      if (__wasbModalKeyHandler) {
+        document.removeEventListener("keydown", __wasbModalKeyHandler);
+        __wasbModalKeyHandler = null;
+      }
+    }
+
+    function closeWasbModal_(result) {
+      var modal = wasbModalEl_("wasbModal");
+      if (modal) {
+        modal.hidden = true;
+        modal.setAttribute("aria-hidden", "true");
+        modal.classList.remove("open");
+      }
+      detachModalKeyHandler_();
+      var resolve = __wasbModalResolver;
+      __wasbModalResolver = null;
+      if (resolve) resolve(result);
+    }
+
+    function bindModalActions_(options) {
+      var footer = wasbModalEl_("wasbModalFooter");
+      if (!footer) return;
+      footer.innerHTML = "";
+
+      var type = options.type || "alert";
+      var cancelBtn = document.createElement("button");
+      cancelBtn.type = "button";
+      cancelBtn.className = "modal-btn modal-btn-cancel";
+      cancelBtn.textContent = options.cancelLabel || "Скасувати";
+
+      var confirmBtn = document.createElement("button");
+      confirmBtn.type = "button";
+      confirmBtn.className =
+        "modal-btn " +
+        (options.danger ? "modal-btn-danger" : "modal-btn-confirm");
+      confirmBtn.textContent = options.confirmLabel || "OK";
+
+      if (type === "alert") {
+        confirmBtn.addEventListener("click", function () {
+          closeWasbModal_(true);
+        });
+        footer.appendChild(confirmBtn);
+        return confirmBtn;
+      }
+
+      cancelBtn.addEventListener("click", function () {
+        closeWasbModal_(type === "prompt" ? null : false);
+      });
+      confirmBtn.addEventListener("click", function () {
+        if (type === "prompt") {
+          var input = wasbModalEl_("wasbModalPromptInput");
+          closeWasbModal_(input ? String(input.value || "") : "");
+          return;
+        }
+        closeWasbModal_(true);
+      });
+      footer.appendChild(cancelBtn);
+      footer.appendChild(confirmBtn);
+      return confirmBtn;
+    }
+
+    function openWasbModal_(options) {
+      return new Promise(function (resolve) {
+        var modal = wasbModalEl_("wasbModal");
+        var titleEl = wasbModalEl_("wasbModalTitle");
+        var bodyEl = wasbModalEl_("wasbModalBody");
+        var backdrop = wasbModalEl_("wasbModalBackdrop");
+        if (!modal || !titleEl || !bodyEl) {
+          resolve(options.type === "prompt" ? null : false);
+          return;
+        }
+
+        __wasbModalResolver = resolve;
+        var type = options.type || "alert";
+        var title = String(options.title || "").trim();
+        var message = String(options.message || "");
+
+        titleEl.textContent = title || (type === "alert" ? "Повідомлення" : "Підтвердження");
+        bodyEl.innerHTML = "";
+
+        if (type === "prompt") {
+          var hint = document.createElement("p");
+          hint.className = "wasb-modal__message";
+          hint.textContent = message;
+          bodyEl.appendChild(hint);
+          var input = document.createElement("input");
+          input.type = options.inputType || "text";
+          input.id = "wasbModalPromptInput";
+          input.className = "wasb-modal__input";
+          input.value = String(options.defaultValue || "");
+          input.placeholder = String(options.placeholder || "");
+          input.autocomplete = "off";
+          bodyEl.appendChild(input);
+        } else {
+          var paragraph = document.createElement("p");
+          paragraph.className = "wasb-modal__message";
+          paragraph.textContent = message;
+          bodyEl.appendChild(paragraph);
+        }
+
+        bindModalActions_(options);
+
+        if (backdrop) {
+          backdrop.onclick = function () {
+            if (type === "alert") {
+              closeWasbModal_(true);
+              return;
+            }
+            closeWasbModal_(type === "prompt" ? null : false);
+          };
+        }
+
+        modal.hidden = false;
+        modal.setAttribute("aria-hidden", "false");
+        modal.classList.add("open");
+
+        __wasbModalKeyHandler = function (event) {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            closeWasbModal_(type === "alert" ? true : type === "prompt" ? null : false);
+            return;
+          }
+          if (event.key === "Enter" && type !== "prompt") {
+            event.preventDefault();
+            closeWasbModal_(true);
+          }
+        };
+        document.addEventListener("keydown", __wasbModalKeyHandler);
+
+        window.setTimeout(function () {
+          if (type === "prompt") {
+            var promptInput = wasbModalEl_("wasbModalPromptInput");
+            if (promptInput) promptInput.focus();
+            return;
+          }
+          var primary =
+            wasbModalEl_("wasbModalFooter") &&
+            wasbModalEl_("wasbModalFooter").querySelector(
+              ".modal-btn-confirm, .modal-btn-danger, .modal-btn",
+            );
+          if (primary) primary.focus();
+        }, 0);
+      });
+    }
+
+    async function showAlertModal(options) {
+      var opts = options || {};
+      await openWasbModal_({
+        type: "alert",
+        title: opts.title,
+        message: opts.message,
+        confirmLabel: opts.confirmLabel || "OK",
+      });
+      return true;
+    }
+
+    async function showConfirmModal(options) {
+      var opts = options || {};
+      return !!(await openWasbModal_({
+        type: "confirm",
+        title: opts.title,
+        message: opts.message,
+        confirmLabel: opts.confirmLabel || "Так",
+        cancelLabel: opts.cancelLabel || "Скасувати",
+        danger: opts.danger === true,
+      }));
+    }
+
+    async function showPromptModal(options) {
+      var opts = options || {};
+      return openWasbModal_({
+        type: "prompt",
+        title: opts.title,
+        message: opts.message,
+        placeholder: opts.placeholder,
+        defaultValue: opts.defaultValue,
+        inputType: opts.inputType || "text",
+        confirmLabel: opts.confirmLabel || "OK",
+        cancelLabel: opts.cancelLabel || "Скасувати",
+      });
+    }
+
+    window.showAlertModal = showAlertModal;
+    window.showConfirmModal = showConfirmModal;
+    window.showPromptModal = showPromptModal;
+  })();
+</script>

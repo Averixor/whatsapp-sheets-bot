@@ -91,7 +91,13 @@
 
   async function clearPhoneCache() {
     assertAdminAction_("clearPhoneCache");
-    if (!confirm("Очистити кеш телефонів?")) return;
+    if (
+      !(await showConfirmModal({
+        title: "Очищення кешу",
+        message: "Очистити кеш телефонів?",
+      }))
+    )
+      return;
 
     logToConsole("Очищення кешу телефонів...", "info");
 
@@ -348,7 +354,13 @@
 
   async function setupTrigger() {
     assertAdminAction_("setupTrigger");
-    if (!confirm("Створити щоденні тригери для відпусток і ДН?")) return;
+    if (
+      !(await showConfirmModal({
+        title: "Тригери",
+        message: "Створити щоденні тригери для відпусток і ДН?",
+      }))
+    )
+      return;
 
     logToConsole("Створення тригера...", "info");
 
@@ -387,7 +399,13 @@
 
   async function cleanupTriggers() {
     assertAdminAction_("cleanupTriggers");
-    if (!confirm("Очистити дублікати тригерів?")) return;
+    if (
+      !(await showConfirmModal({
+        title: "Тригери",
+        message: "Очистити дублікати тригерів?",
+      }))
+    )
+      return;
 
     logToConsole("Очищення дублів тригерів...", "info");
 
@@ -535,7 +553,13 @@
 
   async function applyProtections() {
     assertAdminAction_("applyProtections");
-    if (!confirm("Застосувати захист до службових листів?")) return;
+    if (
+      !(await showConfirmModal({
+        title: "Захист листів",
+        message: "Застосувати захист до службових листів?",
+      }))
+    )
+      return;
     logToConsole("Застосування захисту до службових листів...", "info");
     showStandardResult("Захист службових листів");
     setHtml(
@@ -585,9 +609,12 @@
   async function restartBot() {
     assertAdminAction_("restartBot");
     if (
-      !confirm(
-        "Повністю перезапустити бота?\n\nБудуть очищені активні маркери та активні операції життєвого циклу.",
-      )
+      !(await showConfirmModal({
+        title: "Перезапуск бота",
+        message:
+          "Повністю перезапустити бота?\n\nБудуть очищені активні маркери та активні операції життєвого циклу.",
+        danger: true,
+      }))
     )
       return;
     logToConsole("Перезапуск бота...", "info");
@@ -866,7 +893,13 @@
       showToast("Не знайдено operationId");
       return;
     }
-    if (!confirm("Запустити виправлення для цієї операції?")) return;
+    if (
+      !(await showConfirmModal({
+        title: "Виправлення",
+        message: "Запустити виправлення для цієї операції?",
+      }))
+    )
+      return;
     showStandardResult("Запуск виправлення");
     setHtml(
       "resultContent",

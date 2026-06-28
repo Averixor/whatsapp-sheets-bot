@@ -608,6 +608,22 @@
           </div>
         </div>
       </div>
+
+      <div class="wasb-modal" id="wasbModal" hidden aria-hidden="true">
+        <div class="wasb-modal__backdrop" id="wasbModalBackdrop" aria-hidden="true"></div>
+        <div
+          class="wasb-modal__dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="wasbModalTitle"
+        >
+          <div class="wasb-modal__header">
+            <h2 class="wasb-modal__title" id="wasbModalTitle">Повідомлення</h2>
+          </div>
+          <div class="wasb-modal__body" id="wasbModalBody"></div>
+          <div class="wasb-modal__footer" id="wasbModalFooter"></div>
+        </div>
+      </div>
     </div>
 
     <?!= includeTemplate('JavaScript'); ?>

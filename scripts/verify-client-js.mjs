@@ -105,6 +105,21 @@ function main() {
       /class="back-button back-btn"[\s\S]{0,160}onclick="SidebarApp\.goBack\(\)"/,
       'sidebar back button must call SidebarApp.goBack()',
     );
+    assert.match(
+      sidebar,
+      /id="wasbModal"/,
+      'sidebar must include wasb-modal shell inside sidebar-container',
+    );
+    assert.doesNotMatch(
+      source,
+      /\b(?:window\.)?(?:confirm|alert|prompt)\s*\(/,
+      'sidebar client must not use browser alert/confirm/prompt dialogs',
+    );
+    assert.match(
+      source,
+      /function showConfirmModal\(/,
+      'sidebar modal service must expose showConfirmModal',
+    );
     console.log('verify-client-js: OK');
   } catch (err) {
     console.error('verify-client-js: FAIL');

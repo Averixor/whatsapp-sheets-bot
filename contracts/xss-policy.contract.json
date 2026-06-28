@@ -218,6 +218,7 @@
   ],
   "targetFiles": [
     "ui/Js.Core.html",
+    "ui/Js.Modals.html",
     "ui/Js.Render.Panel.html",
     "ui/Js.Render.Calendar.html",
     "ui/Js.Render.Results.html",

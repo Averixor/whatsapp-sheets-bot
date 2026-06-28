@@ -356,7 +356,11 @@
     }
 
     if (
-      !confirm(`Повернути ${sentRows.length} рядків у стан "не відправлено"?`)
+      !(await showConfirmModal({
+        title: "Скидання статусу",
+        message:
+          'Повернути ' + sentRows.length + ' рядків у стан "не відправлено"?',
+      }))
     ) {
       return;
     }

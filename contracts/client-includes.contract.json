@@ -4,6 +4,7 @@
   "expected": [
     "Js.Core",
     "Js.State",
+    "Js.Modals",
     "Js.Api",
     "Js.Render.Panel",
     "Js.Render.Calendar",
