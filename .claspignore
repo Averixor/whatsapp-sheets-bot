@@ -1,20 +1,13 @@
-# Git / editor / dependencies
 .git/**
 node_modules/**
 .cursor/**
 .codex/**
 .agents/**
-
-# Docs / contracts / local-only files
 docs/**
 contracts/**
 *.md
 *.example.json
 cspell.json
-
-# Do not upload local JS mirrors when .gs sources exist
 **/*.js
-
-# Local smoke/runtime configs
 .clasp.smoke*
 appsscript.smoke.json
