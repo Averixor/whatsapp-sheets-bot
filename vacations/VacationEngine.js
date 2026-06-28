@@ -1,0 +1,1119 @@
+// ========== VACATION + BIRTHDAY ENGINE ==========
+
+const VACATION_ENGINE_CONFIG = {
+  VACATIONS_SHEET: "VACATIONS",
+  NAME_COL: 1,
+  START_COL: 2,
+  END_COL: 3,
+  NUM_COL: 4,
+  ACTIVE_COL: 5,
+  NOTIFY_COL: 6,
+  SOLDIER_DAYS: [3, 1],
+  NOTIFY_COMMANDER: true,
+  COMMANDER_SOON3_TEMPLATE: "COMMANDER_VACATION_SOON_3",
+  COMMANDER_TODAY_TEMPLATE: "COMMANDER_VACATION_TODAY",
+  SOLDIER_TEMPLATES: {
+    3: [
+      "SOLDIER_3_1",
+      "SOLDIER_3_2",
+      "SOLDIER_3_3",
+      "SOLDIER_3_4",
+      "SOLDIER_3_5",
+      "SOLDIER_3_6",
+    ],
+    1: [
+      "SOLDIER_1_1",
+      "SOLDIER_1_2",
+      "SOLDIER_1_3",
+      "SOLDIER_1_4",
+      "SOLDIER_1_5",
+      "SOLDIER_1_6",
+    ],
+  },
+};
+
+const BIRTHDAY_ENGINE_CONFIG = {
+  COMMANDER_DAYS: [3, 2, 1, 0],
+  PERSON_DAYS: [0],
+  COMMANDER_TEMPLATE_3: "BIRTHDAY_COMMANDER_3",
+  COMMANDER_TEMPLATE_2: "BIRTHDAY_COMMANDER_2",
+  COMMANDER_TEMPLATE_1: "BIRTHDAY_COMMANDER_1",
+  PERSON_TEMPLATE: "BIRTHDAY_GREETING",
+};
+
+// ==================== COMMON HELPERS ====================
+
+function _veCommanderRole_() {
+  try {
+    return typeof CONFIG !== "undefined" && CONFIG && CONFIG.COMMANDER_ROLE
+      ? String(CONFIG.COMMANDER_ROLE).trim()
+      : "ГРАФ";
+  } catch (_) {
+    return "ГРАФ";
+  }
+}
+
+function _veTimeZone_() {
+  try {
+    if (
+      typeof DateUtils_ !== "undefined" &&
+      DateUtils_ &&
+      typeof DateUtils_.getTimeZone === "function"
+    ) {
+      const tz = DateUtils_.getTimeZone();
+      if (tz) return tz;
+    }
+
+    if (typeof getTimeZone_ === "function") {
+      const tz = getTimeZone_();
+      if (tz) return tz;
+    }
+  } catch (_) {}
+
+  return "Europe/Kyiv";
+}
+
+function _veBool_(value, defaultValue) {
+  if (value === true || value === false) return value;
+
+  const s = String(value == null ? "" : value)
+    .trim()
+    .toUpperCase();
+
+  if (
+    s === "TRUE" ||
+    s === "1" ||
+    s === "YES" ||
+    s === "Y" ||
+    s === "ON" ||
+    s === "ДА" ||
+    s === "ТАК"
+  ) {
+    return true;
+  }
+
+  if (
+    s === "FALSE" ||
+    s === "0" ||
+    s === "NO" ||
+    s === "N" ||
+    s === "OFF" ||
+    s === "НІ" ||
+    s === "НЕТ"
+  ) {
+    return false;
+  }
+
+  return !!defaultValue;
+}
+
+function _veNormId_(fml) {
+  try {
+    if (typeof _normFmlVac_ === "function") {
+      return _normFmlVac_(fml);
+    }
+  } catch (_) {}
+
+  return String(fml || "")
+    .toLowerCase()
+    .replace(/[ʼ'`’"]/g, "")
+    .replace(/\s+/g, "_")
+    .trim();
+}
+
+function _veParseDate_(value) {
+  if (!value) return null;
+
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    const d = new Date(value);
+    d.setHours(12, 0, 0, 0);
+    return d;
+  }
+
+  if (typeof value === "number" && value > 25569 && value < 60000) {
+    const d = new Date((value - 25569) * 86400 * 1000);
+    d.setHours(12, 0, 0, 0);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  const s = String(value).trim();
+  if (!s) return null;
+
+  let m = s.match(/^(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{2,4})$/);
+  if (m) {
+    const day = parseInt(m[1], 10);
+    const month = parseInt(m[2], 10);
+    let year = parseInt(m[3], 10);
+
+    if (year < 100) {
+      year += year >= 50 ? 1900 : 2000;
+    }
+
+    const d = new Date(year, month - 1, day, 12, 0, 0);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  m = s.match(/^(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})$/);
+  if (m) {
+    const year = parseInt(m[1], 10);
+    const month = parseInt(m[2], 10);
+    const day = parseInt(m[3], 10);
+
+    const d = new Date(year, month - 1, day, 12, 0, 0);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  try {
+    if (
+      typeof DateUtils_ !== "undefined" &&
+      DateUtils_ &&
+      typeof DateUtils_.parseUaDate === "function"
+    ) {
+      const d = DateUtils_.parseUaDate(s);
+
+      if (d instanceof Date && !isNaN(d.getTime())) {
+        d.setHours(12, 0, 0, 0);
+        return d;
+      }
+    }
+  } catch (_) {}
+
+  const parsed = new Date(s);
+  if (!isNaN(parsed.getTime())) {
+    parsed.setHours(12, 0, 0, 0);
+    return parsed;
+  }
+
+  return null;
+}
+
+function _veVacationWordToNumber_(word) {
+  const words = {
+    нульова: 0,
+    перша: 1,
+    друга: 2,
+    третя: 3,
+    четверта: 4,
+    "п'ята": 5,
+    шоста: 6,
+    сьома: 7,
+    восьма: 8,
+    "дев'ята": 9,
+    десята: 10,
+  };
+
+  const lower = String(word || "")
+    .trim()
+    .toLowerCase();
+
+  if (lower.indexOf("перш") === 0) return 1;
+  if (lower.indexOf("друг") === 0) return 2;
+
+  return words[lower] !== undefined ? words[lower] : lower;
+}
+
+function _veNumberToVacationWord_(num) {
+  const words = [
+    "нульова",
+    "перша",
+    "друга",
+    "третя",
+    "четверта",
+    "п'ята",
+    "шоста",
+    "сьома",
+    "восьма",
+    "дев'ята",
+    "десята",
+  ];
+
+  if (typeof num === "number" && num >= 0 && num <= 10) {
+    return words[num];
+  }
+
+  return String(num || "");
+}
+
+function _vePrepareData_(data) {
+  const source = data || {};
+
+  return Object.assign({}, source, {
+    days:
+      source.days != null
+        ? source.days
+        : source.daysUntil != null
+          ? source.daysUntil
+          : "",
+
+    daysUntil:
+      source.daysUntil != null
+        ? source.daysUntil
+        : source.days != null
+          ? source.days
+          : "",
+
+    name: source.name || source.callsign || "",
+    callsign: source.callsign || source.name || "",
+    fml: source.fml || "",
+    surname: source.surname || "",
+
+    startDate: source.startDate || source.date_start || "",
+    endDate: source.endDate || source.date_end || "",
+    date_start: source.date_start || source.startDate || "",
+    date_end: source.date_end || source.endDate || "",
+
+    vacationWord: source.vacationWord || source.vac_no || "",
+    vac_no: source.vac_no || source.vacationWord || "",
+
+    rank: source.rank || "",
+    birthday: source.birthday || "",
+    age: source.age || "",
+  });
+}
+
+function _veTemplateText_(key) {
+  try {
+    if (typeof getTemplateText_ === "function") {
+      return getTemplateText_(key);
+    }
+  } catch (e) {
+    console.warn("Template read error:", key, e);
+  }
+
+  return "";
+}
+
+function _veRenderTemplateOrFallback_(key, data, fallbackText) {
+  try {
+    const tpl = _veTemplateText_(key);
+
+    if (tpl && typeof renderTemplate_ === "function") {
+      return renderTemplate_(tpl, _vePrepareData_(data));
+    }
+  } catch (e) {
+    console.warn("Template render error:", key, e);
+  }
+
+  return String(fallbackText || "");
+}
+
+function _veRandomTemplateOrFallback_(keys, data, fallbackText) {
+  try {
+    if (!Array.isArray(keys) || !keys.length) {
+      return String(fallbackText || "");
+    }
+
+    const enabled = keys.filter(function (key) {
+      return !!_veTemplateText_(key);
+    });
+
+    if (!enabled.length) {
+      return String(fallbackText || "");
+    }
+
+    const picked = enabled[Math.floor(Math.random() * enabled.length)];
+
+    return _veRenderTemplateOrFallback_(picked, data, fallbackText);
+  } catch (e) {
+    console.warn("Random template error:", e);
+    return String(fallbackText || "");
+  }
+}
+
+function _veWaLink_(phone, message) {
+  return buildWhatsAppWebLink_(phone, message);
+}
+
+function _veHasExplicitRecipient_(options) {
+  var input = options && typeof options === "object" ? options : {};
+  var override =
+    input.recipientOverride && typeof input.recipientOverride === "object"
+      ? input.recipientOverride
+      : {};
+  return !!String(
+    override.phone ||
+      override.callsign ||
+      override.role ||
+      input.recipientPhone ||
+      input.recipientCallsign ||
+      input.recipientRole ||
+      input.commanderRole ||
+      "",
+  ).trim();
+}
+
+function _veCommanderRecipient_(options) {
+  try {
+    if (typeof resolveMessageRecipient_ === "function") {
+      return resolveMessageRecipient_(
+        Object.assign({ fallbackRole: _veCommanderRole_() }, options || {}),
+      );
+    }
+
+    const role = _veCommanderRole_();
+    const phone =
+      typeof findPhone_ === "function"
+        ? findPhone_({ role: role, callsign: role }) || ""
+        : "";
+    return phone
+      ? { phone: phone, role: role, callsign: role, source: "legacy" }
+      : null;
+  } catch (e) {
+    console.error("_veCommanderRecipient_ error:", e);
+    if (_veHasExplicitRecipient_(options)) throw e;
+    return null;
+  }
+}
+
+function _veCommanderPhone_(options) {
+  const recipient = _veCommanderRecipient_(options);
+  return recipient && recipient.phone ? recipient.phone : "";
+}
+
+function _veProfilesList_() {
+  try {
+    if (typeof loadPhonesProfiles_ !== "function") {
+      return [];
+    }
+
+    const profiles = loadPhonesProfiles_();
+
+    if (!profiles) return [];
+
+    if (profiles.byFml && typeof profiles.byFml === "object") {
+      return Object.values(profiles.byFml);
+    }
+
+    if (Array.isArray(profiles)) {
+      return profiles;
+    }
+
+    if (Array.isArray(profiles.items)) {
+      return profiles.items;
+    }
+
+    return [];
+  } catch (e) {
+    console.error("_veProfilesList_ error:", e);
+    return [];
+  }
+}
+
+function _veYearsWord_(n) {
+  const v = Math.abs(Number(n)) % 100;
+  const v1 = v % 10;
+
+  if (v > 10 && v < 20) return "років";
+  if (v1 === 1) return "рік";
+  if (v1 >= 2 && v1 <= 4) return "роки";
+
+  return "років";
+}
+
+// ==================== VACATION MESSAGE BUILDERS ====================
+
+function _veBuildVacationSoldierMessage_(kind, data) {
+  const d = _vePrepareData_(data);
+
+  switch (kind) {
+    case "soon_3":
+      return _veRandomTemplateOrFallback_(
+        VACATION_ENGINE_CONFIG.SOLDIER_TEMPLATES[3],
+        d,
+        `${d.name}, нагадую: через 3 дні у тебе відпустка ${d.vacationWord} з ${d.startDate} по ${d.endDate}.`,
+      );
+
+    case "tomorrow":
+      return _veRandomTemplateOrFallback_(
+        VACATION_ENGINE_CONFIG.SOLDIER_TEMPLATES[1],
+        d,
+        `${d.name}, вітаю — завтра ти йдеш у відпустку ${d.vacationWord} з ${d.startDate} по ${d.endDate}.`,
+      );
+
+    default:
+      return `${d.name}, нагадування щодо відпустки з ${d.startDate} по ${d.endDate}.`;
+  }
+}
+
+function _veBuildVacationCommanderMessage_(kind, data) {
+  const d = _vePrepareData_(data);
+
+  switch (kind) {
+    case "soon_3":
+      return _veRenderTemplateOrFallback_(
+        VACATION_ENGINE_CONFIG.COMMANDER_SOON3_TEMPLATE,
+        d,
+        `Боєць ${d.callsign} (${d.fml}) через 3 дні йде у відпустку.\nПеріод: ${d.startDate} - ${d.endDate}`,
+      );
+
+    case "tomorrow":
+      return _veRenderTemplateOrFallback_(
+        VACATION_ENGINE_CONFIG.COMMANDER_TODAY_TEMPLATE,
+        d,
+        `Боєць ${d.callsign} (${d.fml}) завтра йде у відпустку.\nПеріод: ${d.startDate} - ${d.endDate}\n\nНе турбувати!`,
+      );
+
+    default:
+      return `Нагадування по відпустці: ${d.callsign} (${d.fml}).`;
+  }
+}
+
+// ==================== VACATION ENGINE ====================
+
+function runVacationEngine_(targetDate, options) {
+  const result = {
+    soldierMessages: [],
+    commanderMessages: [],
+    debug: {
+      totalRows: 0,
+      activeRows: 0,
+      validDateRows: 0,
+      futureRows: 0,
+      processed: [],
+    },
+  };
+
+  try {
+    if (
+      typeof VacationsRepository_ !== "object" ||
+      !VacationsRepository_ ||
+      typeof VacationsRepository_.listAll !== "function"
+    ) {
+      result.debug.error = "VacationsRepository_ недоступний";
+      return result;
+    }
+
+    const vacationItems = VacationsRepository_.listAll();
+    result.debug.sourceMode =
+      typeof VacationsRepository_.getSourceMode === "function"
+        ? VacationsRepository_.getSourceMode()
+        : "legacy";
+    result.debug.sourceSheet =
+      typeof VacationsRepository_.getSourceSheetName === "function"
+        ? VacationsRepository_.getSourceSheetName()
+        : VACATION_ENGINE_CONFIG.VACATIONS_SHEET;
+
+    result.debug.totalRows = vacationItems.length;
+    if (!vacationItems.length) return result;
+
+    const parsedTarget =
+      targetDate instanceof Date
+        ? new Date(targetDate)
+        : _veParseDate_(targetDate);
+
+    const today = parsedTarget || new Date();
+    today.setHours(12, 0, 0, 0);
+
+    const tz = _veTimeZone_();
+    const commanderRecipient = VACATION_ENGINE_CONFIG.NOTIFY_COMMANDER
+      ? _veCommanderRecipient_(options)
+      : null;
+    const commanderPhone =
+      commanderRecipient && commanderRecipient.phone
+        ? commanderRecipient.phone
+        : "";
+    result.commanderRecipient = commanderRecipient
+      ? {
+          role: commanderRecipient.role || commanderRecipient.callsign || "",
+          callsign:
+            commanderRecipient.callsign || commanderRecipient.role || "",
+          source: commanderRecipient.source || "",
+        }
+      : null;
+
+    for (const item of vacationItems) {
+      const fml = String(item.fml || "").trim();
+      const startValue = item.startDate || item.startDateRaw;
+      const endValue = item.endDate || item.endDateRaw;
+      const vacationWordRaw = String(item.vacationNo || "").trim();
+      const isActive = _veBool_(item.active, false);
+      const notifyPerson = _veBool_(item.notify, true);
+
+      if (!fml || !isActive || item.reminderEligible === false) continue;
+
+      result.debug.activeRows++;
+
+      const startDate = _veParseDate_(startValue);
+      const endDate = _veParseDate_(endValue);
+
+      if (!startDate || !endDate) continue;
+
+      result.debug.validDateRows++;
+
+      const daysUntil = Math.round(
+        (startDate.getTime() - today.getTime()) / 86400000,
+      );
+
+      if (daysUntil < 0) continue;
+
+      result.debug.futureRows++;
+
+      const surname = fml.split(" ")[0] || fml;
+      const callsign =
+        String(item.personKey || "").trim() ||
+        (typeof _getCallsignByFml_ === "function"
+          ? _getCallsignByFml_(fml)
+          : "") || surname;
+
+      const name = String(callsign || surname || fml).trim();
+      const vacationNum = _veVacationWordToNumber_(vacationWordRaw);
+      const vacationWord = _veNumberToVacationWord_(vacationNum);
+      const startStr = Utilities.formatDate(startDate, tz, "dd.MM.yyyy");
+      const endStr = Utilities.formatDate(endDate, tz, "dd.MM.yyyy");
+
+      const baseData = {
+        fml: fml,
+        surname: surname,
+        callsign: callsign,
+        name: name,
+        days: daysUntil,
+        daysUntil: daysUntil,
+        vacationWord: vacationWord,
+        vac_no: vacationWord,
+        startDate: startStr,
+        endDate: endStr,
+        date_start: startStr,
+        date_end: endStr,
+        rank: "",
+      };
+
+      const soldierPhone =
+        notifyPerson && typeof findPhone_ === "function"
+          ? findPhone_({ callsign: callsign, fml: fml }) || ""
+          : notifyPerson && typeof _getPhoneByFml_ === "function"
+            ? _getPhoneByFml_(fml)
+            : "";
+
+      if (daysUntil === 3) {
+        if (commanderPhone) {
+          const commanderMessage = _veBuildVacationCommanderMessage_(
+            "soon_3",
+            baseData,
+          );
+
+          result.commanderMessages.push({
+            type: "commander_soon_3",
+            fml: fml,
+            callsign: callsign,
+            daysUntil: 3,
+            startDate: startStr,
+            endDate: endStr,
+            vacationWord: vacationWord,
+            message: commanderMessage,
+            link: _veWaLink_(commanderPhone, commanderMessage),
+            recipientRole:
+              (result.commanderRecipient && result.commanderRecipient.role) ||
+              "",
+            id: `commander_soon3_${_veNormId_(fml)}_${startStr}`,
+          });
+        }
+
+        if (soldierPhone) {
+          const soldierMessage = _veBuildVacationSoldierMessage_(
+            "soon_3",
+            baseData,
+          );
+
+          result.soldierMessages.push({
+            type: "soldier_soon_3",
+            fml: fml,
+            surname: surname,
+            callsign: callsign,
+            phone: soldierPhone,
+            phoneDisplay: soldierPhone,
+            daysUntil: 3,
+            startDate: startStr,
+            endDate: endStr,
+            vacationWord: vacationWord,
+            message: soldierMessage,
+            link: _veWaLink_(soldierPhone, soldierMessage),
+            id: `soldier_soon3_${_veNormId_(fml)}_${startStr}`,
+          });
+        }
+
+        result.debug.processed.push(`ЗА 3 ДНІ: ${fml}`);
+
+        continue;
+      }
+
+      if (daysUntil === 1) {
+        if (commanderPhone) {
+          const commanderMessage = _veBuildVacationCommanderMessage_(
+            "tomorrow",
+            baseData,
+          );
+
+          result.commanderMessages.push({
+            type: "commander_tomorrow",
+            fml: fml,
+            callsign: callsign,
+            daysUntil: 1,
+            startDate: startStr,
+            endDate: endStr,
+            vacationWord: vacationWord,
+            message: commanderMessage,
+            link: _veWaLink_(commanderPhone, commanderMessage),
+            recipientRole:
+              (result.commanderRecipient && result.commanderRecipient.role) ||
+              "",
+            id: `commander_tomorrow_${_veNormId_(fml)}_${startStr}`,
+          });
+        }
+
+        if (soldierPhone) {
+          const soldierMessage = _veBuildVacationSoldierMessage_(
+            "tomorrow",
+            baseData,
+          );
+
+          result.soldierMessages.push({
+            type: "soldier_tomorrow",
+            fml: fml,
+            surname: surname,
+            callsign: callsign,
+            phone: soldierPhone,
+            phoneDisplay: soldierPhone,
+            daysUntil: 1,
+            startDate: startStr,
+            endDate: endStr,
+            vacationWord: vacationWord,
+            message: soldierMessage,
+            link: _veWaLink_(soldierPhone, soldierMessage),
+            id: `soldier_tomorrow_${_veNormId_(fml)}_${startStr}`,
+          });
+        }
+
+        result.debug.processed.push(`ЗА 1 ДЕНЬ: ${fml}`);
+      }
+    }
+
+    result.soldierMessages.sort(function (a, b) {
+      return a.daysUntil - b.daysUntil;
+    });
+
+    result.commanderMessages.sort(function (a, b) {
+      return a.daysUntil - b.daysUntil;
+    });
+  } catch (e) {
+    console.error("runVacationEngine_ error:", e);
+    result.debug.error = e && e.message ? e.message : String(e);
+  }
+
+  return result;
+}
+
+function testVacationEngine() {
+  const res = runVacationEngine_(new Date());
+  console.log("SOLDIER:", res.soldierMessages.length);
+  console.log("COMMANDER:", res.commanderMessages.length);
+  console.log(res.debug);
+
+  return res;
+}
+
+function checkVacationsAndNotify() {
+  return runVacationEngine_(new Date());
+}
+
+function autoVacationReminder() {
+  try {
+    const result = runVacationEngine_(new Date());
+
+    console.log(
+      `🏖️ Автоперевірка відпусток: командиру ${result.commanderMessages.length}, бійцям ${result.soldierMessages.length}`,
+    );
+
+    return result;
+  } catch (e) {
+    console.error("autoVacationReminder error:", e);
+
+    return {
+      soldierMessages: [],
+      commanderMessages: [],
+      error: e && e.message ? e.message : String(e),
+    };
+  }
+}
+
+// ==================== BIRTHDAY HELPERS ====================
+
+function _veParseBirthdayParts_(birthday) {
+  if (!birthday) return null;
+
+  if (birthday instanceof Date && !isNaN(birthday.getTime())) {
+    return {
+      day: birthday.getDate(),
+      month: birthday.getMonth() + 1,
+      year: birthday.getFullYear(),
+    };
+  }
+
+  if (typeof birthday === "number" && birthday > 25569 && birthday < 60000) {
+    const d = new Date((birthday - 25569) * 86400 * 1000);
+
+    if (!isNaN(d.getTime())) {
+      return {
+        day: d.getDate(),
+        month: d.getMonth() + 1,
+        year: d.getFullYear(),
+      };
+    }
+  }
+
+  const sRaw = String(birthday || "").trim();
+  let s = sRaw;
+  while (/р\.$/.test(s)) {
+    s = s.replace(/р\.$/, "").trim();
+  }
+
+  if (!s) return null;
+
+  let match = s.match(/^(\d{1,2})[.\-/](\d{1,2})(?:[.\-/](\d{2,4}))?$/);
+
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10);
+    let year = match[3] ? parseInt(match[3], 10) : null;
+
+    if (year && year < 100) {
+      year += year >= 50 ? 1900 : 2000;
+    }
+
+    if (!day || !month || day < 1 || day > 31 || month < 1 || month > 12) {
+      return null;
+    }
+
+    return {
+      day: day,
+      month: month,
+      year: year,
+    };
+  }
+
+  match = s.match(/^(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})$/);
+
+  if (match) {
+    const year = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10);
+    const day = parseInt(match[3], 10);
+
+    if (!day || !month || day < 1 || day > 31 || month < 1 || month > 12) {
+      return null;
+    }
+
+    return {
+      day: day,
+      month: month,
+      year: year,
+    };
+  }
+
+  const parsed = new Date(s);
+
+  if (!isNaN(parsed.getTime())) {
+    return {
+      day: parsed.getDate(),
+      month: parsed.getMonth() + 1,
+      year: parsed.getFullYear(),
+    };
+  }
+
+  return null;
+}
+
+function _veBuildBirthdayCommanderMessage_(data) {
+  const d = _vePrepareData_(data);
+  const name = String(d.fml || d.name || d.callsign || "").trim() || "боєць";
+  const age = Number(d.age);
+
+  let datePart = "";
+
+  if (d.birthday && Number.isFinite(age) && age > 0) {
+    datePart = `${d.birthday} (${age} ${_veYearsWord_(age)})`;
+  } else if (d.birthday) {
+    datePart = d.birthday;
+  } else if (Number.isFinite(age) && age > 0) {
+    datePart = `${age} ${_veYearsWord_(age)}`;
+  }
+
+  const daysUntil = Number(
+    d.daysUntil !== undefined && d.daysUntil !== null && d.daysUntil !== ""
+      ? d.daysUntil
+      : d.days,
+  );
+
+  if (daysUntil === 3) {
+    return `Через 3 дні День народження: ${name}${datePart ? ` — ${datePart}` : ""}.`;
+  }
+
+  if (daysUntil === 2) {
+    return `Через 2 дні День народження: ${name}${datePart ? ` — ${datePart}` : ""}.`;
+  }
+
+  if (daysUntil === 1) {
+    return `Завтра День народження: ${name}${datePart ? ` — ${datePart}` : ""}.`;
+  }
+
+  if (daysUntil === 0) {
+    return `Сьогодні День народження: ${name}${datePart ? ` — ${datePart}` : ""}.`;
+  }
+
+  return `День народження: ${name}${datePart ? ` — ${datePart}` : ""}.`;
+}
+
+function _veBuildBirthdayGreetingMessage_(data) {
+  const d = _vePrepareData_(data);
+  const tpl = _veTemplateText_(BIRTHDAY_ENGINE_CONFIG.PERSON_TEMPLATE);
+
+  if (tpl && typeof renderTemplate_ === "function") {
+    return renderTemplate_(tpl, {
+      callsign: d.name || d.callsign || "",
+      name: d.name || d.callsign || "",
+      age: d.age || "",
+      fml: d.fml || "",
+    });
+  }
+
+  const ageLine = d.age ? ` З ${d.age}-річчям!` : " З Днем Народження!";
+
+  return [
+    `Вітаю, ${d.name}!`,
+    "",
+    `${ageLine}`,
+    `Бажаю здоров'я, витримки, сил і мирного неба.`,
+    `Нехай все буде чітко, рівно і без зайвого головняка. 🇺🇦`,
+  ].join("\n");
+}
+
+function _veBirthdayCommanderPhone_(options) {
+  return _veCommanderPhone_(options);
+}
+
+// ==================== BIRTHDAY ENGINE ====================
+
+function runBirthdayEngine_(targetDate, options) {
+  const result = {
+    commanderMessages: [],
+    birthdayMessages: [],
+    debug: [],
+  };
+
+  try {
+    const items = _veProfilesList_();
+    const commanderRecipient = _veCommanderRecipient_(options);
+    const commanderPhone =
+      commanderRecipient && commanderRecipient.phone
+        ? commanderRecipient.phone
+        : "";
+    result.commanderRecipient = commanderRecipient
+      ? {
+          role: commanderRecipient.role || commanderRecipient.callsign || "",
+          callsign:
+            commanderRecipient.callsign || commanderRecipient.role || "",
+          source: commanderRecipient.source || "",
+        }
+      : null;
+
+    const parsedTarget =
+      targetDate instanceof Date
+        ? new Date(targetDate)
+        : _veParseDate_(targetDate);
+
+    const today = parsedTarget || new Date();
+    today.setHours(12, 0, 0, 0);
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+
+      if (!item || !item.fml || !item.birthday) {
+        continue;
+      }
+
+      const birth = _veParseBirthdayParts_(item.birthday);
+
+      if (!birth) {
+        result.debug.push(`${item.fml || "UNKNOWN"}: birthday_parse_failed`);
+        continue;
+      }
+
+      let nextBirthday = new Date(
+        today.getFullYear(),
+        birth.month - 1,
+        birth.day,
+        12,
+        0,
+        0,
+      );
+
+      if (isNaN(nextBirthday.getTime())) {
+        result.debug.push(`${item.fml}: invalid_next_birthday`);
+        continue;
+      }
+
+      if (nextBirthday.getTime() < today.getTime()) {
+        nextBirthday = new Date(
+          today.getFullYear() + 1,
+          birth.month - 1,
+          birth.day,
+          12,
+          0,
+          0,
+        );
+      }
+
+      const daysUntil = Math.round(
+        (nextBirthday.getTime() - today.getTime()) / 86400000,
+      );
+
+      if ([3, 2, 1, 0].indexOf(daysUntil) === -1) {
+        result.debug.push(`${item.fml}: ${daysUntil}`);
+        continue;
+      }
+
+      const callsign =
+        String(item.role || "").trim() || String(item.fml).split(" ")[0];
+      const name = callsign || item.fml;
+      const age = birth.year ? nextBirthday.getFullYear() - birth.year : null;
+
+      const baseData = {
+        fml: item.fml,
+        callsign: callsign,
+        name: name,
+        phone: item.phone || "",
+        birthday: item.birthday,
+        days: daysUntil,
+        daysUntil: daysUntil,
+        age: age,
+      };
+
+      if (
+        BIRTHDAY_ENGINE_CONFIG.COMMANDER_DAYS.indexOf(daysUntil) !== -1 &&
+        commanderPhone
+      ) {
+        const message = _veBuildBirthdayCommanderMessage_(baseData);
+
+        result.commanderMessages.push({
+          type: "birthday_commander_notice",
+          fml: item.fml,
+          callsign: callsign,
+          birthday: item.birthday,
+          age: age,
+          daysUntil: daysUntil,
+          message: message,
+          link: _veWaLink_(commanderPhone, message),
+          recipientRole:
+            (result.commanderRecipient && result.commanderRecipient.role) || "",
+          id: `birthday_commander_${_veNormId_(item.fml)}_${daysUntil}`,
+        });
+      }
+
+      if (BIRTHDAY_ENGINE_CONFIG.PERSON_DAYS.indexOf(daysUntil) !== -1) {
+        const phone = String(item.phone || "").trim();
+        const message = _veBuildBirthdayGreetingMessage_(baseData);
+
+        result.birthdayMessages.push({
+          type: "birthday_person_greeting",
+          fml: item.fml,
+          displayName: name,
+          birthday: item.birthday,
+          age: age,
+          daysUntil: daysUntil,
+          phone: phone,
+          message: message,
+          link: phone ? _veWaLink_(phone, message) : "",
+          id: `birthday_person_${_veNormId_(item.fml)}`,
+        });
+      }
+
+      result.debug.push(`${item.fml}: ${daysUntil}`);
+    }
+
+    result.commanderMessages.sort(function (a, b) {
+      return b.daysUntil - a.daysUntil;
+    });
+
+    result.birthdayMessages.sort(function (a, b) {
+      return a.daysUntil - b.daysUntil;
+    });
+  } catch (e) {
+    console.error("runBirthdayEngine_ error:", e);
+    result.error = e && e.message ? e.message : String(e);
+  }
+
+  return result;
+}
+
+function checkBirthdayReminders() {
+  return runBirthdayEngine_(new Date());
+}
+
+function autoBirthdayReminder() {
+  try {
+    const result = runBirthdayEngine_(new Date());
+
+    console.log(
+      `🎂 Автоперевірка ДН: командиру ${result.commanderMessages.length}, іменинникам ${result.birthdayMessages.length}`,
+    );
+
+    return result;
+  } catch (e) {
+    console.error("autoBirthdayReminder error:", e);
+
+    return {
+      commanderMessages: [],
+      birthdayMessages: [],
+      error: e && e.message ? e.message : String(e),
+    };
+  }
+}
+
+function getBirthdaysSidebar() {
+  try {
+    const data = runBirthdayEngine_(new Date());
+
+    return {
+      success: true,
+      commanderMessages: data.commanderMessages || [],
+      birthdayMessages: data.birthdayMessages || [],
+      totalCommander: (data.commanderMessages || []).length,
+      totalBirthday: (data.birthdayMessages || []).length,
+      message: `Командиру: ${(data.commanderMessages || []).length}, іменинникам: ${(data.birthdayMessages || []).length}`,
+    };
+  } catch (e) {
+    return {
+      success: false,
+      error: e && e.message ? e.message : String(e),
+    };
+  }
+}
+
+// ==================== BUILD WHATSAPP LINK FOR SIDEBAR ====================
+
+function buildBirthdayLink(phone, name) {
+  try {
+    const cleanedPhone = String(phone || "").replace(/\D/g, "");
+
+    if (!cleanedPhone) {
+      return {
+        success: false,
+        error: "Немає телефону",
+      };
+    }
+
+    const msg = _veBuildBirthdayGreetingMessage_({
+      name: name || "друже",
+      callsign: name || "друже",
+      age: "",
+    });
+
+    return {
+      success: true,
+      link: _veWaLink_(cleanedPhone, msg),
+    };
+  } catch (e) {
+    return {
+      success: false,
+      error: e && e.message ? e.message : String(e),
+    };
+  }
+}

@@ -1,0 +1,648 @@
+function _ensureSendPanelTechnicalSheet_() {
+  const ss = getWasbSpreadsheet_();
+  let sh = ss.getSheetByName(CONFIG.SEND_PANEL_SHEET);
+  let created = false;
+
+  if (!sh) {
+    sh = ss.insertSheet(CONFIG.SEND_PANEL_SHEET);
+    created = true;
+  }
+
+  if (sh.getLastRow() < 1) {
+    sh.getRange(1, 1, 1, 7)
+      .merge()
+      .setValue(`Активний місяць: ${getBotMonthSheetName_()}`)
+      .setFontWeight("bold")
+      .setHorizontalAlignment("center")
+      .setBackground("#fff3cd");
+  }
+
+  if (sh.getLastRow() < 2) {
+    sh.getRange(2, 1, 2, 7)
+      .setValues([
+        ["FML", "Phone", "Code", "Tasks", "Status", "Sent", "Action"],
+      ])
+      .setFontWeight("bold")
+      .setHorizontalAlignment("center")
+      .setBackground("#f0f0f0");
+  }
+
+  sh.setFrozenRows(2);
+  return { sheet: sh, created: created };
+}
+function _addHealthCheck_(report, item) {
+  const status = String(item.status || "OK").toUpperCase();
+  const severity = String(
+    item.severity ||
+      (status === "FAIL" ? "CRITICAL" : status === "WARN" ? "WARN" : "INFO"),
+  ).toUpperCase();
+  const ok = status === "OK";
+  const pseudo = status === "PSEUDO";
+
+  report.checks.push({
+    title: String(item.title || ""),
+    ok: ok,
+    pseudo: pseudo,
+    status: status,
+    severity: severity,
+    details: String(item.details || ""),
+    howTo: String(item.howTo || ""),
+  });
+
+  if (status === "FAIL") {
+    report.ok = false;
+  }
+}
+function _runHealthCheckItem_(report, title, severity, fn) {
+  try {
+    const result = fn() || {};
+
+    _addHealthCheck_(report, {
+      title: title,
+      status: result.status || "OK",
+      severity: result.severity || severity || "INFO",
+      details: result.details || "",
+      howTo: result.howTo || "",
+    });
+  } catch (e) {
+    _addHealthCheck_(report, {
+      title: title,
+      status: "FAIL",
+      severity: severity || "CRITICAL",
+      details: _errMsg_(e),
+      howTo: "Перевір код цієї перевірки та залежні функції",
+    });
+  }
+}
+function healthCheck() {
+  const report = {
+    ok: true,
+    ts: new Date().toISOString(),
+    checks: [],
+  };
+
+  _runHealthCheckItem_(report, "Налаштування системи", "CRITICAL", function () {
+    const hasConfig = typeof CONFIG === "object" && CONFIG !== null;
+    return {
+      status: hasConfig ? "OK" : "FAIL",
+      details: hasConfig
+        ? "Основні налаштування таблиці доступні"
+        : "Налаштування системи не визначено",
+      howTo: hasConfig
+        ? ""
+        : "Перевірте, чи налаштування системи оголошені до запуску healthCheck()",
+    };
+  });
+
+  _runHealthCheckItem_(report, "Особовий склад", "CRITICAL", function () {
+    const activeRows =
+      typeof getPersonnelActiveRows_ === "function"
+        ? getPersonnelActiveRows_()
+        : typeof getPersonnelRows_ === "function"
+          ? getPersonnelRows_()
+          : [];
+    const warnings =
+      typeof getPersonnelWarnings_ === "function"
+        ? getPersonnelWarnings_()
+        : [];
+    const duplicateActiveCallsigns = warnings.some(function (w) {
+      return String(w || "").indexOf("дубль активного позивного") !== -1;
+    });
+    return {
+      status: duplicateActiveCallsigns
+        ? "FAIL"
+        : activeRows.length
+          ? "OK"
+          : "WARN",
+      details: `Активних у особовому складі: ${activeRows.length}${
+        warnings.length ? "; " + warnings.join("; ") : ""
+      }`,
+      howTo: duplicateActiveCallsigns
+        ? "Виправте дублікати позивних серед активних записів особового складу"
+        : activeRows.length
+          ? ""
+          : "Заповніть особовий склад (позивний, ПІБ, статус «В наявності» або порожньо)",
+    };
+  });
+
+  _runHealthCheckItem_(report, "Обов'язкові аркуші", "CRITICAL", function () {
+    const ss = getWasbSpreadsheet_();
+    const sheets = ss.getSheets().map((s) => s.getName());
+    const vacationSource =
+      typeof VacationsRepository_ === "object" &&
+      VacationsRepository_ &&
+      typeof VacationsRepository_.getSourceSheetName === "function"
+        ? VacationsRepository_.getSourceSheetName()
+        : "VACATIONS";
+
+    const required = [
+      CONFIG.PHONES_SHEET,
+      CONFIG.DICT_SHEET,
+      CONFIG.DICT_SUM_SHEET,
+      CONFIG.LOG_SHEET,
+      vacationSource,
+      "TEMPLATES",
+    ].filter(Boolean);
+
+    const missing = required.filter((name) => !sheets.includes(name));
+    const missingLabels = missing.map(_userFacingSheetLabel_);
+
+    return {
+      status: missing.length === 0 ? "OK" : "FAIL",
+      details:
+        missing.length === 0
+          ? `Усі обов'язкові аркуші знайдено (${required.length})`
+          : `Відсутні: ${missingLabels.join(", ")}`,
+      howTo: missing.length ? `Створіть аркуші: ${missingLabels.join(", ")}` : "",
+    };
+  });
+
+  _runHealthCheckItem_(report, "Панель надсилання", "WARN", function () {
+    const ensured = _ensureSendPanelTechnicalSheet_();
+    const sh = ensured.sheet;
+
+    return {
+      status: sh ? "OK" : "WARN",
+      severity: "WARN",
+      details: ensured.created
+        ? "Аркуш панелі надсилання був відсутній і створений автоматично"
+        : "Аркуш панелі надсилання існує",
+      howTo: "",
+    };
+  });
+
+  _runHealthCheckItem_(report, "Статуси панелі надсилання", "WARN", function () {
+    const sh = getWasbSpreadsheet_().getSheetByName(CONFIG.SEND_PANEL_SHEET);
+    if (!sh || sh.getLastRow() < 3) {
+      return {
+        status: "WARN",
+        severity: "WARN",
+        details: "Немає рядків даних для перевірки статусів панелі надсилання",
+        howTo: "Спочатку згенеруйте панель відправки",
+      };
+    }
+
+    const statuses = sh
+      .getRange(3, 5, sh.getLastRow() - 2, 1)
+      .getDisplayValues()
+      .flat()
+      .map((v) => String(v || "").trim())
+      .filter(Boolean);
+    const invalid = statuses.filter(
+      (status) =>
+        getSendPanelAllAllowedStatuses_().indexOf(
+          normalizeSendPanelStatus_(status),
+        ) === -1 &&
+        !String(status || "").startsWith(getSendPanelErrorPrefix_()),
+    );
+
+    return {
+      status: invalid.length === 0 ? "OK" : "WARN",
+      severity: "WARN",
+      details:
+        invalid.length === 0
+          ? `Усі ${statuses.length} статусів валідні`
+          : `Некоректні статуси: ${[...new Set(invalid)].join(", ")}`,
+      howTo:
+        invalid.length === 0
+          ? ""
+          : "Використовуйте тільки ✔ або ✘ у колонці Status",
+    };
+  });
+
+  _runHealthCheckItem_(report, "Активний місяць", "CRITICAL", function () {
+    const ss = getWasbSpreadsheet_();
+    const activeMonth = getBotMonthSheetName_();
+    const sh = ss.getSheetByName(activeMonth);
+
+    return {
+      status: sh ? "OK" : "FAIL",
+      details: sh
+        ? `Активний місяць: ${activeMonth}`
+        : `Аркуш "${activeMonth}" не знайдено`,
+      howTo: sh
+        ? ""
+        : "Перевірте BOT_MONTH_PROP_KEY або перемкніть місяць у панелі",
+    };
+  });
+
+  _runHealthCheckItem_(
+    report,
+    "Дати в активному місяці",
+    "CRITICAL",
+    function () {
+      const ss = getWasbSpreadsheet_();
+      const activeMonth = getBotMonthSheetName_();
+      const sh = ss.getSheetByName(activeMonth);
+      if (!sh) throw new Error(`Аркуш "${activeMonth}" не знайдено`);
+
+      const lastCol = sh.getLastColumn();
+      const dateRow = Number(CONFIG.DATE_ROW) || 1;
+
+      const values =
+        lastCol > 0 ? sh.getRange(dateRow, 1, 1, lastCol).getValues()[0] : [];
+
+      const hasDates = values.some(
+        (v) =>
+          (v instanceof Date && !isNaN(v.getTime())) ||
+          /^\d{2}\.\d{2}\.\d{4}$/.test(String(v || "").trim()),
+      );
+
+      return {
+        status: hasDates ? "OK" : "FAIL",
+        details: hasDates
+          ? `У рядку ${dateRow} дати знайдено`
+          : `У рядку ${dateRow} дати не знайдено`,
+        howTo: hasDates
+          ? ""
+          : `Заповніть рядок ${dateRow} датами формату dd.MM.yyyy`,
+      };
+    },
+  );
+
+  _runHealthCheckItem_(
+    report,
+    "Сьогоднішня дата в активному місяці",
+    "WARN",
+    function () {
+      const sh = getBotSheet_();
+      const today = Utilities.formatDate(
+        new Date(),
+        getTimeZone_(),
+        "dd.MM.yyyy",
+      );
+      const col = findTodayColumn_(sh, today);
+
+      return {
+        status: col !== -1 ? "OK" : "WARN",
+        severity: "WARN",
+        details:
+          col !== -1
+            ? `Сьогоднішня дата ${today} знайдена в колонці ${col}`
+            : `Сьогоднішня дата ${today} не знайдена`,
+        howTo:
+          col !== -1
+            ? ""
+            : "Перевірте, чи у шапці місячного аркуша є сьогоднішня дата",
+      };
+    },
+  );
+
+  _runHealthCheckItem_(report, "Телефони — дані", "CRITICAL", function () {
+    const ss = getWasbSpreadsheet_();
+    const sh = ss.getSheetByName(CONFIG.PHONES_SHEET);
+    if (!sh) {
+      return {
+        status: "FAIL",
+        details: "Аркуш телефонів не знайдено",
+        howTo: "Створіть аркуш телефонів",
+      };
+    }
+
+    const rows = Math.max(0, sh.getLastRow() - 1);
+
+    return {
+      status: rows > 0 ? "OK" : "FAIL",
+      details: `Рядків з даними: ${rows}`,
+      howTo:
+        rows > 0
+          ? ""
+          : "Заповніть аркуш телефонів: колонка A — позивний, B — телефон, C — другий телефон",
+    };
+  });
+
+  _runHealthCheckItem_(
+    report,
+    "Завантаження телефонів",
+    "CRITICAL",
+    function () {
+      const map = loadPhonesMap_();
+      const count = Object.keys(map || {}).length;
+
+      return {
+        status: count > 0 ? "OK" : "FAIL",
+        details: `Записів у карті телефонів: ${count}`,
+        howTo: count > 0 ? "" : "Перевірте аркуш телефонів та очистіть кеш телефонів",
+      };
+    },
+  );
+
+  _runHealthCheckItem_(report, "Телефонний index", "CRITICAL", function () {
+    const index =
+      typeof loadPhonesIndex_ === "function" ? loadPhonesIndex_() : null;
+    const ok = !!(
+      index &&
+      index.byFml &&
+      index.byNorm &&
+      index.byRole &&
+      index.byCallsign
+    );
+    const items = ok && Array.isArray(index.items) ? index.items.length : 0;
+
+    return {
+      status: ok && items > 0 ? "OK" : "FAIL",
+      details: ok
+        ? `items=${items}; byFml=${Object.keys(index.byFml || {}).length}; byRole=${Object.keys(index.byRole || {}).length}; byCallsign=${Object.keys(index.byCallsign || {}).length}`
+        : "loadPhonesIndex_() не повернув канонічну структуру",
+      howTo:
+        ok && items > 0
+          ? ""
+          : "Перевірте Stage 7 phone-layer і очистить кеш телефонів",
+    };
+  });
+
+  _runHealthCheckItem_(report, "Телефон командира", "CRITICAL", function () {
+    const phone = findPhone_({ role: CONFIG.COMMANDER_ROLE });
+
+    return {
+      status: phone ? "OK" : "FAIL",
+      details: phone
+        ? `Командир: ${phone}`
+        : `Позивний командира не знайдено в аркуші телефонів`,
+      howTo: phone
+        ? ""
+        : "У аркуші телефонів у колонці A має бути позивний командира",
+    };
+  });
+
+  _runHealthCheckItem_(
+    report,
+    "Запис у журнал дій",
+    "CRITICAL",
+    function () {
+      const exists = _fnExists_("writeLogsBatch_");
+
+      return {
+        status: exists ? "OK" : "FAIL",
+        details: exists
+          ? "Функцію запису в журнал знайдено"
+          : "Функцію запису в журнал не знайдено",
+        howTo: exists ? "" : "Додайте функцію запису журналу у проєкт",
+      };
+    },
+  );
+
+  _runHealthCheckItem_(report, "Ключові функції", "CRITICAL", function () {
+    const fns = [
+      "runVacationEngine_",
+      "buildMessage_",
+      "loadPhonesIndex_",
+      "findPhone_",
+      "loadPhonesMap_",
+      "apiGenerateSendPanelForDate",
+      "apiStage7GetSendPanelData",
+      "apiMarkPanelRowsAsSent",
+      "getBirthdaysSidebar",
+      "getPersonCardData",
+      "openPersonCalendar",
+      "openPersonCardByCallsignAndDate",
+      "_veParseDate_",
+      "_vacationWordToNumber_",
+      "setupVacationTrigger",
+      "cleanupDuplicateTriggers",
+      "sendDaySummaryToCommanderSidebar",
+      "sendDetailedToCommanderSidebar",
+      "healthCheck",
+    ];
+
+    const missing = fns.filter((name) => !_fnExists_(name));
+
+    return {
+      status: missing.length === 0 ? "OK" : "FAIL",
+      details:
+        missing.length === 0
+          ? `Усі ключові функції знайдено (${fns.length})`
+          : `Відсутні: ${missing.join(", ")}`,
+      howTo: missing.length
+        ? "Перевірте, чи всі .gs файли додані в проєкт"
+        : "",
+    };
+  });
+
+  _runHealthCheckItem_(
+    report,
+    "Картка бійця і календар",
+    "CRITICAL",
+    function () {
+      const functionsOk = [
+        "getPersonCardData",
+        "openPersonCalendar",
+        "openPersonCardByCallsignAndDate",
+      ].every((name) => _fnExists_(name));
+
+      return {
+        status: functionsOk ? "OK" : "FAIL",
+        details: functionsOk
+          ? "Функції картки бійця і календаря знайдено"
+          : "Відсутні одна або кілька функцій картки бійця / календаря",
+        howTo: functionsOk
+          ? ""
+          : "Перевірте PersonCards.gs і PersonCalendar.html",
+      };
+    },
+  );
+
+  _runHealthCheckItem_(
+    report,
+    "Helper-функції відпусток",
+    "CRITICAL",
+    function () {
+      const hasParse =
+        (typeof DateUtils_ === "object" &&
+          typeof DateUtils_.parseDateAny === "function") ||
+        _fnExists_("_veParseDate_");
+      const hasVacMap = _fnExists_("_vacationWordToNumber_");
+
+      return {
+        status: hasParse && hasVacMap ? "OK" : "FAIL",
+        details: `parse=${hasParse ? "✓" : "✕"}, vacationWord=${hasVacMap ? "✓" : "✕"}`,
+        howTo:
+          hasParse && hasVacMap
+            ? ""
+            : "Перевірте DateUtils.gs / VacationEngine.gs",
+      };
+    },
+  );
+
+  _runHealthCheckItem_(report, "Журнал сповіщень", "WARN", function () {
+    if (!_fnExists_("getAlertsStatistics") || !_fnExists_("getRecentAlerts")) {
+      return {
+        status: "FAIL",
+        details: "Відсутні функції перегляду сповіщень",
+        howTo: "Перевірте модуль сповіщень у проєкті",
+      };
+    }
+
+    let stats = null;
+    let recent = null;
+    try {
+      stats = getAlertsStatistics();
+    } catch (e) {
+      stats = { error: e && e.message ? e.message : String(e) };
+    }
+    try {
+      recent = getRecentAlerts(3);
+    } catch (e) {
+      recent = { error: e && e.message ? e.message : String(e) };
+    }
+
+    const total = stats && stats.total != null ? Number(stats.total) : null;
+    const recentCount = Array.isArray(recent)
+      ? recent.length
+      : recent && recent.rows
+        ? recent.rows.length
+        : 0;
+
+    return {
+      status: "OK",
+      details:
+        "Сповіщення: всього=" +
+        (total == null ? "н/д" : total) +
+        ", останні=" +
+        recentCount,
+      howTo: "",
+    };
+  });
+
+  _runHealthCheckItem_(
+    report,
+    "Canonical date/html layer",
+    "CRITICAL",
+    function () {
+      const hasDateUtils =
+        typeof DateUtils_ === "object" && DateUtils_ !== null;
+      const hasHtmlUtils =
+        typeof HtmlUtils_ === "object" && HtmlUtils_ !== null;
+      const hasSmoke = _fnExists_("runSmokeTests");
+
+      return {
+        status: hasDateUtils && hasHtmlUtils && hasSmoke ? "OK" : "WARN",
+        severity: "WARN",
+        details: [
+          `DateUtils_: ${hasDateUtils ? "✓" : "✕"}`,
+          `HtmlUtils_: ${hasHtmlUtils ? "✓" : "✕"}`,
+          `runSmokeTests(): ${hasSmoke ? "✓" : "✕"}`,
+        ].join("\n"),
+        howTo:
+          hasDateUtils && hasHtmlUtils && hasSmoke
+            ? ""
+            : "Додайте DateUtils.gs, HtmlUtils.gs та SmokeTests.gs до проєкту",
+      };
+    },
+  );
+
+  _runHealthCheckItem_(
+    report,
+    "Legacy API surface removed",
+    "WARN",
+    function () {
+      const presentLegacy =
+        typeof findPresentLegacyApiGlobals_ === "function"
+          ? findPresentLegacyApiGlobals_()
+          : [];
+      const helperAliases =
+        typeof findPresentLegacyHelperGlobals_ === "function"
+          ? findPresentLegacyHelperGlobals_()
+          : [];
+      const all = presentLegacy.concat(helperAliases);
+
+      return {
+        status: all.length ? "WARN" : "OK",
+        severity: "WARN",
+        details: all.length
+          ? "Залишились: " + all.join(", ")
+          : "Canonical-only API + DateUtils_/HtmlUtils_",
+        howTo: all.length
+          ? "Приберіть Legacy*.gs та deprecated helper wrappers"
+          : "",
+      };
+    },
+  );
+
+  _runHealthCheckItem_(
+    report,
+    "Script Property email власника",
+    "WARN",
+    function () {
+      var diag =
+        typeof getWasbOwnerEmailDiagnostics_ === "function"
+          ? getWasbOwnerEmailDiagnostics_()
+          : {
+              ownerEmailConfigured: false,
+              warning: "getWasbOwnerEmailDiagnostics_ недоступний",
+            };
+
+      if (diag.ownerEmailConfigured) {
+        return {
+          status: "OK",
+          details: "Email власника скрипта заданий і схожий на email",
+          howTo: "",
+        };
+      }
+
+      return {
+        status: "WARN",
+        severity: "WARN",
+        details: diag.warning || "Email власника скрипта не заданий",
+        howTo:
+          "Apps Script → Project settings → Script properties → додайте email власника",
+      };
+    },
+  );
+
+  _runHealthCheckItem_(report, "Тригери автозапуску", "WARN", function () {
+    const triggers = ScriptApp.getProjectTriggers();
+
+    const vac = triggers.filter(
+      (t) => t.getHandlerFunction() === "autoVacationReminder",
+    );
+    const bd = triggers.filter(
+      (t) => t.getHandlerFunction() === "autoBirthdayReminder",
+    );
+    const stage7Daily = triggers.filter(
+      (t) => t.getHandlerFunction() === "stage7JobDailyVacationsAndBirthdays",
+    );
+
+    const hasVac = vac.length > 0;
+    const hasBd = bd.length > 0;
+    const hasStage7Daily = stage7Daily.length > 0;
+    const dupVac = vac.length > 1;
+    const dupBd = bd.length > 1;
+    const dupStage7 = stage7Daily.length > 1;
+
+    const okStage7 = hasStage7Daily && !dupStage7;
+    const okLegacy = hasVac && hasBd && !dupVac && !dupBd;
+    const ok = okStage7 || okLegacy;
+
+    return {
+      status: ok ? "OK" : "WARN",
+      severity: "WARN",
+      details: [
+        `Stage7 daily job: ${hasStage7Daily ? `✓ (${stage7Daily.length} шт)` : "—"}`,
+        `Відпустки: ${hasVac ? `✓ (${vac.length} шт)` : "✕ немає"}`,
+        `ДН: ${hasBd ? `✓ (${bd.length} шт)` : "✕ немає"}`,
+        dupStage7 || dupVac || dupBd ? "⚠ Є дублікати тригерів" : "",
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      howTo: ok
+        ? ""
+        : !hasStage7Daily && (!hasVac || !hasBd)
+          ? 'Натисніть "⏰ Створити тригер" (або встановіть Stage7 jobs)'
+          : dupStage7 || dupVac || dupBd
+            ? 'Натисніть "🧹 Дублі"'
+            : "",
+    };
+  });
+
+  var ownerDiag =
+    typeof getWasbOwnerEmailDiagnostics_ === "function"
+      ? getWasbOwnerEmailDiagnostics_()
+      : { ownerEmailConfigured: false, warning: "" };
+  report.ownerEmailConfigured = !!ownerDiag.ownerEmailConfigured;
+  if (ownerDiag.warning && !report.ownerEmailConfigured) {
+    report.ownerEmailWarning = String(ownerDiag.warning);
+  }
+
+  return report;
+}
