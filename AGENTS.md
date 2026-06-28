@@ -69,6 +69,38 @@ Or one command: `npm run deploy:prod` (local CI + production push). Run
 4. Confirm production `appsscript.json` remains `"executionApi": { "access": "MYSELF" }`.
 5. Re-run `npm run gas:smoke:push`, then create or refresh an **API executable** deployment in the smoke project if the Apps Script UI prompts for it.
 
+### Repository map (`docs/project-files-complete.txt`)
+
+Before structural edits, treat **`docs/project-files-complete.txt`** as the canonical
+file tree of the repo (depth-first, excludes `.git/` and `node_modules/`).
+
+**Agent / contributor rules:**
+
+- Before changes: skim the map to pick the correct **existing domain module** — do not add files when an existing folder already owns the concern.
+- **Client UI:** `ui/Js.*.html`, `ui/Js.Render.*.html`, `ui/Js.Security*.html` first.
+- **Server HTML / dialogs:** `ui-server/`.
+- **Styles:** `ui/Styles*.html` only.
+- Do not mix unrelated JS, GAS, and CSS in one change unless the task requires it.
+- Do **not** move files between domain folders without updating **`contracts/`**, **`docs/module-map.md`**, and release audit notes when applicable.
+- After **create / delete / rename / move** of any tracked file: refresh the map (see below) and include it in the same PR/commit.
+
+**Refresh the map:**
+
+```bash
+npm run map:project-files
+git diff -- docs/project-files-complete.txt
+```
+
+**Pre-release gate:**
+
+```bash
+git status --short
+git diff -- docs/project-files-complete.txt
+npm run release:check    # same as npm run ci; includes verify-project-files-map
+```
+
+Manual alternative (requires `tree`): see **`RUNBOOK.md` §12**.
+
 ### Structural moves (ADR-002)
 
 Domain folders (`reports/`, `vacations/`, `core/`, `ui/`, …) are mechanical moves only. Working layout: [`docs/adr/003-working-domain-layout.md`](./docs/adr/003-working-domain-layout.md), live table [`docs/module-map.md`](./docs/module-map.md). Before a folder PR: run domain CI, update verify scripts that hardcode paths, `npx clasp status`.

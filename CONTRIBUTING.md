@@ -126,6 +126,9 @@ Use logical separation:
 - Compatibility shims should stay small and clearly named.
 
 Before adding a new file, check whether the code belongs in an existing module.
+Use [`docs/project-files-complete.txt`](docs/project-files-complete.txt) as the
+repository file map (depth-first tree). After creating, deleting, or moving files,
+run **`npm run map:project-files`** and commit the updated map in the same change.
 
 ## Security rules
 
@@ -174,6 +177,7 @@ Update documentation when changing:
 - **Daily summaries** — keep **`docs/daily-summary-architecture.md`**, **`ARCHITECTURE.md` §7.1**, **`RUNBOOK.md` §22** aligned when changing `reports/Report_*.gs`, `reports/Summaries.gs`, or sidebar summary flow
 - **User-facing copy** — keep **`docs/user-facing-copy.md`** aligned when changing sidebar labels, menus, dialogs, health messages, or sheet titles shown to users; run **`npm run ci:copy`** after UI text edits
 - **Script properties** — keep **`README.md`**, **`RUNBOOK.md` §15**, **`SECURITY.md`**, **`CONTRIBUTING.md`** aligned with `data/DataAccess.gs`
+- **Repository file map** — refresh **`docs/project-files-complete.txt`** with **`npm run map:project-files`** whenever files are added, removed, or moved; CI enforces freshness via **`verify-project-files-map.mjs`**
 
 ## Review principles
 

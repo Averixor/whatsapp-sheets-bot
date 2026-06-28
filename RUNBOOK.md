@@ -536,12 +536,19 @@ Local equivalent: **`npm run ci`**.
 | `verify-access-autofill-hotfix.mjs` | ACCESS row autofill hotfix contract |
 | `verify-access-temp-password-reissue.mjs` | Temporary password reissue flow |
 | `verify-oauth-scopes.mjs` | Manifest scopes vs allowlist |
+| `verify-project-files-map.mjs` | `docs/project-files-complete.txt` matches working tree |
 | `verify-jsconfig.mjs` | `jsconfig.json` include/exclude globs |
 
 There is **no** Apps Script deployment in CI (`clasp` is local only). See `.github/workflows/ci.yml`.
 
 ---
 
+0. If the change adds, removes, or moves repository files, refresh the map:
+   ```bash
+   npm run map:project-files
+   git diff -- docs/project-files-complete.txt
+   ```
+   (`npm run release:check` / `npm run ci` fails if the map is stale.)
 1. Run local checks (`npm run ci`; see `CONTRIBUTING.md`).
 2. Confirm `audit-function-graph` ends with **`MISSING: none`**.
 3. Commit with a short descriptive message; avoid version-only or vague messages.
@@ -552,6 +559,36 @@ There is **no** Apps Script deployment in CI (`clasp` is local only). See `.gith
 8. Confirm production `appsscript.json` still has `executionApi.access = MYSELF`.
 9. Run **`apiStage7ClearPhoneCache()`** after every deploy, then re-check a person card and personnel modal.
 10. Run smoke only against the separate smoke project (see §13).
+
+### Repository file map
+
+Canonical tree: **`docs/project-files-complete.txt`**. Regenerate after structural file changes:
+
+```bash
+cd ~/git/whatsapp-sheets-bot   # or your clone path
+npm run map:project-files
+git status --short
+git diff -- docs/project-files-complete.txt
+npm run release:check
+```
+
+The generator uses **depth-first** ordering (same layout as the committed map). It does not require the `tree` CLI.
+
+Optional (`tree` installed: `sudo apt install -y tree`):
+
+```bash
+{
+  echo "# WASB — повний список файлів репозиторію"
+  echo "# Порядок: tree -a -F --dirsfirst"
+  echo "# Виключено: .git/, node_modules/"
+  echo "# Файлів: $(find . -type f -not -path './.git/*' -not -path './node_modules/*' | wc -l)"
+  echo "# Оновлено: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo
+  tree -a -F --dirsfirst -I '.git|node_modules' --noreport
+} > docs/project-files-complete.txt
+```
+
+Prefer **`npm run map:project-files`** so local CI and release checks stay aligned.
 
 ## 13. Post-deploy checks
 

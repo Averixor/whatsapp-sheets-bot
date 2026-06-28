@@ -1,0 +1,467 @@
+# WASB — повний список файлів репозиторію
+# Порядок: дерево каталогів (depth-first, алфавіт у кожній папці)
+# Виключено: .git/, node_modules/
+# Файлів: 402
+# Оновлено: 2026-06-28T18:44:34Z
+
+.
+  .clasp.example.json
+  .clasp.json
+  .clasp.smoke.example.json
+  .clasp.smoke.json
+  .clasp.smoke.runtime.json
+  .clasp.smokeignore
+  .claspignore
+  .cursorignore
+  .gitignore
+  .htmlvalidate.json
+  .nvmrc
+  AGENTS.md
+  appsscript.json
+  appsscript.smoke.json
+  ARCHITECTURE.md
+  CHANGELOG.md
+  CONTRIBUTING.md
+  cspell.json
+  jsconfig.json
+  package-lock.json
+  package.json
+  README.md
+  RUNBOOK.md
+  SECURITY.md
+  WASB_RELEASE_AUDIT.md
+
+.cursor/rules/
+  monthly-callsign-sync.mdc
+  personnel-data-keys.mdc
+  user-facing-copy.mdc
+
+.github/workflows/
+  ci.yml
+
+.vscode/
+  settings.json
+
+access/
+  AccessAutoFillPolicy.gs
+  AccessAutoFillPolicy.js
+  AccessControl.AuthResolver.gs
+  AccessControl.AuthResolver.js
+  AccessControl.Core.gs
+  AccessControl.Core.js
+  AccessControl.Lockout.gs
+  AccessControl.Lockout.js
+  AccessControl.Mutations.gs
+  AccessControl.Mutations.js
+  AccessControl.PublicApi.gs
+  AccessControl.PublicApi.js
+  AccessControl.SheetRepository.gs
+  AccessControl.SheetRepository.js
+  AccessControl.TempPasswordReissue.gs
+  AccessControl.TempPasswordReissue.js
+  AccessEnforcement.gs
+  AccessEnforcement.js
+  AccessPolicyChecks.gs
+  AccessPolicyChecks.js
+  AccessSheetRowAutoFillHotfix.gs
+  AccessSheetRowAutoFillHotfix.js
+  AccessSheetTriggers.gs
+  AccessSheetTriggers.js
+
+api/
+  SpreadsheetActionsApi.gs
+  SpreadsheetActionsApi.js
+  Stage7MaintenanceApi.gs
+  Stage7MaintenanceApi.js
+  Stage7ServerApi.gs
+  Stage7ServerApi.js
+
+contracts/
+  access-api.contract.json
+  access.contract.json
+  bridge-flags.registry.json
+  client-includes.contract.json
+  client-layers.contract.json
+  envelope-migration.contract.json
+  envelope.contract.json
+  facade.contract.json
+  manual-format-rules.contract.json
+  oauth-scopes.contract.json
+  personnel-status.contract.json
+  reference-workbook-layout.contract.json
+  SNAPSHOT_CHANGELOG.md
+  user-facing-copy.contract.json
+  xss-policy.contract.json
+
+core/
+  Code.gs
+  Code.js
+  DateUtils.gs
+  DateUtils.js
+  DeprecatedRegistry.gs
+  DeprecatedRegistry.js
+  FunctionBindingAudit.gs
+  FunctionBindingAudit.js
+  LockHelpers.gs
+  LockHelpers.js
+  Log.gs
+  Log.js
+  OperationSafety.gs
+  OperationSafety.js
+  ProjectMetadata.gs
+  ProjectMetadata.js
+  RoutingRegistry.gs
+  RoutingRegistry.js
+  ServerResponse.gs
+  ServerResponse.js
+  Stage7Config.gs
+  Stage7Config.js
+  Stage7EnvelopeCompat.gs
+  Stage7EnvelopeCompat.js
+  Stage7GlobalDependencyAliases.gs
+  Stage7GlobalDependencyAliases.js
+  UseCaseTracing.gs
+  UseCaseTracing.js
+  Utils.gs
+  Utils.js
+  WasbNameUtils.gs
+  WasbNameUtils.js
+  WorkflowOrchestrator.gs
+  WorkflowOrchestrator.js
+
+data/
+  DataAccess.gs
+  DataAccess.js
+  DictionaryRepository.gs
+  DictionaryRepository.js
+  DictMaterialize.gs
+  DictMaterialize.js
+  LogsRepository.gs
+  LogsRepository.js
+  OperationRepository.gs
+  OperationRepository.js
+
+diagnostics/
+  Diagnostics.BasicChecks.gs
+  Diagnostics.BasicChecks.js
+  Diagnostics.Core.gs
+  Diagnostics.Core.js
+  Diagnostics.Health.gs
+  Diagnostics.Health.js
+  Diagnostics.Stage7.Baseline.gs
+  Diagnostics.Stage7.Baseline.js
+  Diagnostics.Stage7.Core.gs
+  Diagnostics.Stage7.Core.js
+  Diagnostics.Stage7.Historical.gs
+  Diagnostics.Stage7.Historical.js
+
+docs/
+  daily-summary-architecture.md
+  developer-guide.md
+  format-rules-governance.md
+  module-map.md
+  project-files-complete.txt
+  README.md
+  user-facing-copy.md
+  vacation-planner.md
+
+docs/adr/
+  001-structural-changes.md
+  002-domain-folder-map.md
+  003-working-domain-layout.md
+  README.md
+
+docs/refactor/
+  p2-candidates.md
+
+docs/runtime-smoke/
+  vacation-smoke-2026-06-14.md
+
+maintenance/
+  ConditionalFormatAdoptedRules.gs
+  ConditionalFormatAdoptedRules.js
+  ConditionalFormatGovernance.gs
+  ConditionalFormatGovernance.js
+  ConditionalFormatRegistry.gs
+  ConditionalFormatRegistry.js
+  JobRuntime.gs
+  JobRuntime.js
+  JobRuntimeRepository.gs
+  JobRuntimeRepository.js
+  LifecycleRetention.gs
+  LifecycleRetention.js
+  TemplateRegistry.gs
+  TemplateRegistry.js
+  TemplateResolver.gs
+  TemplateResolver.js
+  Templates.gs
+  Templates.js
+
+operations/
+  Actions.gs
+  Actions.js
+  LeaveBirthdayReminderMail.gs
+  LeaveBirthdayReminderMail.js
+  MaterializeComputedData.gs
+  MaterializeComputedData.js
+  ProjectRequests.gs
+  ProjectRequests.js
+  Reconciliation.gs
+  Reconciliation.js
+  Triggers.gs
+  Triggers.js
+
+personnel/
+  AlertsRepository.gs
+  AlertsRepository.js
+  PersonCards.gs
+  PersonCards.js
+  PersonnelMaterialize.gs
+  PersonnelMaterialize.js
+  PersonnelRepository.gs
+  PersonnelRepository.js
+  PersonsRepository.gs
+  PersonsRepository.js
+
+reports/
+  MonthlyReport.gs
+  MonthlyReport.js
+  Report_DailyDetailed.gs
+  Report_DailyDetailed.js
+  Report_DailySimple.gs
+  Report_DailySimple.js
+  Report_SummaryData.gs
+  Report_SummaryData.js
+  Summaries.gs
+  Summaries.js
+  SummaryDictSumShim.gs
+  SummaryDictSumShim.js
+  SummaryRepository.gs
+  SummaryRepository.js
+  SummaryService.gs
+  SummaryService.js
+
+scripts/
+  allowed-russian-strings.json
+  allowed-user-facing-technical-strings.json
+  audit-client-xss.mjs
+  audit-envelope-compat.mjs
+  audit-function-graph.mjs
+  bootstrap-access-baseline.mjs
+  bootstrap-facade-snapshot.mjs
+  build-stage7-test-runner-core.mjs
+  ci-gas-sanity.mjs
+  ci.ps1
+  prepare-smoke-bundle.mjs
+  release.mjs
+  split-stage7-test-runner.mjs
+  update-project-files-map.mjs
+  verify-access-api-governance.mjs
+  verify-access-autofill-hotfix.mjs
+  verify-access-temp-password-reissue.mjs
+  verify-age-birthday-countdown.mjs
+  verify-bridge-flags.mjs
+  verify-clasp-push-patterns.mjs
+  verify-client-deps.mjs
+  verify-client-includes.mjs
+  verify-client-js.mjs
+  verify-format-rules-governance.mjs
+  verify-html-label-for.mjs
+  verify-jsconfig.mjs
+  verify-materialize-computed-data.mjs
+  verify-monthly-callsign-sync.mjs
+  verify-no-russian-text.mjs
+  verify-node-version.mjs
+  verify-oauth-scopes.mjs
+  verify-personnel-status-contract.mjs
+  verify-project-files-map.mjs
+  verify-recipient-contract.mjs
+  verify-reference-workbook-layout.mjs
+  verify-send-panel-bounds.mjs
+  verify-snapshot-governance.mjs
+  verify-usecase-facade.mjs
+  verify-user-facing-copy.mjs
+  verify-vacation-planner.mjs
+  verify-workbook-contract.mjs
+
+scripts/lib/
+  eval-access-invariants.mjs
+  gas-files.mjs
+  load-contract.mjs
+
+scripts/snapshots/
+  access-debug-baseline.json
+  stage7-usecases-facade.json
+
+security/
+  AuditTrail.gs
+  AuditTrail.js
+  SecurityRedaction.gs
+  SecurityRedaction.js
+
+sendpanel/
+  SelectionActionService.gs
+  SelectionActionService.js
+  SendPanel.gs
+  SendPanel.js
+  SendPanelConstants.gs
+  SendPanelConstants.js
+  SendPanelFastPaths.gs
+  SendPanelFastPaths.js
+  SendPanelRepository.gs
+  SendPanelRepository.js
+  SendPanelService.gs
+  SendPanelService.js
+  Stage7PhoneDictPayloadShims.gs
+  Stage7PhoneDictPayloadShims.js
+  UseCases.SendPanel.gs
+  UseCases.SendPanel.js
+
+sheets/
+  MonthlyCallsignSync.gs
+  MonthlyCallsignSync.js
+  MonthSheets.gs
+  MonthSheets.js
+  ServiceSheetsBootstrap.gs
+  ServiceSheetsBootstrap.js
+  SheetHeadersEnglishMigration.gs
+  SheetHeadersEnglishMigration.js
+  SheetSchemas.gs
+  SheetSchemas.js
+  SheetStandards.gs
+  SheetStandards.js
+  SheetValidationCompat.gs
+  SheetValidationCompat.js
+  SpreadsheetProtection.gs
+  SpreadsheetProtection.js
+  SystemSheetsSelfHeal.gs
+  SystemSheetsSelfHeal.js
+  Validation.gs
+  Validation.js
+
+smoke/
+  SmokeTests.gs
+  SmokeTests.Helpers.gs
+  SmokeTests.Helpers.js
+  SmokeTests.js
+
+tests/
+  AccessE2ETests.gs
+  AccessE2ETests.js
+  DebugManualTests.gs
+  Diagnostics.Debug.gs
+  DomainTests.gs
+  DomainTests.js
+  GasRuntimeSmoke.gs
+  Stage7TestRunner.Access.gs
+  Stage7TestRunner.Access.js
+  Stage7TestRunner.Api.gs
+  Stage7TestRunner.Api.js
+  Stage7TestRunner.gs
+  Stage7TestRunner.Helpers.gs
+  Stage7TestRunner.Helpers.js
+  Stage7TestRunner.js
+  Stage7TestRunner.Maintenance.gs
+  Stage7TestRunner.Maintenance.js
+  Stage7TestRunner.Registry.gs
+  Stage7TestRunner.Registry.js
+  Stage7TestRunner.Reporting.gs
+  Stage7TestRunner.Reporting.js
+  Stage7TestRunner.SendPanel.gs
+  Stage7TestRunner.SendPanel.js
+  Stage7TestRunner.Sheet.gs
+  Stage7TestRunner.Sheet.js
+  Stage7TestRunner.Summaries.gs
+  Stage7TestRunner.Summaries.js
+  Stage7TestRunner.Ui.gs
+  Stage7TestRunner.Ui.js
+
+ui/
+  JavaScript.html
+  Js.Actions.html
+  Js.Api.html
+  Js.Core.html
+  Js.Diagnostics.html
+  Js.Events.html
+  Js.Helpers.html
+  Js.Modals.html
+  Js.Render.Calendar.html
+  Js.Render.Panel.html
+  Js.Render.Results.html
+  Js.Security.Access.html
+  Js.Security.Boot.html
+  Js.Security.Debug.html
+  Js.Security.DebugView.html
+  Js.Security.Exports.html
+  Js.Security.Forms.html
+  Js.Security.Guards.html
+  Js.Security.html
+  Js.Security.Login.html
+  Js.Security.Policy.html
+  Js.Security.Util.html
+  Js.State.html
+  Js.Vacations.html
+  PersonCalendar.html
+  Sidebar.html
+  Styles_00_Base.html
+  Styles_30_Personnel.html
+  Styles_40_SystemPanels.html
+  Styles_50_Modals.html
+  Styles_60_Health.html
+  Styles_99_Responsive.html
+  Styles.html
+  VacationSidebar.html
+
+ui-server/
+  DialogPresenter.gs
+  DialogPresenter.js
+  Dialogs.gs
+  Dialogs.js
+  DialogTemplates.gs
+  DialogTemplates.js
+  HtmlUtils.gs
+  HtmlUtils.js
+  PreviewLinkService.gs
+  PreviewLinkService.js
+  SidebarServer.gs
+  SidebarServer.js
+
+usecases/
+  UseCases.Calendar.gs
+  UseCases.Calendar.js
+  UseCases.gs
+  UseCases.js
+  UseCases.Maintenance.gs
+  UseCases.Maintenance.js
+  UseCases.MonthOps.gs
+  UseCases.MonthOps.js
+  UseCases.PanelHelpers.gs
+  UseCases.PanelHelpers.js
+  UseCases.Summaries.gs
+  UseCases.Summaries.js
+
+vacations/
+  Vacation_Suggestions.gs
+  Vacation_Suggestions.js
+  VacationBulkFix.gs
+  VacationBulkFix.js
+  VacationEngine.gs
+  VacationEngine.js
+  VacationMonthCalendar.gs
+  VacationMonthCalendar.js
+  VacationOptionsWriter.gs
+  VacationOptionsWriter.js
+  VacationPlannerConfig.gs
+  VacationPlannerConfig.js
+  VacationPlannerService.gs
+  VacationPlannerService.js
+  VacationPlannerTypes.gs
+  VacationPlannerTypes.js
+  VacationService.gs
+  VacationService.js
+  VacationSidebarService.gs
+  VacationSidebarService.js
+  VacationsMaterialize.gs
+  VacationsMaterialize.js
+  VacationsRepository.gs
+  VacationsRepository.js

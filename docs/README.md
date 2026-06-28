@@ -24,6 +24,7 @@ snapshots to the repository.
 | [daily-summary-architecture.md](./daily-summary-architecture.md) | Short/detailed day summary modules, formula block, UI flow  |
 | [format-rules-governance.md](./format-rules-governance.md)       | Manual conditional-format registry and rebuild protection   |
 | [user-facing-copy.md](./user-facing-copy.md)                     | UX copy: UA UI text, no technical names in user-facing strings; enforced by `verify-user-facing-copy.mjs` |
+| [project-files-complete.txt](./project-files-complete.txt)       | Canonical depth-first file tree (governance map); refresh with `npm run map:project-files` |
 
 ## Refactor Planning
 
