@@ -1,51 +1,20 @@
-# ==============================================================================
-# .claspignore for WASB
-# Ignore local/dev files, allow Apps Script source files
-# ==============================================================================
-
+# Git / editor / dependencies
 .git/**
-.vscode/**
 node_modules/**
+.cursor/**
+.codex/**
+.agents/**
 
+# Docs / contracts / local-only files
+docs/**
+contracts/**
 *.md
-*.log
-*.bak*
-*.tmp
-_backup*/**
-_authresolver_*.txt
-_spreadsheet_access_points.txt
-_patch_*.js
-_audit-out.txt
-_audit_function_graph_out.txt
-_ci_gas_sanity_out.txt
-_debug_person_card_lookup.txt
-_person_card_compact_report.txt
+*.example.json
+cspell.json
 
-package.json
-package-lock.json
+# Do not upload local JS mirrors when .gs sources exist
+**/*.js
+
+# Local smoke/runtime configs
+.clasp.smoke*
 appsscript.smoke.json
-.clasp.smokeignore
-
-!appsscript.json
-!**/*.gs
-!**/*.html
-
-# Re-exclude after nested un-ignore (negation above would otherwise include ignored trees)
-node_modules/**
-.git/**
-_backup*/**
-
-# Tests / debug / local diagnostics (after !*.gs so these stay excluded)
-# Stage7TestRunner*.gs + DomainTests.gs + AccessE2ETests.gs — deploy for sidebar «Всі тести проєкту».
-tests/DebugManualTests.gs
-tests/Diagnostics.Debug.gs
-tests/GasRuntimeSmoke.gs
-
-# Local tooling / python env
-.venv_xlsx/**
-.venv/**
-dist/**
-coverage/**
-
-# Generated/debug client bundle - do not push
-_combined_client_debug.*
