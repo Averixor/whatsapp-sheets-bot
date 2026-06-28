@@ -10,6 +10,12 @@ import { repoRoot } from './lib/load-contract.mjs';
 const MAP_FILE = path.join(repoRoot, 'docs/project-files-complete.txt');
 const SKIP_DIRS = new Set(['.git', 'node_modules']);
 
+export function normalizeForCompare(text) {
+  return String(text || '')
+    .replace(/^# Оновлено: .*$/m, '# Оновлено: <ignored>')
+    .replace(/\r\n/g, '\n');
+}
+
 function labelDir(relDir) {
   if (!relDir || relDir === '.') return '.';
   return relDir.split(path.sep).join('/') + '/';
@@ -70,13 +76,30 @@ export function generateProjectFilesMapText() {
   return header.concat(body).join('\n').replace(/\n{3,}/g, '\n\n') + '\n';
 }
 
+/**
+ * @returns {'written' | 'unchanged'}
+ */
 export function writeProjectFilesMap(targetPath = MAP_FILE) {
-  fs.writeFileSync(targetPath, generateProjectFilesMapText(), 'utf8');
+  const outPath = targetPath;
+  const nextContent = generateProjectFilesMapText();
+  const current = fs.existsSync(outPath) ? fs.readFileSync(outPath, 'utf8') : '';
+
+  if (normalizeForCompare(current) === normalizeForCompare(nextContent)) {
+    return 'unchanged';
+  }
+
+  fs.writeFileSync(outPath, nextContent, 'utf8');
+  return 'written';
 }
 
 function main() {
-  writeProjectFilesMap();
-  console.log(`update-project-files-map: OK → ${path.relative(repoRoot, MAP_FILE)}`);
+  const rel = path.relative(repoRoot, MAP_FILE);
+  const result = writeProjectFilesMap();
+  if (result === 'unchanged') {
+    console.log(`update-project-files-map: OK → ${rel} already up to date`);
+    return;
+  }
+  console.log(`update-project-files-map: OK → ${rel}`);
 }
 
 if (import.meta.url === new URL(process.argv[1], 'file:').href) {
