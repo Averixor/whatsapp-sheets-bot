@@ -44,7 +44,8 @@
     "c": "npm run map:project-files && npm run ci",
     "gas": "node scripts/ops-gas.mjs",
     "gh": "node scripts/ops-github.mjs",
-    "ship": "node scripts/ops-ship.mjs"
+    "ship": "node scripts/ops-ship.mjs",
+    "go": "npm run ship --"
   },
   "devDependencies": {
     "@google/clasp": "^3.3.0"

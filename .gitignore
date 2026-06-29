@@ -24,3 +24,9 @@ _audit-out.txt
 !.clasp.smoke.example.json
 .npmrc
 .clasp.smoke.json
+!.clasp.smoke.example.json
+# Local Google Apps Script bindings
+.clasp.json
+.clasp.*.json
+!.clasp.example.json
+!.clasp.smoke.example.json
