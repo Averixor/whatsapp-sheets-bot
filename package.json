@@ -7,6 +7,9 @@
     "node": ">=24 <25"
   },
   "scripts": {
+    "check": "npm run ci",
+    "check:all": "npm run ci",
+    "push:remote": "node scripts/push-remote.mjs",
     "precheck": "node scripts/verify-node-version.mjs",
     "ci": "npm run precheck && node scripts/ci-gas-sanity.mjs && node scripts/verify-clasp-push-patterns.mjs && node scripts/verify-no-russian-text.mjs && node scripts/verify-user-facing-copy.mjs && node scripts/verify-reference-workbook-layout.mjs && node scripts/verify-workbook-contract.mjs && node scripts/verify-monthly-callsign-sync.mjs && node scripts/verify-send-panel-bounds.mjs && node scripts/verify-materialize-computed-data.mjs && node scripts/verify-age-birthday-countdown.mjs && node scripts/verify-vacation-planner.mjs && node scripts/verify-recipient-contract.mjs && node scripts/verify-personnel-status-contract.mjs && node scripts/verify-format-rules-governance.mjs && node scripts/audit-function-graph.mjs && node scripts/verify-client-includes.mjs && node scripts/verify-html-label-for.mjs && node scripts/verify-client-js.mjs && node scripts/verify-client-deps.mjs && node scripts/audit-client-xss.mjs && node scripts/audit-envelope-compat.mjs && node scripts/verify-usecase-facade.mjs && node scripts/verify-snapshot-governance.mjs && node scripts/verify-bridge-flags.mjs && node scripts/verify-access-api-governance.mjs && node scripts/verify-access-autofill-hotfix.mjs && node scripts/verify-access-temp-password-reissue.mjs && node scripts/verify-oauth-scopes.mjs && node scripts/verify-project-files-map.mjs && node scripts/verify-jsconfig.mjs",
     "ci:language": "node scripts/verify-no-russian-text.mjs",
@@ -30,10 +33,17 @@
     "release:check": "npm run ci",
     "map:project-files": "node scripts/update-project-files-map.mjs",
     "map:project-files:verify": "node scripts/verify-project-files-map.mjs",
-    "gas status": "npx clasp status",
-    "gas pull": "npx clasp pull",
-    "gas push": "npx clasp push",
-    "gas open": "npx clasp open"
+    "gas:status": "npx clasp status",
+    "gas:pull": "npx clasp pull",
+    "gas:push": "npx clasp push",
+    "gas:open": "npx clasp open-script",
+    "gas status": "npm run gas:status",
+    "gas pull": "npm run gas:pull",
+    "gas push": "npm run gas:push",
+    "gas open": "npm run gas:open",
+    "c": "npm run ci",
+    "gas": "node scripts/ops-gas.mjs",
+    "gh": "node scripts/ops-github.mjs"
   },
   "devDependencies": {
     "@google/clasp": "^3.3.0"

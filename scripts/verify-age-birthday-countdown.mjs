@@ -46,9 +46,10 @@ assert.equal(formatBirthdayCell_(""), "");
 assert.equal(formatBirthdayCell_(null), "");
 assert.equal(formatBirthdayCell_("not-a-date"), "");
 assert.equal(formatBirthdayCell_("31.02.2026"), "");
-assert.equal(formatBirthdayCell_("20.09.2000"), "20.09.2000р.");
-assert.equal(formatBirthdayCell_("20.09.2000р."), "20.09.2000р.");
-assert.equal(formatBirthdayCell_("20.09.2000р.р."), "20.09.2000р.");
+assert.equal(formatBirthdayCell_("20.09.2000"), "20.09.2000 р.н.");
+assert.equal(formatBirthdayCell_("20.09.2000р."), "20.09.2000 р.н.");
+assert.equal(formatBirthdayCell_("20.09.2000 р.н."), "20.09.2000 р.н.");
+assert.equal(formatBirthdayCell_("20.09.2000р.р."), "20.09.2000 р.н.");
 
 assert.equal(formatAgeCell_(""), "");
 assert.equal(formatAgeCell_(null), "");
@@ -120,7 +121,7 @@ assert.equal(
 );
 assert.equal(
   formatBirthdayCell_("20.09.2000"),
-  "20.09.2000р.",
+  "20.09.2000 р.н.",
   "parseBirthdayValue handles dd.mm.yyyy text",
 );
 

@@ -100,6 +100,7 @@ function calcAge_(birthday, today) {
 
 function normalizeBirthdayText_(value) {
   var text = String(value || "").trim();
+  text = text.replace(/\s*р\.?\s*н\.?\s*$/i, "").trim();
   while (/р\.$/.test(text)) {
     text = text.replace(/р\.$/, "").trim();
   }
@@ -160,7 +161,7 @@ function formatBirthdayCell_(value) {
   var month = String(date.getMonth() + 1).padStart(2, "0");
   var year = date.getFullYear();
 
-  return day + "." + month + "." + year + "р.";
+  return day + "." + month + "." + year + " р.н.";
 }
 
 function formatAgeCell_(value) {
