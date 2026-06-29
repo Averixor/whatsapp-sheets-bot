@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Regenerate docs/project-files-complete.txt — depth-first repository file map.
- * Excludes .git/ and node_modules/.
+ * Excludes .git/, node_modules/, and local clasp binding files (gitignored secrets).
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -9,6 +9,13 @@ import { repoRoot } from './lib/load-contract.mjs';
 
 const MAP_FILE = path.join(repoRoot, 'docs/project-files-complete.txt');
 const SKIP_DIRS = new Set(['.git', 'node_modules']);
+/** Root-level files that must not appear in the committed map (local secrets / IDE). */
+const SKIP_ROOT_FILES = new Set([
+  '.clasp.json',
+  '.clasp.smoke.json',
+  '.clasp.smoke.runtime.json',
+  '.npmrc',
+]);
 
 export function normalizeForCompare(text) {
   return String(text || '')
@@ -31,7 +38,10 @@ function walkDir(absDir, relDir, sections) {
     const abs = path.join(absDir, name);
     const st = fs.statSync(abs);
     if (st.isDirectory()) dirs.push(name);
-    else if (st.isFile()) files.push(name);
+    else if (st.isFile()) {
+      if (relDir === '' && SKIP_ROOT_FILES.has(name)) continue;
+      files.push(name);
+    }
   }
 
   if (files.length) {
@@ -63,7 +73,7 @@ export function generateProjectFilesMapText() {
   const header = [
     '# WASB — повний список файлів репозиторію',
     '# Порядок: дерево каталогів (depth-first, алфавіт у кожній папці)',
-    '# Виключено: .git/, node_modules/',
+    '# Виключено: .git/, node_modules/, локальні .clasp*.json (крім *.example.json)',
     `# Файлів: ${fileCount}`,
     `# Оновлено: ${new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')}`,
     '',

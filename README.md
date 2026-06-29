@@ -27,16 +27,32 @@ This repository is packaged for Google Apps Script through `clasp`:
 
 ## Maintainer workflow
 
+**Typical two-step flow (one production GAS project):**
+
 ```bash
 npm ci
-npm run ci
-npx clasp status
-npx clasp push
-apiStage7ClearPhoneCache() # run in the production GAS editor
+npm run check              # all local verify scripts (alias: npm run ci)
+git add -A && git commit -m "fix: …"
+npm run push:remote        # GitHub + production clasp push (no second CI run)
+apiStage7MaterializeComputedData()  # after PERSONNEL / PHONES / birthday edits
+apiStage7ClearPhoneCache()          # run in the production GAS editor after deploy
 ```
+
+**Alternatives:**
+
+| Command | Use when |
+| -------- | -------- |
+| `npm run deploy:prod` | Full CI + clasp push in one step (no git push) |
+| `npm run ship -- "msg"` | Map refresh + CI + clasp push + commit + GitHub |
+| `npm run release -- "msg"` | Full release pipeline + optional smoke project |
+| `npm run gas:open` | Open the bound GAS project in the browser |
 
 Use Node.js 24 (`.nvmrc`). `npm run deploy:prod` runs local CI and pushes the
 production project with `executionApi.access = MYSELF`.
+
+**Clasp config (local, not in git):** copy `.clasp.example.json` → `.clasp.json` once.
+Smoke is **optional** — only if you maintain a separate test GAS project (see below).
+Do not keep `.clasp.smoke.runtime.json`; nothing in the repo reads it.
 
 Remote smoke is deliberately separate from production:
 
@@ -55,7 +71,7 @@ test spreadsheet. It stages `appsscript.smoke.json` (`executionApi: ANYONE`) in
   - **`WASB_OWNER_EMAIL`** — security mail with full user key for owner
   - **`WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`** — off in normal operation
   - **`WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP`** — legacy plaintext temp-password lookup during migration only; off in normal operation
-- After every production deploy and after **PERSONNEL**, **PHONES**, or birthday changes: run **`apiStage7ClearPhoneCache()`** in the GAS editor, then reload the sidebar.
+- After every production deploy and after **PERSONNEL**, **PHONES**, or birthday changes: run **`apiStage7MaterializeComputedData()`** when derived columns may be stale; then **`apiStage7ClearPhoneCache()`** in the GAS editor, then reload the sidebar.
 
 Full workflow, release checklist, and post-deploy checks: **`CONTRIBUTING.md`** and **`RUNBOOK.md`**.
 
@@ -63,10 +79,11 @@ Full workflow, release checklist, and post-deploy checks: **`CONTRIBUTING.md`** 
 
 The repository runs a lightweight CI workflow on **`push`** and **`pull_request`** to **`main`**, and **`workflow_dispatch`**.
 
-It runs the full **`npm run ci`** suite (**24** Node verify scripts after `npm run precheck` — see `package.json` and **RUNBOOK.md** §12), including:
+It runs the full **`npm run ci`** suite (**30** Node verify scripts after `npm run precheck` — see `package.json` and **RUNBOOK.md** §12), including:
 
 - GAS sanity, clasp push patterns, **Ukrainian/Russian language** (`verify-no-russian-text.mjs`), **user-facing copy** (`verify-user-facing-copy.mjs`)
-- Workbook, vacation planner, recipient, personnel-status, format-rules contracts
+- Reference workbook layout, workbook contract, monthly callsign sync, send-panel bounds, materialize / age-birthday countdown
+- Vacation planner, recipient, personnel-status, format-rules contracts
 - Function graph audit; client includes, HTML labels, JS parse, layer deps, XSS, envelope compat
 - UseCase facade, snapshot governance, bridge flags, access API governance, access hotfixes
 - OAuth scopes, jsconfig
@@ -74,7 +91,7 @@ It runs the full **`npm run ci`** suite (**24** Node verify scripts after `npm r
 See [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) (Node 24, `actions/checkout@v5`, `actions/setup-node@v5`).
 
 The workflow does not deploy to Apps Script. Deployment remains local via
-**`npx clasp push`** or `npm run deploy:prod`.
+**`npm run push:remote`**, **`npm run deploy:prod`**, or **`npm run gas:push`**.
 
 ## Documentation map
 

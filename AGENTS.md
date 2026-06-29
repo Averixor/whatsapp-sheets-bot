@@ -9,12 +9,30 @@ WASB is a Google Apps Script (GAS) bundle bound to a Google Spreadsheet. There i
 ### Running lint/CI checks
 
 ```bash
+npm run check    # alias for full CI
 npm run ci
 ```
 
 This runs all static analysis scripts (GAS sanity, clasp patterns, language/copy guards, workbook and domain contracts, function graph audit, client verification, XSS audit, envelope compat, usecase facade, snapshot governance, bridge flags, access API governance, OAuth scopes, jsconfig verification). All checks are Node.js-based and do not require any Google credentials or network access.
 
-Individual subscripts: `npm run ci:gas`, `npm run ci:client`, `npm run ci:copy`, `npm run ci:language`, `npm run audit:functions`.
+Individual subscripts: `npm run ci:gas`, `npm run ci:client`, `npm run ci:copy`, `npm run ci:language`, `npm run ci:workbook`, `npm run ci:materialize`, `npm run ci:vacations`, `npm run ci:recipients`, `npm run ci:personnel-status`, `npm run ci:format-rules`, `npm run ci:access-autofill`, `npm run audit:functions`.
+
+### Terminal deploy commands
+
+| Command | What it does |
+| -------- | ------------- |
+| `npm run check` / `check:all` | Full local CI (= `npm run ci`) |
+| `npm run c` | Refresh file map + full CI |
+| `npm run deploy:prod` | Full CI + `npx clasp push` (production) |
+| `npm run push:remote` | `git push` + `clasp push` — **no CI**; tree must be committed |
+| `npm run gas` | Node version check + `clasp push` only — **not** full CI |
+| `npm run gh -- "msg"` | Commit (if dirty) + `git push` |
+| `npm run ship` / `go -- "msg"` | `c` + `gas` + `gh` — map, CI, GAS push, GitHub |
+| `npm run release -- "msg"` | CI + commit + git push + clasp + optional smoke |
+| `npm run gas:open` | Open GAS editor (`npx clasp open-script`, clasp 3.x) |
+| `npm run gas:push` / `gas:status` | Production clasp helpers |
+
+**Single production project:** keep only local `.clasp.json` (from `.clasp.example.json`). Smoke files (`.clasp.smoke.json`, `appsscript.smoke.json`) are optional — only if you maintain a separate test GAS project. Do not create `.clasp.smoke.runtime.json`; it is unused.
 
 ### Node.js version
 
@@ -33,7 +51,7 @@ This project cannot be "run" locally in the traditional sense. There is no dev s
 
 ### Testing
 
-- **Local (automated):** `npm run ci` — **24** verify scripts (+ `precheck`), no Google credentials.
+- **Local (automated):** `npm run ci` — **30** verify scripts (+ `precheck`), no Google credentials.
 - **Remote smoke (separate non-production project):** `npm run deploy:smoke` — `apiRunSmokeChecks` via `.clasp.smoke.json`.
 - **Remote (manual):** `apiRunStage7RegressionTests()` in GAS editor.
 
@@ -72,7 +90,8 @@ Or one command: `npm run deploy:prod` (local CI + production push). Run
 ### Repository map (`docs/project-files-complete.txt`)
 
 Before structural edits, treat **`docs/project-files-complete.txt`** as the canonical
-file tree of the repo (depth-first, excludes `.git/` and `node_modules/`).
+file tree of the repo (depth-first, excludes `.git/`, `node_modules/`, and local
+`.clasp*.json` binding files).
 
 **Agent / contributor rules:**
 

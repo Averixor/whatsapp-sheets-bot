@@ -16,17 +16,11 @@ _audit-out.txt
 !.vscode/settings.json
 .aider*
 
-# Local Google Apps Script / clasp mapping
-# Contains scriptId and bound spreadsheet parentId.
+# Local Google Apps Script / clasp mapping (scriptId, spreadsheet parentId)
 .clasp.json
+.clasp.smoke.json
+.clasp.smoke.runtime.json
 .clasp.*.json
 !.clasp.example.json
 !.clasp.smoke.example.json
 .npmrc
-.clasp.smoke.json
-!.clasp.smoke.example.json
-# Local Google Apps Script bindings
-.clasp.json
-.clasp.*.json
-!.clasp.example.json
-!.clasp.smoke.example.json

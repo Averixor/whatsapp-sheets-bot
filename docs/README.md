@@ -24,7 +24,7 @@ snapshots to the repository.
 | [daily-summary-architecture.md](./daily-summary-architecture.md) | Short/detailed day summary modules, formula block, UI flow  |
 | [format-rules-governance.md](./format-rules-governance.md)       | Manual conditional-format registry and rebuild protection   |
 | [user-facing-copy.md](./user-facing-copy.md)                     | UX copy: UA UI text, no technical names in user-facing strings; enforced by `verify-user-facing-copy.mjs` |
-| [project-files-complete.txt](./project-files-complete.txt)       | Canonical depth-first file tree (governance map); refresh with `npm run map:project-files` |
+| [project-files-complete.txt](./project-files-complete.txt)       | Canonical depth-first file tree (governance map); excludes local `.clasp*.json`; refresh with `npm run map:project-files` |
 
 ## Refactor Planning
 
@@ -42,5 +42,5 @@ monthly schedule key: **Callsign** — the xlsx may label the column Позив�
 
 Production status is recorded in
 [`WASB_RELEASE_AUDIT.md`](../WASB_RELEASE_AUDIT.md) (**CLOSED** 2026-06-07).
-Re-verify with current evidence when redeploying: `npm run ci`, `clasp status`,
-`npm run deploy:smoke` (`apiRunSmokeChecks`), or `apiRunStage7RegressionTests()` in GAS diagnostics.
+Re-verify with current evidence when redeploying: `npm run check`, `npm run gas:status`,
+`npm run deploy:smoke` (optional separate project), or `apiRunStage7RegressionTests()` in GAS diagnostics.

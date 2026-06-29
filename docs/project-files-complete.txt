@@ -1,15 +1,12 @@
 # WASB — повний список файлів репозиторію
 # Порядок: дерево каталогів (depth-first, алфавіт у кожній папці)
-# Виключено: .git/, node_modules/
-# Файлів: 406
-# Оновлено: 2026-06-29T04:08:08Z
+# Виключено: .git/, node_modules/, локальні .clasp*.json (крім *.example.json)
+# Файлів: 403
+# Оновлено: 2026-06-29T04:46:30Z
 
 .
   .clasp.example.json
-  .clasp.json
   .clasp.smoke.example.json
-  .clasp.smoke.json
-  .clasp.smoke.runtime.json
   .clasp.smokeignore
   .claspignore
   .cursorignore

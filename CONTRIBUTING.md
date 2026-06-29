@@ -12,11 +12,27 @@ Use Node.js 24 (`.nvmrc`) and the repository-pinned dependencies:
 
 ```bash
 npm ci
-npm run ci
-npx clasp status
+npm run check    # full CI (alias: npm run ci)
 ```
 
 Run individual npm scripts only when diagnosing a specific failed check.
+
+### Terminal commands (maintainers)
+
+| Command | What it does |
+| -------- | ------------- |
+| `npm run check` | Full local CI |
+| `npm run c` | Refresh `docs/project-files-complete.txt` + full CI |
+| `npm run deploy:prod` | Full CI + production `clasp push` |
+| `npm run push:remote` | `git push` + `clasp push` — **no CI**; commit first |
+| `npm run gas` | Node version gate + `clasp push` only — **not** full CI |
+| `npm run gh -- "msg"` | Commit (if needed) + push to GitHub |
+| `npm run ship -- "msg"` | `c` + `gas` + `gh` |
+| `npm run release -- "msg"` | CI + commit + git push + clasp + optional smoke |
+| `npm run gas:open` | Open GAS editor (`clasp open-script`) |
+| `npm run gas:status` | List files tracked for clasp push |
+
+**One production project:** local `.clasp.json` only (from `.clasp.example.json`). Smoke configs are optional for a separate test GAS. `.clasp.smoke.runtime.json` is not used — delete if present.
 
 ### Commit messages
 
@@ -29,14 +45,13 @@ descriptive enough.
 **Pushing to GitHub does not update Google Apps Script.** Deploy explicitly:
 
 ```bash
-npx clasp status
-npx clasp push
+npm run gas:status
+npm run gas:push
 ```
 
 Confirm **Tracked files** includes all domain `**/*.gs` and `ui/**/*.html`, and excludes `tests/`, `node_modules/`, `*.md`. See [`docs/module-map.md`](./docs/module-map.md) and [ADR-003](docs/adr/003-working-domain-layout.md).
 
-Or run `npm run deploy:prod` for CI + production push. Production keeps
-`executionApi.access = MYSELF`; it does not run remote smoke.
+Or run `npm run deploy:prod` for CI + production push, or `npm run push:remote` after commit for git + clasp without re-running CI. Production keeps `executionApi.access = MYSELF`; it does not run remote smoke.
 
 For remote smoke, configure `.clasp.smoke.json` from
 `.clasp.smoke.example.json` with a separate non-production Apps Script project,
@@ -57,9 +72,9 @@ Sidebar bootstrap can create and seed these sheets (headers + one template row) 
 ### PERSONNEL / PHONES / birthday cache
 
 After every production deploy, and after changing **PERSONNEL**, **PHONES**,
-phone index logic, or birthday behavior, clear the script cache that backs
-profiles:
+phone index logic, or birthday behavior:
 
+- Run **`apiStage7MaterializeComputedData()`** when derived columns (Birthday `DD.MM.YYYY р.н.`, Age, Days until birthday) may be stale.
 - Run **`apiStage7ClearPhoneCache()`** in the Apps Script editor (maintenance API).
 
 Then in the spreadsheet: close the sidebar → open it again → open a person card and confirm **ДН** and phone fields.
@@ -68,16 +83,26 @@ Then in the spreadsheet: close the sidebar → open it again → open a person c
 
 The repository runs a lightweight CI workflow on push and pull requests to **`main`** (also **`workflow_dispatch`**).
 
-It runs the complete `npm run ci` contract suite (**24** verify scripts after `precheck`): GAS sanity, clasp patterns, **Ukrainian/Russian language** and **user-facing copy** guards, workbook and
-recipient contracts, **vacation planner** (`verify-vacation-planner.mjs`),
-personnel-status and format-rules contracts, function graph, client
+It runs the complete `npm run ci` contract suite (**30** verify scripts after `precheck`): GAS sanity, clasp patterns, **Ukrainian/Russian language** and **user-facing copy** guards, reference workbook layout, workbook and monthly callsign contracts, send-panel bounds, materialize / age-birthday countdown, vacation planner,
+recipient contracts, personnel-status and format-rules contracts, function graph, client
 parsing/layers/XSS, response envelope, facade/snapshot/bridge governance, access
-API policy and hotfixes, OAuth scopes, and jsconfig verification.
+API policy and hotfixes, OAuth scopes, project file map, and jsconfig verification.
 
-Shortcuts: `npm run ci:copy`, `npm run ci:language`, `npm run ci:vacations`.
+Shortcuts: `npm run ci:copy`, `npm run ci:language`, `npm run ci:vacations`, `npm run ci:workbook`, `npm run ci:materialize`.
 
 The workflow does **not** deploy to Apps Script. Deployment stays local
-(`npx clasp push` / `npm run deploy:prod`). No Google secrets.
+(`npm run push:remote` / `npm run deploy:prod` / `npm run gas:push`). No Google secrets.
+
+### Local secrets (never commit)
+
+| File | In git? | Purpose |
+| ------ | -------- | -------- |
+| `.clasp.json` | no | Production scriptId |
+| `.clasp.smoke.json` | no | Optional smoke project |
+| `.clasp.example.json` | yes | Template |
+| `.clasp.smoke.example.json` | yes | Smoke template |
+
+`.gitignore` and `.cursorignore` hide local clasp bindings from git and from Cursor AI indexing.
 
 ## Basic workflow (contributors)
 
@@ -99,7 +124,7 @@ Check project state:
 
 ```powershell
 git status
-clasp status
+npm run gas:status
 ```
 
 ## Code guidelines

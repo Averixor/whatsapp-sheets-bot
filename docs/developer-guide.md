@@ -75,16 +75,19 @@ Move / split / merge файлів — лише **механічна** зміна
 ## Мінімальна перевірка
 
 ```bash
-npm run ci
+npm run check    # alias: npm run ci
 ```
 
-Перед production deploy (з правильною clasp-авторизацією і production script project):
+**Typical deploy (one production GAS):**
 
 ```bash
-npx clasp push
+git add -A && git commit -m "fix: …"
+npm run push:remote
 ```
 
-Після deploy у GAS editor: **`apiStage7ClearPhoneCache()`**, потім перевірка картки людини та health (`apiStage7QuickHealthCheck()`). Повний checklist: [RUNBOOK.md](../RUNBOOK.md) §12–§13.
+Or CI + clasp only: `npm run deploy:prod`. Full pipeline with map refresh: `npm run ship -- "fix: …"`.
+
+Після deploy у GAS editor: **`apiStage7MaterializeComputedData()`** (після змін PERSONNEL/PHONES/birthday), потім **`apiStage7ClearPhoneCache()`**, потім перевірка картки людини та health (`apiStage7QuickHealthCheck()`). Повний checklist: [RUNBOOK.md](../RUNBOOK.md) §12–§13.
 
 ## Куди далі
 

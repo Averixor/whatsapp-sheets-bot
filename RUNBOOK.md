@@ -508,7 +508,7 @@ If something breaks:
 
 The repository runs CI automatically on **`push`** and **`pull_request`** to **`main`**, and **`workflow_dispatch`**.
 
-Local equivalent: **`npm run ci`**.
+Local equivalent: **`npm run check`** (alias **`npm run ci`**).
 
 | Script | Purpose |
 |--------|---------|
@@ -517,7 +517,12 @@ Local equivalent: **`npm run ci`**.
 | `verify-clasp-push-patterns.mjs` | `.claspignore` / push patterns |
 | `verify-no-russian-text.mjs` | Ban Russian markers in project text |
 | `verify-user-facing-copy.mjs` | Ban technical tokens in user-visible copy (`contracts/user-facing-copy.contract.json`) |
+| `verify-reference-workbook-layout.mjs` | Reference xlsx header layout contract |
 | `verify-workbook-contract.mjs` | Monthly layout geometry, formula-block short summary, detailed summary grouping |
+| `verify-monthly-callsign-sync.mjs` | PERSONNEL → monthly «Позивні» sync contract |
+| `verify-send-panel-bounds.mjs` | SEND_PANEL row bounds contract |
+| `verify-materialize-computed-data.mjs` | PERSONNEL materialize / computed columns API contract |
+| `verify-age-birthday-countdown.mjs` | Birthday `DD.MM.YYYY р.н.`, Age `Nр.`, countdown UA labels |
 | `verify-vacation-planner.mjs` | Vacation planner rules, calendar, repository contracts |
 | `verify-recipient-contract.mjs` | Recipient routing and dark-select UI contract |
 | `verify-personnel-status-contract.mjs` | PERSONNEL Status dropdown/active/inactive vs `personnel/PersonnelRepository.gs` |
@@ -549,15 +554,15 @@ There is **no** Apps Script deployment in CI (`clasp` is local only). See `.gith
    git diff -- docs/project-files-complete.txt
    ```
    (`npm run release:check` / `npm run ci` fails if the map is stale.)
-1. Run local checks (`npm run ci`; see `CONTRIBUTING.md`).
+1. Run local checks (`npm run check`; see `CONTRIBUTING.md`).
 2. Confirm `audit-function-graph` ends with **`MISSING: none`**.
 3. Commit with a short descriptive message; avoid version-only or vague messages.
-4. **`git push origin main`**.
-5. **`clasp status`** then **`clasp push`** — GitHub alone does not update the bound script project.
+4. **`npm run push:remote`** — or `git push origin <branch>` then **`npm run gas:push`**.
+5. **`npm run gas:status`** before push if you changed `.claspignore` or folder layout — confirm tracked `.gs` / `.html` set.
 6. In Apps Script → **Project settings → Script properties**: ensure **`WASB_SPREADSHEET_ID`** is set if you rely on triggers/headless runs (use your production spreadsheet ID).
 7. Reload the spreadsheet UI; close and reopen the sidebar.
 8. Confirm production `appsscript.json` still has `executionApi.access = MYSELF`.
-9. Run **`apiStage7ClearPhoneCache()`** after every deploy, then re-check a person card and personnel modal.
+9. After PERSONNEL / PHONES / birthday edits: **`apiStage7MaterializeComputedData()`**, then **`apiStage7ClearPhoneCache()`** after every deploy; re-check a person card and personnel modal.
 10. Run smoke only against the separate smoke project (see §13).
 
 ### Repository file map
@@ -612,6 +617,18 @@ apiStage7ClearPhoneCache()
 
 Then reload the spreadsheet/sidebar and verify a person card, personnel modal,
 SEND_PANEL row, and the expected role.
+
+### Clasp config (one production project)
+
+| File | Commit? | Notes |
+| ------ | -------- | ------ |
+| `.clasp.example.json` | yes | Template — copy to `.clasp.json` locally |
+| `.clasp.json` | **no** | Your production `scriptId` |
+| `.clasp.smoke.example.json` | yes | Optional — separate test GAS only |
+| `.clasp.smoke.json` | **no** | Optional smoke project |
+| `.clasp.smoke.runtime.json` | **no** | **Unused** — safe to delete |
+
+Open the bound script: **`npm run gas:open`** (`clasp open-script` in clasp 3.x).
 
 ### Separate remote smoke project
 
@@ -683,7 +700,7 @@ Contract: `contracts/reference-workbook-layout.contract.json` (headers extracted
 | B | ID v/s | Optional internal id (`ID_VS`) |
 | C | ID | Армія+ (optional data) |
 | D–F | Last name / First name / Patronymic | Code synthesizes `FML` |
-| G–I | Birthday / Age / Days until birthday | Birthday helpers (materialized) |
+| G–I | Birthday / Age / Days until birthday | Materialized display: **Birthday** `DD.MM.YYYY р.н.` (space before suffix; legacy `…р.` normalizes on read); **Age** `Nр.` (e.g. `25р.`); **Days until birthday** — UA countdown text (`personnel/PersonnelMaterialize.gs`) |
 | J–K | Phone / Phone 2 | Phones |
 | **L** | **Callsign** | **Working callsign** (e.g. `ГРАФ`) — schedule key |
 | M | Rank | Rank (instead of Title) |
