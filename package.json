@@ -44,9 +44,7 @@
     "go": "npm run ship --"
   },
   "devDependencies": {
-    "@google/clasp": "^3.3.0"
-  },
-  "dependencies": {
-    "uuid": "^14.0.0"
+    "@google/clasp": "^3.3.0",
+    "uuid": "^14.0.1"
   }
 }
