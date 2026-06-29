@@ -15,7 +15,7 @@ const POST_NESTED_EXCLUDE_PATTERNS = [
   '_backup*/**',
 ];
 
-const TARGETS = [{ file: '.claspignore' }, { file: '.clasp.smokeignore' }];
+const TARGETS = [{ file: '.claspignore' }];
 
 function main() {
   const errors = [];

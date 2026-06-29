@@ -19,8 +19,6 @@ Practical index: **where to look** and **what CI proves it**. Structural rules: 
 | UI server helpers | `ui-server/` | `SidebarServer.gs`, dialogs, `HtmlUtils.gs` | `npm run ci:client` | HtmlService server-side host/helpers. |
 | Security/audit | `security/` | `AuditTrail.gs`, `SecurityRedaction.gs` | `npm run ci` | Audit and redaction utilities. |
 | Operations | `operations/` | `Actions.gs`, triggers, reconciliation, project requests | `npm run ci` | Operational workflows outside one domain. |
-| Production smoke | `smoke/` | `SmokeTests.gs`, `SmokeTests.Helpers.gs` | `npm run ci`, remote smoke | Production smoke entrypoints included in clasp push. |
-| Tests (local) | `tests/` | `Stage7TestRunner*.gs`, `DomainTests.gs` (production deploy for admin sidebar); `GasRuntimeSmoke.gs`, `DebugManualTests.gs` clasp-excluded | `npm run ci` |
 | UI (HTML/JS) | `ui/` | `Sidebar.html`, `JavaScript.html`, `Js.*.html`, `Styles*.html` | `npm run ci:client`, `verify-user-facing-copy.mjs` | Phases 1–4 complete (#34); `include()` resolves legacy basenames. |
 
 ## Root stays non-runtime only

@@ -19,7 +19,9 @@
       "url": "https://www.googleapis.com/auth/spreadsheets",
       "status": "required",
       "rationale": "SpreadsheetApp read/write for bound spreadsheet and monthly sheets",
-      "gasApis": ["SpreadsheetApp"]
+      "gasApis": [
+        "SpreadsheetApp"
+      ]
     },
     {
       "url": "https://www.googleapis.com/auth/drive.file",
@@ -31,25 +33,36 @@
       "url": "https://www.googleapis.com/auth/script.container.ui",
       "status": "required",
       "rationale": "HtmlService sidebar, dialogs, and person-card UI",
-      "gasApis": ["HtmlService"]
+      "gasApis": [
+        "HtmlService"
+      ]
     },
     {
       "url": "https://www.googleapis.com/auth/script.send_mail",
       "status": "required",
       "rationale": "MailApp security notifications on access violations (best-effort)",
-      "gasApis": ["MailApp"]
+      "gasApis": [
+        "MailApp"
+      ]
     },
     {
       "url": "https://www.googleapis.com/auth/userinfo.email",
       "status": "required",
       "rationale": "Session.getActiveUser/getEffectiveUser email for ACCESS identity and audit",
-      "gasApis": ["Session"]
+      "gasApis": [
+        "Session"
+      ]
     },
     {
       "url": "https://www.googleapis.com/auth/script.scriptapp",
       "status": "required",
       "rationale": "ScriptApp managed triggers, properties, and project metadata",
-      "gasApis": ["ScriptApp", "PropertiesService", "CacheService", "LockService"]
+      "gasApis": [
+        "ScriptApp",
+        "PropertiesService",
+        "CacheService",
+        "LockService"
+      ]
     },
     {
       "url": "https://www.googleapis.com/auth/documents",

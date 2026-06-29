@@ -29,9 +29,26 @@
     "LastAppliedAt"
   ],
   "dropdowns": {
-    "DetectedAs": ["WASB_MANAGED", "MANUAL", "UNKNOWN", "ADOPTED"],
-    "Decision": ["Preserve", "Adopt", "Temporary", "Ignore", "DeleteAllowed"],
-    "Relevance": ["Permanent", "Temporary", "OneTime", "Deprecated", "Unknown"],
+    "DetectedAs": [
+      "WASB_MANAGED",
+      "MANUAL",
+      "UNKNOWN",
+      "ADOPTED"
+    ],
+    "Decision": [
+      "Preserve",
+      "Adopt",
+      "Temporary",
+      "Ignore",
+      "DeleteAllowed"
+    ],
+    "Relevance": [
+      "Permanent",
+      "Temporary",
+      "OneTime",
+      "Deprecated",
+      "Unknown"
+    ],
     "MovePolicy": [
       "KeepOriginalRange",
       "RemapWithSheet",
@@ -39,7 +56,10 @@
       "RemapWithVacationCalendar",
       "DoNotMove"
     ],
-    "AdoptToCode": ["TRUE", "FALSE"]
+    "AdoptToCode": [
+      "TRUE",
+      "FALSE"
+    ]
   },
   "userControlledFields": [
     "Decision",
@@ -62,18 +82,32 @@
   "preserveWrapper": "preserveUserConditionalFormatRules_",
   "directConditionalRuleWriter": {
     "method": "setConditionalFormatRules",
-    "allowedFiles": ["ConditionalFormatGovernance.gs"]
+    "allowedFiles": [
+      "ConditionalFormatGovernance.gs"
+    ]
   },
   "destructiveFormattingIntegrations": {
     "VacationOptionsWriter.gs": [
       "_writeSchedule_",
       "_writeChecks_"
     ],
-    "SendPanel.gs": ["ensureSendPanelStructure_"],
-    "Report_DailyDetailed.gs": ["createDetailedSheet_"]
+    "SendPanel.gs": [
+      "ensureSendPanelStructure_"
+    ],
+    "Report_DailyDetailed.gs": [
+      "createDetailedSheet_"
+    ]
   },
-  "monthlyScheduleCopyPaths": ["MonthSheets.gs", "UseCases.MonthOps.gs"],
-  "protectedPriorityOrder": ["MANUAL", "UNKNOWN", "ADOPTED", "WASB_MANAGED"],
+  "monthlyScheduleCopyPaths": [
+    "MonthSheets.gs",
+    "UseCases.MonthOps.gs"
+  ],
+  "protectedPriorityOrder": [
+    "MANUAL",
+    "UNKNOWN",
+    "ADOPTED",
+    "WASB_MANAGED"
+  ],
   "unknownPolicy": "preserve-as-user",
   "defaultMovePolicy": "KeepOriginalRange",
   "deletePolicy": "Decision=DeleteAllowed-only",

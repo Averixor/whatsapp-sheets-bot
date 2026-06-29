@@ -20,4 +20,3 @@ _ci_gas_sanity_out.txt
 !.clasp.example.json
 .npmrc
 package-lock.json
-.clasp.smoke.runtime.json

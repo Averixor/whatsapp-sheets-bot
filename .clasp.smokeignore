@@ -1,7 +1,0 @@
-**/*
-!appsscript.json
-!**/*.gs
-!**/*.html
-node_modules/**
-.git/**
-_backup*/**

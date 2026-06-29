@@ -31,7 +31,6 @@ Each domain move is one PR: `git mv` + governance/doc path updates + CI green.
 | **1** | `reports/`, `vacations/`, `sendpanel/`, `maintenance/`, `diagnostics/` | Done |
 | **2** | `access/`, `personnel/` | Done |
 | **3** | `ui/` | Done — HTML `include()` chain reviewed and basename-compatible |
-| **4** | `api/`, `core/`, `data/`, `sheets/`, `usecases/`, `ui-server/`, `security/`, `operations/`, `smoke/` | Done — root runtime files removed |
 
 HTML (`Js.Vacations.html`, `VacationSidebar.html`, `Sidebar.html`, …) lives in `ui/` after Phase 3. Runtime callers may still pass legacy basenames such as `include("Sidebar")`.
 
@@ -52,7 +51,6 @@ git diff --stat                    # mv + docs + verify paths only
 npm run ci
 npm run ci:<domain>              # when listed in module-map
 npx clasp status                 # folder present; node_modules absent from tracked
-npm run deploy:smoke             # before production clasp push
 ```
 
 ## Out of scope

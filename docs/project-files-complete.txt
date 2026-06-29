@@ -1,13 +1,11 @@
 # WASB — повний список файлів репозиторію
 # Порядок: дерево каталогів (depth-first, алфавіт у кожній папці)
 # Виключено: .git/, node_modules/, локальні .clasp*.json (крім *.example.json)
-# Файлів: 403
-# Оновлено: 2026-06-29T04:46:30Z
+# Файлів: 395
+# Оновлено: 2026-06-29T05:02:35Z
 
 .
   .clasp.example.json
-  .clasp.smoke.example.json
-  .clasp.smokeignore
   .claspignore
   .cursorignore
   .gitignore
@@ -15,7 +13,6 @@
   .nvmrc
   AGENTS.md
   appsscript.json
-  appsscript.smoke.json
   ARCHITECTURE.md
   CHANGELOG.md
   CONTRIBUTING.md
@@ -171,9 +168,6 @@ docs/adr/
 docs/refactor/
   p2-candidates.md
 
-docs/runtime-smoke/
-  vacation-smoke-2026-06-14.md
-
 maintenance/
   ConditionalFormatAdoptedRules.gs
   ConditionalFormatAdoptedRules.js
@@ -252,7 +246,6 @@ scripts/
   ops-gas.mjs
   ops-github.mjs
   ops-ship.mjs
-  prepare-smoke-bundle.mjs
   push-remote.mjs
   release.mjs
   split-stage7-test-runner.mjs
@@ -343,8 +336,6 @@ sheets/
 smoke/
   SmokeTests.gs
   SmokeTests.Helpers.gs
-  SmokeTests.Helpers.js
-  SmokeTests.js
 
 tests/
   AccessE2ETests.gs
@@ -353,7 +344,6 @@ tests/
   Diagnostics.Debug.gs
   DomainTests.gs
   DomainTests.js
-  GasRuntimeSmoke.gs
   Stage7TestRunner.Access.gs
   Stage7TestRunner.Access.js
   Stage7TestRunner.Api.gs

@@ -44,27 +44,12 @@ apiStage7ClearPhoneCache()          # run in the production GAS editor after dep
 | -------- | -------- |
 | `npm run deploy:prod` | Full CI + clasp push in one step (no git push) |
 | `npm run ship -- "msg"` | Map refresh + CI + clasp push + commit + GitHub |
-| `npm run release -- "msg"` | Full release pipeline + optional smoke project |
 | `npm run gas:open` | Open the bound GAS project in the browser |
 
 Use Node.js 24 (`.nvmrc`). `npm run deploy:prod` runs local CI and pushes the
 production project with `executionApi.access = MYSELF`.
 
 **Clasp config (local, not in git):** copy `.clasp.example.json` → `.clasp.json` once.
-Smoke is **optional** — only if you maintain a separate test GAS project (see below).
-Do not keep `.clasp.smoke.runtime.json`; nothing in the repo reads it.
-
-Remote smoke is deliberately separate from production:
-
-```bash
-cp .clasp.smoke.example.json .clasp.smoke.json
-npm run deploy:smoke
-```
-
-The smoke config must target a separate non-production Apps Script project and
-test spreadsheet. It stages `appsscript.smoke.json` (`executionApi: ANYONE`) in
-`/tmp/wasb-smoke-bundle`; production never receives that manifest or
-`GasRuntimeSmoke.gs`.
 
 - **Script properties** (Apps Script → Project settings → Script properties):
   - **`WASB_SPREADSHEET_ID`** — headless/triggers (see `RUNBOOK.md` §15)
@@ -132,7 +117,6 @@ workbook exports, personal data, or local workbook paths.
 ├── appsscript.json                   # GAS manifest (repo root only)
 ├── core/ api/ data/ sheets/ usecases/ ui-server/   # server runtime
 ├── reports/ vacations/ sendpanel/ access/ personnel/
-├── maintenance/ diagnostics/ security/ operations/ smoke/
 ├── ui/                               # all .html (Sidebar, JavaScript, Js.*, Styles*)
 ├── tests/                            # local-only (excluded from clasp push)
 ├── docs/ contracts/ scripts/         # Git-only tooling and documentation

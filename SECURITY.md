@@ -148,10 +148,7 @@ Access API surface is governed by `contracts/access-api.contract.json` and `npm 
 ### Execution API separation
 
 - production `appsscript.json` is fixed to `executionApi.access = MYSELF`
-- `GasRuntimeSmoke.gs` is excluded from production `clasp push`
-- remote smoke uses a separate non-production Apps Script project,
-  `.clasp.smoke.json`, and `appsscript.smoke.json`
-- never point `.clasp.smoke.json` at the production script or spreadsheet
+- production `clasp push` uses `.claspignore` and `appsscript.json` with `executionApi.access = MYSELF`
 
 The access governance contract verifies the production manifest, every public
 `api*` entrypoint, explicit non-public exclusions, role policy, guard markers,

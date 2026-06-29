@@ -563,7 +563,6 @@ There is **no** Apps Script deployment in CI (`clasp` is local only). See `.gith
 7. Reload the spreadsheet UI; close and reopen the sidebar.
 8. Confirm production `appsscript.json` still has `executionApi.access = MYSELF`.
 9. After PERSONNEL / PHONES / birthday edits: **`apiStage7MaterializeComputedData()`**, then **`apiStage7ClearPhoneCache()`** after every deploy; re-check a person card and personnel modal.
-10. Run smoke only against the separate smoke project (see §13).
 
 ### Repository file map
 
@@ -606,12 +605,12 @@ npm run deploy:prod
 ```
 
 This runs `npm run ci` and `npx clasp push`. Production uses
-`appsscript.json` with `executionApi.access = MYSELF`; `.claspignore` excludes
-`GasRuntimeSmoke.gs`.
+`appsscript.json` with `executionApi.access = MYSELF`.
 
 Immediately after push, run in the production GAS editor:
 
 ```text
+apiStage7MaterializeComputedData()
 apiStage7ClearPhoneCache()
 ```
 
@@ -624,50 +623,8 @@ SEND_PANEL row, and the expected role.
 | ------ | -------- | ------ |
 | `.clasp.example.json` | yes | Template — copy to `.clasp.json` locally |
 | `.clasp.json` | **no** | Your production `scriptId` |
-| `.clasp.smoke.example.json` | yes | Optional — separate test GAS only |
-| `.clasp.smoke.json` | **no** | Optional smoke project |
-| `.clasp.smoke.runtime.json` | **no** | **Unused** — safe to delete |
 
 Open the bound script: **`npm run gas:open`** (`clasp open-script` in clasp 3.x).
-
-### Separate remote smoke project
-
-Create a separate non-production Apps Script project and test spreadsheet.
-Copy the local config template once:
-
-```bash
-cp .clasp.smoke.example.json .clasp.smoke.json
-```
-
-Set its `scriptId`/`projectId`, configure `WASB_SPREADSHEET_ID` to the test
-spreadsheet, grant the smoke executor the required ACCESS role, then run:
-
-```bash
-npm run deploy:smoke
-```
-
-`deploy:smoke` stages the full GAS tree (all domain folders per `docs/module-map.md`) plus `appsscript.smoke.json` in
-`/tmp/wasb-smoke-bundle`, pushes only to `.clasp.smoke.json`, and runs
-`apiRunSmokeChecks`. Never point `.clasp.smoke.json` at production.
-
-**Expectations:**
-
-| Field                                         | Expected                                        |
-| --------------------------------------------- | ----------------------------------------------- |
-| `ok`                                          | `true`                                          |
-| `checks.migrationFlag`                        | not `'true'` (null/empty OK)                    |
-| `checks.clientSignal.success`                 | `true`                                          |
-| `checks.clientSignal.data.result.emailSent`   | `false`                                         |
-| `checks.clientSignal.data.result.alertLogged` | `true`                                          |
-| `checks.accessPolicy.ok`                      | `true` (or `OK_WITH_SKIPS` status without FAIL) |
-
-**Troubleshooting `clasp run`:**
-
-- Enable **Apps Script API** for the Google account / Cloud project used by clasp.
-- `clasp login` — refresh OAuth if expired.
-- Smoke project must use `appsscript.smoke.json` with `"executionApi": { "access": "ANYONE" }`.
-- Production `appsscript.json` must remain `"executionApi": { "access": "MYSELF" }`.
-- Run `npm run gas:smoke:push` before smoke; create/update an **API executable** deployment in the smoke project if required.
 
 ### Manual GAS functions (editor)
 
@@ -676,7 +633,7 @@ Run from the Apps Script editor when relevant after a deploy or config change:
 - `apiStage7GetAccessDescriptor()` — lightweight descriptor sanity
 - `apiStage7DebugAccess()` — access debug payload
 - `runAccessPolicyChecks()` — access policy assertions
-- `runSmokeTests()` — smoke bundle
+- `runSmokeTests()` — regression bundle (`smoke/SmokeTests.gs`, deployed with production)
 - `apiStage7MaterializeComputedData()` — пересборка обчислюваних колонок (PERSONNEL helper, PHONES, Birthday, VACATIONS, Status панелі); sidebar: **Оновити обчислювані дані**
 - `apiStage7ClearPhoneCache()` — invalidate phone/profile caches (після кожного production deploy; **не** замінює materialize)
 
@@ -743,8 +700,6 @@ apiStage7ClearPhoneCache()
 
 Then reload the spreadsheet and reopen the sidebar. Verify one **person card**, **personnel modal** (callsign list), and **SEND_PANEL** row.
 
-Optional: `apiStage7QuickHealthCheck()` in production, or `npm run gas:smoke`
-against the separate smoke project. Health fails on duplicate **active**
 Callsign values.
 
 ## 15. Script properties
@@ -815,7 +770,6 @@ For day-to-day operations, prefer calling **`apiStage7*`** and documented Stage7
 | Location                         | Usage                                                                                                                                | Role                               | Risk                                        | Decision                                                                          |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------- |
 | **`Stage7TestRunner.gs`**        | ~~`eval(name)`~~ removed; explicit registry **`getStage7TestRunnerExplicitRegistry_()`** + **`globalThis[name]`** for discovery only | Manual / menu test runner          | Was **medium** (string eval); now **lower** | **DONE (P2.e)** — registered task names bind to real functions; no runtime `eval` |
-| **`smoke/SmokeTests.gs`**              | `Function("return this")()` only if `globalThis` is unavailable                                                                      | Smoke / symbol resolution fallback | Low in V8 (branch rarely taken)             | **DEFER** — replace only if a zero-`Function` pattern is validated on all hosts   |
 | **`diagnostics/Diagnostics.Core.gs`**        | `_global_()` → `Function('return this')()`                                                                                           | Diagnostics global scope           | Low                                         | **DEFER**                                                                         |
 | **`Diagnostics.Stage7.Core.gs`** | `_diagGlobal_()` → same pattern after `globalThis`                                                                                   | Stage7 diagnostics                 | Low                                         | **DEFER**                                                                         |
 
@@ -843,7 +797,6 @@ Do **not** reintroduce `eval` for resolving test or handler names; extend **`get
 
 ### Перевірка
 
-У **`runSmokeTests()`** (`smoke/SmokeTests.gs`) є крок **«Optional business sheets ensured …»**: ті самі **`ensure*`** потім перевіряють, що всі три назви існують (`skipOnError`).
 
 ## 21. Vacation source migration
 

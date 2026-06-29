@@ -351,21 +351,7 @@ function main() {
     );
   }
 
-  const smokeManifest = JSON.parse(read(contract.smokeManifestFile));
-  const smokeAccess =
-    smokeManifest.executionApi && smokeManifest.executionApi.access;
-  if (smokeAccess !== contract.smokeExecutionApiAccess) {
-    errors.push(
-      `${contract.smokeManifestFile} executionApi.access must be ${contract.smokeExecutionApiAccess}; found ${smokeAccess || '<missing>'}`,
-    );
-  }
-
-  const productionClaspIgnore = read(contract.productionClaspIgnoreFile);
-  for (const file of contract.smokeOnlyFiles || []) {
-    if (!productionClaspIgnore.split(/\r?\n/).includes(file)) {
-      errors.push(`${file} must be excluded by ${contract.productionClaspIgnoreFile}`);
-    }
-  }
+  // Separate test-project manifest checks were removed.
 
   if (errors.length) {
     console.error('verify-access-api-governance: FAIL');

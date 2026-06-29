@@ -43,4 +43,4 @@ monthly schedule key: **Callsign** — the xlsx may label the column Позив�
 Production status is recorded in
 [`WASB_RELEASE_AUDIT.md`](../WASB_RELEASE_AUDIT.md) (**CLOSED** 2026-06-07).
 Re-verify with current evidence when redeploying: `npm run check`, `npm run gas:status`,
-`npm run deploy:smoke` (optional separate project), or `apiRunStage7RegressionTests()` in GAS diagnostics.
+`apiRunStage7RegressionTests()` or `runSmokeTests()` in GAS diagnostics.

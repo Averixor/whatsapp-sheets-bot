@@ -28,11 +28,9 @@ Run individual npm scripts only when diagnosing a specific failed check.
 | `npm run gas` | Node version gate + `clasp push` only — **not** full CI |
 | `npm run gh -- "msg"` | Commit (if needed) + push to GitHub |
 | `npm run ship -- "msg"` | `c` + `gas` + `gh` |
-| `npm run release -- "msg"` | CI + commit + git push + clasp + optional smoke |
 | `npm run gas:open` | Open GAS editor (`clasp open-script`) |
 | `npm run gas:status` | List files tracked for clasp push |
 
-**One production project:** local `.clasp.json` only (from `.clasp.example.json`). Smoke configs are optional for a separate test GAS. `.clasp.smoke.runtime.json` is not used — delete if present.
 
 ### Commit messages
 
@@ -51,11 +49,7 @@ npm run gas:push
 
 Confirm **Tracked files** includes all domain `**/*.gs` and `ui/**/*.html`, and excludes `tests/`, `node_modules/`, `*.md`. See [`docs/module-map.md`](./docs/module-map.md) and [ADR-003](docs/adr/003-working-domain-layout.md).
 
-Or run `npm run deploy:prod` for CI + production push, or `npm run push:remote` after commit for git + clasp without re-running CI. Production keeps `executionApi.access = MYSELF`; it does not run remote smoke.
-
-For remote smoke, configure `.clasp.smoke.json` from
-`.clasp.smoke.example.json` with a separate non-production Apps Script project,
-then run `npm run deploy:smoke`.
+Or run `npm run deploy:prod` for CI + production push, or `npm run push:remote` after commit for git + clasp without re-running CI. Production keeps `executionApi.access = MYSELF`.
 
 ### Script Properties (spreadsheet binding)
 
@@ -98,9 +92,7 @@ The workflow does **not** deploy to Apps Script. Deployment stays local
 | File | In git? | Purpose |
 | ------ | -------- | -------- |
 | `.clasp.json` | no | Production scriptId |
-| `.clasp.smoke.json` | no | Optional smoke project |
 | `.clasp.example.json` | yes | Template |
-| `.clasp.smoke.example.json` | yes | Smoke template |
 
 `.gitignore` and `.cursorignore` hide local clasp bindings from git and from Cursor AI indexing.
 
@@ -184,7 +176,6 @@ A pull request should include:
 
 Apps Script errors often appear only at runtime in Google’s environment.
 
-After `clasp push`, run smoke or diagnostics from the editor when relevant (see `RUNBOOK.md` — Post-deploy checks).
 
 ## Documentation
 

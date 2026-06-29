@@ -9,10 +9,7 @@
   "clientRoutingGroupsField": "PROJECT_STAGE7_CLIENT_ROUTING_GROUPS_",
   "productionManifestFile": "appsscript.json",
   "productionExecutionApiAccess": "MYSELF",
-  "smokeManifestFile": "appsscript.smoke.json",
-  "smokeExecutionApiAccess": "ANYONE",
   "productionClaspIgnoreFile": ".claspignore",
-  "smokeOnlyFiles": ["tests/GasRuntimeSmoke.gs"],
   "publicEndpoints": [
     "apiStage7GetAccessDescriptorLite",
     "apiStage7BootstrapSidebar",
@@ -202,7 +199,9 @@
     "apiLoadCalendarDay": "apiStage7GetSidebarData("
   },
   "requiredServerMarkers": {
-    "apiStage7BootstrapSidebar": ["_stage7CanViewSidebarPersonnel_(descriptor)"]
+    "apiStage7BootstrapSidebar": [
+      "_stage7CanViewSidebarPersonnel_(descriptor)"
+    ]
   },
   "forbiddenServerMarkers": {
     "apiStage7BootstrapSidebar": [
@@ -210,7 +209,10 @@
       "_ensureOptionalBusinessSheetsQuiet_",
       "ensureAllSystemSheets_"
     ],
-    "apiGetActiveProjects": ["ensureProjectsSheet_", "insertSheet"]
+    "apiGetActiveProjects": [
+      "ensureProjectsSheet_",
+      "insertSheet"
+    ]
   },
   "requiredRoutingEndpoints": [
     "apiStage7BootstrapSidebar",
@@ -223,14 +225,6 @@
     {
       "name": "apiExecute_",
       "reason": "internal response helper; trailing underscore marks non-public API"
-    },
-    {
-      "name": "apiRunSmokeChecks",
-      "reason": "smoke-project-only entrypoint; excluded from production public API"
-    },
-    {
-      "name": "apiRunVacationRuntimeSmoke",
-      "reason": "self-cleaning vacation smoke-project-only entrypoint; excluded from production public API"
     },
     {
       "name": "apiBuildSendPanelFast",

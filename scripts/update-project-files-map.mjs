@@ -12,8 +12,6 @@ const SKIP_DIRS = new Set(['.git', 'node_modules']);
 /** Root-level files that must not appear in the committed map (local secrets / IDE). */
 const SKIP_ROOT_FILES = new Set([
   '.clasp.json',
-  '.clasp.smoke.json',
-  '.clasp.smoke.runtime.json',
   '.npmrc',
 ]);
 

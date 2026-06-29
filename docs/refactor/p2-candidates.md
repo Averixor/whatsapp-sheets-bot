@@ -12,7 +12,6 @@ The current largest WASB-owned modules are:
 |--------|------:|--------|----------|
 | `access/AccessEnforcement.gs` | 1609 | RBAC / security enforcement | P2 |
 | `access/AccessControl.AuthResolver.gs` | 1560 | identity / login / bind | P2 |
-| `smoke/SmokeTests.gs` | 1490 | regression and smoke tests | P2 |
 
 Together they contain 4659 lines, roughly 10% of the GAS codebase across domain folders.
 This is not a release blocker; the production release is CLOSED.
@@ -69,11 +68,9 @@ Suggested split:
 
 **Risk:** low-medium. Functions are already named and separable.
 
-## Candidate 3 — SmokeTests.gs
 
 Current role:
 
-- `runSmokeTests`
 - Stage 4 / Stage 5 scenario tests
 - Regression suite wrappers
 - Inline checks
@@ -82,11 +79,6 @@ Suggested split:
 
 | New file | Responsibility |
 |----------|----------------|
-| `SmokeTests.Core.gs` | shared helpers and assertions |
-| `SmokeTests.Stage4.gs` | Stage 4 checks |
-| `SmokeTests.Stage5.gs` | Stage 5 checks |
-| `SmokeTests.Regression.gs` | regression suite |
-| `SmokeTests.Production.gs` | production smoke wrappers |
 
 **Risk:** low. Test code only, but entrypoints must stay stable.
 
@@ -100,12 +92,10 @@ npx clasp push
 
 Important entrypoints that must remain stable:
 
-- `runSmokeTests`
 - `runStage4ScenarioTests`
 - `runStage5ScenarioTests`
 - `runRegressionTestSuite`
 - `apiRunStage7RegressionTests`
-- `apiRunSmokeChecks` (remote smoke; historical alias `apiRunProductionSmokeChecks`)
 
 ## Not in Scope
 

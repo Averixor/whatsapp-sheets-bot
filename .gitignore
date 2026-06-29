@@ -4,23 +4,17 @@ node_modules/
 # Local debug reports
 _debug_person_card_lookup.txt
 _person_card_compact_report.txt
-
 # Logs/temp
 *.log
 *.tmp
 *.bak
 _audit-out.txt
-
 # VS Code / AI local settings
 .vscode/*
 !.vscode/settings.json
 .aider*
-
 # Local Google Apps Script / clasp mapping (scriptId, spreadsheet parentId)
 .clasp.json
-.clasp.smoke.json
-.clasp.smoke.runtime.json
 .clasp.*.json
 !.clasp.example.json
-!.clasp.smoke.example.json
 .npmrc

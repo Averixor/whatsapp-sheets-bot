@@ -1,8 +1,18 @@
 {
   "version": 1,
-  "required": ["success", "message", "data.result", "data.meta"],
-  "optional": ["dryRun"],
-  "forbiddenRemovals": ["success", "message"],
+  "required": [
+    "success",
+    "message",
+    "data.result",
+    "data.meta"
+  ],
+  "optional": [
+    "dryRun"
+  ],
+  "forbiddenRemovals": [
+    "success",
+    "message"
+  ],
   "fieldTypes": {
     "success": "boolean",
     "message": "string",
@@ -16,7 +26,9 @@
     "adaptStage4SummaryResponse",
     "normalizeApiResponse"
   ],
-  "adapterFiles": ["Js.Core.html"],
+  "adapterFiles": [
+    "Js.Core.html"
+  ],
   "callSiteFiles": [
     "Js.Actions.html",
     "Js.Render.Panel.html",

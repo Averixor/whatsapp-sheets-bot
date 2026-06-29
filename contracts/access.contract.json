@@ -1,7 +1,11 @@
 {
   "version": 1,
   "baselinePath": "scripts/snapshots/access-debug-baseline.json",
-  "snapshotMetaFields": ["schemaRef", "reviewedAt", "changeReason"],
+  "snapshotMetaFields": [
+    "schemaRef",
+    "reviewedAt",
+    "changeReason"
+  ],
   "descriptorSchema": {
     "identity": {
       "email": "string",

@@ -28,11 +28,9 @@ Individual subscripts: `npm run ci:gas`, `npm run ci:client`, `npm run ci:copy`,
 | `npm run gas` | Node version check + `clasp push` only — **not** full CI |
 | `npm run gh -- "msg"` | Commit (if dirty) + `git push` |
 | `npm run ship` / `go -- "msg"` | `c` + `gas` + `gh` — map, CI, GAS push, GitHub |
-| `npm run release -- "msg"` | CI + commit + git push + clasp + optional smoke |
 | `npm run gas:open` | Open GAS editor (`npx clasp open-script`, clasp 3.x) |
 | `npm run gas:push` / `gas:status` | Production clasp helpers |
 
-**Single production project:** keep only local `.clasp.json` (from `.clasp.example.json`). Smoke files (`.clasp.smoke.json`, `appsscript.smoke.json`) are optional — only if you maintain a separate test GAS project. Do not create `.clasp.smoke.runtime.json`; it is unused.
 
 ### Node.js version
 
@@ -52,40 +50,28 @@ This project cannot be "run" locally in the traditional sense. There is no dev s
 ### Testing
 
 - **Local (automated):** `npm run ci` — **30** verify scripts (+ `precheck`), no Google credentials.
-- **Remote smoke (separate non-production project):** `npm run deploy:smoke` — `apiRunSmokeChecks` via `.clasp.smoke.json`.
-- **Remote (manual):** `apiRunStage7RegressionTests()` in GAS editor.
+- **Remote (manual):** `apiRunStage7RegressionTests()` or `runSmokeTests()` in the GAS editor.
 
 Documentation index: [`docs/README.md`](./docs/README.md). Verify release status
-from current CI, clasp status, remote smoke, and GAS diagnostics.
+from current CI, `npm run gas:status`, and GAS diagnostics.
 
-### Production runtime smoke
+### Production deploy
 
 After local CI and deploy:
 
 ```bash
-fish_add_path $HOME/.local/node-v24.16.0/bin   # if Node 22 is default
-npm run ci
-npx clasp push
+npm run check
+npm run deploy:prod
 apiStage7MaterializeComputedData()  # after PERSONNEL / PHONES / VACATIONS edits
 apiStage7ClearPhoneCache()          # run in the production GAS editor after deploy
 ```
 
-Or one command: `npm run deploy:prod` (local CI + production push). Run
-`npm run deploy:smoke` separately against the non-production smoke project.
+Or: `npm run push:remote` after commit (git + clasp, no second CI run).
 
-**Expectations** (`apiRunSmokeChecks` result):
+**If `clasp push` fails:**
 
-- `ok === true`
-- `checks.migrationFlag !== 'true'` (null/empty is OK)
-- `checks.clientSignal` — envelope `success: true`; inner result: `emailSent: false`, `alertLogged: true` (typically at `data.result`)
-
-**If `clasp run` fails with permission/API errors:**
-
-1. Enable **Google Apps Script API** in [Google Cloud Console](https://console.cloud.google.com/) for the clasp OAuth project.
-2. Run `clasp login` and confirm `.clasp.json` scriptId matches the target project.
-3. Confirm `appsscript.smoke.json` contains `"executionApi": { "access": "ANYONE" }`.
-4. Confirm production `appsscript.json` remains `"executionApi": { "access": "MYSELF" }`.
-5. Re-run `npm run gas:smoke:push`, then create or refresh an **API executable** deployment in the smoke project if the Apps Script UI prompts for it.
+1. Run `clasp login` and confirm `.clasp.json` scriptId matches the target project.
+2. Confirm production `appsscript.json` remains `"executionApi": { "access": "MYSELF" }`.
 
 ### Repository map (`docs/project-files-complete.txt`)
 
