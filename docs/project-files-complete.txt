@@ -1,8 +1,8 @@
 # WASB — повний список файлів репозиторію
 # Порядок: дерево каталогів (depth-first, алфавіт у кожній папці)
 # Виключено: .git/, node_modules/
-# Файлів: 403
-# Оновлено: 2026-06-29T03:52:02Z
+# Файлів: 406
+# Оновлено: 2026-06-29T04:08:08Z
 
 .
   .clasp.example.json
@@ -252,6 +252,9 @@ scripts/
   build-stage7-test-runner-core.mjs
   ci-gas-sanity.mjs
   ci.ps1
+  ops-gas.mjs
+  ops-github.mjs
+  ops-ship.mjs
   prepare-smoke-bundle.mjs
   push-remote.mjs
   release.mjs

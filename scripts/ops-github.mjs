@@ -18,25 +18,25 @@ run('git', ['status', '--short']);
 const changed = out('git status --short');
 
 if (changed) {
-  if (!msg) {
-    console.error('\nERROR: есть изменения, нужен текст коммита.');
-    console.error('Пример: npm run gh -- "fix: update send panel"');
+  if (!msg || msg === 'fix:') {
+    console.error('\nERROR: commit message is required.');
+    console.error('Example: npm run gh -- "fix: update ops scripts"');
     process.exit(1);
   }
 
   run('git', ['add', '-A']);
   run('git', ['commit', '-m', msg]);
 } else {
-  console.log('\nGit: нет новых изменений для коммита.');
+  console.log('\nGit: no changes to commit.');
 }
 
 const branch = out('git rev-parse --abbrev-ref HEAD');
 
 try {
-  out(`git rev-parse --abbrev-ref --symbolic-full-name @{u}`);
+  out('git rev-parse --abbrev-ref --symbolic-full-name @{u}');
   run('git', ['push']);
 } catch {
   run('git', ['push', '-u', 'origin', branch]);
 }
 
-console.log('\nGitHub: OK');
+console.log('\nGitHub: push completed');
