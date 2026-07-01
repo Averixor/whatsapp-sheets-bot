@@ -419,6 +419,68 @@ function apiStage7MaterializeComputedData() {
   });
 }
 
+function apiStage7MaterializeMonthJournal(payload) {
+  _stage7AssertRole_("maintainer", "materialize month journal");
+  var monthSheet =
+    typeof resolveMonthJournalSheetName_ === "function"
+      ? resolveMonthJournalSheetName_(payload || {})
+      : "";
+
+  if (!monthSheet) {
+    return _stage7BuildMaintenanceResponse_(
+      false,
+      "Відкрийте місячний аркуш 01–12",
+      {
+        ok: false,
+        reason: "not_month_sheet",
+      },
+      "stage7MaterializeMonthJournal",
+      ["Відкрийте місячний аркуш 01–12"],
+    );
+  }
+
+  var result =
+    typeof materializeMonthJournalBundle_ === "function"
+      ? materializeMonthJournalBundle_(monthSheet)
+      : {
+          ok: false,
+          reason: "materialize_unavailable",
+          message: "materializeMonthJournalBundle_ недоступна",
+        };
+
+  var ok = !!(result && result.ok !== false);
+  var names =
+    typeof monthJournalDerivedSheetNames_ === "function"
+      ? monthJournalDerivedSheetNames_(monthSheet)
+      : { journal: "", summary: "" };
+
+  return _stage7BuildMaintenanceResponse_(
+    ok,
+    ok
+      ? "Журнал місяця оновлено: " +
+        String(names.journal || "") +
+        ", " +
+        String(names.summary || "")
+      : result && result.message
+        ? result.message
+        : "Не вдалося оновити журнал місяця",
+    result || {},
+    "stage7MaterializeMonthJournal",
+    ok
+      ? []
+      : [
+          (result && result.message) ||
+            "Не вдалося оновити журнал місяця",
+        ],
+    {
+      affectedSheets: ok
+        ? [names.journal, names.summary, monthSheet].filter(Boolean)
+        : [monthSheet],
+      monthSheet: monthSheet,
+    },
+  );
+}
+
 function apiStage7RestartBot() {
   _stage7AssertRole_("sysadmin", "restart bot");
   return Stage7UseCases_.runMaintenanceScenario({ type: "restartBot" });

@@ -1,8 +1,8 @@
 # WASB — повний список файлів репозиторію
 # Порядок: дерево каталогів (depth-first, алфавіт у кожній папці)
 # Виключено: .git/, node_modules/, локальні .clasp*.json (крім *.example.json)
-# Файлів: 395
-# Оновлено: 2026-06-29T05:02:35Z
+# Файлів: 397
+# Оновлено: 2026-07-01T16:25:37Z
 
 .
   .clasp.example.json
@@ -215,6 +215,7 @@ personnel/
   PersonsRepository.js
 
 reports/
+  MonthJournalMaterialize.gs
   MonthlyReport.gs
   MonthlyReport.js
   Report_DailyDetailed.gs
@@ -263,6 +264,7 @@ scripts/
   verify-html-label-for.mjs
   verify-jsconfig.mjs
   verify-materialize-computed-data.mjs
+  verify-month-journal-materialize.mjs
   verify-monthly-callsign-sync.mjs
   verify-no-russian-text.mjs
   verify-node-version.mjs

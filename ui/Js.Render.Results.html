@@ -352,6 +352,48 @@
     renderMaterializeComputedDataConfirm_();
   }
 
+  async function materializeMonthJournal() {
+    assertAdminAction_("materializeMonthJournal");
+    logToConsole("Оновлення журналу місяця...", "info");
+
+    try {
+      const result = await ActionDispatcher.run(
+        "materializeMonthJournal",
+        () => MaintenanceApi.materializeMonthJournal({}),
+      );
+
+      const payload = result?.data?.result || result?.data || result || {};
+      const journalSheet = String(payload.journalSheet || "").trim();
+      const summarySheet = String(payload.summarySheet || "").trim();
+      const journalRows = Number(payload.journalRowsWritten || 0);
+      const summaryRows = Number(payload.summaryRowsWritten || 0);
+
+      if (result?.success) {
+        showToast("Журнал місяця оновлено");
+        showStandardResult("Журнал місяця");
+        setHtml(
+          "resultContent",
+          `
+          <div class="result-item">
+            <div class="result-label" style="color: var(--success-color);">Успішно</div>
+            <div class="result-value">
+              <p>${escapeHtml(result.message || "Журнал місяця оновлено")}</p>
+              <p style="font-size:0.85rem; margin-top:8px;">
+                ${escapeHtml(journalSheet)}: ${escapeHtml(String(journalRows))} записів<br>
+                ${escapeHtml(summarySheet)}: ${escapeHtml(String(summaryRows))} осіб
+              </p>
+            </div>
+          </div>
+        `,
+        );
+      } else {
+        showToast("" + (result?.message || "Не вдалося оновити журнал місяця"));
+      }
+    } catch (error) {
+      showToast("" + normalizeError(error));
+    }
+  }
+
   async function setupTrigger() {
     assertAdminAction_("setupTrigger");
     if (

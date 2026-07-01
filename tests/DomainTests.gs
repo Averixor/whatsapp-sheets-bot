@@ -412,6 +412,41 @@ function _runMonthlyLayoutDomainTests_(report) {
   );
 }
 
+function _runMonthJournalDomainTests_(report) {
+  _domainPush_(
+    report,
+    "monthJournal.compress merges consecutive days with same code",
+    function () {
+      var summary = buildMonthJournalCompressedSummary_([
+        { dayNumber: 1, code: "БР" },
+        { dayNumber: 2, code: "БР" },
+        { dayNumber: 3, code: "БР" },
+        { dayNumber: 4, code: "Резерв" },
+        { dayNumber: 5, code: "Резерв" },
+        { dayNumber: 6, code: "Резерв" },
+        { dayNumber: 7, code: "КП" },
+      ]);
+      _domainAssertEqual_(
+        summary,
+        "01–03 БР; 04–06 Резерв; 07 КП",
+        "compressed summary",
+      );
+      return summary;
+    },
+  );
+
+  _domainPush_(
+    report,
+    "monthJournal.derived sheet names follow month suffix",
+    function () {
+      var names = monthJournalDerivedSheetNames_("07");
+      _domainAssertEqual_(names.journal, "ЖУРНАЛ_07", "journal sheet");
+      _domainAssertEqual_(names.summary, "ПІДСУМОК_07", "summary sheet");
+      return names.journal;
+    },
+  );
+}
+
 function runStage6ADomainTests_(options) {
   const opts = options || {};
   const report = {
@@ -649,6 +684,7 @@ function runStage6ADomainTests_(options) {
   // PERSONNEL and sheet schema regressions
   _runPersonnelRepositoryDomainTests_(report);
   _runMonthlyLayoutDomainTests_(report);
+  _runMonthJournalDomainTests_(report);
 
   // Reconciliation pure compare
   _domainPush_(report, "reconciliation.compare missing rows", function () {
