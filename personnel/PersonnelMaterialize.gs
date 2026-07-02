@@ -335,6 +335,10 @@ function _personnelMaterializeBuildSourceRows_(sheet) {
   if (!rowCount) return { rows: [], col: {}, startRow: startRow, endRow: endRow };
 
   var lastCol = Math.max(sheet.getLastColumn(), 1);
+  if (typeof ensurePersonnelStatusColumnHeader_ === "function") {
+    ensurePersonnelStatusColumnHeader_(sheet);
+    lastCol = Math.max(sheet.getLastColumn(), 1);
+  }
   var headers = sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0];
   var col = _personnelBuildHeaderColIndex_(headers);
   var dataRange = _personnelMaterializeRange_(sheet, startRow, endRow, 1, lastCol);
@@ -745,6 +749,10 @@ function materializePersonnelDerivedSheets_(options) {
       phones: null,
       birthday: null,
     };
+  }
+
+  if (typeof ensurePersonnelStatusColumn_ === "function") {
+    ensurePersonnelStatusColumn_(personnelSheet);
   }
 
   var built;

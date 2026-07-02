@@ -31,6 +31,12 @@ assert.match(
   readRepoFileByBasename(repoRoot, "PersonnelMaterialize.gs", {
     errorPrefix: "verify-materialize-computed-data",
   }),
+  /ensurePersonnelStatusColumn_/,
+);
+assert.match(
+  readRepoFileByBasename(repoRoot, "PersonnelMaterialize.gs", {
+    errorPrefix: "verify-materialize-computed-data",
+  }),
   /syncAllMonthlyCallsignsFromPersonnel_/,
 );
 assert.match(

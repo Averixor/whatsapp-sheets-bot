@@ -325,6 +325,29 @@ function _runPersonnelRepositoryDomainTests_(report) {
       return "materialize-calc-ok";
     },
   );
+
+  _domainPush_(
+    report,
+    "personnel.status column header detection",
+    function () {
+      _domainAssertEqual_(
+        _personnelFindStatusColumnIndex_(["Callsign", "Status"]),
+        1,
+        "Status index",
+      );
+      _domainAssertEqual_(
+        _personnelFindStatusColumnIndex_(["Callsign", "Статус"]),
+        1,
+        "Status ua alias",
+      );
+      _domainAssertEqual_(
+        _personnelFindStatusColumnIndex_(["Callsign", ""]),
+        -1,
+        "missing Status",
+      );
+      return "ok";
+    },
+  );
 }
 
 function _runMonthlyLayoutDomainTests_(report) {

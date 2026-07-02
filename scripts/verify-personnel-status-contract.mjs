@@ -192,6 +192,10 @@ assert.equal(
   "in-trip status is active",
 );
 
+assert.match(source, /function ensurePersonnelStatusColumnHeader_/);
+assert.match(source, /function ensurePersonnelStatusColumn_/);
+assert.match(source, /ensurePersonnelStatusColumnHeader_\(sh\)/);
+
 console.log(
   `verify-personnel-status-contract: OK (dropdown=${runtime.dropdown.length}, inTrip=unicode-constant)`,
 );

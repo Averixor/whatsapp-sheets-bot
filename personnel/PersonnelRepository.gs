@@ -308,6 +308,10 @@ function applyPersonnelStatusColumnValidation_(sh) {
     return { applied: false, reason: "no sheet" };
   }
 
+  if (typeof ensurePersonnelStatusColumnHeader_ === "function") {
+    ensurePersonnelStatusColumnHeader_(sh);
+  }
+
   var lastCol = Math.max(sh.getLastColumn(), 1);
   var headers = sh.getRange(1, 1, 1, lastCol).getDisplayValues()[0];
   var colIndex;
@@ -370,6 +374,7 @@ function _personnelCanonicalHeaderKey_(rawHeader) {
   var aliases = {
     id: "ID",
     "id армія+": "ID",
+    "id army+": "ID",
     "армія+": "ID",
     "id v/s": "ID_VS",
     cells: "",
@@ -503,6 +508,109 @@ function _personnelBuildHeaderColIndex_(headersRow) {
   return col;
 }
 
+/** Reference workbook column P (1-based). */
+var PERSONNEL_REFERENCE_STATUS_COL_ = 16;
+
+function _personnelFindStatusColumnIndex_(headersRow) {
+  var headers = headersRow || [];
+  for (var i = 0; i < headers.length; i++) {
+    if (_personnelCanonicalHeaderKey_(headers[i]) === "Status") {
+      return i;
+    }
+  }
+  return -1;
+}
+
+/**
+ * Creates missing Status header on PERSONNEL (column P in reference layout, or next free column).
+ * Does not overwrite unrelated headers. Empty data cells stay empty (= В наявності on read).
+ */
+function ensurePersonnelStatusColumnHeader_(sheet) {
+  if (!sheet || typeof sheet.getRange !== "function") {
+    return { ensured: false, reason: "no sheet" };
+  }
+
+  var lastCol = Math.max(Number(sheet.getLastColumn()) || 0, 1);
+  var headers = sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0] || [];
+  var statusIdx = _personnelFindStatusColumnIndex_(headers);
+
+  if (statusIdx >= 0) {
+    return {
+      ensured: false,
+      alreadyPresent: true,
+      column: statusIdx + 1,
+      header: "Status",
+    };
+  }
+
+  var targetCol = PERSONNEL_REFERENCE_STATUS_COL_;
+  var maxColumns = Math.max(Number(sheet.getMaxColumns()) || 0, 1);
+  if (maxColumns < targetCol && typeof sheet.insertColumnsAfter === "function") {
+    sheet.insertColumnsAfter(maxColumns, targetCol - maxColumns);
+    maxColumns = targetCol;
+  }
+
+  var headerAtTarget = "";
+  if (lastCol >= targetCol) {
+    headerAtTarget = String(headers[targetCol - 1] || "").trim();
+  } else {
+    try {
+      headerAtTarget = String(
+        sheet.getRange(1, targetCol).getDisplayValue() || "",
+      ).trim();
+    } catch (_) {}
+  }
+
+  if (
+    headerAtTarget &&
+    _personnelCanonicalHeaderKey_(headerAtTarget) !== "Status"
+  ) {
+    targetCol = Math.max(lastCol, targetCol) + 1;
+    if (maxColumns < targetCol && typeof sheet.insertColumnsAfter === "function") {
+      sheet.insertColumnsAfter(maxColumns, targetCol - maxColumns);
+    }
+  }
+
+  sheet.getRange(1, targetCol).setValue("Status");
+
+  if (typeof invalidatePersonnelCache_ === "function") {
+    invalidatePersonnelCache_();
+  }
+
+  return {
+    ensured: true,
+    column: targetCol,
+    header: "Status",
+  };
+}
+
+/** Ensures Status header and applies dropdown validation for the whole column. */
+function ensurePersonnelStatusColumn_(sheet) {
+  var headerResult = ensurePersonnelStatusColumnHeader_(sheet);
+  var validation =
+    typeof applyPersonnelStatusColumnValidation_ === "function"
+      ? applyPersonnelStatusColumnValidation_(sheet)
+      : { applied: false, reason: "validation unavailable" };
+
+  return {
+    ensured: headerResult.ensured === true || validation.applied === true,
+    header: headerResult,
+    validation: validation,
+    column:
+      (validation && validation.column) ||
+      (headerResult && headerResult.column) ||
+      0,
+  };
+}
+
+function ensurePersonnelStatusColumn() {
+  var sh = _personnelGetSheet_(false);
+  if (!sh) {
+    throw new Error('Аркуш "' + _personnelSheetName_() + '" не знайдено');
+  }
+  return ensurePersonnelStatusColumn_(sh);
+}
+
 function _personnelReadCell_(row, colIndex) {
   if (colIndex === undefined || colIndex < 0) return "";
   return row[colIndex];
@@ -626,6 +734,9 @@ function _personnelRowToRecord_(row, sheetRow, col) {
 
 function _personnelLoadRowsUncached_() {
   var sh = _personnelGetSheet_(true);
+  if (typeof ensurePersonnelStatusColumnHeader_ === "function") {
+    ensurePersonnelStatusColumnHeader_(sh);
+  }
   var lastCol = Math.max(sh.getLastColumn(), 1);
   var lastRow = Math.max(sh.getLastRow(), 1);
   var values = sh.getRange(1, 1, lastRow, lastCol).getDisplayValues();
@@ -972,4 +1083,6 @@ var PersonnelRepository_ = PersonnelRepository_ || {
   activeStatuses: PERSONNEL_ACTIVE_STATUSES_,
   inactiveStatuses: PERSONNEL_INACTIVE_STATUSES_,
   applyStatusValidation: applyPersonnelStatusColumnValidation,
+  ensureStatusColumn: ensurePersonnelStatusColumn,
+  ensureStatusColumnHeader: ensurePersonnelStatusColumnHeader_,
 };
