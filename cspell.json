@@ -1,6 +1,15 @@
 {
   "version": "0.2",
   "language": "en,uk",
+  "import": ["@cspell/dict-uk-ua/cspell-ext.json"],
+  "dictionaries": ["uk-ua"],
+  "overrides": [
+    {
+      "filename": "**/*.{gs,html,md}",
+      "language": "en,uk",
+      "dictionaries": ["uk-ua"]
+    }
+  ],
   "words": [
     "автозачистка",
     "автоперевірка",
