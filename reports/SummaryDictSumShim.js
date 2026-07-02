@@ -124,7 +124,7 @@ function getDefaultDictSumRules_() {
     { code: "Лікарняний", order: 215 },
     { code: "ППД Київ", order: 220 },
     { code: "Гусачівка", order: 225 },
-    { code: "DC", order: 230 },
+    { code: "Drone Camp", order: 230 },
     { code: "БЗВП", order: 245 },
     { code: "СЗЧ", order: 300 },
     { code: "Вибув", order: 333 },

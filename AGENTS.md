@@ -115,8 +115,7 @@ Domain folders (`reports/`, `vacations/`, `core/`, `ui/`, …) are mechanical mo
 - Monthly schedule row key: **Callsign**; personal fields from `PERSONNEL` by Callsign (fallback **FML**).
 - **ID Army+** is optional data, not a required system key.
 - **Position** is not a person key.
-- **Status** (UA only in sheet): dropdown — `В наявності`, `У відрядженні`,
-  `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`.
+- **Status** (UA only in sheet): dropdown — `В наявності`, `У відрядженні`, `Drone Camp`, `ППД Київ`, `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`.
   Runtime-active: all except `Вибув` and `СЗЧ`; empty = `В наявності`. Legacy
   (`Дієвий`, `Active`, `Відрядження`, EN) mapped on read only.
 - Final (logical) headers: `ID | FML | … | Unit | Status`. Physical in reference "Книга Взводу Охорони.xlsx": `Cells`, `ID v/s`, split `Last name` / `First name` / `Patronymic` (FML synthesized), **`Callsign` in column L**, `Rank`, `OSH 4`, `Status` — see `contracts/reference-workbook-layout.contract.json`. `TEMPLATE` is legacy-only (not in reference file). Code reads by **header names only** (aliases cover variants). See `RUNBOOK.md` §14.

@@ -68,7 +68,7 @@ const MONTHLY_CONFIG = {
   /** Monthly sheet column A (slot/BR) width in pixels. */
   SLOT_COL_WIDTH: 30,
   /** Monthly sheet column B (callsign / identity) width in pixels. */
-  CALLSIGN_COL_WIDTH: 150,
+  CALLSIGN_COL_WIDTH: 160,
   /** Monthly sheet width for columns C..last. */
   DATA_COL_WIDTH: 110,
 };
@@ -96,7 +96,7 @@ const SUMMARY_GROUPS = {
   Лікарняний: ["Лікарняний", "Лікарн"],
   "ППД Київ": ["ППД Київ", "Київ"],
   Гусачівка: ["Гусачівка", "Гусачі"],
-  DC: ["DC"],
+  Drone Camp: ["Drone Camp"],
   БЗВП: ["БЗВП"],
   СЗЧ: ["СЗЧ"],
   Вибув: ["Вибув"],
@@ -129,7 +129,7 @@ const FULL_NAMES = {
   Київ: "ППД Київ",
   Гусачівка: "Гусачівка",
   Гусачі: "Гусачівка",
-  DC: "Drone Camp",
+  Drone Camp: "Drone Camp",
   БЗВП: "Базова військова підготовка",
   СЗЧ: "Самовільне залишення частини",
   Вибув: "Вибув",
