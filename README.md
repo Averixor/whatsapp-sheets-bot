@@ -1,6 +1,6 @@
 # WASB — Google Apps Script bundle
 
-WASB is a spreadsheet-bound Google Apps Script bundle for personnel tracking, daily summaries, person cards, calendar views, send-panel workflows, and operational maintenance inside a single Google Sheets project.
+WASB is a spreadsheet-bound Google Apps Script bundle for personnel tracking, daily summaries, person cards, calendar views, send-panel workflows, reference directories, derived month journals, and operational maintenance inside a single Google Sheets project.
 
 This repository is packaged for Google Apps Script through `clasp`:
 
@@ -24,6 +24,8 @@ This repository is packaged for Google Apps Script through `clasp`:
 - viewer hardening: viewer may see the personnel list, but may open only their own card and cannot open the detailed summary
 - role-separated maintenance access: maintainer, admin, sysadmin, and owner have different server-side permissions
 - lightweight sidebar bootstrap and read-only access descriptor support for faster UI startup
+- derived month journal sheets per month: `ЖУРНАЛ_MM` and `ПІДСУМОК_MM`
+- optional sidebar reference sheets: `PHONE_DIRECTORY` (service phones) and `CAR` (vehicle register)
 
 ## Maintainer workflow
 
@@ -34,7 +36,8 @@ npm ci
 npm run check              # all local verify scripts (alias: npm run ci)
 git add -A && git commit -m "fix: …"
 npm run push:remote        # GitHub + production clasp push (no second CI run)
-apiStage7MaterializeComputedData()  # after PERSONNEL / PHONES / birthday edits
+apiStage7MaterializeComputedData()  # after PERSONNEL / PHONES / VACATIONS / birthday / Status changes
+apiStage7MaterializeMonthJournal({ monthSheet: "07" })  # if a month journal/summary must be refreshed
 apiStage7ClearPhoneCache()          # run in the production GAS editor after deploy
 ```
 
@@ -56,7 +59,7 @@ production project with `executionApi.access = MYSELF`.
   - **`WASB_OWNER_EMAIL`** — security mail with full user key for owner
   - **`WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`** — off in normal operation
   - **`WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP`** — legacy plaintext temp-password lookup during migration only; off in normal operation
-- After every production deploy and after **PERSONNEL**, **PHONES**, or birthday changes: run **`apiStage7MaterializeComputedData()`** when derived columns may be stale; then **`apiStage7ClearPhoneCache()`** in the GAS editor, then reload the sidebar.
+- After every production deploy and after **PERSONNEL**, **PHONES**, **VACATIONS**, birthday, or `Status` changes: run **`apiStage7MaterializeComputedData()`** when derived columns may be stale. If you changed a month sheet and need refreshed fact/history views, run **`apiStage7MaterializeMonthJournal({ monthSheet: "MM" })`** for that month. Then run **`apiStage7ClearPhoneCache()`** in the GAS editor and reload the sidebar.
 
 Full workflow, release checklist, and post-deploy checks: **`CONTRIBUTING.md`** and **`RUNBOOK.md`**.
 
@@ -64,10 +67,10 @@ Full workflow, release checklist, and post-deploy checks: **`CONTRIBUTING.md`** 
 
 The repository runs a lightweight CI workflow on **`push`** and **`pull_request`** to **`main`**, and **`workflow_dispatch`**.
 
-It runs the full **`npm run ci`** suite (**30** Node verify scripts after `npm run precheck` — see `package.json` and **RUNBOOK.md** §12), including:
+It runs the full **`npm run ci`** suite (**32** Node verify scripts after `npm run precheck` — see `package.json` and **RUNBOOK.md** §12), including:
 
 - GAS sanity, clasp push patterns, **Ukrainian/Russian language** (`verify-no-russian-text.mjs`), **user-facing copy** (`verify-user-facing-copy.mjs`)
-- Reference workbook layout, workbook contract, monthly callsign sync, send-panel bounds, materialize / age-birthday countdown
+- Reference workbook layout, reference repositories, workbook contract, monthly callsign sync, send-panel bounds, materialize / month-journal / age-birthday countdown
 - Vacation planner, recipient, personnel-status, format-rules contracts
 - Function graph audit; client includes, HTML labels, JS parse, layer deps, XSS, envelope compat
 - UseCase facade, snapshot governance, bridge flags, access API governance, access hotfixes
@@ -179,8 +182,7 @@ Notes:
 - Active UA statuses (dropdown, 9 values): `В наявності`, `У відрядженні`,
   `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`.
   Runtime-active (schedule, phones, cards): all except **`Вибув`** and **`СЗЧ`**.
-  Empty status defaults to **`В наявності`**. Legacy labels (`Дієвий`, `Active`,
-  `Відрядження`, EN) map on read only — see `personnel/PersonnelRepository.gs`.
+  Empty status defaults to **`В наявності`**. If the `Status` header is missing, runtime self-heal seeds it in the reference column (**P**) or appends a safe new column before validation. Legacy labels (`Дієвий`, `Active`, `Відрядження`, EN) map on read only — see `personnel/PersonnelRepository.gs`.
 - Runtime reads by header names and supports documented aliases (split names, `ID v/s`, OSH 4, legacy TEMPLATE, etc.). After edits,
   run `apiStage7ClearPhoneCache()`.
 
@@ -214,6 +216,8 @@ Turn it back off immediately after the needed keys are registered.
 - `apiStage7BootstrapSidebar()` — sidebar bootstrap + optional business sheets
 - `apiStage7BootstrapRuntimeAndAlertsSheets()` — service sheet bootstrap (`sheets/ServiceSheetsBootstrap.gs`)
 - `apiStage7BootstrapAccessSheet()` — `ACCESS` bootstrap
+- `apiStage7MaterializeComputedData()` — helper columns, PHONES/BIRTHDAY/VACATIONS/panel materialize, status validation, monthly callsign sync
+- `apiStage7MaterializeMonthJournal()` — derived `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` for the active or requested month
 
 ## Non-goals for this bundle
 

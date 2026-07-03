@@ -68,7 +68,8 @@ Sidebar bootstrap can create and seed these sheets (headers + one template row) 
 After every production deploy, and after changing **PERSONNEL**, **PHONES**,
 phone index logic, or birthday behavior:
 
-- Run **`apiStage7MaterializeComputedData()`** when derived columns (Birthday `DD.MM.YYYY р.н.`, Age, Days until birthday) may be stale.
+- Run **`apiStage7MaterializeComputedData()`** when derived columns (Birthday `DD.MM.YYYY р.н.`, Age, Days until birthday), `PERSONNEL.Status` self-heal/validation, or callsign-sync outputs may be stale.
+- If you changed a month sheet and rely on derived history views, run **`apiStage7MaterializeMonthJournal({ monthSheet: "MM" })`** for that month.
 - Run **`apiStage7ClearPhoneCache()`** in the Apps Script editor (maintenance API).
 
 Then in the spreadsheet: close the sidebar → open it again → open a person card and confirm **ДН** and phone fields.
@@ -77,7 +78,7 @@ Then in the spreadsheet: close the sidebar → open it again → open a person c
 
 The repository runs a lightweight CI workflow on push and pull requests to **`main`** (also **`workflow_dispatch`**).
 
-It runs the complete `npm run ci` contract suite (**30** verify scripts after `precheck`): GAS sanity, clasp patterns, **Ukrainian/Russian language** and **user-facing copy** guards, reference workbook layout, workbook and monthly callsign contracts, send-panel bounds, materialize / age-birthday countdown, vacation planner,
+It runs the complete `npm run ci` contract suite (**32** verify scripts after `precheck`): GAS sanity, clasp patterns, **Ukrainian/Russian language** and **user-facing copy** guards, reference workbook layout, reference repositories, workbook and monthly callsign contracts, send-panel bounds, materialize / month-journal / age-birthday countdown, vacation planner,
 recipient contracts, personnel-status and format-rules contracts, function graph, client
 parsing/layers/XSS, response envelope, facade/snapshot/bridge governance, access
 API policy and hotfixes, OAuth scopes, project file map, and jsconfig verification.
@@ -191,6 +192,7 @@ Update documentation when changing:
 - Project workflow
 - **`SHEET_HEADERS` / ACCESS schema** — keep **`README.md`**, **`RUNBOOK.md`**, **`ARCHITECTURE.md`** in sync
 - **Daily summaries** — keep **`docs/daily-summary-architecture.md`**, **`ARCHITECTURE.md` §7.1**, **`RUNBOOK.md` §22** aligned when changing `reports/Report_*.gs`, `reports/Summaries.gs`, or sidebar summary flow
+- **Month journal / reference sheets** — keep **`README.md`**, **`ARCHITECTURE.md`**, **`RUNBOOK.md`**, **`docs/module-map.md`**, and workbook/reference contracts aligned when changing `reports/MonthJournalMaterialize.gs` or `ReferenceSheetsRepository_`
 - **User-facing copy** — keep **`docs/user-facing-copy.md`** aligned when changing sidebar labels, menus, dialogs, health messages, or sheet titles shown to users; run **`npm run ci:copy`** after UI text edits
 - **Script properties** — keep **`README.md`**, **`RUNBOOK.md` §15**, **`SECURITY.md`**, **`CONTRIBUTING.md`** aligned with `data/DataAccess.gs`
 - **Repository file map** — refresh **`docs/project-files-complete.txt`** with **`npm run map:project-files`** whenever files are added, removed, or moved; CI enforces freshness via **`verify-project-files-map.mjs`**

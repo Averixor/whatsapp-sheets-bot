@@ -5,7 +5,7 @@
     "month06": "Compact layout: A=BR formula, B=Позивний, dates from C.",
     "monthStandard": "Sheets 02-05: A=ТЕЛЕФОН, B=ПОЗИВНИЙ, dates from H.",
     "phoneDirectory": "PHONE_DIRECTORY is a sectioned reference: column A holds section titles or phone numbers, column B holds contact name/description.",
-    "car": "CAR is an optional vehicle register: A=П.І.Б, B=Найменування військового майна, C=Військовий номер, D=Номер шасі, E=Рік випуску, F=Вартість."
+    "car": "CAR is an optional vehicle register: A=П.І.Б, B=Найменування військового майна, C=Військовий номер, D=Номер шасі, E=Рік випуску, F=Вартість, G=Стан."
   },
   "sheets": {
     "PERSONNEL": {

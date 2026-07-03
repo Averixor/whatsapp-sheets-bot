@@ -518,10 +518,12 @@ Local equivalent: **`npm run check`** (alias **`npm run ci`**).
 | `verify-no-russian-text.mjs` | Ban Russian markers in project text |
 | `verify-user-facing-copy.mjs` | Ban technical tokens in user-visible copy (`contracts/user-facing-copy.contract.json`) |
 | `verify-reference-workbook-layout.mjs` | Reference xlsx header layout contract |
+| `verify-reference-repositories.mjs` | `PHONE_DIRECTORY` / `CAR` parser semantics and workbook coverage |
 | `verify-workbook-contract.mjs` | Monthly layout geometry, formula-block short summary, detailed summary grouping |
 | `verify-monthly-callsign-sync.mjs` | PERSONNEL → monthly «Позивні» sync contract |
 | `verify-send-panel-bounds.mjs` | SEND_PANEL row bounds contract |
 | `verify-materialize-computed-data.mjs` | PERSONNEL materialize / computed columns API contract |
+| `verify-month-journal-materialize.mjs` | `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` wiring, API, access, sidebar |
 | `verify-age-birthday-countdown.mjs` | Birthday `DD.MM.YYYY р.н.`, Age `Nр.`, countdown UA labels |
 | `verify-vacation-planner.mjs` | Vacation planner rules, calendar, repository contracts |
 | `verify-recipient-contract.mjs` | Recipient routing and dark-select UI contract |
@@ -562,7 +564,7 @@ There is **no** Apps Script deployment in CI (`clasp` is local only). See `.gith
 6. In Apps Script → **Project settings → Script properties**: ensure **`WASB_SPREADSHEET_ID`** is set if you rely on triggers/headless runs (use your production spreadsheet ID).
 7. Reload the spreadsheet UI; close and reopen the sidebar.
 8. Confirm production `appsscript.json` still has `executionApi.access = MYSELF`.
-9. After PERSONNEL / PHONES / birthday edits: **`apiStage7MaterializeComputedData()`**, then **`apiStage7ClearPhoneCache()`** after every deploy; re-check a person card and personnel modal.
+9. After PERSONNEL / PHONES / VACATIONS / birthday / `Status` edits: **`apiStage7MaterializeComputedData()`**, then **`apiStage7ClearPhoneCache()`** after every deploy; re-check a person card and personnel modal. If you changed a month sheet and rely on derived fact/history views, also run **`apiStage7MaterializeMonthJournal({ monthSheet: "MM" })`** for that month.
 
 ### Repository file map
 
@@ -611,6 +613,7 @@ Immediately after push, run in the production GAS editor:
 
 ```text
 apiStage7MaterializeComputedData()
+apiStage7MaterializeMonthJournal({ monthSheet: "07" })   # when the month journal / summary must be refreshed
 apiStage7ClearPhoneCache()
 ```
 
@@ -634,7 +637,8 @@ Run from the Apps Script editor when relevant after a deploy or config change:
 - `apiStage7DebugAccess()` — access debug payload
 - `runAccessPolicyChecks()` — access policy assertions
 - `runSmokeTests()` — regression bundle (`smoke/SmokeTests.gs`, deployed with production)
-- `apiStage7MaterializeComputedData()` — пересборка обчислюваних колонок (PERSONNEL helper, PHONES, Birthday, VACATIONS, Status панелі); sidebar: **Оновити обчислювані дані**
+- `apiStage7MaterializeComputedData()` — пересборка обчислюваних колонок (PERSONNEL helper, PHONES, Birthday, VACATIONS, Status панелі), auto-heal/validation `PERSONNEL.Status`, monthly callsign sync; sidebar: **Оновити обчислювані дані**
+- `apiStage7MaterializeMonthJournal({ monthSheet: "07" })` — derived `ЖУРНАЛ_MM` / `ПІДСУМОК_MM`; sidebar: **Оновити журнал місяця**
 - `apiStage7ClearPhoneCache()` — invalidate phone/profile caches (після кожного production deploy; **не** замінює materialize)
 
 ## 14. PERSONNEL sheet (canonical people data)
@@ -679,14 +683,14 @@ Required (logical): `FML` (or split name parts), `Birthday`, `Phone`, `Callsign`
 
 ### One-time / migration in the spreadsheet
 
-1. Add column **`Status`** if missing (or run **`apiStage7BootstrapRuntimeAndAlertsSheets`** / self-heal to seed headers on empty `PERSONNEL`).
+1. If column **`Status`** is missing, runtime self-heal creates header **`Status`** in reference column **P** (or appends a safe new column if P is occupied), then applies dropdown validation.
 2. For everyone on duty: leave **`Status` empty** (defaults to **`В наявності`**) or pick an active dropdown value:
    **`В наявності`**, **`У відрядженні`**, **`Відпустка`**, **`Лікарняний`**, **`Тимчасовий`**, **`Гусачівка`**, **`БЗВП`**. Do not mix EN/UA in the same column.
 3. For departed or absent-without-leave: set **`Вибув`** or **`СЗЧ`** — excluded from schedule, phones, and cards. Do **not** use **`Переведений`** (legacy values map to **`Вибув`** on read).
 
 **Dropdown order (9 values):** `В наявності` → `У відрядженні` → `Вибув` → `Відпустка` → `Лікарняний` → `Тимчасовий` → `Гусачівка` → `БЗВП` → `СЗЧ`. Legacy labels (`Дієвий`, `Відрядження`, `Active`, EN) normalize on read.
 
-**Data validation (dropdown):** apply to the **whole** Status column from row 2, e.g. `PERSONNEL!M2:M`, not a single cell like `M10`. After deploy, run **`applyPersonnelStatusColumnValidation()`** in the Apps Script editor, or **`ensureSystemSheetByName_('PERSONNEL')`** / bootstrap self-heal to apply the list automatically.
+**Data validation (dropdown):** apply to the **whole** Status column from row 2, e.g. `PERSONNEL!P2:P`, not a single cell like `P10`. After deploy, run **`applyPersonnelStatusColumnValidation()`** in the Apps Script editor, **`ensurePersonnelStatusColumn()`** for header + dropdown self-heal, or **`ensureSystemSheetByName_('PERSONNEL')`** / bootstrap self-heal to apply the list automatically.
 
 **`ID`** (Армія+) may stay empty or temporary; it is not required for cards, schedule, phones, or birthdays.
 

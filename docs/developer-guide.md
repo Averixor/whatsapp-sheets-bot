@@ -29,6 +29,8 @@ Google Sheets       — ACCESS, PERSONNEL, місячні листи, …
 | ACCESS | Доступи, ролі, bootstrap, lockout |
 | PERSONNEL | Люди, Callsign, Status (UA), телефони |
 | Місячні аркуші (`01`…`12`) | Добовий графік, формульний блок |
+| `MonthJournalMaterialize` | Derived `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` from month sheets + PERSONNEL + DICT |
+| `ReferenceSheetsRepository_` | Optional sidebar reference sheets `PHONE_DIRECTORY` / `CAR` |
 | `Report_*` | Зведення дня (short з formula block, detailed окремо) — modules in `reports/` |
 | Vacation modules | Відпустки, перевірки, міні-календар — server modules in `vacations/` |
 | `contracts/` + `scripts/verify-*` | Захист від тихої деградації (governance CI) |
@@ -43,8 +45,9 @@ Google Sheets       — ACCESS, PERSONNEL, місячні листи, …
 | `AccessEnforcement_*` | Server-side дозволи на дії |
 | `contracts/access-api.contract.json` | Публічна поверхня API + parity з кодом |
 | Guard markers (`_stage7AssertRole_`, `assertCan…`) | Обхід permissions |
-| PERSONNEL keys (Callsign, Status UA) | Графік, картки, телефони, health |
+| PERSONNEL keys (Callsign, Status UA) | Графік, картки, телефони, health; Status auto-heal/validation |
 | Formula block на місячних листах | Short summary ([daily-summary-architecture.md](./daily-summary-architecture.md)) |
+| `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` derived sheets | Фактична історія місяця; окремий materialize path |
 | Bootstrap ACCESS / protections | Login для всіх користувачів |
 | Production `clasp` remote | Ризик deploy не в той script project |
 
@@ -59,6 +62,8 @@ Google Sheets       — ACCESS, PERSONNEL, місячні листи, …
 5. **Чи оновлено contract / CI / docs?**
 
 Якщо додаєш або змінюєш `api*`, зміна **не завершена**, поки не проходить `verify-access-api-governance` (recursive scan, contract parity, guard markers).
+
+Якщо змінюєш derived місячний журнал або reference sheets, зміна **не завершена**, поки не проходять відповідні перевірки: `verify-month-journal-materialize`, `verify-reference-repositories`, `verify-reference-workbook-layout`.
 
 Структурні зміни (move/split/merge): [ADR-001](./adr/001-structural-changes.md). **Робоча** карта папок: [ADR-003](./adr/003-working-domain-layout.md), [module-map.md](./module-map.md). Історичні фази: [ADR-002](./adr/002-domain-folder-map.md).
 
@@ -87,7 +92,7 @@ npm run push:remote
 
 Or CI + clasp only: `npm run deploy:prod`. Full pipeline with map refresh: `npm run ship -- "fix: …"`.
 
-Після deploy у GAS editor: **`apiStage7MaterializeComputedData()`** (після змін PERSONNEL/PHONES/birthday), потім **`apiStage7ClearPhoneCache()`**, потім перевірка картки людини та health (`apiStage7QuickHealthCheck()`). Повний checklist: [RUNBOOK.md](../RUNBOOK.md) §12–§13.
+Після deploy у GAS editor: **`apiStage7MaterializeComputedData()`** (після змін PERSONNEL/PHONES/VACATIONS/birthday/Status), за потреби **`apiStage7MaterializeMonthJournal({ monthSheet: "MM" })`** (якщо мінявся місячний лист або потрібні `ЖУРНАЛ_MM` / `ПІДСУМОК_MM`), потім **`apiStage7ClearPhoneCache()`**, потім перевірка картки людини, reference sidebar views, і health (`apiStage7QuickHealthCheck()`). Повний checklist: [RUNBOOK.md](../RUNBOOK.md) §12–§13.
 
 ## Куди далі
 

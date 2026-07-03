@@ -1,5 +1,21 @@
 # Changelog
 
+Historical record of changes. For the current operational truth, use `README.md`, `RUNBOOK.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `AGENTS.md`, and the active contracts / verify scripts.
+
+## 2026-07-03 — Docs and governance synced to current code
+
+- **Docs:** aligned `README.md`, `RUNBOOK.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `AGENTS.md`, `docs/README.md`, `docs/developer-guide.md`, `docs/module-map.md`, and ADR summaries with the current Stage 7 codebase.
+- **Current features documented:** derived month journal `ЖУРНАЛ_MM` / `ПІДСУМОК_MM`, optional `PHONE_DIRECTORY` / `CAR` reference sheets, and `PERSONNEL.Status` runtime self-heal.
+- **Governance:** extracted declarative contracts for month journal and reference repositories; updated verifiers to read those contracts instead of hardcoded expectations.
+- **Release status docs:** marked `WASB_RELEASE_AUDIT.md` as historical snapshot rather than current readiness truth.
+
+## 2026-07-03 — Month journal, reference sheets, and PERSONNEL Status self-heal
+
+- **`reports/MonthJournalMaterialize.gs`** + sidebar/API/governance wiring: derived `ЖУРНАЛ_MM` and `ПІДСУМОК_MM` per month sheet (`01`..`12`) via `apiStage7MaterializeMonthJournal()`.
+- **`data/DictionaryRepository.gs` / `ReferenceSheetsRepository_`**: optional `PHONE_DIRECTORY` and `CAR` repositories with sidebar views and maintainer access.
+- **`personnel/PersonnelRepository.gs` / `personnel/PersonnelMaterialize.gs`**: missing `Status` header is auto-created and validated before PERSONNEL materialize flows continue.
+- **UI:** `PHONE_DIRECTORY` WhatsApp buttons normalized to fixed-width `WA`; unavailable numbers render as inactive `Н/Д` badges.
+
 ## 2026-06-20 — Reference workbook layout contract ("Книга Взводу Охорони.xlsx")
 
 - **Contract:** `contracts/reference-workbook-layout.contract.json` — headers for PERSONNEL, PHONES, BIRTHDAY, DICT, DICT_SUM, month `02`/`06`, VACATIONS extracted from the reference xlsx.

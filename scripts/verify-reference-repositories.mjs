@@ -5,9 +5,11 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import vm from "node:vm";
+import { loadContract } from "./lib/load-contract.mjs";
 import { readRepoFileByBasename } from "./lib/gas-files.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
+const contract = loadContract("reference-repositories.contract.json");
 
 function readGasByBasename(fileName) {
   return readRepoFileByBasename(repoRoot, fileName, {
@@ -77,32 +79,33 @@ function loadRepository(spreadsheet) {
   const context = vm.createContext({
     console,
     CONFIG: {
-      PHONE_DIRECTORY_SHEET: "PHONE_DIRECTORY",
-      CAR_SHEET: "CAR",
+      PHONE_DIRECTORY_SHEET: contract.repositories.phoneDirectory.sheetName,
+      CAR_SHEET: contract.repositories.carsRegister.sheetName,
     },
     getWasbSpreadsheet_: () => spreadsheet,
     normalizePhone_: normalizePhoneForTest,
   });
-  vm.runInContext(readGasByBasename("DictionaryRepository.gs"), context, {
+  const source = readGasByBasename("DictionaryRepository.gs");
+  assert.match(source, /ReferenceSheetsRepository_/);
+  assert.match(source, /readPhoneDirectory/);
+  assert.match(source, /readCarsRegister/);
+  vm.runInContext(source, context, {
     filename: "DictionaryRepository.gs",
   });
   return context;
 }
 
+const phoneContract = contract.repositories.phoneDirectory;
+const carContract = contract.repositories.carsRegister;
 const spreadsheet = new FakeSpreadsheet({
-  PHONE_DIRECTORY: new FakeSheet("PHONE_DIRECTORY", [
-    ["Phone / Section", "Name / Note"],
-    ["Командування", ""],
-    ["+380671112233", "Черговий частини"],
-    ["067 444 55 66", "Медик"],
-  ]),
-  CAR: new FakeSheet("CAR", [
-    ["П.І.Б", "Найменування військового майна", "Військовий номер", "Номер шасі", "Рік випуску", "Вартість", "Стан"],
-    ["Іваненко Іван Іванович", "Автомобіль легковий", "АА0001", "VIN001", "2020", "100 000,50", "Справна"],
-    ["Петренко Петро Петрович", "", "АА0002", "VIN002", "2019", "50000", "Не БГ (ремонт)"],
-    ["—", "Мотоцикл", "", "VIN003", "2021", "75000", "Обмежено БГ — потрібен ремонт."],
-    ["Сидоренко С.С.", "Вантажний автомобіль", "АА0004", "VIN004", "2018", "25000", "Справна (БГ)."],
-  ]),
+  [phoneContract.sheetName]: new FakeSheet(
+    phoneContract.sheetName,
+    phoneContract.fixtureRows,
+  ),
+  [carContract.sheetName]: new FakeSheet(
+    carContract.sheetName,
+    carContract.fixtureRows,
+  ),
 });
 
 const context = loadRepository(spreadsheet);
@@ -111,43 +114,75 @@ const phoneDirectory = vm.runInContext(
   "ReferenceSheetsRepository_.readPhoneDirectory()",
   context,
 );
-assert.equal(phoneDirectory.items.length, 2);
-assert.equal(phoneDirectory.items[0].section, "Командування");
-assert.equal(phoneDirectory.items[0].name, "Черговий частини");
-assert.equal(phoneDirectory.items[0].phone, "+380671112233");
-assert.equal(phoneDirectory.items[1].phone, "+380674445566");
-assert.equal(phoneDirectory.stats.contacts, 2);
-assert.equal(phoneDirectory.stats.sections, 1);
+assert.equal(phoneDirectory.items.length, phoneContract.expected.items.length);
+phoneContract.expected.items.forEach((expected, index) => {
+  assert.equal(phoneDirectory.items[index].section, expected.section);
+  assert.equal(phoneDirectory.items[index].name, expected.name);
+  assert.equal(phoneDirectory.items[index].phone, expected.phone);
+});
 assert.equal(
-  phoneDirectory.items.some((item) => item.name === "Name / Note" || item.phoneDisplay === "Phone / Section"),
-  false,
+  phoneDirectory.stats.contacts,
+  phoneContract.expected.stats.contacts,
 );
+assert.equal(
+  phoneDirectory.stats.sections,
+  phoneContract.expected.stats.sections,
+);
+phoneContract.expected.excludedHeaderMarkers.forEach((marker) => {
+  assert.equal(
+    phoneDirectory.items.some(
+      (item) => item.name === marker || item.phoneDisplay === marker,
+    ),
+    false,
+  );
+});
 
 const carsRegister = vm.runInContext(
   "ReferenceSheetsRepository_.readCarsRegister()",
   context,
 );
-assert.equal(carsRegister.items.length, 3);
+assert.equal(carsRegister.items.length, carContract.expected.itemCount);
 assert.deepEqual(
   Array.from(carsRegister.items.map((item) => item.assetName)),
-  ["Автомобіль легковий", "Мотоцикл", "Вантажний автомобіль"],
+  carContract.expected.assetNames,
 );
-assert.equal(carsRegister.stats.total, 3);
-assert.equal(carsRegister.stats.assigned, 2);
-assert.equal(carsRegister.stats.unassigned, 1);
-assert.equal(carsRegister.stats.totalCost, 200000.5);
+assert.equal(carsRegister.stats.total, carContract.expected.stats.total);
+assert.equal(carsRegister.stats.assigned, carContract.expected.stats.assigned);
+assert.equal(
+  carsRegister.stats.unassigned,
+  carContract.expected.stats.unassigned,
+);
+assert.equal(
+  carsRegister.stats.totalCost,
+  carContract.expected.stats.totalCost,
+);
 assert.equal(carsRegister.warnings.length, 1);
-assert.match(carsRegister.warnings[0], /Пропущено рядків без найменування майна: 1/);
+assert.match(
+  carsRegister.warnings[0],
+  new RegExp(carContract.expected.warningPattern),
+);
 assert.equal(carsRegister.items.some((item) => !item.assetName), false);
 assert.deepEqual(
   Array.from(carsRegister.items.map((item) => item.status)),
-  ["Справна", "Обмежено БГ", "Справна"],
+  carContract.expected.normalizedStatuses,
 );
-assert.equal(carsRegister.items[1].statusDescription, "Потрібен ремонт.");
+assert.equal(
+  carsRegister.items[carContract.expected.statusDescriptionAtIndex.index]
+    .statusDescription,
+  carContract.expected.statusDescriptionAtIndex.value,
+);
 assert.equal(
   carsRegister.stats.byStatus.map((entry) => `${entry.name}:${entry.count}`).join(","),
-  "Справна:2,Обмежено БГ:1",
+  carContract.expected.byStatus.join(","),
 );
 assert.equal(carsRegister.items[1].searchText.includes("обмежено бг"), true);
+assert.equal(
+  carsRegister.items[carContract.expected.searchIncludesAtIndex.index].searchText.includes(
+    carContract.expected.searchIncludesAtIndex.value,
+  ),
+  true,
+);
 
-console.log("verify-reference-repositories: OK (PHONE_DIRECTORY header, CAR assetName/status)");
+console.log(
+  `verify-reference-repositories: OK (${phoneContract.sheetName}, ${carContract.sheetName})`,
+);

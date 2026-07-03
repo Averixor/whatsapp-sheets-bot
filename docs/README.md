@@ -17,7 +17,7 @@ snapshots to the repository.
 | [adr/003-working-domain-layout.md](./adr/003-working-domain-layout.md) | Working domain folder agreement (not final architecture)   |
 | [SECURITY.md](../SECURITY.md)                                    | Identity, RBAC, lockout, protected data                     |
 | [CHANGELOG.md](../CHANGELOG.md)                                  | Durable release history                                     |
-| [WASB_RELEASE_AUDIT.md](../WASB_RELEASE_AUDIT.md)                | Production release verdict (CLOSED 2026-06-07)              |
+| [WASB_RELEASE_AUDIT.md](../WASB_RELEASE_AUDIT.md)                | Historical release snapshot; not current deploy truth       |
 | [CONTRIBUTING.md](../CONTRIBUTING.md)                            | Local workflow, CI, change policy                           |
 | [AGENTS.md](../AGENTS.md)                                        | Automation-agent instructions                               |
 | [vacation-planner.md](./vacation-planner.md)                     | Vacation planner, concurrent rules, mini-calendar UX        |
@@ -36,11 +36,16 @@ Machine-readable policy belongs in [`contracts/`](../contracts/). Snapshot
 changes are governed by `scripts/verify-snapshot-governance.mjs` and must be
 recorded in [`contracts/SNAPSHOT_CHANGELOG.md`](../contracts/SNAPSHOT_CHANGELOG.md).
 
+Current workbook/runtime additions guarded by contracts and CI:
+
+- `contracts/month-journal.contract.json` + `scripts/verify-month-journal-materialize.mjs` for derived `ЖУРНАЛ_MM` / `ПІДСУМОК_MM`
+- `contracts/reference-repositories.contract.json` + `scripts/verify-reference-repositories.mjs` for `PHONE_DIRECTORY` / `CAR`
+- `contracts/personnel-status.contract.json` + `scripts/verify-personnel-status-contract.mjs` for `PERSONNEL.Status` and self-heal invariants
+
 **Reference data table:** Code and docs are kept in sync with the provided
 "Книга Взводу Охорони.xlsx" (PERSONNEL: split names + **Callsign** column L; month **06** compact B=Позивний;
 monthly schedule key: **Callsign** — the xlsx may label the column Позивний/ПОЗИВНИЙ). See RUNBOOK §14 and recent CHANGELOG.
 
-Production status is recorded in
-[`WASB_RELEASE_AUDIT.md`](../WASB_RELEASE_AUDIT.md) (**CLOSED** 2026-06-07).
-Re-verify with current evidence when redeploying: `npm run check`, `npm run gas:status`,
-`apiRunStage7RegressionTests()` or `runSmokeTests()` in GAS diagnostics.
+Do not treat any static release-audit markdown as current readiness truth.
+Re-verify deploy state from current evidence: `npm run check`, `npm run gas:status`,
+and GAS diagnostics (`apiRunStage7RegressionTests()` or `runSmokeTests()`).

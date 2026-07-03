@@ -13,6 +13,9 @@ const contract = loadContract("personnel-status.contract.json");
 const source = readRepoFileByBasename(repoRoot, "PersonnelRepository.gs", {
   errorPrefix: "verify-personnel-status-contract",
 });
+const selfHealSource = readRepoFileByBasename(repoRoot, "SystemSheetsSelfHeal.gs", {
+  errorPrefix: "verify-personnel-status-contract",
+});
 
 const IN_TRIP_UNICODE = contract.inTripStatusUnicode || "";
 const IN_TRIP_CANON = IN_TRIP_UNICODE ? JSON.parse(`"${IN_TRIP_UNICODE}"`) : "";
@@ -195,6 +198,21 @@ assert.equal(
 assert.match(source, /function ensurePersonnelStatusColumnHeader_/);
 assert.match(source, /function ensurePersonnelStatusColumn_/);
 assert.match(source, /ensurePersonnelStatusColumnHeader_\(sh\)/);
+assert.match(
+  source,
+  new RegExp(
+    `var PERSONNEL_REFERENCE_STATUS_COL_\\s*=\\s*${contract.referenceStatusColumn};`,
+  ),
+);
+
+(contract.selfHeal?.validationAppliedBy || []).forEach((symbol) => {
+  assert.match(
+    source + "\n" + selfHealSource,
+    new RegExp(symbol.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+  );
+});
+assert.match(selfHealSource, /function _applyPersonnelStatusValidation_/);
+assert.match(selfHealSource, /applyPersonnelStatusColumnValidation_\(sheet\)/);
 
 console.log(
   `verify-personnel-status-contract: OK (dropdown=${runtime.dropdown.length}, inTrip=unicode-constant)`,

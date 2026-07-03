@@ -1,5 +1,7 @@
 # WASB production release audit
 
+Historical snapshot only. This file records the close state from **2026-06-07** and is **not** the current operational source of truth for CI counts, tracked GAS file counts, or deploy readiness. Check `README.md`, `RUNBOOK.md`, `CONTRIBUTING.md`, `package.json`, current `npm run gas:status`, and live GAS diagnostics for the present state.
+
 **Verdict:** WASB production release — **CLOSED**
 
 **Closed at:** 2026-06-07  

@@ -49,7 +49,7 @@ This project cannot be "run" locally in the traditional sense. There is no dev s
 
 ### Testing
 
-- **Local (automated):** `npm run ci` — **30** verify scripts (+ `precheck`), no Google credentials.
+- **Local (automated):** `npm run ci` — **32** verify scripts (+ `precheck`), no Google credentials.
 - **Remote (manual):** `apiRunStage7RegressionTests()` or `runSmokeTests()` in the GAS editor.
 
 Documentation index: [`docs/README.md`](./docs/README.md). Verify release status
@@ -62,7 +62,8 @@ After local CI and deploy:
 ```bash
 npm run check
 npm run deploy:prod
-apiStage7MaterializeComputedData()  # after PERSONNEL / PHONES / VACATIONS edits
+apiStage7MaterializeComputedData()  # after PERSONNEL / PHONES / VACATIONS / birthday / Status edits
+apiStage7MaterializeMonthJournal({ monthSheet: "07" })  # if month-derived journal sheets must be refreshed
 apiStage7ClearPhoneCache()          # run in the production GAS editor after deploy
 ```
 
@@ -115,11 +116,12 @@ Domain folders (`reports/`, `vacations/`, `core/`, `ui/`, …) are mechanical mo
 - Monthly schedule row key: **Callsign**; personal fields from `PERSONNEL` by Callsign (fallback **FML**).
 - **ID Army+** is optional data, not a required system key.
 - **Position** is not a person key.
-- **Status** (UA only in sheet): dropdown — `В наявності`, `У відрядженні`, `Drone Camp`, `ППД Київ`, `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`.
+- **Status** (UA only in sheet): dropdown — `В наявності`, `У відрядженні`, `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`.
   Runtime-active: all except `Вибув` and `СЗЧ`; empty = `В наявності`. Legacy
   (`Дієвий`, `Active`, `Відрядження`, EN) mapped on read only.
 - Final (logical) headers: `ID | FML | … | Unit | Status`. Physical in reference "Книга Взводу Охорони.xlsx": `Cells`, `ID v/s`, split `Last name` / `First name` / `Patronymic` (FML synthesized), **`Callsign` in column L**, `Rank`, `OSH 4`, `Status` — see `contracts/reference-workbook-layout.contract.json`. `TEMPLATE` is legacy-only (not in reference file). Code reads by **header names only** (aliases cover variants). See `RUNBOOK.md` §14.
-- After every production deploy or PERSONNEL edits: run **`apiStage7MaterializeComputedData()`** when derived columns may be stale; run **`apiStage7ClearPhoneCache()`** for phone cache invalidation (mandatory after deploy).
+- Missing `Status` header is self-healed at runtime (reference column **P** when free, otherwise next safe column) before validation/materialize paths proceed.
+- After every production deploy or PERSONNEL edits: run **`apiStage7MaterializeComputedData()`** when derived columns may be stale; run **`apiStage7ClearPhoneCache()`** for phone cache invalidation (mandatory after deploy). If month fact/history sheets are used, refresh them separately with **`apiStage7MaterializeMonthJournal()`**.
 - See `.cursor/rules/personnel-data-keys.mdc`.
 
 ### Daily summaries (do not regress)

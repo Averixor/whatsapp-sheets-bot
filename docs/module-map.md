@@ -4,16 +4,16 @@ Practical index: **where to look** and **what CI proves it**. Structural rules: 
 
 | Domain | Folder | Main files | CI / verification | Notes |
 | ------ | ------ | ---------- | ----------------- | ----- |
-| Reports | `reports/` | `Report_*.gs`, `Summaries.gs`, `Summary*.gs`, `MonthlyReport.gs` | `npm run ci`, `npm run ci:workbook` | |
-| Vacations | `vacations/` | `Vacation*.gs` (11 modules) | `npm run ci:vacations` | Vacation HTML compatibility shell lives in `ui/`. |
+| Reports | `reports/` | `Report_*.gs`, `Summaries.gs`, `Summary*.gs`, `MonthlyReport.gs`, `MonthJournalMaterialize.gs` | `npm run ci`, `npm run ci:workbook`, `npm run ci:materialize` | Includes daily summaries and derived month journal sheets. |
+| Vacations | `vacations/` | `Vacation*.gs` | `npm run ci:vacations` | Vacation HTML compatibility shell lives in `ui/`. |
 | Send panel | `sendpanel/` | `SendPanel*.gs`, `SelectionActionService.gs`, `UseCases.SendPanel.gs`, `Stage7PhoneDictPayloadShims.gs` | `npm run ci`, `npm run ci:recipients` | |
 | Maintenance / formats | `maintenance/` | `ConditionalFormat*.gs`, `JobRuntime*.gs`, `Template*.gs`, `LifecycleRetention.gs` | `npm run ci:format-rules` | Sheet self-heal lives in `sheets/`. |
 | Diagnostics | `diagnostics/` | `Diagnostics.*.gs` (runtime) | `npm run ci` | `tests/Diagnostics.Debug.gs` — clasp-excluded. |
 | Access | `access/` | `AccessControl.*.gs`, `AccessEnforcement.gs`, autofill hotfix | `npm run ci` (access-api governance) | Move-only in structural PRs. |
-| Personnel | `personnel/` | `PersonnelRepository.gs`, `PersonsRepository.gs`, `PersonCards.gs`, `AlertsRepository.gs` | `npm run ci`, personnel contracts | Callsign/Status — workspace rules. |
+| Personnel | `personnel/` | `PersonnelRepository.gs`, `PersonsRepository.gs`, `PersonCards.gs`, `AlertsRepository.gs` | `npm run ci`, personnel contracts | Callsign/Status — workspace rules; `Status` header self-heal lives here. |
 | API entrypoints | `api/` | `Stage7ServerApi.gs`, `Stage7MaintenanceApi.gs`, `SpreadsheetActionsApi.gs` | `npm run ci` | Public `api*` surface and spreadsheet actions. |
 | Core runtime | `core/` | `Code.gs`, `Stage7Config.gs`, `ProjectMetadata.gs`, shared helpers | `npm run ci` | Cross-cutting GAS globals, routing, config, responses. |
-| Data repositories | `data/` | `DataAccess.gs`, `DictionaryRepository.gs`, `LogsRepository.gs`, `OperationRepository.gs` | `npm run ci` | Shared repository/data access helpers. |
+| Data repositories | `data/` | `DataAccess.gs`, `DictionaryRepository.gs`, `LogsRepository.gs`, `OperationRepository.gs` | `npm run ci`, `npm run ci:workbook` | `ReferenceSheetsRepository_` in `DictionaryRepository.gs` owns `PHONE_DIRECTORY` / `CAR`. |
 | Sheet/workbook | `sheets/` | `Sheet*.gs`, `MonthSheets.gs`, validation/protection/self-heal | `npm run ci:workbook` | Workbook schema, month sheets, protections. |
 | Use cases | `usecases/` | `UseCases*.gs` | `npm run ci`, `npm run ci:workbook` | Application facade and domain use-case modules. |
 | UI server helpers | `ui-server/` | `SidebarServer.gs`, dialogs, `HtmlUtils.gs` | `npm run ci:client` | HtmlService server-side host/helpers. |

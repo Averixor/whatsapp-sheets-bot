@@ -59,6 +59,8 @@ Representative entrypoints:
 - `apiStage7GetMonthsList()`
 - `apiStage7GetSidebarData()`
 - `apiStage7GetSendPanelData()`
+- `apiStage7GetPhoneDirectory()`
+- `apiStage7GetCarsRegister()`
 - `apiGenerateSendPanelForDate()`
 - `apiBuildDaySummary()`
 - `apiBuildDetailedSummary()`
@@ -84,6 +86,8 @@ Representative entrypoints:
 - `apiRunStage7RegressionTests()`
 - `apiStage7ListPendingRepairs()`
 - `apiStage7RunRepair()`
+- `apiStage7MaterializeComputedData()`
+- `apiStage7MaterializeMonthJournal()`
 
 ### Compatibility facade
 
@@ -108,11 +112,13 @@ Key repositories and services:
 - `personnel/PersonnelRepository.gs`
 - `personnel/PersonsRepository.gs`
 - `sendpanel/SendPanelRepository.gs`
+- `data/DictionaryRepository.gs` — shared dictionary/phone/profile access plus `ReferenceSheetsRepository_` for `PHONE_DIRECTORY` / `CAR`
 - `reports/SummaryRepository.gs`
 - `reports/SummaryService.gs`
 - `reports/Report_SummaryData.gs` — read short-summary values from monthly formula block
 - `reports/Report_DailySimple.gs` — format short daily summary text
 - `reports/Report_DailyDetailed.gs` — detailed daily summary (people + DICT_SUM groups)
+- `reports/MonthJournalMaterialize.gs` — derived `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` from month sheets + PERSONNEL + DICT/DICT_SUM
 - `reports/Summaries.gs` — legacy entrypoints (`buildDaySummaryForColumn_`, summary dialogs)
 - `vacations/VacationsRepository.gs`
 - `vacations/VacationPlannerService.gs`, `vacations/VacationMonthCalendar.gs`, `vacations/Vacation_Suggestions.gs`
@@ -218,10 +224,14 @@ Main operational sheets typically include:
 - `PHONES` — legacy fallback when `PERSONNEL` is empty/unavailable (`loadPhonesIndex_` prefers `PERSONNEL`)
 - `DICT`
 - `DICT_SUM`
+- `PHONE_DIRECTORY` — optional sectioned service phone directory (`A:B`)
+- `CAR` — optional vehicle register (`A:G`)
 - `SEND_PANEL`
 - `VACATIONS` — legacy vacation source (`A:I` only; `K:Q` presentation/migration)
 - `VACATION_REQUESTS` — opt-in flat vacation source; activated explicitly with
   Script Property `WASB_VACATION_SOURCE=VACATION_REQUESTS`
+- `ЖУРНАЛ_MM` — derived month fact table, one person × one day × one code
+- `ПІДСУМОК_MM` — derived month person summary with counters and compressed history
 - `LOG`
 - `TEMPLATES`
 
@@ -289,6 +299,22 @@ day details via `getVacationCalendarDayDetailsFromSidebar`. Footer shows only
 
 Full design: [`docs/vacation-planner.md`](./docs/vacation-planner.md). Contract:
 `scripts/verify-vacation-planner.mjs`.
+
+## 7.3 Reference sheets and month journal
+
+Sidebar maintainers can open two optional reference repositories:
+
+- `PHONE_DIRECTORY` — sectioned service phones with WhatsApp links (`apiStage7GetPhoneDirectory`)
+- `CAR` — vehicle register with owner/search/stats (`apiStage7GetCarsRegister`)
+
+These reads are owned by `ReferenceSheetsRepository_` in `data/DictionaryRepository.gs`. Header/workbook expectations are guarded by `contracts/reference-workbook-layout.contract.json` and parser semantics by `scripts/verify-reference-repositories.mjs`.
+
+Month-journal materialization is separate from `apiStage7MaterializeComputedData()`:
+
+- source: month sheet `01`..`12` + PERSONNEL + DICT + DICT_SUM
+- output: `ЖУРНАЛ_MM` and `ПІДСУМОК_MM`
+- maintenance API: `apiStage7MaterializeMonthJournal()`
+- UI action: sidebar button **Оновити журнал місяця**
 
 ## 8. Sidebar runtime principles
 

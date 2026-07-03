@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "sourceOfTruth": "reports/MonthJournalMaterialize.gs",
+  "derivedSheetNames": {
+    "journalPrefix": "ЖУРНАЛ_",
+    "summaryPrefix": "ПІДСУМОК_"
+  },
+  "unknownCodeLabel": "Невідомий код",
+  "journalHeaders": [
+    "Дата",
+    "Позивний",
+    "ПІБ",
+    "Звання",
+    "Посада",
+    "Код",
+    "Коротко",
+    "Вид служби",
+    "Місце",
+    "Завдання",
+    "Примітка",
+    "Джерело"
+  ],
+  "summaryBaseHeaders": [
+    "Позивний",
+    "ПІБ",
+    "Звання",
+    "Посада"
+  ],
+  "notesHeaderMatchers": [
+    "приміт",
+    "note"
+  ],
+  "dependencies": [
+    "getPersonnelByCallsignAnyStatus_",
+    "readDictSum_",
+    "loadDictMap_"
+  ],
+  "personnelPolicy": {
+    "mode": "read-only-lookup",
+    "forbidWritesToSheet": "PERSONNEL"
+  },
+  "api": {
+    "functionName": "apiStage7MaterializeMonthJournal",
+    "emptyMonthMessage": "Відкрийте місячний аркуш 01–12",
+    "publicEndpoint": true,
+    "minRole": "maintainer",
+    "routingAction": "materializeMonthJournal"
+  },
+  "sidebar": {
+    "buttonLabel": "Оновити журнал місяця",
+    "action": "materializeMonthJournal"
+  }
+}
