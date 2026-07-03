@@ -19,6 +19,11 @@
     confirmSendFromPanel() {},
     rejectSendFromPanel() {},
     debugAccess() {},
+    showPhoneDirectory() {},
+    showCarsRegister() {},
+    filterPhoneDirectory() {},
+    filterCarsRegister() {},
+    openReferenceLink() {},
   };
 
   // =========================
@@ -1085,6 +1090,301 @@
     }
   }
 
+
+  // =========================
+  // REFERENCE SHEETS
+  // =========================
+
+  function referenceSearchMatch_(item, query) {
+    const q = String(query || "").trim().toLowerCase();
+    if (!q) return true;
+    return String(item?.searchText || JSON.stringify(item || {}))
+      .toLowerCase()
+      .includes(q);
+  }
+
+  function formatReferenceNumber_(value) {
+    const num = Number(value || 0);
+    if (!Number.isFinite(num)) return "0";
+    return num.toLocaleString("uk-UA");
+  }
+
+  function renderReferenceWarnings_(warnings) {
+    const list = Array.isArray(warnings) ? warnings.filter(Boolean) : [];
+    if (!list.length) return "";
+    return `
+      <div class="result-item">
+        <div class="result-label">Попередження</div>
+        <div class="result-value">${list.map((w) => escapeHtml(w)).join("<br>")}</div>
+      </div>
+    `;
+  }
+
+  function openReferenceLink(link) {
+    const safeLink = String(link || "").trim();
+    if (!safeLink) return;
+    if (STATE.DIAG_TEST_MODE) return;
+    openLinkSafe(safeLink);
+  }
+
+  async function showPhoneDirectory() {
+    showStandardResult("📒 Службові телефони");
+    setHtml(
+      "resultContent",
+      `
+        <div class="result-screen">
+          <div class="result-item">
+            <div class="result-value">Завантажую службові телефони...</div>
+          </div>
+        </div>
+      `,
+    );
+
+    showLoading();
+    try {
+      const result = await ActionDispatcher.run(
+        "phoneDirectory",
+        () => Stage7Api.getPhoneDirectory(),
+        { successMessage: "" },
+      );
+      if (!result?.success) {
+        throw new Error(result?.error || "Не вдалося завантажити телефони");
+      }
+      const data = result.data || result;
+      STATE.phoneDirectory = data;
+      renderPhoneDirectory(data, "");
+      logToConsole(
+        `✓ Службові телефони: ${Number(data?.stats?.contacts || 0)} контактів`,
+        "success",
+      );
+    } catch (error) {
+      logToConsole(`✕ Службові телефони: ${normalizeError(error)}`, "error");
+      displayInResult("error", { error: normalizeError(error) });
+    } finally {
+      hideLoading();
+    }
+  }
+
+  function renderPhoneDirectory(data, query) {
+    const payload = data || {};
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    const filtered = items.filter((item) => referenceSearchMatch_(item, query));
+    const groups = new Map();
+    const phoneActionStyle =
+      "display:inline-flex;align-items:center;justify-content:center;flex:0 0 56px;width:56px;white-space:nowrap;text-align:center;padding-left:0;padding-right:0;";
+    const phoneMissingStyle =
+      "display:inline-flex;align-items:center;justify-content:center;flex:0 0 56px;width:56px;white-space:nowrap;text-align:center;padding:6px 0;border-radius:999px;background:rgba(100,116,139,0.18);color:var(--text-secondary);font-size:0.85rem;font-weight:600;cursor:default;opacity:1;";
+
+    filtered.forEach((item) => {
+      const section = String(item.section || "Без розділу").trim() || "Без розділу";
+      if (!groups.has(section)) groups.set(section, []);
+      groups.get(section).push(item);
+    });
+
+    const sectionsHtml = filtered.length
+      ? Array.from(groups.entries())
+          .map(([section, rows]) => `
+            <div class="result-item">
+              <div class="result-label">${escapeHtml(section)}</div>
+              ${rows
+                .map((item) => `
+                  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid var(--border-color);">
+                    <div style="min-width:0;">
+                      <div class="result-value" style="font-weight:700;">${escapeHtml(item.name || "—")}</div>
+                      <div style="color:var(--text-secondary);font-size:12px;line-height:1.35;">${escapeHtml(item.phoneDisplay || item.phone || "—")}</div>
+                    </div>
+                    ${item.link
+                      ? `<button class="result-link" type="button" style="${phoneActionStyle}" title="Відкрити чат у WhatsApp" onclick="SidebarApp.openReferenceLink('${escapeJsString(item.link)}')">WA</button>`
+                      : `<span style="${phoneMissingStyle}" title="Немає номера" aria-disabled="true">Н/Д</span>`}
+                  </div>
+                `)
+                .join("")}
+            </div>
+          `)
+          .join("")
+      : `
+        <div class="result-item">
+          <div class="result-label">Результат</div>
+          <div class="result-value">Нічого не знайдено</div>
+        </div>
+      `;
+
+    const rowsHtml = renderReferenceWarnings_(payload.warnings) + sectionsHtml;
+
+    setHtml(
+      "resultContent",
+      `
+        <div class="result-screen">
+          <div class="result-item">
+            <div class="result-label">Усього</div>
+            <div class="result-value">${escapeHtml(formatReferenceNumber_(payload?.stats?.contacts))} контактів · ${escapeHtml(formatReferenceNumber_(payload?.stats?.sections))} розділів</div>
+          </div>
+
+          <div class="result-item">
+            <label class="result-label" for="phoneDirectorySearch">Пошук</label>
+            <input
+              id="phoneDirectorySearch"
+              class="input"
+              type="search"
+              value="${escapeAttr(query || "")}" 
+              placeholder="ПІБ, служба або номер"
+              oninput="SidebarApp.filterPhoneDirectory(this.value)"
+              style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);"
+            />
+          </div>
+
+          ${rowsHtml}
+        </div>
+      `,
+    );
+  }
+
+  function filterPhoneDirectory(query) {
+    renderPhoneDirectory(STATE.phoneDirectory || {}, query || "");
+    setTimeout(() => {
+      const el = $id("phoneDirectorySearch");
+      if (!el) return;
+      el.focus();
+      const end = String(el.value || "").length;
+      el.setSelectionRange?.(end, end);
+    }, 0);
+  }
+
+  async function showCarsRegister() {
+    showStandardResult("🚙 Автотехніка");
+    setHtml(
+      "resultContent",
+      `
+        <div class="result-screen">
+          <div class="result-item">
+            <div class="result-value">Завантажую реєстр автотехніки...</div>
+          </div>
+        </div>
+      `,
+    );
+
+    showLoading();
+    try {
+      const result = await ActionDispatcher.run(
+        "carsRegister",
+        () => Stage7Api.getCarsRegister(),
+        { successMessage: "" },
+      );
+      if (!result?.success) {
+        throw new Error(result?.error || "Не вдалося завантажити автотехніку");
+      }
+      const data = result.data || result;
+      STATE.carsRegister = data;
+      renderCarsRegister(data, "");
+      logToConsole(
+        `✓ Автотехніка: ${Number(data?.stats?.total || 0)} записів`,
+        "success",
+      );
+    } catch (error) {
+      logToConsole(`✕ Автотехніка: ${normalizeError(error)}`, "error");
+      displayInResult("error", { error: normalizeError(error) });
+    } finally {
+      hideLoading();
+    }
+  }
+
+  function renderCarStatList_(entries, fallback) {
+    const source = entries && typeof entries === "object" ? entries : {};
+    const rows = Array.isArray(source)
+      ? source.map((entry) =>
+          `${String(entry?.name || fallback)}: ${formatReferenceNumber_(entry?.count)}`,
+        )
+      : Object.keys(source)
+          .sort()
+          .map((key) => `${String(key)}: ${formatReferenceNumber_(source[key])}`);
+    return rows.length ? rows.join(" · ") : "Без розподілу";
+  }
+
+  function renderCarTypeStats_(stats) {
+    return renderCarStatList_(stats?.byType, "Інше");
+  }
+
+  function renderCarStatusStats_(stats) {
+    return renderCarStatList_(stats?.byStatus, "Без стану");
+  }
+
+  function renderCarsRegister(data, query) {
+    const payload = data || {};
+    const stats = payload.stats || {};
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    const filtered = items.filter((item) => referenceSearchMatch_(item, query));
+
+    const itemRowsHtml = filtered.length
+      ? filtered
+          .map((item) => `
+            <div class="result-item">
+              <div class="result-label">${escapeHtml(item.assetName || "—")}</div>
+              <div class="result-value" style="font-weight:700;">${escapeHtml(item.ownerDisplay || "Не закріплено")}</div>
+              <div style="color:var(--text-secondary);font-size:12px;line-height:1.45;margin-top:6px;">
+                Стан: ${escapeHtml(item.status || "Без стану")}${item.statusDescription ? ` — ${escapeHtml(item.statusDescription)}` : ""}<br>
+                Військовий номер: ${escapeHtml(item.militaryNumber || "—")}<br>
+                Шасі: ${escapeHtml(item.chassisNumber || "—")}<br>
+                Рік: ${escapeHtml(item.year || "—")} · Вартість: ${escapeHtml(item.costDisplay || "—")}
+              </div>
+            </div>
+          `)
+          .join("")
+      : `
+        <div class="result-item">
+          <div class="result-label">Результат</div>
+          <div class="result-value">Нічого не знайдено</div>
+        </div>
+      `;
+
+    const rowsHtml = renderReferenceWarnings_(payload.warnings) + itemRowsHtml;
+
+    setHtml(
+      "resultContent",
+      `
+        <div class="result-screen">
+          <div class="result-item">
+            <div class="result-label">Підсумок</div>
+            <div class="result-value">
+              ${escapeHtml(formatReferenceNumber_(stats.total))} записів · закріплено: ${escapeHtml(formatReferenceNumber_(stats.assigned))} · без ПІБ: ${escapeHtml(formatReferenceNumber_(stats.unassigned))}
+            </div>
+            <div style="color:var(--text-secondary);font-size:12px;line-height:1.45;margin-top:6px;">
+              Загальна вартість: ${escapeHtml(stats.totalCostDisplay || "0,00")}<br>
+              Роки: ${escapeHtml(stats.minYear || "—")} — ${escapeHtml(stats.maxYear || "—")}<br>
+              Типи: ${escapeHtml(renderCarTypeStats_(stats))}<br>
+              Стани: ${escapeHtml(renderCarStatusStats_(stats))}
+            </div>
+          </div>
+
+          <div class="result-item">
+            <label class="result-label" for="carsRegisterSearch">Пошук</label>
+            <input
+              id="carsRegisterSearch"
+              class="input"
+              type="search"
+              value="${escapeAttr(query || "")}" 
+              placeholder="ПІБ, авто, номер, шасі або стан"
+              oninput="SidebarApp.filterCarsRegister(this.value)"
+              style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);"
+            />
+          </div>
+
+          ${rowsHtml}
+        </div>
+      `,
+    );
+  }
+
+  function filterCarsRegister(query) {
+    renderCarsRegister(STATE.carsRegister || {}, query || "");
+    setTimeout(() => {
+      const el = $id("carsRegisterSearch");
+      if (!el) return;
+      el.focus();
+      const end = String(el.value || "").length;
+      el.setSelectionRange?.(end, end);
+    }, 0);
+  }
+
   // =========================
   // BOOTSTRAP
   // =========================
@@ -1234,6 +1534,11 @@
     initPersonnelModal,
     showRequestsForm,
     submitRequestForm,
+    showPhoneDirectory,
+    showCarsRegister,
+    filterPhoneDirectory,
+    filterCarsRegister,
+    openReferenceLink,
   };
 
   window.SidebarApp = SidebarApp;
