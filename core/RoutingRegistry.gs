@@ -73,6 +73,34 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ =
         verifyAfterWrite: false,
       }),
 
+      getPhoneDirectory: Object.freeze({
+        routeName: "sidebar.getPhoneDirectory",
+        publicApiMethod: "apiStage7GetPhoneDirectory",
+        useCase: "ReferenceSheetsRepository_.readPhoneDirectory",
+        category: "sidebar",
+        compatibilityStatus: "canonical",
+        mode: "read",
+        lockRequired: false,
+        dryRunSupported: false,
+        uiAllowed: true,
+        clientActionAliases: ["phoneDirectory"],
+        verifyAfterWrite: false,
+      }),
+
+      getCarsRegister: Object.freeze({
+        routeName: "sidebar.getCarsRegister",
+        publicApiMethod: "apiStage7GetCarsRegister",
+        useCase: "ReferenceSheetsRepository_.readCarsRegister",
+        category: "sidebar",
+        compatibilityStatus: "canonical",
+        mode: "read",
+        lockRequired: false,
+        dryRunSupported: false,
+        uiAllowed: true,
+        clientActionAliases: ["carsRegister"],
+        verifyAfterWrite: false,
+      }),
+
       generateSendPanelForDate: Object.freeze({
         routeName: "sidebar.generateSendPanelForDate",
         publicApiMethod: "apiGenerateSendPanelForDate",

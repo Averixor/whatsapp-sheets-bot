@@ -3,7 +3,9 @@
   "notes": {
     "personnelCallsign": "Column L Callsign holds working callsign values (e.g. ГРАФ); no TEMPLATE column in reference file.",
     "month06": "Compact layout: A=BR formula, B=Позивний, dates from C.",
-    "monthStandard": "Sheets 02-05: A=ТЕЛЕФОН, B=ПОЗИВНИЙ, dates from H."
+    "monthStandard": "Sheets 02-05: A=ТЕЛЕФОН, B=ПОЗИВНИЙ, dates from H.",
+    "phoneDirectory": "PHONE_DIRECTORY is a sectioned reference: column A holds section titles or phone numbers, column B holds contact name/description.",
+    "car": "CAR is an optional vehicle register: A=П.І.Б, B=Найменування військового майна, C=Військовий номер, D=Номер шасі, E=Рік випуску, F=Вартість."
   },
   "sheets": {
     "PERSONNEL": {
@@ -127,6 +129,19 @@
       "G": "Days left",
       "H": "Travel",
       "I": "Interval check"
+    },
+    "PHONE_DIRECTORY": {
+      "A": "Phone / Section",
+      "B": "Name / Note"
+    },
+    "CAR": {
+      "A": "П.І.Б",
+      "B": "Найменування військового майна",
+      "C": "Військовий номер",
+      "D": "Номер шасі",
+      "E": "Рік випуску",
+      "F": "Вартість",
+      "G": "Стан"
     }
   }
 }

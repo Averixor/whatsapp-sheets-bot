@@ -236,7 +236,13 @@ function apiStage7BootstrapSidebar() {
       personnelCallsigns: personnelCallsigns,
       commanderRole: commanderRole,
       commanderRecipients: commanderRecipients,
-      businessSheets: ["Дані", "Проєкти", "Заявки"].map(function (name) {
+      businessSheets: [
+        "Дані",
+        "Проєкти",
+        "Заявки",
+        CONFIG.PHONE_DIRECTORY_SHEET || "PHONE_DIRECTORY",
+        CONFIG.CAR_SHEET || "CAR",
+      ].map(function (name) {
         return { name: name, exists: !!ss.getSheetByName(name) };
       }),
     },
@@ -384,6 +390,41 @@ function apiStage7GetSidebarData(dateStr) {
     {
       startedAt: startedAt,
       affectedSheets: [sidebar.month || getBotMonthSheetName_()],
+    },
+  );
+}
+
+
+function apiStage7GetPhoneDirectory() {
+  const startedAt = _stage7FastStartedAt_();
+  _stage7AssertRole_("maintainer", "get phone directory");
+
+  const data = ReferenceSheetsRepository_.readPhoneDirectory();
+  return _stage7FastResponse_(
+    "getPhoneDirectory",
+    "Службові телефони завантажено",
+    data,
+    data.warnings || [],
+    {
+      startedAt: startedAt,
+      affectedSheets: [CONFIG.PHONE_DIRECTORY_SHEET || "PHONE_DIRECTORY"],
+    },
+  );
+}
+
+function apiStage7GetCarsRegister() {
+  const startedAt = _stage7FastStartedAt_();
+  _stage7AssertRole_("maintainer", "get cars register");
+
+  const data = ReferenceSheetsRepository_.readCarsRegister();
+  return _stage7FastResponse_(
+    "getCarsRegister",
+    "Реєстр автотехніки завантажено",
+    data,
+    data.warnings || [],
+    {
+      startedAt: startedAt,
+      affectedSheets: [CONFIG.CAR_SHEET || "CAR"],
     },
   );
 }

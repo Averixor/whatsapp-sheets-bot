@@ -49,6 +49,8 @@ function _userFacingSheetLabel_(name) {
   const labels = {
     PERSONNEL: "Особовий склад",
     PHONES: "Телефони",
+    PHONE_DIRECTORY: "Службові телефони",
+    CAR: "Автотехніка",
     DICT: "Довідник",
     DICT_SUM: "Довідник підсумків",
     LOG: "Журнал дій",

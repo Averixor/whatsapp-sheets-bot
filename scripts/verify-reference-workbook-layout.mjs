@@ -64,6 +64,12 @@ assert.equal(built.TEMPLATE, -1, "TEMPLATE must stay unused in reference layout"
 
 assert.equal(contract.sheets["06"].B, "Позивний");
 assert.equal(contract.sheets["02"].B, "ПОЗИВНИЙ");
+assert.equal(contract.sheets.PHONE_DIRECTORY.A, "Phone / Section");
+assert.equal(contract.sheets.PHONE_DIRECTORY.B, "Name / Note");
+assert.equal(contract.sheets.CAR.A, "П.І.Б");
+assert.equal(contract.sheets.CAR.B, "Найменування військового майна");
+assert.equal(contract.sheets.CAR.F, "Вартість");
+assert.equal(contract.sheets.CAR.G, "Стан");
 
 const sheetSchemas = readRepoFileByBasename(repoRoot, "SheetSchemas.gs", {
   errorPrefix: "verify-reference-workbook-layout",

@@ -231,6 +231,42 @@
       };
     },
 
+
+    async getPhoneDirectory() {
+      const response = await Api.run("apiStage7GetPhoneDirectory");
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success,
+        message: response?.message || "",
+        error: response?.error || null,
+        data: result,
+        items: Array.isArray(result.items) ? result.items : [],
+        sections: Array.isArray(result.sections) ? result.sections : [],
+        stats: result.stats || {},
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response,
+      };
+    },
+
+    async getCarsRegister() {
+      const response = await Api.run("apiStage7GetCarsRegister");
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success,
+        message: response?.message || "",
+        error: response?.error || null,
+        data: result,
+        items: Array.isArray(result.items) ? result.items : [],
+        stats: result.stats || {},
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response,
+      };
+    },
+
     async createNextMonth(options = {}) {
       const response = await Api.run("apiStage7CreateNextMonth", options);
       const result = unwrapStage4Result(response) || {};

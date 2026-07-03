@@ -823,6 +823,8 @@
       vacations: "Відпустки",
       birthdayCheck: "Дні Народження",
       debugAccess: "Перевірка доступу",
+      phoneDirectory: "Службові телефони",
+      carsRegister: "Автотехніка",
       requests: "Заявки",
     };
 
@@ -918,6 +920,14 @@
 
         case "vacations":
           navigateTo("vacations", () => showVacationsModule());
+          break;
+
+        case "phoneDirectory":
+          navigateTo("phoneDirectory", () => showPhoneDirectory());
+          break;
+
+        case "carsRegister":
+          navigateTo("carsRegister", () => showCarsRegister());
           break;
 
         case "vacationReminder": {

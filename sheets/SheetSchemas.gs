@@ -698,6 +698,151 @@ function _ssBuildPhonesSchema_() {
   });
 }
 
+
+function _ssBuildPhoneDirectorySchema_() {
+  return _ssFreeze_({
+    key: "phoneDirectory",
+    legacyKey: "PHONE_DIRECTORY",
+    type: "sectionedTable",
+    title: "PHONE_DIRECTORY",
+    name: _ssTrimmedString_(
+      _ssConfigValue_("PHONE_DIRECTORY_SHEET", "PHONE_DIRECTORY"),
+      "PHONE_DIRECTORY",
+    ),
+    headerRow: 1,
+    dataStartRow: 2,
+    required: false,
+    fields: _ssFreeze_({
+      phone: _ssFreeze_({
+        col: 1,
+        type: "string",
+        required: false,
+        allowBlank: true,
+        label: "Phone",
+      }),
+      name: _ssFreeze_({
+        col: 2,
+        type: "string",
+        required: false,
+        allowBlank: true,
+        label: "Name",
+      }),
+      section: _ssFreeze_({
+        col: 1,
+        type: "string",
+        required: false,
+        allowBlank: true,
+        label: "Section",
+      }),
+    }),
+    keyFields: ["section", "name", "phone"],
+    requiredFields: [],
+    nullableFields: ["section", "name", "phone"],
+    searchableFields: ["section", "name", "phone"],
+    notes:
+      "Секційний довідник службових контактів: рядок-секція у колонці A, контакти у колонках A:B.",
+  });
+}
+
+function _ssBuildCarSchema_() {
+  return _ssFreeze_({
+    key: "car",
+    legacyKey: "CAR",
+    type: "table",
+    title: "CAR",
+    name: _ssTrimmedString_(_ssConfigValue_("CAR_SHEET", "CAR"), "CAR"),
+    headerRow: 1,
+    dataStartRow: 2,
+    required: false,
+    fields: _ssFreeze_({
+      owner: _ssFreeze_({
+        col: 1,
+        type: "string",
+        required: false,
+        allowBlank: true,
+        label: "П.І.Б",
+      }),
+      assetName: _ssFreeze_({
+        col: 2,
+        type: "string",
+        required: true,
+        allowBlank: false,
+        label: "Найменування військового майна",
+      }),
+      militaryNumber: _ssFreeze_({
+        col: 3,
+        type: "string",
+        required: false,
+        allowBlank: true,
+        label: "Військовий номер",
+      }),
+      chassisNumber: _ssFreeze_({
+        col: 4,
+        type: "string",
+        required: false,
+        allowBlank: true,
+        label: "Номер шасі",
+      }),
+      year: _ssFreeze_({
+        col: 5,
+        type: "number|string",
+        required: false,
+        allowBlank: true,
+        label: "Рік випуску",
+      }),
+      cost: _ssFreeze_({
+        col: 6,
+        type: "number|string",
+        required: false,
+        allowBlank: true,
+        label: "Вартість",
+      }),
+      status: _ssFreeze_({
+        col: 7,
+        type: "string",
+        required: false,
+        allowBlank: true,
+        label: "Стан",
+        allowedValues: _ssFreeze_([
+          "Справна",
+          "Обмежено БГ",
+          "Не БГ (ремонт)",
+          "Не БГ (дефіцит)",
+          "Втрачена",
+        ]),
+      }),
+    }),
+    headerAliases: _ssFreeze_({
+      owner: ["П.І.Б", "ПІБ", "FML", "Owner"],
+      assetName: ["Найменування військового майна", "Майно", "Asset"],
+      militaryNumber: ["Військовий номер", "Номер"],
+      chassisNumber: ["Номер шасі", "Шасі", "VIN"],
+      year: ["Рік випуску", "Рік", "Year"],
+      cost: ["Вартість", "Cost"],
+      status: ["Стан", "Статус", "Status"],
+    }),
+    keyFields: ["militaryNumber", "chassisNumber"],
+    requiredFields: ["assetName"],
+    nullableFields: [
+      "owner",
+      "militaryNumber",
+      "chassisNumber",
+      "year",
+      "cost",
+      "status",
+    ],
+    searchableFields: [
+      "owner",
+      "assetName",
+      "militaryNumber",
+      "chassisNumber",
+      "status",
+    ],
+    notes:
+      "Реєстр автотехніки: відповідальна особа, найменування, військовий номер, шасі, рік, вартість і стан.",
+  });
+}
+
 function _ssBuildDictSchema_() {
   return _ssFreeze_({
     key: "dict",
@@ -1109,6 +1254,8 @@ function _ssBuildSchemas_() {
     monthly: _ssBuildMonthlySchema_(),
     personnel: _ssBuildPersonnelSchema_(),
     phones: _ssBuildPhonesSchema_(),
+    phoneDirectory: _ssBuildPhoneDirectorySchema_(),
+    car: _ssBuildCarSchema_(),
     dict: _ssBuildDictSchema_(),
     dictSum: _ssBuildDictSumSchema_(),
     sendPanel: _ssBuildSendPanelSchema_(),
@@ -1127,6 +1274,11 @@ function _canonicalSchemaMap_() {
     personnel: SHEET_SCHEMAS.personnel,
     PHONES: SHEET_SCHEMAS.phones,
     phones: SHEET_SCHEMAS.phones,
+    PHONE_DIRECTORY: SHEET_SCHEMAS.phoneDirectory,
+    phoneDirectory: SHEET_SCHEMAS.phoneDirectory,
+    phonedirectory: SHEET_SCHEMAS.phoneDirectory,
+    CAR: SHEET_SCHEMAS.car,
+    car: SHEET_SCHEMAS.car,
     DICT: SHEET_SCHEMAS.dict,
     dict: SHEET_SCHEMAS.dict,
     DICT_SUM: SHEET_SCHEMAS.dictSum,
@@ -1147,6 +1299,8 @@ function getRequiredSchemaKeys_() {
     "monthly",
     "personnel",
     "phones",
+    "phoneDirectory",
+    "car",
     "dict",
     "dictSum",
     "sendPanel",
@@ -1236,6 +1390,8 @@ var SheetSchemas_ = (function () {
       MONTHLY: getMonthlySheetSchema_(_ssBotMonthSheetName_()),
       PERSONNEL: _toLegacySchema_(SHEET_SCHEMAS.personnel),
       PHONES: _toLegacySchema_(SHEET_SCHEMAS.phones),
+      PHONE_DIRECTORY: _toLegacySchema_(SHEET_SCHEMAS.phoneDirectory),
+      CAR: _toLegacySchema_(SHEET_SCHEMAS.car),
       DICT: _toLegacySchema_(SHEET_SCHEMAS.dict),
       DICT_SUM: _toLegacySchema_(SHEET_SCHEMAS.dictSum),
       SEND_PANEL: _toLegacySchema_(SHEET_SCHEMAS.sendPanel),
