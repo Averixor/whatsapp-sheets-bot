@@ -8,6 +8,38 @@
  */
 
 const VacationsRepository_ = (function () {
+  const _vacationRepoCache = {
+    sourceRows: null,
+    sourceRowsSheetRef: null,
+    rightPanelRows: null,
+    rightPanelRowsSheetRef: null,
+    legacyList: null,
+    legacyListSheetRef: null,
+    matchesByLookup: Object.create(null),
+  };
+
+  function _cloneVacationList_(list) {
+    return Array.isArray(list) ? list.slice() : [];
+  }
+
+  function _vacationSourceModeKey_() {
+    return getSourceMode() === "requests" ? "requests" : "legacy";
+  }
+
+  function _resetLegacyVacationCaches_() {
+    _vacationRepoCache.sourceRows = null;
+    _vacationRepoCache.sourceRowsSheetRef = null;
+    _vacationRepoCache.legacyList = null;
+    _vacationRepoCache.legacyListSheetRef = null;
+    _vacationRepoCache.matchesByLookup = Object.create(null);
+  }
+
+  function _resetAllVacationCaches_() {
+    _resetLegacyVacationCaches_();
+    _vacationRepoCache.rightPanelRows = null;
+    _vacationRepoCache.rightPanelRowsSheetRef = null;
+  }
+
   function _sourceRangeConfig_() {
     try {
       if (
@@ -330,6 +362,18 @@ const VacationsRepository_ = (function () {
   function readVacationSource() {
     const sheet = DataAccess_.getSheet(_sourceSheetName_(), null, false);
     if (!sheet || sheet.getLastRow() < 2) return [];
+    if (
+      _vacationRepoCache.sourceRows &&
+      _vacationRepoCache.sourceRowsSheetRef === sheet
+    ) {
+      return _cloneVacationList_(_vacationRepoCache.sourceRows);
+    }
+    if (
+      _vacationRepoCache.sourceRowsSheetRef &&
+      _vacationRepoCache.sourceRowsSheetRef !== sheet
+    ) {
+      _resetLegacyVacationCaches_();
+    }
 
     const rangeCfg = _sourceRangeConfig_();
     const startCol = rangeCfg.startCol || 1;
@@ -358,12 +402,20 @@ const VacationsRepository_ = (function () {
         endDateRaw: row[2],
       });
     });
-    return out;
+    _vacationRepoCache.sourceRows = out;
+    _vacationRepoCache.sourceRowsSheetRef = sheet;
+    return _cloneVacationList_(out);
   }
 
   function readRightPanelRows() {
     const sheet = DataAccess_.getSheet(_sourceSheetName_(), null, false);
     if (!sheet || sheet.getLastRow() < 2) return [];
+    if (
+      _vacationRepoCache.rightPanelRows &&
+      _vacationRepoCache.rightPanelRowsSheetRef === sheet
+    ) {
+      return _cloneVacationList_(_vacationRepoCache.rightPanelRows);
+    }
 
     const panel = _rightPanelConfig_();
     const startCol = panel.startCol || 11;
@@ -391,7 +443,9 @@ const VacationsRepository_ = (function () {
         endDateRaw: row[2],
       });
     });
-    return out;
+    _vacationRepoCache.rightPanelRows = out;
+    _vacationRepoCache.rightPanelRowsSheetRef = sheet;
+    return _cloneVacationList_(out);
   }
 
   function detectRightPanelManualData() {
@@ -422,9 +476,21 @@ const VacationsRepository_ = (function () {
   function listLegacy() {
     const sheet = DataAccess_.getSheet(_sourceSheetName_(), null, false);
     if (!sheet || sheet.getLastRow() < 2) return [];
+    if (
+      _vacationRepoCache.legacyList &&
+      _vacationRepoCache.legacyListSheetRef === sheet
+    ) {
+      return _cloneVacationList_(_vacationRepoCache.legacyList);
+    }
+    if (
+      _vacationRepoCache.legacyListSheetRef &&
+      _vacationRepoCache.legacyListSheetRef !== sheet
+    ) {
+      _resetLegacyVacationCaches_();
+    }
 
     const headerMeta = _legacyHeaderMeta_(sheet);
-    return readVacationSource().map(function (item) {
+    const out = readVacationSource().map(function (item) {
       const vacationNo = item.vacationNo;
       const active = item.active;
       return {
@@ -457,6 +523,9 @@ const VacationsRepository_ = (function () {
         },
       };
     });
+    _vacationRepoCache.legacyList = out;
+    _vacationRepoCache.legacyListSheetRef = sheet;
+    return _cloneVacationList_(out);
   }
 
   function _findNextMainSourceRow_(sheet, rangeCfg) {
@@ -540,6 +609,8 @@ const VacationsRepository_ = (function () {
     sheet
       .getRange(2, panel.startCol || 11, rowCount, panel.width || 9)
       .clearContent();
+
+    _resetAllVacationCaches_();
 
     return {
       migrated: migrated,
@@ -627,7 +698,7 @@ const VacationsRepository_ = (function () {
     const width = Math.max(sheet.getLastColumn(), _requestHeaders_().length);
     const rows = sheet.getRange(2, 1, rowCount, width).getValues();
     const seenIds = {};
-    return rows
+    const out = rows
       .map(function (row, rowIndex) {
         const id = String(_requestValue_(row, index, "ID") || "").trim();
         const fml = String(_requestValue_(row, index, "FML") || "").trim();
@@ -730,10 +801,11 @@ const VacationsRepository_ = (function () {
         };
       })
       .filter(Boolean);
+    return _cloneVacationList_(out);
   }
 
   function listAll() {
-    return getSourceMode() === "requests"
+    return _vacationSourceModeKey_() === "requests"
       ? listRequests({ required: true })
       : listLegacy();
   }
@@ -765,12 +837,21 @@ const VacationsRepository_ = (function () {
 
   function findByFml(fml) {
     const keys = _personLookupKeys_(fml);
-    return listAll().filter(function (item) {
+    const sourceMode = _vacationSourceModeKey_();
+    const cacheKey = sourceMode + "|" + Object.keys(keys).sort().join("|");
+    if (sourceMode === "legacy" && _vacationRepoCache.matchesByLookup[cacheKey]) {
+      return _cloneVacationList_(_vacationRepoCache.matchesByLookup[cacheKey]);
+    }
+    const out = listAll().filter(function (item) {
       return (
         keys[_normFml_(item.personKey)] === true ||
         keys[_normFml_(item.fml)] === true
       );
     });
+    if (sourceMode === "legacy") {
+      _vacationRepoCache.matchesByLookup[cacheKey] = out;
+    }
+    return _cloneVacationList_(out);
   }
 
   function getCurrentForFml(fml, dateStr) {
@@ -851,6 +932,7 @@ const VacationsRepository_ = (function () {
     findByFml: findByFml,
     getCurrentForFml: getCurrentForFml,
     getNextForFml: getNextForFml,
+    invalidateCache: _resetAllVacationCaches_,
   };
 })();
 

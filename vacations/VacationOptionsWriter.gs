@@ -14,6 +14,18 @@ const VacationOptionsWriter_ = (function () {
     return getWasbSpreadsheet_();
   }
 
+  function _invalidateVacationRepositoryCache_() {
+    try {
+      if (
+        typeof VacationsRepository_ === "object" &&
+        VacationsRepository_ &&
+        typeof VacationsRepository_.invalidateCache === "function"
+      ) {
+        VacationsRepository_.invalidateCache();
+      }
+    } catch (_) {}
+  }
+
   function _fmlKey_(value) {
     if (typeof _normFml_ === "function") return _normFml_(value);
     return String(value || "")
@@ -322,6 +334,7 @@ const VacationOptionsWriter_ = (function () {
       .getRange(targetRow, 1, 1, width)
       .setValues([_requestRowData_(option, existingRow, "Approved")]);
     sheet.getRange(targetRow, 7, 1, 3).setNumberFormat("dd.MM.yyyy");
+    _invalidateVacationRepositoryCache_();
     return {
       sheetName: sheet.getName(),
       rowNumber: targetRow,
@@ -358,6 +371,7 @@ const VacationOptionsWriter_ = (function () {
         .getRange(rowNumber, 12)
         .setValue(active === true ? "Approved" : "Cancelled");
       sheet.getRange(rowNumber, 15).setValue(new Date());
+      _invalidateVacationRepositoryCache_();
       return {
         sheetName: sheet.getName(),
         rowNumber: rowNumber,
@@ -515,6 +529,7 @@ const VacationOptionsWriter_ = (function () {
         .setValue(_sourceVacationText_(option));
       sheet.getRange(targetRow, startCol + 7).setValue(travel);
       _materializeVacationSheetIfManaged_(sheet, [targetRow]);
+      _invalidateVacationRepositoryCache_();
       return {
         sheetName: sheet.getName(),
         rowNumber: targetRow,
@@ -539,6 +554,7 @@ const VacationOptionsWriter_ = (function () {
     sheet.getRange(targetRow, startCol, 1, width).setValues([rowData]);
     sheet.getRange(targetRow, startCol + 1, 1, 2).setNumberFormat("dd.MM.yyyy");
     _materializeVacationSheetIfManaged_(sheet);
+    _invalidateVacationRepositoryCache_();
 
     return {
       sheetName: sheet.getName(),
@@ -586,6 +602,7 @@ const VacationOptionsWriter_ = (function () {
         }
         startRange.clearContent();
         _materializeVacationSheetIfManaged_(sheet, [rowNumber]);
+        _invalidateVacationRepositoryCache_();
         return {
           sheetName: sheet.getName(),
           rowNumber: rowNumber,
@@ -600,6 +617,7 @@ const VacationOptionsWriter_ = (function () {
         .getRange(rowNumber, startCol + 8)
         .setValue(active === true ? "OK" : "CANCELLED");
       _materializeVacationSheetIfManaged_(sheet);
+      _invalidateVacationRepositoryCache_();
       return {
         sheetName: sheet.getName(),
         rowNumber: rowNumber,
@@ -715,6 +733,7 @@ const VacationOptionsWriter_ = (function () {
       if (activate) {
         _setSourceMode_(VACATION_PLANNER_CONFIG.SHEETS.REQUESTS);
       }
+      _invalidateVacationRepositoryCache_();
     }
 
     return {

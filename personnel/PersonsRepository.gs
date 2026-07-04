@@ -5,6 +5,8 @@
 var PersonsRepository_ =
   PersonsRepository_ ||
   (function () {
+    const monthlyRowLookupCache = {};
+
     function normalizeDateStr(dateStr) {
       const safe = String(dateStr || "").trim();
       return assertUaDateString_(safe);
@@ -126,6 +128,64 @@ var PersonsRepository_ =
         .filter(Boolean);
     }
 
+    function getMonthlyRowLookup_(sheet) {
+      const sh = sheet || getBotSheet_();
+      const cacheKey = String(sh.getName() || "").trim();
+      if (monthlyRowLookupCache[cacheKey]) {
+        return monthlyRowLookupCache[cacheKey];
+      }
+
+      const schema = SheetSchemas_.get(sh.getName());
+      const matrix = schema.matrix;
+      const rowCount = matrix.endRow - matrix.startRow + 1;
+      const callsignCol = Number(schema.columns.callsign || 0);
+      if (callsignCol < 1) {
+        monthlyRowLookupCache[cacheKey] = { byCallsign: {} };
+        return monthlyRowLookupCache[cacheKey];
+      }
+      const brCol = Number(schema.columns.brDays || 0);
+      const firstCol =
+        callsignCol && brCol
+          ? Math.min(callsignCol, brCol)
+          : Math.max(callsignCol, brCol, 1);
+      const lastCol =
+        callsignCol && brCol
+          ? Math.max(callsignCol, brCol)
+          : Math.max(callsignCol, brCol, 1);
+      const width = Math.max(lastCol - firstCol + 1, 1);
+      const values = sh
+        .getRange(matrix.startRow, firstCol, rowCount, width)
+        .getDisplayValues();
+      const byCallsign = {};
+
+      values.forEach(function (row, idx) {
+        const callsign = String(row[callsignCol - firstCol] || "").trim();
+        if (!callsign) return;
+        const key = _normCallsignKey_(callsign);
+        if (!key || byCallsign[key]) return;
+        byCallsign[key] = {
+          rowNumber: matrix.startRow + idx,
+          callsign: callsign,
+          brDays:
+            brCol > 0
+              ? String(row[brCol - firstCol] || "").trim() || "0"
+              : "0",
+        };
+      });
+
+      monthlyRowLookupCache[cacheKey] = {
+        byCallsign: byCallsign,
+      };
+      return monthlyRowLookupCache[cacheKey];
+    }
+
+    function findMonthlyRowMetaByCallsign_(callsign, sheet) {
+      const key = _normCallsignKey_(callsign);
+      if (!key) return null;
+      const lookup = getMonthlyRowLookup_(sheet);
+      return (lookup && lookup.byCallsign && lookup.byCallsign[key]) || null;
+    }
+
     function findRowByCallsign(callsign, sheet) {
       const key = _normCallsignKey_(callsign);
       return (
@@ -148,14 +208,14 @@ var PersonsRepository_ =
       );
     }
 
-    function getPayloadByRow(rowNumber, dateStr, sheet) {
+    function getPayloadByRow(rowNumber, dateStr, sheet, phonesIndexArg, dictMapArg) {
       const ctx = getDateContext(dateStr, sheet);
       const payload = buildPayloadForCell_(
         ctx.sheet,
         Number(rowNumber),
         Number(ctx.col),
-        DictionaryRepository_.getPhonesIndex(),
-        DictionaryRepository_.getDictMap(),
+        phonesIndexArg || DictionaryRepository_.getPhonesIndex(),
+        dictMapArg || DictionaryRepository_.getDictMap(),
       );
 
       const personnel = _resolvePersonnel_(
@@ -172,15 +232,24 @@ var PersonsRepository_ =
     function getPersonByCallsign(callsign, dateStr) {
       const safeDate = normalizeDateStr(dateStr);
       const sheet = getSheetByDate(safeDate);
-      const item = findRowByCallsign(callsign, sheet);
-      if (!item) {
+      const rowMeta = findMonthlyRowMetaByCallsign_(callsign, sheet);
+      if (!rowMeta) {
         throw new Error(
           `Позивний "${callsign}" не знайдено на місячному графіку`,
         );
       }
 
+      const phonesIndex = DictionaryRepository_.getPhonesIndex();
+      const dictMap = DictionaryRepository_.getDictMap();
+      const payload = getPayloadByRow(
+        rowMeta.rowNumber,
+        safeDate,
+        sheet,
+        phonesIndex,
+        dictMap,
+      );
       const personnel =
-        _resolvePersonnel_(item.callsign, item.fml, item.id) ||
+        _resolvePersonnel_(payload.callsign || rowMeta.callsign, payload.fml, payload.id) ||
         (function () {
           try {
             return getPersonnelByCallsign_(callsign);
@@ -197,19 +266,34 @@ var PersonsRepository_ =
         }
       }
 
-      const payload = getPayloadByRow(item._meta.rowNumber, safeDate, sheet);
-      const merged = _mergeMonthlyWithPersonnel_(item, personnel);
+      const merged = _mergeMonthlyWithPersonnel_(
+        {
+          callsign: rowMeta.callsign,
+          brDays: rowMeta.brDays || "0",
+          phone: "",
+          position: "",
+          oshs: "",
+          rank: "",
+          fml: payload.fml || "",
+          id: payload.id || "",
+        },
+        personnel,
+      );
 
       const phone =
         merged.phone ||
         payload.phone ||
-        DictionaryRepository_.getPhoneByCallsign(merged.callsign) ||
-        DictionaryRepository_.getPhoneByFml(merged.fml) ||
+        (typeof findPhone_ === "function"
+          ? findPhone_(
+              { callsign: merged.callsign, fml: merged.fml },
+              { index: phonesIndex },
+            )
+          : "") ||
         "";
 
       const prevSheet = getPrevMonthSheetByDate(safeDate);
       const prevRow = prevSheet
-        ? findRowByCallsign(merged.callsign, prevSheet)
+        ? findMonthlyRowMetaByCallsign_(merged.callsign, prevSheet)
         : null;
 
       const fmlForVacation = merged.fml || payload.fml || "";
@@ -225,16 +309,16 @@ var PersonsRepository_ =
         phone: phone,
         phone2: merged.phone2 || "",
         birthday: merged.birthday || "",
-        brDaysThisMonth: item.brDays || "0",
+        brDaysThisMonth: rowMeta.brDays || "0",
         brDaysPrevMonth: prevRow ? prevRow.brDays || "0" : "0",
         todayGroup: getPersonGroupForDate_(
           sheet,
-          item._meta.rowNumber,
+          rowMeta.rowNumber,
           safeDate,
         ),
         dateStr: safeDate,
         sheet: sheet.getName(),
-        row: item._meta.rowNumber,
+        row: rowMeta.rowNumber,
         col: payload.col,
         message: payload.message || "",
         waLink: payload.link || "",

@@ -29,17 +29,12 @@ var UseCasesSummaries_ = (function () {
         const summary = SummaryRepository_.buildDaySummary(
           input.dateStr || input.date,
         );
-        const targetDate = DateUtils_.parseUaDate(summary.date) || new Date();
-        const vacations = runVacationEngine_(targetDate);
-        const birthdays = runBirthdayEngine_(targetDate);
         return {
           success: true,
           message: "Зведення сформовано",
           result: {
             summary: summary.summary,
             date: summary.date,
-            vacations: vacations,
-            birthdays: birthdays,
             sheet: summary.sheet,
           },
           changes: [],
@@ -79,9 +74,6 @@ var UseCasesSummaries_ = (function () {
         const summary = SummaryRepository_.buildDetailedSummary(
           input.dateStr || input.date,
         );
-        const targetDate = DateUtils_.parseUaDate(summary.date) || new Date();
-        const vacations = runVacationEngine_(targetDate);
-        const birthdays = runBirthdayEngine_(targetDate);
         return {
           success: true,
           message: "Детальне зведення сформовано",
@@ -89,8 +81,6 @@ var UseCasesSummaries_ = (function () {
             summary: summary.summary,
             date: summary.date,
             peopleCount: summary.peopleCount,
-            vacations: vacations,
-            birthdays: birthdays,
             sheet: summary.sheet,
           },
           changes: [],

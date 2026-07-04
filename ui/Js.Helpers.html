@@ -67,9 +67,16 @@
   window.formatLogArgsPreview_ = formatLogArgsPreview_;
   window.formatApiResultSummary_ = formatApiResultSummary_;
 
+  function normalizeConsoleLogType_(type) {
+    const value = String(type || "info").toLowerCase();
+    if (value === "warn") return "warning";
+    if (value === "err") return "error";
+    return value || "info";
+  }
+
   function isConsoleAlertLogType_(type) {
-    const value = String(type || "").toLowerCase();
-    return value === "error" || value === "warning" || value === "warn";
+    const value = normalizeConsoleLogType_(type);
+    return value === "error" || value === "warning";
   }
 
   function bumpConsoleAlertBadge_(type) {
@@ -213,7 +220,7 @@
 
   function inferConsoleLogChannel_(type, message, channelHint) {
     const msg = String(message == null ? "" : message);
-    const logType = String(type || "info");
+    const logType = normalizeConsoleLogType_(type);
     if (channelHint === "dev") return "dev";
     if (
       logType === "server" ||
@@ -249,12 +256,16 @@
 
   function matchesConsoleFilter_(filter, type, message, channel) {
     const active = String(filter || "all");
+    const normalizedType = normalizeConsoleLogType_(type);
     const resolvedChannel =
       String(channel || "") ||
       inferConsoleLogChannel_(type, message);
     if (active === "all") return true;
+    if (active === "warning") {
+      return normalizedType === "warning";
+    }
     if (active === "error") {
-      return type === "error" || type === "warning";
+      return normalizedType === "error";
     }
     if (active === "server") return resolvedChannel === "server";
     if (active === "action") return resolvedChannel === "action";
@@ -281,8 +292,14 @@
     const label = title.querySelector(".console-title__label");
     if (!label) return;
     const filter = String(STATE.consoleFilter || "all");
-    label.textContent =
-      filter === "all" ? "Лог виконання" : "Лог виконання · фільтр";
+    const filterLabels = {
+      all: "Лог виконання",
+      action: "Лог виконання · дії",
+      warning: "Лог виконання · попередження",
+      error: "Лог виконання · помилки",
+      server: "Лог виконання · сервер",
+    };
+    label.textContent = filterLabels[filter] || "Лог виконання · фільтр";
   }
 
   function setConsoleFilter(filter) {
@@ -312,7 +329,7 @@
       },
     );
 
-    const type = entry.type || "info";
+    const type = normalizeConsoleLogType_(entry.type || "info");
     const channel =
       entry.channel ||
       inferConsoleLogChannel_(type, entry.message, entry.channel);

@@ -480,6 +480,42 @@
     logToConsole(`Обрано дату: ${formatDateForDisplay(dateStr)}`, "info");
   }
 
+  async function loadSummarySupplementary_(dateStr) {
+    const safeDate = String(dateStr || "").trim();
+    const host = $id("resultSupplementaryBlocks");
+    if (!safeDate || !host) return;
+
+    const requestKey = `supplementary:${safeDate}:${Date.now()}`;
+    STATE.summarySupplementaryRequestKey = requestKey;
+
+    try {
+      const result = await Stage7Api.checkVacationsAndBirthdays({ date: safeDate });
+      if (STATE.summarySupplementaryRequestKey !== requestKey) return;
+      if (!result?.success) {
+        logToConsole(
+          "⚠ Нагадування дня: " +
+            String(result?.error || result?.message || "не вдалося завантажити"),
+          "warning",
+        );
+        return;
+      }
+
+      const html = renderSupplementaryBlocks({
+        vacations: result?.vacations || {},
+        birthdays: result?.birthdays || {},
+      });
+
+      if (!$id("resultSupplementaryBlocks")) return;
+      setHtml("resultSupplementaryBlocks", html || "");
+    } catch (error) {
+      if (STATE.summarySupplementaryRequestKey !== requestKey) return;
+      logToConsole(
+        "⚠ Нагадування дня: " + normalizeError(error),
+        "warning",
+      );
+    }
+  }
+
   async function processSelectedDate(action) {
     if (!STATE.selectedDate) {
       logToConsole("Оберіть дату в календарі", "warning");
@@ -495,6 +531,7 @@
           STATE.lastSummaryText = result.summary || "";
           STATE.lastSummaryDate = STATE.selectedDate;
           displayInResult("summary", result);
+          loadSummarySupplementary_(STATE.selectedDate);
         } else {
           displayInResult("error", {
             error: result?.error || "Невідома помилка",
@@ -508,6 +545,7 @@
           STATE.lastDetailedText = result.summary || "";
           STATE.lastDetailedDate = STATE.selectedDate;
           displayInResult("detailedActionable", result);
+          loadSummarySupplementary_(STATE.selectedDate);
         } else {
           displayInResult("error", {
             error: result?.error || "Невідома помилка",
