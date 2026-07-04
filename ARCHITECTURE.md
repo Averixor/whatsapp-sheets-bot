@@ -41,6 +41,7 @@ WASB is a spreadsheet-bound Google Apps Script application.
 ### Packaging policy
 
 - GAS runtime (`.gs`, `.html`, `appsscript.json`) deploys from purpose-named folders plus the root manifest via `clasp`; see [`docs/module-map.md`](./docs/module-map.md)
+- Runtime source of truth is `.gs` and `.html`; obsolete paired `.js` GAS mirrors were removed because `clasp` never deployed them.
 - Markdown is excluded from `clasp push` by `.claspignore`
 - Git operational docs are the human source of truth; contracts are machine-readable policy
 - one-off audits, production workbook snapshots, and transitional notes are not kept in the repository

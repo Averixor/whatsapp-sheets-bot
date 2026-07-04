@@ -1,8 +1,8 @@
 # WASB — повний список файлів репозиторію
 # Порядок: дерево каталогів (depth-first, алфавіт у кожній папці)
 # Виключено: .git/, node_modules/, локальні .clasp*.json (крім *.example.json)
-# Файлів: 400
-# Оновлено: 2026-07-03T20:40:48Z
+# Файлів: 272
+# Оновлено: 2026-07-04T01:12:58Z
 
 .
   .clasp.example.json
@@ -38,37 +38,22 @@
 
 access/
   AccessAutoFillPolicy.gs
-  AccessAutoFillPolicy.js
   AccessControl.AuthResolver.gs
-  AccessControl.AuthResolver.js
   AccessControl.Core.gs
-  AccessControl.Core.js
   AccessControl.Lockout.gs
-  AccessControl.Lockout.js
   AccessControl.Mutations.gs
-  AccessControl.Mutations.js
   AccessControl.PublicApi.gs
-  AccessControl.PublicApi.js
   AccessControl.SheetRepository.gs
-  AccessControl.SheetRepository.js
   AccessControl.TempPasswordReissue.gs
-  AccessControl.TempPasswordReissue.js
   AccessEnforcement.gs
-  AccessEnforcement.js
   AccessPolicyChecks.gs
-  AccessPolicyChecks.js
   AccessSheetRowAutoFillHotfix.gs
-  AccessSheetRowAutoFillHotfix.js
   AccessSheetTriggers.gs
-  AccessSheetTriggers.js
 
 api/
   SpreadsheetActionsApi.gs
-  SpreadsheetActionsApi.js
   Stage7MaintenanceApi.gs
-  Stage7MaintenanceApi.js
   Stage7ServerApi.gs
-  Stage7ServerApi.js
 
 contracts/
   access-api.contract.json
@@ -91,65 +76,37 @@ contracts/
 
 core/
   Code.gs
-  Code.js
   DateUtils.gs
-  DateUtils.js
   DeprecatedRegistry.gs
-  DeprecatedRegistry.js
   FunctionBindingAudit.gs
-  FunctionBindingAudit.js
   LockHelpers.gs
-  LockHelpers.js
   Log.gs
-  Log.js
   OperationSafety.gs
-  OperationSafety.js
   ProjectMetadata.gs
-  ProjectMetadata.js
   RoutingRegistry.gs
-  RoutingRegistry.js
   ServerResponse.gs
-  ServerResponse.js
   Stage7Config.gs
-  Stage7Config.js
   Stage7EnvelopeCompat.gs
-  Stage7EnvelopeCompat.js
   Stage7GlobalDependencyAliases.gs
-  Stage7GlobalDependencyAliases.js
   UseCaseTracing.gs
-  UseCaseTracing.js
   Utils.gs
-  Utils.js
   WasbNameUtils.gs
-  WasbNameUtils.js
   WorkflowOrchestrator.gs
-  WorkflowOrchestrator.js
 
 data/
   DataAccess.gs
-  DataAccess.js
   DictionaryRepository.gs
-  DictionaryRepository.js
   DictMaterialize.gs
-  DictMaterialize.js
   LogsRepository.gs
-  LogsRepository.js
   OperationRepository.gs
-  OperationRepository.js
 
 diagnostics/
   Diagnostics.BasicChecks.gs
-  Diagnostics.BasicChecks.js
   Diagnostics.Core.gs
-  Diagnostics.Core.js
   Diagnostics.Health.gs
-  Diagnostics.Health.js
   Diagnostics.Stage7.Baseline.gs
-  Diagnostics.Stage7.Baseline.js
   Diagnostics.Stage7.Core.gs
-  Diagnostics.Stage7.Core.js
   Diagnostics.Stage7.Historical.gs
-  Diagnostics.Stage7.Historical.js
 
 docs/
   daily-summary-architecture.md
@@ -172,68 +129,40 @@ docs/refactor/
 
 maintenance/
   ConditionalFormatAdoptedRules.gs
-  ConditionalFormatAdoptedRules.js
   ConditionalFormatGovernance.gs
-  ConditionalFormatGovernance.js
   ConditionalFormatRegistry.gs
-  ConditionalFormatRegistry.js
   JobRuntime.gs
-  JobRuntime.js
   JobRuntimeRepository.gs
-  JobRuntimeRepository.js
   LifecycleRetention.gs
-  LifecycleRetention.js
   TemplateRegistry.gs
-  TemplateRegistry.js
   TemplateResolver.gs
-  TemplateResolver.js
   Templates.gs
-  Templates.js
 
 operations/
   Actions.gs
-  Actions.js
   LeaveBirthdayReminderMail.gs
-  LeaveBirthdayReminderMail.js
   MaterializeComputedData.gs
-  MaterializeComputedData.js
   ProjectRequests.gs
-  ProjectRequests.js
   Reconciliation.gs
-  Reconciliation.js
   Triggers.gs
-  Triggers.js
 
 personnel/
   AlertsRepository.gs
-  AlertsRepository.js
   PersonCards.gs
-  PersonCards.js
   PersonnelMaterialize.gs
-  PersonnelMaterialize.js
   PersonnelRepository.gs
-  PersonnelRepository.js
   PersonsRepository.gs
-  PersonsRepository.js
 
 reports/
   MonthJournalMaterialize.gs
   MonthlyReport.gs
-  MonthlyReport.js
   Report_DailyDetailed.gs
-  Report_DailyDetailed.js
   Report_DailySimple.gs
-  Report_DailySimple.js
   Report_SummaryData.gs
-  Report_SummaryData.js
   Summaries.gs
-  Summaries.js
   SummaryDictSumShim.gs
-  SummaryDictSumShim.js
   SummaryRepository.gs
-  SummaryRepository.js
   SummaryService.gs
-  SummaryService.js
 
 scripts/
   allowed-russian-strings.json
@@ -294,49 +223,29 @@ scripts/snapshots/
 
 security/
   AuditTrail.gs
-  AuditTrail.js
   SecurityRedaction.gs
-  SecurityRedaction.js
 
 sendpanel/
   SelectionActionService.gs
-  SelectionActionService.js
   SendPanel.gs
-  SendPanel.js
   SendPanelConstants.gs
-  SendPanelConstants.js
   SendPanelFastPaths.gs
-  SendPanelFastPaths.js
   SendPanelRepository.gs
-  SendPanelRepository.js
   SendPanelService.gs
-  SendPanelService.js
   Stage7PhoneDictPayloadShims.gs
-  Stage7PhoneDictPayloadShims.js
   UseCases.SendPanel.gs
-  UseCases.SendPanel.js
 
 sheets/
   MonthlyCallsignSync.gs
-  MonthlyCallsignSync.js
   MonthSheets.gs
-  MonthSheets.js
   ServiceSheetsBootstrap.gs
-  ServiceSheetsBootstrap.js
   SheetHeadersEnglishMigration.gs
-  SheetHeadersEnglishMigration.js
   SheetSchemas.gs
-  SheetSchemas.js
   SheetStandards.gs
-  SheetStandards.js
   SheetValidationCompat.gs
-  SheetValidationCompat.js
   SpreadsheetProtection.gs
-  SpreadsheetProtection.js
   SystemSheetsSelfHeal.gs
-  SystemSheetsSelfHeal.js
   Validation.gs
-  Validation.js
 
 smoke/
   SmokeTests.gs
@@ -344,33 +253,20 @@ smoke/
 
 tests/
   AccessE2ETests.gs
-  AccessE2ETests.js
   DebugManualTests.gs
   Diagnostics.Debug.gs
   DomainTests.gs
-  DomainTests.js
   Stage7TestRunner.Access.gs
-  Stage7TestRunner.Access.js
   Stage7TestRunner.Api.gs
-  Stage7TestRunner.Api.js
   Stage7TestRunner.gs
   Stage7TestRunner.Helpers.gs
-  Stage7TestRunner.Helpers.js
-  Stage7TestRunner.js
   Stage7TestRunner.Maintenance.gs
-  Stage7TestRunner.Maintenance.js
   Stage7TestRunner.Registry.gs
-  Stage7TestRunner.Registry.js
   Stage7TestRunner.Reporting.gs
-  Stage7TestRunner.Reporting.js
   Stage7TestRunner.SendPanel.gs
-  Stage7TestRunner.SendPanel.js
   Stage7TestRunner.Sheet.gs
-  Stage7TestRunner.Sheet.js
   Stage7TestRunner.Summaries.gs
-  Stage7TestRunner.Summaries.js
   Stage7TestRunner.Ui.gs
-  Stage7TestRunner.Ui.js
 
 ui/
   JavaScript.html
@@ -410,54 +306,30 @@ ui/
 
 ui-server/
   DialogPresenter.gs
-  DialogPresenter.js
   Dialogs.gs
-  Dialogs.js
   DialogTemplates.gs
-  DialogTemplates.js
   HtmlUtils.gs
-  HtmlUtils.js
   PreviewLinkService.gs
-  PreviewLinkService.js
   SidebarServer.gs
-  SidebarServer.js
 
 usecases/
   UseCases.Calendar.gs
-  UseCases.Calendar.js
   UseCases.gs
-  UseCases.js
   UseCases.Maintenance.gs
-  UseCases.Maintenance.js
   UseCases.MonthOps.gs
-  UseCases.MonthOps.js
   UseCases.PanelHelpers.gs
-  UseCases.PanelHelpers.js
   UseCases.Summaries.gs
-  UseCases.Summaries.js
 
 vacations/
   Vacation_Suggestions.gs
-  Vacation_Suggestions.js
   VacationBulkFix.gs
-  VacationBulkFix.js
   VacationEngine.gs
-  VacationEngine.js
   VacationMonthCalendar.gs
-  VacationMonthCalendar.js
   VacationOptionsWriter.gs
-  VacationOptionsWriter.js
   VacationPlannerConfig.gs
-  VacationPlannerConfig.js
   VacationPlannerService.gs
-  VacationPlannerService.js
   VacationPlannerTypes.gs
-  VacationPlannerTypes.js
   VacationService.gs
-  VacationService.js
   VacationSidebarService.gs
-  VacationSidebarService.js
   VacationsMaterialize.gs
-  VacationsMaterialize.js
   VacationsRepository.gs
-  VacationsRepository.js
