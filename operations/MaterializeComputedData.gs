@@ -25,6 +25,11 @@ function materializeAllComputedDataAffectedSheets_(result) {
     }
   }
   if (safe.vacations && safe.vacations.sheet) sheets.push(safe.vacations.sheet);
+  if (safe.vacationSchedule && Array.isArray(safe.vacationSchedule.affectedSheets)) {
+    safe.vacationSchedule.affectedSheets.forEach(function (name) {
+      if (name) sheets.push(name);
+    });
+  }
   if (safe.panel && safe.panel.sheet) sheets.push(safe.panel.sheet);
   return sheets.filter(function (name, index, list) {
     return name && list.indexOf(name) === index;
@@ -41,6 +46,7 @@ function materializeAllComputedData_(options) {
     phones: null,
     birthday: null,
     vacations: null,
+    vacationSchedule: null,
     panel: null,
   };
 
@@ -54,6 +60,25 @@ function materializeAllComputedData_(options) {
   if (typeof materializeVacationComputedColumns_ === "function") {
     result.vacations = materializeVacationComputedColumns_();
     if (result.vacations && result.vacations.ok === false) {
+      result.ok = false;
+    }
+  }
+
+  if (
+    typeof VacationOptionsWriter_ === "object" &&
+    VacationOptionsWriter_ &&
+    typeof VacationOptionsWriter_.rebuildVacationSystem === "function"
+  ) {
+    try {
+      result.vacationSchedule = VacationOptionsWriter_.rebuildVacationSystem();
+    } catch (scheduleError) {
+      result.vacationSchedule = {
+        ok: false,
+        reason:
+          scheduleError && scheduleError.message
+            ? scheduleError.message
+            : String(scheduleError),
+      };
       result.ok = false;
     }
   }

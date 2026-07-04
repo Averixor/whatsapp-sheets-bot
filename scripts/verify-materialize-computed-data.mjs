@@ -26,6 +26,8 @@ const utils = readRepoFileByBasename(repoRoot, "Utils.gs", {
 assert.match(orchestrator, /function materializeAllComputedData_/);
 assert.match(orchestrator, /materializePersonnelDerivedSheets_/);
 assert.match(orchestrator, /materializeVacationComputedColumns_/);
+assert.match(orchestrator, /VacationOptionsWriter_\.rebuildVacationSystem/);
+assert.match(orchestrator, /vacationSchedule/);
 assert.match(orchestrator, /ensureSendPanelStatusFormula_/);
 assert.match(
   readRepoFileByBasename(repoRoot, "PersonnelMaterialize.gs", {
