@@ -120,11 +120,14 @@ const materializeResult = vm.runInContext(
   materializeContext,
 );
 assert.equal(materializeResult.ok, true);
-assert.deepEqual(
+const affectedSheets = Array.from(
   vm.runInContext(
     "materializeAllComputedDataAffectedSheets_(materializeAllComputedData_({ source: 'ci' }))",
     materializeContext,
   ),
+);
+assert.deepEqual(
+  affectedSheets,
   [
     "PERSONNEL",
     "PHONES",
