@@ -1998,13 +1998,22 @@ generatedSheets = {};
 const sourceBeforeRebuild = sourceSheet.rows.map((row) => row.slice());
 const multiMonthRebuild = writer.rebuildVacationSystem({ year: 2026 });
 const scheduleSheet = generatedSheets.VACATION_SCHEDULE;
+const multiMonthCheckSheet = generatedSheets.VACATION_CHECK;
 assert.ok(scheduleSheet, "rebuild must create VACATION_SCHEDULE");
+assert.ok(multiMonthCheckSheet, "rebuild must create VACATION_CHECK");
 assert.equal(multiMonthRebuild.scheduleYear, 2026);
 assert.equal(multiMonthRebuild.scheduleDays, 365);
 assert.match(String(scheduleSheet.rows[0][0]), /2026/);
 assert.deepEqual(Array.from(multiMonthRebuild.affectedSheets), [
   "VACATION_SCHEDULE",
   "VACATION_CHECK",
+]);
+assert.deepEqual(multiMonthCheckSheet.rows[0].slice(0, 5), [
+  "Date",
+  "Type",
+  "FML",
+  "Description",
+  "Severity",
 ]);
 assert.deepEqual(
   sourceSheet.rows,
@@ -2135,6 +2144,7 @@ generatedSheets = {};
 const emptyRebuild = writer.rebuildVacationSystem({ year: 2026 });
 assert.equal(emptyRebuild.schedulePeople, 0);
 assert.equal(emptyRebuild.scheduleDays, 365);
+assert.equal(emptyRebuild.checkRows, 0);
 assert.match(
   String(generatedSheets.VACATION_SCHEDULE.rows[0][0]),
   /2026/,
@@ -2143,6 +2153,18 @@ assert.match(
 assert.ok(
   generatedSheets.VACATION_SCHEDULE.borders.length >= 11,
   "empty full-year calendar must still add month separators",
+);
+assert.deepEqual(generatedSheets.VACATION_CHECK.rows[0].slice(0, 5), [
+  "Date",
+  "Type",
+  "FML",
+  "Description",
+  "Severity",
+]);
+assert.deepEqual(
+  generatedSheets.VACATION_CHECK.rows[1].slice(0, 5),
+  ["", "ALL_RULES", "", "Порушень не знайдено", "OK"],
+  "empty audit must write an explicit OK row to VACATION_CHECK",
 );
 
 sourceSheet = new FakeSheet(
@@ -2165,6 +2187,33 @@ sourceSheet = new FakeSheet(
   ]),
 );
 generatedSheets = {};
+const gapRebuild = writer.rebuildVacationSystem({ year: 2026 });
+assert.ok(
+  gapRebuild.checkRows > 0,
+  "short gaps must be written to VACATION_CHECK",
+);
+const gapCheckRows = generatedSheets.VACATION_CHECK.rows;
+assert.deepEqual(gapCheckRows[0].slice(0, 5), [
+  "Date",
+  "Type",
+  "FML",
+  "Description",
+  "Severity",
+]);
+const gapCheckProblemRow = gapCheckRows
+  .slice(1)
+  .find((row) => row[1] === "Замалий інтервал між відпустками");
+assert.ok(
+  gapCheckProblemRow,
+  "VACATION_CHECK must show the Ukrainian PERSON_GAP label",
+);
+assert.equal(gapCheckProblemRow[2], "Гап Людина");
+assert.equal(gapCheckProblemRow[4], "ERROR");
+assert.doesNotMatch(
+  gapCheckRows.map((row) => row.slice(0, 5).join("|")).join("\n"),
+  /PERSON_GAP|GAP_TOO_SHORT|YEAR_LIMIT|START_TOO_CLOSE/,
+  "VACATION_CHECK must not expose internal audit rule codes",
+);
 const gapReport = writer.generateVacationReport();
 assert.ok(gapReport.errorCount > 0, "short gaps must be blocking");
 assert.equal(gapReport.warningCount, 0, "short gap report must not include warnings");
