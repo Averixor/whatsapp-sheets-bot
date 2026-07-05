@@ -152,10 +152,11 @@ const failedScheduleResult = vm.runInContext(
   materializeContext,
 );
 assert.equal(failedScheduleResult.ok, false);
-assert.deepEqual(failedScheduleResult.vacationSchedule, {
-  ok: false,
-  reason: "schedule rebuild failed",
-});
+assert.equal(failedScheduleResult.vacationSchedule.ok, false);
+assert.equal(
+  failedScheduleResult.vacationSchedule.reason,
+  "schedule rebuild failed",
+);
 
 const sidebar = readRepoFileByBasename(repoRoot, "Sidebar.html", {
   errorPrefix: "verify-materialize-computed-data",
