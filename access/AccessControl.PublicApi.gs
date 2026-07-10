@@ -217,15 +217,7 @@ function listAllowedActionsForRole_(role) {
     case "admin":
       return ["усі дії maintainer", "керування доступом", "журнали порушень"];
     case "sysadmin":
-      return [
-        "усі дії admin",
-        "відновлення",
-        "repair",
-        "захист аркушів",
-        "protections",
-        "тригери",
-        "triggers",
-      ];
+      return ["усі дії admin", "відновлення", "захист аркушів", "тригери"];
     case "owner":
       return ["повний доступ до всієї системи"];
     default:
