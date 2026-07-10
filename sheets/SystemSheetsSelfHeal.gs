@@ -472,7 +472,7 @@ function _sshBuildRegistry_() {
       name: _sshConfigValue_("CAR_SHEET", "CAR"),
       schemaKey: "car",
       headers: [
-        "FML",
+        "Callsign",
         "Name of military property",
         "Military registration number",
         "Chassis number",

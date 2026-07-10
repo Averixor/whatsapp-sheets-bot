@@ -325,6 +325,20 @@ const ReferenceSheetsRepository_ = (function () {
     return buildNamedStats_(items, "status", "Без стану", CAR_STATUS_ORDER_);
   }
 
+  function detectCarOwnerColumnMode_(headerValue) {
+    const text = clean_(headerValue).toLowerCase();
+    if (
+      text === "fml" ||
+      text === "full name" ||
+      text === "п.і.б" ||
+      text === "піб" ||
+      text === "owner"
+    ) {
+      return "fml";
+    }
+    return "callsign";
+  }
+
 
   function normalizeFmlKey_(value) {
     if (typeof _normFml_ === "function") return _normFml_(value);
@@ -492,39 +506,48 @@ const ReferenceSheetsRepository_ = (function () {
     const values = sheet
       .getRange(2, 1, sheet.getLastRow() - 1, Math.max(sheet.getLastColumn(), 8))
       .getDisplayValues();
+    const header = sheet
+      .getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 8))
+      .getDisplayValues()[0] || [];
+    const ownerColumnMode = detectCarOwnerColumnMode_(header[0]);
     let totalCost = 0;
     let skippedMissingAssetName = 0;
     let unresolvedOwners = 0;
     const years = [];
 
     values.forEach(function (row, idx) {
-      const ownerRaw = clean_(row[0]);
+      const ownerKeyRaw = clean_(row[0]);
+      const ownerIsDash = isDash_(ownerKeyRaw);
+      const ownerFmlRaw =
+        ownerColumnMode === "fml" && !ownerIsDash ? ownerKeyRaw : "";
+      const ownerCallsignRaw =
+        ownerColumnMode === "fml" ? clean_(row[7]) : ownerIsDash ? "" : ownerKeyRaw;
+      const ownerRaw = ownerColumnMode === "fml" ? ownerFmlRaw : ownerCallsignRaw;
       const assetName = clean_(row[1]);
       const militaryNumber = clean_(row[2]);
       const chassisNumber = clean_(row[3]);
       const year = normalizeYear_(row[4]);
       const costDisplay = clean_(row[5]);
       const statusRaw = clean_(row[6]);
-      const ownerCallsignRaw = clean_(row[7]);
       const status = normalizeCarStatus_(statusRaw);
       const statusDescription = getCarStatusDescription_(status);
-      if (!ownerRaw && !assetName && !militaryNumber && !chassisNumber && !statusRaw) return;
+      if (!ownerKeyRaw && !assetName && !militaryNumber && !chassisNumber && !statusRaw) return;
       if (!assetName) {
         skippedMissingAssetName += 1;
         return;
       }
 
       const ownerPerson = canonicalPersonFromPersonnel_(
-        { fullName: isDash_(ownerRaw) ? "" : ownerRaw, callsign: ownerCallsignRaw },
-        { callsign: ownerCallsignRaw, fml: isDash_(ownerRaw) ? "" : ownerRaw },
+        { fullName: ownerFmlRaw, callsign: ownerCallsignRaw },
+        { callsign: ownerCallsignRaw, fml: ownerFmlRaw },
       );
-      const owner = ownerPerson.fullName || (isDash_(ownerRaw) ? "" : ownerRaw);
-      if (
+      const owner = ownerPerson.fullName || (ownerIsDash ? "" : ownerKeyRaw);
+      const ownerMissing =
         personnelReferenceAvailable_() &&
-        ownerRaw &&
-        !isDash_(ownerRaw) &&
-        !ownerPerson.found
-      ) {
+        ownerKeyRaw &&
+        !ownerIsDash &&
+        !ownerPerson.found;
+      if (ownerMissing) {
         unresolvedOwners += 1;
       }
 
@@ -536,13 +559,17 @@ const ReferenceSheetsRepository_ = (function () {
       out.items.push({
         rowNumber: idx + 2,
         owner: owner,
-        ownerDisplay: owner || ownerRaw,
-        ownerRaw: ownerRaw,
+        ownerDisplay: owner || ownerKeyRaw,
+        ownerRaw: ownerKeyRaw,
+        ownerKey: ownerKeyRaw,
+        ownerSource: ownerColumnMode,
         ownerCanonical: ownerPerson.found,
+        ownerMissing: ownerMissing,
+        ownerHighlight: ownerMissing ? "missing-person" : "",
         ownerCallsign: ownerPerson.callsign || ownerCallsignRaw,
         ownerRank: ownerPerson.rank,
         ownerPhone: ownerPerson.phone,
-        assigned: !!owner && !isDash_(owner),
+        assigned: !!ownerKeyRaw && !ownerIsDash,
         assetName: assetName,
         militaryNumber: militaryNumber,
         chassisNumber: chassisNumber,
@@ -554,8 +581,9 @@ const ReferenceSheetsRepository_ = (function () {
         statusDescription: statusDescription,
         type: detectAssetType_(assetName),
         searchText: [
-          ownerRaw,
+          ownerKeyRaw,
           owner,
+          ownerCallsignRaw,
           ownerPerson.callsign,
           ownerPerson.rank,
           ownerPerson.phone,
@@ -577,6 +605,7 @@ const ReferenceSheetsRepository_ = (function () {
       return item.assigned;
     }).length;
     out.stats.unassigned = out.stats.total - out.stats.assigned;
+    out.stats.unresolvedOwners = unresolvedOwners;
     out.stats.totalCost = totalCost;
     out.stats.totalCostDisplay = formatMoney_(totalCost);
     out.stats.minYear = years.length ? String(Math.min.apply(null, years)) : "";
@@ -590,7 +619,7 @@ const ReferenceSheetsRepository_ = (function () {
     }
     if (unresolvedOwners > 0) {
       out.warnings.push(
-        "Автотехніка: власників не знайдено в PERSONNEL: " + unresolvedOwners,
+        "Автотехніка: власників не знайдено в особовому складі: " + unresolvedOwners,
       );
     }
     return out;
@@ -861,4 +890,3 @@ const ReferenceSheetsRepository_ = (function () {
     getEquipmentForPerson: getEquipmentForPerson,
   };
 })();
-

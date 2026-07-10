@@ -69,7 +69,7 @@ assert.equal(contract.sheets["06"].B, "Позивний");
 assert.equal(contract.sheets["02"].B, "ПОЗИВНИЙ");
 assert.equal(contract.sheets.PHONE_DIRECTORY.A, "Phone / Section");
 assert.equal(contract.sheets.PHONE_DIRECTORY.B, "Name / Note");
-assert.equal(contract.sheets.CAR.A, "FML");
+assert.equal(contract.sheets.CAR.A, "Callsign");
 assert.equal(contract.sheets.CAR.B, "Name of military property");
 assert.equal(contract.sheets.CAR.F, "Value");
 assert.equal(contract.sheets.CAR.G, "Condition");

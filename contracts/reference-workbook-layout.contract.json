@@ -5,7 +5,7 @@
     "month06": "Compact layout: A=BR formula, B=Позивний, dates from C.",
     "monthStandard": "Sheets 02-05: A=ТЕЛЕФОН, B=ПОЗИВНИЙ, dates from H.",
     "phoneDirectory": "PHONE_DIRECTORY is a sectioned reference: column A holds section titles or phone numbers, column B holds contact name/description.",
-    "car": "CAR is an optional vehicle register from the real workbook: A=FML, B=Name of military property, C=Military registration number, D=Chassis number, E=Year of manufacture, F=Value, G=Condition.",
+    "car": "CAR is an optional vehicle register from the real workbook: A=Callsign, B=Name of military property, C=Military registration number, D=Chassis number, E=Year of manufacture, F=Value, G=Condition. Legacy A=FML is read only for compatibility.",
     "month07": "Compact layout: B=Позивний, dates from C, notes in AH.",
     "weapon": "WEAPON is a person-bound military property register: A:E person identity, blocks F:L, M:S, U:Z hold military property records."
   },
@@ -138,7 +138,7 @@
       "B": "Name / Note"
     },
     "CAR": {
-      "A": "FML",
+      "A": "Callsign",
       "B": "Name of military property",
       "C": "Military registration number",
       "D": "Chassis number",

@@ -1316,18 +1316,29 @@
 
     const itemRowsHtml = filtered.length
       ? filtered
-          .map((item) => `
-            <div class="result-item">
+          .map((item) => {
+            const ownerMissing = item?.ownerMissing === true;
+            const ownerClass = ownerMissing
+              ? " result-item--reference-missing-person"
+              : "";
+            const ownerBadge = ownerMissing
+              ? '<div class="reference-missing-person-badge">Не знайдено в особовому складі</div>'
+              : "";
+            return `
+            <div class="result-item${ownerClass}">
               <div class="result-label">${escapeHtml(item.assetName || "—")}</div>
               <div class="result-value" style="font-weight:700;">${escapeHtml(item.ownerDisplay || "Не закріплено")}</div>
+              ${ownerBadge}
               <div style="color:var(--text-secondary);font-size:12px;line-height:1.45;margin-top:6px;">
+                Позивний: ${escapeHtml(item.ownerCallsign || item.ownerKey || "—")}<br>
                 Стан: ${escapeHtml(item.status || "Без стану")}${item.statusDescription ? ` — ${escapeHtml(item.statusDescription)}` : ""}<br>
                 Військовий номер: ${escapeHtml(item.militaryNumber || "—")}<br>
                 Шасі: ${escapeHtml(item.chassisNumber || "—")}<br>
                 Рік: ${escapeHtml(item.year || "—")} · Вартість: ${escapeHtml(item.costDisplay || "—")}
               </div>
             </div>
-          `)
+          `;
+          })
           .join("")
       : `
         <div class="result-item">
@@ -1345,9 +1356,10 @@
           <div class="result-item">
             <div class="result-label">Підсумок</div>
             <div class="result-value">
-              ${escapeHtml(formatReferenceNumber_(stats.total))} записів · закріплено: ${escapeHtml(formatReferenceNumber_(stats.assigned))} · без ПІБ: ${escapeHtml(formatReferenceNumber_(stats.unassigned))}
+              ${escapeHtml(formatReferenceNumber_(stats.total))} записів · закріплено: ${escapeHtml(formatReferenceNumber_(stats.assigned))} · без позивного: ${escapeHtml(formatReferenceNumber_(stats.unassigned))}
             </div>
             <div style="color:var(--text-secondary);font-size:12px;line-height:1.45;margin-top:6px;">
+              Не знайдено в особовому складі: ${escapeHtml(formatReferenceNumber_(stats.unresolvedOwners))}<br>
               Загальна вартість: ${escapeHtml(stats.totalCostDisplay || "0,00")}<br>
               Роки: ${escapeHtml(stats.minYear || "—")} — ${escapeHtml(stats.maxYear || "—")}<br>
               Типи: ${escapeHtml(renderCarTypeStats_(stats))}<br>

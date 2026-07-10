@@ -75,6 +75,57 @@ function normalizePhoneForTest(value) {
   return digits.startsWith("+") ? digits : `+${digits}`;
 }
 
+function normalizeCallsignForTest(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+const fakePersonnelRows = [
+  {
+    callsign: "ГУГЛ",
+    fml: "Гугл Оператор",
+    rank: "солдат",
+    phone: "0670000001",
+  },
+  {
+    callsign: "СОВА",
+    fml: "Сова Оператор",
+    rank: "солдат",
+    phone: "0670000002",
+  },
+  {
+    callsign: "МАЙОР",
+    fml: "Майор Оператор",
+    rank: "майор",
+    phone: "0670000003",
+  },
+  {
+    callsign: "ІВАН",
+    fml: "Іваненко Іван Іванович",
+    rank: "солдат",
+    phone: "0671112233",
+  },
+  {
+    callsign: "ПЕТРО",
+    fml: "Петренко Петро Петрович",
+    rank: "сержант",
+    phone: "0674445566",
+  },
+];
+
+const fakePersonnelRepository = {
+  getByCallsignAnyStatus(callsign) {
+    const key = normalizeCallsignForTest(callsign);
+    return fakePersonnelRows.find((row) => normalizeCallsignForTest(row.callsign) === key) || null;
+  },
+  getByFml(fml) {
+    const key = String(fml || "").trim().toLowerCase();
+    return fakePersonnelRows.find((row) => String(row.fml || "").trim().toLowerCase() === key) || null;
+  },
+  getRows() {
+    return fakePersonnelRows.slice();
+  },
+};
+
 function loadRepository(spreadsheet) {
   const context = vm.createContext({
     console,
@@ -85,6 +136,8 @@ function loadRepository(spreadsheet) {
     },
     getWasbSpreadsheet_: () => spreadsheet,
     normalizePhone_: normalizePhoneForTest,
+    _normCallsignKey_: normalizeCallsignForTest,
+    PersonnelRepository_: fakePersonnelRepository,
   });
   const source = readGasByBasename("DictionaryRepository.gs");
   assert.match(source, /ReferenceSheetsRepository_/);
@@ -160,6 +213,10 @@ assert.equal(
   carContract.expected.stats.unassigned,
 );
 assert.equal(
+  carsRegister.stats.unresolvedOwners,
+  carContract.expected.stats.unresolvedOwners,
+);
+assert.equal(
   carsRegister.stats.totalCost,
   carContract.expected.stats.totalCost,
 );
@@ -182,7 +239,15 @@ assert.equal(
   carsRegister.stats.byStatus.map((entry) => `${entry.name}:${entry.count}`).join(","),
   carContract.expected.byStatus.join(","),
 );
-assert.equal(carsRegister.items[1].searchText.includes("обмежено бг"), true);
+assert.deepEqual(
+  Array.from(
+    carsRegister.items
+      .filter((item) => item.ownerMissing)
+      .map((item) => item.ownerRaw),
+  ),
+  carContract.expected.missingOwners,
+);
+assert.equal(carsRegister.items[2].searchText.includes("обмежено бг"), true);
 assert.equal(
   carsRegister.items[carContract.expected.searchIncludesAtIndex.index].searchText.includes(
     carContract.expected.searchIncludesAtIndex.value,

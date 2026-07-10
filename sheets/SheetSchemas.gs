@@ -765,7 +765,7 @@ function _ssBuildCarSchema_() {
         type: "string",
         required: false,
         allowBlank: true,
-        label: "FML",
+        label: "Callsign",
       }),
       assetName: _ssFreeze_({
         col: 2,
@@ -818,7 +818,7 @@ function _ssBuildCarSchema_() {
       }),
     }),
     headerAliases: _ssFreeze_({
-      owner: ["FML", "Full name", "П.І.Б", "ПІБ", "Owner"],
+      owner: ["Callsign", "Позивний", "FML", "Full name", "П.І.Б", "ПІБ", "Owner"],
       assetName: ["Name of military property", "Найменування військового майна", "Майно", "Asset"],
       militaryNumber: ["Military registration number", "Військовий номер", "Номер"],
       chassisNumber: ["Chassis number", "Номер шасі", "Шасі", "VIN"],
@@ -844,7 +844,7 @@ function _ssBuildCarSchema_() {
       "status",
     ],
     notes:
-      "Реєстр автотехніки з реальної книги: FML, майно, військовий номер, шасі, рік, вартість і стан.",
+      "Реєстр автотехніки з реальної книги: Callsign, майно, військовий номер, шасі, рік, вартість і стан. Legacy FML у колонці A читається лише як сумісність.",
   });
 }
 
