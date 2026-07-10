@@ -17,16 +17,17 @@ const contract = JSON.parse(fs.readFileSync(contractPath, "utf8"));
 
 const personnelHeaders = contract.sheets.PERSONNEL;
 assert.ok(personnelHeaders, "PERSONNEL headers missing in contract");
-assert.equal(personnelHeaders.L, "Callsign");
+assert.equal(personnelHeaders.L, "Email");
+assert.equal(personnelHeaders.M, "Callsign");
 assert.ok(
   !Object.values(personnelHeaders).includes("TEMPLATE"),
   "reference PERSONNEL must not use TEMPLATE column",
 );
 
 const expectedPersonnelCanonical = {
-  Cells: "",
+  Cells: "Cells",
   "ID v/s": "ID_VS",
-  ID: "ID",
+  "ID Army+": "ID",
   "Last name": "LastName",
   "First name": "FirstName",
   Patronymic: "Patronymic",
@@ -35,6 +36,7 @@ const expectedPersonnelCanonical = {
   "Days until birthday": "Days_until_birthday",
   Phone: "Phone",
   "Phone 2": "2_Phone",
+  Email: "Email",
   Callsign: "Callsign",
   Rank: "Rank",
   Position: "Position",
@@ -57,6 +59,7 @@ for (const [header, expected] of Object.entries(expectedPersonnelCanonical)) {
 }
 
 const built = ctx._personnelBuildHeaderColIndex_(Object.values(personnelHeaders));
+assert.ok(built.Email >= 0, "Email column index");
 assert.ok(built.Callsign >= 0, "Callsign column index");
 assert.ok(built.LastName >= 0, "Last name column index");
 assert.ok(built.Rank >= 0, "Rank column index");
@@ -66,10 +69,14 @@ assert.equal(contract.sheets["06"].B, "Позивний");
 assert.equal(contract.sheets["02"].B, "ПОЗИВНИЙ");
 assert.equal(contract.sheets.PHONE_DIRECTORY.A, "Phone / Section");
 assert.equal(contract.sheets.PHONE_DIRECTORY.B, "Name / Note");
-assert.equal(contract.sheets.CAR.A, "П.І.Б");
-assert.equal(contract.sheets.CAR.B, "Найменування військового майна");
-assert.equal(contract.sheets.CAR.F, "Вартість");
-assert.equal(contract.sheets.CAR.G, "Стан");
+assert.equal(contract.sheets.CAR.A, "FML");
+assert.equal(contract.sheets.CAR.B, "Name of military property");
+assert.equal(contract.sheets.CAR.F, "Value");
+assert.equal(contract.sheets.CAR.G, "Condition");
+assert.equal(contract.sheets.WEAPON.A, "Last name");
+assert.equal(contract.sheets.WEAPON.F, "Name of military property");
+assert.equal(contract.sheets.WEAPON.K, "Date of assignment");
+assert.equal(contract.sheets.WEAPON.U, "Name of military property");
 
 const sheetSchemas = readRepoFileByBasename(repoRoot, "SheetSchemas.gs", {
   errorPrefix: "verify-reference-workbook-layout",
@@ -85,7 +92,8 @@ assert.doesNotMatch(
   /Callsign carrier: `TEMPLATE`/,
   "RUNBOOK must not claim TEMPLATE is reference callsign carrier",
 );
-assert.match(runbook, /\*\*L\*\* \| \*\*Callsign\*\*/);
+assert.match(runbook, /\| L \| Email \|/);
+assert.match(runbook, /\| \*\*M\*\* \| \*\*Callsign\*\*/);
 assert.match(runbook, /reference-workbook-layout\.contract\.json/);
 
 const agents = fs.readFileSync(path.join(repoRoot, "AGENTS.md"), "utf8");

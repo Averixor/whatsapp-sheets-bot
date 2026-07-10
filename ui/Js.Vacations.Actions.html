@@ -1,0 +1,695 @@
+<script>
+  // Js.Vacations.Actions — async/server/UI action handlers.
+
+  const VacationModuleActions_ = {
+    getScheduleYear_() {
+      var raw = this.read("vacScheduleYear");
+      var year = Number(raw);
+      if (year >= 1900 && year <= 9999) return year;
+      return Number(this.state.scheduleYear) || new Date().getFullYear();
+    },
+
+    problemFindDraft(problem) {
+      var item = problem || {};
+      var fml = String(item.primaryFml || item.fml || "").trim();
+      if (/[\/,]/.test(fml) && !item.primaryFml) fml = "";
+      var date = String(item.startDate || item.date || "").trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) date = this.todayInputDate();
+      var vacationNumber = Number(item.vacationNumber) || 0;
+      var days = Number(item.days) || 0;
+      return {
+        fml: fml,
+        vacationNumber: vacationNumber || 1,
+        startDate: date,
+        days: days || 15,
+        searchWindow: 30,
+        complete: !!(fml && vacationNumber && days),
+      };
+    },
+
+    async loadState(options) {
+      var silent = !!(options && options.silent);
+      if (this.state.isStateLoading) return;
+      this.state.isStateLoading = true;
+      if (silent) this.render();
+      if (!silent) showLoading();
+      try {
+        var result = await runServerMethod_(
+          "getVacationSidebarState",
+          [],
+          "VacationModule.loadState",
+        );
+        this.state.personnel = result.personnel || [];
+        this.state.vacations = result.vacations || [];
+        this.state.stats = result.stats || { total: 0, activePeople: 0 };
+        this.state.scheduleYear =
+          Number(result.scheduleYear) || new Date().getFullYear();
+        this.state.scheduleYearOptions = Array.isArray(
+          result.scheduleYearOptions,
+        )
+          ? result.scheduleYearOptions
+          : [];
+        this.state.problemSummary = result.problemSummary || null;
+        this.state.rightPanelMigration = result.rightPanelMigration || null;
+        this.setStatus("", "info");
+        this.render();
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        this.state.isStateLoading = false;
+        if (!silent) hideLoading();
+        this.render();
+      }
+    },
+
+    openTab(tab) {
+      this.state.activeTab = tab;
+      this.setStatus("", "info");
+      this.render();
+      if (tab === "overview" && !this.state.monthCalendar) {
+        this.render();
+      }
+      if (tab === "check" && !this.state.problemsLoaded) {
+        this.render();
+      }
+    },
+
+    openFindFromProblem(index) {
+      var problem = this.state.checks[Number(index)];
+      if (!problem) return;
+      var draft = this.problemFindDraft(problem);
+      this.state.findDraft = draft;
+      this.state.options = [];
+      this.state.activeTab = "find";
+      this.setStatus(
+        draft.complete
+          ? "Поля підбору заповнено з проблемного питання."
+          : "Не вдалося однозначно визначити відпустку. Перевірте поля підбору вручну.",
+        draft.complete ? "info" : "warning",
+      );
+      this.render();
+    },
+
+    async applyRightPanelMigration() {
+      showLoading();
+      try {
+        var result = await runServerMethod_(
+          "applyRightPanelMigrationFromSidebar",
+          [],
+          "VacationModule.applyRightPanelMigration",
+        );
+        var migration = (result && result.migration) || result || {};
+        var message =
+          migration.message ||
+          (migration.migrated > 0
+            ? "Перенесено записів: " + migration.migrated
+            : "Міграцію правої таблиці завершено");
+        showToast("✓ " + message);
+        this.setStatus(message, migration.migrated > 0 ? "success" : "info");
+        if (result.problemSummary) {
+          this.state.problemSummary = result.problemSummary;
+        }
+        if (result.rightPanelMigration) {
+          this.state.rightPanelMigration = result.rightPanelMigration;
+        }
+        if (result.vacations) {
+          this.state.vacations = result.vacations;
+        }
+        if (result.stats) {
+          this.state.stats = result.stats;
+        }
+        await this.loadState();
+        if (this.state.problemsLoaded) {
+          await this.loadProblems();
+        } else {
+          this.render();
+        }
+        logToConsole("✓ " + message, "success");
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    async applyFixSuggestion(problemIndex, suggestionIndex) {
+      var problem = this.state.checks[Number(problemIndex)];
+      var suggestion =
+        problem &&
+        Array.isArray(problem.fixSuggestions) &&
+        problem.fixSuggestions[Number(suggestionIndex)];
+      if (!suggestion) {
+        this.setStatus("Пропозицію не знайдено", "error");
+        return;
+      }
+      if (!suggestion.canAutoApply) {
+        this.setStatus(
+          suggestion.autoApplyReason ||
+            "Цю пропозицію не можна застосувати автоматично",
+          "warning",
+        );
+        return;
+      }
+      showLoading();
+      try {
+        await runServerMethod_(
+          "applyVacationSuggestionFromSidebar",
+          [
+            Object.assign({}, suggestion, {
+              fml: suggestion.personName || suggestion.fml,
+              issueId: problem.issueId || "",
+            }),
+          ],
+          "VacationModule.applyFixSuggestion",
+        );
+        showToast("✓ Пропозицію застосовано");
+        await this.loadProblems();
+        await this.loadState();
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    async checkReminders() {
+      showLoading();
+      try {
+        var result = await ActionDispatcher.run(
+          "checkVacationsAndBirthdays",
+          function () {
+            return Stage7Api.checkVacationsAndBirthdays({
+              date: _todayStr_(),
+              recipientRole: getSelectedCommanderRecipient_(),
+            });
+          },
+        );
+        if (!result || !result.success) {
+          throw new Error(result?.error || "Не вдалося перевірити нагадування");
+        }
+        this.state.remindersHtml = renderVacationReminderResult_(
+          result.vacations || {},
+          result.message || "",
+        );
+        this.setStatus("🏖️ Нагадування про відпустки перевірено", "success");
+        logToConsole("🏖️ Нагадування про відпустки перевірено", "success");
+        this.render();
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    async openUpdatedSchedule() {
+      showLoading();
+      showToast("Оновлюю графік відпусток...");
+      try {
+        var year = this.getScheduleYear_();
+        this.state.scheduleYear = year;
+        var result = await runServerMethod_(
+          "openUpdatedVacationScheduleFromSidebar",
+          [{ year: year }],
+          "VacationModule.openUpdatedSchedule",
+        );
+        var rebuild = result && result.rebuild ? result.rebuild : {};
+        var problemSummary = rebuild.problemSummary || {};
+        var counts = problemSummary.counts || {};
+        logToConsole(
+          "✓ Графік відпусток: " +
+            JSON.stringify({
+              ok: !!(result && result.ok),
+              scheduleYear: rebuild.scheduleYear || year,
+              activePeople: rebuild.activePeopleCount,
+              vacationCount: rebuild.vacationCount,
+              problemCount:
+                problemSummary.total || rebuild.problemCount || 0,
+              errors: counts.ERROR || 0,
+              warnings: counts.WARNING || 0,
+              message: result && result.message,
+            }),
+          "success",
+        );
+        showToast(
+          result && result.message
+            ? result.message
+            : "Графік відпусток оновлено і відкрито",
+        );
+        if (result && result.rebuild && result.rebuild.problemSummary) {
+          this.state.problemSummary = result.rebuild.problemSummary;
+        }
+        if (result && result.year) {
+          this.state.scheduleYear = Number(result.year);
+        }
+        await this.loadState();
+      } catch (error) {
+        console.error("[VacationModule.openUpdatedSchedule] failed", error);
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    async submitAdd() {
+      showLoading();
+      try {
+        var result = await runServerMethod_(
+          "addVacationFromSidebar",
+          [
+            {
+              fml: this.read("vacAddPerson"),
+              type: this.read("vacAddType"),
+              startDate: this.read("vacAddStart"),
+              days: Number(this.read("vacAddDays")),
+            },
+          ],
+          "VacationModule.submitAdd",
+        );
+        showToast(
+          result.warnings && result.warnings.length
+            ? "⚠ Відпустку додано з попередженнями"
+            : "✓ Відпустку додано",
+        );
+        this.state.activeTab = "overview";
+        await this.loadState();
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    async submitFind() {
+      showLoading();
+      try {
+        this.state.options = await runServerMethod_(
+          "findVacationSidebarOptions",
+          [
+            {
+              fml: this.read("vacFindPerson"),
+              vacationNumber: Number(this.read("vacFindNumber")),
+              desiredStart: this.read("vacFindStart"),
+              durationDays: Number(this.read("vacFindDays")),
+              searchWindow: Number(this.read("vacFindWindow")),
+            },
+          ],
+          "VacationModule.submitFind",
+        );
+        this.setStatus("Підбір завершено.", "success");
+        this.render();
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    async applyOption(index) {
+      var item = this.state.options[index];
+      if (!item) return;
+      showLoading();
+      try {
+        var result = await runServerMethod_(
+          "applyVacationOptionFromSidebar",
+          [item],
+          "VacationModule.applyOption",
+        );
+        showToast(
+          result.warnings && result.warnings.length
+            ? "⚠ Варіант застосовано з попередженнями"
+            : "✓ Варіант застосовано",
+        );
+        this.state.activeTab = "overview";
+        await this.loadState();
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    prepareMove(index) {
+      var vacation = this.state.vacations[index];
+      if (!vacation) return;
+      this.state.moveIndex = String(index);
+      this.state.activeTab = "plan";
+      this.render();
+      var moveStart = document.getElementById("vacMoveStart");
+      var moveDays = document.getElementById("vacMoveDays");
+      if (moveStart) moveStart.value = vacation.startDate;
+      if (moveDays) moveDays.value = String(vacation.days);
+    },
+
+    async submitMove() {
+      var vacation = this.state.vacations[Number(this.read("vacMoveVacation"))];
+      if (!vacation) throw new Error("Оберіть відпустку");
+      showLoading();
+      try {
+        var result = await runServerMethod_(
+          "moveVacationFromSidebar",
+          [
+            {
+              requestId: vacation.requestId,
+              personKey: vacation.personKey,
+              fml: vacation.fml,
+              vacationNumber: vacation.vacationNumber,
+              type: vacation.type,
+              sourceRow: vacation.sourceRow,
+              sourceStartColumn: vacation.sourceStartColumn,
+              startDate: this.read("vacMoveStart"),
+              days: Number(this.read("vacMoveDays")),
+            },
+          ],
+          "VacationModule.submitMove",
+        );
+        showToast(
+          result.warnings && result.warnings.length
+            ? "⚠ Відпустку перенесено з попередженнями"
+            : "✓ Відпустку перенесено",
+        );
+        this.state.moveIndex = "";
+        this.state.activeTab = "plan";
+        await this.loadState();
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    async loadProblems() {
+      if (this.state.isProblemsLoading) return;
+      this.state.isProblemsLoading = true;
+      this.render();
+      showLoading();
+      try {
+        var result = await runServerMethod_(
+          "checkVacationRulesFromSidebar",
+          [],
+          "VacationModule.loadProblems",
+        );
+        this.state.checks = result.checks || [];
+        this.state.problemsLoaded = true;
+        this.state.bulkFixPlan = null;
+        if (result.problemSummary) {
+          this.state.problemSummary = result.problemSummary;
+        } else if (result.errorCount != null) {
+          this.state.problemSummary = {
+            errorCount: result.errorCount,
+            warningCount: result.warningCount || 0,
+            problemCount: result.problemCount || result.errorCount,
+            scheduleRows: result.scheduleRows || this.state.stats.total,
+            items: [],
+            summaryLine: "",
+          };
+        }
+        this.setStatus(
+          result.problemCount || result.errorCount
+            ? "Проблемних питань: " + (result.problemCount || result.errorCount)
+            : "Проблемних питань не знайдено.",
+          result.problemCount || result.errorCount ? "warning" : "success",
+        );
+        this.render();
+        logToConsole(
+          this.state.checks.length
+            ? "⚠ Проблемних питань: " + this.state.checks.length
+            : "✓ Проблемних питань не знайдено",
+          this.state.checks.length ? "warning" : "success",
+        );
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        this.state.isProblemsLoading = false;
+        hideLoading();
+        this.render();
+      }
+    },
+
+    async checkAllRules() {
+      return this.loadProblems();
+    },
+
+    async buildBulkFixPlan() {
+      if (!this.state.problemsLoaded) {
+        await this.loadProblems();
+      }
+      showLoading();
+      try {
+        var plan = await runServerMethod_(
+          "buildVacationBulkFixPlanFromSidebar",
+          [{}],
+          "VacationModule.buildBulkFixPlan",
+        );
+        this.state.bulkFixPlan = plan || null;
+        this.setStatus(
+          plan && plan.moves && plan.moves.length
+            ? "Пакетний план: " +
+                plan.moves.length +
+                " перенесень, вирішується " +
+                (plan.resolvedProblems || 0) +
+                " проблем."
+            : plan && plan.warnings && plan.warnings.length
+              ? plan.warnings[0]
+              : "Автоматичних перенесень не знайдено.",
+          plan && plan.moves && plan.moves.length ? "info" : "warning",
+        );
+        this.render();
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    async applyBulkFixPlan() {
+      var plan = this.state.bulkFixPlan;
+      if (!plan || !plan.success || !Array.isArray(plan.moves) || !plan.moves.length) {
+        this.setStatus("Спочатку підберіть пакетне рішення.", "warning");
+        return;
+      }
+      if (
+        !(await showConfirmModal({
+          title: "Пакетне рішення",
+          message:
+            "Застосувати " + plan.moves.length + " перенесень відпусток?",
+        }))
+      ) {
+        return;
+      }
+      showLoading();
+      try {
+        var result = await runServerMethod_(
+          "applyVacationBulkFixPlanFromSidebar",
+          [{ plan: plan }],
+          "VacationModule.applyBulkFixPlan",
+        );
+        if (!result || result.success !== true) {
+          throw new Error(
+            (result && result.message) ||
+              "Не вдалося застосувати пакетне рішення",
+          );
+        }
+        this.state.bulkFixPlan = null;
+        showToast("Пакетне рішення застосовано. Оновіть графік відпусток.");
+        this.setStatus(
+          "Пакетне рішення застосовано. Залишилось проблем: " +
+            (result.problemCount || 0),
+          "success",
+        );
+        await this.loadProblems();
+        await this.loadState();
+        await this.loadMonthCalendar();
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    getCalendarYearMonth_() {
+      var year = Number(this.read("vacCalendarYear"));
+      var month = Number(this.read("vacCalendarMonth"));
+      if (!(year >= 1900 && year <= 9999)) {
+        year = Number(this.state.calendarYear) || new Date().getFullYear();
+      }
+      if (!(month >= 1 && month <= 12)) {
+        month = Number(this.state.calendarMonth) || new Date().getMonth() + 1;
+      }
+      this.state.calendarYear = year;
+      this.state.calendarMonth = month;
+      return { year: year, month: month };
+    },
+
+    async loadMonthCalendar(preferredYearMonth, options) {
+      var opts = options || {};
+      var silent = !!opts.silent;
+      var ym;
+      if (
+        preferredYearMonth &&
+        Number(preferredYearMonth.year) >= 1900 &&
+        Number(preferredYearMonth.month) >= 1 &&
+        Number(preferredYearMonth.month) <= 12
+      ) {
+        ym = {
+          year: Number(preferredYearMonth.year),
+          month: Number(preferredYearMonth.month),
+        };
+        this.state.calendarYear = ym.year;
+        this.state.calendarMonth = ym.month;
+      } else {
+        ym = this.getCalendarYearMonth_();
+      }
+      if (this.state.isCalendarLoading) return;
+      this.state.isCalendarLoading = true;
+      this.render();
+      if (!silent) showLoading();
+      try {
+        var calendar = await runServerMethod_(
+          "getVacationMonthCalendarFromSidebar",
+          [{ year: ym.year, month: ym.month }],
+          "VacationModule.loadMonthCalendar",
+        );
+        this.renderMonthCalendar(calendar);
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        this.state.isCalendarLoading = false;
+        if (!silent) hideLoading();
+        this.render();
+      }
+    },
+
+    renderMonthCalendar(calendar) {
+      this.state.monthCalendar = calendar || null;
+      this.state.calendarDayDetails = "";
+      if (calendar && calendar.success) {
+        this.state.calendarYear = Number(calendar.year) || this.state.calendarYear;
+        this.state.calendarMonth =
+          Number(calendar.month) || this.state.calendarMonth;
+      }
+      this.render();
+    },
+
+    shiftMonthCalendar(delta) {
+      var year = Number(this.state.calendarYear) || new Date().getFullYear();
+      var month = Number(this.state.calendarMonth) || new Date().getMonth() + 1;
+      month += Number(delta) || 0;
+      while (month < 1) {
+        month += 12;
+        year -= 1;
+      }
+      while (month > 12) {
+        month -= 12;
+        year += 1;
+      }
+      this.loadMonthCalendar({ year: year, month: month });
+    },
+
+    async showCalendarDayDetails(dateIso) {
+      var calendar = this.state.monthCalendar;
+      if (!calendar || !calendar.success || !dateIso) return;
+      this.state.calendarDayDetails =
+        '<div class="vacations-muted">Завантаження деталей…</div>';
+      this.render();
+      try {
+        showLoading();
+        var details = await runServerMethod_(
+          "getVacationCalendarDayDetailsFromSidebar",
+          [{ dateIso: dateIso }],
+          "VacationModule.showCalendarDayDetails",
+        );
+        this.state.calendarDayDetails = this.formatCalendarDayDetailsHtml_(
+          details,
+        );
+        this.render();
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    async checkDate() {
+      showLoading();
+      try {
+        var result = await runServerMethod_(
+          "validateVacationDateFromSidebar",
+          [
+            {
+              fml: this.read("vacCheckPerson"),
+              vacationNumber: Number(this.read("vacCheckNumber")),
+              startDate: this.read("vacCheckStart"),
+              days: Number(this.read("vacCheckDays")),
+            },
+          ],
+          "VacationModule.checkDate",
+        );
+        this.state.checks = result.violations || [];
+        this.state.problemsLoaded = true;
+        this.setStatus(
+          result.isValid ? "Дата допустима." : "Дата має порушення.",
+          result.isValid ? "success" : "error",
+        );
+        this.render();
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    async generateReport() {
+      showLoading();
+      try {
+        var result = await runServerMethod_(
+          "generateVacationReportFromSidebar",
+          [],
+          "VacationModule.generateReport",
+        );
+        this.state.reportText = result.summary || "Звіт порожній.";
+        if (result.problemSummary) {
+          this.state.problemSummary = result.problemSummary;
+        }
+        this.setStatus("Звіт сформовано.", "success");
+        this.render();
+        var adminNote = result.adminSheet
+          ? " (технічний аудит: " + result.adminSheet + ")"
+          : "";
+        logToConsole("✓ Звіт по відпустках сформовано" + adminNote, "success");
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        hideLoading();
+      }
+    },
+
+    async cancelVacation(index) {
+      var vacation = this.state.vacations[index];
+      if (!vacation) return;
+      if (
+        !(await showConfirmModal({
+          title: "Скасування відпустки",
+          message: "Скасувати відпустку: " + vacation.fml + "?",
+          danger: true,
+        }))
+      )
+        return;
+      showLoading();
+      runServerMethod_(
+        "cancelVacationFromSidebar",
+        [vacation],
+        "VacationModule.cancelVacation",
+      )
+        .then(function () {
+          showToast("✓ Відпустку скасовано");
+          return VacationModule.loadState();
+        })
+        .catch(function (error) {
+          VacationModule.showError(error);
+        })
+        .finally(function () {
+          hideLoading();
+        });
+    },
+  };
+</script>

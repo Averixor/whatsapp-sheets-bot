@@ -58,8 +58,16 @@ assert.match(
 );
 
 assert.match(syncModule, /function syncAllMonthlyCallsignsFromPersonnel_/);
+assert.match(syncModule, /function syncMonthlyCallsignsForPersonnelUpdate_/);
+assert.match(syncModule, /monthlySyncMode === "all"/);
+assert.match(syncModule, /return syncActiveMonthlyCallsignsFromPersonnel_/);
 assert.match(syncModule, /resolvePersonnelDisplayCallsign_/);
-assert.match(personnelMaterialize, /syncAllMonthlyCallsignsFromPersonnel_/);
+assert.match(personnelMaterialize, /syncMonthlyCallsignsForPersonnelUpdate_/);
+assert.doesNotMatch(
+  personnelMaterialize,
+  /syncAllMonthlyCallsignsFromPersonnel_\(\)/,
+  "default personnel materialize must not sync all months",
+);
 assert.match(monthOps, /syncMonthlyCallsignsFromPersonnel_\(newSheet\)/);
 
 const personnelRepo = readRepoFileByBasename(

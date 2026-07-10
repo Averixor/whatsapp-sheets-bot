@@ -1,0 +1,136 @@
+<script>
+  // Js.Vacations — vacation module inside main WASB sidebar (resultContent).
+
+  const VacationModule = {
+    state: {
+      personnel: [],
+      vacations: [],
+      stats: { total: 0, activePeople: 0 },
+      scheduleYear: new Date().getFullYear(),
+      scheduleYearOptions: [],
+      activeTab: "overview",
+      statusMessage: "",
+      statusType: "info",
+      isStateLoading: false,
+      isProblemsLoading: false,
+      isCalendarLoading: false,
+      options: [],
+      checks: [],
+      problemsLoaded: false,
+      problemSummary: null,
+      rightPanelMigration: null,
+      reportText: "",
+      remindersHtml: "",
+      moveIndex: "",
+      findDraft: {},
+      bulkFixPlan: null,
+      monthCalendar: null,
+      calendarYear: new Date().getFullYear(),
+      calendarMonth: new Date().getMonth() + 1,
+      calendarDayDetails: "",
+    },
+
+    esc(value) {
+      return escapeHtml(String(value == null ? "" : value));
+    },
+
+    fmtDate(value) {
+      return formatDateUa(value);
+    },
+
+    requestStatusLabel(status) {
+      var labels = {
+        Draft: "Чернетка",
+        Proposed: "Запропоновано",
+        Approved: "Затверджено",
+        Applied: "Застосовано",
+        Cancelled: "Скасовано",
+      };
+      return labels[String(status || "").trim()] || String(status || "").trim();
+    },
+
+    personLabel(person) {
+      return person.callsign
+        ? person.callsign + " — " + person.fml
+        : person.fml;
+    },
+
+    vacationLabel(vacation) {
+      return (
+        (vacation.type || "Відпустка") +
+        " | " +
+        vacation.fml +
+        " | " +
+        this.fmtDate(vacation.startDate) +
+        " — " +
+        this.fmtDate(vacation.endDate)
+      );
+    },
+
+    render() {
+      setHtml(
+        "resultContent",
+        '<div class="vacations-module vacation-module" id="vacationsModuleRoot">' +
+          this.tabsHtml() +
+          '<div class="vacations-panel">' +
+          this.panelHtml() +
+          this.statusHtml() +
+          "</div></div>",
+      );
+    },
+
+    setStatus(message, type) {
+      this.state.statusMessage = message || "";
+      this.state.statusType = type || "info";
+    },
+
+    read(id) {
+      var el = document.getElementById(id);
+      return el ? el.value : "";
+    },
+
+    todayInputDate() {
+      var now = new Date();
+      return (
+        now.getFullYear() +
+        "-" +
+        String(now.getMonth() + 1).padStart(2, "0") +
+        "-" +
+        String(now.getDate()).padStart(2, "0")
+      );
+    },
+
+    show() {
+      showStandardResult("🏖️ Відпустки");
+      setText("resultTitle", "🏖️ Відпустки");
+      this.state.activeTab = "overview";
+      this.setStatus("Завантаження…", "info");
+      this.render();
+      this.loadState({ silent: true });
+    },
+
+    showError(error) {
+      var message = normalizeError(error);
+      this.setStatus(message, "error");
+      this.render();
+      logToConsole("✕ Відпустки: " + message, "error");
+      showToast("✕ " + message);
+    },
+  };
+
+  Object.assign(VacationModule, VacationModuleRenderProblems_);
+  Object.assign(VacationModule, VacationModuleRenderCalendar_);
+  Object.assign(VacationModule, VacationModuleRenderMain_);
+  Object.assign(VacationModule, VacationModuleActions_);
+
+  function showVacationsModule() {
+    VacationModule.show();
+  }
+
+  function checkVacationRemindersFromMainPanel() {
+    return VacationModule.checkReminders();
+  }
+
+  window.VacationModule = VacationModule;
+  window.showVacationsModule = showVacationsModule;
+</script>

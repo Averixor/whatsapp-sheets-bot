@@ -1,17 +1,19 @@
 {
-  "sourceFile": "Книга Взводу Охорони.xlsx",
+  "sourceFile": "Книга Взводу Охорони(38).xlsx",
   "notes": {
-    "personnelCallsign": "Column L Callsign holds working callsign values (e.g. ГРАФ); no TEMPLATE column in reference file.",
+    "personnelCallsign": "Column M Callsign holds working callsign values (e.g. ГРАФ); column L is Email; no TEMPLATE column in reference file.",
     "month06": "Compact layout: A=BR formula, B=Позивний, dates from C.",
     "monthStandard": "Sheets 02-05: A=ТЕЛЕФОН, B=ПОЗИВНИЙ, dates from H.",
     "phoneDirectory": "PHONE_DIRECTORY is a sectioned reference: column A holds section titles or phone numbers, column B holds contact name/description.",
-    "car": "CAR is an optional vehicle register: A=П.І.Б, B=Найменування військового майна, C=Військовий номер, D=Номер шасі, E=Рік випуску, F=Вартість, G=Стан."
+    "car": "CAR is an optional vehicle register from the real workbook: A=FML, B=Name of military property, C=Military registration number, D=Chassis number, E=Year of manufacture, F=Value, G=Condition.",
+    "month07": "Compact layout: B=Позивний, dates from C, notes in AH.",
+    "weapon": "WEAPON is a person-bound military property register: A:E person identity, blocks F:L, M:S, U:Z hold military property records."
   },
   "sheets": {
     "PERSONNEL": {
       "A": "Cells",
       "B": "ID v/s",
-      "C": "ID",
+      "C": "ID Army+",
       "D": "Last name",
       "E": "First name",
       "F": "Patronymic",
@@ -20,11 +22,12 @@
       "I": "Days until birthday",
       "J": "Phone",
       "K": "Phone 2",
-      "L": "Callsign",
-      "M": "Rank",
-      "N": "Position",
-      "O": "OSH 4",
-      "P": "Status"
+      "L": "Email",
+      "M": "Callsign",
+      "N": "Rank",
+      "O": "Position",
+      "P": "OSH 4",
+      "Q": "Status"
     },
     "PHONES": {
       "A": "Callsign",
@@ -38,15 +41,15 @@
       "D": "Days until birthday"
     },
     "DICT": {
-      "A": "Код",
-      "B": "Вид служби",
+      "A": "Code",
+      "B": "Type of service",
       "C": "Місце",
       "D": "Завдання"
     },
     "DICT_SUM": {
-      "A": "Код",
-      "B": "Вид служби",
-      "C": "Порядок",
+      "A": "Code",
+      "B": "Type of service",
+      "C": "Order",
       "F": "Резерв"
     },
     "06": {
@@ -135,13 +138,76 @@
       "B": "Name / Note"
     },
     "CAR": {
-      "A": "П.І.Б",
-      "B": "Найменування військового майна",
-      "C": "Військовий номер",
-      "D": "Номер шасі",
-      "E": "Рік випуску",
-      "F": "Вартість",
-      "G": "Стан"
+      "A": "FML",
+      "B": "Name of military property",
+      "C": "Military registration number",
+      "D": "Chassis number",
+      "E": "Year of manufacture",
+      "F": "Value",
+      "G": "Condition"
+    },
+    "WEAPON": {
+      "A": "Last name",
+      "B": "First name",
+      "C": "Patronymic",
+      "D": "Rank",
+      "E": "Phone",
+      "F": "Name of military property",
+      "G": "Year of manufacture",
+      "H": "Nomenclature code",
+      "I": "Serial number",
+      "J": "Unit price",
+      "K": "Date of assignment",
+      "L": "Location",
+      "M": "Name of military property",
+      "N": "Year of manufacture",
+      "O": "Nomenclature code",
+      "P": "Serial number",
+      "Q": "Unit price",
+      "R": "Date of assignment",
+      "S": "Location",
+      "T": "",
+      "U": "Name of military property",
+      "V": "Year of manufacture",
+      "W": "Nomenclature code",
+      "X": "Serial number",
+      "Y": "Unit price",
+      "Z": "Location"
+    },
+    "07": {
+      "B": "Позивний",
+      "C": "46204.0",
+      "D": "46205.0",
+      "E": "46206.0",
+      "F": "46207.0",
+      "G": "46208.0",
+      "H": "46209.0",
+      "I": "46210.0",
+      "J": "46211.0",
+      "K": "46212.0",
+      "L": "46213.0",
+      "M": "46214.0",
+      "N": "46215.0",
+      "O": "46216.0",
+      "P": "46217.0",
+      "Q": "46218.0",
+      "R": "46219.0",
+      "S": "46220.0",
+      "T": "46221.0",
+      "U": "46222.0",
+      "V": "46223.0",
+      "W": "46224.0",
+      "X": "46225.0",
+      "Y": "46226.0",
+      "Z": "46227.0",
+      "AA": "46228.0",
+      "AB": "46229.0",
+      "AC": "46230.0",
+      "AD": "46231.0",
+      "AE": "46232.0",
+      "AF": "46233.0",
+      "AG": "46234.0",
+      "AH": "Примітки"
     }
   }
 }

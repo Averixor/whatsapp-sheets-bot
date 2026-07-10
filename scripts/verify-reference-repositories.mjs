@@ -81,6 +81,7 @@ function loadRepository(spreadsheet) {
     CONFIG: {
       PHONE_DIRECTORY_SHEET: contract.repositories.phoneDirectory.sheetName,
       CAR_SHEET: contract.repositories.carsRegister.sheetName,
+      WEAPON_SHEET: contract.repositories.weaponsRegister.sheetName,
     },
     getWasbSpreadsheet_: () => spreadsheet,
     normalizePhone_: normalizePhoneForTest,
@@ -89,6 +90,7 @@ function loadRepository(spreadsheet) {
   assert.match(source, /ReferenceSheetsRepository_/);
   assert.match(source, /readPhoneDirectory/);
   assert.match(source, /readCarsRegister/);
+  assert.match(source, /readWeaponsRegister/);
   vm.runInContext(source, context, {
     filename: "DictionaryRepository.gs",
   });
@@ -97,6 +99,7 @@ function loadRepository(spreadsheet) {
 
 const phoneContract = contract.repositories.phoneDirectory;
 const carContract = contract.repositories.carsRegister;
+const weaponContract = contract.repositories.weaponsRegister;
 const spreadsheet = new FakeSpreadsheet({
   [phoneContract.sheetName]: new FakeSheet(
     phoneContract.sheetName,
@@ -105,6 +108,10 @@ const spreadsheet = new FakeSpreadsheet({
   [carContract.sheetName]: new FakeSheet(
     carContract.sheetName,
     carContract.fixtureRows,
+  ),
+  [weaponContract.sheetName]: new FakeSheet(
+    weaponContract.sheetName,
+    weaponContract.fixtureRows,
   ),
 });
 
@@ -183,6 +190,42 @@ assert.equal(
   true,
 );
 
+
+
+const weaponsRegister = vm.runInContext(
+  "ReferenceSheetsRepository_.readWeaponsRegister()",
+  context,
+);
+assert.equal(weaponsRegister.items.length, weaponContract.expected.itemCount);
+assert.deepEqual(
+  Array.from(weaponsRegister.items.map((item) => item.assetName)),
+  weaponContract.expected.assetNames,
+);
+assert.equal(weaponsRegister.stats.total, weaponContract.expected.stats.total);
+assert.equal(weaponsRegister.stats.persons, weaponContract.expected.stats.persons);
+assert.equal(weaponsRegister.stats.assigned, weaponContract.expected.stats.assigned);
+assert.equal(weaponsRegister.stats.unassigned, weaponContract.expected.stats.unassigned);
+assert.equal(
+  weaponsRegister.stats.totalUnitPrice,
+  weaponContract.expected.stats.totalUnitPrice,
+);
+assert.equal(weaponsRegister.warnings.length, 1);
+assert.match(
+  weaponsRegister.warnings[0],
+  new RegExp(weaponContract.expected.warningPattern),
+);
+assert.equal(
+  weaponsRegister.items[weaponContract.expected.searchIncludesAtIndex.index].searchText.includes(
+    weaponContract.expected.searchIncludesAtIndex.value,
+  ),
+  true,
+);
+weaponContract.expected.byType.forEach((marker) => {
+  assert.ok(
+    weaponsRegister.stats.byType.map((entry) => `${entry.name}:${entry.count}`).includes(marker),
+    `WEAPON type stats include ${marker}`,
+  );
+});
 console.log(
-  `verify-reference-repositories: OK (${phoneContract.sheetName}, ${carContract.sheetName})`,
+  `verify-reference-repositories: OK (${phoneContract.sheetName}, ${carContract.sheetName}, ${weaponContract.sheetName})`,
 );

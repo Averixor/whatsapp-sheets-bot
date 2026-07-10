@@ -83,8 +83,8 @@
                 if (typeof openAccessLoginFlow === 'function')
                   openAccessLoginFlow('login');
               "
-              title="Увійти за ключем доступу"
-              aria-label="Увійти за ключем доступу"
+              title="Увійти"
+              aria-label="Увійти"
             >
               <span class="whatsapp-icon" aria-hidden="true">🔑</span>
             </button>
@@ -206,6 +206,18 @@
             >
               <span class="menu-icon" aria-hidden="true">🚙</span>
               <span class="menu-text">Автотехніка</span>
+            </button>
+
+            <button
+              id="btnWeaponsRegister"
+              class="menu-item"
+              data-role-min="maintainer"
+              type="button"
+              onclick="SidebarApp.handleMenuAction('weaponsRegister')"
+              title="Відкрити реєстр озброєння та майна"
+            >
+              <span class="menu-icon" aria-hidden="true">🪖</span>
+              <span class="menu-text">Озброєння</span>
             </button>
 
             <button

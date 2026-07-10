@@ -1,0 +1,43 @@
+<script>
+  // Js.Vacations.Constants — rule type labels and normalization.
+
+  const VACATION_RULE_HUMAN_LABELS = {
+    GAP_TOO_SHORT: "Замалий інтервал між відпустками",
+    PERSON_GAP: "Замалий інтервал між відпустками",
+    PERSON_OVERLAP: "Відпустки однієї людини перетинаються",
+    START_TOO_CLOSE: "Дати початку занадто близько",
+    START_GAP: "Дати початку занадто близько",
+    MIN_PERSON_YEAR: "Немає відпустки у році",
+    YEAR_LIMIT: "Забагато відпусток у році",
+    MAX_PERSON_YEAR: "Забагато відпусток у році",
+    MAX_CONCURRENT: "Забагато людей одночасно у відпустці",
+    INVALID_DATE: "Некоректна дата",
+    INVALID_DURATION: "Некоректна тривалість",
+    PERSONNEL_VACATION_WITHOUT_PLAN: "Статус особового складу не підтверджений планом",
+    MONTHLY_VACATION_WITHOUT_PLAN:
+      "Код у місячному графіку не підтверджений планом",
+    PLAN_WITHOUT_MONTHLY_VACATION: "План не відображений у місячному графіку",
+    HIGH_LOAD_PERIOD: "Період на межі допустимого навантаження",
+    MONTH_BALANCE: "Перекіс стартів відпусток у місяці",
+    RIGHT_PANEL_LEGACY_DATA: "Дані у правій таблиці K:Q (не джерело істини)",
+  };
+
+  function normalizeVacationRuleType_(type) {
+    var aliases = {
+      GAP_TOO_SHORT: "PERSON_GAP",
+      START_TOO_CLOSE: "START_GAP",
+      YEAR_LIMIT: "MAX_PERSON_YEAR",
+    };
+    return aliases[type] || type;
+  }
+
+  function humanVacationRuleLabel_(type) {
+    var key = String(type || "").trim();
+    return (
+      VACATION_RULE_HUMAN_LABELS[key] ||
+      VACATION_RULE_HUMAN_LABELS[normalizeVacationRuleType_(key)] ||
+      key ||
+      "Проблема"
+    );
+  }
+</script>

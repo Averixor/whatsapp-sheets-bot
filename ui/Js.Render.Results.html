@@ -293,12 +293,34 @@
           result.data.result.personnel &&
           result.data.result.personnel.personnel) ||
         null;
+      const assignmentBlock =
+        (result.personnel && result.personnel.assignmentIdentity) ||
+        (result.data &&
+          result.data.result &&
+          result.data.result.personnel &&
+          result.data.result.personnel.assignmentIdentity) ||
+        null;
+      const carAssignmentRows = Number(
+        assignmentBlock && assignmentBlock.car && assignmentBlock.car.rowsChanged,
+      );
+      const weaponAssignmentRows = Number(
+        assignmentBlock && assignmentBlock.weapon && assignmentBlock.weapon.rowsChanged,
+      );
       const ageBirthdayRows = Number(
         personnelBlock && personnelBlock.birthdayColumnsFormattedRows,
       );
       if (ageBirthdayRows > 0) {
         logToConsole(
           "✓ Дані ДН відформатовано: " + String(ageBirthdayRows) + " рядків",
+          "success",
+        );
+      }
+      if (carAssignmentRows > 0 || weaponAssignmentRows > 0) {
+        logToConsole(
+          "✓ Закріплене майно синхронізовано: авто " +
+            String(carAssignmentRows) +
+            ", озброєння " +
+            String(weaponAssignmentRows),
           "success",
         );
       }
@@ -338,6 +360,18 @@
               (monthlySummary.warnings.length
                 ? ". " + monthlySummary.warnings.join("; ")
                 : ""),
+          )}</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Закріплене майно</div>
+          <div class="result-value">${escapeHtml(
+            assignmentBlock && assignmentBlock.ok === false
+              ? assignmentBlock.error || "Синхронізацію майна не виконано"
+              : "Автотехніка: " +
+                  String(carAssignmentRows) +
+                  " змін; озброєння: " +
+                  String(weaponAssignmentRows) +
+                  " змін",
           )}</div>
         </div>
       `,

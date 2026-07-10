@@ -842,6 +842,7 @@
       debugAccess: "Перевірка доступу",
       phoneDirectory: "Службові телефони",
       carsRegister: "Автотехніка",
+      weaponsRegister: "Озброєння",
       requests: "Заявки",
     };
 
@@ -945,6 +946,10 @@
 
         case "carsRegister":
           navigateTo("carsRegister", () => showCarsRegister());
+          break;
+
+        case "weaponsRegister":
+          navigateTo("weaponsRegister", () => showWeaponsRegister());
           break;
 
         case "vacationReminder": {

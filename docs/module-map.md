@@ -13,7 +13,7 @@ Practical index: **where to look** and **what CI proves it**. Structural rules: 
 | Personnel | `personnel/` | `PersonnelRepository.gs`, `PersonsRepository.gs`, `PersonCards.gs`, `AlertsRepository.gs` | `npm run ci`, personnel contracts | Callsign/Status — workspace rules; `Status` header self-heal lives here. |
 | API entrypoints | `api/` | `Stage7ServerApi.gs`, `Stage7MaintenanceApi.gs`, `SpreadsheetActionsApi.gs` | `npm run ci` | Public `api*` surface and spreadsheet actions. |
 | Core runtime | `core/` | `Code.gs`, `Stage7Config.gs`, `ProjectMetadata.gs`, shared helpers | `npm run ci` | Cross-cutting GAS globals, routing, config, responses. |
-| Data repositories | `data/` | `DataAccess.gs`, `DictionaryRepository.gs`, `LogsRepository.gs`, `OperationRepository.gs` | `npm run ci`, `npm run ci:workbook` | `ReferenceSheetsRepository_` in `DictionaryRepository.gs` owns `PHONE_DIRECTORY` / `CAR`. |
+| Data repositories | `data/` | `DataAccess.gs`, `DictionaryRepository.gs`, `LogsRepository.gs`, `OperationRepository.gs` | `npm run ci`, `npm run ci:workbook` | `ReferenceSheetsRepository_` in `DictionaryRepository.gs` owns `PHONE_DIRECTORY` / `CAR` / `WEAPON` / `WEAPON`. |
 | Sheet/workbook | `sheets/` | `Sheet*.gs`, `MonthSheets.gs`, validation/protection/self-heal | `npm run ci:workbook` | Workbook schema, month sheets, protections. |
 | Use cases | `usecases/` | `UseCases*.gs` | `npm run ci`, `npm run ci:workbook` | Application facade and domain use-case modules. |
 | UI server helpers | `ui-server/` | `SidebarServer.gs`, dialogs, `HtmlUtils.gs` | `npm run ci:client` | HtmlService server-side host/helpers. |

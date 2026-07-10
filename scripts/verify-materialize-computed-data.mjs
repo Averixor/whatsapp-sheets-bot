@@ -39,7 +39,7 @@ assert.match(
   readRepoFileByBasename(repoRoot, "PersonnelMaterialize.gs", {
     errorPrefix: "verify-materialize-computed-data",
   }),
-  /syncAllMonthlyCallsignsFromPersonnel_/,
+  /syncMonthlyCallsignsForPersonnelUpdate_/,
 );
 assert.match(
   readRepoFileByBasename(repoRoot, "PersonnelMaterialize.gs", {
@@ -49,6 +49,8 @@ assert.match(
 );
 
 assert.match(maintenanceApi, /function apiStage7MaterializeComputedData/);
+assert.match(maintenanceApi, /monthlySyncMode/);
+assert.match(useCases, /monthlySyncMode: input && input.monthlySyncMode/);
 assert.match(maintenanceApi, /materializeComputedData/);
 
 assert.match(useCases, /idempotency: type !== "materializeComputedData"/);

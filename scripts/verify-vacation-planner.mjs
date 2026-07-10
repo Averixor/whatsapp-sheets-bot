@@ -22,6 +22,35 @@ function readRepo(file) {
   });
 }
 
+const VACATION_CLIENT_INCLUDE_BASENAMES = [
+  "Js.Vacations.Constants",
+  "Js.Vacations.Formatters",
+  "Js.Vacations.Render.Problems",
+  "Js.Vacations.Render.Calendar",
+  "Js.Vacations.Render.Main",
+  "Js.Vacations.Actions",
+  "Js.Vacations.Module",
+];
+
+function readVacationClientHtmlParts() {
+  return VACATION_CLIENT_INCLUDE_BASENAMES.map((name) =>
+    readRepo(`${name}.html`),
+  );
+}
+
+function extractVacationClientScript(htmlParts, basenames) {
+  return htmlParts
+    .map((html, index) => {
+      const match = html.match(/<script>([\s\S]*?)<\/script>/i);
+      assert.ok(
+        match,
+        `${basenames[index]}.html must contain a client script`,
+      );
+      return match[1];
+    })
+    .join("\n");
+}
+
 function load(context, file) {
   vm.runInContext(readRepo(file), context, {
     filename: path.basename(file),
@@ -2242,7 +2271,13 @@ assert.match(
   /<button\s*\n\s+type="button"/,
   "Sidebar.html is compressed by HTML formatter; reload from disk and do not format-on-save",
 );
-const jsVacations = readRepo("Js.Vacations.html");
+const vacationClientHtmlParts = readVacationClientHtmlParts();
+const jsVacations = vacationClientHtmlParts[vacationClientHtmlParts.length - 1];
+const jsVacationsBundle = vacationClientHtmlParts.join("\n");
+const vacationClientScript = extractVacationClientScript(
+  vacationClientHtmlParts,
+  VACATION_CLIENT_INCLUDE_BASENAMES,
+);
 const stylesPersonnel = readRepo("Styles_30_Personnel.html");
 assert.ok(
   stylesPersonnel.split(/\r?\n/).length >= 500,
@@ -2253,8 +2288,6 @@ assert.doesNotMatch(
   /\} \.[a-z#]/,
   "Styles_30_Personnel.html is minified; use CSS mode (not HTML) and avoid clasp pull over local edits",
 );
-const jsVacationsScript = jsVacations.match(/<script>([\s\S]*?)<\/script>/i);
-assert.ok(jsVacationsScript, "Js.Vacations must contain a client script");
 let vacationClientRendered = "";
 const vacationClientContext = vm.createContext({
   console,
@@ -2282,8 +2315,8 @@ const vacationClientContext = vm.createContext({
     return String(value);
   },
 });
-vm.runInContext(jsVacationsScript[1], vacationClientContext, {
-  filename: "Js.Vacations.html",
+vm.runInContext(vacationClientScript, vacationClientContext, {
+  filename: "Js.Vacations.bundle.html",
 });
 const renderVacationProblems = vm.runInContext(
   "renderVacationProblems_",
@@ -2330,8 +2363,8 @@ assert.doesNotMatch(
   renderVacationProblems([{ type: "INVALID_DATE", fml: "Тест" }]),
   /Підібрати нову дату/,
 );
-assert.match(jsVacations, /function formatDateUa/);
-assert.match(jsVacations, /fmtDate\(vacation\.startDate\)/);
+assert.match(jsVacationsBundle, /function formatDateUa/);
+assert.match(jsVacationsBundle, /fmtDate\(vacation\.startDate\)/);
 const formatDateUa = vm.runInContext("formatDateUa", vacationClientContext);
 assert.equal(formatDateUa("2027-05-13"), "13.05.2027");
 assert.equal(formatDateUa("13.05.2027"), "13.05.2027");
@@ -2436,22 +2469,22 @@ assert.doesNotMatch(
   "schedule must not be limited to active vacations only",
 );
 assert.match(sidebarService, /scheduleYear:/);
-assert.match(jsVacations, /getScheduleYear_/);
-assert.match(jsVacations, /vacScheduleYear/);
-assert.match(jsVacations, /openUpdatedVacationScheduleFromSidebar[\s\S]*year:/);
-assert.match(jsVacations, /openUpdatedSchedule\(\)/);
-assert.match(jsVacations, /Оновити і відкрити графік/);
-assert.match(jsVacations, /openUpdatedVacationScheduleFromSidebar/);
-assert.match(jsVacations, /✓ Графік відпусток:/);
+assert.match(jsVacationsBundle, /getScheduleYear_/);
+assert.match(jsVacationsBundle, /vacScheduleYear/);
+assert.match(jsVacationsBundle, /openUpdatedVacationScheduleFromSidebar[\s\S]*year:/);
+assert.match(jsVacationsBundle, /openUpdatedSchedule\(\)/);
+assert.match(jsVacationsBundle, /Оновити і відкрити графік/);
+assert.match(jsVacationsBundle, /openUpdatedVacationScheduleFromSidebar/);
+assert.match(jsVacationsBundle, /✓ Графік відпусток:/);
 assert.doesNotMatch(
-  jsVacations,
+  jsVacationsBundle,
   /JSON\.stringify\(result \|\| \{\}\)/,
   "openUpdatedSchedule must not dump full result JSON to console",
 );
 assert.doesNotMatch(jsVacations, /Оновити стан/);
-assert.match(jsVacations, /↻ Оновити дані/);
+assert.match(jsVacationsBundle, /↻ Оновити дані/);
 assert.match(
-  jsVacations,
+  jsVacationsBundle,
   /title="Оновлює дані бокової панелі з таблиці\. Не перебудовує графік\."/,
 );
 assert.doesNotMatch(jsVacations, /🔄 Оновити графік/);
@@ -2497,18 +2530,19 @@ assert.match(jsHelpers, /vacations:\s*"Відпустки"/);
 assert.match(jsHelpers, /case "vacations":/);
 assert.match(jsHelpers, /showVacationsModule\(\)/);
 assert.match(jsVacations, /const VacationModule = \{/);
-assert.match(jsVacations, /runServerMethod_/);
+assert.match(jsVacationsBundle, /runServerMethod_/);
 assert.match(jsVacations, /window\.VacationModule = VacationModule/);
-assert.ok(includesContract.expected.includes("Js.Vacations"));
+assert.ok(includesContract.expected.includes("Js.Vacations.Module"));
+assert.ok(includesContract.expected.includes("Js.Vacations.Actions"));
 assert.match(jsVacations, /checkVacationRemindersFromMainPanel/);
-assert.match(jsVacations, /getVacationSidebarState/);
-assert.match(jsVacations, /const VACATION_RULE_HUMAN_LABELS = \{/);
-assert.match(jsVacations, /function humanVacationRuleLabel_/);
-assert.match(jsVacations, /scheduleSummaryHtml\(\)/);
-assert.match(jsVacations, /🏖️ Графік відпусток/);
+assert.match(jsVacationsBundle, /getVacationSidebarState/);
+assert.match(jsVacationsBundle, /const VACATION_RULE_HUMAN_LABELS = \{/);
+assert.match(jsVacationsBundle, /function humanVacationRuleLabel_/);
+assert.match(jsVacationsBundle, /scheduleSummaryHtml\(\)/);
+assert.match(jsVacationsBundle, /🏖️ Графік відпусток/);
 assert.match(jsVacations, /requestStatusLabel\(status\)/);
 assert.match(sidebarService, /status:\s*String\(vacation\.status/);
-assert.match(jsVacations, /\{ id: "plan", label: "План" \}/);
+assert.match(jsVacationsBundle, /\{ id: "plan", label: "План" \}/);
 assert.doesNotMatch(jsVacations, /\{ id: "schedule", label: "Графік" \}/);
 assert.doesNotMatch(jsVacations, /\{ id: "move", label: "Перенести" \}/);
 assert.match(
@@ -2523,16 +2557,16 @@ assert.doesNotMatch(
   ]),
   /GAP_TOO_SHORT/,
 );
-assert.match(jsVacations, /function buildVacationProblemSuggestions_/);
-assert.match(jsVacations, /function renderVacationFixSuggestions_/);
-assert.match(jsVacations, /applyFixSuggestion\(/);
+assert.match(jsVacationsBundle, /function buildVacationProblemSuggestions_/);
+assert.match(jsVacationsBundle, /function renderVacationFixSuggestions_/);
+assert.match(jsVacationsBundle, /applyFixSuggestion\(/);
 assert.match(sidebarService, /applyVacationSuggestionFromSidebar/);
 assert.match(sidebarService, /applyRightPanelMigrationFromSidebar/);
-assert.match(jsVacations, /applyRightPanelMigrationFromSidebar/);
-assert.match(jsVacations, /applyRightPanelMigration\(\)/);
-assert.match(jsVacations, /Міграція K:Q → A:I/);
+assert.match(jsVacationsBundle, /applyRightPanelMigrationFromSidebar/);
+assert.match(jsVacationsBundle, /applyRightPanelMigration\(\)/);
+assert.match(jsVacationsBundle, /Міграція K:Q → A:I/);
 assert.match(
-  jsVacations,
+  jsVacationsBundle,
   /RIGHT_PANEL_LEGACY_DATA[\s\S]*?Міграція K:Q → A:I/,
   "right-panel problem card must expose migration action",
 );
@@ -2540,34 +2574,42 @@ assert.match(
   readRepo("Vacation_Suggestions.gs"),
   /function buildVacationFixSuggestions_/,
 );
-assert.match(jsVacations, /function renderVacationProblems_/);
-assert.match(jsVacations, /Проблемні питання/);
-assert.match(jsVacations, /Знайти проблеми/);
+assert.match(jsVacationsBundle, /VacationModuleRenderProblems_/);
+assert.match(jsVacationsBundle, /function renderVacationProblems_/);
+assert.match(jsVacations, /Object\.assign\(VacationModule, VacationModuleRenderProblems_\)/);
+assert.match(jsVacationsBundle, /Проблемні питання/);
+assert.match(jsVacationsBundle, /Знайти проблеми/);
 assert.match(
-  jsVacations,
+  jsVacationsBundle,
   /async loadProblems\(\)[\s\S]*?"checkVacationRulesFromSidebar"/,
 );
-assert.match(jsVacations, /Натисніть «Знайти проблеми»/);
-assert.match(jsVacations, /Підібрати пакетне рішення/);
-assert.match(jsVacations, /Застосувати пакетне рішення/);
-assert.match(jsVacations, /buildVacationBulkFixPlanFromSidebar/);
-assert.match(jsVacations, /applyVacationBulkFixPlanFromSidebar/);
-assert.match(jsVacations, /getVacationMonthCalendarFromSidebar/);
-assert.match(jsVacations, /getVacationCalendarDayDetailsFromSidebar/);
-assert.match(jsVacations, /loadMonthCalendar\(/);
-assert.match(jsVacations, /buildVacationDayTooltip_/);
-assert.match(jsVacations, /getVacationLoadLevelLabel_/);
-assert.match(jsVacations, /vacations-mini-calendar__day-divider/);
-assert.match(jsVacations, /vacations-mini-calendar__day-card/);
-assert.match(jsVacations, /Проблемних дат:/);
-assert.match(jsVacations, /loadMonthCalendar\(\{ year: year, month: month \}\)/);
+assert.match(jsVacationsBundle, /Натисніть «Знайти проблеми»/);
+assert.match(jsVacationsBundle, /Підібрати пакетне рішення/);
+assert.match(jsVacationsBundle, /Застосувати пакетне рішення/);
+assert.match(jsVacationsBundle, /buildVacationBulkFixPlanFromSidebar/);
+assert.match(jsVacationsBundle, /applyVacationBulkFixPlanFromSidebar/);
+assert.match(jsVacationsBundle, /getVacationMonthCalendarFromSidebar/);
+assert.match(jsVacationsBundle, /getVacationCalendarDayDetailsFromSidebar/);
+assert.match(jsVacationsBundle, /loadMonthCalendar\(/);
+assert.match(jsVacationsBundle, /buildVacationDayTooltip_/);
+assert.match(jsVacationsBundle, /getVacationLoadLevelLabel_/);
+assert.match(jsVacationsBundle, /vacations-mini-calendar__day-divider/);
+assert.match(jsVacationsBundle, /vacations-mini-calendar__day-card/);
+assert.match(jsVacationsBundle, /Проблемних дат:/);
+assert.match(jsVacationsBundle, /loadMonthCalendar\(\{ year: year, month: month \}\)/);
+assert.match(jsVacationsBundle, /VacationModuleRenderCalendar_/);
+assert.match(jsVacations, /Object\.assign\(VacationModule, VacationModuleRenderCalendar_\)/);
+assert.match(jsVacationsBundle, /VacationModuleRenderMain_/);
+assert.match(jsVacations, /Object\.assign\(VacationModule, VacationModuleRenderMain_\)/);
+assert.match(jsVacationsBundle, /VacationModuleActions_/);
+assert.match(jsVacations, /Object\.assign\(VacationModule, VacationModuleActions_\)/);
 assert.doesNotMatch(
-  jsVacations,
+  jsVacationsBundle,
   /Макс\. одночасно:/,
   "mini calendar summary must not show static rule text",
 );
 assert.doesNotMatch(
-  jsVacations,
+  jsVacationsBundle,
   /Коротке перевантаження:/,
   "mini calendar summary must not show static overload rule text",
 );
@@ -2576,12 +2618,12 @@ assert.match(
   /\.vacations-mini-calendar__day-divider/,
   "mini calendar day cell must include divider",
 );
-assert.match(jsVacations, /showCalendarDayDetails\(/);
-assert.match(jsVacations, /for=\\"vacCalendarYear\\"/);
-assert.match(jsVacations, /for=\\"vacCalendarMonth\\"/);
-assert.match(jsVacations, /for=\\"vacScheduleYear\\"/);
-assert.match(jsVacations, /for=\\"vacAddPerson\\"/);
-assert.match(jsVacations, /for=\\"vacCheckDays\\"/);
+assert.match(jsVacationsBundle, /showCalendarDayDetails\(/);
+assert.match(jsVacationsBundle, /for=\\"vacCalendarYear\\"/);
+assert.match(jsVacationsBundle, /for=\\"vacCalendarMonth\\"/);
+assert.match(jsVacationsBundle, /for=\\"vacScheduleYear\\"/);
+assert.match(jsVacationsBundle, /for=\\"vacAddPerson\\"/);
+assert.match(jsVacationsBundle, /for=\\"vacCheckDays\\"/);
 assert.match(sidebarService, /buildVacationBulkFixPlanFromSidebar/);
 assert.match(sidebarService, /applyVacationBulkFixPlanFromSidebar/);
 assert.match(sidebarService, /getVacationMonthCalendarFromSidebar/);
@@ -2611,8 +2653,8 @@ assert.match(
   /\.vacations-mini-calendar__day--overload/,
   "mini calendar must style overloaded days",
 );
-assert.match(jsVacations, /openFindFromProblem\(index\)/);
-assert.match(jsVacations, /Підібрати нову дату/);
+assert.match(jsVacationsBundle, /openFindFromProblem\(index\)/);
+assert.match(jsVacationsBundle, /Підібрати нову дату/);
 assert.doesNotMatch(jsVacations, /label:\s*"Перевірка"/);
 assert.match(
   stylesPersonnel,
@@ -2629,9 +2671,9 @@ assert.match(
   /\.vacation-card-badge[\s\S]*?flex:\s*0\s+0\s+auto[\s\S]*?white-space:\s*nowrap/,
   "vacation card badge must not shrink or wrap",
 );
-assert.match(jsVacations, /vacation-card-badge/);
+assert.match(jsVacationsBundle, /vacation-card-badge/);
 assert.match(
-  jsVacations,
+  jsVacationsBundle,
   /vacation-card-badge">' \+\s*\n\s*VacationModule\.esc\(vacation\.type\)/,
   "vacation type badge must be a single span without split text",
 );
@@ -2646,7 +2688,7 @@ assert.match(sidebarService, /const VacationSidebarService_ = \(function \(\)/);
 assert.match(sidebarService, /PersonnelRepository_\.getActiveRows\(\)/);
 assert.match(sidebarService, /applyVacationOptionFromSidebar/);
 assert.match(sidebarService, /requestId:\s*String\(vacation\.requestId/);
-assert.match(jsVacations, /requestId:\s*vacation\.requestId/);
+assert.match(jsVacationsBundle, /requestId:\s*vacation\.requestId/);
 assert.doesNotMatch(
   sidebar + sidebarService,
   /VACATION_OPTIONS|writeVacationOptions/,

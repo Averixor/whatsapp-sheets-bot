@@ -1,8 +1,8 @@
 # WASB — повний список файлів репозиторію
 # Порядок: дерево каталогів (depth-first, алфавіт у кожній папці)
 # Виключено: .git/, node_modules/, локальні .clasp*.json (крім *.example.json)
-# Файлів: 272
-# Оновлено: 2026-07-04T01:12:58Z
+# Файлів: 279
+# Оновлено: 2026-07-10T03:18:34Z
 
 .
   .clasp.example.json
@@ -292,7 +292,14 @@ ui/
   Js.Security.Policy.html
   Js.Security.Util.html
   Js.State.html
+  Js.Vacations.Actions.html
+  Js.Vacations.Constants.html
+  Js.Vacations.Formatters.html
   Js.Vacations.html
+  Js.Vacations.Module.html
+  Js.Vacations.Render.Calendar.html
+  Js.Vacations.Render.Main.html
+  Js.Vacations.Render.Problems.html
   PersonCalendar.html
   Sidebar.html
   Styles_00_Base.html

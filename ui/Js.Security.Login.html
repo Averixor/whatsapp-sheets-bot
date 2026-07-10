@@ -86,9 +86,11 @@
       "    </div>",
       '    <div id="accessLoginModalBody" class="access-login-modal__body is-form">',
       '      <div id="accessLoginForm" style="display:none;">',
-      '        <label class="access-login-modal__field"><span class="access-login-modal__label">Ключ доступу</span><input id="loginAccessKey" class="access-login-modal__input" type="password" autocomplete="current-password" placeholder="Введіть ключ доступу"></label>',
+      '        <label class="access-login-modal__field"><span class="access-login-modal__label">Логін</span><input id="accessLoginUsernameInput" class="access-login-modal__input" type="text" autocomplete="username" placeholder="Введіть логін"></label>',
+      '        <label class="access-login-modal__field"><span class="access-login-modal__label">Пароль</span><input id="accessLoginPasswordInput" class="access-login-modal__input" type="password" autocomplete="current-password" placeholder="Введіть пароль"></label>',
       '        <div class="access-login-modal__actions" style="display:grid; gap:8px;">',
-      '          <button type="button" id="accessLoginSubmitBtn" class="access-login-modal__submit">Підтвердити вхід</button>',
+      '          <button type="button" id="accessLoginSubmitBtn" class="access-login-modal__submit">Увійти</button>',
+      '          <button type="button" id="accessLoginToHaveKeyBtn" class="access-login-modal__submit" style="background:transparent; border:1px solid var(--border-color,#374151);">Зареєструватися з ключем</button>',
       '          <button type="button" id="accessLoginToRequestBtn" class="access-login-modal__submit" style="background:transparent; border:1px solid var(--border-color,#374151);">Отримати ключ доступу</button>',
       '          <button type="button" id="accessLoginBackBtn" class="access-login-modal__submit" style="background:transparent; border:1px solid var(--border-color,#374151);">Назад</button>',
       "        </div>",
@@ -102,7 +104,8 @@
       '        <label class="access-login-modal__field"><span class="access-login-modal__label">Куди зручно отримати ключ</span><select id="accessRequestPreferredContactInput" class="access-login-modal__input"><option value="email">Email</option><option value="whatsapp">WhatsApp</option><option value="signal">Signal</option><option value="telegram">Telegram</option></select></label>',
       '        <div class="access-login-modal__actions" style="display:grid; gap:8px;">',
       '          <button type="button" id="accessKeyRequestSubmitBtn" class="access-login-modal__submit">Отримати ключ доступу</button>',
-      '          <button type="button" id="accessRequestToLoginBtn" class="access-login-modal__submit" style="background:transparent; border:1px solid var(--border-color,#374151);">Увійти за ключем</button>',
+      '          <button type="button" id="accessRequestToHaveKeyBtn" class="access-login-modal__submit" style="background:transparent; border:1px solid var(--border-color,#374151);">У мене вже є ключ</button>',
+      '          <button type="button" id="accessRequestToLoginBtn" class="access-login-modal__submit" style="background:transparent; border:1px solid var(--border-color,#374151);">Увійти за логіном</button>',
       '          <button type="button" id="accessRequestBackBtn" class="access-login-modal__submit" style="background:transparent; border:1px solid var(--border-color,#374151);">Назад</button>',
       "        </div>",
       "      </div>",
@@ -137,11 +140,17 @@
     const requestToLoginBtn = document.getElementById(
       "accessRequestToLoginBtn",
     );
+    const loginToHaveKeyBtn = document.getElementById(
+      "accessLoginToHaveKeyBtn",
+    );
+    const requestToHaveKeyBtn = document.getElementById(
+      "accessRequestToHaveKeyBtn",
+    );
     const loginBackBtn = document.getElementById("accessLoginBackBtn");
     const requestBackBtn = document.getElementById("accessRequestBackBtn");
     const haveKeyBackBtn = document.getElementById("accessHaveKeyBackBtn");
     if (loginSubmitBtn)
-      loginSubmitBtn.addEventListener("click", submitLoginByAccessKeyForm_);
+      loginSubmitBtn.addEventListener("click", submitLoginByPasswordForm_);
     if (requestSubmitBtn)
       requestSubmitBtn.addEventListener("click", submitAccessKeyRequestForm_);
     if (haveKeySubmitBtn)
@@ -152,6 +161,14 @@
     if (loginToRequestBtn)
       loginToRequestBtn.addEventListener("click", function () {
         openAccessLoginFlow("request");
+      });
+    if (loginToHaveKeyBtn)
+      loginToHaveKeyBtn.addEventListener("click", function () {
+        openAccessLoginFlow("haveKey");
+      });
+    if (requestToHaveKeyBtn)
+      requestToHaveKeyBtn.addEventListener("click", function () {
+        openAccessLoginFlow("haveKey");
       });
     if (requestToLoginBtn)
       requestToLoginBtn.addEventListener("click", function () {
@@ -165,8 +182,6 @@
       haveKeyBackBtn.addEventListener("click", function () {
         openAccessLoginFlow("login");
       });
-    if (submitBtn) submitBtn.addEventListener("click", submitAccessLoginForm_);
-
     window.addEventListener("keydown", function (event) {
       if (event.key === "Escape") {
         const state = ensureAccessLoginState_();
@@ -195,6 +210,7 @@
       document.getElementById("identifierInput") ||
       document.getElementById("accessIdentifierInput") ||
       document.getElementById("accessLoginIdentifier") ||
+      document.getElementById("accessLoginUsernameInput") ||
       document.getElementById("accessLoginInput") ||
       document.querySelector('[name="identifier"]') ||
       document.querySelector('[name="login"]') ||
@@ -204,12 +220,14 @@
     var passwordInputEl =
       document.getElementById("passwordInput") ||
       document.getElementById("accessPasswordInput") ||
+      document.getElementById("accessLoginPasswordInput") ||
       document.getElementById("accessLoginPassword") ||
       document.querySelector('[name="password"]') ||
       document.querySelector("[data-access-password]") ||
       document.querySelector("[data-password-input]");
 
     var keyInputEl =
+      document.getElementById("accessHaveKeyInput") ||
       document.getElementById("loginAccessKey") ||
       document.getElementById("accessKeyInput") ||
       document.getElementById("userKeyInput") ||
@@ -302,15 +320,107 @@
         normalizedMode === "request"
           ? "Заповніть заявку на отримання нового ключа доступу"
           : normalizedMode === "haveKey"
-            ? "Створіть логін і пароль для вже підтвердженого ключа"
-            : "Введіть уже виданий ключ доступу";
+            ? "Створіть логін і пароль для вже виданого ключа"
+            : "Увійдіть за логіном і паролем";
     }
     setAccessLoginModalMessage_("", false);
     setAccessLoginMode_(normalizedMode);
     if (normalizedMode === "login") {
-      const loginInput = document.getElementById("loginAccessKey");
+      const loginInput = document.getElementById("accessLoginUsernameInput");
       if (loginInput) loginInput.focus();
+    } else if (normalizedMode === "haveKey") {
+      const keyInput = document.getElementById("accessHaveKeyInput");
+      if (keyInput) keyInput.focus();
     }
+  }
+
+  async function submitLoginByPasswordForm_() {
+    const state = ensureAccessLoginState_();
+    if (state.loading) return;
+
+    const login = safeString_(
+      document.getElementById("accessLoginUsernameInput") &&
+        document.getElementById("accessLoginUsernameInput").value,
+    );
+    const password = String(
+      (document.getElementById("accessLoginPasswordInput") &&
+        document.getElementById("accessLoginPasswordInput").value) ||
+        "",
+    );
+
+    if (!login) {
+      setAccessLoginModalMessage_("Введіть логін.", true);
+      return;
+    }
+    if (!password) {
+      setAccessLoginModalMessage_("Введіть пароль.", true);
+      return;
+    }
+
+    setAccessLoginModalMessage_("", false);
+    setAccessLoginLoading_(true);
+
+    try {
+      const api =
+        window.MaintenanceApi ||
+        window.Stage7Api ||
+        MaintenanceApi ||
+        Stage7Api ||
+        {};
+      if (typeof api.loginByCredentials === "function") {
+        const result = await api.loginByCredentials({
+          login: login,
+          password: password,
+        });
+        await handleAccessLoginResult_(result);
+        return;
+      }
+      if (typeof api.loginByAccessKey !== "function") {
+        throw new Error("Метод входу недоступний у клієнтському API.");
+      }
+      const result = await api.loginByAccessKey({
+        login: login,
+        password: password,
+      });
+      await handleAccessLoginResult_(result);
+    } catch (error) {
+      setAccessLoginModalMessage_(normalizeError(error), true);
+    } finally {
+      setAccessLoginLoading_(false);
+    }
+  }
+
+  async function handleAccessLoginResult_(result) {
+    if (!result || result.ok === false || result.success === false) {
+      setAccessLoginModalMessage_(
+        (result && (result.message || result.error)) ||
+          "Логін або пароль не підтверджено",
+        true,
+      );
+      await loadAccessDescriptor();
+      return;
+    }
+
+    if (result.descriptor) {
+      STATE.access = normalizeAccessForUi_(result.descriptor);
+    } else if (result.data && result.data.descriptor) {
+      STATE.access = normalizeAccessForUi_(result.data.descriptor);
+    } else {
+      await loadAccessDescriptor();
+    }
+
+    setAccessLoginLoading_(false);
+    if (result.registrationRequired) {
+      setAccessLoginModalMessage_(result.message || "", false);
+      openAccessLoginFlow("haveKey");
+      showToast(result.message || "Завершіть реєстрацію");
+      applyAccessPolicyUI();
+      return;
+    }
+
+    closeAccessLoginModal();
+    applyAccessPolicyUI();
+    showToast((result && result.message) || "Вхід виконано");
   }
 
   async function submitLoginByAccessKeyForm_() {
@@ -318,8 +428,8 @@
     if (state.loading) return;
 
     const accessKey = safeString_(
-      document.getElementById("loginAccessKey") &&
-        document.getElementById("loginAccessKey").value,
+      document.getElementById("accessHaveKeyInput") &&
+        document.getElementById("accessHaveKeyInput").value,
     );
     if (!accessKey) {
       setAccessLoginModalMessage_("Введіть ключ доступу.", true);
@@ -342,38 +452,11 @@
         );
       }
       const result = await api.loginByAccessKey({ accessKey: accessKey });
-      if (!result || result.ok === false || result.success === false) {
-        setAccessLoginModalMessage_(
-          (result && (result.message || result.error)) ||
-            "Ключ доступу не підтверджено",
-          true,
-        );
-        await loadAccessDescriptor();
-        return;
-      }
-
-      if (result.descriptor) {
-        STATE.access = normalizeAccessForUi_(result.descriptor);
-      } else if (result.data && result.data.descriptor) {
-        STATE.access = normalizeAccessForUi_(result.data.descriptor);
-      } else {
-        await loadAccessDescriptor();
-      }
-
-      setAccessLoginLoading_(false);
-      if (result.registrationRequired) {
-        setAccessLoginModalMessage_(result.message || "", false);
-        openAccessLoginFlow("haveKey");
+      await handleAccessLoginResult_(result);
+      if (result && result.registrationRequired) {
         const haveKeyInput = document.getElementById("accessHaveKeyInput");
         if (haveKeyInput) haveKeyInput.value = accessKey;
-        showToast(result.message || "Завершіть реєстрацію");
-        applyAccessPolicyUI();
-        return;
       }
-
-      closeAccessLoginModal();
-      applyAccessPolicyUI();
-      showToast((result && result.message) || "Вхід виконано");
     } catch (error) {
       setAccessLoginModalMessage_(normalizeError(error), true);
     } finally {

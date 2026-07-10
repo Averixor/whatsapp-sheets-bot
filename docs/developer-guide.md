@@ -30,7 +30,7 @@ Google Sheets       — ACCESS, PERSONNEL, місячні листи, …
 | PERSONNEL | Люди, Callsign, Status (UA), телефони |
 | Місячні аркуші (`01`…`12`) | Добовий графік, формульний блок |
 | `MonthJournalMaterialize` | Derived `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` from month sheets + PERSONNEL + DICT |
-| `ReferenceSheetsRepository_` | Optional sidebar reference sheets `PHONE_DIRECTORY` / `CAR` |
+| `ReferenceSheetsRepository_` | Optional sidebar reference sheets `PHONE_DIRECTORY` / `CAR` / `WEAPON` / `WEAPON` |
 | `Report_*` | Зведення дня (short з formula block, detailed окремо) — modules in `reports/` |
 | Vacation modules | Відпустки, перевірки, міні-календар — server modules in `vacations/` |
 | `contracts/` + `scripts/verify-*` | Захист від тихої деградації (governance CI) |

@@ -267,6 +267,24 @@
       };
     },
 
+    async getWeaponsRegister() {
+      const response = await Api.run("apiStage7GetWeaponsRegister");
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success,
+        message: response?.message || "",
+        error: response?.error || null,
+        data: result,
+        items: Array.isArray(result.items) ? result.items : [],
+        persons: Array.isArray(result.persons) ? result.persons : [],
+        stats: result.stats || {},
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response,
+      };
+    },
+
     async createNextMonth(options = {}) {
       const response = await Api.run("apiStage7CreateNextMonth", options);
       const result = unwrapStage4Result(response) || {};
@@ -322,6 +340,12 @@
           "apiStage7RegisterAccessWithTemporaryPassword",
           payload || {},
         ),
+      );
+    },
+
+    async loginByCredentials(payload = {}) {
+      return adaptStage4UtilityResponse(
+        await Api.run("apiStage7LoginByAccessKey", payload || {}),
       );
     },
   };
@@ -419,6 +443,10 @@
           "apiStage7RegisterAccessWithTemporaryPassword",
           payload || {},
         ),
+      ),
+    loginByCredentials: async (payload = {}) =>
+      adaptStage4UtilityResponse(
+        await Api.run("apiStage7LoginByAccessKey", payload || {}),
       ),
     loginByIdentifierAndCallsign: async (payload = {}) =>
       adaptStage4UtilityResponse(
