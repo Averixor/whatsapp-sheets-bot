@@ -172,12 +172,15 @@ function syncMonthlyCallsignsFromPersonnel_(targetSheetOrName) {
 
   if (values.length > maxRows) {
     warnings.push(
-      "У PERSONNEL більше рядків (" +
+      "Лист " +
+        monthSheet.getName() +
+        ": у PERSONNEL " +
         values.length +
-        "), ніж слотів графіка (" +
+        " рядок, слотів графіка " +
         maxRows +
-        "); синхронізовано перші " +
-        maxRows,
+        "; синхронізовано перші " +
+        maxRows +
+        ".",
     );
   }
 
@@ -204,6 +207,41 @@ function syncActiveMonthlyCallsignsFromPersonnel_() {
   return syncMonthlyCallsignsFromPersonnel_(
     typeof getBotMonthSheetName_ === "function" ? getBotMonthSheetName_() : "",
   );
+}
+
+function _monthlyCallsignSyncModeFromOptions_(options) {
+  var opts = options || {};
+  if (
+    opts.includeHistory === true ||
+    opts.monthlySyncMode === "all" ||
+    opts.mode === "history"
+  ) {
+    return "all";
+  }
+  var monthSheet = String(opts.monthSheet || opts.month || "").trim();
+  if (/^\d{2}$/.test(monthSheet)) {
+    return "sheet";
+  }
+  return "current";
+}
+
+/**
+ * Default personnel update: current bot month only.
+ * History: monthlySyncMode=all | includeHistory=true | mode=history.
+ * Single archive month: monthSheet="06".
+ */
+function syncMonthlyCallsignsForPersonnelUpdate_(options) {
+  var mode = _monthlyCallsignSyncModeFromOptions_(options);
+  if (mode === "all") {
+    return syncAllMonthlyCallsignsFromPersonnel_();
+  }
+  if (mode === "sheet") {
+    var month = String(
+      (options && options.monthSheet) || (options && options.month) || "",
+    ).trim();
+    return syncMonthlyCallsignsFromPersonnel_(month);
+  }
+  return syncActiveMonthlyCallsignsFromPersonnel_();
 }
 
 function syncAllMonthlyCallsignsFromPersonnel_() {

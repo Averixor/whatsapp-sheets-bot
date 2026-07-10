@@ -778,10 +778,12 @@ function materializePersonnelDerivedSheets_(options) {
 
   var monthlySync = null;
   try {
-    if (typeof syncAllMonthlyCallsignsFromPersonnel_ === "function") {
-      monthlySync = syncAllMonthlyCallsignsFromPersonnel_();
+    if (typeof syncMonthlyCallsignsForPersonnelUpdate_ === "function") {
+      monthlySync = syncMonthlyCallsignsForPersonnelUpdate_(options || {});
     } else if (typeof syncActiveMonthlyCallsignsFromPersonnel_ === "function") {
       monthlySync = syncActiveMonthlyCallsignsFromPersonnel_();
+    } else if (typeof syncMonthlyCallsignsFromPersonnel_ === "function") {
+      monthlySync = syncMonthlyCallsignsFromPersonnel_();
     } else {
       monthlySync = {
         ok: false,
