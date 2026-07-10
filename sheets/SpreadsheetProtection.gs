@@ -119,6 +119,9 @@ function _spResolveSheetNames_(options) {
     _spGetCoreValue_("CHECKPOINTS_SHEET", "CHECKPOINTS"),
     _spGetCoreValue_("ALERTS_LOG_SHEET", "ALERTS_LOG"),
     _spGetCoreValue_("ACCESS_SHEET", "ACCESS"),
+    _spGetConfigValue_(config, "PHONE_DIRECTORY_SHEET", "PHONE_DIRECTORY"),
+    _spGetConfigValue_(config, "CAR_SHEET", "CAR"),
+    _spGetConfigValue_(config, "WEAPON_SHEET", "WEAPON"),
   ];
 
   if (includeSendPanel) {

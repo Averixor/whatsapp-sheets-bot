@@ -105,6 +105,71 @@ function getPersonCardData(callsign, dateStr) {
   }
 }
 
+
+function _personCardAssetLine_(label, value) {
+  const safeValue = String(value || "").trim();
+  if (!safeValue) return "";
+  return `<div class="asset-line"><span>${_personCardSafeHtml_(label)}</span>${_personCardSafeHtml_(safeValue)}</div>`;
+}
+
+function _personCardRenderCar_(item) {
+  const car = item || {};
+  return `<div class="asset-card asset-card-car">
+    <div class="asset-title">${_personCardSafeHtml_(car.assetName || "Автотехніка")}</div>
+    ${_personCardAssetLine_("Військовий номер", car.militaryNumber || "—")}
+    ${_personCardAssetLine_("Шасі", car.chassisNumber || "—")}
+    ${_personCardAssetLine_("Рік", car.year || "—")}
+    ${_personCardAssetLine_("Стан", car.status || "—")}
+    ${_personCardAssetLine_("Вартість", car.costDisplay || "—")}
+  </div>`;
+}
+
+function _personCardRenderWeapon_(item) {
+  const weapon = item || {};
+  return `<div class="asset-card asset-card-weapon">
+    <div class="asset-title">${_personCardSafeHtml_(weapon.assetName || "Майно")}</div>
+    ${_personCardAssetLine_("Блок", weapon.blockLabel || "—")}
+    ${_personCardAssetLine_("Номенклатура", weapon.nomenclatureCode || "—")}
+    ${_personCardAssetLine_("Заводський номер", weapon.serialNumber || "—")}
+    ${_personCardAssetLine_("Рік", weapon.year || "—")}
+    ${_personCardAssetLine_("Ціна", weapon.unitPriceDisplay || "—")}
+    ${_personCardAssetLine_("Місце", weapon.location || "—")}
+  </div>`;
+}
+
+function _personCardEquipmentHtml_(data) {
+  const cars = Array.isArray(data && data.cars)
+    ? data.cars
+    : data && data.equipment && Array.isArray(data.equipment.cars)
+      ? data.equipment.cars
+      : [];
+  const weapons = Array.isArray(data && data.weapons)
+    ? data.weapons
+    : data && data.equipment && Array.isArray(data.equipment.weapons)
+      ? data.equipment.weapons
+      : [];
+  if (!cars.length && !weapons.length) return "";
+
+  const carsHtml = cars.length
+    ? `<div class="asset-section">
+        <div class="asset-section-title">Автотехніка</div>
+        <div class="asset-list">${cars.map(_personCardRenderCar_).join("")}</div>
+      </div>`
+    : "";
+  const weaponsHtml = weapons.length
+    ? `<div class="asset-section">
+        <div class="asset-section-title">Озброєння та майно</div>
+        <div class="asset-list">${weapons.map(_personCardRenderWeapon_).join("")}</div>
+      </div>`
+    : "";
+
+  return `<div class="assets-wrap">
+    <div class="assets-header">Закріплене майно</div>
+    ${carsHtml}
+    ${weaponsHtml}
+  </div>`;
+}
+
 function openPersonCardByCallsign_(callsign) {
   return openPersonCardByCallsignAndDate_(callsign, _todayStr_());
 }
@@ -135,6 +200,7 @@ function openPersonCardByCallsignAndDate_(callsign, dateStr) {
   const escapedMessage = _personCardSafeHtml_(data.message || "");
   const callsignJs = _personCardJsString_(data.callsign || "");
   const waLink = String(data.waLink || "").trim();
+  const equipmentHtml = _personCardEquipmentHtml_(data);
 
   const currentVacHtml =
     data.vac && data.vac.inVacation && Array.isArray(data.vac.matches)
@@ -365,6 +431,70 @@ function openPersonCardByCallsignAndDate_(callsign, dateStr) {
             line-height: 1.35;
           }
 
+          .assets-wrap {
+            margin-top: 14px;
+            border: 1px solid rgba(96, 165, 250, 0.35);
+            border-radius: 14px;
+            padding: 12px;
+            background: rgba(15, 23, 42, 0.58);
+          }
+
+          .assets-header {
+            font-size: 14px;
+            font-weight: 800;
+            margin-bottom: 10px;
+            color: #ffffff;
+          }
+
+          .asset-section + .asset-section {
+            margin-top: 12px;
+          }
+
+          .asset-section-title {
+            color: #93c5fd;
+            font-size: 12px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+          }
+
+          .asset-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+          }
+
+          .asset-card {
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 12px;
+            padding: 10px;
+            background: rgba(2, 6, 23, 0.38);
+          }
+
+          .asset-title {
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 800;
+            line-height: 1.3;
+            margin-bottom: 6px;
+          }
+
+          .asset-line {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            color: #dbeafe;
+            font-size: 12px;
+            line-height: 1.35;
+            padding: 2px 0;
+          }
+
+          .asset-line span {
+            color: #9fb2cb;
+            flex-shrink: 0;
+          }
+
           .actions {
             display: flex;
             gap: 8px;
@@ -566,6 +696,7 @@ function openPersonCardByCallsignAndDate_(callsign, dateStr) {
 
           ${currentVacHtml}
           ${nextVacHtml}
+          ${equipmentHtml}
 
           <div class="actions">
             ${whatsappHtml}

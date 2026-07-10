@@ -28,6 +28,7 @@ function checkSheets() {
       { name: CONFIG.PHONES_SHEET || "PHONES", required: false },
       { name: CONFIG.PHONE_DIRECTORY_SHEET || "PHONE_DIRECTORY", required: false },
       { name: CONFIG.CAR_SHEET || "CAR", required: false },
+      { name: CONFIG.WEAPON_SHEET || "WEAPON", required: false },
       { name: CONFIG.DICT_SHEET || "DICT", required: true },
       { name: CONFIG.DICT_SUM_SHEET || "DICT_SUM", required: true },
       { name: CONFIG.LOG_SHEET || "LOG", required: false },

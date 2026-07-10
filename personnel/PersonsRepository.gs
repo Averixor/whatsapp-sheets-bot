@@ -78,6 +78,37 @@ var PersonsRepository_ =
       return base;
     }
 
+
+    function getEquipmentForPerson_(person) {
+      if (
+        typeof ReferenceSheetsRepository_ !== "object" ||
+        !ReferenceSheetsRepository_ ||
+        typeof ReferenceSheetsRepository_.getEquipmentForPerson !== "function"
+      ) {
+        return { cars: [], weapons: [], total: 0, warnings: [] };
+      }
+      try {
+        const equipment = ReferenceSheetsRepository_.getEquipmentForPerson(person || {});
+        return {
+          cars: Array.isArray(equipment && equipment.cars) ? equipment.cars : [],
+          weapons: Array.isArray(equipment && equipment.weapons)
+            ? equipment.weapons
+            : [],
+          total: Number(equipment && equipment.total) || 0,
+          warnings: Array.isArray(equipment && equipment.warnings)
+            ? equipment.warnings
+            : [],
+        };
+      } catch (e) {
+        return {
+          cars: [],
+          weapons: [],
+          total: 0,
+          warnings: [e && e.message ? String(e.message) : String(e)],
+        };
+      }
+    }
+
     /**
      * Рядки місячного листа: позивний + БР + координати рядка; персональні поля з PERSONNEL.
      */
@@ -297,11 +328,15 @@ var PersonsRepository_ =
         : null;
 
       const fmlForVacation = merged.fml || payload.fml || "";
+      const equipment = getEquipmentForPerson_(merged);
 
       return {
         id: merged.id || "",
-        callsign: merged.callsign || item.callsign,
+        callsign: merged.callsign || rowMeta.callsign,
         fml: merged.fml || payload.fml || "",
+        lastName: merged.lastName || "",
+        firstName: merged.firstName || "",
+        patronymic: merged.patronymic || "",
         rank: merged.rank || merged.title || "",
         position: merged.position || "",
         oshs: merged.oshs || "",
@@ -327,6 +362,9 @@ var PersonsRepository_ =
           safeDate,
         ),
         vac: VacationsRepository_.getCurrentForFml(fmlForVacation, safeDate),
+        equipment: equipment,
+        cars: equipment.cars,
+        weapons: equipment.weapons,
         phoneDisplay: _formatPhoneDisplay_(phone),
       };
     }

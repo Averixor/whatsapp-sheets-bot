@@ -1344,6 +1344,33 @@ function _findAccessEntryByPasswordSecret_(entries, secret) {
   return null;
 }
 
+function _findAccessEntryByCredentials_(entries, login, password) {
+  const normalizedLogin = String(login || "").trim().toLowerCase();
+  const normalizedEmail = normalizeEmail_(login);
+  const secret = String(password || "").trim();
+  if (!normalizedLogin || !secret || /^WASB-/i.test(secret)) return null;
+  const list = Array.isArray(entries) ? entries : [];
+  for (let i = 0; i < list.length; i++) {
+    const row = list[i];
+    if (row.enabled !== true) continue;
+    if (String(row.registrationStatus || "").toLowerCase() !== "active")
+      continue;
+    if (!row.passwordHash || !row.passwordSalt) continue;
+    if (typeof hashAccessPasswordWithSalt_ !== "function") continue;
+
+    const rowLogin = String(row.login || "").trim().toLowerCase();
+    const rowEmail = normalizeEmail_(row.email);
+    const loginMatches =
+      rowLogin === normalizedLogin ||
+      (!!normalizedEmail && rowEmail === normalizedEmail);
+    if (!loginMatches) continue;
+
+    const enteredHash = hashAccessPasswordWithSalt_(secret, row.passwordSalt);
+    if (enteredHash === row.passwordHash) return row;
+  }
+  return null;
+}
+
 function _isTemporaryAccessKeyUsable_(entry) {
   if (!entry) return false;
   const status = String(entry.registrationStatus || "")
@@ -1403,8 +1430,16 @@ function loginByAccessKey(accessKeyOrPayload) {
     !Array.isArray(accessKeyOrPayload)
       ? Object.assign({}, accessKeyOrPayload)
       : { accessKey: accessKeyOrPayload };
+  const login = String(payload.login || payload.username || "").trim();
+  const password = String(payload.password || payload.pass || "").trim();
   const accessKey = String(
-    payload.accessKey || payload.key || payload.temporaryPassword || "",
+    payload.accessKey ||
+      payload.key ||
+      payload.temporaryPassword ||
+      (!payload.accessKey && !payload.key && !payload.temporaryPassword
+        ? password
+        : "") ||
+      "",
   ).trim();
   const currentKeyHash = getCurrentUserKeyHash_();
   const supportCallsign = getPrimarySupportCallsign_();
@@ -1450,34 +1485,53 @@ function loginByAccessKey(accessKeyOrPayload) {
     let entry = null;
     let matchType = "";
 
-    const tempEntry = _findAccessEntryByTemporaryPassword_(entries, accessKey);
-    if (tempEntry && _isTemporaryAccessKeyUsable_(tempEntry)) {
-      entry = tempEntry;
-      matchType = "temporary_password";
-    }
-    if (!entry) {
-      const passwordEntry = _findAccessEntryByPasswordSecret_(
+    if (login) {
+      const credentialEntry = _findAccessEntryByCredentials_(
         entries,
-        accessKey,
+        login,
+        password || accessKey,
       );
-      if (passwordEntry) {
-        entry = passwordEntry;
-        matchType = "password";
+      if (credentialEntry) {
+        entry = credentialEntry;
+        matchType = "credentials";
+      }
+    } else {
+      const tempEntry = _findAccessEntryByTemporaryPassword_(entries, accessKey);
+      if (tempEntry && _isTemporaryAccessKeyUsable_(tempEntry)) {
+        entry = tempEntry;
+        matchType = "temporary_password";
+      }
+      if (!entry) {
+        const passwordEntry = _findAccessEntryByPasswordSecret_(
+          entries,
+          accessKey,
+        );
+        if (passwordEntry) {
+          entry = passwordEntry;
+          matchType = "password";
+        }
       }
     }
 
     if (!entry) {
+      const isCredentialAttempt = !!login;
       const failure = _registerSelfBindFailure_(currentKeyHash, {
-        identifierType: "access_key",
-        identifierValue: "",
+        identifierType: isCredentialAttempt ? "login" : "access_key",
+        identifierValue: isCredentialAttempt ? login : "",
         callsign: "",
-        reasonCode: "access.login.key_invalid",
-        reasonMessage: "Ключ доступу не підтверджено.",
+        reasonCode: isCredentialAttempt
+          ? "access.login.credentials_invalid"
+          : "access.login.key_invalid",
+        reasonMessage: isCredentialAttempt
+          ? "Логін або пароль не підтверджено."
+          : "Ключ доступу не підтверджено.",
         loginMeta: {},
       });
       const finalCode = failure.blocked
         ? REASON_CODES.SELF_BIND_LOGIN_BLOCKED
-        : "access.login.key_invalid";
+        : isCredentialAttempt
+          ? "access.login.credentials_invalid"
+          : "access.login.key_invalid";
       return {
         success: false,
         ok: false,
@@ -1488,7 +1542,9 @@ function loginByAccessKey(accessKeyOrPayload) {
             " хв. " +
             getSelfBindHelpText_() +
             "."
-          : "Ключ доступу не підтверджено.",
+          : isCredentialAttempt
+            ? "Логін або пароль не підтверджено."
+            : "Ключ доступу не підтверджено.",
         loginLockout: failure.blocked ? failure : loginState,
       };
     }
@@ -1528,7 +1584,8 @@ function loginByAccessKey(accessKeyOrPayload) {
       success: true,
       ok: true,
       code: REASON_CODES.OK,
-      message: "Вхід виконано.",
+      message:
+        matchType === "credentials" ? "Вхід за логіном виконано." : "Вхід виконано.",
       descriptor: descriptor,
       supportCallsign: supportCallsign,
     };

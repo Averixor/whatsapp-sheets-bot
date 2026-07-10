@@ -25,7 +25,7 @@ This repository is packaged for Google Apps Script through `clasp`:
 - role-separated maintenance access: maintainer, admin, sysadmin, and owner have different server-side permissions
 - lightweight sidebar bootstrap and read-only access descriptor support for faster UI startup
 - derived month journal sheets per month: `ЖУРНАЛ_MM` and `ПІДСУМОК_MM`
-- optional sidebar reference sheets: `PHONE_DIRECTORY` (service phones) and `CAR` (vehicle register)
+- optional sidebar reference sheets: `PHONE_DIRECTORY` (service phones), `CAR` (vehicle register), and `WEAPON` (weapons/property register)
 
 ## Maintainer workflow
 
@@ -177,7 +177,7 @@ Notes:
 ## PERSONNEL model
 
 - Monthly sheets store **Callsign + schedule**; `PERSONNEL` stores person fields.
-- `Callsign` is the schedule/lookup key (reference xlsx: column **L** on PERSONNEL, values like `ГРАФ`). `FML` is the fallback display identity (synthesized from `Last name` + `First name` + `Patronymic`). `TEMPLATE` is legacy-only (not in the reference workbook).
+- `Callsign` is the schedule/lookup key (reference xlsx: column **M** on PERSONNEL, values like `ГРАФ`). `FML` is the fallback display identity (synthesized from `Last name` + `First name` + `Patronymic`). `TEMPLATE` is legacy-only (not in the reference workbook).
 - `ID` is optional Армія+ data; `Position` is not a person key.
 - Active UA statuses (dropdown, 9 values): `В наявності`, `У відрядженні`,
   `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`.

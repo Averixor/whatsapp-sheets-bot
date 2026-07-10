@@ -5,21 +5,21 @@ Historical record of changes. For the current operational truth, use `README.md`
 ## 2026-07-03 — Docs and governance synced to current code
 
 - **Docs:** aligned `README.md`, `RUNBOOK.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `AGENTS.md`, `docs/README.md`, `docs/developer-guide.md`, `docs/module-map.md`, and ADR summaries with the current Stage 7 codebase.
-- **Current features documented:** derived month journal `ЖУРНАЛ_MM` / `ПІДСУМОК_MM`, optional `PHONE_DIRECTORY` / `CAR` reference sheets, and `PERSONNEL.Status` runtime self-heal.
+- **Current features documented:** derived month journal `ЖУРНАЛ_MM` / `ПІДСУМОК_MM`, optional `PHONE_DIRECTORY` / `CAR` / `WEAPON` / `WEAPON` reference sheets, and `PERSONNEL.Status` runtime self-heal.
 - **Governance:** extracted declarative contracts for month journal and reference repositories; updated verifiers to read those contracts instead of hardcoded expectations.
 - **Release status docs:** marked `WASB_RELEASE_AUDIT.md` as historical snapshot rather than current readiness truth.
 
 ## 2026-07-03 — Month journal, reference sheets, and PERSONNEL Status self-heal
 
 - **`reports/MonthJournalMaterialize.gs`** + sidebar/API/governance wiring: derived `ЖУРНАЛ_MM` and `ПІДСУМОК_MM` per month sheet (`01`..`12`) via `apiStage7MaterializeMonthJournal()`.
-- **`data/DictionaryRepository.gs` / `ReferenceSheetsRepository_`**: optional `PHONE_DIRECTORY` and `CAR` repositories with sidebar views and maintainer access.
+- **`data/DictionaryRepository.gs` / `ReferenceSheetsRepository_`**: optional `PHONE_DIRECTORY`, `CAR`, and `WEAPON` repositories with sidebar views and maintainer access.
 - **`personnel/PersonnelRepository.gs` / `personnel/PersonnelMaterialize.gs`**: missing `Status` header is auto-created and validated before PERSONNEL materialize flows continue.
 - **UI:** `PHONE_DIRECTORY` WhatsApp buttons normalized to fixed-width `WA`; unavailable numbers render as inactive `Н/Д` badges.
 
 ## 2026-06-20 — Reference workbook layout contract ("Книга Взводу Охорони.xlsx")
 
 - **Contract:** `contracts/reference-workbook-layout.contract.json` — headers for PERSONNEL, PHONES, BIRTHDAY, DICT, DICT_SUM, month `02`/`06`, VACATIONS extracted from the reference xlsx.
-- **Code:** `PersonnelRepository.gs` — aliases `ID v/s` → `ID_VS`, ignore `Cells`; comments corrected: reference uses **Callsign column L**, not TEMPLATE.
+- **Code:** `PersonnelRepository.gs` — aliases `ID v/s` → `ID_VS`, ignore `Cells`; comments corrected: reference uses **Email column L** and **Callsign column M**, not TEMPLATE.
 - **Docs:** `RUNBOOK.md` §14, `AGENTS.md`, `README.md`, `docs/README.md`, `.cursor/rules/personnel-data-keys.mdc` aligned with the reference file.
 - **CI:** `scripts/verify-reference-workbook-layout.mjs` guards contract vs aliases and docs.
 
@@ -27,7 +27,7 @@ Historical record of changes. For the current operational truth, use `README.md`
 
 - **Code:** PersonnelRepository now fully supports the physical PERSONNEL layout from the reference xlsx:
   - Split name columns `Last name` / `First name` / `Patronymic` → synthesized `FML`
-  - **`Callsign` column L** holds working callsign values (reference has no TEMPLATE column)
+  - **`Email` column L** and **`Callsign` column M** hold working email/callsign values (reference has no TEMPLATE column)
   - Aliases extended for split names and `ID v/s`; FML requirement relaxed when name parts present
   - Monthly sheets in the xlsx use `ПОЗИВНИЙ` (Callsign) + `П.І.Б.` / codes — compatible with existing SheetSchemas / lookup by Callsign
 - **Docs:** Updated `README.md`, `RUNBOOK.md` §14, `AGENTS.md`, `CHANGELOG.md` to describe logical vs physical columns, reference xlsx support, and post-sync state. All documents aligned with project + the provided table.

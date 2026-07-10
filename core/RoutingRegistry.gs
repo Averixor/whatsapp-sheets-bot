@@ -101,6 +101,20 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ =
         verifyAfterWrite: false,
       }),
 
+      getWeaponsRegister: Object.freeze({
+        routeName: "sidebar.getWeaponsRegister",
+        publicApiMethod: "apiStage7GetWeaponsRegister",
+        useCase: "ReferenceSheetsRepository_.readWeaponsRegister",
+        category: "sidebar",
+        compatibilityStatus: "canonical",
+        mode: "read",
+        lockRequired: false,
+        dryRunSupported: false,
+        uiAllowed: true,
+        clientActionAliases: ["weaponsRegister"],
+        verifyAfterWrite: false,
+      }),
+
       generateSendPanelForDate: Object.freeze({
         routeName: "sidebar.generateSendPanelForDate",
         publicApiMethod: "apiGenerateSendPanelForDate",
