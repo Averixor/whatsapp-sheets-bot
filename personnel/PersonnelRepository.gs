@@ -516,8 +516,8 @@ function _personnelBuildHeaderColIndex_(headersRow) {
   return col;
 }
 
-/** Reference workbook column P (1-based). */
-var PERSONNEL_REFERENCE_STATUS_COL_ = 16;
+/** Reference workbook column Q (1-based). */
+var PERSONNEL_REFERENCE_STATUS_COL_ = 17;
 
 function _personnelFindStatusColumnIndex_(headersRow) {
   var headers = headersRow || [];
@@ -530,7 +530,7 @@ function _personnelFindStatusColumnIndex_(headersRow) {
 }
 
 /**
- * Creates missing Status header on PERSONNEL (column P in reference layout, or next free column).
+ * Creates missing Status header on PERSONNEL (column Q in reference layout, or next free column).
  * Does not overwrite unrelated headers. Empty data cells stay empty (= В наявності on read).
  */
 function ensurePersonnelStatusColumnHeader_(sheet) {

@@ -518,7 +518,7 @@ Local equivalent: **`npm run check`** (alias **`npm run ci`**).
 | `verify-no-russian-text.mjs` | Ban Russian markers in project text |
 | `verify-user-facing-copy.mjs` | Ban technical tokens in user-visible copy (`contracts/user-facing-copy.contract.json`) |
 | `verify-reference-workbook-layout.mjs` | Reference xlsx header layout contract |
-| `verify-reference-repositories.mjs` | `PHONE_DIRECTORY` / `CAR` / `WEAPON` / `WEAPON` parser semantics and workbook coverage |
+| `verify-reference-repositories.mjs` | `PHONE_DIRECTORY` / `CAR` / `WEAPON` parser semantics and workbook coverage |
 | `verify-workbook-contract.mjs` | Monthly layout geometry, formula-block short summary, detailed summary grouping |
 | `verify-monthly-callsign-sync.mjs` | PERSONNEL → monthly «Позивні» sync contract |
 | `verify-send-panel-bounds.mjs` | SEND_PANEL row bounds contract |

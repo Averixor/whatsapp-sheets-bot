@@ -119,8 +119,8 @@ Domain folders (`reports/`, `vacations/`, `core/`, `ui/`, …) are mechanical mo
 - **Status** (UA only in sheet): dropdown — `В наявності`, `У відрядженні`, `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`.
   Runtime-active: all except `Вибув` and `СЗЧ`; empty = `В наявності`. Legacy
   (`Дієвий`, `Active`, `Відрядження`, EN) mapped on read only.
-- Final (logical) headers: `ID | FML | … | Unit | Status`. Physical in reference "Книга Взводу Охорони.xlsx": `Cells`, `ID v/s`, split `Last name` / `First name` / `Patronymic` (FML synthesized), **`Callsign` in column L**, `Rank`, `OSH 4`, `Status` — see `contracts/reference-workbook-layout.contract.json`. `TEMPLATE` is legacy-only (not in reference file). Code reads by **header names only** (aliases cover variants). See `RUNBOOK.md` §14.
-- Missing `Status` header is self-healed at runtime (reference column **P** when free, otherwise next safe column) before validation/materialize paths proceed.
+- Final (logical) headers: `ID | FML | … | Unit | Status`. Physical in reference "Книга Взводу Охорони.xlsx": `Cells`, `ID v/s`, split `Last name` / `First name` / `Patronymic` (FML synthesized), **`Email` in column L**, **`Callsign` in column M**, `Rank`, `OSH 4`, **`Status` in column Q** — see `contracts/reference-workbook-layout.contract.json`. `TEMPLATE` is legacy-only (not in reference file). Code reads by **header names only** (aliases cover variants). See `RUNBOOK.md` §14.
+- Missing `Status` header is self-healed at runtime (reference column **Q** when free, otherwise next safe column) before validation/materialize paths proceed.
 - After every production deploy or PERSONNEL edits: run **`apiStage7MaterializeComputedData()`** when derived columns may be stale; run **`apiStage7ClearPhoneCache()`** for phone cache invalidation (mandatory after deploy). If month fact/history sheets are used, refresh them separately with **`apiStage7MaterializeMonthJournal()`**.
 - See `.cursor/rules/personnel-data-keys.mdc`.
 

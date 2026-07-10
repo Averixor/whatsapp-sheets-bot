@@ -2,10 +2,17 @@
 
 Historical record of changes. For the current operational truth, use `README.md`, `RUNBOOK.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `AGENTS.md`, and the active contracts / verify scripts.
 
+## 2026-07-10 — Full docs/code audit alignment
+
+- **PERSONNEL Status self-heal:** `personnel-status.contract.json` and `PersonnelRepository.gs` now target reference column **Q** (17), matching `reference-workbook-layout.contract.json` (column P is `OSH 4`).
+- **Docs:** fixed stale Callsign/Email column letters in `AGENTS.md`, `.cursor/rules/personnel-data-keys.mdc`, `docs/README.md`, and `README.md` (Status self-heal column).
+- **Docs:** removed duplicate `/ WEAPON` typos in `ARCHITECTURE.md`, `docs/module-map.md`, `docs/developer-guide.md`, `docs/README.md`, and `RUNBOOK.md`.
+- **CI:** `verify-reference-workbook-layout.mjs` and `verify-personnel-status-contract.mjs` cross-check Status column parity across contracts.
+
 ## 2026-07-03 — Docs and governance synced to current code
 
 - **Docs:** aligned `README.md`, `RUNBOOK.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `AGENTS.md`, `docs/README.md`, `docs/developer-guide.md`, `docs/module-map.md`, and ADR summaries with the current Stage 7 codebase.
-- **Current features documented:** derived month journal `ЖУРНАЛ_MM` / `ПІДСУМОК_MM`, optional `PHONE_DIRECTORY` / `CAR` / `WEAPON` / `WEAPON` reference sheets, and `PERSONNEL.Status` runtime self-heal.
+- **Current features documented:** derived month journal `ЖУРНАЛ_MM` / `ПІДСУМОК_MM`, optional `PHONE_DIRECTORY` / `CAR` / `WEAPON` reference sheets, and `PERSONNEL.Status` runtime self-heal.
 - **Governance:** extracted declarative contracts for month journal and reference repositories; updated verifiers to read those contracts instead of hardcoded expectations.
 - **Release status docs:** marked `WASB_RELEASE_AUDIT.md` as historical snapshot rather than current readiness truth.
 

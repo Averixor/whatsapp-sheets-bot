@@ -113,7 +113,7 @@ Key repositories and services:
 - `personnel/PersonnelRepository.gs`
 - `personnel/PersonsRepository.gs`
 - `sendpanel/SendPanelRepository.gs`
-- `data/DictionaryRepository.gs` — shared dictionary/phone/profile access plus `ReferenceSheetsRepository_` for `PHONE_DIRECTORY` / `CAR` / `WEAPON` / `WEAPON` / `WEAPON`
+- `data/DictionaryRepository.gs` — shared dictionary/phone/profile access plus `ReferenceSheetsRepository_` for `PHONE_DIRECTORY` / `CAR` / `WEAPON`
 - `reports/SummaryRepository.gs`
 - `reports/SummaryService.gs`
 - `reports/Report_SummaryData.gs` — read short-summary values from monthly formula block

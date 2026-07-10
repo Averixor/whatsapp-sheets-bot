@@ -26,10 +26,10 @@
     "Вибув",
     "СЗЧ"
   ],
-  "referenceStatusColumn": 16,
+  "referenceStatusColumn": 17,
   "selfHeal": {
     "header": "Status",
-    "preferColumn": 16,
+    "preferColumn": 17,
     "appendIfOccupied": true,
     "validationAppliedBy": [
       "ensurePersonnelStatusColumn_",

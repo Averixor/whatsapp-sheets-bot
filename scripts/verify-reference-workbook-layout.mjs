@@ -102,5 +102,36 @@ assert.doesNotMatch(
   /`TEMPLATE` as callsign value/,
   "AGENTS.md must not claim TEMPLATE is reference callsign source",
 );
+assert.match(
+  agents,
+  /`Callsign` in column M/,
+  "AGENTS.md must document Callsign in reference column M",
+);
+assert.doesNotMatch(
+  agents,
+  /`Callsign` in column L/,
+  "AGENTS.md must not claim Callsign is reference column L",
+);
+assert.match(
+  agents,
+  /reference column \*\*Q\*\*/,
+  "AGENTS.md must document Status self-heal in reference column Q",
+);
+
+const personnelStatusContract = JSON.parse(
+  fs.readFileSync(
+    path.join(repoRoot, "contracts/personnel-status.contract.json"),
+    "utf8",
+  ),
+);
+const statusColLetter = Object.entries(personnelHeaders).find(
+  ([, header]) => header === "Status",
+)?.[0];
+assert.equal(statusColLetter, "Q", "PERSONNEL Status must be column Q");
+assert.equal(
+  personnelStatusContract.referenceStatusColumn,
+  statusColLetter.charCodeAt(0) - 64,
+  "personnel-status.contract referenceStatusColumn must match reference layout Status column",
+);
 
 console.log("verify-reference-workbook-layout: OK");

@@ -182,7 +182,7 @@ Notes:
 - Active UA statuses (dropdown, 9 values): `В наявності`, `У відрядженні`,
   `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`.
   Runtime-active (schedule, phones, cards): all except **`Вибув`** and **`СЗЧ`**.
-  Empty status defaults to **`В наявності`**. If the `Status` header is missing, runtime self-heal seeds it in the reference column (**P**) or appends a safe new column before validation. Legacy labels (`Дієвий`, `Active`, `Відрядження`, EN) map on read only — see `personnel/PersonnelRepository.gs`.
+  Empty status defaults to **`В наявності`**. If the `Status` header is missing, runtime self-heal seeds it in the reference column (**Q**) or appends a safe new column before validation. Legacy labels (`Дієвий`, `Active`, `Відрядження`, EN) map on read only — see `personnel/PersonnelRepository.gs`.
 - Runtime reads by header names and supports documented aliases (split names, `ID v/s`, OSH 4, legacy TEMPLATE, etc.). After edits,
   run `apiStage7ClearPhoneCache()`.
 
