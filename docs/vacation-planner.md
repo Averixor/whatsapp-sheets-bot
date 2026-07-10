@@ -23,7 +23,7 @@ only (deprecated).
 | `vacations/VacationMonthCalendar.gs` | Month mini-calendar payload |
 | `vacations/Vacation_Suggestions.gs` | Fix suggestions for audit issues |
 | `vacations/VacationBulkFix.gs` | Bulk fix plan/apply |
-| `ui/Js.Vacations.html` | Vacations tab UI |
+| `ui/Js.Vacations.*.html` | Vacations tab UI (`Js.Vacations.Module` entry) |
 | `ui/Styles_30_Personnel.html` | Mini-calendar styles |
 
 ## Sources of truth
@@ -186,7 +186,7 @@ Only dynamic month stats (no static rule text):
 
 ### Tooltip (hover)
 
-Built client-side by `buildVacationDayTooltip_()` in `Js.Vacations.html`.
+Built client-side by `buildVacationDayTooltip_()` in `Js.Vacations.Render.Calendar.html`.
 Shows human-readable date, people count, problems count, status label, optional
 `peoplePreview` / `problemsPreview`, and click hint. ISO date alone is not used
 as the tooltip.

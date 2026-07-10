@@ -32,7 +32,7 @@ Each domain move is one PR: `git mv` + governance/doc path updates + CI green.
 | **2** | `access/`, `personnel/` | Done |
 | **3** | `ui/` | Done — HTML `include()` chain reviewed and basename-compatible |
 
-HTML (`Js.Vacations.html`, `VacationSidebar.html`, `Sidebar.html`, …) lives in `ui/` after Phase 3. Runtime callers may still pass legacy basenames such as `include("Sidebar")`.
+HTML (`Js.Vacations.*.html`, `VacationSidebar.html`, `Sidebar.html`, …) lives in `ui/` after Phase 3. Runtime callers may still pass legacy basenames such as `include("Sidebar")`.
 
 ### Invariants (every move PR)
 

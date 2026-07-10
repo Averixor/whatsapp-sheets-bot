@@ -113,7 +113,7 @@ Key repositories and services:
 - `personnel/PersonnelRepository.gs`
 - `personnel/PersonsRepository.gs`
 - `sendpanel/SendPanelRepository.gs`
-- `data/DictionaryRepository.gs` — shared dictionary/phone/profile access plus `ReferenceSheetsRepository_` for `PHONE_DIRECTORY` / `CAR`
+- `data/DictionaryRepository.gs` — shared dictionary/phone/profile access plus `ReferenceSheetsRepository_` for `PHONE_DIRECTORY` / `CAR` / `WEAPON` / `WEAPON` / `WEAPON`
 - `reports/SummaryRepository.gs`
 - `reports/SummaryService.gs`
 - `reports/Report_SummaryData.gs` — read short-summary values from monthly formula block
@@ -282,7 +282,7 @@ Full design: [`docs/daily-summary-architecture.md`](./docs/daily-summary-archite
 
 ## 7.2 Vacation planner and mini-calendar
 
-Vacation planning runs in the sidebar **Відпустки** tab (`ui/Js.Vacations.html`).
+Vacation planning runs in the sidebar **Відпустки** tab (`ui/Js.Vacations.*.html` partials via `JavaScript.html`).
 Source adapter: `vacations/VacationsRepository.gs` (default `VACATIONS` `A:I`).
 
 | Layer | Module | Role |
@@ -292,7 +292,7 @@ Source adapter: `vacations/VacationsRepository.gs` (default `VACATIONS` `A:I`).
 | Calendar | `vacations/VacationMonthCalendar.gs` | Month grid, day `loadLevel`, previews |
 | Suggestions | `vacations/Vacation_Suggestions.gs` | Safe move proposals per issue |
 | API | `vacations/VacationSidebarService.gs` | Sidebar entrypoints |
-| UI | `ui/Js.Vacations.html` | Tabs, mini-calendar, problems, bulk fix |
+| UI | `ui/Js.Vacations.*.html` | Tabs, mini-calendar, problems, bulk fix (`Js.Vacations.Module` entry) |
 
 Mini-calendar: count-only cells, informative tooltip (`buildVacationDayTooltip_`),
 day details via `getVacationCalendarDayDetailsFromSidebar`. Footer shows only

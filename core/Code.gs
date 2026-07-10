@@ -1,10 +1,11 @@
 /************ КОНФІГУРАЦІЯ ************/
 const CONFIG = {
   // Основні налаштування аркушів
-  TARGET_SHEET: "06",
+  TARGET_SHEET: "07",
   PHONES_SHEET: "PHONES",
   PHONE_DIRECTORY_SHEET: "PHONE_DIRECTORY",
   CAR_SHEET: "CAR",
+  WEAPON_SHEET: "WEAPON",
   PERSONNEL_SHEET: "PERSONNEL",
   DICT_SHEET: "DICT",
   DICT_SUM_SHEET: "DICT_SUM",
@@ -17,7 +18,7 @@ const CONFIG = {
   BR_COL: 1,
   DATE_ROW: 1,
   CALLSIGN_COL: 2,
-  CODE_RANGE_A1: "C2:AF30",
+  CODE_RANGE_A1: "C2:AG32",
   OS_FML_RANGE_A1: "",
 
   // Технічні параметри
@@ -51,7 +52,7 @@ const MONTHLY_CONFIG = {
   DATE_ROW: CONFIG.DATE_ROW,
   FML_COL: CONFIG.FML_COL,
   FIRST_DATA_ROW: 2,
-  LAST_DATA_ROW: 30,
+  LAST_DATA_ROW: 32,
   CLEAR_RANGES: [CONFIG.CODE_RANGE_A1],
   MONTH_NAMES: {
     "01": "Січень",
@@ -269,7 +270,13 @@ function getClientRuntimeContract_() {
       "Js.Render.Panel.html",
       "Js.Render.Calendar.html",
       "Js.Render.Results.html",
-      "Js.Vacations.html",
+      "Js.Vacations.Constants.html",
+      "Js.Vacations.Formatters.html",
+      "Js.Vacations.Render.Problems.html",
+      "Js.Vacations.Render.Calendar.html",
+      "Js.Vacations.Render.Main.html",
+      "Js.Vacations.Actions.html",
+      "Js.Vacations.Module.html",
       "Js.Diagnostics.html",
       "Js.Security.Boot.html",
       "Js.Security.Util.html",

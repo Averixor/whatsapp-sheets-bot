@@ -296,7 +296,7 @@ guest / login fail
 
 **Перевірити:**
 
-- рядок у PERSONNEL (Callsign у колонці L, Status українською);
+- рядок у PERSONNEL (Email у колонці L, Callsign у колонці M, Status українською);
 - телефон / `2_Phone`;
 - після змін даних або deploy — **`apiStage7ClearPhoneCache()`**.
 
@@ -350,7 +350,7 @@ guest / login fail
 
 ```
 помилка у відпустках
-  → vacation UI (`ui/Js.Vacations.html`)
+  → vacation UI (`ui/Js.Vacations.*.html` partials)
   → vacations/VacationPlannerService.gs, vacations/VacationMonthCalendar.gs
   → selected month
   → VACATIONS / VACATION_REQUESTS
@@ -518,7 +518,7 @@ Local equivalent: **`npm run check`** (alias **`npm run ci`**).
 | `verify-no-russian-text.mjs` | Ban Russian markers in project text |
 | `verify-user-facing-copy.mjs` | Ban technical tokens in user-visible copy (`contracts/user-facing-copy.contract.json`) |
 | `verify-reference-workbook-layout.mjs` | Reference xlsx header layout contract |
-| `verify-reference-repositories.mjs` | `PHONE_DIRECTORY` / `CAR` parser semantics and workbook coverage |
+| `verify-reference-repositories.mjs` | `PHONE_DIRECTORY` / `CAR` / `WEAPON` / `WEAPON` parser semantics and workbook coverage |
 | `verify-workbook-contract.mjs` | Monthly layout geometry, formula-block short summary, detailed summary grouping |
 | `verify-monthly-callsign-sync.mjs` | PERSONNEL → monthly «Позивні» sync contract |
 | `verify-send-panel-bounds.mjs` | SEND_PANEL row bounds contract |
@@ -647,31 +647,32 @@ Run from the Apps Script editor when relevant after a deploy or config change:
 
 ### Final header row (row 1)
 
-Logical (canonical): `ID | FML | Birthday | Age | Days_until_birthday | Phone | 2_Phone | Callsign | Title | Position | OSH_4 | Unit | Status`
+Logical (canonical): `Cells | ID_VS | ID | LastName | FirstName | Patronymic | Birthday | Age | Days_until_birthday | Phone | 2_Phone | Email | Callsign | Rank | Position | OSH_4 | Status`
 
 **Reference workbook "Книга Взводу Охорони" physical layout (supported):**
 
 Contract: `contracts/reference-workbook-layout.contract.json` (headers extracted from the reference xlsx).
 
-**PERSONNEL (row 1, columns A–P):**
+**PERSONNEL (row 1, columns A–Q):**
 
 | Col | Header | Role |
 | --- | --- | --- |
 | A | Cells | Ignored (sheet row marker) |
 | B | ID v/s | Optional internal id (`ID_VS`) |
-| C | ID | Армія+ (optional data) |
+| C | ID Army+ | Армія+ (optional data) |
 | D–F | Last name / First name / Patronymic | Code synthesizes `FML` |
 | G–I | Birthday / Age / Days until birthday | Materialized display: **Birthday** `DD.MM.YYYY р.н.` (space before suffix; legacy `…р.` normalizes on read); **Age** `Nр.` (e.g. `25р.`); **Days until birthday** — UA countdown text (`personnel/PersonnelMaterialize.gs`) |
 | J–K | Phone / Phone 2 | Phones |
-| **L** | **Callsign** | **Working callsign** (e.g. `ГРАФ`) — schedule key |
-| M | Rank | Rank (instead of Title) |
-| N | Position | Position |
-| O | OSH 4 | OSH_4 (space ok) |
-| P | Status | UA dropdown (9 values) |
+| L | Email | Optional contact email |
+| **M** | **Callsign** | **Working callsign** (e.g. `ГРАФ`) — schedule key |
+| N | Rank | Rank (instead of Title) |
+| O | Position | Position |
+| P | OSH 4 | OSH_4 (space ok) |
+| Q | Status | UA dropdown (9 values) |
 
 **Monthly sheets:**
 
-- **06 (compact):** A = БР (formula), **B = Позивний**, dates from **C** (`C2:AF30` code range).
+- **07 (compact/current):** **B = Позивний**, dates from **C** (`C2:AG32` code range). **06** remains a compact historical sheet (`C2:AF30`).
 - **02–05 (standard):** A = ТЕЛЕФОН, **B = ПОЗИВНИЙ**, dates from **H**.
 
 **Monthly «Позивні» sync:** `Callsign` from PERSONNEL → monthly callsign column; empty Callsign → `Last name` (row-aligned). See `sheets/MonthlyCallsignSync.gs`.
@@ -683,14 +684,14 @@ Required (logical): `FML` (or split name parts), `Birthday`, `Phone`, `Callsign`
 
 ### One-time / migration in the spreadsheet
 
-1. If column **`Status`** is missing, runtime self-heal creates header **`Status`** in reference column **P** (or appends a safe new column if P is occupied), then applies dropdown validation.
+1. If column **`Status`** is missing, runtime self-heal creates header **`Status`** in reference column **Q** (or appends a safe new column if P is occupied), then applies dropdown validation.
 2. For everyone on duty: leave **`Status` empty** (defaults to **`В наявності`**) or pick an active dropdown value:
    **`В наявності`**, **`У відрядженні`**, **`Відпустка`**, **`Лікарняний`**, **`Тимчасовий`**, **`Гусачівка`**, **`БЗВП`**. Do not mix EN/UA in the same column.
 3. For departed or absent-without-leave: set **`Вибув`** or **`СЗЧ`** — excluded from schedule, phones, and cards. Do **not** use **`Переведений`** (legacy values map to **`Вибув`** on read).
 
 **Dropdown order (9 values):** `В наявності` → `У відрядженні` → `Вибув` → `Відпустка` → `Лікарняний` → `Тимчасовий` → `Гусачівка` → `БЗВП` → `СЗЧ`. Legacy labels (`Дієвий`, `Відрядження`, `Active`, EN) normalize on read.
 
-**Data validation (dropdown):** apply to the **whole** Status column from row 2, e.g. `PERSONNEL!P2:P`, not a single cell like `P10`. After deploy, run **`applyPersonnelStatusColumnValidation()`** in the Apps Script editor, **`ensurePersonnelStatusColumn()`** for header + dropdown self-heal, or **`ensureSystemSheetByName_('PERSONNEL')`** / bootstrap self-heal to apply the list automatically.
+**Data validation (dropdown):** apply to the **whole** Status column from row 2, e.g. `PERSONNEL!Q2:Q`, not a single cell like `P10`. After deploy, run **`applyPersonnelStatusColumnValidation()`** in the Apps Script editor, **`ensurePersonnelStatusColumn()`** for header + dropdown self-heal, or **`ensureSystemSheetByName_('PERSONNEL')`** / bootstrap self-heal to apply the list automatically.
 
 **`ID`** (Армія+) may stay empty or temporary; it is not required for cards, schedule, phones, or birthdays.
 

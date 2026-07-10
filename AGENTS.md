@@ -142,8 +142,8 @@ Domain folders (`reports/`, `vacations/`, `core/`, `ui/`, …) are mechanical mo
 - Rules source: `vacations/VacationPlannerConfig.gs` (`MAX_CONCURRENT`, `OVERLOAD_*`, `MIN_VACATION_DAYS`, `MIN_DAYS_GAP`, `MIN_START_GAP_DAYS`).
 - Mini-calendar cells: day number + divider + count only (no names in grid).
 - Footer summary: **Проблемних дат** / **Навантажених днів** only (no static rule lines).
-- Navigation ◀/▶ must pass explicit `{ year, month }` to `loadMonthCalendar` (see `ui/Js.Vacations.html`).
-- Modules: `vacations/VacationMonthCalendar.gs`, `vacations/Vacation_Suggestions.gs`, `ui/Js.Vacations.html`.
+- Navigation ◀/▶ must pass explicit `{ year, month }` to `loadMonthCalendar` (see `ui/Js.Vacations.Actions.html`).
+- Modules: `vacations/VacationMonthCalendar.gs`, `vacations/Vacation_Suggestions.gs`, `ui/Js.Vacations.*.html` partials.
 - Design doc: [`docs/vacation-planner.md`](./docs/vacation-planner.md).
 - Local contract: `scripts/verify-vacation-planner.mjs` (`npm run ci:vacations`).
 
