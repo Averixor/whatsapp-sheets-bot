@@ -58,6 +58,26 @@
     return null;
   }
 
+  function resolveOperationRepository_() {
+    try {
+      if (typeof OperationRepository_ !== 'undefined' && OperationRepository_) {
+        return OperationRepository_;
+      }
+    } catch (error) {}
+
+    try {
+      if (
+        root &&
+        Object.prototype.hasOwnProperty.call(root, 'OperationRepository_') &&
+        root.OperationRepository_
+      ) {
+        return root.OperationRepository_;
+      }
+    } catch (error) {}
+
+    return null;
+  }
+
   function resolveSelectionActionService_() {
     try {
       if (typeof SelectionActionService_ !== 'undefined' && SelectionActionService_) {
@@ -115,8 +135,10 @@
   }
 
   defineLazyAlias_('WorkflowOrchestrator', 'WorkflowOrchestrator_', resolveWorkflowOrchestrator_);
+  defineLazyAlias_('OperationRepository', 'OperationRepository_', resolveOperationRepository_);
   defineLazyAlias_('SelectionActionService', 'SelectionActionService_', resolveSelectionActionService_);
 
   exposeUnderscoreValueIfAlreadyLoaded_('SelectionActionService_', resolveSelectionActionService_);
   exposeUnderscoreValueIfAlreadyLoaded_('WorkflowOrchestrator_', resolveWorkflowOrchestrator_);
+  exposeUnderscoreValueIfAlreadyLoaded_('OperationRepository_', resolveOperationRepository_);
 })(typeof globalThis !== 'undefined' ? globalThis : this);

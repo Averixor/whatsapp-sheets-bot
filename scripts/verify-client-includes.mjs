@@ -21,6 +21,20 @@ function parseIncludes(text) {
   return found;
 }
 
+function parseActiveRuntimeChain(metadataText) {
+  const blockMatch = metadataText.match(
+    /activeRuntimeChain:\s*Object\.freeze\(\[([\s\S]*?)\]\)/,
+  );
+  if (!blockMatch) return null;
+  const entries = [];
+  const itemRe = /"([^"]+\.html)"/g;
+  let match;
+  while ((match = itemRe.exec(blockMatch[1])) !== null) {
+    entries.push(match[1].replace(/\.html$/, ''));
+  }
+  return entries;
+}
+
 function main() {
   if (!fs.existsSync(loaderPath)) {
     console.error(`verify-client-includes: ${includesContract.loaderFile} not found`);
@@ -51,6 +65,31 @@ function main() {
   const dupes = includes.filter((item, idx) => includes.indexOf(item) !== idx);
   if (dupes.length) {
     errors.push(`duplicate includes: ${Array.from(new Set(dupes)).join(', ')}`);
+  }
+
+  const metadataRel =
+    findFileByBasename(repoRoot, 'ProjectMetadata.gs', ['.gs']) || 'core/ProjectMetadata.gs';
+  const metadataPath = path.join(repoRoot, metadataRel);
+  if (fs.existsSync(metadataPath)) {
+    const metadataText = fs.readFileSync(metadataPath, 'utf8');
+    const activeRuntimeChain = parseActiveRuntimeChain(metadataText);
+    if (!activeRuntimeChain) {
+      errors.push('ProjectMetadata.gs activeRuntimeChain block not found');
+    } else if (activeRuntimeChain.length !== EXPECTED.length) {
+      errors.push(
+        `activeRuntimeChain length ${activeRuntimeChain.length} != client includes ${EXPECTED.length}`,
+      );
+    } else {
+      EXPECTED.forEach((name, index) => {
+        if (activeRuntimeChain[index] !== name) {
+          errors.push(
+            `activeRuntimeChain mismatch at index ${index}: expected ${name}, got ${activeRuntimeChain[index] || '(missing)'}`,
+          );
+        }
+      });
+    }
+  } else {
+    errors.push('ProjectMetadata.gs not found for activeRuntimeChain parity check');
   }
 
   for (const htmlRel of walkHtmlFiles(repoRoot)) {

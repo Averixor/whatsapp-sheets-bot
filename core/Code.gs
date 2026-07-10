@@ -266,6 +266,7 @@ function getClientRuntimeContract_() {
     runtimeModules: [
       "Js.Core.html",
       "Js.State.html",
+      "Js.Modals.html",
       "Js.Api.html",
       "Js.Render.Panel.html",
       "Js.Render.Calendar.html",
@@ -277,6 +278,7 @@ function getClientRuntimeContract_() {
       "Js.Vacations.Render.Main.html",
       "Js.Vacations.Actions.html",
       "Js.Vacations.Module.html",
+      "Js.VacationSync.html",
       "Js.Diagnostics.html",
       "Js.Security.Boot.html",
       "Js.Security.Util.html",

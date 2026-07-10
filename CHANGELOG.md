@@ -2,6 +2,12 @@
 
 Historical record of changes. For the current operational truth, use `README.md`, `RUNBOOK.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `AGENTS.md`, and the active contracts / verify scripts.
 
+## 2026-07-10 — Stage 7.1 governance diagnostics alignment
+
+- **Diagnostics:** health/release checks no longer show "Як виправити" hints when status is OK.
+- **Metadata:** `activeRuntimeChain`, `getClientRuntimeContract_().runtimeModules`, and release bundle index now include `Js.Modals.html` and `Js.VacationSync.html`.
+- **CI:** `verify-client-includes.mjs` cross-checks `ProjectMetadata.gs` active runtime chain against `client-includes.contract.json`.
+
 ## 2026-07-10 — Full docs/code audit alignment
 
 - **PERSONNEL Status self-heal:** `personnel-status.contract.json` and `PersonnelRepository.gs` now target reference column **Q** (17), matching `reference-workbook-layout.contract.json` (column P is `OSH 4`).

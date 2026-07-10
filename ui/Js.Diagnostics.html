@@ -558,7 +558,7 @@
 
         text += icon + ' [' + (status || '?') + '] ' + name + '\n';
         if (details) text += '   Деталі:\n' + indentUiReportText_(details, '     ') + '\n';
-        if (recommendation) text += '   Як виправити:\n' + indentUiReportText_(recommendation, '     ') + '\n';
+        if (!ok && recommendation) text += '   Як виправити:\n' + indentUiReportText_(recommendation, '     ') + '\n';
         text += '\n';
       });
 
@@ -686,7 +686,7 @@
           <span class="health-badges">[${escapeHtml(status || '?')}]</span>
         </div>
         ${details ? `<div class="health-details">${renderMultilineUiReportText_(details)}</div>` : ''}
-        ${recommendation ? `<div class="how-to-box" style="${isPseudo ? 'border-left-color: var(--google-blue);' : ''}"><strong>${noteLabel}:</strong> ${renderMultilineUiReportText_(recommendation)}</div>` : ''}
+        ${!ok && recommendation ? `<div class="how-to-box" style="${isPseudo ? 'border-left-color: var(--google-blue);' : ''}"><strong>${noteLabel}:</strong> ${renderMultilineUiReportText_(recommendation)}</div>` : ''}
       </div>
     `;
   }
@@ -792,7 +792,9 @@
 
         text += `${icon} [${status || '?'}] ${name}\n`;
         if (details) text += `   Деталі: ${details}\n`;
-        if (recommendation) text += `   ${isPseudo ? 'Примітка' : 'Як виправити'}: ${String(recommendation).replace(/\n/g, ' ')}\n`;
+        if ((isPseudo || !ok) && recommendation) {
+          text += `   ${isPseudo ? 'Примітка' : 'Як виправити'}: ${String(recommendation).replace(/\n/g, ' ')}\n`;
+        }
         text += `\n`;
       });
 
