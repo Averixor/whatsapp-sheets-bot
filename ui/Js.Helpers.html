@@ -923,9 +923,14 @@
           );
           if (result?.success) {
             logToConsole(`✓ ${result.message}`, "success");
-            navigateTo("createNextMonth", () => {
-              displayInResult("createMonth", result);
-            });
+            const openedConflicts =
+              typeof maybeOpenVacationMonthlySyncConflicts_ === "function" &&
+              maybeOpenVacationMonthlySyncConflicts_(result);
+            if (!openedConflicts) {
+              navigateTo("createNextMonth", () => {
+                displayInResult("createMonth", result);
+              });
+            }
           } else {
             navigateTo("createNextMonth", () => {
               displayInResult("error", {

@@ -28,6 +28,8 @@ assert.match(orchestrator, /materializePersonnelDerivedSheets_/);
 assert.match(orchestrator, /materializeVacationComputedColumns_/);
 assert.match(orchestrator, /VacationOptionsWriter_\.rebuildVacationSystem/);
 assert.match(orchestrator, /vacationSchedule/);
+assert.match(orchestrator, /materializeVacationMonthlyScheduleSync_/);
+assert.match(orchestrator, /vacationMonthlySync/);
 assert.match(orchestrator, /ensureSendPanelStatusFormula_/);
 assert.match(
   readRepoFileByBasename(repoRoot, "PersonnelMaterialize.gs", {
@@ -66,7 +68,12 @@ assert.doesNotMatch(
   "clearPhoneCache must not materialize derived sheets",
 );
 
-assert.doesNotMatch(utils.match(/function clearPhoneCache[\s\S]*?^}/m)?.[0] || "", /materializePersonnelDerivedSheets_/);
+assert.match(
+  readRepoFileByBasename(repoRoot, "UseCases.MonthOps.gs", {
+    errorPrefix: "verify-materialize-computed-data",
+  }),
+  /syncVacationsWithMonthlySheet_/,
+);
 
 const sidebar = readRepoFileByBasename(repoRoot, "Sidebar.html", {
   errorPrefix: "verify-materialize-computed-data",

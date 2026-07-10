@@ -1,8 +1,8 @@
 # WASB — повний список файлів репозиторію
 # Порядок: дерево каталогів (depth-first, алфавіт у кожній папці)
 # Виключено: .git/, node_modules/, локальні .clasp*.json (крім *.example.json)
-# Файлів: 278
-# Оновлено: 2026-07-10T04:11:22Z
+# Файлів: 281
+# Оновлено: 2026-07-10T07:06:24Z
 
 .
   .clasp.example.json
@@ -209,6 +209,7 @@ scripts/
   verify-snapshot-governance.mjs
   verify-usecase-facade.mjs
   verify-user-facing-copy.mjs
+  verify-vacation-monthly-sync.mjs
   verify-vacation-planner.mjs
   verify-workbook-contract.mjs
 
@@ -299,6 +300,7 @@ ui/
   Js.Vacations.Render.Calendar.html
   Js.Vacations.Render.Main.html
   Js.Vacations.Render.Problems.html
+  Js.VacationSync.html
   PersonCalendar.html
   Sidebar.html
   Styles_00_Base.html
@@ -331,6 +333,7 @@ vacations/
   VacationBulkFix.gs
   VacationEngine.gs
   VacationMonthCalendar.gs
+  VacationMonthlySync.gs
   VacationOptionsWriter.gs
   VacationPlannerConfig.gs
   VacationPlannerService.gs

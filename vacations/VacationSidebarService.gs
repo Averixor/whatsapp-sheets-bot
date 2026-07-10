@@ -571,6 +571,47 @@ const VacationSidebarService_ = (function () {
     );
   }
 
+  function getMonthlySyncPending() {
+    _assertWorkingAccess_("getVacationMonthlySyncPendingFromSidebar");
+    if (
+      typeof VacationMonthlySync_ !== "object" ||
+      !VacationMonthlySync_ ||
+      typeof VacationMonthlySync_.getPendingPlan !== "function"
+    ) {
+      return {
+        ok: false,
+        pendingUserDecision: false,
+        message: "Модуль синхронізації недоступний",
+      };
+    }
+    var pending = VacationMonthlySync_.getPendingPlan();
+    return pending || { ok: true, pendingUserDecision: false };
+  }
+
+  function previewMonthlySync(formData) {
+    _assertWorkingAccess_("previewVacationMonthlySyncFromSidebar");
+    if (
+      typeof VacationMonthlySync_ !== "object" ||
+      !VacationMonthlySync_ ||
+      typeof VacationMonthlySync_.preview !== "function"
+    ) {
+      throw new Error("Модуль синхронізації відпусток недоступний");
+    }
+    return VacationMonthlySync_.preview(formData || {});
+  }
+
+  function resolveMonthlySyncDecisions(formData) {
+    _assertWorkingAccess_("resolveVacationMonthlySyncFromSidebar");
+    if (
+      typeof VacationMonthlySync_ !== "object" ||
+      !VacationMonthlySync_ ||
+      typeof VacationMonthlySync_.resolveDecisions !== "function"
+    ) {
+      throw new Error("Модуль синхронізації відпусток недоступний");
+    }
+    return VacationMonthlySync_.resolveDecisions(formData || {});
+  }
+
   function applyRightPanelMigration() {
     _assertWorkingAccess_("applyRightPanelMigrationFromSidebar");
     return _withDocumentLock_(function () {
@@ -633,6 +674,9 @@ const VacationSidebarService_ = (function () {
     applyBulkFixPlan: applyBulkFixPlan,
     getMonthCalendar: getMonthCalendar,
     getCalendarDayDetails: getCalendarDayDetails,
+    getMonthlySyncPending: getMonthlySyncPending,
+    previewMonthlySync: previewMonthlySync,
+    resolveMonthlySyncDecisions: resolveMonthlySyncDecisions,
     applyRightPanelMigration: applyRightPanelMigration,
   };
 })();
@@ -719,4 +763,16 @@ function getVacationCalendarDayDetailsFromSidebar(formData) {
 
 function applyRightPanelMigrationFromSidebar() {
   return VacationSidebarService_.applyRightPanelMigration();
+}
+
+function getVacationMonthlySyncPendingFromSidebar() {
+  return VacationSidebarService_.getMonthlySyncPending();
+}
+
+function previewVacationMonthlySyncFromSidebar(formData) {
+  return VacationSidebarService_.previewMonthlySync(formData);
+}
+
+function resolveVacationMonthlySyncFromSidebar(formData) {
+  return VacationSidebarService_.resolveMonthlySyncDecisions(formData);
 }

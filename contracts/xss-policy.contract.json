@@ -229,6 +229,7 @@
     "ui/Js.Vacations.Render.Calendar.html",
     "ui/Js.Vacations.Render.Main.html",
     "ui/Js.Vacations.Render.Problems.html",
+    "ui/Js.VacationSync.html",
     "ui/Js.Diagnostics.html",
     "ui/Js.Actions.html",
     "ui/Js.Helpers.html",

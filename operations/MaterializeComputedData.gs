@@ -2,6 +2,57 @@
  * MaterializeComputedData.gs — orchestrates derived sheet values (no formulas).
  */
 
+function materializeVacationMonthlyScheduleSync_(options) {
+  var opts = options && typeof options === "object" ? options : {};
+  var monthSheet = String(opts.monthSheet || "").trim();
+  if (!monthSheet && typeof getBotMonthSheetName_ === "function") {
+    monthSheet = String(getBotMonthSheetName_() || "").trim();
+  }
+  if (!/^\d{2}$/.test(monthSheet)) {
+    return {
+      ok: true,
+      skipped: true,
+      reason: "no_month_sheet",
+      message: "Синхронізацію відпусток із місячним графіком пропущено: немає активного місяця",
+    };
+  }
+  if (
+    typeof VacationMonthlySync_ !== "object" ||
+    !VacationMonthlySync_ ||
+    typeof VacationMonthlySync_.sync !== "function"
+  ) {
+    return {
+      ok: false,
+      skipped: true,
+      reason: "sync_unavailable",
+      message: "Модуль синхронізації відпусток недоступний",
+    };
+  }
+  try {
+    var syncResult = VacationMonthlySync_.sync({
+      monthSheet: monthSheet,
+      source: String(opts.source || "materialize"),
+    });
+    return Object.assign(
+      {
+        ok: true,
+        stage: "Синхронізація відпусток із місячним графіком",
+        sheet: monthSheet,
+      },
+      syncResult || {},
+    );
+  } catch (error) {
+    return {
+      ok: false,
+      sheet: monthSheet,
+      stage: "Синхронізація відпусток із місячним графіком",
+      reason: "sync_failed",
+      message:
+        error && error.message ? String(error.message) : String(error || "sync_failed"),
+    };
+  }
+}
+
 function materializeAllComputedDataAffectedSheets_(result) {
   var safe = result && typeof result === "object" ? result : {};
   var sheets = [];
@@ -30,6 +81,9 @@ function materializeAllComputedDataAffectedSheets_(result) {
       if (name) sheets.push(name);
     });
   }
+  if (safe.vacationMonthlySync && safe.vacationMonthlySync.sheet) {
+    sheets.push(safe.vacationMonthlySync.sheet);
+  }
   if (safe.panel && safe.panel.sheet) sheets.push(safe.panel.sheet);
   return sheets.filter(function (name, index, list) {
     return name && list.indexOf(name) === index;
@@ -47,6 +101,7 @@ function materializeAllComputedData_(options) {
     birthday: null,
     vacations: null,
     vacationSchedule: null,
+    vacationMonthlySync: null,
     panel: null,
   };
 
@@ -84,6 +139,27 @@ function materializeAllComputedData_(options) {
           scheduleError && scheduleError.message
             ? scheduleError.message
             : String(scheduleError),
+      };
+      result.ok = false;
+    }
+  }
+
+  if (typeof materializeVacationMonthlyScheduleSync_ === "function") {
+    try {
+      result.vacationMonthlySync = materializeVacationMonthlyScheduleSync_({
+        source: source,
+        monthSheet: options && options.monthSheet,
+      });
+      if (result.vacationMonthlySync && result.vacationMonthlySync.ok === false) {
+        result.ok = false;
+      }
+    } catch (vacationSyncError) {
+      result.vacationMonthlySync = {
+        ok: false,
+        reason:
+          vacationSyncError && vacationSyncError.message
+            ? vacationSyncError.message
+            : String(vacationSyncError),
       };
       result.ok = false;
     }

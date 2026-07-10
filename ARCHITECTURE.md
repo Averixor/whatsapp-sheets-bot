@@ -292,14 +292,13 @@ Source adapter: `vacations/VacationsRepository.gs` (default `VACATIONS` `A:I`).
 | Calendar | `vacations/VacationMonthCalendar.gs` | Month grid, day `loadLevel`, previews |
 | Suggestions | `vacations/Vacation_Suggestions.gs` | Safe move proposals per issue |
 | API | `vacations/VacationSidebarService.gs` | Sidebar entrypoints |
+| Monthly sync | `vacations/VacationMonthlySync.gs` | One-way approved vacation → month sheet (`Відпус`); conflicts via `ui/Js.VacationSync.html` |
 | UI | `ui/Js.Vacations.*.html` | Tabs, mini-calendar, problems, bulk fix (`Js.Vacations.Module` entry) |
 
-Mini-calendar: count-only cells, informative tooltip (`buildVacationDayTooltip_`),
-day details via `getVacationCalendarDayDetailsFromSidebar`. Footer shows only
-**Проблемних дат** / **Навантажених днів**.
+`VacationMonthlySync_` runs after month creation and inside `apiStage7MaterializeComputedData()` as stage **Синхронізація відпусток із місячним графіком**. Empty cells are auto-filled; non-empty mismatches become sidebar conflicts until a maintainer confirms. Metadata is stored in Document Properties; confirmed replacements append service notes.
 
-Full design: [`docs/vacation-planner.md`](./docs/vacation-planner.md). Contract:
-`scripts/verify-vacation-planner.mjs`.
+Full design: [`docs/vacation-planner.md`](./docs/vacation-planner.md). Contracts:
+`scripts/verify-vacation-planner.mjs`, `scripts/verify-vacation-monthly-sync.mjs`.
 
 ## 7.3 Reference sheets and month journal
 

@@ -217,7 +217,7 @@
       <div class="result-screen month-switcher-card">
         <div class="result-screen-title">Підтвердження</div>
         <div class="month-switcher-hint">
-          Оновити обчислювані дані (вік, дні до дня народження, позивні на графіку, відпустки, статус панелі)?
+          Оновити обчислювані дані (вік, дні до дня народження, позивні на графіку, відпустки у місячному графіку, статус панелі)?
         </div>
         <div class="month-switcher-actions">
           <button
@@ -329,6 +329,20 @@
       showStandardResult("Обчислювані дані");
       logToConsole("✓ " + (result.message || "Обчислювані дані оновлено"), "success");
 
+      const vacationSync =
+        result.vacationMonthlySync ||
+        (result.data &&
+          result.data.result &&
+          result.data.result.vacationMonthlySync) ||
+        null;
+      const vacationSyncStats = vacationSync && vacationSync.stats ? vacationSync.stats : {};
+      const vacationSyncAuto =
+        Number(vacationSync && vacationSync.autoFillApplied) ||
+        Number(vacationSyncStats.autoFill) ||
+        0;
+      const vacationSyncConflicts = Number(vacationSyncStats.conflicts || 0);
+      const vacationSyncRemovals = Number(vacationSyncStats.removals || 0);
+
       setHtml(
         "resultContent",
         `
@@ -374,8 +388,32 @@
                   " змін",
           )}</div>
         </div>
+        <div class="result-item">
+          <div class="result-label">Синхронізація відпусток із місячним графіком</div>
+          <div class="result-value">${escapeHtml(
+            vacationSync && vacationSync.skipped
+              ? vacationSync.message || "Пропущено"
+              : "Автозаповнено " +
+                  String(vacationSyncAuto) +
+                  " клітинок" +
+                  (vacationSyncConflicts || vacationSyncRemovals
+                    ? "; конфліктів: " +
+                      String(vacationSyncConflicts) +
+                      ", зняття: " +
+                      String(vacationSyncRemovals)
+                    : ""),
+          )}</div>
+        </div>
       `,
       );
+
+      if (
+        vacationSync &&
+        vacationSync.pendingUserDecision &&
+        typeof maybeOpenVacationMonthlySyncConflicts_ === "function"
+      ) {
+        maybeOpenVacationMonthlySyncConflicts_(result);
+      }
     } catch (error) {
       showToast("" + normalizeError(error));
     }

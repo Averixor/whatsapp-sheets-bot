@@ -371,7 +371,7 @@ guest / login fail
 2. `clasp status` — правильний script project.
 3. Script Properties: `WASB_SPREADSHEET_ID`, `WASB_OWNER_EMAIL`.
 4. ACCESS bootstrap не зламаний.
-5. **`apiStage7MaterializeComputedData()`** після змін PERSONNEL / PHONES / Birthday / VACATIONS або коли потрібно оновити вік, дні до ДН, відпусткові колонки.
+5. **`apiStage7MaterializeComputedData()`** після змін PERSONNEL / PHONES / Birthday / VACATIONS або коли потрібно оновити вік, дні до ДН, відпусткові колонки та **синхронізацію відпусток із місячним графіком** (автозаповнення порожніх клітинок; конфлікти — у панелі **Конфлікти з відпустками**).
 6. **`apiStage7ClearPhoneCache()`** після кожного production deploy (лише інвалідація кешу телефонів).
 7. `apiStage7QuickHealthCheck()` / `apiStage7HealthCheck()`.
 8. contract parity (`verify-access-api-governance` у CI).
@@ -526,6 +526,7 @@ Local equivalent: **`npm run check`** (alias **`npm run ci`**).
 | `verify-month-journal-materialize.mjs` | `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` wiring, API, access, sidebar |
 | `verify-age-birthday-countdown.mjs` | Birthday `DD.MM.YYYY р.н.`, Age `Nр.`, countdown UA labels |
 | `verify-vacation-planner.mjs` | Vacation planner rules, calendar, repository contracts |
+| `verify-vacation-monthly-sync.mjs` | One-way vacation → monthly sheet sync (auto-fill, conflicts, removals) |
 | `verify-recipient-contract.mjs` | Recipient routing and dark-select UI contract |
 | `verify-personnel-status-contract.mjs` | PERSONNEL Status dropdown/active/inactive vs `personnel/PersonnelRepository.gs` |
 | `verify-format-rules-governance.mjs` | Manual conditional-format registry |
@@ -547,6 +548,7 @@ Local equivalent: **`npm run check`** (alias **`npm run ci`**).
 | `verify-jsconfig.mjs` | `jsconfig.json` include/exclude globs |
 
 There is **no** Apps Script deployment in CI (`clasp` is local only). See `.github/workflows/ci.yml`.
+
 
 ---
 

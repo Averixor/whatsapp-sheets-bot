@@ -730,6 +730,125 @@
   margin-top: 10px;
 }
 
+.vacation-sync-module {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.vacation-sync-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vacation-sync-title {
+  color: var(--whatsapp-teal);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.vacation-sync-subtitle {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.vacation-sync-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.vacation-sync-batch,
+.vacation-sync-group__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vacation-sync-group {
+  background: var(--warning-soft-bg);
+  border: 1px solid var(--warning-soft-border);
+  border-left: 4px solid var(--warning-color);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.vacation-sync-group__person {
+  font-weight: 700;
+}
+
+.vacation-sync-group__vacation {
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.vacation-sync-group__entries {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.vacation-sync-entry {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.vacation-sync-entry--warning {
+  border-left: 3px solid var(--warning-color);
+}
+
+.vacation-sync-entry__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.vacation-sync-entry__values {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.vacation-sync-entry__from {
+  color: var(--log-error);
+}
+
+.vacation-sync-entry__to {
+  color: var(--success-color);
+}
+
+.vacation-sync-entry__message {
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.vacation-sync-exception-label {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.vacation-sync-review-panel {
+  margin-top: 4px;
+}
+
+.vacation-sync-review__progress {
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
 /* ====================== RESPONSIVE ====================== */
 @media (max-width: 480px) {
   .person-card__actions {

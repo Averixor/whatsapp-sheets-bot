@@ -134,6 +134,16 @@ function createNextMonthSheet() {
     } catch (syncErr) {
       console.error(syncErr);
     }
+    try {
+      if (typeof syncVacationsWithMonthlySheet_ === "function") {
+        syncVacationsWithMonthlySheet_({
+          sheet: newSheet,
+          source: "createMonthSheet",
+        });
+      }
+    } catch (vacationSyncErr) {
+      console.error(vacationSyncErr);
+    }
     newSheet.activate();
     highlightActiveMonthTab_(nextName);
 

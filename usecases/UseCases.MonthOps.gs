@@ -50,6 +50,25 @@ function _stage7CreateNextMonthCore_(payload) {
     console.error(syncErr);
   }
 
+  var vacationMonthlySync = null;
+  try {
+    if (typeof syncVacationsWithMonthlySheet_ === "function") {
+      vacationMonthlySync = syncVacationsWithMonthlySheet_({
+        sheet: newSheet,
+        source: "createMonthSheet",
+      });
+    }
+  } catch (vacationSyncErr) {
+    console.error(vacationSyncErr);
+    vacationMonthlySync = {
+      ok: false,
+      message:
+        vacationSyncErr && vacationSyncErr.message
+          ? String(vacationSyncErr.message)
+          : String(vacationSyncErr),
+    };
+  }
+
   if (payload.switchToNewMonth !== false) {
     setBotMonthSheetName_(nextName);
   } else {
@@ -61,6 +80,7 @@ function _stage7CreateNextMonthCore_(payload) {
     sourceMonth: srcName,
     createdMonth: nextName,
     switched: payload.switchToNewMonth !== false,
+    vacationMonthlySync: vacationMonthlySync,
   };
 }
 

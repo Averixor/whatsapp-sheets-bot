@@ -1,0 +1,390 @@
+<script>
+  // Js.VacationSync — monthly schedule vacation sync conflict review panel.
+
+  const VacationMonthlySyncModule = {
+    state: {
+      plan: null,
+      reviewIndex: 0,
+      exceptionReason: "",
+      busy: false,
+      statusText: "",
+      statusLevel: "info",
+    },
+
+    reset() {
+      this.state.reviewIndex = 0;
+      this.state.exceptionReason = "";
+      this.state.busy = false;
+      this.state.statusText = "";
+      this.state.statusLevel = "info";
+    },
+
+    setStatus(text, level) {
+      this.state.statusText = String(text || "");
+      this.state.statusLevel = level || "info";
+    },
+
+    esc(value) {
+      return typeof escapeHtml === "function" ? escapeHtml(value) : String(value ?? "");
+    },
+
+    allEntries() {
+      const plan = this.state.plan || {};
+      return (plan.conflicts || []).concat(plan.removals || []);
+    },
+
+    groups() {
+      const plan = this.state.plan || {};
+      if (Array.isArray(plan.groups) && plan.groups.length) return plan.groups;
+      const byKey = {};
+      this.allEntries().forEach((entry) => {
+        const key =
+          String(entry.callsign || entry.fml || "—").toUpperCase() +
+          "|" +
+          String(entry.vacationRecordId || entry.vacationLabel || "");
+        if (!byKey[key]) {
+          byKey[key] = {
+            person: entry.callsign || entry.fml || "—",
+            fml: entry.fml || "",
+            vacationRecordId: entry.vacationRecordId || "",
+            vacationLabel: entry.vacationLabel || "Відпустка",
+            conflicts: [],
+            removals: [],
+          };
+        }
+        if (entry.kind === "removal") byKey[key].removals.push(entry);
+        else byKey[key].conflicts.push(entry);
+      });
+      return Object.keys(byKey).map((key) => byKey[key]);
+    },
+
+    statsHtml() {
+      const stats = (this.state.plan && this.state.plan.stats) || {};
+      return (
+        '<div class="vacation-sync-stats">' +
+        '<span>Автозаповнено: <strong>' +
+        this.esc(String(stats.autoFill || this.state.plan?.autoFillApplied || 0)) +
+        "</strong></span>" +
+        '<span>Конфліктів: <strong>' +
+        this.esc(String(stats.conflicts || (this.state.plan?.conflicts || []).length)) +
+        "</strong></span>" +
+        '<span>Зняття: <strong>' +
+        this.esc(String(stats.removals || (this.state.plan?.removals || []).length)) +
+        "</strong></span>" +
+        '<span>Без змін: <strong>' +
+        this.esc(String(stats.unchanged || 0)) +
+        "</strong></span>" +
+        "</div>"
+      );
+    },
+
+    entryRowHtml(entry) {
+      const isRemoval = entry.kind === "removal";
+      const previous = entry.previousValue || "порожньо";
+      const nextValue = isRemoval ? "порожньо" : entry.newValue || "—";
+      return (
+        '<div class="vacation-sync-entry vacation-sync-entry--warning">' +
+        '<div class="vacation-sync-entry__head">' +
+        '<span class="vacation-sync-entry__date">' +
+        this.esc(entry.dateLabel || entry.dateKey || "—") +
+        "</span>" +
+        '<span class="vacation-sync-entry__cell">' +
+        this.esc(entry.a1 || "") +
+        "</span>" +
+        "</div>" +
+        '<div class="vacation-sync-entry__values">' +
+        '<span class="vacation-sync-entry__from">' +
+        this.esc(previous) +
+        "</span>" +
+        '<span class="vacation-sync-entry__arrow" aria-hidden="true">→</span>' +
+        '<span class="vacation-sync-entry__to">' +
+        this.esc(nextValue) +
+        "</span>" +
+        "</div>" +
+        (entry.message
+          ? '<div class="vacation-sync-entry__message">' + this.esc(entry.message) + "</div>"
+          : "") +
+        "</div>"
+      );
+    },
+
+    groupHtml(group, index) {
+      const entries = (group.conflicts || []).concat(group.removals || []);
+      return (
+        '<section class="vacation-sync-group" data-group-index="' +
+        index +
+        '">' +
+        '<div class="vacation-sync-group__head">' +
+        '<div class="vacation-sync-group__person">' +
+        this.esc(group.person || "—") +
+        "</div>" +
+        '<div class="vacation-sync-group__vacation">' +
+        this.esc(group.vacationLabel || "Відпустка") +
+        "</div>" +
+        "</div>" +
+        '<div class="vacation-sync-group__entries">' +
+        entries.map((entry) => this.entryRowHtml(entry)).join("") +
+        "</div>" +
+        '<div class="vacation-sync-group__actions">' +
+        '<button type="button" class="btn btn-secondary vacations-btn-sm" onclick="VacationMonthlySyncModule.applyGroup(' +
+        index +
+        ", 'apply')\">Застосувати зміни</button>" +
+        '<button type="button" class="btn btn-secondary vacations-btn-sm" onclick="VacationMonthlySyncModule.applyGroup(' +
+        index +
+        ", 'defer')\">Відкласти до наступного оновлення</button>" +
+        '<button type="button" class="btn btn-secondary vacations-btn-sm" onclick="VacationMonthlySyncModule.applyGroup(' +
+        index +
+        ", 'exception')\">Позначити як виняток</button>" +
+        "</div>" +
+        "</section>"
+      );
+    },
+
+    reviewHtml() {
+      const entries = this.allEntries();
+      if (!entries.length) {
+        return '<div class="vacations-empty">Немає активних конфліктів</div>';
+      }
+      const index = Math.max(0, Math.min(this.state.reviewIndex, entries.length - 1));
+      const entry = entries[index];
+      return (
+        '<div class="vacation-sync-review">' +
+        '<div class="vacation-sync-review__progress">' +
+        "Запис " +
+        String(index + 1) +
+        " з " +
+        String(entries.length) +
+        "</div>" +
+        this.entryRowHtml(entry) +
+        '<div class="vacation-sync-review__person">' +
+        this.esc(entry.callsign || entry.fml || "—") +
+        " · " +
+        this.esc(entry.vacationLabel || "Відпустка") +
+        "</div>" +
+        '<div class="vacation-sync-group__actions">' +
+        '<button type="button" class="btn btn-secondary vacations-btn-sm" onclick="VacationMonthlySyncModule.applyReview(' +
+        index +
+        ", 'apply')\">Застосувати</button>" +
+        '<button type="button" class="btn btn-secondary vacations-btn-sm" onclick="VacationMonthlySyncModule.applyReview(' +
+        index +
+        ", 'defer')\">Відкласти</button>" +
+        '<button type="button" class="btn btn-secondary vacations-btn-sm" onclick="VacationMonthlySyncModule.applyReview(' +
+        index +
+        ", 'exception')\">Виняток</button>" +
+        '<button type="button" class="btn btn-secondary vacations-btn-sm" onclick="VacationMonthlySyncModule.shiftReview(1)\">Наступний</button>' +
+        "</div>" +
+        "</div>"
+      );
+    },
+
+    render() {
+      const plan = this.state.plan;
+      if (!plan || !plan.pendingUserDecision) {
+        if (typeof showStandardResult === "function") showStandardResult("Конфлікти з відпустками");
+        if (typeof setHtml === "function") {
+          setHtml(
+            "resultContent",
+            '<div class="vacations-empty">Немає активних конфліктів синхронізації відпусток</div>',
+          );
+        }
+        return;
+      }
+
+      const sheet = plan.sheet || "";
+      const month = plan.month && plan.year ? plan.month + "." + plan.year : "";
+      const statusClass =
+        "vacations-status vacations-status--" + (this.state.statusLevel || "info");
+      const html =
+        '<div class="vacation-sync-module">' +
+        '<div class="vacation-sync-header">' +
+        '<div class="vacation-sync-title">Конфлікти з відпустками</div>' +
+        '<div class="vacation-sync-subtitle">Аркуш ' +
+        this.esc(sheet) +
+        (month ? " · " + this.esc(month) : "") +
+        "</div>" +
+        this.statsHtml() +
+        (this.state.statusText
+          ? '<div class="' + statusClass + '">' + this.esc(this.state.statusText) + "</div>"
+          : "") +
+        "</div>" +
+        '<div class="vacation-sync-batch">' +
+        '<button type="button" class="btn btn-primary vacations-btn-sm" onclick="VacationMonthlySyncModule.applyAll()">Застосувати всі</button>' +
+        '<button type="button" class="btn btn-secondary vacations-btn-sm" onclick="VacationMonthlySyncModule.showReview()">Переглянути по черзі</button>' +
+        '<button type="button" class="btn btn-secondary vacations-btn-sm" onclick="VacationMonthlySyncModule.deferAll()">Відкласти всі</button>' +
+        '<button type="button" class="btn btn-secondary vacations-btn-sm" onclick="VacationMonthlySyncModule.close()">Закрити</button>' +
+        "</div>" +
+        '<label class="vacation-sync-exception-label" for="vacationSyncExceptionReason">Коментар для винятків</label>' +
+        '<input id="vacationSyncExceptionReason" class="vacations-form input" type="text" placeholder="Причина винятку (необовʼязково)" value="' +
+        this.esc(this.state.exceptionReason) +
+        '" oninput="VacationMonthlySyncModule.state.exceptionReason=this.value">' +
+        '<div id="vacationSyncReviewPanel" class="vacation-sync-review-panel wasb-is-hidden"></div>' +
+        '<div class="vacation-sync-groups">' +
+        this.groups()
+          .map((group, index) => this.groupHtml(group, index))
+          .join("") +
+        "</div>" +
+        "</div>";
+
+      if (typeof showStandardResult === "function") showStandardResult("Конфлікти з відпустками");
+      if (typeof setHtml === "function") setHtml("resultContent", html);
+    },
+
+    show(plan) {
+      this.reset();
+      this.state.plan = plan && typeof plan === "object" ? plan : null;
+      this.render();
+    },
+
+    showReview() {
+      const panel = document.getElementById("vacationSyncReviewPanel");
+      if (!panel) return;
+      panel.classList.remove("wasb-is-hidden");
+      panel.innerHTML = this.reviewHtml();
+    },
+
+    shiftReview(delta) {
+      const entries = this.allEntries();
+      if (!entries.length) return;
+      this.state.reviewIndex =
+        (this.state.reviewIndex + Number(delta || 0) + entries.length) % entries.length;
+      this.showReview();
+    },
+
+    close() {
+      if (typeof SidebarApp !== "undefined" && typeof SidebarApp.goBack === "function") {
+        SidebarApp.goBack();
+        return;
+      }
+      if (typeof goBack === "function") goBack();
+    },
+
+    groupEntryIds(group) {
+      return (group.conflicts || [])
+        .concat(group.removals || [])
+        .map((entry) => entry.id)
+        .filter(Boolean);
+    },
+
+    async resolve(action, payload) {
+      if (this.state.busy) return;
+      const plan = this.state.plan || {};
+      this.state.busy = true;
+      this.setStatus("Застосування рішення…", "info");
+      this.render();
+      if (typeof showLoading === "function") showLoading();
+      try {
+        const result = await runServerMethod_(
+          "resolveVacationMonthlySyncFromSidebar",
+          [
+            Object.assign(
+              {
+                planId: plan.planId || "",
+                action: action,
+                reason: this.state.exceptionReason || "",
+              },
+              payload || {},
+            ),
+          ],
+          "VacationMonthlySyncModule.resolve",
+        );
+        const pending = result && result.pending ? result.pending : null;
+        if (pending && pending.pendingUserDecision) {
+          this.state.plan = pending;
+          this.setStatus(result.message || "Рішення застосовано", "success");
+        } else if (Number(result && result.remaining) > 0) {
+          const refreshed = await runServerMethod_(
+            "getVacationMonthlySyncPendingFromSidebar",
+            [],
+            "VacationMonthlySyncModule.refreshPending",
+          );
+          this.state.plan =
+            refreshed && refreshed.pendingUserDecision ? refreshed : null;
+          this.setStatus(result.message || "Частину конфліктів оброблено", "warning");
+        } else {
+          this.state.plan = null;
+          this.setStatus(result.message || "Усі конфлікти оброблено", "success");
+        }
+        this.render();
+        if (!this.state.plan && typeof showToast === "function") {
+          showToast("Синхронізацію відпусток завершено");
+        }
+        return result;
+      } catch (error) {
+        this.setStatus("" + (error && error.message ? error.message : error), "error");
+        this.render();
+        if (typeof showToast === "function") showToast("" + error);
+        throw error;
+      } finally {
+        this.state.busy = false;
+        if (typeof hideLoading === "function") hideLoading();
+      }
+    },
+
+    applyAll() {
+      return this.resolve("applyAll", {});
+    },
+
+    deferAll() {
+      return this.resolve("deferAll", {});
+    },
+
+    applyGroup(index, action) {
+      const group = this.groups()[Number(index)];
+      if (!group) return;
+      return this.resolve(action, { ids: this.groupEntryIds(group) });
+    },
+
+    applyEntry(id, action) {
+      return this.resolve(action, { id: id });
+    },
+
+    applyReview(index, action) {
+      const entry = this.allEntries()[Number(index)];
+      if (!entry || !entry.id) return;
+      return this.applyEntry(entry.id, action);
+    },
+  };
+
+  function maybeOpenVacationMonthlySyncConflicts_(result) {
+    const root = result || {};
+    const sync =
+      root.vacationMonthlySync ||
+      (root.data &&
+        root.data.result &&
+        root.data.result.vacationMonthlySync) ||
+      (root.result && root.result.vacationMonthlySync) ||
+      null;
+    if (!sync || !sync.pendingUserDecision) return false;
+    if (typeof VacationMonthlySyncModule.show === "function") {
+      VacationMonthlySyncModule.show(sync);
+      return true;
+    }
+    return false;
+  }
+
+  async function openVacationMonthlySyncConflictsFromSidebar() {
+    try {
+      if (typeof showLoading === "function") showLoading();
+      const pending = await runServerMethod_(
+        "getVacationMonthlySyncPendingFromSidebar",
+        [],
+        "openVacationMonthlySyncConflictsFromSidebar",
+      );
+      if (pending && pending.pendingUserDecision) {
+        VacationMonthlySyncModule.show(pending);
+        return pending;
+      }
+      if (typeof showToast === "function") {
+        showToast("Немає активних конфліктів синхронізації відпусток");
+      }
+      return pending;
+    } finally {
+      if (typeof hideLoading === "function") hideLoading();
+    }
+  }
+
+  window.VacationMonthlySyncModule = VacationMonthlySyncModule;
+  window.maybeOpenVacationMonthlySyncConflicts_ = maybeOpenVacationMonthlySyncConflicts_;
+  window.openVacationMonthlySyncConflictsFromSidebar =
+    openVacationMonthlySyncConflictsFromSidebar;
+</script>
