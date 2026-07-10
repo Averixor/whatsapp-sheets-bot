@@ -242,6 +242,7 @@ function apiStage7BootstrapSidebar() {
         "Заявки",
         CONFIG.PHONE_DIRECTORY_SHEET || "PHONE_DIRECTORY",
         CONFIG.CAR_SHEET || "CAR",
+        CONFIG.WEAPON_SHEET || "WEAPON",
       ].map(function (name) {
         return { name: name, exists: !!ss.getSheetByName(name) };
       }),
@@ -425,6 +426,23 @@ function apiStage7GetCarsRegister() {
     {
       startedAt: startedAt,
       affectedSheets: [CONFIG.CAR_SHEET || "CAR"],
+    },
+  );
+}
+
+function apiStage7GetWeaponsRegister() {
+  const startedAt = _stage7FastStartedAt_();
+  _stage7AssertRole_("maintainer", "get weapons register");
+
+  const data = ReferenceSheetsRepository_.readWeaponsRegister();
+  return _stage7FastResponse_(
+    "getWeaponsRegister",
+    "Реєстр озброєння та майна завантажено",
+    data,
+    data.warnings || [],
+    {
+      startedAt: startedAt,
+      affectedSheets: [CONFIG.WEAPON_SHEET || "WEAPON"],
     },
   );
 }
