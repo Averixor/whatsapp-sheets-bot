@@ -21,25 +21,28 @@ var PERSONNEL_SHEET_NAME =
 
 /** Sheet must have these header columns (ID and computed birthday helpers are optional). */
 /** Canonical (logical) header order. Physical layout in reference workbook "Книга Взводу Охорони" (see contracts/reference-workbook-layout.contract.json):
- *  A Cells (ignored), B ID v/s, C ID, D–F Last/First/Patronymic (code synthesizes FML), G–I birthday helpers,
- *  J–K phones, L Callsign (working values, e.g. ГРАФ), M Rank, N Position, O OSH 4, P Status.
+ *  A Cells (ignored), B ID v/s, C ID Army+, D–F Last/First/Patronymic (code synthesizes FML), G–I birthday helpers,
+ *  J–K phones, L Email, M Callsign (working values, e.g. ГРАФ), N Rank, O Position, P OSH 4, Q Status.
  *  TEMPLATE is supported only as a legacy alternate layout — not present in the reference xlsx.
  *  Reading is header-name based with aliases (see _personnelCanonicalHeaderKey_).
  */
 var PERSONNEL_CANONICAL_HEADER_ORDER_ = [
+  "Cells",
+  "ID_VS",
   "ID",
-  "FML",
+  "LastName",
+  "FirstName",
+  "Patronymic",
   "Birthday",
   "Age",
   "Days_until_birthday",
   "Phone",
   "2_Phone",
+  "Email",
   "Callsign",
-  "TEMPLATE",
   "Rank",
   "Position",
   "OSH_4",
-  "Unit",
   "Status",
 ];
 
@@ -55,6 +58,7 @@ var PERSONNEL_REQUIRED_HEADER_KEYS = [
 
 /** ID, Unit, Rank/Title, 2_Phone, TEMPLATE (legacy), ID_VS, computed birthday helpers, split names (Last/First/Patronymic) — optional. */
 var PERSONNEL_OPTIONAL_HEADER_KEYS = [
+  "Cells",
   "ID",
   "Age",
   "Days_until_birthday",
@@ -64,6 +68,7 @@ var PERSONNEL_OPTIONAL_HEADER_KEYS = [
   "ID_VS",
   "Rank",
   "TEMPLATE",
+  "Email",
   "LastName",
   "FirstName",
   "Patronymic",
@@ -375,9 +380,10 @@ function _personnelCanonicalHeaderKey_(rawHeader) {
     id: "ID",
     "id армія+": "ID",
     "id army+": "ID",
+    "id army plus": "ID",
     "армія+": "ID",
     "id v/s": "ID_VS",
-    cells: "",
+    cells: "Cells",
     fml: "FML",
     піб: "FML",
     pib: "FML",
@@ -398,6 +404,8 @@ function _personnelCanonicalHeaderKey_(rawHeader) {
     "days until birthday": "Days_until_birthday",
     phone: "Phone",
     телефон: "Phone",
+    email: "Email",
+    "e-mail": "Email",
     "2_phone": "2_Phone",
     "2 phone": "2_Phone",
     "phone 2": "2_Phone",
@@ -447,7 +455,7 @@ function _personnelGetSheet_(mustExist) {
         PERSONNEL_REQUIRED_HEADER_KEYS.concat(
           PERSONNEL_OPTIONAL_HEADER_KEYS,
         ).join(", ") +
-        " (етalon «Книга Взводу Охорони»: Last/First/Patronymic + Callsign у колонці L; TEMPLATE — лише legacy)",
+        " (еталон «Книга Взводу Охорони»: Last/First/Patronymic + Email + Callsign у колонці M; TEMPLATE — лише legacy)",
     );
   }
   return sh || null;
@@ -634,6 +642,14 @@ function _personnelRowLastName_(row, col) {
 function _personnelRowToRecord_(row, sheetRow, col) {
   var callsign = String(_personnelReadCell_(row, col.Callsign) || "").trim();
   var lastName = _personnelRowLastName_(row, col);
+  var firstName =
+    col.FirstName !== undefined && col.FirstName >= 0
+      ? String(_personnelReadCell_(row, col.FirstName) || "").trim()
+      : "";
+  var patronymic =
+    col.Patronymic !== undefined && col.Patronymic >= 0
+      ? String(_personnelReadCell_(row, col.Patronymic) || "").trim()
+      : "";
   var fml = String(_personnelReadCell_(row, col.FML) || "").trim();
   var id =
     col.ID >= 0 ? String(_personnelReadCell_(row, col.ID) || "").trim() : "";
@@ -649,20 +665,11 @@ function _personnelRowToRecord_(row, sheetRow, col) {
   var statusCanonical = getPersonnelStatusCanonical_(status);
   var active = isPersonnelStatusActive_(status);
 
-  // Reference workbook layout: split name parts; Callsign column L holds working values.
+  // Reference workbook layout: split name parts; Callsign column M holds working values.
   if (!fml) {
-    var ln =
-      col.LastName !== undefined && col.LastName >= 0
-        ? String(_personnelReadCell_(row, col.LastName) || "").trim()
-        : "";
-    var fn =
-      col.FirstName !== undefined && col.FirstName >= 0
-        ? String(_personnelReadCell_(row, col.FirstName) || "").trim()
-        : "";
-    var pn =
-      col.Patronymic !== undefined && col.Patronymic >= 0
-        ? String(_personnelReadCell_(row, col.Patronymic) || "").trim()
-        : "";
+    var ln = lastName;
+    var fn = firstName;
+    var pn = patronymic;
     if (ln || fn || pn) {
       fml = [ln, fn, pn]
         .filter(function (x) {
@@ -684,6 +691,9 @@ function _personnelRowToRecord_(row, sheetRow, col) {
   var record = {
     id: id,
     fml: fml,
+    lastName: lastName,
+    firstName: firstName,
+    patronymic: patronymic,
     birthday: String(_personnelReadCell_(row, col.Birthday) || "").trim(),
     age: String(_personnelReadCell_(row, col.Age) || "").trim(),
     daysUntilBirthday: String(
@@ -691,6 +701,7 @@ function _personnelRowToRecord_(row, sheetRow, col) {
     ).trim(),
     phone: String(_personnelReadCell_(row, col.Phone) || "").trim(),
     phone2: String(_personnelReadCell_(row, col["2_Phone"]) || "").trim(),
+    email: String(col.Email >= 0 ? _personnelReadCell_(row, col.Email) || "" : "").trim(),
     callsign: callsign,
     template:
       col.TEMPLATE >= 0
@@ -717,11 +728,15 @@ function _personnelRowToRecord_(row, sheetRow, col) {
 
   record.ID = record.id;
   record.FML = record.fml;
+  record.LastName = record.lastName;
+  record.FirstName = record.firstName;
+  record.Patronymic = record.patronymic;
   record.Birthday = record.birthday;
   record.Age = record.age;
   record.Days_until_birthday = record.daysUntilBirthday;
   record.Phone = record.phone;
   record["2_Phone"] = record.phone2;
+  record.Email = record.email;
   record.Callsign = record.callsign;
   record.Title = record.title;
   record.Position = record.position;
@@ -1019,6 +1034,9 @@ function mergePersonnelIntoPersonView_(base, personnel) {
   var out = Object.assign({}, base || {});
   if (personnel.id) out.id = personnel.id;
   if (personnel.fml) out.fml = personnel.fml;
+  if (personnel.lastName) out.lastName = personnel.lastName;
+  if (personnel.firstName) out.firstName = personnel.firstName;
+  if (personnel.patronymic) out.patronymic = personnel.patronymic;
   if (personnel.callsign) out.callsign = personnel.callsign;
   if (personnel.title || personnel.rank) {
     out.rank = personnel.title || personnel.rank;
