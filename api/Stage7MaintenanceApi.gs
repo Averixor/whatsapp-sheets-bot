@@ -411,11 +411,16 @@ function apiStage7ClearPhoneCache() {
   return Stage7UseCases_.runMaintenanceScenario({ type: "clearPhoneCache" });
 }
 
-function apiStage7MaterializeComputedData() {
+function apiStage7MaterializeComputedData(payload) {
   _stage7AssertRole_("maintainer", "materialize computed data");
+  var opts = payload && typeof payload === "object" ? payload : {};
   return Stage7UseCases_.runMaintenanceScenario({
     type: "materializeComputedData",
     source: "api",
+    monthlySyncMode: opts.monthlySyncMode,
+    monthSheet: opts.monthSheet,
+    includeHistory: opts.includeHistory,
+    mode: opts.mode,
   });
 }
 

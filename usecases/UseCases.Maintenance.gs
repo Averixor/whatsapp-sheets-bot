@@ -387,7 +387,13 @@ var UseCasesMaintenance_ = (function () {
                 ? materializeAllComputedData_({
                     source:
                       (input && input.source) ||
-                      (context && context.trigger ? "maintenanceTrigger" : "maintenance"),
+                      (context && context.trigger
+                        ? "maintenanceTrigger"
+                        : "maintenance"),
+                    monthlySyncMode: input && input.monthlySyncMode,
+                    monthSheet: input && input.monthSheet,
+                    includeHistory: input && input.includeHistory,
+                    mode: input && input.mode,
                   })
                 : { ok: false, reason: "materializeAllComputedData_ missing" };
             var affectedSheets = materializeAllComputedDataAffectedSheets_(

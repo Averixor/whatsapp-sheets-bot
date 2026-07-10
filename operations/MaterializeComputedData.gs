@@ -51,7 +51,13 @@ function materializeAllComputedData_(options) {
   };
 
   if (typeof materializePersonnelDerivedSheets_ === "function") {
-    result.personnel = materializePersonnelDerivedSheets_({ source: source });
+    result.personnel = materializePersonnelDerivedSheets_({
+      source: source,
+      monthlySyncMode: options && options.monthlySyncMode,
+      monthSheet: options && options.monthSheet,
+      includeHistory: options && options.includeHistory,
+      mode: options && options.mode,
+    });
     if (result.personnel && result.personnel.ok === false) {
       result.ok = false;
     }
