@@ -1142,14 +1142,83 @@ function apiStage7ReissueAccessTemporaryPassword(payload) {
   );
 }
 
+function _stage7RedactAccessReissueLogMetadata_(response) {
+  const result =
+    response && response.data && response.data.result
+      ? response.data.result
+      : response && typeof response === "object"
+        ? response
+        : {};
+  const rawColumns = Array.isArray(result.updatedColumns)
+    ? result.updatedColumns
+    : Array.isArray(result.changedColumns)
+      ? result.changedColumns
+      : [];
+  const changedColumns = [];
+  let redactedSensitiveColumns = 0;
+
+  rawColumns.forEach(function (column) {
+    const value = String(column || "").trim();
+    if (!value) return;
+    if (/password|token|hash|salt|plain/i.test(value)) {
+      redactedSensitiveColumns++;
+      return;
+    }
+    if (changedColumns.indexOf(value) === -1) changedColumns.push(value);
+  });
+  if (redactedSensitiveColumns) {
+    changedColumns.push("[redacted-sensitive-access-columns]");
+  }
+
+  return {
+    success: !!(response && response.success),
+    rowNumber: result.matchedRowNumber || result.accessSheetRow || "",
+    role: result.role || result.matchedRole || "",
+    changedColumns: changedColumns,
+  };
+}
+
 function apiStage7ReissueOwnerTemporaryPasswordManual() {
+  const props = PropertiesService.getScriptProperties();
+  const ownerEmail = String(props.getProperty("WASB_OWNER_EMAIL") || "").trim();
+  const ownerLogin = String(props.getProperty("WASB_OWNER_LOGIN") || "").trim();
+  const missing = [];
+  if (!ownerEmail) missing.push("WASB_OWNER_EMAIL");
+  if (!ownerLogin) missing.push("WASB_OWNER_LOGIN");
+
+  if (missing.length) {
+    const message =
+      "Для manual перевипуску owner temporary password задайте Script Properties: " +
+      missing.join(", ") +
+      ".";
+    return _stage7BuildMaintenanceResponse_(
+      false,
+      message,
+      {
+        ok: false,
+        success: false,
+        code: "access.reissue.owner_config_missing",
+        missingScriptProperties: missing,
+      },
+      "stage7ReissueOwnerTemporaryPasswordManual",
+      [message],
+      { affectedSheets: [appGetCore("ACCESS_SHEET", "ACCESS")] },
+    );
+  }
+
   const result = apiStage7ReissueAccessTemporaryPassword({
-    email: "ryabinin.sergei.alekseevich@gmail.com",
-    login: "ШАХТАР",
+    email: ownerEmail,
+    login: ownerLogin,
     expectedRole: "owner",
   });
-  const payload = JSON.stringify(result, null, 2);
-  console.log(payload);
-  Logger.log(payload);
+  const metadata = _stage7RedactAccessReissueLogMetadata_(result);
+  console.log(
+    "[ACCESS] Owner temporary password manual reissue: " +
+      JSON.stringify(metadata),
+  );
+  Logger.log(
+    "[ACCESS] Owner temporary password manual reissue: " +
+      JSON.stringify(metadata),
+  );
   return result;
 }

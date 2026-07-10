@@ -1,5 +1,5 @@
 {
-  "scriptId": "1AB7o3GPo41RchW5k_LAWrgwsIujcfNBQpvqHP5faLldTs0hFglbWI85",
+  "scriptId": "PUT_PRODUCTION_SCRIPT_ID_HERE",
   "rootDir": ".",
-  "parentId": ["1v8ixM67nG_Bfy5NzcDZbmSjwVOYbkN02ibfP6YqI384"]
+  "parentId": ["PUT_PARENT_DRIVE_FOLDER_ID_HERE"]
 }

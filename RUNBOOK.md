@@ -624,7 +624,7 @@ SEND_PANEL row, and the expected role.
 
 | File | Commit? | Notes |
 | ------ | -------- | ------ |
-| `.clasp.example.json` | yes | Template — copy to `.clasp.json` locally |
+| `.clasp.example.json` | yes | Placeholder template — copy to `.clasp.json` locally and fill real IDs only there |
 | `.clasp.json` | **no** | Your production `scriptId` |
 
 Open the bound script: **`npm run gas:open`** (`clasp open-script` in clasp 3.x).
@@ -635,6 +635,7 @@ Run from the Apps Script editor when relevant after a deploy or config change:
 
 - `apiStage7GetAccessDescriptor()` — lightweight descriptor sanity
 - `apiStage7DebugAccess()` — access debug payload
+- `apiStage7ReissueOwnerTemporaryPasswordManual()` — owner-only temporary password reissue helper; requires Script Properties **`WASB_OWNER_EMAIL`** and **`WASB_OWNER_LOGIN`**; logs only redacted metadata (`success`, row number, role, non-sensitive changed-column summary)
 - `runAccessPolicyChecks()` — access policy assertions
 - `runSmokeTests()` — regression bundle (`smoke/SmokeTests.gs`, deployed with production)
 - `apiStage7MaterializeComputedData()` — пересборка обчислюваних колонок (PERSONNEL helper, PHONES, Birthday, VACATIONS, Status панелі), auto-heal/validation `PERSONNEL.Status`, monthly callsign sync; sidebar: **Оновити обчислювані дані**
@@ -715,6 +716,7 @@ Canonical resolver (**`DataAccess.gs`**):
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **`WASB_SPREADSHEET_ID`**                    | Target spreadsheet for headless runs (triggers, executions without open UI). Required when no container spreadsheet context exists.                                                         |
 | **`WASB_OWNER_EMAIL`**                       | Owner email for security notifications that may include the full user key. Quick health warns if unset.                                                                                     |
+| **`WASB_OWNER_LOGIN`**                       | Owner `ACCESS.login` value used only by `apiStage7ReissueOwnerTemporaryPasswordManual()` to identify the owner row without hardcoded source values.                                          |
 | **`WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`**     | Emergency email bridge during migration only. Keep disabled (`false` / unset) in normal operation.                                                                                          |
 | **`WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP`** | Legacy plaintext temp-password column lookup during migration only. Keep disabled in normal operation; run `apiStage7NormalizeAccessSheetFormatting()` to clear `temporary_password_plain`. |
 
