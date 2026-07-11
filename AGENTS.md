@@ -34,7 +34,7 @@ Individual subscripts: `npm run ci:gas`, `npm run ci:client`, `npm run ci:copy`,
 
 ### Node.js version
 
-CI requires **Node.js 24** (matching `.github/workflows/ci.yml` and `.nvmrc`). `npm run ci` runs `npm run precheck` first (`scripts/verify-node-version.mjs`).
+CI and local dev recommend **Node.js 24** (`.github/workflows/ci.yml`, `.nvmrc`). `package.json` `engines.node` is **`>=24`** with no upper cap — Node 25, 26, … pass `npm run precheck` unless you add an explicit `<` / `<=` in engines. `npm run ci` runs precheck first (`scripts/verify-node-version.mjs`).
 
 ```bash
 nvm use    # reads .nvmrc (24)

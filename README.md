@@ -78,7 +78,7 @@ It runs the full **`npm run ci`** suite (**32** Node verify scripts after `npm r
 - UseCase facade, snapshot governance, bridge flags, access API governance, access hotfixes
 - OAuth scopes, jsconfig
 
-See [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) (Node 24, `actions/checkout@v5`, `actions/setup-node@v5`).
+See [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) (CI pins Node 24; `engines.node` is `>=24`, `actions/checkout@v5`, `actions/setup-node@v5`).
 
 The workflow does not deploy to Apps Script. Deployment remains local via
 **`npm run push:remote`**, **`npm run deploy:prod`**, or **`npm run gas:push`**.

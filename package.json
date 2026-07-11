@@ -4,7 +4,7 @@
   "private": true,
   "description": "WhatsApp-Sheets-Bot Google Apps Script project",
   "engines": {
-    "node": ">=24 <25"
+    "node": ">=24"
   },
   "scripts": {
     "check": "npm run ci",

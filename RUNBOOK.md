@@ -512,7 +512,7 @@ Local equivalent: **`npm run check`** (alias **`npm run ci`**).
 
 | Script | Purpose |
 |--------|---------|
-| `verify-node-version.mjs` | Node 24 engine gate (`precheck`) |
+| `verify-node-version.mjs` | Node `>=24` engine gate (`precheck`; honors explicit `<` / `<=` if set) |
 | `ci-gas-sanity.mjs` | Syntax check all `.gs` files |
 | `verify-clasp-push-patterns.mjs` | `.claspignore` / push patterns |
 | `verify-no-russian-text.mjs` | Ban Russian markers in project text |

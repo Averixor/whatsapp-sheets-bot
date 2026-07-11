@@ -8,7 +8,7 @@ New maintainers: start with [`docs/developer-guide.md`](./docs/developer-guide.m
 
 ## Local workflow (source of truth)
 
-Use Node.js 24 (`.nvmrc`) and the repository-pinned dependencies:
+Use Node.js 24 locally (`.nvmrc`; `engines.node` is `>=24` with no max major) and the repository-pinned dependencies:
 
 ```bash
 npm ci
