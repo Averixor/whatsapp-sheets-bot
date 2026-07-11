@@ -1263,12 +1263,11 @@ assert.equal(calendar.personCount, 2);
 const firstPersonRow = calendar.rows.find((row) => row[1] === "Перша Людина");
 const secondPersonRow = calendar.rows.find((row) => row[1] === "Друга Людина");
 assert.equal(firstPersonRow[0], 3);
-assert.deepEqual(Array.from(firstPersonRow.slice(2, 6)), [
-  "В1",
-  "В1",
-  "",
-  "СО",
-]);
+assert.deepEqual(
+  Array.from(firstPersonRow.slice(2, 6)),
+  ["В1", "В1", "", "СО"],
+  "сімейні обставини must map to СО on annual schedule, not В2",
+);
 assert.deepEqual(Array.from(secondPersonRow.slice(2, 6)), ["", "ВД", "ВД", ""]);
 assert.equal(calendar.startDate.getMonth(), 0);
 assert.equal(calendar.startDate.getDate(), 1);
@@ -2798,6 +2797,23 @@ assert.match(monthCalendarSource, /peoplePreview/);
 assert.match(monthCalendarSource, /problemsPreview/);
 assert.match(monthCalendarSource, /readVacationSource_\(\)/);
 assert.doesNotMatch(monthCalendarSource, /readRightPanelRows/);
+for (const [label, source] of [
+  ["VacationOptionsWriter.gs", writerSource],
+  ["VacationMonthCalendar.gs", monthCalendarSource],
+  ["VacationSidebarService.gs", sidebarService],
+  ["VacationBulkFix.gs", bulkFixSource],
+]) {
+  assert.doesNotMatch(
+    source,
+    /indexOf\("сімейна"\)/,
+    `${label}: «сімейна» does not match canonical «сімейні обставини»`,
+  );
+  assert.match(
+    source,
+    /indexOf\("сімейн"\)/,
+    `${label}: schedule marker must match сімейні via «сімейн» prefix`,
+  );
+}
 
 const calendarContext = vm.createContext({
   console,
