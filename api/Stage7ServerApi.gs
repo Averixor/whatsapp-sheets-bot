@@ -472,11 +472,20 @@ function apiStage7SyncInventoryReconciliation() {
   _stage7AssertRole_("maintainer", "sync inventory reconciliation");
 
   const data = InventoryReconciliation_.syncFiles();
+  const warnings = [];
+  if (data.truncatedByFiles) {
+    warnings.push("Перевірено граничну кількість файлів; частина папки могла не потрапити до пошуку");
+  }
+  if (data.truncatedByDepth) {
+    warnings.push("Досягнуто граничну глибину вкладених папок; глибші рівні не переглянуто");
+  } else if (data.truncated && !data.truncatedByFiles) {
+    warnings.push("Перегляд папки звірки обмежено; частина вмісту могла не потрапити до пошуку");
+  }
   return _stage7FastResponse_(
     "syncInventoryReconciliation",
     "Файли звірки синхронізовано",
     data,
-    data.truncated ? ["Перевірено граничну кількість файлів; частина папки могла не потрапити до пошуку"] : [],
+    warnings,
     {
       startedAt: startedAt,
       affectedSheets: [
