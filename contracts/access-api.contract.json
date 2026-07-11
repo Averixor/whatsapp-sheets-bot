@@ -25,6 +25,10 @@
     "apiStage7GetPhoneDirectory",
     "apiStage7GetCarsRegister",
     "apiStage7GetWeaponsRegister",
+    "apiStage7GetInventoryReconciliation",
+    "apiStage7SyncInventoryReconciliation",
+    "apiStage7SetInventoryReconciliationFolder",
+    "apiStage7GetSelectedInventoryReconciliation",
     "apiMarkPanelRowsAsPending",
     "apiMarkPanelRowsAsSent",
     "apiMarkPanelRowsAsSentFast",
@@ -139,6 +143,9 @@
       "apiStage7GetPhoneDirectory",
       "apiStage7GetCarsRegister",
       "apiStage7GetWeaponsRegister",
+      "apiStage7GetInventoryReconciliation",
+      "apiStage7SyncInventoryReconciliation",
+      "apiStage7GetSelectedInventoryReconciliation",
       "apiMarkPanelRowsAsPending",
       "apiMarkPanelRowsAsSent",
       "apiMarkPanelRowsAsSentFast",
@@ -188,7 +195,8 @@
       "apiStage7ReportAccessViolation",
       "apiStage7ApplyProtections",
       "apiStage7NormalizeAllSheetHeadersToEnglish",
-      "apiExportAdoptedFormatRules"
+      "apiExportAdoptedFormatRules",
+      "apiStage7SetInventoryReconciliationFolder"
     ]
   },
   "rolePolicyOverrides": {

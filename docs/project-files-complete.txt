@@ -1,8 +1,8 @@
 # WASB — повний список файлів репозиторію
 # Порядок: дерево каталогів (depth-first, алфавіт у кожній папці)
 # Виключено: .git/, node_modules/, локальні .clasp*.json (крім *.example.json)
-# Файлів: 282
-# Оновлено: 2026-07-10T08:17:13Z
+# Файлів: 286
+# Оновлено: 2026-07-11T15:32:09Z
 
 .
   .clasp.example.json
@@ -112,6 +112,7 @@ docs/
   daily-summary-architecture.md
   developer-guide.md
   format-rules-governance.md
+  inventory-reconciliation.md
   module-map.md
   project-files-complete.txt
   README.md
@@ -126,6 +127,9 @@ docs/adr/
 
 docs/refactor/
   p2-candidates.md
+
+inventory/
+  InventoryReconciliation.gs
 
 maintenance/
   ConditionalFormatAdoptedRules.gs
@@ -278,6 +282,7 @@ ui/
   Js.Diagnostics.html
   Js.Events.html
   Js.Helpers.html
+  Js.InventoryReconciliation.html
   Js.Modals.html
   Js.Render.Calendar.html
   Js.Render.Panel.html
@@ -306,6 +311,7 @@ ui/
   Sidebar.html
   Styles_00_Base.html
   Styles_30_Personnel.html
+  Styles_35_InventoryReconciliation.html
   Styles_40_SystemPanels.html
   Styles_50_Modals.html
   Styles_60_Health.html

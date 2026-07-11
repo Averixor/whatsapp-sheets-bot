@@ -285,6 +285,74 @@
       };
     },
 
+    async getInventoryReconciliation(options = {}) {
+      const response = await Api.run(
+        "apiStage7GetInventoryReconciliation",
+        options || {},
+      );
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success,
+        message: response?.message || "",
+        error: response?.error || null,
+        data: result,
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response,
+      };
+    },
+
+    async syncInventoryReconciliation() {
+      const response = await Api.run("apiStage7SyncInventoryReconciliation");
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success,
+        message: response?.message || "",
+        error: response?.error || null,
+        data: result,
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response,
+      };
+    },
+
+    async setInventoryReconciliationFolder(folderValue) {
+      const response = await Api.run(
+        "apiStage7SetInventoryReconciliationFolder",
+        folderValue || "",
+      );
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success,
+        message: response?.message || "",
+        error: response?.error || null,
+        data: result,
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response,
+      };
+    },
+
+    async getSelectedInventoryReconciliation() {
+      const response = await Api.run(
+        "apiStage7GetSelectedInventoryReconciliation",
+      );
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success && result.success !== false,
+        message: response?.message || "",
+        error: response?.error || result.error || null,
+        data: result,
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response,
+      };
+    },
+
     async createNextMonth(options = {}) {
       const response = await Api.run("apiStage7CreateNextMonth", options);
       const result = unwrapStage4Result(response) || {};

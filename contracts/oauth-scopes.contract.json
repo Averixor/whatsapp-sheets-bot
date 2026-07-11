@@ -1,14 +1,15 @@
 {
   "version": 1,
   "manifestFile": "appsscript.json",
-  "reviewedAt": "2026-05-29",
-  "changeReason": "P2 OAuth scope audit — remove unused Drive full + Documents scopes",
+  "reviewedAt": "2026-07-11",
+  "changeReason": "Inventory reconciliation Drive folder scan requires read-only access to existing Drive folders and files",
   "forbiddenScopes": [
     "https://www.googleapis.com/auth/script.external_request"
   ],
   "requiredScopes": [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive.file",
+    "https://www.googleapis.com/auth/drive.readonly",
     "https://www.googleapis.com/auth/script.container.ui",
     "https://www.googleapis.com/auth/script.send_mail",
     "https://www.googleapis.com/auth/userinfo.email",
@@ -28,6 +29,14 @@
       "status": "required",
       "rationale": "Per-file Drive access for the container spreadsheet created/opened by the app",
       "gasApis": []
+    },
+    {
+      "url": "https://www.googleapis.com/auth/drive.readonly",
+      "status": "required",
+      "rationale": "DriveApp read-only folder traversal and file metadata lookup for inventory reconciliation documents",
+      "gasApis": [
+        "DriveApp"
+      ]
     },
     {
       "url": "https://www.googleapis.com/auth/script.container.ui",
@@ -73,7 +82,7 @@
     {
       "url": "https://www.googleapis.com/auth/drive",
       "status": "removed",
-      "rationale": "No DriveApp usage; drive.file is sufficient for container-bound access",
+      "rationale": "Full Drive access remains unnecessary; reconciliation uses drive.readonly for existing files and folders",
       "gasApis": []
     }
   ]

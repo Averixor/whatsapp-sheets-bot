@@ -1,0 +1,456 @@
+<script>
+  // Js.InventoryReconciliation — модуль звірки служб у головній боковій панелі.
+
+  var InventoryReconciliationModule = (function () {
+    const state = {
+      dashboard: null,
+      selectedMonth: 0,
+      busy: false,
+    };
+
+    function esc_(value) {
+      return typeof escapeHtml === "function"
+        ? escapeHtml(value == null ? "" : String(value))
+        : String(value == null ? "" : value);
+    }
+
+    function attr_(value) {
+      return typeof escapeAttr === "function"
+        ? escapeAttr(value == null ? "" : String(value))
+        : esc_(value);
+    }
+
+    function canConfigure_() {
+      try {
+        return typeof hasRoleAtLeast_ === "function" && hasRoleAtLeast_("sysadmin");
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function statusLabel_(status) {
+      const labels = {
+        complete: "Завершено",
+        incomplete: "Не завершено",
+        current: "Поточний місяць",
+        future: "Ще не розпочато",
+      };
+      return labels[String(status || "")] || "Без статусу";
+    }
+
+    function statusIcon_(status) {
+      const icons = {
+        complete: "✓",
+        incomplete: "!",
+        current: "○",
+        future: "—",
+      };
+      return icons[String(status || "")] || "·";
+    }
+
+    function selectedMonth_() {
+      const dashboard = state.dashboard || {};
+      const months = Array.isArray(dashboard.months) ? dashboard.months : [];
+      return (
+        months.find(function (month) {
+          return Number(month.month) === Number(state.selectedMonth);
+        }) || months[0] || null
+      );
+    }
+
+    function ensureSelectedMonth_() {
+      const dashboard = state.dashboard || {};
+      const months = Array.isArray(dashboard.months) ? dashboard.months : [];
+      if (!months.length) {
+        state.selectedMonth = 0;
+        return;
+      }
+      if (
+        months.some(function (month) {
+          return Number(month.month) === Number(state.selectedMonth);
+        })
+      ) {
+        return;
+      }
+      const current = months.find(function (month) {
+        return month.status === "current";
+      });
+      const incomplete = months.find(function (month) {
+        return month.status === "incomplete";
+      });
+      state.selectedMonth = Number((current || incomplete || months[0]).month || 1);
+    }
+
+    function renderFolderCard_(dashboard) {
+      const folder = dashboard.folder || {};
+      const configured = folder.configured === true;
+      const folderName = configured ? esc_(folder.name || "Папка звірок") : "Папку ще не налаштовано";
+      const folderLink =
+        configured && folder.url
+          ? '<a class="recon-folder-link" href="' +
+            attr_(folder.url) +
+            '" target="_blank" rel="noopener noreferrer">Відкрити папку</a>'
+          : "";
+      const error = folder.error
+        ? '<div class="recon-alert recon-alert--warning">' + esc_(folder.error) + "</div>"
+        : "";
+      const sync = dashboard.sync || {};
+      const syncError = sync.error
+        ? '<div class="recon-alert recon-alert--warning">Автосинхронізація: ' + esc_(sync.error) + "</div>"
+        : "";
+      const syncInfo = sync.lastSyncedAt
+        ? '<div class="recon-sync-info">Остання синхронізація: ' +
+          esc_(new Date(sync.lastSyncedAt).toLocaleString("uk-UA")) +
+          "</div>"
+        : '<div class="recon-sync-info">Файли ще не синхронізовано.</div>';
+      const configForm = canConfigure_()
+        ? '<div class="recon-folder-form">' +
+          '<label for="reconFolderValue">Посилання або ідентифікатор папки</label>' +
+          '<input id="reconFolderValue" class="input recon-folder-input" type="text" placeholder="https://drive.google.com/drive/folders/…" />' +
+          '<button type="button" class="btn btn-secondary" onclick="InventoryReconciliationModule.saveFolder()">Зберегти папку</button>' +
+          "</div>"
+        : !configured
+          ? '<div class="recon-muted">Налаштувати папку може користувач із системними правами.</div>'
+          : "";
+
+      return (
+        '<div class="recon-card recon-folder-card">' +
+        '<div class="recon-card__head">' +
+        '<div><div class="recon-card__eyebrow">Google Drive</div><strong>' +
+        folderName +
+        "</strong></div>" +
+        folderLink +
+        "</div>" +
+        error +
+        syncError +
+        syncInfo +
+        configForm +
+        "</div>"
+      );
+    }
+
+    function renderSummary_(dashboard) {
+      const summary = dashboard.summary || {};
+      return (
+        '<div class="recon-summary">' +
+        '<div class="recon-summary__item"><strong>' +
+        esc_(summary.completeMonths || 0) +
+        '</strong><span>завершено місяців</span></div>' +
+        '<div class="recon-summary__item"><strong>' +
+        esc_(summary.incompleteMonths || 0) +
+        '</strong><span>потребують уваги</span></div>' +
+        '<div class="recon-summary__item"><strong>' +
+        esc_(summary.linkedFiles || 0) +
+        '<small> / ' +
+        esc_(summary.expectedFiles || 0) +
+        '</small></strong><span>файлів прив’язано</span></div>' +
+        "</div>"
+      );
+    }
+
+    function renderMonths_(dashboard) {
+      const months = Array.isArray(dashboard.months) ? dashboard.months : [];
+      return (
+        '<div class="recon-months" role="list" aria-label="Місяці звірки">' +
+        months
+          .map(function (month) {
+            const active = Number(month.month) === Number(state.selectedMonth);
+            return (
+              '<button type="button" role="listitem" class="recon-month recon-month--' +
+              attr_(month.status) +
+              (active ? " is-active" : "") +
+              '" onclick="InventoryReconciliationModule.selectMonth(' +
+              Number(month.month) +
+              ')">' +
+              '<span class="recon-month__status" aria-hidden="true">' +
+              esc_(statusIcon_(month.status)) +
+              "</span>" +
+              '<span class="recon-month__name">' +
+              esc_(month.name || month.label || "") +
+              "</span>" +
+              '<span class="recon-month__count">' +
+              esc_(month.checked || 0) +
+              " / " +
+              esc_(month.total || 0) +
+              "</span>" +
+              "</button>"
+            );
+          })
+          .join("") +
+        "</div>"
+      );
+    }
+
+    function renderServiceFile_(service) {
+      const file = service && service.file ? service.file : null;
+      if (!file || !file.url) {
+        return '<span class="recon-file-state recon-file-state--missing">Файл не знайдено</span>';
+      }
+      const duplicate = Number(file.duplicateCount || 0);
+      return (
+        '<div class="recon-file-actions">' +
+        '<a class="recon-file-link" href="' +
+        attr_(file.url) +
+        '" target="_blank" rel="noopener noreferrer">Відкрити</a>' +
+        '<span class="recon-file-name" title="' +
+        attr_(file.fileName || "") +
+        '">' +
+        esc_(file.fileName || "Документ") +
+        "</span>" +
+        (duplicate > 0
+          ? '<span class="recon-duplicate" title="Знайдено додаткові відповідні файли">+' +
+            esc_(duplicate) +
+            "</span>"
+          : "") +
+        "</div>"
+      );
+    }
+
+    function renderSelectedMonth_() {
+      const month = selectedMonth_();
+      if (!month) {
+        return '<div class="recon-card"><div class="recon-muted">Дані місяців відсутні.</div></div>';
+      }
+      const services = Array.isArray(month.services) ? month.services : [];
+      const rows = services
+        .map(function (service) {
+          const checked = service.checked === true;
+          const missingClass = checked && (!service.file || !service.file.url) ? " recon-service--missing-file" : "";
+          return (
+            '<div class="recon-service' +
+            missingClass +
+            '">' +
+            '<div class="recon-service__check ' +
+            (checked ? "is-checked" : "") +
+            '" aria-label="' +
+            (checked ? "Завершено" : "Не завершено") +
+            '">' +
+            (checked ? "✓" : "") +
+            "</div>" +
+            '<div class="recon-service__main"><strong>' +
+            esc_(service.serviceCode || "") +
+            '</strong><span title="' +
+            attr_(service.serviceName || "") +
+            '">' +
+            esc_(service.serviceName || "") +
+            "</span></div>" +
+            '<div class="recon-service__file">' +
+            renderServiceFile_(service) +
+            "</div>" +
+            "</div>"
+          );
+        })
+        .join("");
+
+      return (
+        '<div class="recon-card recon-month-detail">' +
+        '<div class="recon-card__head">' +
+        '<div><div class="recon-card__eyebrow">' +
+        esc_(statusLabel_(month.status)) +
+        '</div><strong>' +
+        esc_(month.name || month.label || "") +
+        " " +
+        esc_((state.dashboard && state.dashboard.year) || "") +
+        "</strong></div>" +
+        '<div class="recon-month-total recon-month-total--' +
+        attr_(month.status) +
+        '">' +
+        esc_(month.checked || 0) +
+        " / " +
+        esc_(month.total || 0) +
+        "</div>" +
+        "</div>" +
+        '<div class="recon-services">' +
+        rows +
+        "</div>" +
+        "</div>"
+      );
+    }
+
+    function render_() {
+      const dashboard = state.dashboard;
+      if (!dashboard) {
+        setHtml(
+          "resultContent",
+          '<div class="recon-card"><div class="recon-muted">Завантажую звірку…</div></div>',
+        );
+        return;
+      }
+      ensureSelectedMonth_();
+
+      const html =
+        '<div class="inventory-reconciliation">' +
+        '<div class="recon-toolbar">' +
+        '<button type="button" class="btn btn-secondary" onclick="InventoryReconciliationModule.load()">↻ Оновити статуси</button>' +
+        '<button type="button" class="btn btn-primary" onclick="InventoryReconciliationModule.sync()">Синхронізувати файли</button>' +
+        '<button type="button" class="btn btn-secondary" onclick="InventoryReconciliationModule.openSelected()">Відкрити вибрану клітинку</button>' +
+        "</div>" +
+        renderSummary_(dashboard) +
+        renderFolderCard_(dashboard) +
+        '<div class="recon-card"><div class="recon-card__head"><div><div class="recon-card__eyebrow">ЗВІРКА ' +
+        esc_(dashboard.year || "") +
+        '</div><strong>' +
+        esc_(dashboard.serviceCount || 0) +
+        " служб</strong></div></div>" +
+        renderMonths_(dashboard) +
+        "</div>" +
+        renderSelectedMonth_() +
+        "</div>";
+      setHtml("resultContent", html);
+    }
+
+    async function load() {
+      if (state.busy) return;
+      state.busy = true;
+      showLoading();
+      try {
+        const result = await Stage7Api.getInventoryReconciliation();
+        if (!result?.success) {
+          throw new Error(result?.error || "Не вдалося завантажити звірку");
+        }
+        state.dashboard = result.data || {};
+        ensureSelectedMonth_();
+        render_();
+        logToConsole("✓ Статуси звірки оновлено", "success");
+      } catch (error) {
+        displayInResult("error", { error: normalizeError(error) });
+        logToConsole("✕ Звірка: " + normalizeError(error), "error");
+      } finally {
+        state.busy = false;
+        hideLoading();
+      }
+    }
+
+    async function sync() {
+      if (state.busy) return;
+      state.busy = true;
+      showLoading();
+      try {
+        const result = await Stage7Api.syncInventoryReconciliation();
+        if (!result?.success) {
+          throw new Error(result?.error || "Не вдалося синхронізувати файли");
+        }
+        const data = result.data || {};
+        state.dashboard = data.dashboard || state.dashboard;
+        ensureSelectedMonth_();
+        render_();
+        showToast(
+          "✓ Прив’язано: " +
+            Number(data.linkedFiles || 0) +
+            ", відсутні: " +
+            Number(data.missingFiles || 0),
+        );
+        logToConsole(
+          "✓ Звірка: перевірено файлів " +
+            Number(data.scannedFiles || 0) +
+            ", прив’язано " +
+            Number(data.linkedFiles || 0),
+          "success",
+        );
+      } catch (error) {
+        showToast("✕ " + normalizeError(error));
+        logToConsole("✕ Синхронізація звірки: " + normalizeError(error), "error");
+      } finally {
+        state.busy = false;
+        hideLoading();
+      }
+    }
+
+    async function saveFolder() {
+      const input = $id("reconFolderValue");
+      const value = String((input && input.value) || "").trim();
+      if (!value) {
+        showToast("Вкажіть посилання на папку");
+        return;
+      }
+      if (state.busy) return;
+      state.busy = true;
+      showLoading();
+      try {
+        const result = await Stage7Api.setInventoryReconciliationFolder(value);
+        if (!result?.success) {
+          throw new Error(result?.error || "Не вдалося зберегти папку");
+        }
+        showToast("✓ Папку звірок збережено");
+        state.busy = false;
+        hideLoading();
+        await sync();
+        return;
+      } catch (error) {
+        showToast("✕ " + normalizeError(error));
+        logToConsole("✕ Налаштування папки звірок: " + normalizeError(error), "error");
+      } finally {
+        if (state.busy) {
+          state.busy = false;
+          hideLoading();
+        }
+      }
+    }
+
+    function selectMonth(month) {
+      state.selectedMonth = Number(month || 0);
+      render_();
+    }
+
+    async function openSelected() {
+      if (state.busy) return;
+      const pendingWindow = window.open("about:blank", "WASB_RECONCILIATION_FILE");
+      state.busy = true;
+      showLoading();
+      try {
+        const result = await Stage7Api.getSelectedInventoryReconciliation();
+        const data = result?.data || {};
+        if (!result?.success) {
+          throw new Error(result?.error || data.error || "Не вдалося визначити вибрану клітинку");
+        }
+        if (!data.file || !data.file.url) {
+          throw new Error("Для вибраної служби та місяця файл не знайдено");
+        }
+        if (pendingWindow) {
+          pendingWindow.location.replace(data.file.url);
+        } else {
+          window.open(data.file.url, "_blank", "noopener,noreferrer");
+        }
+        logToConsole(
+          "↗ Відкрито звірку: " +
+            String(data.serviceCode || "") +
+            " " +
+            String(data.month || ""),
+          "success",
+        );
+      } catch (error) {
+        try {
+          if (pendingWindow) pendingWindow.close();
+        } catch (_) {}
+        showToast("✕ " + normalizeError(error));
+      } finally {
+        state.busy = false;
+        hideLoading();
+      }
+    }
+
+    async function open() {
+      showStandardResult("🧾 Звірка");
+      setHtml(
+        "resultContent",
+        '<div class="recon-card"><div class="recon-muted">Завантажую звірку…</div></div>',
+      );
+      await load();
+    }
+
+    return Object.freeze({
+      open: open,
+      load: load,
+      sync: sync,
+      saveFolder: saveFolder,
+      selectMonth: selectMonth,
+      openSelected: openSelected,
+      render: render_,
+      state: state,
+    });
+  })();
+
+  function showInventoryReconciliation() {
+    return InventoryReconciliationModule.open();
+  }
+</script>

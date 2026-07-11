@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-07-11 — Inventory reconciliation module
+
+- **Workbook:** dynamic green/pale-pink month status formatting for `INVENTORY_RECONCILIATION`; current and future incomplete months stay neutral.
+- **Drive index:** recursive read-only scan, service/month filename matching, duplicate detection, hidden `INVENTORY_RECONCILIATION_FILES` storage, and cell notes with document links.
+- **Sidebar:** new **Звірка** section with month progress, service/file list, selected-cell opening, folder configuration, manual synchronization, and 15-minute stale auto-sync.
+- **Governance:** routes, RBAC, runtime metadata, client includes, OAuth scope contract, and project-file map updated.
+
 Historical record of changes. For the current operational truth, use `README.md`, `RUNBOOK.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `AGENTS.md`, and the active contracts / verify scripts.
 
 ## 2026-07-10 — Stage 7.1 governance diagnostics alignment

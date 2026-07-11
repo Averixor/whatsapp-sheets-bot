@@ -447,6 +447,82 @@ function apiStage7GetWeaponsRegister() {
   );
 }
 
+function apiStage7GetInventoryReconciliation(options) {
+  const startedAt = _stage7FastStartedAt_();
+  _stage7AssertRole_("maintainer", "get inventory reconciliation");
+
+  const data = InventoryReconciliation_.getDashboard(options || {});
+  return _stage7FastResponse_(
+    "getInventoryReconciliation",
+    "Статуси звірки завантажено",
+    data,
+    [],
+    {
+      startedAt: startedAt,
+      affectedSheets: [
+        CONFIG.INVENTORY_RECONCILIATION_SHEET || "INVENTORY_RECONCILIATION",
+        CONFIG.INVENTORY_RECONCILIATION_FILES_SHEET || "INVENTORY_RECONCILIATION_FILES",
+      ],
+    },
+  );
+}
+
+function apiStage7SyncInventoryReconciliation() {
+  const startedAt = _stage7FastStartedAt_();
+  _stage7AssertRole_("maintainer", "sync inventory reconciliation");
+
+  const data = InventoryReconciliation_.syncFiles();
+  return _stage7FastResponse_(
+    "syncInventoryReconciliation",
+    "Файли звірки синхронізовано",
+    data,
+    data.truncated ? ["Перевірено граничну кількість файлів; частина папки могла не потрапити до пошуку"] : [],
+    {
+      startedAt: startedAt,
+      affectedSheets: [
+        CONFIG.INVENTORY_RECONCILIATION_SHEET || "INVENTORY_RECONCILIATION",
+        CONFIG.INVENTORY_RECONCILIATION_FILES_SHEET || "INVENTORY_RECONCILIATION_FILES",
+      ],
+      appliedChangesCount: Number(data.linkedFiles || 0),
+      dryRun: false,
+      lockUsed: true,
+      lockRequired: true,
+    },
+  );
+}
+
+function apiStage7SetInventoryReconciliationFolder(folderValue) {
+  const startedAt = _stage7FastStartedAt_();
+  _stage7AssertRole_("sysadmin", "configure inventory reconciliation folder");
+
+  const folder = InventoryReconciliation_.setFolder(folderValue || "");
+  return _stage7FastResponse_(
+    "setInventoryReconciliationFolder",
+    "Папку звірок збережено",
+    { folder: folder },
+    [],
+    {
+      startedAt: startedAt,
+      appliedChangesCount: 1,
+      dryRun: false,
+    },
+  );
+}
+
+function apiStage7GetSelectedInventoryReconciliation() {
+  const startedAt = _stage7FastStartedAt_();
+  _stage7AssertRole_("maintainer", "get selected inventory reconciliation");
+
+  const data = InventoryReconciliation_.getSelected();
+  return _stage7FastResponse_(
+    "getSelectedInventoryReconciliation",
+    data.success ? "Вибрану звірку визначено" : "Клітинку звірки не визначено",
+    data,
+    data.success ? [] : [data.error || "Оберіть клітинку звірки"],
+    { startedAt: startedAt },
+  );
+}
+
 function apiStage7GetSendPanelData() {
   const startedAt = _stage7FastStartedAt_();
   _stage7AssertRole_("maintainer", "get send panel data");

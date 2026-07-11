@@ -31,7 +31,6 @@ Run individual npm scripts only when diagnosing a specific failed check.
 | `npm run gas:open` | Open GAS editor (`clasp open-script`) |
 | `npm run gas:status` | List files tracked for clasp push |
 
-
 ### Commit messages
 
 Use short descriptive messages such as `fix access registration expiry` or
@@ -176,7 +175,6 @@ A pull request should include:
 ## Testing notes
 
 Apps Script errors often appear only at runtime in Google’s environment.
-
 
 ## Documentation
 

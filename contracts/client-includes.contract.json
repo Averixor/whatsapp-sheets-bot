@@ -17,6 +17,7 @@
     "Js.Vacations.Actions",
     "Js.Vacations.Module",
     "Js.VacationSync",
+    "Js.InventoryReconciliation",
     "Js.Diagnostics",
     "Js.Security.Boot",
     "Js.Security.Util",

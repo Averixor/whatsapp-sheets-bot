@@ -150,6 +150,23 @@ function onEdit(e) {
   if (!sheet) return;
 
   const sheetName = sheet.getName();
+
+  try {
+    if (
+      typeof InventoryReconciliation_ === "object" &&
+      InventoryReconciliation_ &&
+      typeof InventoryReconciliation_.handleEdit === "function"
+    ) {
+      InventoryReconciliation_.handleEdit(e);
+    }
+  } catch (error) {
+    _logError_("onEdit.inventoryReconciliation", error, {
+      sheetName: sheetName,
+      a1Notation:
+        typeof range.getA1Notation === "function" ? range.getA1Notation() : "",
+    });
+  }
+
   const accessSheetName = _getAccessSheetName_();
   const isAccessSheet = (sheetName === accessSheetName);
   const isProtectedSheet = _isProtectedSheet_(sheetName);

@@ -843,6 +843,7 @@
       phoneDirectory: "Службові телефони",
       carsRegister: "Автотехніка",
       weaponsRegister: "Озброєння",
+      inventoryReconciliation: "Звірка",
       requests: "Заявки",
     };
 
@@ -955,6 +956,12 @@
 
         case "weaponsRegister":
           navigateTo("weaponsRegister", () => showWeaponsRegister());
+          break;
+
+        case "inventoryReconciliation":
+          navigateTo("inventoryReconciliation", () =>
+            showInventoryReconciliation(),
+          );
           break;
 
         case "vacationReminder": {
