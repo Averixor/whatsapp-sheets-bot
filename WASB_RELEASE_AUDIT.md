@@ -7,17 +7,17 @@ Historical snapshot only. This file records the close state from **2026-06-07** 
 **Closed at:** 2026-06-07  
 **Git baseline:** `main` (clean tree before close commit)  
 **GAS deploy:** `clasp push` — **PASS**, 144 files  
-**Authorized clasp user:** ryabinin.sergei.alekseevich@gmail.com
+**Authorized clasp user:** [`ryabinin.sergei.alekseevich@gmail.com`](mailto:ryabinin.sergei.alekseevich@gmail.com)
 
 ---
 
 ## Production smoke
 
-| Check | Result |
-|-------|--------|
-| Manual run in GAS UI | **PASS** — 2026-06-07 11:55 |
-| `apiRunProductionSmokeChecks` (historical name; current remote smoke: `apiRunSmokeChecks` in `tests/GasRuntimeSmoke.gs`) | `ok: true` |
-| Access policy checks | **23/23 OK** |
+| Check                                                                                                                    | Result                      |
+| ------------------------------------------------------------------------------------------------------------------------ | --------------------------- |
+| Manual run in GAS UI                                                                                                     | **PASS** — 2026-06-07 11:55 |
+| `apiRunProductionSmokeChecks` (historical name; current remote smoke: `apiRunSmokeChecks` in `tests/GasRuntimeSmoke.gs`) | `ok: true`                  |
+| Access policy checks                                                                                                     | **23/23 OK**                |
 
 Clean Git code was pushed to GAS after CI; any temporary `manualSmokePrint()` added only in the Apps Script UI was overwritten and is **not** in production code.
 
@@ -25,8 +25,8 @@ Clean Git code was pushed to GAS after CI; any temporary `manualSmokePrint()` ad
 
 ## Tooling (post-release, not a release blocker)
 
-| Check | Result |
-|-------|--------|
+| Check                             | Result                                                               |
+| --------------------------------- | -------------------------------------------------------------------- |
 | `npm run gas:smoke` (`clasp run`) | **BLOCKED** — Google OAuth app authorization for clasp execution API |
 
 Track as a separate tooling task (OAuth for `clasp run`). Manual production smoke in the GAS editor satisfies the release gate.
@@ -35,17 +35,17 @@ Track as a separate tooling task (OAuth for `clasp run`). Manual production smok
 
 ## Final status matrix
 
-| Area | Status |
-|------|--------|
-| WASB production release | **CLOSED** |
-| Code | **PASS** |
-| CI (`npm run ci`) | **PASS** |
-| GAS | **PUSHED** (144 files) |
-| Workbook contract | **PASS** (personnel=29) |
-| Recipient contract | **PASS** |
-| XSS audit | **PASS** |
-| Access policy runtime | **PASS** (23/23) |
-| Manual production smoke | **PASS** |
-| GitHub `main` | **UP TO DATE** |
+| Area                    | Status                  |
+| ----------------------- | ----------------------- |
+| WASB production release | **CLOSED**              |
+| Code                    | **PASS**                |
+| CI (`npm run ci`)       | **PASS**                |
+| GAS                     | **PUSHED** (144 files)  |
+| Workbook contract       | **PASS** (personnel=29) |
+| Recipient contract      | **PASS**                |
+| XSS audit               | **PASS**                |
+| Access policy runtime   | **PASS** (23/23)        |
+| Manual production smoke | **PASS**                |
+| GitHub `main`           | **UP TO DATE**          |
 
-**Final verdict — CLOSED**
+## Final verdict — CLOSED
