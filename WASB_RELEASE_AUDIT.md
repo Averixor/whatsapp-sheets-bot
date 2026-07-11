@@ -7,7 +7,7 @@ Historical snapshot only. This file records the close state from **2026-06-07** 
 **Closed at:** 2026-06-07  
 **Git baseline:** `main` (clean tree before close commit)  
 **GAS deploy:** `clasp push` — **PASS**, 144 files  
-**Authorized clasp user:** [ryabinin.sergei.alekseevich@gmail.com](mailto:ryabinin.sergei.alekseevich@gmail.com)
+**Authorized clasp user:** [`ryabinin.sergei.alekseevich@gmail.com`](mailto:ryabinin.sergei.alekseevich@gmail.com)
 
 ---
 
