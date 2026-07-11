@@ -18,6 +18,11 @@ const InventoryReconciliation_ = (function () {
     AUTO_SYNC_TTL_MS: 15 * 60 * 1000,
   });
 
+  const SCAN_TRUNCATION_REASON = Object.freeze({
+    FILES: "files",
+    DEPTH: "depth",
+  });
+
   const MONTH_NAMES = Object.freeze([
     "Січень",
     "Лютий",
@@ -413,17 +418,17 @@ const InventoryReconciliation_ = (function () {
 
   function markScanTruncated_(scanState, reason) {
     scanState.truncated = true;
-    if (reason === "depth") scanState.truncatedByDepth = true;
-    else if (reason === "files") scanState.truncatedByFiles = true;
+    if (reason === SCAN_TRUNCATION_REASON.DEPTH) scanState.truncatedByDepth = true;
+    else if (reason === SCAN_TRUNCATION_REASON.FILES) scanState.truncatedByFiles = true;
   }
 
   function walkFolder_(folder, pathParts, depth, collector, scanState) {
     if (depth > DEFAULTS.MAX_SCAN_DEPTH) {
-      markScanTruncated_(scanState, "depth");
+      markScanTruncated_(scanState, SCAN_TRUNCATION_REASON.DEPTH);
       return;
     }
     if (collector.length >= DEFAULTS.MAX_SCANNED_FILES) {
-      markScanTruncated_(scanState, "files");
+      markScanTruncated_(scanState, SCAN_TRUNCATION_REASON.FILES);
       return;
     }
 
@@ -439,14 +444,14 @@ const InventoryReconciliation_ = (function () {
         path: pathParts.join(" / "),
       });
     }
-    if (files.hasNext()) markScanTruncated_(scanState, "files");
+    if (files.hasNext()) markScanTruncated_(scanState, SCAN_TRUNCATION_REASON.FILES);
 
     const folders = folder.getFolders();
     while (folders.hasNext() && collector.length < DEFAULTS.MAX_SCANNED_FILES) {
       const child = folders.next();
       walkFolder_(child, pathParts.concat([child.getName()]), depth + 1, collector, scanState);
     }
-    if (folders.hasNext()) markScanTruncated_(scanState, "files");
+    if (folders.hasNext()) markScanTruncated_(scanState, SCAN_TRUNCATION_REASON.FILES);
   }
 
   function scoreCandidate_(file, service, month, year) {

@@ -2,38 +2,51 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 import { repoRoot } from './lib/load-contract.mjs';
+import { readRepoFileByBasename } from './lib/gas-files.mjs';
 
-const inventory = fs.readFileSync(path.join(repoRoot, 'inventory/InventoryReconciliation.gs'), 'utf8');
+const inventory = readRepoFileByBasename(repoRoot, 'InventoryReconciliation.gs', {
+  errorPrefix: 'verify-inventory-reconciliation',
+});
 const client = fs.readFileSync(path.join(repoRoot, 'ui/Js.InventoryReconciliation.html'), 'utf8');
 const protection = fs.readFileSync(path.join(repoRoot, 'sheets/SpreadsheetProtection.gs'), 'utf8');
 const health = fs.readFileSync(path.join(repoRoot, 'diagnostics/Diagnostics.Health.gs'), 'utf8');
 const stage7Api = fs.readFileSync(path.join(repoRoot, 'api/Stage7ServerApi.gs'), 'utf8');
 
-const COMPLETE_COLOR = '#D9EAD3';
-const INCOMPLETE_COLOR = '#F4CCCC';
-
-/** Mirrors InventoryReconciliation_.computeMonthStatus_ */
-function computeMonthStatus({ future, past, checksComplete, filesComplete }) {
-  const complete = !!checksComplete && !!filesComplete;
-  let color = null;
-  let status = 'current';
-
-  if (past && complete) {
-    color = COMPLETE_COLOR;
-    status = 'complete';
-  } else if (past && !filesComplete) {
-    color = INCOMPLETE_COLOR;
-    status = 'missing_files';
-  } else if (past) {
-    color = INCOMPLETE_COLOR;
-    status = 'incomplete';
-  } else if (future) {
-    status = 'future';
-  }
-
-  return { status, color, complete, checksComplete: !!checksComplete, filesComplete: !!filesComplete };
+function extractFunctionBody(source, fnName) {
+  const marker = `function ${fnName}`;
+  const start = source.indexOf(marker);
+  assert.ok(start >= 0, `missing ${fnName} in InventoryReconciliation.gs`);
+  const tail = source.slice(start);
+  const nextFn = tail.slice(marker.length).search(/\n  function [A-Za-z_$]/);
+  return nextFn >= 0 ? tail.slice(0, nextFn + marker.length) : tail;
 }
+
+function extractConstObject(source, constName) {
+  const marker = `const ${constName} = Object.freeze({`;
+  const start = source.indexOf(marker);
+  assert.ok(start >= 0, `missing ${constName} in InventoryReconciliation.gs`);
+  const tail = source.slice(start);
+  const end = tail.indexOf('});');
+  assert.ok(end >= 0, `unterminated ${constName}`);
+  return tail.slice(0, end + 3);
+}
+
+const defaultsSource = inventory.match(/const DEFAULTS = Object\.freeze\(\{[\s\S]*?\}\);/);
+assert.ok(defaultsSource, 'DEFAULTS block missing in InventoryReconciliation.gs');
+
+const inventoryContext = vm.createContext({ Object, console });
+vm.runInContext(
+  `${defaultsSource[0]}\n${extractConstObject(inventory, 'SCAN_TRUNCATION_REASON')}\n${extractFunctionBody(inventory, 'computeMonthStatus_')}\n${extractFunctionBody(inventory, 'markScanTruncated_')}`,
+  inventoryContext,
+  { filename: 'InventoryReconciliation.extracted.js' },
+);
+
+const computeMonthStatus = vm.runInContext('computeMonthStatus_', inventoryContext);
+const markScanTruncated = vm.runInContext('markScanTruncated_', inventoryContext);
+const DEFAULTS = vm.runInContext('DEFAULTS', inventoryContext);
+const SCAN_TRUNCATION_REASON = vm.runInContext('SCAN_TRUNCATION_REASON', inventoryContext);
 
 assert.equal(computeMonthStatus({ past: true, future: false, checksComplete: true, filesComplete: true }).status, 'complete');
 assert.equal(computeMonthStatus({ past: true, future: false, checksComplete: false, filesComplete: true }).status, 'incomplete');
@@ -41,38 +54,28 @@ assert.equal(computeMonthStatus({ past: false, future: false, checksComplete: fa
 assert.equal(computeMonthStatus({ past: false, future: false, checksComplete: true, filesComplete: true }).status, 'current');
 assert.equal(computeMonthStatus({ past: false, future: true, checksComplete: true, filesComplete: true }).status, 'future');
 assert.equal(computeMonthStatus({ past: true, future: false, checksComplete: true, filesComplete: false }).status, 'missing_files');
-assert.equal(computeMonthStatus({ past: true, future: false, checksComplete: true, filesComplete: true }).color, COMPLETE_COLOR);
-assert.equal(computeMonthStatus({ past: true, future: false, checksComplete: false, filesComplete: false }).color, INCOMPLETE_COLOR);
+assert.equal(computeMonthStatus({ past: true, future: false, checksComplete: true, filesComplete: true }).color, DEFAULTS.COMPLETE_COLOR);
+assert.equal(computeMonthStatus({ past: true, future: false, checksComplete: false, filesComplete: false }).color, DEFAULTS.INCOMPLETE_COLOR);
 assert.equal(8 * 12, 96);
 assert.equal(9 * 12, 108);
 
-/** Mirrors InventoryReconciliation_.markScanTruncated_ + walkFolder_ depth/file guards */
-function applyScanLimits({ depth, maxDepth, fileCount, maxFiles }) {
-  const scanState = { truncated: false, truncatedByFiles: false, truncatedByDepth: false };
-  if (depth > maxDepth) {
-    scanState.truncated = true;
-    scanState.truncatedByDepth = true;
-    return scanState;
-  }
-  if (fileCount >= maxFiles) {
-    scanState.truncated = true;
-    scanState.truncatedByFiles = true;
-    return scanState;
-  }
-  return scanState;
+function scanStateSnapshot() {
+  return { truncated: false, truncatedByFiles: false, truncatedByDepth: false };
 }
 
-const depthHit = applyScanLimits({ depth: 6, maxDepth: 5, fileCount: 0, maxFiles: 2500 });
+const depthHit = scanStateSnapshot();
+markScanTruncated(depthHit, SCAN_TRUNCATION_REASON.DEPTH);
 assert.equal(depthHit.truncated, true);
 assert.equal(depthHit.truncatedByDepth, true);
 assert.equal(depthHit.truncatedByFiles, false);
 
-const filesHit = applyScanLimits({ depth: 2, maxDepth: 5, fileCount: 2500, maxFiles: 2500 });
+const filesHit = scanStateSnapshot();
+markScanTruncated(filesHit, SCAN_TRUNCATION_REASON.FILES);
 assert.equal(filesHit.truncated, true);
 assert.equal(filesHit.truncatedByFiles, true);
 assert.equal(filesHit.truncatedByDepth, false);
 
-const withinLimits = applyScanLimits({ depth: 5, maxDepth: 5, fileCount: 10, maxFiles: 2500 });
+const withinLimits = scanStateSnapshot();
 assert.equal(withinLimits.truncated, false);
 assert.equal(withinLimits.truncatedByDepth, false);
 assert.equal(withinLimits.truncatedByFiles, false);
@@ -91,9 +94,12 @@ assert.match(inventory, /checksComplete:\s*checksComplete/);
 assert.match(inventory, /filesComplete:\s*filesComplete/);
 assert.match(inventory, /порожній рядок між службами/);
 assert.match(inventory, /Папку звірок Google Drive ще не налаштовано/);
+assert.match(inventory, /const SCAN_TRUNCATION_REASON = Object\.freeze\(/);
 assert.match(inventory, /function markScanTruncated_/);
-assert.match(inventory, /markScanTruncated_\(scanState, "depth"\)/);
-assert.match(inventory, /markScanTruncated_\(scanState, "files"\)/);
+assert.match(inventory, /markScanTruncated_\(scanState, SCAN_TRUNCATION_REASON\.DEPTH\)/);
+assert.match(inventory, /markScanTruncated_\(scanState, SCAN_TRUNCATION_REASON\.FILES\)/);
+assert.match(inventory, /reason === SCAN_TRUNCATION_REASON\.DEPTH/);
+assert.match(inventory, /reason === SCAN_TRUNCATION_REASON\.FILES/);
 assert.match(inventory, /truncatedByFiles:\s*!!scanState\.truncatedByFiles/);
 assert.match(inventory, /truncatedByDepth:\s*!!scanState\.truncatedByDepth/);
 assert.doesNotMatch(inventory, /if \(depth > DEFAULTS\.MAX_SCAN_DEPTH\) return;/);
