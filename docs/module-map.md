@@ -5,7 +5,8 @@ Practical index: **where to look** and **what CI proves it**. Structural rules: 
 | Domain | Folder | Main files | CI / verification | Notes |
 | ------ | ------ | ---------- | ----------------- | ----- |
 | Reports | `reports/` | `Report_*.gs`, `Summaries.gs`, `Summary*.gs`, `MonthlyReport.gs`, `MonthJournalMaterialize.gs` | `npm run ci`, `npm run ci:workbook`, `npm run ci:materialize` | Includes daily summaries and derived month journal sheets. |
-| Vacations | `vacations/` | `Vacation*.gs` | `npm run ci:vacations` | Vacation UI partials live in `ui/Js.Vacations.*.html`. |
+| Vacations | `vacations/` | `Vacation*.gs` | `npm run ci:vacations` | Vacation UI partials live in `ui/Js.Vacations.*.html`; monthly sync in `VacationMonthlySync.gs`. |
+| Inventory | `inventory/` | `InventoryReconciliation.gs` | `npm run ci` (access-api, client includes, oauth scopes) | Sidebar **Звірка**; sheets `INVENTORY_RECONCILIATION` / `INVENTORY_RECONCILIATION_FILES`. |
 | Send panel | `sendpanel/` | `SendPanel*.gs`, `SelectionActionService.gs`, `UseCases.SendPanel.gs`, `Stage7PhoneDictPayloadShims.gs` | `npm run ci`, `npm run ci:recipients` | |
 | Maintenance / formats | `maintenance/` | `ConditionalFormat*.gs`, `JobRuntime*.gs`, `Template*.gs`, `LifecycleRetention.gs` | `npm run ci:format-rules` | Sheet self-heal lives in `sheets/`. |
 | Diagnostics | `diagnostics/` | `Diagnostics.*.gs` (runtime) | `npm run ci` | `tests/Diagnostics.Debug.gs` — clasp-excluded. |

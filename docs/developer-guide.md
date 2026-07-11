@@ -32,7 +32,8 @@ Google Sheets       — ACCESS, PERSONNEL, місячні листи, …
 | `MonthJournalMaterialize` | Derived `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` from month sheets + PERSONNEL + DICT |
 | `ReferenceSheetsRepository_` | Optional sidebar reference sheets `PHONE_DIRECTORY` / `CAR` / `WEAPON` |
 | `Report_*` | Зведення дня (short з formula block, detailed окремо) — modules in `reports/` |
-| Vacation modules | Відпустки, перевірки, міні-календар — server modules in `vacations/` |
+| Vacation modules | Відпустки, перевірки, міні-календар, monthly sync — server modules in `vacations/`; UI in `ui/Js.Vacations.*.html` + `ui/Js.VacationSync.html` |
+| `InventoryReconciliation_` | Звірка служб: `INVENTORY_RECONCILIATION`, Drive index, sidebar **Звірка** (`inventory/InventoryReconciliation.gs`) |
 | `contracts/` + `scripts/verify-*` | Захист від тихої деградації (governance CI) |
 
 Детальніша архітектура: [ARCHITECTURE.md](../ARCHITECTURE.md). Доступ і RBAC: [SECURITY.md](../SECURITY.md).
@@ -103,4 +104,5 @@ Or CI + clasp only: `npm run deploy:prod`. Full pipeline with map refresh: `npm 
 | Identity, lockout, RBAC | [SECURITY.md](../SECURITY.md) |
 | Зведення дня | [daily-summary-architecture.md](./daily-summary-architecture.md) |
 | Відпустки | [vacation-planner.md](./vacation-planner.md) |
+| Звірка (inventory) | [inventory-reconciliation.md](./inventory-reconciliation.md) |
 | Локальний workflow | [CONTRIBUTING.md](../CONTRIBUTING.md) |

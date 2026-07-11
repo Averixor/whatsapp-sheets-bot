@@ -26,6 +26,8 @@ This repository is packaged for Google Apps Script through `clasp`:
 - lightweight sidebar bootstrap and read-only access descriptor support for faster UI startup
 - derived month journal sheets per month: `ЖУРНАЛ_MM` and `ПІДСУМОК_MM`
 - optional sidebar reference sheets: `PHONE_DIRECTORY` (service phones), `CAR` (vehicle register), and `WEAPON` (weapons/property register)
+- inventory reconciliation sidebar (**Звірка**): month checkboxes on `INVENTORY_RECONCILIATION`, Drive document links, auto-sync index
+- vacation monthly sync: approved/applied vacations → month sheet `Відпус` (`vacations/VacationMonthlySync.gs`; conflicts in **Конфлікти з відпустками**)
 
 ## Maintainer workflow
 
@@ -105,6 +107,7 @@ The workflow does not deploy to Apps Script. Deployment remains local via
 | [`docs/adr/002-domain-folder-map.md`](./docs/adr/002-domain-folder-map.md) | Phased folder moves (ADR-002) |
 | [`docs/daily-summary-architecture.md`](./docs/daily-summary-architecture.md) | Short/detailed day summary: formula block, modules, sidebar flow |
 | [`docs/vacation-planner.md`](./docs/vacation-planner.md) | Vacation planner, concurrent rules, mini-calendar UX |
+| [`docs/inventory-reconciliation.md`](./docs/inventory-reconciliation.md) | Inventory month tracking, Drive folder scan, sidebar **Звірка** |
 | [`docs/user-facing-copy.md`](./docs/user-facing-copy.md) | UX copy policy; enforced by `verify-user-facing-copy.mjs` |
 | [`docs/format-rules-governance.md`](./docs/format-rules-governance.md) | Manual conditional-format registry |
 | [`docs/adr/003-working-domain-layout.md`](./docs/adr/003-working-domain-layout.md) | Working domain folder layout (post-#34) |
@@ -119,7 +122,7 @@ workbook exports, personal data, or local workbook paths.
 .
 ├── appsscript.json                   # GAS manifest (repo root only)
 ├── core/ api/ data/ sheets/ usecases/ ui-server/   # server runtime
-├── reports/ vacations/ sendpanel/ access/ personnel/
+├── reports/ vacations/ sendpanel/ access/ personnel/ inventory/
 ├── ui/                               # all .html (Sidebar, JavaScript, Js.*, Styles*)
 ├── tests/                            # local-only (excluded from clasp push)
 ├── docs/ contracts/ scripts/         # Git-only tooling and documentation

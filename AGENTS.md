@@ -143,9 +143,16 @@ Domain folders (`reports/`, `vacations/`, `core/`, `ui/`, …) are mechanical mo
 - Mini-calendar cells: day number + divider + count only (no names in grid).
 - Footer summary: **Проблемних дат** / **Навантажених днів** only (no static rule lines).
 - Navigation ◀/▶ must pass explicit `{ year, month }` to `loadMonthCalendar` (see `ui/Js.Vacations.Actions.html`).
-- Modules: `vacations/VacationMonthCalendar.gs`, `vacations/Vacation_Suggestions.gs`, `ui/Js.Vacations.*.html` partials.
+- Modules: `vacations/VacationMonthCalendar.gs`, `vacations/Vacation_Suggestions.gs`, `vacations/VacationMonthlySync.gs`, `ui/Js.Vacations.*.html` partials, `ui/Js.VacationSync.html`.
 - Design doc: [`docs/vacation-planner.md`](./docs/vacation-planner.md).
-- Local contract: `scripts/verify-vacation-planner.mjs` (`npm run ci:vacations`).
+- Local contract: `scripts/verify-vacation-planner.mjs`, `scripts/verify-vacation-monthly-sync.mjs` (`npm run ci:vacations`).
+
+### Inventory reconciliation (do not regress)
+
+- Sheets: `INVENTORY_RECONCILIATION` (visible), `INVENTORY_RECONCILIATION_FILES` (hidden index).
+- Drive folder id: Script Property `WASB_INVENTORY_RECONCILIATION_FOLDER_ID`; OAuth scope `drive.readonly` required.
+- Modules: `inventory/InventoryReconciliation.gs`, `ui/Js.InventoryReconciliation.html`, `ui/Styles_35_InventoryReconciliation.html`.
+- Design doc: [`docs/inventory-reconciliation.md`](./docs/inventory-reconciliation.md).
 
 ### User-facing copy (do not regress)
 

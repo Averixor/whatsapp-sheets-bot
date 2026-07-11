@@ -543,7 +543,7 @@ Local equivalent: **`npm run check`** (alias **`npm run ci`**).
 | `verify-access-api-governance.mjs` | Access endpoints, role policies, client routes |
 | `verify-access-autofill-hotfix.mjs` | ACCESS row autofill hotfix contract |
 | `verify-access-temp-password-reissue.mjs` | Temporary password reissue flow |
-| `verify-oauth-scopes.mjs` | Manifest scopes vs allowlist |
+| `verify-oauth-scopes.mjs` | Manifest scopes vs allowlist (`drive.readonly` for inventory reconciliation) |
 | `verify-project-files-map.mjs` | `docs/project-files-complete.txt` matches working tree |
 | `verify-jsconfig.mjs` | `jsconfig.json` include/exclude globs |
 
@@ -883,5 +883,33 @@ intact for diagnosis. Do not delete `VACATIONS` during the compatibility period.
 
 ```bash
 npm run ci:vacations
+node scripts/verify-vacation-monthly-sync.mjs
+npm run ci
+```
+
+### Синхронізація з місячним графіком
+
+`VacationMonthlySync_` (`vacations/VacationMonthlySync.gs`) заповнює порожні
+клітинки кодом `Відпус` після `apiStage7CreateNextMonth()` і
+`apiStage7MaterializeComputedData()`. Конфлікти з уже заповненими клітинками —
+у панелі **Конфлікти з відпустками** (`ui/Js.VacationSync.html`). Деталі:
+[`docs/vacation-planner.md`](./docs/vacation-planner.md) § Monthly schedule sync.
+
+## 24. Inventory reconciliation (звірка)
+
+Панель: **WASB → Відкрити панель → Звірка**.
+
+Повний опис: [`docs/inventory-reconciliation.md`](./docs/inventory-reconciliation.md).
+
+### Що перевірити після деплою
+
+1. Після першого deploy з модулем звірки — повторно авторизувати OAuth scope **`drive.readonly`** (перегляд наявних файлів/папок Drive).
+2. **sysadmin** задає кореневу папку Drive; інші ролі бачать прогрес місяців і можуть відкривати прив’язані документи.
+3. Позначки на `INVENTORY_RECONCILIATION` перефарбовують місяць (`onEdit`); авто-синхронізація індексу — якщо старіша за 15 хв.
+4. Кнопка **Синхронізувати файли** оновлює прихований `INVENTORY_RECONCILIATION_FILES` і примітки клітинок.
+
+### Локальна перевірка
+
+```bash
 npm run ci
 ```

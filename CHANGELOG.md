@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-07-11 — Docs synced to inventory reconciliation and runtime chain
+
+- **ARCHITECTURE.md:** client `activeRuntimeChain` (Modals, Vacations partials, VacationSync, InventoryReconciliation); §7.3 WEAPON; new §7.4 inventory reconciliation.
+- **SECURITY.md:** `drive.readonly` OAuth scope; sysadmin UA maintenance action keys (`відновлення`, `захист аркушів`, `тригери`).
+- **README.md / docs index / module-map / developer-guide / AGENTS.md / CONTRIBUTING.md / RUNBOOK.md §24:** inventory reconciliation and vacation monthly sync cross-links.
+
 ## 2026-07-11 — Inventory reconciliation module
 
 - **Workbook:** dynamic green/pale-pink month status formatting for `INVENTORY_RECONCILIATION`; current and future incomplete months stay neutral.

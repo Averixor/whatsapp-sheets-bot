@@ -191,6 +191,8 @@ Update documentation when changing:
 - **`SHEET_HEADERS` / ACCESS schema** — keep **`README.md`**, **`RUNBOOK.md`**, **`ARCHITECTURE.md`** in sync
 - **Daily summaries** — keep **`docs/daily-summary-architecture.md`**, **`ARCHITECTURE.md` §7.1**, **`RUNBOOK.md` §22** aligned when changing `reports/Report_*.gs`, `reports/Summaries.gs`, or sidebar summary flow
 - **Month journal / reference sheets** — keep **`README.md`**, **`ARCHITECTURE.md`**, **`RUNBOOK.md`**, **`docs/module-map.md`**, and workbook/reference contracts aligned when changing `reports/MonthJournalMaterialize.gs` or `ReferenceSheetsRepository_`
+- **Vacation monthly sync** — keep **`docs/vacation-planner.md`**, **`ARCHITECTURE.md` §7.2**, **`RUNBOOK.md` §21–§23** aligned when changing `vacations/VacationMonthlySync.gs` or `ui/Js.VacationSync.html`
+- **Inventory reconciliation** — keep **`docs/inventory-reconciliation.md`**, **`ARCHITECTURE.md` §7.4**, **`SECURITY.md`** (OAuth scopes), and access-api governance aligned when changing `inventory/InventoryReconciliation.gs` or `ui/Js.InventoryReconciliation.html`
 - **User-facing copy** — keep **`docs/user-facing-copy.md`** aligned when changing sidebar labels, menus, dialogs, health messages, or sheet titles shown to users; run **`npm run ci:copy`** after UI text edits
 - **Script properties** — keep **`README.md`**, **`RUNBOOK.md` §15**, **`SECURITY.md`**, **`CONTRIBUTING.md`** aligned with `data/DataAccess.gs`
 - **Repository file map** — refresh **`docs/project-files-complete.txt`** with **`npm run map:project-files`** whenever files are added, removed, or moved; CI enforces freshness via **`verify-project-files-map.mjs`**

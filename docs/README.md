@@ -21,6 +21,7 @@ snapshots to the repository.
 | [CONTRIBUTING.md](../CONTRIBUTING.md)                            | Local workflow, CI, change policy                           |
 | [AGENTS.md](../AGENTS.md)                                        | Automation-agent instructions                               |
 | [vacation-planner.md](./vacation-planner.md)                     | Vacation planner, concurrent rules, mini-calendar UX        |
+| [inventory-reconciliation.md](./inventory-reconciliation.md)   | Inventory month tracking, Drive links, sidebar **Звірка**   |
 | [daily-summary-architecture.md](./daily-summary-architecture.md) | Short/detailed day summary modules, formula block, UI flow  |
 | [format-rules-governance.md](./format-rules-governance.md)       | Manual conditional-format registry and rebuild protection   |
 | [user-facing-copy.md](./user-facing-copy.md)                     | UX copy: UA UI text, no technical names in user-facing strings; enforced by `verify-user-facing-copy.mjs` |

@@ -15,13 +15,23 @@ WASB is a spreadsheet-bound Google Apps Script application.
 - `ui/Sidebar.html` is the sidebar shell
 - `ui/JavaScript.html` aggregates the modular client runtime
 - `ui/Styles.html` bundles CSS partials via GAS `include()` (see partials `ui/Styles_*.html`)
-- active JS include chain (via `JavaScript.html`):
+- active JS include chain (via `JavaScript.html`; canonical order in `core/ProjectMetadata.gs` → `activeRuntimeChain` and `contracts/client-includes.contract.json`):
   - `Js.Core.html`
   - `Js.State.html`
+  - `Js.Modals.html`
   - `Js.Api.html`
   - `Js.Render.Panel.html`
   - `Js.Render.Calendar.html`
   - `Js.Render.Results.html`
+  - `Js.Vacations.Constants.html`
+  - `Js.Vacations.Formatters.html`
+  - `Js.Vacations.Render.Problems.html`
+  - `Js.Vacations.Render.Calendar.html`
+  - `Js.Vacations.Render.Main.html`
+  - `Js.Vacations.Actions.html`
+  - `Js.Vacations.Module.html`
+  - `Js.VacationSync.html`
+  - `Js.InventoryReconciliation.html`
   - `Js.Diagnostics.html`
   - `Js.Security.Boot.html`
   - `Js.Security.Util.html`
@@ -36,7 +46,7 @@ WASB is a spreadsheet-bound Google Apps Script application.
   - `Js.Helpers.html`
   - `Js.Events.html`
   - `Js.Actions.html`
-- `Js.Security.html` is a legacy shim and is not in the loader chain
+- `Js.Security.html` and monolithic `Js.Vacations.html` are legacy shims and are not in the loader chain
 
 ### Packaging policy
 
@@ -62,6 +72,8 @@ Representative entrypoints:
 - `apiStage7GetSendPanelData()`
 - `apiStage7GetPhoneDirectory()`
 - `apiStage7GetCarsRegister()`
+- `apiStage7GetWeaponsRegister()`
+- `apiStage7GetInventoryReconciliation()` / `apiStage7SyncInventoryReconciliation()`
 - `apiGenerateSendPanelForDate()`
 - `apiBuildDaySummary()`
 - `apiBuildDetailedSummary()`
@@ -302,10 +314,11 @@ Full design: [`docs/vacation-planner.md`](./docs/vacation-planner.md). Contracts
 
 ## 7.3 Reference sheets and month journal
 
-Sidebar maintainers can open two optional reference repositories:
+Sidebar maintainers can open three optional reference repositories:
 
 - `PHONE_DIRECTORY` — sectioned service phones with WhatsApp links (`apiStage7GetPhoneDirectory`)
 - `CAR` — vehicle register with owner/search/stats (`apiStage7GetCarsRegister`)
+- `WEAPON` — person-bound military property register (`apiStage7GetWeaponsRegister`)
 
 These reads are owned by `ReferenceSheetsRepository_` in `data/DictionaryRepository.gs`. Header/workbook expectations are guarded by `contracts/reference-workbook-layout.contract.json` and parser semantics by `scripts/verify-reference-repositories.mjs`.
 
@@ -315,6 +328,23 @@ Month-journal materialization is separate from `apiStage7MaterializeComputedData
 - output: `ЖУРНАЛ_MM` and `ПІДСУМОК_MM`
 - maintenance API: `apiStage7MaterializeMonthJournal()`
 - UI action: sidebar button **Оновити журнал місяця**
+
+## 7.4 Inventory reconciliation
+
+Service inventory month tracking lives on `INVENTORY_RECONCILIATION` with a hidden
+Drive index sheet `INVENTORY_RECONCILIATION_FILES`.
+
+| Layer | Module | Role |
+| ----- | ------ | ---- |
+| Server | `inventory/InventoryReconciliation.gs` | Month status colors, Drive folder scan, file matching, cell notes |
+| API | `api/Stage7ServerApi.gs` | `apiStage7GetInventoryReconciliation`, `apiStage7SyncInventoryReconciliation`, `apiStage7SetInventoryReconciliationFolder`, `apiStage7GetSelectedInventoryReconciliation` |
+| UI | `ui/Js.InventoryReconciliation.html` | Sidebar **Звірка** section |
+| Trigger | `access/AccessSheetTriggers.gs` | `onEdit` recolor after checkbox changes |
+
+Folder id is stored in Script Property `WASB_INVENTORY_RECONCILIATION_FOLDER_ID`.
+Drive traversal requires OAuth scope `drive.readonly` (see `contracts/oauth-scopes.contract.json`).
+
+Full design: [`docs/inventory-reconciliation.md`](./docs/inventory-reconciliation.md).
 
 ## 8. Sidebar runtime principles
 
