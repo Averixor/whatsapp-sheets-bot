@@ -370,6 +370,10 @@ var AccessEnforcement_ =
         _configValue_("SEND_PANEL_SHEET", "SEND_PANEL"),
         _configValue_("PERSONNEL_SHEET", "PERSONNEL"),
         _configValue_("PHONES_SHEET", "PHONES"),
+        _configValue_(
+          "INVENTORY_RECONCILIATION_FILES_SHEET",
+          "INVENTORY_RECONCILIATION_FILES",
+        ),
       ]);
     }
 

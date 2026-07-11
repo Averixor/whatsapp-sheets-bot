@@ -2,6 +2,7 @@
 !appsscript.json
 !**/*.gs
 !**/*.html
+tests/**
 node_modules/**
 .git/**
 _backup*/**

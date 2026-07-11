@@ -403,6 +403,9 @@
         if (!result?.success) {
           throw new Error(result?.error || data.error || "Не вдалося визначити вибрану клітинку");
         }
+        if (!data.success) {
+          throw new Error(data.error || "Оберіть клітинку звірки");
+        }
         if (!data.file || !data.file.url) {
           throw new Error("Для вибраної служби та місяця файл не знайдено");
         }

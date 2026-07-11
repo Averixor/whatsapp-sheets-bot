@@ -122,6 +122,11 @@ function _spResolveSheetNames_(options) {
     _spGetConfigValue_(config, "PHONE_DIRECTORY_SHEET", "PHONE_DIRECTORY"),
     _spGetConfigValue_(config, "CAR_SHEET", "CAR"),
     _spGetConfigValue_(config, "WEAPON_SHEET", "WEAPON"),
+    _spGetConfigValue_(
+      config,
+      "INVENTORY_RECONCILIATION_FILES_SHEET",
+      "INVENTORY_RECONCILIATION_FILES",
+    ),
   ];
 
   if (includeSendPanel) {
@@ -310,6 +315,45 @@ function _spProtectSheet_(
     );
     return false;
   }
+}
+
+function protectInventoryReconciliationIndexSheet_(sheet) {
+  const summary = {
+    protectedSheets: [],
+    warnings: [],
+    allowedEditors: {},
+    removedEditors: {},
+    domainEditDisabled: [],
+  };
+  const allowEditors = _spUniqueStrings_(_spResolveAdminEmails_().filter(Boolean));
+  const existing =
+    sheet && _spCanCall_(sheet, "getProtections")
+      ? sheet.getProtections(SpreadsheetApp.ProtectionType.SHEET) || []
+      : [];
+  if (existing.length) {
+    const protection = existing[0];
+    if (_spCanCall_(protection, "setDescription")) {
+      protection.setDescription("WASB inventory reconciliation index protection");
+    }
+    if (_spCanCall_(protection, "setWarningOnly")) {
+      protection.setWarningOnly(false);
+    }
+    if (allowEditors.length) {
+      _spDisableDomainEdit_(protection, summary, sheet.getName());
+      _spRemoveDisallowedEditors_(protection, allowEditors, summary, sheet.getName());
+      _spAddAllowedEditors_(protection, allowEditors, summary, sheet.getName());
+    }
+    summary.protectedSheets.push(sheet.getName());
+    return summary;
+  }
+  _spProtectSheet_(
+    sheet,
+    allowEditors,
+    false,
+    summary,
+    "WASB inventory reconciliation index protection",
+  );
+  return summary;
 }
 
 function _wasbServiceSheets_(options) {

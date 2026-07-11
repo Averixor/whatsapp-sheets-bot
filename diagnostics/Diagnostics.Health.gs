@@ -157,6 +157,41 @@ function healthCheck() {
     };
   });
 
+  _runHealthCheckItem_(report, "Технічний індекс звірки", "WARN", function () {
+    const sheetName =
+      (typeof CONFIG === "object" && CONFIG.INVENTORY_RECONCILIATION_FILES_SHEET) ||
+      "INVENTORY_RECONCILIATION_FILES";
+    const sheet = getWasbSpreadsheet_().getSheetByName(sheetName);
+    if (!sheet) {
+      return {
+        status: "WARN",
+        details: "Технічний індекс ще не створено",
+        howTo: "Виконайте синхронізацію файлів звірки",
+      };
+    }
+    const protections =
+      typeof sheet.getProtections === "function"
+        ? sheet.getProtections(SpreadsheetApp.ProtectionType.SHEET)
+        : [];
+    const hidden = sheet.isSheetHidden();
+    const blockingProtection = protections.some(function (protection) {
+      return !protection.isWarningOnly();
+    });
+    return {
+      status: hidden && blockingProtection ? "OK" : "FAIL",
+      severity: hidden && blockingProtection ? "INFO" : "CRITICAL",
+      details:
+        "Індекс " +
+        (hidden ? "приховано" : "не приховано") +
+        "; блокувальний захист: " +
+        (blockingProtection ? "так" : "ні"),
+      howTo:
+        hidden && blockingProtection
+          ? ""
+          : "Приховайте технічний індекс і повторно застосуйте захист аркушів",
+    };
+  });
+
   _runHealthCheckItem_(report, "Панель надсилання", "WARN", function () {
     const ensured = _ensureSendPanelTechnicalSheet_();
     const sh = ensured.sheet;
