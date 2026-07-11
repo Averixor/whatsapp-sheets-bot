@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
-# Обхід npm run ci, коли cmd.exe вимкнено політикою.
-# Запускає повний CI-ланцюг через node (еквівалент package.json "ci").
+# Legacy Windows subset when npm run ci fails under restricted cmd.exe policy.
+# Full CI parity: npm run ci (see package.json "ci" and ci:* scripts).
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -8,10 +8,15 @@ $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
+node scripts/verify-node-version.mjs
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 $Steps = @(
   'scripts/ci-gas-sanity.mjs',
+  'scripts/verify-clasp-push-patterns.mjs',
   'scripts/audit-function-graph.mjs',
   'scripts/verify-client-includes.mjs',
+  'scripts/verify-html-label-for.mjs',
   'scripts/verify-client-js.mjs',
   'scripts/verify-client-deps.mjs',
   'scripts/audit-client-xss.mjs',
