@@ -161,9 +161,16 @@ const InventoryReconciliation_ = (function () {
       .getValues();
 
     const services = [];
+    let blankRow = 0;
     for (let row = DEFAULTS.FIRST_SERVICE_ROW; row <= values.length; row++) {
       const name = String(values[row - 1][0] || "").trim();
-      if (!name) break;
+      if (!name) {
+        if (services.length && !blankRow) blankRow = row;
+        continue;
+      }
+      if (blankRow) {
+        throw new Error("На аркуші звірки знайдено порожній рядок між службами");
+      }
       const code = extractServiceCode_(name);
       services.push({
         row: row,
@@ -222,23 +229,36 @@ const InventoryReconciliation_ = (function () {
 
   function applyFormatting() {
     const layout = getLayout_();
+    const index = indexMap_();
     const now = new Date();
     const result = [];
 
     layout.months.forEach(function (monthInfo) {
       const checks = readMonthChecks_(layout, monthInfo);
-      const complete = checks.length > 0 && checks.every(function (value) { return value; });
+      const checksComplete = checks.length > 0 && checks.every(function (value) { return value; });
+      const filesComplete = layout.services.every(function (service) {
+        const key = layout.year + "|" + monthInfo.month + "|" + compactKey_(service.code);
+        return !!(index[key] && index[key].url);
+      });
+      const complete = checksComplete && filesComplete;
       const future = isFutureMonth_(layout.year, monthInfo.month, now);
       const past = isPastMonth_(layout.year, monthInfo.month, now);
       let color = null;
       let status = "neutral";
 
-      if (!future && complete) {
+      if (past && complete) {
         color = DEFAULTS.COMPLETE_COLOR;
         status = "complete";
-      } else if (past && !complete) {
+      } else if (past && !filesComplete) {
+        color = DEFAULTS.INCOMPLETE_COLOR;
+        status = "missing_files";
+      } else if (past) {
         color = DEFAULTS.INCOMPLETE_COLOR;
         status = "incomplete";
+      } else if (future) {
+        status = "future";
+      } else {
+        status = "current";
       }
 
       layout.sheet
@@ -248,6 +268,8 @@ const InventoryReconciliation_ = (function () {
       result.push({
         month: monthInfo.month,
         complete: complete,
+        checksComplete: checksComplete,
+        filesComplete: filesComplete,
         checked: checks.filter(Boolean).length,
         total: checks.length,
         status: status,
@@ -361,11 +383,18 @@ const InventoryReconciliation_ = (function () {
       indexSheet.setFrozenRows(1);
     }
     if (!indexSheet.isSheetHidden()) indexSheet.hideSheet();
+    if (typeof protectInventoryReconciliationIndexSheet_ === "function") {
+      protectInventoryReconciliationIndexSheet_(indexSheet);
+    }
     return indexSheet;
   }
 
-  function walkFolder_(folder, pathParts, depth, collector) {
-    if (depth > DEFAULTS.MAX_SCAN_DEPTH || collector.length >= DEFAULTS.MAX_SCANNED_FILES) return;
+  function walkFolder_(folder, pathParts, depth, collector, scanState) {
+    if (depth > DEFAULTS.MAX_SCAN_DEPTH) return;
+    if (collector.length >= DEFAULTS.MAX_SCANNED_FILES) {
+      scanState.truncated = true;
+      return;
+    }
 
     const files = folder.getFiles();
     while (files.hasNext() && collector.length < DEFAULTS.MAX_SCANNED_FILES) {
@@ -379,12 +408,14 @@ const InventoryReconciliation_ = (function () {
         path: pathParts.join(" / "),
       });
     }
+    if (files.hasNext()) scanState.truncated = true;
 
     const folders = folder.getFolders();
     while (folders.hasNext() && collector.length < DEFAULTS.MAX_SCANNED_FILES) {
       const child = folders.next();
-      walkFolder_(child, pathParts.concat([child.getName()]), depth + 1, collector);
+      walkFolder_(child, pathParts.concat([child.getName()]), depth + 1, collector, scanState);
     }
+    if (folders.hasNext()) scanState.truncated = true;
   }
 
   function scoreCandidate_(file, service, month, year) {
@@ -551,7 +582,8 @@ const InventoryReconciliation_ = (function () {
       }
       const root = DriveApp.getFolderById(folderId);
       const files = [];
-      walkFolder_(root, [root.getName()], 0, files);
+      const scanState = { truncated: false };
+      walkFolder_(root, [root.getName()], 0, files, scanState);
       const selected = chooseFiles_(files, layout);
       const rows = writeIndex_(layout, selected);
       const index = indexMap_();
@@ -566,7 +598,7 @@ const InventoryReconciliation_ = (function () {
         linkedFiles: linked,
         missingFiles: rows.length - linked,
         duplicateFiles: duplicates,
-        truncated: files.length >= DEFAULTS.MAX_SCANNED_FILES,
+        truncated: scanState.truncated,
         folder: folderDescriptor_(),
         formatting: formatting,
         dashboard: getDashboard({ skipFormatting: true, skipAutoSync: true }),
@@ -577,14 +609,9 @@ const InventoryReconciliation_ = (function () {
   }
 
   function monthStatus_(layout, monthInfo, checks, index, now) {
-    const complete = checks.length > 0 && checks.every(function (value) { return value; });
+    const checksComplete = checks.length > 0 && checks.every(function (value) { return value; });
     const future = isFutureMonth_(layout.year, monthInfo.month, now);
     const past = isPastMonth_(layout.year, monthInfo.month, now);
-    let status = "current";
-    if (future) status = "future";
-    else if (complete) status = "complete";
-    else if (past) status = "incomplete";
-
     const services = layout.services.map(function (service, serviceIndex) {
       const key = layout.year + "|" + monthInfo.month + "|" + compactKey_(service.code);
       const file = index[key] || null;
@@ -598,6 +625,15 @@ const InventoryReconciliation_ = (function () {
         file: file,
       };
     });
+    const filesComplete = services.length > 0 && services.every(function (item) {
+      return !!(item.file && item.file.url);
+    });
+    const complete = checksComplete && filesComplete;
+    let status = "current";
+    if (future) status = "future";
+    else if (past && complete) status = "complete";
+    else if (past && !filesComplete) status = "missing_files";
+    else if (past) status = "incomplete";
 
     return {
       month: monthInfo.month,
@@ -606,6 +642,8 @@ const InventoryReconciliation_ = (function () {
       label: monthInfo.label,
       status: status,
       complete: complete,
+      checksComplete: checksComplete,
+      filesComplete: filesComplete,
       checked: checks.filter(Boolean).length,
       total: checks.length,
       linked: services.filter(function (item) { return item.file && item.file.url; }).length,
