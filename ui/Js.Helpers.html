@@ -835,6 +835,10 @@
       clearLog: "Очищення логів",
       restartBot: "Перезапуск бота",
       applyProtections: "Захист службових листів",
+      previewProtections: "Перегляд захисту листів",
+      bootstrapRuntime: "Створення службових листів",
+      bootstrapAccess: "Ініціалізація листа доступу",
+      runRegressionTests: "Регресійні тести",
       pendingRepairs: "Операції, що потребують виправлення",
       vacationReminder: "Нагадування про відпустки",
       vacations: "Відпустки",
@@ -1109,6 +1113,22 @@
 
         case "applyProtections":
           await applyProtections();
+          break;
+
+        case "previewProtections":
+          await previewProtections();
+          break;
+
+        case "bootstrapRuntime":
+          await bootstrapRuntimeSheets();
+          break;
+
+        case "bootstrapAccess":
+          await bootstrapAccessSheet();
+          break;
+
+        case "runRegressionTests":
+          await runRegressionTests();
           break;
 
         case "requests":

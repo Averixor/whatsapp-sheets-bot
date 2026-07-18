@@ -535,6 +535,10 @@
       adaptStage4UtilityResponse(
         await Api.run("apiStage7BootstrapAccessSheet"),
       ),
+    bootstrapRuntimeAndAlertsSheets: async () =>
+      adaptStage4UtilityResponse(
+        await Api.run("apiStage7BootstrapRuntimeAndAlertsSheets"),
+      ),
     reportClientAccessSignal: async (actionName, details = {}) =>
       adaptStage4UtilityResponse(
         await Api.run(
