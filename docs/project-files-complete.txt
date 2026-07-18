@@ -1,8 +1,8 @@
 # WASB — повний список файлів репозиторію
 # Порядок: дерево каталогів (depth-first, алфавіт у кожній папці)
 # Виключено: .git/, node_modules/, локальні .clasp*.json (крім *.example.json)
-# Файлів: 287
-# Оновлено: 2026-07-12T00:26:27Z
+# Файлів: 288
+# Оновлено: 2026-07-18T07:54:54Z
 
 .
   .clasp.example.json
@@ -109,6 +109,7 @@ diagnostics/
   Diagnostics.Stage7.Historical.gs
 
 docs/
+  branch-archive.md
   daily-summary-architecture.md
   developer-guide.md
   format-rules-governance.md
