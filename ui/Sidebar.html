@@ -319,6 +319,33 @@
 
                 <button
                   class="btn btn-secondary health-actions-btn health-actions-btn--wide"
+                  data-role-min="admin"
+                  type="button"
+                  onclick="SidebarApp.handleMenuAction('bootstrapRuntime')"
+                >
+                  📋 Створити службові листи
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn health-actions-btn--wide"
+                  data-role-min="admin"
+                  type="button"
+                  onclick="SidebarApp.handleMenuAction('bootstrapAccess')"
+                >
+                  🔐 Ініціалізувати лист доступу
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="sysadmin"
+                  type="button"
+                  onclick="SidebarApp.handleMenuAction('previewProtections')"
+                >
+                  👁 Переглянути захист листів
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn health-actions-btn--wide"
                   data-role-min="sysadmin"
                   type="button"
                   onclick="SidebarApp.handleMenuAction('applyProtections')"
@@ -333,6 +360,15 @@
                   onclick="SidebarApp.runHealthCheck()"
                 >
                   🩺 Перевірка системи
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="admin"
+                  type="button"
+                  onclick="SidebarApp.handleMenuAction('runRegressionTests')"
+                >
+                  🧪 Регресійні тести
                 </button>
 
                 <button

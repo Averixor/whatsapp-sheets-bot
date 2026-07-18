@@ -720,6 +720,206 @@
     }
   }
 
+  async function previewProtections() {
+    assertAdminAction_("previewProtections");
+    logToConsole("Перегляд захисту службових листів (без змін)...", "info");
+    showStandardResult("Перегляд захисту листів");
+    setHtml(
+      "resultContent",
+      '<div class="result-item"><div class="result-value">Готую звіт без змін...</div></div>',
+    );
+    try {
+      const result = await ActionDispatcher.run(
+        "previewProtections",
+        () => MaintenanceApi.applyProtections({ dryRun: true }),
+        { successMessage: "" },
+      );
+      const protectedSheets = Array.isArray(result?.protectedSheets)
+        ? result.protectedSheets
+        : Array.isArray(result?.data?.protectedSheets)
+          ? result.data.protectedSheets
+          : [];
+      const warnings = Array.isArray(result?.warnings)
+        ? result.warnings
+        : Array.isArray(result?.data?.warnings)
+          ? result.data.warnings
+          : [];
+      setHtml(
+        "resultContent",
+        `
+        <div class="result-item">
+          <div class="result-label">Режим</div>
+          <div class="result-value">Перегляд без застосування змін</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label" style="color: var(--success-color);">Звіт</div>
+          <div class="result-value">${escapeHtml(result?.message || "Звіт підготовлено")}</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Листи для захисту</div>
+          <div class="result-value">${protectedSheets.length ? protectedSheets.map(escapeHtml).join("<br>") : "—"}</div>
+        </div>
+        ${warnings.length ? `<div class="result-item"><div class="result-label">Попередження</div><div class="result-value">${warnings.map(escapeHtml).join("<br>")}</div></div>` : ""}
+      `,
+      );
+      showToast("Звіт захисту готовий");
+    } catch (error) {
+      setHtml(
+        "resultContent",
+        `<div class="result-item"><div class="result-value">✕ ${escapeHtml(normalizeError(error))}</div></div>`,
+      );
+      showToast("Не вдалося підготувати звіт захисту");
+    }
+  }
+
+  async function bootstrapRuntimeSheets() {
+    assertAdminAction_("bootstrapRuntime");
+    logToConsole("Створення службових листів журналів...", "info");
+    showStandardResult("Створення службових листів");
+    setHtml(
+      "resultContent",
+      '<div class="result-item"><div class="result-value">Створюю службові листи...</div></div>',
+    );
+    try {
+      const result = await ActionDispatcher.run(
+        "bootstrapRuntime",
+        () => MaintenanceApi.bootstrapRuntimeAndAlertsSheets(),
+        { successMessage: "" },
+      );
+      const success = result && result.success !== false;
+      const sheets = Array.isArray(result?.affectedSheets)
+        ? result.affectedSheets
+        : Array.isArray(result?.data?.affectedSheets)
+          ? result.data.affectedSheets
+          : [];
+      const warnings = Array.isArray(result?.warnings)
+        ? result.warnings
+        : Array.isArray(result?.data?.warnings)
+          ? result.data.warnings
+          : [];
+      const statusLabel = success ? "Успішно" : "Помилка";
+      const statusColor = success
+        ? "var(--success-color)"
+        : "var(--danger-color)";
+      const statusMessage =
+        result?.message ||
+        result?.error ||
+        (success
+          ? "Службові листи створено"
+          : "Не вдалося створити листи");
+      setHtml(
+        "resultContent",
+        `
+        <div class="result-item">
+          <div class="result-label" style="color: ${statusColor};">${escapeHtml(statusLabel)}</div>
+          <div class="result-value">${escapeHtml(statusMessage)}</div>
+        </div>
+        ${sheets.length ? `<div class="result-item"><div class="result-label">Листи</div><div class="result-value">${sheets.map(escapeHtml).join("<br>")}</div></div>` : ""}
+        ${warnings.length ? `<div class="result-item"><div class="result-label">Попередження</div><div class="result-value">${warnings.map(escapeHtml).join("<br>")}</div></div>` : ""}
+      `,
+      );
+      showToast(success ? "Службові листи створено" : "Не вдалося створити службові листи");
+    } catch (error) {
+      setHtml(
+        "resultContent",
+        `<div class="result-item"><div class="result-value">✕ ${escapeHtml(normalizeError(error))}</div></div>`,
+      );
+      showToast("Не вдалося створити службові листи");
+    }
+  }
+
+  async function bootstrapAccessSheet() {
+    assertAdminAction_("bootstrapAccess");
+    logToConsole("Ініціалізація листа доступу...", "info");
+    showStandardResult("Ініціалізація листа доступу");
+    setHtml(
+      "resultContent",
+      '<div class="result-item"><div class="result-value">Ініціалізую лист доступу...</div></div>',
+    );
+    try {
+      const result = await ActionDispatcher.run(
+        "bootstrapAccess",
+        () => MaintenanceApi.bootstrapAccessSheet(),
+        { successMessage: "" },
+      );
+      const success = result && result.success !== false;
+      const warnings = Array.isArray(result?.warnings)
+        ? result.warnings
+        : Array.isArray(result?.data?.warnings)
+          ? result.data.warnings
+          : [];
+      const statusLabel = success ? "Успішно" : "Помилка";
+      const statusColor = success
+        ? "var(--success-color)"
+        : "var(--danger-color)";
+      const statusMessage =
+        result?.message ||
+        result?.error ||
+        (success
+          ? "Лист доступу ініціалізовано"
+          : "Не вдалося ініціалізувати лист доступу");
+      setHtml(
+        "resultContent",
+        `
+        <div class="result-item">
+          <div class="result-label" style="color: ${statusColor};">${escapeHtml(statusLabel)}</div>
+          <div class="result-value">${escapeHtml(statusMessage)}</div>
+        </div>
+        ${warnings.length ? `<div class="result-item"><div class="result-label">Попередження</div><div class="result-value">${warnings.map(escapeHtml).join("<br>")}</div></div>` : ""}
+      `,
+      );
+      showToast(success ? "Лист доступу ініціалізовано" : "Не вдалося ініціалізувати лист доступу");
+    } catch (error) {
+      setHtml(
+        "resultContent",
+        `<div class="result-item"><div class="result-value">✕ ${escapeHtml(normalizeError(error))}</div></div>`,
+      );
+      showToast("Не вдалося ініціалізувати лист доступу");
+    }
+  }
+
+  async function runRegressionTests() {
+    assertAdminAction_("runRegressionTests");
+    logToConsole("Запуск регресійних тестів...", "info");
+    showStandardResult("Регресійні тести");
+    setHtml(
+      "resultContent",
+      '<div class="result-item"><div class="result-value">⏳ Виконую регресійні тести...</div></div>',
+    );
+    try {
+      const result = await ActionDispatcher.run(
+        "runRegressionTests",
+        () => DiagnosticsApi.runRegressionTests({ dryRun: true }),
+        { successMessage: "" },
+      );
+      const report = (result && (result.data || result)) || {};
+      STATE.lastHealthReport = report;
+      const failCount = Number((report.counts && report.counts.failed) || 0);
+      if (typeof renderHealthReport === "function") {
+        setHtml("resultContent", renderHealthReport(report));
+      } else {
+        const statusColor =
+          failCount > 0 ? "var(--danger-color)" : "var(--success-color)";
+        setHtml(
+          "resultContent",
+          `
+          <div class="result-item">
+            <div class="result-label" style="color: ${statusColor};">Результат</div>
+            <div class="result-value">${escapeHtml(result?.message || report.summary || "Регресійні тести завершено")}</div>
+          </div>
+        `,
+        );
+      }
+      showToast(failCount > 0 ? "⚠ Є провалені регресійні тести" : "✓ Регресійні тести пройдено");
+    } catch (error) {
+      setHtml(
+        "resultContent",
+        `<div class="result-item"><div class="result-value">✕ ${escapeHtml(normalizeError(error))}</div></div>`,
+      );
+      showToast("Не вдалося запустити регресійні тести");
+    }
+  }
+
   async function restartBot() {
     assertAdminAction_("restartBot");
     if (
