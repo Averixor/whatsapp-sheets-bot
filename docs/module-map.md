@@ -9,7 +9,7 @@ Practical index: **where to look** and **what CI proves it**. Structural rules: 
 | Inventory | `inventory/` | `InventoryReconciliation.gs`, `TemporaryPropertyRegister.gs` | `npm run ci` (`ci:gas` pulls `verify-inventory-reconciliation.mjs`); `npm run ci:workbook` for temporary-property | Sidebar **Звірка** plus temporary-property register on `Property_issued_for_temporary_u`; reference sheets `PROPERTY_CATALOG` / `PROPERTY_KITS`. |
 | Send panel | `sendpanel/` | `SendPanel*.gs`, `SelectionActionService.gs`, `UseCases.SendPanel.gs`, `Stage7PhoneDictPayloadShims.gs` | `npm run ci`, `npm run ci:recipients` | |
 | Maintenance / formats | `maintenance/` | `ConditionalFormat*.gs`, `JobRuntime*.gs`, `Template*.gs`, `LifecycleRetention.gs` | `npm run ci:format-rules` | Sheet self-heal lives in `sheets/`. |
-| Diagnostics | `diagnostics/` | `Diagnostics.*.gs` (runtime) | `npm run ci` | `tests/Diagnostics.Debug.gs` — clasp-excluded. |
+| Diagnostics | `diagnostics/` | `Diagnostics.*.gs` (runtime) | `npm run ci` | `tests/Diagnostics.Debug.gs` + Stage7TestRunner — deployed with clasp. |
 | Access | `access/` | `AccessControl.*.gs`, `AccessEnforcement.gs`, autofill hotfix | `npm run ci` (access-api governance) | Move-only in structural PRs. |
 | Personnel | `personnel/` | `PersonnelRepository.gs`, `PersonsRepository.gs`, `PersonCards.gs`, `AlertsRepository.gs` | `npm run ci`, personnel contracts | Callsign/Status — workspace rules; `Status` header self-heal lives here. |
 | API entrypoints | `api/` | `Stage7ServerApi.gs`, `Stage7MaintenanceApi.gs`, `SpreadsheetActionsApi.gs` | `npm run ci` | Public `api*` surface and spreadsheet actions. |
@@ -28,4 +28,4 @@ Repository metadata and tooling config stay at root: `appsscript.json`, `package
 
 ## Clasp push reminder
 
-Nested files: `!**/*.gs`, `!**/*.html`, then re-exclude `node_modules/**`, `.git/**`, `_backup*/**`, and local test paths under `tests/`. Run `npx clasp status` before production push.
+Nested files: `!**/*.gs`, `!**/*.html`, then re-exclude `node_modules/**`, `.git/**`, `_backup*/**`. `tests/Stage7TestRunner*.gs` are included in deploy. Run `npx clasp status` before production push.

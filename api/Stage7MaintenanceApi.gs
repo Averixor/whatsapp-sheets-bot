@@ -811,7 +811,7 @@ function _invokeProjectTestChunk_(options) {
     return runProjectTestChunk(options || {});
   }
   throw new Error(
-    "Модуль тестів проєкту недоступний. Виконайте clasp push (tests/Stage7TestRunner*.gs має бути в deploy).",
+    "Модуль тестів проєкту недоступний (Stage7TestRunner). Зробіть clasp push з актуального репозиторію — tests/Stage7TestRunner*.gs входять у deploy.",
   );
 }
 

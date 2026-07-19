@@ -126,7 +126,7 @@ workbook exports, personal data, or local workbook paths.
 ├── core/ api/ data/ sheets/ usecases/ ui-server/   # server runtime
 ├── reports/ vacations/ sendpanel/ access/ personnel/ inventory/
 ├── ui/                               # all .html (Sidebar, JavaScript, Js.*, Styles*)
-├── tests/                            # local-only (excluded from clasp push)
+├── tests/                            # Stage7TestRunner + domain/manual tests (deployed)
 ├── docs/ contracts/ scripts/         # Git-only tooling and documentation
 └── README.md RUNBOOK.md ARCHITECTURE.md …
 ```

@@ -693,6 +693,8 @@ const InventoryReconciliation_ = (function () {
     const initialSync = autoSyncState_();
     let autoSyncError = "";
 
+    ensureIndexSheet_();
+
     if (!opts.skipAutoSync && opts.autoSync !== false && folderId && initialSync.stale) {
       try {
         return syncFiles().dashboard;
@@ -779,5 +781,6 @@ const InventoryReconciliation_ = (function () {
     getSelected: getSelected,
     setFolder: setFolder,
     syncFiles: syncFiles,
+    ensureIndexSheet: ensureIndexSheet_,
   });
 })();

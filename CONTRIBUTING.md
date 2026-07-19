@@ -46,7 +46,7 @@ npm run gas:status
 npm run gas:push
 ```
 
-Confirm **Tracked files** includes all domain `**/*.gs` and `ui/**/*.html`, and excludes `tests/`, `node_modules/`, `*.md`. See [`docs/module-map.md`](./docs/module-map.md) and [ADR-003](docs/adr/003-working-domain-layout.md).
+Confirm **Tracked files** includes all domain `**/*.gs` (including `tests/Stage7TestRunner*.gs`), `ui/**/*.html`, and excludes `node_modules/`, `*.md`. See [`docs/module-map.md`](./docs/module-map.md) and [ADR-003](docs/adr/003-working-domain-layout.md).
 
 Or run `npm run deploy:prod` for CI + production push, or `npm run push:remote` after commit for git + clasp without re-running CI. Production keeps `executionApi.access = MYSELF`.
 

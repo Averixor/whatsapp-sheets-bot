@@ -12,7 +12,6 @@ import './verify-inventory-reconciliation.mjs';
 const NESTED_INCLUDE_PATTERNS = ['!**/*.gs', '!**/*.html'];
 
 const POST_NESTED_EXCLUDE_PATTERNS = [
-  'tests/**',
   'node_modules/**',
   '.git/**',
   '_backup*/**',
@@ -73,8 +72,8 @@ function main() {
   });
   const statusOutput = `${clasp.stdout || ''}\n${clasp.stderr || ''}`;
   if (clasp.status === 0) {
-    if (/tests[\\/].*\.gs/i.test(statusOutput)) {
-      errors.push('clasp status must not track tests/**/*.gs');
+    if (!/tests[\\/]Stage7TestRunner\.gs/i.test(statusOutput)) {
+      errors.push('clasp status must track tests/Stage7TestRunner.gs');
     }
     if (!/smoke[\\/]SmokeTests.*\.gs/i.test(statusOutput)) {
       errors.push('clasp status must track smoke/SmokeTests*.gs');

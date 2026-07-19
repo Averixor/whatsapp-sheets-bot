@@ -161,12 +161,28 @@ function healthCheck() {
     const sheetName =
       (typeof CONFIG === "object" && CONFIG.INVENTORY_RECONCILIATION_FILES_SHEET) ||
       "INVENTORY_RECONCILIATION_FILES";
-    const sheet = getWasbSpreadsheet_().getSheetByName(sheetName);
+    let sheet = getWasbSpreadsheet_().getSheetByName(sheetName);
+    let healError = "";
+    if (
+      !sheet &&
+      typeof InventoryReconciliation_ !== "undefined" &&
+      InventoryReconciliation_ &&
+      typeof InventoryReconciliation_.ensureIndexSheet === "function"
+    ) {
+      try {
+        InventoryReconciliation_.ensureIndexSheet();
+        sheet = getWasbSpreadsheet_().getSheetByName(sheetName);
+      } catch (error) {
+        healError = error && error.message ? error.message : String(error || "");
+      }
+    }
     if (!sheet) {
       return {
         status: "WARN",
-        details: "Технічний індекс ще не створено",
-        howTo: "Виконайте синхронізацію файлів звірки",
+        details: healError
+          ? "Технічний індекс ще не створено: " + healError
+          : "Технічний індекс ще не створено",
+        howTo: "Відкрийте розділ Звірка або виконайте синхронізацію файлів звірки",
       };
     }
     const protections =

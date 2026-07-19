@@ -112,5 +112,8 @@ assert.match(client, /Оберіть клітинку звірки/);
 assert.match(protection, /protectInventoryReconciliationIndexSheet_/);
 assert.match(protection, /setWarningOnly\(false\)/);
 assert.match(health, /blockingProtection/);
+assert.match(inventory, /ensureIndexSheet:\s*ensureIndexSheet_/);
+assert.match(health, /InventoryReconciliation_\.ensureIndexSheet/);
+assert.match(inventory, /ensureIndexSheet_\(\);/);
 
 console.log('verify-inventory-reconciliation: OK');
