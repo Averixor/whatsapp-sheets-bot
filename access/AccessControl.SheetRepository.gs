@@ -361,48 +361,88 @@ function _getHeaderMap_(sh) {
 
 function _ensureSheetSchema_(sh) {
   if (!sh) return;
+
   _removeAccessObsoleteColumns_(sh);
+
   var expectedHeaders = _getExpectedHeaders_();
   if (!expectedHeaders.length) return;
-  var currentLastColumn = Number(sh.getLastColumn()) || 0;
-  var currentLastRow = Number(sh.getLastRow()) || 0;
-  if (currentLastColumn < expectedHeaders.length) {
-    var missingCols = expectedHeaders.length - currentLastColumn;
-    if (missingCols > 0 && currentLastColumn > 0) {
-      sh.insertColumnsAfter(currentLastColumn, missingCols);
-    }
+
+  // Гарантуємо достатню фізичну кількість колонок.
+  var maxColumns = Number(sh.getMaxColumns()) || 0;
+  if (maxColumns < expectedHeaders.length) {
+    sh.insertColumnsAfter(
+      Math.max(maxColumns, 1),
+      expectedHeaders.length - maxColumns
+    );
   }
 
+  var currentLastColumn = Number(sh.getLastColumn()) || 0;
+  var currentLastRow = Number(sh.getLastRow()) || 0;
+
   var currentHeaders =
-    currentLastRow >= 1
-      ? sh.getRange(1, 1, 1, Math.max(expectedHeaders.length, 1)).getValues()[0]
+    currentLastRow >= 1 && currentLastColumn >= 1
+      ? sh.getRange(1, 1, 1, currentLastColumn).getValues()[0]
       : [];
 
-  var hasAnyHeaders = currentHeaders.some(function (v) {
-    return String(v || "").trim() !== "";
+  var hasAnyHeaders = currentHeaders.some(function (value) {
+    return String(value || "").trim() !== "";
   });
 
+  // Новий або повністю порожній аркуш.
   if (!hasAnyHeaders) {
-    sh.getRange(1, 1, 1, expectedHeaders.length).setValues([expectedHeaders]);
+    sh.getRange(1, 1, 1, expectedHeaders.length).setValues([
+      expectedHeaders,
+    ]);
   } else {
-    var headerMap = _getHeaderMap_(sh);
-    for (var j = 0; j < expectedHeaders.length; j++) {
-      if (!headerMap[expectedHeaders[j]]) {
-        sh.getRange(1, j + 1).setValue(expectedHeaders[j]);
+    /*
+     * Вставляємо кожну відсутню колонку саме у її канонічну позицію.
+     *
+     * Важливо: після кожної вставки карта заголовків перебудовується,
+     * оскільки всі наступні колонки зміщуються вправо.
+     */
+    for (var i = 0; i < expectedHeaders.length; i++) {
+      var expectedHeader = expectedHeaders[i];
+      var targetColumn = i + 1;
+      var headerMap = _getHeaderMap_(sh);
+      var existingColumn = Number(headerMap[expectedHeader]) || 0;
+
+      if (!existingColumn) {
+        sh.insertColumnBefore(targetColumn);
+        sh.getRange(1, targetColumn).setValue(expectedHeader);
+        continue;
       }
+
+      /*
+       * Нічого не перезаписуємо, якщо заголовок уже існує.
+       * Цей bootstrap додає відсутні колонки, але не допускає
+       * перейменування колонок поверх наявних даних.
+       */
     }
   }
 
   sh.setFrozenRows(1);
-  sh.getRange(1, 1, 1, Math.max(expectedHeaders.length, sh.getLastColumn(), 1))
+
+  sh
+    .getRange(
+      1,
+      1,
+      1,
+      Math.max(expectedHeaders.length, sh.getLastColumn(), 1)
+    )
     .setFontWeight("bold")
     .setBackground("#e8eaed");
+
   _applyAccessHeaderDisplayLabels_(sh);
   _applyRoleValidation_(sh);
   _applyEmailValidation_(sh);
   _applyEnabledValidation_(sh);
   _applySelfBindAllowedValidation_(sh);
   _applyRegistrationStatusValidation_(sh);
+
+  _invalidateAccessRepoCachesSafe_({
+    resetSheet: false,
+    resetEntries: true,
+  });
 }
 
 // ---------------------------------------------------------------------------
