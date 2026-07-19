@@ -34,6 +34,7 @@ Google Sheets       — ACCESS, PERSONNEL, місячні листи, …
 | `Report_*` | Зведення дня (short з formula block, detailed окремо) — modules in `reports/` |
 | Vacation modules | Відпустки, перевірки, міні-календар, monthly sync — server modules in `vacations/`; UI in `ui/Js.Vacations.*.html` + `ui/Js.VacationSync.html` |
 | `InventoryReconciliation_` | Звірка служб: `INVENTORY_RECONCILIATION`, Drive index, sidebar **Звірка** (`inventory/InventoryReconciliation.gs`) |
+| `TemporaryPropertyRegister_` | Тимчасово видане майно: `Property_issued_for_temporary_u` + `PROPERTY_CATALOG` / `PROPERTY_KITS` (`inventory/TemporaryPropertyRegister.gs`) |
 | `contracts/` + `scripts/verify-*` | Захист від тихої деградації (governance CI) |
 
 Детальніша архітектура: [ARCHITECTURE.md](../ARCHITECTURE.md). Доступ і RBAC: [SECURITY.md](../SECURITY.md).
@@ -105,4 +106,5 @@ Or CI + clasp only: `npm run deploy:prod`. Full pipeline with map refresh: `npm 
 | Зведення дня | [daily-summary-architecture.md](./daily-summary-architecture.md) |
 | Відпустки | [vacation-planner.md](./vacation-planner.md) |
 | Звірка (inventory) | [inventory-reconciliation.md](./inventory-reconciliation.md) |
+| Тимчасово видане майно | [temporary-property-register.md](./temporary-property-register.md) |
 | Локальний workflow | [CONTRIBUTING.md](../CONTRIBUTING.md) |

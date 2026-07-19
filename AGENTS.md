@@ -31,7 +31,6 @@ Individual subscripts: `npm run ci:gas`, `npm run ci:client`, `npm run ci:copy`,
 | `npm run gas:open` | Open GAS editor (`npx clasp open-script`, clasp 3.x) |
 | `npm run gas:push` / `gas:status` | Production clasp helpers |
 
-
 ### Node.js version
 
 CI and local dev recommend **Node.js 24** (`.github/workflows/ci.yml`, `.nvmrc`). `package.json` `engines.node` is **`>=24`** with no upper cap — Node 25, 26, … pass `npm run precheck` unless you add an explicit `<` / `<=` in engines. `npm run ci` runs precheck first (`scripts/verify-node-version.mjs`).
@@ -49,7 +48,7 @@ This project cannot be "run" locally in the traditional sense. There is no dev s
 
 ### Testing
 
-- **Local (automated):** `npm run ci` — **32** verify scripts (+ `precheck`), no Google credentials.
+- **Local (automated):** `npm run ci` — **35** verify/audit scripts (+ `precheck`), no Google credentials.
 - **Remote (manual):** `apiRunStage7RegressionTests()` or `runSmokeTests()` in the GAS editor.
 
 Documentation index: [`docs/README.md`](./docs/README.md). Verify release status
@@ -153,6 +152,17 @@ Domain folders (`reports/`, `vacations/`, `core/`, `ui/`, …) are mechanical mo
 - Drive folder id: Script Property `WASB_INVENTORY_RECONCILIATION_FOLDER_ID`; OAuth scope `drive.readonly` required.
 - Modules: `inventory/InventoryReconciliation.gs`, `ui/Js.InventoryReconciliation.html`, `ui/Styles_35_InventoryReconciliation.html`.
 - Design doc: [`docs/inventory-reconciliation.md`](./docs/inventory-reconciliation.md).
+
+### Temporary property register (do not regress)
+
+- Sheets: `Property_issued_for_temporary_u` (working register), `PROPERTY_CATALOG` (dropdown/unit source), `PROPERTY_KITS` (kit composition).
+- Module: `inventory/TemporaryPropertyRegister.gs`; edit routing: `access/AccessSheetTriggers.gs`.
+- Main quantities are numeric; unit is stored separately. Parent asset rows may have linked auto-generated component rows.
+- Fuel cans use separate `Вид палива` and `Об'єм палива, л` fields.
+- One-time setup/migration: **`apiSetupTemporaryPropertyRegister()`**. It backs up a legacy sheet before conversion.
+- Person cards read outstanding temporary property through `PersonsRepository_` and render it under **Тимчасово видане майно**.
+- Design doc: [`docs/temporary-property-register.md`](./docs/temporary-property-register.md).
+- Local contract: `scripts/verify-temporary-property-register.mjs` (`npm run ci:workbook`).
 
 ### User-facing copy (do not regress)
 

@@ -6,26 +6,28 @@ The repository root holds manifests, tooling, and documentation only.
 Keep operational truth in the documents below; do not add one-off audits or production workbook
 snapshots to the repository.
 
-| File                                                             | Source-of-truth responsibility                              |
-| ---------------------------------------------------------------- | ----------------------------------------------------------- |
-| [README.md](../README.md)                                        | Project overview, quick start, documentation map            |
-| [ARCHITECTURE.md](../ARCHITECTURE.md)                            | Runtime layers, data flow, canonical APIs                   |
-| [RUNBOOK.md](../RUNBOOK.md)                                      | Bootstrap, deployment, production checks, troubleshooting   |
-| [developer-guide.md](./developer-guide.md)                       | First-week map: layers, safe zones, how to think about changes |
-| [adr/README.md](./adr/README.md)                                 | Architecture Decision Records (structural change rules)       |
-| [module-map.md](./module-map.md)                                 | Domain folders: where modules live, which CI guards them      |
-| [adr/003-working-domain-layout.md](./adr/003-working-domain-layout.md) | Working domain folder agreement (not final architecture)   |
-| [SECURITY.md](../SECURITY.md)                                    | Identity, RBAC, lockout, protected data                     |
-| [CHANGELOG.md](../CHANGELOG.md)                                  | Durable release history                                     |
-| [WASB_RELEASE_AUDIT.md](../WASB_RELEASE_AUDIT.md)                | Historical release snapshot; not current deploy truth       |
-| [CONTRIBUTING.md](../CONTRIBUTING.md)                            | Local workflow, CI, change policy                           |
-| [AGENTS.md](../AGENTS.md)                                        | Automation-agent instructions                               |
-| [vacation-planner.md](./vacation-planner.md)                     | Vacation planner, concurrent rules, mini-calendar UX        |
-| [inventory-reconciliation.md](./inventory-reconciliation.md)   | Inventory month tracking, Drive links, sidebar **Звірка**   |
-| [daily-summary-architecture.md](./daily-summary-architecture.md) | Short/detailed day summary modules, formula block, UI flow  |
-| [format-rules-governance.md](./format-rules-governance.md)       | Manual conditional-format registry and rebuild protection   |
-| [user-facing-copy.md](./user-facing-copy.md)                     | UX copy: UA UI text, no technical names in user-facing strings; enforced by `verify-user-facing-copy.mjs` |
-| [project-files-complete.txt](./project-files-complete.txt)       | Canonical depth-first file tree (governance map); excludes local `.clasp*.json`; refresh with `npm run map:project-files` |
+| File                                                                   | Source-of-truth responsibility                                                                                            |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| [README.md](../README.md)                                              | Project overview, quick start, documentation map                                                                          |
+| [ARCHITECTURE.md](../ARCHITECTURE.md)                                  | Runtime layers, data flow, canonical APIs                                                                                 |
+| [RUNBOOK.md](../RUNBOOK.md)                                            | Bootstrap, deployment, production checks, troubleshooting                                                                 |
+| [developer-guide.md](./developer-guide.md)                             | First-week map: layers, safe zones, how to think about changes                                                            |
+| [adr/README.md](./adr/README.md)                                       | Architecture Decision Records (structural change rules)                                                                   |
+| [module-map.md](./module-map.md)                                       | Domain folders: where modules live, which CI guards them                                                                  |
+| [adr/003-working-domain-layout.md](./adr/003-working-domain-layout.md) | Working domain folder agreement (not final architecture)                                                                  |
+| [SECURITY.md](../SECURITY.md)                                          | Identity, RBAC, lockout, protected data                                                                                   |
+| [CHANGELOG.md](../CHANGELOG.md)                                        | Durable release history                                                                                                   |
+| [WASB_RELEASE_AUDIT.md](../WASB_RELEASE_AUDIT.md)                      | Historical release snapshot; not current deploy truth                                                                     |
+| [CONTRIBUTING.md](../CONTRIBUTING.md)                                  | Local workflow, CI, change policy                                                                                         |
+| [AGENTS.md](../AGENTS.md)                                              | Automation-agent instructions                                                                                             |
+| [vacation-planner.md](./vacation-planner.md)                           | Vacation planner, concurrent rules, mini-calendar UX                                                                      |
+| [inventory-reconciliation.md](./inventory-reconciliation.md)           | Inventory month tracking, Drive links, sidebar **Звірка**                                                                 |
+| [temporary-property-register.md](./temporary-property-register.md)     | Temporary issue/return register, catalog, kits, migration                                                                 |
+| [daily-summary-architecture.md](./daily-summary-architecture.md)       | Short/detailed day summary modules, formula block, UI flow                                                                |
+| [format-rules-governance.md](./format-rules-governance.md)             | Manual conditional-format registry and rebuild protection                                                                 |
+| [user-facing-copy.md](./user-facing-copy.md)                           | UX copy: UA UI text, no technical names in user-facing strings; enforced by `verify-user-facing-copy.mjs`                 |
+| [branch-archive.md](./branch-archive.md)                               | Archived former working branches (`archive/*` tags)                                                                       |
+| [project-files-complete.txt](./project-files-complete.txt)             | Canonical depth-first file tree (governance map); excludes local `.clasp*.json`; refresh with `npm run map:project-files` | Canonical depth-first file tree (governance map); excludes local `.clasp*.json`; refresh with `npm run map:project-files` |
 
 ## Refactor Planning
 

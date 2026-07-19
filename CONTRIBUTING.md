@@ -77,10 +77,10 @@ Then in the spreadsheet: close the sidebar → open it again → open a person c
 
 The repository runs a lightweight CI workflow on push and pull requests to **`main`** (also **`workflow_dispatch`**).
 
-It runs the complete `npm run ci` contract suite (**32** verify scripts after `precheck`): GAS sanity, clasp patterns, **Ukrainian/Russian language** and **user-facing copy** guards, reference workbook layout, reference repositories, workbook and monthly callsign contracts, send-panel bounds, materialize / month-journal / age-birthday countdown, vacation planner,
+It runs the complete `npm run ci` contract suite (**35** verify/audit scripts after `precheck`): GAS sanity, clasp patterns, **Ukrainian/Russian language** and **user-facing copy** guards, reference workbook layout, reference repositories, workbook and monthly callsign contracts, send-panel bounds, temporary-property register, materialize / month-journal / age-birthday countdown, vacation planner,
 recipient contracts, personnel-status and format-rules contracts, function graph, client
 parsing/layers/XSS, response envelope, facade/snapshot/bridge governance, access
-API policy and hotfixes, OAuth scopes, project file map, and jsconfig verification.
+API governance, access policy checks and hotfixes, OAuth scopes, project file map, and jsconfig verification.
 
 Shortcuts: `npm run ci:copy`, `npm run ci:language`, `npm run ci:vacations`, `npm run ci:workbook`, `npm run ci:materialize`.
 
@@ -193,6 +193,7 @@ Update documentation when changing:
 - **Month journal / reference sheets** — keep **`README.md`**, **`ARCHITECTURE.md`**, **`RUNBOOK.md`**, **`docs/module-map.md`**, and workbook/reference contracts aligned when changing `reports/MonthJournalMaterialize.gs` or `ReferenceSheetsRepository_`
 - **Vacation monthly sync** — keep **`docs/vacation-planner.md`**, **`ARCHITECTURE.md` §7.2**, **`RUNBOOK.md` §21–§23** aligned when changing `vacations/VacationMonthlySync.gs` or `ui/Js.VacationSync.html`
 - **Inventory reconciliation** — keep **`docs/inventory-reconciliation.md`**, **`ARCHITECTURE.md` §7.4**, **`SECURITY.md`** (OAuth scopes), and access-api governance aligned when changing `inventory/InventoryReconciliation.gs` or `ui/Js.InventoryReconciliation.html`
+- **Temporary property register** — keep **`docs/temporary-property-register.md`**, **`ARCHITECTURE.md` §7.5**, **`AGENTS.md`**, and `scripts/verify-temporary-property-register.mjs` aligned when changing `inventory/TemporaryPropertyRegister.gs` or person-card outstanding-property rendering
 - **User-facing copy** — keep **`docs/user-facing-copy.md`** aligned when changing sidebar labels, menus, dialogs, health messages, or sheet titles shown to users; run **`npm run ci:copy`** after UI text edits
 - **Script properties** — keep **`README.md`**, **`RUNBOOK.md` §15**, **`SECURITY.md`**, **`CONTRIBUTING.md`** aligned with `data/DataAccess.gs`
 - **Repository file map** — refresh **`docs/project-files-complete.txt`** with **`npm run map:project-files`** whenever files are added, removed, or moved; CI enforces freshness via **`verify-project-files-map.mjs`**

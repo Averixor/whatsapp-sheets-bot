@@ -6,7 +6,7 @@ Practical index: **where to look** and **what CI proves it**. Structural rules: 
 | ------ | ------ | ---------- | ----------------- | ----- |
 | Reports | `reports/` | `Report_*.gs`, `Summaries.gs`, `Summary*.gs`, `MonthlyReport.gs`, `MonthJournalMaterialize.gs` | `npm run ci`, `npm run ci:workbook`, `npm run ci:materialize` | Includes daily summaries and derived month journal sheets. |
 | Vacations | `vacations/` | `Vacation*.gs` | `npm run ci:vacations` | Vacation UI partials live in `ui/Js.Vacations.*.html`; monthly sync in `VacationMonthlySync.gs`. |
-| Inventory | `inventory/` | `InventoryReconciliation.gs` | `npm run ci` (access-api, client includes, oauth scopes) | Sidebar **Звірка**; sheets `INVENTORY_RECONCILIATION` / `INVENTORY_RECONCILIATION_FILES`. |
+| Inventory | `inventory/` | `InventoryReconciliation.gs`, `TemporaryPropertyRegister.gs` | `npm run ci` (`ci:gas` pulls `verify-inventory-reconciliation.mjs`); `npm run ci:workbook` for temporary-property | Sidebar **Звірка** plus temporary-property register on `Property_issued_for_temporary_u`; reference sheets `PROPERTY_CATALOG` / `PROPERTY_KITS`. |
 | Send panel | `sendpanel/` | `SendPanel*.gs`, `SelectionActionService.gs`, `UseCases.SendPanel.gs`, `Stage7PhoneDictPayloadShims.gs` | `npm run ci`, `npm run ci:recipients` | |
 | Maintenance / formats | `maintenance/` | `ConditionalFormat*.gs`, `JobRuntime*.gs`, `Template*.gs`, `LifecycleRetention.gs` | `npm run ci:format-rules` | Sheet self-heal lives in `sheets/`. |
 | Diagnostics | `diagnostics/` | `Diagnostics.*.gs` (runtime) | `npm run ci` | `tests/Diagnostics.Debug.gs` — clasp-excluded. |

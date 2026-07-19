@@ -1,13 +1,12 @@
 # WASB — повний список файлів репозиторію
 # Порядок: дерево каталогів (depth-first, алфавіт у кожній папці)
 # Виключено: .git/, node_modules/, локальні .clasp*.json (крім *.example.json)
-# Файлів: 288
-# Оновлено: 2026-07-18T07:54:54Z
+# Файлів: 290
+# Оновлено: 2026-07-19T04:47:47Z
 
 .
   .clasp.example.json
   .claspignore
-  .cursorignore
   .gitignore
   .htmlvalidate.json
   .nvmrc
@@ -117,6 +116,7 @@ docs/
   module-map.md
   project-files-complete.txt
   README.md
+  temporary-property-register.md
   user-facing-copy.md
   vacation-planner.md
 
@@ -131,6 +131,7 @@ docs/refactor/
 
 inventory/
   InventoryReconciliation.gs
+  TemporaryPropertyRegister.gs
 
 maintenance/
   ConditionalFormatAdoptedRules.gs
@@ -214,6 +215,7 @@ scripts/
   verify-reference-workbook-layout.mjs
   verify-send-panel-bounds.mjs
   verify-snapshot-governance.mjs
+  verify-temporary-property-register.mjs
   verify-usecase-facade.mjs
   verify-user-facing-copy.mjs
   verify-vacation-monthly-sync.mjs

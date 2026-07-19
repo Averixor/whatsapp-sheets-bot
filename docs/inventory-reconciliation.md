@@ -40,3 +40,18 @@
 - кнопка **Відкрити** у списку служб відкриває документ у новій вкладці.
 
 Для першого запуску після розгортання потрібно повторно надати скрипту дозвіл лише на читання наявних файлів і папок Google Drive (`drive.readonly`).
+
+## Модулі
+
+| Шар | Файл |
+| --- | ---- |
+| Server | `inventory/InventoryReconciliation.gs` |
+| UI | `ui/Js.InventoryReconciliation.html`, `ui/Styles_35_InventoryReconciliation.html` |
+| Trigger | `access/AccessSheetTriggers.gs` (`onEdit` → recolor) |
+| API | `apiStage7GetInventoryReconciliation`, `apiStage7SyncInventoryReconciliation`, `apiStage7SetInventoryReconciliationFolder`, `apiStage7GetSelectedInventoryReconciliation` |
+
+## Локальна перевірка
+
+`npm run ci` (зокрема `ci:gas` → `verify-clasp-push-patterns.mjs` імпортує
+`scripts/verify-inventory-reconciliation.mjs`) плюс oauth/access/client guards.
+Окремо: `node scripts/verify-inventory-reconciliation.mjs`.

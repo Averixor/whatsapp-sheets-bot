@@ -80,33 +80,52 @@ var PersonsRepository_ =
 
 
     function getEquipmentForPerson_(person) {
+      const warnings = [];
+      let cars = [];
+      let weapons = [];
+      let temporaryProperty = [];
+
       if (
-        typeof ReferenceSheetsRepository_ !== "object" ||
-        !ReferenceSheetsRepository_ ||
-        typeof ReferenceSheetsRepository_.getEquipmentForPerson !== "function"
+        typeof ReferenceSheetsRepository_ === "object" &&
+        ReferenceSheetsRepository_ &&
+        typeof ReferenceSheetsRepository_.getEquipmentForPerson === "function"
       ) {
-        return { cars: [], weapons: [], total: 0, warnings: [] };
-      }
-      try {
-        const equipment = ReferenceSheetsRepository_.getEquipmentForPerson(person || {});
-        return {
-          cars: Array.isArray(equipment && equipment.cars) ? equipment.cars : [],
-          weapons: Array.isArray(equipment && equipment.weapons)
+        try {
+          const equipment = ReferenceSheetsRepository_.getEquipmentForPerson(person || {});
+          cars = Array.isArray(equipment && equipment.cars) ? equipment.cars : [];
+          weapons = Array.isArray(equipment && equipment.weapons)
             ? equipment.weapons
-            : [],
-          total: Number(equipment && equipment.total) || 0,
-          warnings: Array.isArray(equipment && equipment.warnings)
-            ? equipment.warnings
-            : [],
-        };
-      } catch (e) {
-        return {
-          cars: [],
-          weapons: [],
-          total: 0,
-          warnings: [e && e.message ? String(e.message) : String(e)],
-        };
+            : [];
+          if (Array.isArray(equipment && equipment.warnings)) {
+            warnings.push.apply(warnings, equipment.warnings);
+          }
+        } catch (e) {
+          warnings.push(e && e.message ? String(e.message) : String(e));
+        }
       }
+
+      if (
+        typeof TemporaryPropertyRegister_ === "object" &&
+        TemporaryPropertyRegister_ &&
+        typeof TemporaryPropertyRegister_.readForCallsign === "function"
+      ) {
+        try {
+          temporaryProperty = TemporaryPropertyRegister_.readForCallsign(
+            person && person.callsign ? person.callsign : "",
+            false,
+          );
+        } catch (e) {
+          warnings.push(e && e.message ? String(e.message) : String(e));
+        }
+      }
+
+      return {
+        cars: cars,
+        weapons: weapons,
+        temporaryProperty: temporaryProperty,
+        total: cars.length + weapons.length + temporaryProperty.length,
+        warnings: warnings,
+      };
     }
 
     /**
@@ -365,6 +384,7 @@ var PersonsRepository_ =
         equipment: equipment,
         cars: equipment.cars,
         weapons: equipment.weapons,
+        temporaryProperty: equipment.temporaryProperty || [],
         phoneDisplay: _formatPhoneDisplay_(phone),
       };
     }

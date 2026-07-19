@@ -27,6 +27,7 @@ This repository is packaged for Google Apps Script through `clasp`:
 - derived month journal sheets per month: `ЖУРНАЛ_MM` and `ПІДСУМОК_MM`
 - optional sidebar reference sheets: `PHONE_DIRECTORY` (service phones), `CAR` (vehicle register), and `WEAPON` (weapons/property register)
 - inventory reconciliation sidebar (**Звірка**): month checkboxes on `INVENTORY_RECONCILIATION`, Drive document links, auto-sync index
+- temporary-property register: dependent category/model dropdowns, automatic units and kit components, returns, balances, fuel details, and person-card integration
 - vacation monthly sync: approved/applied vacations → month sheet `Відпус` (`vacations/VacationMonthlySync.gs`; conflicts in **Конфлікти з відпустками**)
 
 ## Maintainer workflow
@@ -69,14 +70,14 @@ Full workflow, release checklist, and post-deploy checks: **`CONTRIBUTING.md`** 
 
 The repository runs a lightweight CI workflow on **`push`** and **`pull_request`** to **`main`**, and **`workflow_dispatch`**.
 
-It runs the full **`npm run ci`** suite (**32** Node verify scripts after `npm run precheck` — see `package.json` and **RUNBOOK.md** §12), including:
+It runs the full **`npm run ci`** suite (**35** Node verify/audit scripts after `npm run precheck` — see `package.json` and **RUNBOOK.md** §12), including:
 
 - GAS sanity, clasp push patterns, **Ukrainian/Russian language** (`verify-no-russian-text.mjs`), **user-facing copy** (`verify-user-facing-copy.mjs`)
-- Reference workbook layout, reference repositories, workbook contract, monthly callsign sync, send-panel bounds, materialize / month-journal / age-birthday countdown
+- Reference workbook layout, reference repositories, workbook contract, monthly callsign sync, send-panel bounds, temporary-property register, materialize / month-journal / age-birthday countdown
 - Vacation planner, recipient, personnel-status, format-rules contracts
 - Function graph audit; client includes, HTML labels, JS parse, layer deps, XSS, envelope compat
-- UseCase facade, snapshot governance, bridge flags, access API governance, access hotfixes
-- OAuth scopes, jsconfig
+- UseCase facade, snapshot governance, bridge flags, access API governance, access policy checks, access hotfixes
+- OAuth scopes, project-files map, jsconfig
 
 See [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) (CI pins Node 24; `engines.node` is `>=24`, `actions/checkout@v5`, `actions/setup-node@v5`).
 
@@ -108,6 +109,7 @@ The workflow does not deploy to Apps Script. Deployment remains local via
 | [`docs/daily-summary-architecture.md`](./docs/daily-summary-architecture.md) | Short/detailed day summary: formula block, modules, sidebar flow |
 | [`docs/vacation-planner.md`](./docs/vacation-planner.md) | Vacation planner, concurrent rules, mini-calendar UX |
 | [`docs/inventory-reconciliation.md`](./docs/inventory-reconciliation.md) | Inventory month tracking, Drive folder scan, sidebar **Звірка** |
+| [`docs/temporary-property-register.md`](./docs/temporary-property-register.md) | Temporary issue/return register, catalog, kits, migration |
 | [`docs/user-facing-copy.md`](./docs/user-facing-copy.md) | UX copy policy; enforced by `verify-user-facing-copy.mjs` |
 | [`docs/format-rules-governance.md`](./docs/format-rules-governance.md) | Manual conditional-format registry |
 | [`docs/adr/003-working-domain-layout.md`](./docs/adr/003-working-domain-layout.md) | Working domain folder layout (post-#34) |
@@ -139,12 +141,13 @@ runtime `.gs` at repo root; all `.html` live in `ui/`.
 2. Deploy with **`clasp push`** from this repository (nested `!**/*.gs` and `!**/*.html` from all domain folders per `.claspignore`), or upload the same tree in the GAS editor.
 3. Import only GAS runtime files from this repository; there is no `_extras/` folder in the compact bundle.
 4. Run `apiStage7BootstrapRuntimeAndAlertsSheets()` once.
-5. Run `apiStage7BootstrapAccessSheet()` once.
-6. Fill the `ACCESS` sheet.
-7. Run `apiStage7ApplyProtections({ dryRun: true })` and review the report.
-8. Run `apiStage7ApplyProtections({ dryRun: false })` after `ACCESS` is correct.
-9. Run `apiStage7QuickHealthCheck()`.
-10. Verify the `🧑‍💻` sidebar block for each role you actually use.
+5. Run `apiSetupTemporaryPropertyRegister()` once to create or migrate the temporary-property register.
+6. Run `apiStage7BootstrapAccessSheet()` once.
+7. Fill the `ACCESS` sheet.
+8. Run `apiStage7ApplyProtections({ dryRun: true })` and review the report.
+9. Run `apiStage7ApplyProtections({ dryRun: false })` after `ACCESS` is correct.
+10. Run `apiStage7QuickHealthCheck()`.
+11. Verify the `🧑‍💻` sidebar block for each role you actually use.
 
 Після першого відкриття сайдбару (або явного виклику **`apiStage7BootstrapSidebar()`**) за потреби створюються порожні optional аркуші **`Дані`**, **`Проєкти`**, **`Заявки`** із заголовками й одним шаблонним рядком; якщо аркуш уже має дані, вміст не перезаписується. Див. **`RUNBOOK.md`** §20.
 

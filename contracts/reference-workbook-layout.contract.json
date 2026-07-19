@@ -1,5 +1,5 @@
 {
-  "sourceFile": "Книга Взводу Охорони(38).xlsx",
+  "sourceFile": "Книга Взводу Охорони(42).xlsx",
   "notes": {
     "personnelCallsign": "Column M Callsign holds working callsign values (e.g. ГРАФ); column L is Email; no TEMPLATE column in reference file.",
     "month06": "Compact layout: A=BR formula, B=Позивний, dates from C.",
@@ -7,7 +7,8 @@
     "phoneDirectory": "PHONE_DIRECTORY is a sectioned reference: column A holds section titles or phone numbers, column B holds contact name/description.",
     "car": "CAR is an optional vehicle register from the real workbook: A=Callsign, B=Name of military property, C=Military registration number, D=Chassis number, E=Year of manufacture, F=Value, G=Condition. Legacy A=FML is read only for compatibility.",
     "month07": "Compact layout: B=Позивний, dates from C, notes in AH.",
-    "weapon": "WEAPON is a person-bound military property register: A:E person identity, blocks F:L, M:S, U:Z hold military property records."
+    "weapon": "WEAPON is a person-bound military property register: A:E person identity, blocks F:L, M:S, U:Z hold military property records.",
+    "temporaryProperty": "Property_issued_for_temporary_u is the temporary issue/return register. PROPERTY_CATALOG drives dependent dropdowns and units; PROPERTY_KITS defines automatic component rows."
   },
   "sheets": {
     "PERSONNEL": {
@@ -208,6 +209,47 @@
       "AF": "46233.0",
       "AG": "46234.0",
       "AH": "Примітки"
+    },
+    "Property_issued_for_temporary_u": {
+      "A": "Позивний",
+      "B": "Пост / об'єкт",
+      "C": "Вид майна",
+      "D": "Найменування / модель",
+      "E": "Видано",
+      "F": "Од. обліку",
+      "G": "Дата видачі",
+      "H": "Повернуто",
+      "I": "Дата повернення",
+      "J": "Залишок",
+      "K": "Статус",
+      "L": "Вид палива",
+      "M": "Об'єм палива, л",
+      "N": "Комплектність / примітка",
+      "O": "ID запису",
+      "P": "ID комплекту",
+      "Q": "Батьківський ID",
+      "R": "Тип рядка",
+      "S": "Код майна",
+      "T": "Авто-рядок"
+    },
+    "PROPERTY_CATALOG": {
+      "A": "Код",
+      "B": "Вид майна",
+      "C": "Найменування / модель",
+      "D": "Од. обліку",
+      "E": "Комплект",
+      "F": "Потрібні дані про паливо",
+      "G": "Доступно для вибору",
+      "H": "Примітка",
+      "I": "Порядок"
+    },
+    "PROPERTY_KITS": {
+      "A": "Код основного майна",
+      "B": "Комплектуюча",
+      "C": "Кількість",
+      "D": "Од. обліку",
+      "E": "Код комплектуючої",
+      "F": "Порядок"
     }
   }
 }

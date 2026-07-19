@@ -346,6 +346,25 @@ Drive traversal requires OAuth scope `drive.readonly` (see `contracts/oauth-scop
 
 Full design: [`docs/inventory-reconciliation.md`](./docs/inventory-reconciliation.md).
 
+## 7.5 Temporary property register
+
+Temporary issue/return tracking lives on `Property_issued_for_temporary_u` with
+reference sheets `PROPERTY_CATALOG` (category/model/unit) and `PROPERTY_KITS`
+(kit composition).
+
+| Layer | Module | Role |
+| ----- | ------ | ---- |
+| Server | `inventory/TemporaryPropertyRegister.gs` | Dropdowns, kit component rows, balances, fuel fields, migration |
+| Setup API | `apiSetupTemporaryPropertyRegister()` | One-time seed/migrate/backup |
+| Trigger | `access/AccessSheetTriggers.gs` | `onEdit` routing to `TemporaryPropertyRegister_.handleEdit` |
+| Person cards | `personnel/PersonsRepository.gs`, `personnel/PersonCards.gs` | Outstanding items under **Тимчасово видане майно** |
+
+Main quantities are numeric; unit of account is stored separately. Fuel cans use
+`Вид палива` and `Об'єм палива, л`. Local contract:
+`scripts/verify-temporary-property-register.mjs` (`npm run ci:workbook`).
+
+Full design: [`docs/temporary-property-register.md`](./docs/temporary-property-register.md).
+
 ## 8. Sidebar runtime principles
 
 - first paint should stay lightweight
@@ -362,7 +381,7 @@ Main validation tools:
 - `apiStage7HealthCheck()`
 - `apiRunStage7Diagnostics()`
 - `apiRunStage7RegressionTests()`
-- `smoke/SmokeTests.gs`
+- `smoke/SmokeTests.gs` (`runSmokeTests()`)
 - `tests/AccessE2ETests.gs`
 - `tests/DomainTests.gs`
 

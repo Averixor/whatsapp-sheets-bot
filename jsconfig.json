@@ -4,7 +4,7 @@
     "lib": ["ES2015"],
     "checkJs": false,
     "module": "ES2015",
-    "moduleResolution": "node"
+    "moduleResolution": "bundler"
   },
   "include": ["scripts/**/*.mjs", "**/*.gs"],
   "exclude": ["node_modules"],

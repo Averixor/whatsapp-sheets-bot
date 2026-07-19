@@ -16,7 +16,7 @@ Historical snapshot only. This file records the close state from **2026-06-07** 
 | Check                                                                                                                    | Result                      |
 | ------------------------------------------------------------------------------------------------------------------------ | --------------------------- |
 | Manual run in GAS UI                                                                                                     | **PASS** — 2026-06-07 11:55 |
-| `apiRunProductionSmokeChecks` (historical name; current remote smoke: `apiRunSmokeChecks` in `tests/GasRuntimeSmoke.gs`) | `ok: true`                  |
+| `apiRunProductionSmokeChecks` (historical name used at close; file `tests/GasRuntimeSmoke.gs` is **not** in the current tree — production smoke today is `runSmokeTests()` in `smoke/SmokeTests.gs`) | `ok: true`                  |
 | Access policy checks                                                                                                     | **23/23 OK**                |
 
 Clean Git code was pushed to GAS after CI; any temporary `manualSmokePrint()` added only in the Apps Script UI was overwritten and is **not** in production code.

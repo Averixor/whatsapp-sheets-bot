@@ -193,7 +193,7 @@ Manual replay from maintenance API: `apiRunStage7Job(jobName, { trigger: false }
 
 Не починати з випадкового редагування ACCESS, PERSONNEL або коду. Спочатку — симптом → шар → файл або аркуш.
 
-```
+```text
 Симптом
   ↓
 Який api* / сценарій викликано?
@@ -225,7 +225,7 @@ Manual replay from maintenance API: `apiRunStage7Job(jobName, { trigger: false }
 
 **Типовий маршрут:**
 
-```
+```text
 guest / login fail
   → AccessControl_
   → AuthResolver / ACCESS lookup
@@ -253,7 +253,7 @@ guest / login fail
 
 **Типовий маршрут:**
 
-```
+```text
 "Недостатньо прав"
   → визначити api*
   → AccessEnforcement_
@@ -280,7 +280,7 @@ guest / login fail
 
 **Типовий маршрут:**
 
-```
+```text
 немає кнопки
   → Js.* / sidebar rendering
   → user context
@@ -302,7 +302,7 @@ guest / login fail
 
 **Типовий маршрут:**
 
-```
+```text
 не той телефон / ПІБ / callsign
   → PERSONNEL
   → нормалізація ключів
@@ -325,7 +325,7 @@ guest / login fail
 
 **Типовий маршрут:**
 
-```
+```text
 неправильне зведення
   → reports/Report_SummaryData.gs / reports/Report_DailySimple.gs
   → дата / колонка
@@ -348,7 +348,7 @@ guest / login fail
 
 **Типовий маршрут:**
 
-```
+```text
 помилка у відпустках
   → vacation UI (`ui/Js.Vacations.*.html` partials)
   → vacations/VacationPlannerService.gs, vacations/VacationMonthCalendar.gs
@@ -378,7 +378,7 @@ guest / login fail
 
 **Типовий маршрут:**
 
-```
+```text
 після deploy все зламалось
   → npm run ci
   → clasp / remote
@@ -404,7 +404,7 @@ guest / login fail
 
 **Типовий маршрут:**
 
-```
+```text
 новий api* → CI fail
   → public або excluded + reason
   → оновити contract + ProjectMetadata role policy
@@ -497,7 +497,7 @@ If something breaks:
 ## 11. Recommended release hygiene
 
 - keep `main` stable
-- do active work in `dev`
+- do active work on short-lived feature branches (merge into `main`; there is no long-lived remote `dev` branch)
 - tag release points
 - keep `CHANGELOG.md` concise and current
 - keep one-off reports outside this compact GAS import ZIP
@@ -510,53 +510,56 @@ The repository runs CI automatically on **`push`** and **`pull_request`** to **`
 
 Local equivalent: **`npm run check`** (alias **`npm run ci`**).
 
-| Script | Purpose |
-|--------|---------|
-| `verify-node-version.mjs` | Node `>=24` engine gate (`precheck`; honors explicit `<` / `<=` if set) |
-| `ci-gas-sanity.mjs` | Syntax check all `.gs` files |
-| `verify-clasp-push-patterns.mjs` | `.claspignore` / push patterns |
-| `verify-no-russian-text.mjs` | Ban Russian markers in project text |
-| `verify-user-facing-copy.mjs` | Ban technical tokens in user-visible copy (`contracts/user-facing-copy.contract.json`) |
-| `verify-reference-workbook-layout.mjs` | Reference xlsx header layout contract |
-| `verify-reference-repositories.mjs` | `PHONE_DIRECTORY` / `CAR` / `WEAPON` parser semantics and workbook coverage |
-| `verify-workbook-contract.mjs` | Monthly layout geometry, formula-block short summary, detailed summary grouping |
-| `verify-monthly-callsign-sync.mjs` | PERSONNEL → monthly «Позивні» sync contract |
-| `verify-send-panel-bounds.mjs` | SEND_PANEL row bounds contract |
-| `verify-materialize-computed-data.mjs` | PERSONNEL materialize / computed columns API contract |
-| `verify-month-journal-materialize.mjs` | `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` wiring, API, access, sidebar |
-| `verify-age-birthday-countdown.mjs` | Birthday `DD.MM.YYYY р.н.`, Age `Nр.`, countdown UA labels |
-| `verify-vacation-planner.mjs` | Vacation planner rules, calendar, repository contracts |
-| `verify-vacation-monthly-sync.mjs` | One-way vacation → monthly sheet sync (auto-fill, conflicts, removals) |
-| `verify-recipient-contract.mjs` | Recipient routing and dark-select UI contract |
-| `verify-personnel-status-contract.mjs` | PERSONNEL Status dropdown/active/inactive vs `personnel/PersonnelRepository.gs` |
-| `verify-format-rules-governance.mjs` | Manual conditional-format registry |
-| `audit-function-graph.mjs` | Bound entrypoint refs vs definitions |
-| `verify-client-includes.mjs` | `ui/JavaScript.html` include order |
-| `verify-html-label-for.mjs` | HTML `label for=` hygiene |
-| `verify-client-js.mjs` | Combined sidebar client parse-check |
-| `verify-client-deps.mjs` | Client layer graph (`contracts/client-layers.contract.json`) |
-| `audit-client-xss.mjs` | Unsafe `innerHTML` / `setHtml` interpolations |
-| `audit-envelope-compat.mjs` | Server envelope + client adapters + transport bridge |
-| `verify-usecase-facade.mjs` | `Stage7UseCases_` contract vs snapshot |
-| `verify-snapshot-governance.mjs` | Snapshot mutations require `contracts/SNAPSHOT_CHANGELOG.md` |
-| `verify-bridge-flags.mjs` | `USE_NEW_API_PATH` registry (`contracts/bridge-flags.registry.json`) |
-| `verify-access-api-governance.mjs` | Access endpoints, role policies, client routes |
-| `verify-access-autofill-hotfix.mjs` | ACCESS row autofill hotfix contract |
-| `verify-access-temp-password-reissue.mjs` | Temporary password reissue flow |
-| `verify-oauth-scopes.mjs` | Manifest scopes vs allowlist (`drive.readonly` for inventory reconciliation) |
-| `verify-project-files-map.mjs` | `docs/project-files-complete.txt` matches working tree |
-| `verify-jsconfig.mjs` | `jsconfig.json` include/exclude globs |
+| Script                                    | Purpose                                                                                |
+| ----------------------------------------- | -------------------------------------------------------------------------------------- |
+| `verify-node-version.mjs`                 | Node `>=24` engine gate (`precheck`; honors explicit `<` / `<=` if set)                |
+| `ci-gas-sanity.mjs`                       | Syntax check all `.gs` files                                                           |
+| `verify-clasp-push-patterns.mjs`          | `.claspignore` / push patterns (also runs `verify-inventory-reconciliation.mjs`)       |
+| `verify-no-russian-text.mjs`              | Ban Russian markers in project text                                                    |
+| `verify-user-facing-copy.mjs`             | Ban technical tokens in user-visible copy (`contracts/user-facing-copy.contract.json`) |
+| `verify-reference-workbook-layout.mjs`    | Reference xlsx header layout contract                                                  |
+| `verify-reference-repositories.mjs`       | `PHONE_DIRECTORY` / `CAR` / `WEAPON` parser semantics and workbook coverage            |
+| `verify-workbook-contract.mjs`            | Monthly layout geometry, formula-block short summary, detailed summary grouping        |
+| `verify-monthly-callsign-sync.mjs`        | PERSONNEL → monthly «Позивні» sync contract                                            |
+| `verify-send-panel-bounds.mjs`            | SEND_PANEL row bounds contract                                                         |
+| `verify-temporary-property-register.mjs`  | Temporary-property register headers, catalog/kits, status math (`ci:workbook`)         |
+| `verify-materialize-computed-data.mjs`    | PERSONNEL materialize / computed columns API contract                                  |
+| `verify-month-journal-materialize.mjs`    | `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` wiring, API, access, sidebar                               |
+| `verify-age-birthday-countdown.mjs`       | Birthday `DD.MM.YYYY р.н.`, Age `Nр.`, countdown UA labels                             |
+| `verify-vacation-planner.mjs`             | Vacation planner rules, calendar, repository contracts                                 |
+| `verify-vacation-monthly-sync.mjs`        | One-way vacation → monthly sheet sync (auto-fill, conflicts, removals)                 |
+| `verify-recipient-contract.mjs`           | Recipient routing and dark-select UI contract                                          |
+| `verify-personnel-status-contract.mjs`    | PERSONNEL Status dropdown/active/inactive vs `personnel/PersonnelRepository.gs`        |
+| `verify-format-rules-governance.mjs`      | Manual conditional-format registry                                                     |
+| `audit-function-graph.mjs`                | Bound entrypoint refs vs definitions                                                   |
+| `verify-client-includes.mjs`              | `ui/JavaScript.html` include order                                                     |
+| `verify-html-label-for.mjs`               | HTML `label for=` hygiene                                                              |
+| `verify-client-js.mjs`                    | Combined sidebar client parse-check                                                    |
+| `verify-client-deps.mjs`                  | Client layer graph (`contracts/client-layers.contract.json`)                           |
+| `audit-client-xss.mjs`                    | Unsafe `innerHTML` / `setHtml` interpolations                                          |
+| `audit-envelope-compat.mjs`               | Server envelope + client adapters + transport bridge                                   |
+| `verify-usecase-facade.mjs`               | `Stage7UseCases_` contract vs snapshot                                                 |
+| `verify-snapshot-governance.mjs`          | Snapshot mutations require `contracts/SNAPSHOT_CHANGELOG.md`                           |
+| `verify-bridge-flags.mjs`                 | `USE_NEW_API_PATH` registry (`contracts/bridge-flags.registry.json`)                   |
+| `verify-access-api-governance.mjs`        | Access endpoints, role policies, client routes                                         |
+| `verify-access-policy-checks.mjs`         | Access policy check surface vs contract                                                |
+| `verify-access-autofill-hotfix.mjs`       | ACCESS row autofill hotfix contract                                                    |
+| `verify-access-temp-password-reissue.mjs` | Temporary password reissue flow                                                        |
+| `verify-oauth-scopes.mjs`                 | Manifest scopes vs allowlist (`drive.readonly` for inventory reconciliation)           |
+| `verify-project-files-map.mjs`            | `docs/project-files-complete.txt` matches working tree                                 |
+| `verify-jsconfig.mjs`                     | `jsconfig.json` include/exclude globs                                                  |
 
 There is **no** Apps Script deployment in CI (`clasp` is local only). See `.github/workflows/ci.yml`.
-
 
 ---
 
 0. If the change adds, removes, or moves repository files, refresh the map:
+
    ```bash
    npm run map:project-files
    git diff -- docs/project-files-complete.txt
    ```
+
    (`npm run release:check` / `npm run ci` fails if the map is stale.)
 1. Run local checks (`npm run check`; see `CONTRIBUTING.md`).
 2. Confirm `audit-function-graph` ends with **`MISSING: none`**.
@@ -718,7 +721,7 @@ Canonical resolver (**`DataAccess.gs`**):
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **`WASB_SPREADSHEET_ID`**                    | Target spreadsheet for headless runs (triggers, executions without open UI). Required when no container spreadsheet context exists.                                                         |
 | **`WASB_OWNER_EMAIL`**                       | Owner email for security notifications that may include the full user key. Quick health warns if unset.                                                                                     |
-| **`WASB_OWNER_LOGIN`**                       | Owner `ACCESS.login` value used only by `apiStage7ReissueOwnerTemporaryPasswordManual()` to identify the owner row without hardcoded source values.                                          |
+| **`WASB_OWNER_LOGIN`**                       | Owner `ACCESS.login` value used only by `apiStage7ReissueOwnerTemporaryPasswordManual()` to identify the owner row without hardcoded source values.                                         |
 | **`WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`**     | Emergency email bridge during migration only. Keep disabled (`false` / unset) in normal operation.                                                                                          |
 | **`WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP`** | Legacy plaintext temp-password column lookup during migration only. Keep disabled in normal operation; run `apiStage7NormalizeAccessSheetFormatting()` to clear `temporary_password_plain`. |
 
@@ -776,11 +779,11 @@ For day-to-day operations, prefer calling **`apiStage7*`** and documented Stage7
 
 ## 19. Reflective helpers: eval / `Function('return this')`
 
-| Location                         | Usage                                                                                                                                | Role                               | Risk                                        | Decision                                                                          |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------- |
-| **`Stage7TestRunner.gs`**        | ~~`eval(name)`~~ removed; explicit registry **`getStage7TestRunnerExplicitRegistry_()`** + **`globalThis[name]`** for discovery only | Manual / menu test runner          | Was **medium** (string eval); now **lower** | **DONE (P2.e)** — registered task names bind to real functions; no runtime `eval` |
-| **`diagnostics/Diagnostics.Core.gs`**        | `_global_()` → `Function('return this')()`                                                                                           | Diagnostics global scope           | Low                                         | **DEFER**                                                                         |
-| **`Diagnostics.Stage7.Core.gs`** | `_diagGlobal_()` → same pattern after `globalThis`                                                                                   | Stage7 diagnostics                 | Low                                         | **DEFER**                                                                         |
+| Location                              | Usage                                                                                                                                | Role                      | Risk                                        | Decision                                                                          |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------- |
+| **`Stage7TestRunner.gs`**             | ~~`eval(name)`~~ removed; explicit registry **`getStage7TestRunnerExplicitRegistry_()`** + **`globalThis[name]`** for discovery only | Manual / menu test runner | Was **medium** (string eval); now **lower** | **DONE (P2.e)** — registered task names bind to real functions; no runtime `eval` |
+| **`diagnostics/Diagnostics.Core.gs`** | `_global_()` → `Function('return this')()`                                                                                           | Diagnostics global scope  | Low                                         | **DEFER**                                                                         |
+| **`Diagnostics.Stage7.Core.gs`**      | `_diagGlobal_()` → same pattern after `globalThis`                                                                                   | Stage7 diagnostics        | Low                                         | **DEFER**                                                                         |
 
 Do **not** reintroduce `eval` for resolving test or handler names; extend **`getStage7TestRunnerExplicitRegistry_()`** when adding fixed registry tasks.
 
@@ -805,7 +808,6 @@ Do **not** reintroduce `eval` for resolving test or handler names; extend **`get
 Заголовки рядка 1 збігаються з порядком **`appendRow`** у **`apiSubmitRequest`**: **timestamp**, **user_email**, **project_id**, **project_name**, **title**, **details**, **dedupe_key**, **status**. Шаблон: **`dedupe_key`** = `wasb-template-row-v1`, **`status`** = `template`; **`findDuplicate_`** сканує колонку dedupe по всіх даних рядках до останнього заповненого рядка.
 
 ### Перевірка
-
 
 ## 21. Vacation source migration
 
@@ -871,7 +873,7 @@ intact for diagnosis. Do not delete `VACATIONS` during the compatibility period.
 
 Повний опис: [`docs/vacation-planner.md`](./docs/vacation-planner.md).
 
-### Що перевірити після деплою
+### Що перевірити після деплою (міні-календар)
 
 1. Під сіткою лише **Проблемних дат** і **Навантажених днів** (без рядків про «Макс. одночасно» / «Коротке перевантаження»).
 2. **◀ / ▶** реально змінюють місяць і рік (у т.ч. Грудень ↔ Січень).
@@ -879,7 +881,7 @@ intact for diagnosis. Do not delete `VACATIONS` during the compatibility period.
 4. Tooltip при наведенні — дата, кількість, статус, підказка про клік (не лише `YYYY-MM-DD`).
 5. Клік по проблемному дню — деталі + варіанти переносу.
 
-### Локальна перевірка
+### Локальна перевірка (міні-календар)
 
 ```bash
 npm run ci:vacations
@@ -901,7 +903,7 @@ npm run ci
 
 Повний опис: [`docs/inventory-reconciliation.md`](./docs/inventory-reconciliation.md).
 
-### Що перевірити після деплою
+### Що перевірити після деплою (звірка)
 
 1. Після першого deploy з модулем звірки — повторно авторизувати OAuth scope **`drive.readonly`** (перегляд наявних файлів/папок Drive).
 2. **sysadmin** задає кореневу папку Drive; інші ролі бачать прогрес місяців і можуть відкривати прив’язані документи.
@@ -909,12 +911,37 @@ npm run ci
 4. Кнопка **Синхронізувати файли** оновлює прихований захищений `INVENTORY_RECONCILIATION_FILES` і примітки клітинок.
 5. Для поточної книги перевірте 9 служб і 108 очікуваних документів; кількість обчислюється динамічно.
 
-### Локальна перевірка
+### Локальна перевірка (звірка)
 
 ```bash
 npm run ci
 npx clasp status
 npm audit --audit-level=moderate
+```
+
+`scripts/verify-inventory-reconciliation.mjs` входить у CI як side-effect імпорт
+з `verify-clasp-push-patterns.mjs` (`npm run ci:gas`); його також можна
+запускати окремо.
+
+## 25. Temporary property register (тимчасово видане майно)
+
+Аркуші: `Property_issued_for_temporary_u`, `PROPERTY_CATALOG`, `PROPERTY_KITS`.
+Модуль: `inventory/TemporaryPropertyRegister.gs` (edit routing —
+`access/AccessSheetTriggers.gs`). Картки людей показують залишки в секції
+**Тимчасово видане майно**.
+
+Одноразова ініціалізація / міграція з GAS editor:
+
+```javascript
+apiSetupTemporaryPropertyRegister()
+```
+
+Повний опис: [`docs/temporary-property-register.md`](./docs/temporary-property-register.md).
+
+### Локальна перевірка (тимчасове майно)
+
+```bash
+npm run ci:workbook
 ```
 
 ### Тимчасово прийнятий ризик npm

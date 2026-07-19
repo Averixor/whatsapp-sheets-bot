@@ -167,6 +167,22 @@ function onEdit(e) {
     });
   }
 
+  try {
+    if (
+      typeof TemporaryPropertyRegister_ === "object" &&
+      TemporaryPropertyRegister_ &&
+      typeof TemporaryPropertyRegister_.handleEdit === "function"
+    ) {
+      TemporaryPropertyRegister_.handleEdit(e);
+    }
+  } catch (error) {
+    _logError_("onEdit.temporaryProperty", error, {
+      sheetName: sheetName,
+      a1Notation:
+        typeof range.getA1Notation === "function" ? range.getA1Notation() : "",
+    });
+  }
+
   const accessSheetName = _getAccessSheetName_();
   const isAccessSheet = (sheetName === accessSheetName);
   const isProtectedSheet = _isProtectedSheet_(sheetName);

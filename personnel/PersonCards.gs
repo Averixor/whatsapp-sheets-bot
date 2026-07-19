@@ -137,6 +137,53 @@ function _personCardRenderWeapon_(item) {
   </div>`;
 }
 
+function _personCardPropertyQty_(value, unit) {
+  const raw = Number(value);
+  const amount = Number.isFinite(raw) ? raw : 0;
+  const normalized = Math.round(amount * 1000) / 1000;
+  return `${normalized} ${String(unit || "шт.").trim() || "шт."}`;
+}
+
+function _personCardRenderTemporaryPropertyComponent_(item) {
+  const component = item || {};
+  return `<div class="asset-component">
+    <div class="asset-component-name">${_personCardSafeHtml_(component.assetName || "Комплектуюча")}</div>
+    <div class="asset-component-meta">
+      ${_personCardSafeHtml_(_personCardPropertyQty_(component.remaining, component.unit))}
+      · ${_personCardSafeHtml_(component.status || "—")}
+    </div>
+  </div>`;
+}
+
+function _personCardRenderTemporaryProperty_(item) {
+  const property = item || {};
+  const components = Array.isArray(property.components) ? property.components : [];
+  const fuel = [property.fuelType, property.fuelVolume ? `${property.fuelVolume} л` : ""]
+    .filter(Boolean)
+    .join(", ");
+  const componentsHtml = components.length
+    ? `<div class="asset-components">
+        <div class="asset-components-title">Комплектність</div>
+        ${components.map(_personCardRenderTemporaryPropertyComponent_).join("")}
+      </div>`
+    : "";
+
+  return `<div class="asset-card asset-card-temporary">
+    <div class="asset-title">${_personCardSafeHtml_(property.assetName || "Майно")}</div>
+    ${_personCardAssetLine_("Пост / об'єкт", property.post || "—")}
+    ${_personCardAssetLine_("Категорія", property.category || "—")}
+    ${_personCardAssetLine_("Видано", _personCardPropertyQty_(property.issued, property.unit))}
+    ${_personCardAssetLine_("Повернуто", _personCardPropertyQty_(property.returned, property.unit))}
+    ${_personCardAssetLine_("Залишок", _personCardPropertyQty_(property.remaining, property.unit))}
+    ${_personCardAssetLine_("Дата видачі", property.issuedDate || "—")}
+    ${_personCardAssetLine_("Дата повернення", property.returnedDate || "—")}
+    ${_personCardAssetLine_("Паливо", fuel)}
+    ${_personCardAssetLine_("Статус", property.status || "—")}
+    ${_personCardAssetLine_("Примітка", property.note)}
+    ${componentsHtml}
+  </div>`;
+}
+
 function _personCardEquipmentHtml_(data) {
   const cars = Array.isArray(data && data.cars)
     ? data.cars
@@ -148,7 +195,12 @@ function _personCardEquipmentHtml_(data) {
     : data && data.equipment && Array.isArray(data.equipment.weapons)
       ? data.equipment.weapons
       : [];
-  if (!cars.length && !weapons.length) return "";
+  const temporaryProperty = Array.isArray(data && data.temporaryProperty)
+    ? data.temporaryProperty
+    : data && data.equipment && Array.isArray(data.equipment.temporaryProperty)
+      ? data.equipment.temporaryProperty
+      : [];
+  if (!cars.length && !weapons.length && !temporaryProperty.length) return "";
 
   const carsHtml = cars.length
     ? `<div class="asset-section">
@@ -162,11 +214,18 @@ function _personCardEquipmentHtml_(data) {
         <div class="asset-list">${weapons.map(_personCardRenderWeapon_).join("")}</div>
       </div>`
     : "";
+  const temporaryHtml = temporaryProperty.length
+    ? `<div class="asset-section">
+        <div class="asset-section-title">Тимчасово видане майно</div>
+        <div class="asset-list">${temporaryProperty.map(_personCardRenderTemporaryProperty_).join("")}</div>
+      </div>`
+    : "";
 
   return `<div class="assets-wrap">
-    <div class="assets-header">Закріплене майно</div>
+    <div class="assets-header">Облік майна</div>
     ${carsHtml}
     ${weaponsHtml}
+    ${temporaryHtml}
   </div>`;
 }
 
@@ -492,6 +551,41 @@ function openPersonCardByCallsignAndDate_(callsign, dateStr) {
 
           .asset-line span {
             color: #9fb2cb;
+            flex-shrink: 0;
+          }
+
+          .asset-components {
+            margin-top: 8px;
+            border-top: 1px solid rgba(148, 163, 184, 0.2);
+            padding-top: 7px;
+          }
+
+          .asset-components-title {
+            color: #93c5fd;
+            font-size: 11px;
+            font-weight: 800;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+          }
+
+          .asset-component {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 3px 0 3px 8px;
+            border-left: 2px solid rgba(96, 165, 250, 0.45);
+            font-size: 11px;
+            line-height: 1.35;
+          }
+
+          .asset-component-name {
+            color: #dbeafe;
+          }
+
+          .asset-component-meta {
+            color: #9fb2cb;
+            text-align: right;
             flex-shrink: 0;
           }
 
