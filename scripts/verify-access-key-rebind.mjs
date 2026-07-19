@@ -74,6 +74,14 @@ assert.match(bootSource, /redactSensitiveForLog_/);
 assert.match(redactionSource, /isSensitiveKey/);
 assert.match(redactionSource, /password|accesskey|token|hash|salt/i);
 
+const enforcementSource = read("AccessEnforcement.gs");
+assert.match(enforcementSource, /SecurityRedaction_\.sanitizeObject/);
+assert.match(enforcementSource, /cellValuesRedacted/);
+assert.match(
+  enforcementSource,
+  /redactAccessCellValues[\s\S]*oldValue:[\s\S]*\[REDACTED\]/,
+);
+
 assert.ok(
   Array.isArray(contract.publicEndpoints) &&
     contract.publicEndpoints.includes("apiStage7ResumeBrowserSession"),
