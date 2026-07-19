@@ -126,6 +126,8 @@ function _getAccessHeaderDisplayLabels_() {
     temporary_password_salt: "Temp_salt",
     temporary_password_expires_at: "Temp_expires",
     temporary_password_used_at: "Temp_used",
+    browser_session_hash: "Sess_hash",
+    browser_session_expires_at: "Sess_expires",
     approved_by: "Approved_by",
     approved_at: "Approved_at",
     activated_at: "Activated_at",
@@ -227,6 +229,10 @@ function _getAccessHeaderAliasMap_() {
     temporary_password_expires_at: "temporary_password_expires_at",
     "час використання тимчасового пароля": "temporary_password_used_at",
     temporary_password_used_at: "temporary_password_used_at",
+    "хеш браузерної сесії": "browser_session_hash",
+    browser_session_hash: "browser_session_hash",
+    "термін дії браузерної сесії": "browser_session_expires_at",
+    browser_session_expires_at: "browser_session_expires_at",
     "ким схвалено": "approved_by",
     "хто схвалив": "approved_by",
     хто_схвалив: "approved_by",
@@ -741,6 +747,8 @@ function _rowToEntry_(row, rowNumber, headerMap) {
       read("temporary_password_expires_at") || "",
     ),
     temporaryPasswordUsedAt: String(read("temporary_password_used_at") || ""),
+    browserSessionHash: normalizeStoredHash_(read("browser_session_hash")),
+    browserSessionExpiresAt: String(read("browser_session_expires_at") || ""),
     approvedBy: String(read("approved_by") || "").trim(),
     approvedAt: String(read("approved_at") || ""),
     activatedAt: String(read("activated_at") || ""),
@@ -927,6 +935,14 @@ function _entryToHeaderUpdates_(entry) {
     updates.temporary_password_used_at = e.temporaryPasswordUsedAt;
   if (e.temporary_password_used_at !== undefined)
     updates.temporary_password_used_at = e.temporary_password_used_at;
+  if (e.browserSessionHash !== undefined)
+    updates.browser_session_hash = normalizeStoredHash_(e.browserSessionHash);
+  if (e.browser_session_hash !== undefined)
+    updates.browser_session_hash = normalizeStoredHash_(e.browser_session_hash);
+  if (e.browserSessionExpiresAt !== undefined)
+    updates.browser_session_expires_at = e.browserSessionExpiresAt;
+  if (e.browser_session_expires_at !== undefined)
+    updates.browser_session_expires_at = e.browser_session_expires_at;
   if (e.approvedBy !== undefined) updates.approved_by = e.approvedBy;
   if (e.approved_by !== undefined) updates.approved_by = e.approved_by;
   if (e.approvedAt !== undefined) updates.approved_at = e.approvedAt;
@@ -1066,6 +1082,20 @@ function _updateEntryFields_(sheetRow, updates) {
   if (has("temporary_password_used_at"))
     mapped.temporaryPasswordUsedAt = String(
       updates.temporary_password_used_at || "",
+    );
+  if (has("browser_session_hash"))
+    mapped.browserSessionHash = normalizeStoredHash_(
+      updates.browser_session_hash,
+    );
+  if (has("browserSessionHash"))
+    mapped.browserSessionHash = normalizeStoredHash_(updates.browserSessionHash);
+  if (has("browser_session_expires_at"))
+    mapped.browserSessionExpiresAt = String(
+      updates.browser_session_expires_at || "",
+    );
+  if (has("browserSessionExpiresAt"))
+    mapped.browserSessionExpiresAt = String(
+      updates.browserSessionExpiresAt || "",
     );
   if (has("approved_by")) mapped.approvedBy = String(updates.approved_by || "");
   if (has("approved_at")) mapped.approvedAt = String(updates.approved_at || "");
@@ -1392,6 +1422,7 @@ function apiStage7NormalizeAccessSheetFormatting() {
       "термін дії тимчасового пароля",
     ]),
     col(["temporary_password_used_at", "час використання тимчасового пароля"]),
+    col(["browser_session_expires_at", "термін дії браузерної сесії"]),
     col(["approved_at", "час схвалення"]),
     col(["activated_at", "час активації"]),
   ].filter(Boolean);

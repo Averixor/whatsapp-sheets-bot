@@ -1066,6 +1066,33 @@ function apiStage7LoginByAccessKey(accessKeyOrPayload) {
   );
 }
 
+function apiStage7ResumeBrowserSession(payload) {
+  const result =
+    typeof AccessControl_ === "object" && AccessControl_.resumeBrowserSession
+      ? AccessControl_.resumeBrowserSession(payload || {})
+      : {
+          success: false,
+          ok: false,
+          message: "AccessControl_ недоступний",
+          code: "access.session.unavailable",
+        };
+  const success = result && result.success !== false;
+  const message =
+    result && result.message
+      ? result.message
+      : success
+        ? "Сесію відновлено"
+        : "Не вдалося відновити сесію";
+  return _stage7BuildMaintenanceResponse_(
+    success,
+    message,
+    result || {},
+    "stage7ResumeBrowserSession",
+    success ? [] : [message],
+    { affectedSheets: [appGetCore("ACCESS_SHEET", "ACCESS")] },
+  );
+}
+
 function apiStage7RegisterAccessWithTemporaryPassword(payload) {
   const result =
     typeof AccessControl_ === "object" &&

@@ -87,7 +87,7 @@
       '    <div id="accessLoginModalBody" class="access-login-modal__body is-form">',
       '      <div id="accessLoginForm" style="display:none;">',
       '        <label class="access-login-modal__field"><span class="access-login-modal__label">Логін</span><input id="accessLoginUsernameInput" class="access-login-modal__input" type="text" autocomplete="username" placeholder="Введіть логін"></label>',
-      '        <label class="access-login-modal__field"><span class="access-login-modal__label">Пароль</span><input id="accessLoginPasswordInput" class="access-login-modal__input" type="password" autocomplete="current-password" placeholder="Введіть пароль"></label>',
+      '        <label class="access-login-modal__field"><span class="access-login-modal__label">Пароль</span><input id="accessLoginPasswordInput" class="access-login-modal__input" type="password" autocomplete="current-password" placeholder="Пароль або одноразовий код WASB-…"></label>',
       '        <div class="access-login-modal__actions" style="display:grid; gap:8px;">',
       '          <button type="button" id="accessLoginSubmitBtn" class="access-login-modal__submit">Увійти</button>',
       '          <button type="button" id="accessLoginToHaveKeyBtn" class="access-login-modal__submit" style="background:transparent; border:1px solid var(--border-color,#374151);">Зареєструватися з ключем</button>',
@@ -401,6 +401,11 @@
       return;
     }
 
+    if (typeof captureBrowserSessionFromResult_ === "function") {
+      captureBrowserSessionFromResult_(result);
+      captureBrowserSessionFromResult_(result.data);
+    }
+
     if (result.descriptor) {
       STATE.access = normalizeAccessForUi_(result.descriptor);
     } else if (result.data && result.data.descriptor) {
@@ -410,10 +415,19 @@
     }
 
     setAccessLoginLoading_(false);
-    if (result.registrationRequired) {
-      setAccessLoginModalMessage_(result.message || "", false);
+    if (result.registrationRequired || (result.data && result.data.registrationRequired)) {
+      setAccessLoginModalMessage_(
+        (result && result.message) ||
+          (result.data && result.data.message) ||
+          "",
+        false,
+      );
       openAccessLoginFlow("haveKey");
-      showToast(result.message || "Завершіть реєстрацію");
+      showToast(
+        (result && result.message) ||
+          (result.data && result.data.message) ||
+          "Завершіть реєстрацію",
+      );
       applyAccessPolicyUI();
       return;
     }

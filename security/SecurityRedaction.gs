@@ -3,6 +3,9 @@
  */
 
 const SecurityRedaction_ = (function() {
+  const SENSITIVE_KEY_RE_ =
+    /(password|passwd|passphrase|accesskey|access_key|temporarypassword|temporary_password|browsersession|browser_session|sessiontoken|session_token|token|secret|salt|hash|credential|authorization|authcode|otp|onetime)/i;
+
   function _maskPhone(value) {
     const raw = String(value || '');
     const digits = raw.replace(/\D/g, '');
@@ -40,9 +43,27 @@ const SecurityRedaction_ = (function() {
     });
   }
 
+  function isSensitiveKey(key) {
+    return SENSITIVE_KEY_RE_.test(String(key || ''));
+  }
+
+  function _redactSecretScalar_(value) {
+    if (value === null || value === undefined) return value;
+    if (typeof value === 'boolean' || typeof value === 'number') return '[REDACTED]';
+    const text = String(value);
+    if (!text) return '[REDACTED]';
+    return '[REDACTED len=' + text.length + ']';
+  }
+
   function _redactValue(key, value) {
     const normalizedKey = String(key || '').toLowerCase();
     if (value === null || value === undefined) return value;
+    if (isSensitiveKey(normalizedKey)) {
+      if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
+        return '[REDACTED]';
+      }
+      return _redactSecretScalar_(value);
+    }
     if (Array.isArray(value)) return value.map(function(item) { return sanitizeObject(item, normalizedKey); });
     if (typeof value === 'object') return sanitizeObject(value, normalizedKey);
     if (/(^|_)(phone|mobile|tel|number)$/.test(normalizedKey)) return _maskPhone(value);
@@ -63,9 +84,11 @@ const SecurityRedaction_ = (function() {
   }
 
   function sanitizeLogEntry(entry) {
-    const item = Object.assign({}, entry || {});
+    const item = sanitizeObject(entry || {}, 'log');
     if (Object.prototype.hasOwnProperty.call(item, 'phone')) item.phone = _maskPhone(item.phone);
-    if (Object.prototype.hasOwnProperty.call(item, 'message')) item.message = _redactMessage(item.message);
+    if (Object.prototype.hasOwnProperty.call(item, 'message') && !isSensitiveKey('message')) {
+      item.message = _redactMessage(item.message);
+    }
     if (Object.prototype.hasOwnProperty.call(item, 'link')) item.link = _redactWaLink(item.link);
     return item;
   }
@@ -86,6 +109,7 @@ const SecurityRedaction_ = (function() {
     sanitizeLogEntry: sanitizeLogEntry,
     sanitizeAuditEntry: sanitizeAuditEntry,
     sanitizeObject: sanitizeObject,
+    isSensitiveKey: isSensitiveKey,
     maskPhone: _maskPhone,
     redactMessage: _redactMessage,
     redactWaLink: _redactWaLink

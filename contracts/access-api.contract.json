@@ -79,6 +79,7 @@
     "apiStage7ListBindableCallsigns",
     "apiStage7LoginByIdentifierAndCallsign",
     "apiStage7LoginByAccessKey",
+    "apiStage7ResumeBrowserSession",
     "apiStage7SubmitAccessKeyRequest",
     "apiStage7RegisterAccessWithTemporaryPassword",
     "apiStage7ReportAccessViolation",
@@ -116,6 +117,7 @@
       "apiStage7ListBindableCallsigns",
       "apiStage7LoginByIdentifierAndCallsign",
       "apiStage7LoginByAccessKey",
+      "apiStage7ResumeBrowserSession",
       "apiStage7SubmitAccessKeyRequest",
       "apiStage7RegisterAccessWithTemporaryPassword"
     ],

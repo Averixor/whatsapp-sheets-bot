@@ -101,6 +101,59 @@
             };
       if (STATE._accessDescriptorRequestId !== requestId) return;
       STATE.access = normalizeAccessForUi_(raw);
+
+      const access = STATE.access || {};
+      const needsResume =
+        !!access.keyAvailable &&
+        (!access.registered || access.role === "guest");
+      const storedSession =
+        typeof readWasbBrowserSession_ === "function"
+          ? readWasbBrowserSession_()
+          : "";
+      if (
+        needsResume &&
+        storedSession &&
+        typeof MaintenanceApi.resumeBrowserSession === "function"
+      ) {
+        try {
+          const resumed = await MaintenanceApi.resumeBrowserSession({
+            browserSessionToken: storedSession,
+          });
+          if (STATE._accessDescriptorRequestId !== requestId) return;
+          if (
+            resumed &&
+            resumed.success !== false &&
+            resumed.ok !== false
+          ) {
+            if (typeof captureBrowserSessionFromResult_ === "function") {
+              captureBrowserSessionFromResult_(resumed);
+              captureBrowserSessionFromResult_(resumed.data);
+            }
+            const resumedRaw =
+              (resumed.data && resumed.data.descriptor) ||
+              resumed.descriptor ||
+              (resumed.data && resumed.data.data && resumed.data.data.descriptor) ||
+              null;
+            if (resumedRaw) {
+              STATE.access = normalizeAccessForUi_(resumedRaw);
+            } else {
+              const again = await MaintenanceApi.getAccessDescriptor();
+              if (STATE._accessDescriptorRequestId !== requestId) return;
+              STATE.access = normalizeAccessForUi_(
+                again && again.data ? again.data : raw,
+              );
+            }
+          } else if (
+            resumed &&
+            (resumed.code === "access.session.invalid" ||
+              (resumed.data && resumed.data.code === "access.session.invalid"))
+          ) {
+            if (typeof clearWasbBrowserSession_ === "function") {
+              clearWasbBrowserSession_();
+            }
+          }
+        } catch (_) {}
+      }
     } catch (error) {
       if (STATE._accessDescriptorRequestId !== requestId) return;
       STATE.access = normalizeAccessForUi_({

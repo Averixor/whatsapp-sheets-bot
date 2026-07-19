@@ -77,6 +77,41 @@
     };
   }
 
+  if (typeof window.redactSensitiveForLog_ !== "function") {
+    window.redactSensitiveForLog_ = function (value, depth) {
+      var maxDepth = typeof depth === "number" ? depth : 0;
+      if (maxDepth > 6) return "[REDACTED-depth]";
+      if (value === null || value === undefined) return value;
+      if (typeof value !== "object") return value;
+      if (Array.isArray(value)) {
+        return value.map(function (item) {
+          return window.redactSensitiveForLog_(item, maxDepth + 1);
+        });
+      }
+      var out = {};
+      Object.keys(value).forEach(function (key) {
+        var lower = String(key || "").toLowerCase();
+        if (
+          /(password|passwd|passphrase|accesskey|access_key|temporarypassword|temporary_password|browsersession|browser_session|sessiontoken|session_token|token|secret|salt|hash|credential|authorization|authcode|otp|onetime)/i.test(
+            lower,
+          )
+        ) {
+          var raw = value[key];
+          if (raw === null || raw === undefined) {
+            out[key] = "[REDACTED]";
+          } else if (typeof raw === "string") {
+            out[key] = "[REDACTED len=" + raw.length + "]";
+          } else {
+            out[key] = "[REDACTED]";
+          }
+          return;
+        }
+        out[key] = window.redactSensitiveForLog_(value[key], maxDepth + 1);
+      });
+      return out;
+    };
+  }
+
   if (!window.__wasbConsoleBuffer__) {
     window.__wasbConsoleBuffer__ = [];
   }
@@ -130,7 +165,11 @@
           return arg.stack || arg.message || String(arg);
         }
         try {
-          var text = JSON.stringify(arg);
+          var safe =
+            typeof window.redactSensitiveForLog_ === "function"
+              ? window.redactSensitiveForLog_(arg)
+              : arg;
+          var text = JSON.stringify(safe);
           if (text && text.length > 280) return text.slice(0, 277) + "…";
           return text;
         } catch (_) {

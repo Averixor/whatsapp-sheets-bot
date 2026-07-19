@@ -110,6 +110,7 @@ const PROJECT_STAGE7_CANONICAL_API_MAP_ = Object.freeze({
     "apiStage7ListBindableCallsigns",
     "apiStage7LoginByIdentifierAndCallsign",
     "apiStage7LoginByAccessKey",
+    "apiStage7ResumeBrowserSession",
     "apiStage7SubmitAccessKeyRequest",
     "apiStage7RegisterAccessWithTemporaryPassword",
     "apiStage7NormalizeAccessSheetFormatting",
@@ -389,6 +390,9 @@ const PROJECT_STAGE7_ACCESS_API_ROLE_POLICY_ = Object.freeze({
     guestAllowed: true,
   }),
   apiStage7LoginByAccessKey: Object.freeze({
+    guestAllowed: true,
+  }),
+  apiStage7ResumeBrowserSession: Object.freeze({
     guestAllowed: true,
   }),
   apiStage7SubmitAccessKeyRequest: Object.freeze({

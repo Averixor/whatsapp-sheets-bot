@@ -416,6 +416,12 @@
         await Api.run("apiStage7LoginByAccessKey", payload || {}),
       );
     },
+
+    async resumeBrowserSession(payload = {}) {
+      return adaptStage4UtilityResponse(
+        await Api.run("apiStage7ResumeBrowserSession", payload || {}),
+      );
+    },
   };
 
   var MaintenanceApi = {
@@ -515,6 +521,10 @@
     loginByCredentials: async (payload = {}) =>
       adaptStage4UtilityResponse(
         await Api.run("apiStage7LoginByAccessKey", payload || {}),
+      ),
+    resumeBrowserSession: async (payload = {}) =>
+      adaptStage4UtilityResponse(
+        await Api.run("apiStage7ResumeBrowserSession", payload || {}),
       ),
     loginByIdentifierAndCallsign: async (payload = {}) =>
       adaptStage4UtilityResponse(

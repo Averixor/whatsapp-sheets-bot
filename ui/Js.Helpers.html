@@ -47,7 +47,15 @@
   function formatLogArgsPreview_(args) {
     if (!args || !args.length) return "";
     try {
-      const preview = JSON.stringify(args.length === 1 ? args[0] : args);
+      const safe =
+        typeof window.redactSensitiveForLog_ === "function"
+          ? window.redactSensitiveForLog_(
+              args.length === 1 ? args[0] : args,
+            )
+          : args.length === 1
+            ? args[0]
+            : args;
+      const preview = JSON.stringify(safe);
       if (!preview || preview === "{}" || preview === "[]") return "";
       return preview.length > 140 ? preview.slice(0, 137) + "…" : preview;
     } catch (_) {
@@ -64,8 +72,45 @@
     return "";
   }
 
+  var WASB_BROWSER_SESSION_KEY_ = "wasb.access.browserSession";
+
+  function saveWasbBrowserSession_(token) {
+    const value = String(token || "").trim();
+    if (!value) return;
+    try {
+      localStorage.setItem(WASB_BROWSER_SESSION_KEY_, value);
+    } catch (_) {}
+  }
+
+  function readWasbBrowserSession_() {
+    try {
+      return String(localStorage.getItem(WASB_BROWSER_SESSION_KEY_) || "").trim();
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function clearWasbBrowserSession_() {
+    try {
+      localStorage.removeItem(WASB_BROWSER_SESSION_KEY_);
+    } catch (_) {}
+  }
+
+  function captureBrowserSessionFromResult_(result) {
+    if (!result) return;
+    const token =
+      result.browserSessionToken ||
+      (result.data && result.data.browserSessionToken) ||
+      "";
+    if (token) saveWasbBrowserSession_(token);
+  }
+
   window.formatLogArgsPreview_ = formatLogArgsPreview_;
   window.formatApiResultSummary_ = formatApiResultSummary_;
+  window.saveWasbBrowserSession_ = saveWasbBrowserSession_;
+  window.readWasbBrowserSession_ = readWasbBrowserSession_;
+  window.clearWasbBrowserSession_ = clearWasbBrowserSession_;
+  window.captureBrowserSessionFromResult_ = captureBrowserSessionFromResult_;
 
   function normalizeConsoleLogType_(type) {
     const value = String(type || "info").toLowerCase();

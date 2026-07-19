@@ -1371,25 +1371,29 @@ function _findAccessEntryByCredentials_(entries, login, password) {
   return null;
 }
 
-function _isTemporaryAccessKeyUsable_(entry) {
+function _isTemporaryAccessKeyUsable_(entry, options) {
   if (!entry) return false;
+  const opts = options || {};
+  const allowActiveRecovery = opts.allowActiveRecovery !== false;
   const status = String(entry.registrationStatus || "")
     .trim()
     .toLowerCase();
   const hasCredentials = !!(
     String(entry.login || "").trim() && String(entry.passwordHash || "").trim()
   );
-  if (
-    status !== "approved" &&
-    status !== "key_sent" &&
-    !(status === "active" && !hasCredentials)
-  ) {
+  const isRegistrationPath =
+    status === "approved" ||
+    status === "key_sent" ||
+    (status === "active" && !hasCredentials);
+  const isActiveRecoveryPath =
+    allowActiveRecovery && status === "active" && hasCredentials;
+  if (!isRegistrationPath && !isActiveRecoveryPath) {
     return false;
   }
   if (entry.enabled !== true) return false;
   if (!entry.temporaryPasswordHash || !entry.temporaryPasswordSalt)
     return false;
-  if (entry.temporaryPasswordUsedAt && hasCredentials) return false;
+  if (entry.temporaryPasswordUsedAt) return false;
   if (entry.temporaryPasswordExpiresAt) {
     const expiresRaw = String(entry.temporaryPasswordExpiresAt || "").trim();
     const expiresDate = new Date(expiresRaw.replace(" ", "T"));
@@ -1400,24 +1404,118 @@ function _isTemporaryAccessKeyUsable_(entry) {
   return true;
 }
 
-function _bindAccessEntryToCurrentKey_(entry, currentKeyHash) {
+function _findAccessEntryByLoginAndTemporaryPassword_(entries, login, temporaryPassword) {
+  const normalizedLogin = String(login || "").trim().toLowerCase();
+  const normalizedEmail = normalizeEmail_(login);
+  const tempPlain = String(temporaryPassword || "").trim();
+  if (!normalizedLogin || !tempPlain || !/^WASB-/i.test(tempPlain)) return null;
+  const list = Array.isArray(entries) ? entries : [];
+  for (let i = 0; i < list.length; i++) {
+    const row = list[i];
+    if (row.enabled !== true) continue;
+    const rowLogin = String(row.login || "").trim().toLowerCase();
+    const rowEmail = normalizeEmail_(row.email);
+    const loginMatches =
+      rowLogin === normalizedLogin ||
+      (!!normalizedEmail && rowEmail === normalizedEmail);
+    if (!loginMatches) continue;
+    if (!_isTemporaryAccessKeyUsable_(row, { allowActiveRecovery: true })) {
+      continue;
+    }
+    const matched = _findAccessEntryByTemporaryPassword_([row], tempPlain);
+    if (matched) return matched;
+  }
+  return null;
+}
+
+function _findAccessEntryByBrowserSession_(entries, sessionToken) {
+  const token = String(sessionToken || "").trim();
+  if (!token || typeof hashAccessBrowserSessionToken_ !== "function") return null;
+  const tokenHash = hashAccessBrowserSessionToken_(token);
+  if (!tokenHash) return null;
+  const list = Array.isArray(entries) ? entries : [];
+  for (let i = 0; i < list.length; i++) {
+    const row = list[i];
+    if (row.enabled !== true) continue;
+    if (String(row.registrationStatus || "").toLowerCase() !== "active")
+      continue;
+    const storedHash = normalizeStoredHash_(
+      row.browserSessionHash || row.browser_session_hash || "",
+    );
+    if (!storedHash || storedHash !== tokenHash) continue;
+    if (
+      typeof isAccessBrowserSessionExpired_ === "function" &&
+      isAccessBrowserSessionExpired_(
+        row.browserSessionExpiresAt || row.browser_session_expires_at || "",
+      )
+    ) {
+      continue;
+    }
+    return row;
+  }
+  return null;
+}
+
+function _issueBrowserSessionForEntry_(entry) {
+  if (!entry || !entry.sheetRow) {
+    return { entry: entry, browserSessionToken: "" };
+  }
+  if (
+    typeof generateAccessBrowserSessionToken_ !== "function" ||
+    typeof hashAccessBrowserSessionToken_ !== "function" ||
+    typeof getAccessBrowserSessionExpiresAt_ !== "function"
+  ) {
+    return { entry: entry, browserSessionToken: "" };
+  }
+  const browserSessionToken = generateAccessBrowserSessionToken_();
+  const browserSessionHash = hashAccessBrowserSessionToken_(browserSessionToken);
+  const browserSessionExpiresAt = getAccessBrowserSessionExpiresAt_(
+    BROWSER_SESSION_TTL_DAYS,
+  );
+  const saved =
+    _updateEntryFields_(entry.sheetRow, {
+      browser_session_hash: browserSessionHash,
+      browser_session_expires_at: browserSessionExpiresAt,
+    }) || entry;
+  return {
+    entry: saved,
+    browserSessionToken: browserSessionToken,
+    browserSessionExpiresAt: browserSessionExpiresAt,
+  };
+}
+
+function _bindAccessEntryToCurrentKey_(entry, currentKeyHash, options) {
+  const opts = options || {};
   const occupantHash = normalizeStoredHash_(entry.userKeyCurrentHash);
   const shouldRotateCurrentKey =
     occupantHash && occupantHash !== currentKeyHash;
+  const nowText = _nowText_();
+  const nowLong = _nowText_("long");
   const updates = {
     user_key_current_hash: currentKeyHash,
     request_user_key_hash: currentKeyHash,
-    last_seen_at: _nowText_(),
+    last_seen_at: nowText,
     failed_attempts: 0,
     locked_until_ms: 0,
   };
   if (shouldRotateCurrentKey) {
     updates.user_key_prev_hash = occupantHash;
-    updates.last_rotated_at = _nowText_("long");
+    updates.last_rotated_at = nowLong;
   } else if (!entry.lastRotatedAt) {
-    updates.last_rotated_at = _nowText_("long");
+    updates.last_rotated_at = nowLong;
   }
-  return _updateEntryFields_(entry.sheetRow, updates) || entry;
+  if (opts.consumeTemporaryPassword) {
+    updates.temporary_password_plain = "";
+    updates.temporary_password_used_at = nowLong;
+  }
+  const saved = _updateEntryFields_(entry.sheetRow, updates) || entry;
+  if (shouldRotateCurrentKey && typeof _auditKeyRotation_ === "function") {
+    _auditKeyRotation_(saved, {
+      matchedBy: opts.matchedBy || "identity-proof-rebind",
+      lastRotatedAt: nowLong,
+    });
+  }
+  return saved;
 }
 
 /**
@@ -1443,6 +1541,7 @@ function loginByAccessKey(accessKeyOrPayload) {
   ).trim();
   const currentKeyHash = getCurrentUserKeyHash_();
   const supportCallsign = getPrimarySupportCallsign_();
+  const secretForMatch = password || accessKey;
 
   if (!currentKeyHash) {
     return {
@@ -1453,12 +1552,12 @@ function loginByAccessKey(accessKeyOrPayload) {
         "Не вдалося визначити ключ користувача. Оновіть панель і спробуйте ще раз.",
     };
   }
-  if (!accessKey) {
+  if (!accessKey && !password) {
     return {
       success: false,
       ok: false,
       code: "access.login.key_required",
-      message: "Введіть ключ доступу.",
+      message: "Введіть ключ доступу або пароль.",
     };
   }
 
@@ -1489,11 +1588,21 @@ function loginByAccessKey(accessKeyOrPayload) {
       const credentialEntry = _findAccessEntryByCredentials_(
         entries,
         login,
-        password || accessKey,
+        secretForMatch,
       );
       if (credentialEntry) {
         entry = credentialEntry;
         matchType = "credentials";
+      } else if (/^WASB-/i.test(secretForMatch)) {
+        const recoveryEntry = _findAccessEntryByLoginAndTemporaryPassword_(
+          entries,
+          login,
+          secretForMatch,
+        );
+        if (recoveryEntry) {
+          entry = recoveryEntry;
+          matchType = "temporary_password_recovery";
+        }
       }
     } else {
       const tempEntry = _findAccessEntryByTemporaryPassword_(entries, accessKey);
@@ -1559,24 +1668,51 @@ function loginByAccessKey(accessKeyOrPayload) {
       };
     }
 
-    const savedEntry = _bindAccessEntryToCurrentKey_(entry, currentKeyHash);
+    const status = String(entry.registrationStatus || "")
+      .trim()
+      .toLowerCase();
+    const hasCredentials = !!(
+      String(entry.login || "").trim() && String(entry.passwordHash || "").trim()
+    );
+    const isRecoveryRebind =
+      (matchType === "temporary_password" ||
+        matchType === "temporary_password_recovery") &&
+      status === "active" &&
+      hasCredentials;
+
+    let savedEntry = _bindAccessEntryToCurrentKey_(entry, currentKeyHash, {
+      consumeTemporaryPassword:
+        matchType === "temporary_password" ||
+        matchType === "temporary_password_recovery",
+      matchedBy: isRecoveryRebind
+        ? "temporary-password-recovery"
+        : matchType === "credentials"
+          ? "login-password-rebind"
+          : matchType,
+    });
     _clearSelfBindLoginState_(currentKeyHash);
-    _applySuccessfulAuth_(savedEntry, currentKeyHash);
+    savedEntry = _applySuccessfulAuth_(savedEntry, currentKeyHash) || savedEntry;
+
+    const sessionIssue = _issueBrowserSessionForEntry_(savedEntry);
+    savedEntry = sessionIssue.entry || savedEntry;
 
     const complete = _isAccessEntryActivationComplete_(savedEntry);
     const descriptor = describe({ includeSensitiveDebug: false });
-    if (!complete) {
+    if (!complete && !isRecoveryRebind) {
       return {
         success: true,
         ok: true,
         code: "access.login.registration_required",
         message:
-          matchType === "temporary_password"
+          matchType === "temporary_password" ||
+          matchType === "temporary_password_recovery"
             ? "Ключ підтверджено. Завершіть реєстрацію: створіть логін і пароль."
             : "Ключ підтверджено, але реєстрацію ще не завершено.",
         descriptor: descriptor,
         registrationRequired: true,
         supportCallsign: supportCallsign,
+        browserSessionToken: sessionIssue.browserSessionToken || "",
+        browserSessionExpiresAt: sessionIssue.browserSessionExpiresAt || "",
       };
     }
 
@@ -1584,10 +1720,117 @@ function loginByAccessKey(accessKeyOrPayload) {
       success: true,
       ok: true,
       code: REASON_CODES.OK,
-      message:
-        matchType === "credentials" ? "Вхід за логіном виконано." : "Вхід виконано.",
+      message: isRecoveryRebind
+        ? "Доступ відновлено. Новий ключ привʼязано до наявного облікового запису."
+        : matchType === "credentials"
+          ? "Вхід за логіном виконано."
+          : "Вхід виконано.",
       descriptor: descriptor,
       supportCallsign: supportCallsign,
+      keyRebound: true,
+      recoveryRebind: !!isRecoveryRebind,
+      browserSessionToken: sessionIssue.browserSessionToken || "",
+      browserSessionExpiresAt: sessionIssue.browserSessionExpiresAt || "",
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * Resume access after Google rotates the temporary browser key using a
+ * previously issued long-lived browser session token.
+ */
+function resumeBrowserSession(payload) {
+  payload = payload || {};
+  const sessionToken = String(
+    payload.browserSessionToken ||
+      payload.sessionToken ||
+      payload.token ||
+      "",
+  ).trim();
+  const currentKeyHash = getCurrentUserKeyHash_();
+  const supportCallsign = getPrimarySupportCallsign_();
+
+  if (!currentKeyHash) {
+    return {
+      success: false,
+      ok: false,
+      code: REASON_CODES.SELF_BIND_KEY_UNAVAILABLE,
+      message:
+        "Не вдалося визначити ключ користувача. Оновіть панель і спробуйте ще раз.",
+    };
+  }
+  if (!sessionToken) {
+    return {
+      success: false,
+      ok: false,
+      code: "access.session.token_required",
+      message: "Сесію браузера не знайдено. Увійдіть знову.",
+    };
+  }
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
+    const entries = _readSheetEntries_();
+    const byCurrent = _findByUserKey_(currentKeyHash, {
+      includeLocked: true,
+      includeDisabled: true,
+    });
+    if (byCurrent && _isAccessEntryActivationComplete_(byCurrent)) {
+      const refreshed = _issueBrowserSessionForEntry_(byCurrent);
+      return {
+        success: true,
+        ok: true,
+        code: REASON_CODES.OK,
+        message: "Сесію підтверджено.",
+        descriptor: describe({ includeSensitiveDebug: false }),
+        supportCallsign: supportCallsign,
+        browserSessionToken: refreshed.browserSessionToken || sessionToken,
+        browserSessionExpiresAt: refreshed.browserSessionExpiresAt || "",
+        alreadyBound: true,
+      };
+    }
+
+    const entry = _findAccessEntryByBrowserSession_(entries, sessionToken);
+    if (!entry) {
+      return {
+        success: false,
+        ok: false,
+        code: "access.session.invalid",
+        message:
+          "Збережену сесію не підтверджено. Увійдіть за логіном або одноразовим кодом.",
+      };
+    }
+    if (_isTimedLocked_(entry) || _isAdminDisabled_(entry)) {
+      return {
+        success: false,
+        ok: false,
+        code: REASON_CODES.DENIED_TIMED_LOCKOUT,
+        message:
+          "Доступ тимчасово заблоковано. " + getSelfBindHelpText_() + ".",
+      };
+    }
+
+    let savedEntry = _bindAccessEntryToCurrentKey_(entry, currentKeyHash, {
+      matchedBy: "browser-session-rebind",
+    });
+    _clearSelfBindLoginState_(currentKeyHash);
+    savedEntry = _applySuccessfulAuth_(savedEntry, currentKeyHash) || savedEntry;
+    const sessionIssue = _issueBrowserSessionForEntry_(savedEntry);
+
+    return {
+      success: true,
+      ok: true,
+      code: REASON_CODES.OK,
+      message: "Ключ доступу оновлено за збереженою сесією.",
+      descriptor: describe({ includeSensitiveDebug: false }),
+      supportCallsign: supportCallsign,
+      keyRebound: true,
+      sessionRebound: true,
+      browserSessionToken: sessionIssue.browserSessionToken || "",
+      browserSessionExpiresAt: sessionIssue.browserSessionExpiresAt || "",
     };
   } finally {
     lock.releaseLock();
@@ -1706,12 +1949,50 @@ function registerAccessWithTemporaryPassword(payload) {
       String(entry.login || "").trim() &&
       String(entry.passwordHash || "").trim()
     );
-    if (status === "active" && hasCredentials)
+    if (status === "active" && hasCredentials) {
+      if (
+        entry.temporaryPasswordHash &&
+        entry.temporaryPasswordSalt &&
+        !entry.temporaryPasswordUsedAt &&
+        _isTemporaryAccessKeyUsable_(entry, { allowActiveRecovery: true })
+      ) {
+        const recoveryHash = hashAccessPasswordWithSalt_(
+          temporaryPassword,
+          entry.temporaryPasswordSalt,
+        );
+        if (recoveryHash === entry.temporaryPasswordHash) {
+          let rebound = _bindAccessEntryToCurrentKey_(entry, currentKeyHash, {
+            consumeTemporaryPassword: true,
+            matchedBy: "temporary-password-recovery-register",
+          });
+          _clearSelfBindLoginState_(currentKeyHash);
+          rebound = _applySuccessfulAuth_(rebound, currentKeyHash) || rebound;
+          const sessionIssue = _issueBrowserSessionForEntry_(rebound);
+          return {
+            success: true,
+            ok: true,
+            code: REASON_CODES.OK,
+            message:
+              "Доступ відновлено. Новий ключ привʼязано до наявного облікового запису.",
+            descriptor: describe({ includeSensitiveDebug: false }),
+            accessSheetRow:
+              sessionIssue.entry && sessionIssue.entry.sheetRow
+                ? sessionIssue.entry.sheetRow
+                : entry.sheetRow,
+            keyRebound: true,
+            recoveryRebind: true,
+            browserSessionToken: sessionIssue.browserSessionToken || "",
+            browserSessionExpiresAt: sessionIssue.browserSessionExpiresAt || "",
+          };
+        }
+      }
       return {
         success: false,
         code: "access.registration.already_active",
-        message: "Доступ уже активовано.",
+        message:
+          "Доступ уже активовано. Увійдіть за логіном і паролем або одноразовим кодом відновлення.",
       };
+    }
     if (
       status !== "approved" &&
       status !== "key_sent" &&
@@ -1811,15 +2092,18 @@ function registerAccessWithTemporaryPassword(payload) {
       }
       throw writeError;
     }
+    const sessionIssue = _issueBrowserSessionForEntry_(savedEntry || entry);
     return {
       success: true,
       code: "access.registration.active",
       message: "Доступ активовано. Оновіть панель.",
       descriptor: describe({ includeSensitiveDebug: false }),
       accessSheetRow:
-        savedEntry && savedEntry.sheetRow
-          ? savedEntry.sheetRow
-          : entry.sheetRow,
+        (sessionIssue.entry && sessionIssue.entry.sheetRow) ||
+        (savedEntry && savedEntry.sheetRow) ||
+        entry.sheetRow,
+      browserSessionToken: sessionIssue.browserSessionToken || "",
+      browserSessionExpiresAt: sessionIssue.browserSessionExpiresAt || "",
     };
   } finally {
     lock.releaseLock();
