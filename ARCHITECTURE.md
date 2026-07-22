@@ -262,11 +262,11 @@ Protected / service sheets include:
 
 Три аркуші для заявок із сайдбару та місячного звіту за даними таблиці:
 
-| Sheet (name) | Primary module                                         | Seeded when                         |
-| ------------ | ------------------------------------------------------ | ----------------------------------- |
+| Sheet (name) | Primary module                                                 | Seeded when                         |
+| ------------ | -------------------------------------------------------------- | ----------------------------------- |
 | `Дані`       | `reports/MonthlyReport.gs` (`MonthlyReport_.ensureDataSheet_`) | Sidebar bootstrap; empty sheet only |
-| `Проєкти`    | `operations/ProjectRequests.gs` (`ensureProjectsSheet_`)          | same                                |
-| `Заявки`     | `operations/ProjectRequests.gs` (`ensureRequestsSheet_`)          | same                                |
+| `Проєкти`    | `operations/ProjectRequests.gs` (`ensureProjectsSheet_`)       | same                                |
+| `Заявки`     | `operations/ProjectRequests.gs` (`ensureRequestsSheet_`)       | same                                |
 
 Тригер входу: **`apiStage7BootstrapSidebar()`** → **`_ensureOptionalBusinessSheetsQuiet_()`** in `api/Stage7ServerApi.gs`. Деталі колонок і шаблонних рядків — **`RUNBOOK.md` §20**.
 

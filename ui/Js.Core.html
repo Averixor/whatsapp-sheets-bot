@@ -426,6 +426,26 @@
     } catch (_) {}
   }
 
+  // Default slow-call console badge threshold (ms). Known heavy maintenance routes use higher limits.
+  var API_SLOW_WARN_MS_DEFAULT_ = 15000;
+  var API_SLOW_WARN_MS_BY_METHOD_ = {
+    apiStage7MaterializeComputedData: 120000,
+    apiStage7MaterializeMonthJournal: 90000,
+    apiStage7RunAllTestsChunk: 120000,
+    apiStage7QuickHealthCheck: 60000,
+  };
+
+  function resolveApiSlowWarnMs_(method) {
+    var key = String(method || "").trim();
+    if (
+      key &&
+      Object.prototype.hasOwnProperty.call(API_SLOW_WARN_MS_BY_METHOD_, key)
+    ) {
+      return API_SLOW_WARN_MS_BY_METHOD_[key];
+    }
+    return API_SLOW_WARN_MS_DEFAULT_;
+  }
+
   var Api = {
     run(method, ...args) {
       const started = Date.now();
@@ -466,9 +486,20 @@
               "error",
             );
           } else {
-            const logType = ms >= 15000 ? "warning" : "success";
+            const slowWarnMs = resolveApiSlowWarnMs_(method);
+            const logType = ms >= slowWarnMs ? "warning" : "success";
+            const expectedLongSuffix =
+              ms >= API_SLOW_WARN_MS_DEFAULT_ && ms < slowWarnMs
+                ? " — очікувано тривала операція"
+                : "";
             _consoleLog_(
-              "✓ Сервер: " + method + " (" + ms + " мс)" + summarySuffix,
+              "✓ Сервер: " +
+                method +
+                " (" +
+                ms +
+                " мс)" +
+                expectedLongSuffix +
+                summarySuffix,
               logType,
             );
           }

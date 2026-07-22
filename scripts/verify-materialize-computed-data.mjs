@@ -27,6 +27,7 @@ assert.match(orchestrator, /function materializeAllComputedData_/);
 assert.match(orchestrator, /materializePersonnelDerivedSheets_/);
 assert.match(orchestrator, /materializeVacationComputedColumns_/);
 assert.match(orchestrator, /VacationOptionsWriter_\.rebuildVacationSystem/);
+assert.match(orchestrator, /skipUnchanged/);
 assert.match(orchestrator, /vacationSchedule/);
 assert.match(orchestrator, /materializeVacationMonthlyScheduleSync_/);
 assert.match(orchestrator, /vacationMonthlySync/);
@@ -80,5 +81,11 @@ const sidebar = readRepoFileByBasename(repoRoot, "Sidebar.html", {
 });
 assert.match(sidebar, /Оновити обчислювані дані/);
 assert.match(sidebar, /materializeComputedData/);
+
+const jsCore = readRepoFileByBasename(repoRoot, "Js.Core.html", {
+  errorPrefix: "verify-materialize-computed-data",
+});
+assert.match(jsCore, /resolveApiSlowWarnMs_/);
+assert.match(jsCore, /apiStage7MaterializeComputedData:\s*120000/);
 
 console.log("verify-materialize-computed-data: OK");

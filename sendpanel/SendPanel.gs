@@ -317,8 +317,24 @@ function materializeSendPanelStatusColumn_(panel, rowCount) {
   });
 
   const statusRange = bounds.sheet.getRange(bounds.startRow, 5, count, 1);
+  const currentStatuses = statusRange.getDisplayValues();
+  var unchanged = currentStatuses.length === statuses.length;
+  if (unchanged) {
+    for (var i = 0; i < statuses.length; i++) {
+      if (
+        String((currentStatuses[i] && currentStatuses[i][0]) || "").trim() !==
+        String((statuses[i] && statuses[i][0]) || "").trim()
+      ) {
+        unchanged = false;
+        break;
+      }
+    }
+  }
+  if (unchanged) {
+    return true;
+  }
+
   statusRange.clearDataValidations();
-  statusRange.clearContent();
   statusRange.setValues(statuses);
   statusRange.setHorizontalAlignment('center');
   return true;

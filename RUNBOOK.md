@@ -525,7 +525,7 @@ Local equivalent: **`npm run check`** (alias **`npm run ci`**).
 | `verify-temporary-property-register.mjs`  | Temporary-property register headers, catalog/kits, status math (`ci:workbook`)         |
 | `verify-materialize-computed-data.mjs`    | PERSONNEL materialize / computed columns API contract                                  |
 | `verify-month-journal-materialize.mjs`    | `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` wiring, API, access, sidebar                               |
-| `verify-age-birthday-countdown.mjs`       | Birthday `DD.MM.YYYY р.н.`, Age `Nр.`, countdown UA labels                             |
+| `verify-age-birthday-countdown.mjs`       | Birthday `DD.MM.YYYY р. н.`, Age `N р.`, countdown UA labels                           |
 | `verify-vacation-planner.mjs`             | Vacation planner rules, calendar, repository contracts                                 |
 | `verify-vacation-monthly-sync.mjs`        | One-way vacation → monthly sheet sync (auto-fill, conflicts, removals)                 |
 | `verify-recipient-contract.mjs`           | Recipient routing and dark-select UI contract                                          |
@@ -643,7 +643,7 @@ Run from the Apps Script editor when relevant after a deploy or config change:
 - `apiStage7ReissueOwnerTemporaryPasswordManual()` — owner-only temporary password reissue helper; requires Script Properties **`WASB_OWNER_EMAIL`** and **`WASB_OWNER_LOGIN`**; logs only redacted metadata (`success`, row number, role, non-sensitive changed-column summary)
 - `runAccessPolicyChecks()` — access policy assertions
 - `runSmokeTests()` — regression bundle (`smoke/SmokeTests.gs`, deployed with production)
-- `apiStage7MaterializeComputedData()` — пересборка обчислюваних колонок (PERSONNEL helper, PHONES, Birthday, VACATIONS, Status панелі), auto-heal/validation `PERSONNEL.Status`, monthly callsign sync; sidebar: **Оновити обчислювані дані**
+- `apiStage7MaterializeComputedData()` — перезбірка обчислюваних колонок (PERSONNEL helper, PHONES, Birthday, VACATIONS, Status панелі), auto-heal/validation `PERSONNEL.Status`, monthly callsign sync; sidebar: **Оновити обчислювані дані**
 - `apiStage7MaterializeMonthJournal({ monthSheet: "07" })` — derived `ЖУРНАЛ_MM` / `ПІДСУМОК_MM`; sidebar: **Оновити журнал місяця**
 - `apiStage7ClearPhoneCache()` — invalidate phone/profile caches (після кожного production deploy; **не** замінює materialize)
 
@@ -667,7 +667,7 @@ Contract: `contracts/reference-workbook-layout.contract.json` (headers extracted
 | B | ID v/s | Optional internal id (`ID_VS`) |
 | C | ID Army+ | Армія+ (optional data) |
 | D–F | Last name / First name / Patronymic | Code synthesizes `FML` |
-| G–I | Birthday / Age / Days until birthday | Materialized display: **Birthday** `DD.MM.YYYY р.н.` (space before suffix; legacy `…р.` normalizes on read); **Age** `Nр.` (e.g. `25р.`); **Days until birthday** — UA countdown text (`personnel/PersonnelMaterialize.gs`) |
+| G–I | Birthday / Age / Days until birthday | Materialized display: **Birthday** `DD.MM.YYYY р. н.` (space before suffix; legacy `… р.` normalizes on read); **Age** `N р.` (e.g. `25 р.`); **Days until birthday** — UA countdown (`N м.`, `N д.`, `N м. N д.`, or `Сьогодні`; space before abbreviation; `personnel/PersonnelMaterialize.gs`) |
 | J–K | Phone / Phone 2 | Phones |
 | L | Email | Optional contact email |
 | **M** | **Callsign** | **Working callsign** (e.g. `ГРАФ`) — schedule key |

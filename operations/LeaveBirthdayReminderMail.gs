@@ -99,7 +99,7 @@ function _lbrBuildDigestBody_(dateLabel, vacations, birthdays) {
     function (item) {
       return (
         (item.displayName || item.fml || "—") +
-        (item.age ? " (" + item.age + ")" : "") +
+        (item.age ? " (" + Number(item.age) + " р.)" : "") +
         "\n   " +
         String(item.message || "").replace(/\n/g, "\n   ") +
         (item.link ? "\n   " + item.link : "")

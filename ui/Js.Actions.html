@@ -417,24 +417,28 @@
       renderCommanderRecipientControls_() + renderBirthdayResult(result);
   }
 
-  function formatYearsUa(age) {
-    const n = Math.abs(Number(age)) % 100;
-    const n1 = n % 10;
+  function formatAgeDisplayUa(age) {
+    const raw = String(age == null ? "" : age).trim();
+    if (!raw) return "";
 
-    if (n > 10 && n < 20) return "років";
-    if (n1 === 1) return "рік";
-    if (n1 >= 2 && n1 <= 4) return "роки";
-    return "років";
+    const alreadyFormatted = raw.match(/^(\d+)\s*р\.$/);
+    if (alreadyFormatted) {
+      return `${alreadyFormatted[1]} р.`;
+    }
+
+    const a = Number(raw);
+    if (!Number.isFinite(a) || a <= 0) return "";
+    return `${a} р.`;
   }
 
   function formatBirthdayWithAge(birthday, age) {
     const b = String(birthday || "").trim();
-    const a = Number(age);
+    const agePart = formatAgeDisplayUa(age);
 
     if (!b) return "—";
-    if (!Number.isFinite(a) || a <= 0) return b;
+    if (!agePart) return b;
 
-    return `${b} (${a} ${formatYearsUa(a)})`;
+    return `${b} (${agePart})`;
   }
 
   function formatBirthdayDayWord(days) {

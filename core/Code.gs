@@ -530,7 +530,8 @@ function debugPhones() {
       3,
     );
     function cleanBirthday(value) {
-      const s = String(value || "").trim();
+      let s = String(value || "").trim();
+      s = s.replace(/\s*р\.?\s*н\.?\s*$/i, "").trim();
       if (!s) return "";
       if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(s)) {
         const parts = s.split(".");

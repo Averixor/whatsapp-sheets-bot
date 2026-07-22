@@ -46,7 +46,8 @@ const monthOps = readRepoFileByBasename(repoRoot, "UseCases.MonthOps.gs", {
 assert.match(syncModule, /function syncMonthlyCallsignsFromPersonnel_/);
 assert.match(syncModule, /function findMonthlyCallsignColumn_/);
 assert.match(syncModule, /monthlyCallsignValueFromPersonnelRow_/);
-assert.match(syncModule, /getRange\(startRow, callsignCol, output\.length, 1\)\.setValues/);
+assert.match(syncModule, /targetRange\.setValues\(output\)/);
+assert.match(syncModule, /skippedWrite/);
 assert.match(syncModule, /Не знайдено аркуш PERSONNEL \/ Персонал/);
 assert.match(
   syncModule,

@@ -67,7 +67,7 @@ Sidebar bootstrap can create and seed these sheets (headers + one template row) 
 After every production deploy, and after changing **PERSONNEL**, **PHONES**,
 phone index logic, or birthday behavior:
 
-- Run **`apiStage7MaterializeComputedData()`** when derived columns (Birthday `DD.MM.YYYY р.н.`, Age, Days until birthday), `PERSONNEL.Status` self-heal/validation, or callsign-sync outputs may be stale.
+- Run **`apiStage7MaterializeComputedData()`** when derived columns (Birthday `DD.MM.YYYY р. н.`, Age, Days until birthday), `PERSONNEL.Status` self-heal/validation, or callsign-sync outputs may be stale.
 - If you changed a month sheet and rely on derived history views, run **`apiStage7MaterializeMonthJournal({ monthSheet: "MM" })`** for that month.
 - Run **`apiStage7ClearPhoneCache()`** in the Apps Script editor (maintenance API).
 

@@ -13,6 +13,7 @@ const SKIP_DIRS = new Set(['.git', 'node_modules']);
 const SKIP_ROOT_FILES = new Set([
   '.clasp.json',
   '.npmrc',
+  'Untitled',
 ]);
 
 export function normalizeForCompare(text) {

@@ -1,8 +1,8 @@
 # WASB — повний список файлів репозиторію
 # Порядок: дерево каталогів (depth-first, алфавіт у кожній папці)
 # Виключено: .git/, node_modules/, локальні .clasp*.json (крім *.example.json)
-# Файлів: 291
-# Оновлено: 2026-07-19T05:22:13Z
+# Файлів: 293
+# Оновлено: 2026-07-22T21:50:08Z
 
 .
   .clasp.example.json
@@ -112,6 +112,7 @@ docs/
   daily-summary-architecture.md
   developer-guide.md
   format-rules-governance.md
+  INTEGRATION_GUIDE.md
   inventory-reconciliation.md
   module-map.md
   project-files-complete.txt
@@ -158,6 +159,9 @@ personnel/
   PersonnelMaterialize.gs
   PersonnelRepository.gs
   PersonsRepository.gs
+
+reference-workbooks/
+  README.md
 
 reports/
   MonthJournalMaterialize.gs

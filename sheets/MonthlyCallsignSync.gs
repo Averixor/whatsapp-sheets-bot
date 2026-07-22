@@ -189,13 +189,28 @@ function syncMonthlyCallsignsFromPersonnel_(targetSheetOrName) {
     output.push([""]);
   }
 
-  monthSheet.getRange(startRow, callsignCol, output.length, 1).setValues(output);
+  var targetRange = monthSheet.getRange(startRow, callsignCol, output.length, 1);
+  var currentValues = targetRange.getDisplayValues();
+  var callsignChanged = false;
+  for (var v = 0; v < output.length; v++) {
+    if (
+      String((currentValues[v] && currentValues[v][0]) || "").trim() !==
+      String((output[v] && output[v][0]) || "").trim()
+    ) {
+      callsignChanged = true;
+      break;
+    }
+  }
+  if (callsignChanged) {
+    targetRange.setValues(output);
+  }
 
   return {
     ok: true,
     sheet: monthSheet.getName(),
     personnelSheet: personnelSheet.getName(),
-    rowsWritten: Math.min(values.length, maxRows),
+    rowsWritten: callsignChanged ? Math.min(values.length, maxRows) : 0,
+    skippedWrite: !callsignChanged,
     personnelRows: built.personnelRows,
     callsignColumn: callsignCol,
     startRow: startRow,

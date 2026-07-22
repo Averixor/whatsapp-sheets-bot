@@ -372,25 +372,19 @@ function _veCommanderPhone_(options) {
 
 function _veProfilesList_() {
   try {
-    if (typeof loadPhonesProfiles_ !== "function") {
-      return [];
-    }
+    if (typeof loadPhonesProfiles_ !== "function") return [];
 
     const profiles = loadPhonesProfiles_();
-
+    
     if (!profiles) return [];
+
+    if (Array.isArray(profiles)) return profiles;
 
     if (profiles.byFml && typeof profiles.byFml === "object") {
       return Object.values(profiles.byFml);
     }
 
-    if (Array.isArray(profiles)) {
-      return profiles;
-    }
-
-    if (Array.isArray(profiles.items)) {
-      return profiles.items;
-    }
+    if (Array.isArray(profiles.items)) return profiles.items;
 
     return [];
   } catch (e) {
@@ -400,7 +394,10 @@ function _veProfilesList_() {
 }
 
 function _veYearsWord_(n) {
-  const v = Math.abs(Number(n)) % 100;
+  const num = Math.abs(Number(n));
+  if (Number.isNaN(num)) return "років";
+
+  const v = num % 100;
   const v1 = v % 10;
 
   if (v > 10 && v < 20) return "років";
@@ -761,7 +758,7 @@ function _veParseBirthdayParts_(birthday) {
   }
 
   const sRaw = String(birthday || "").trim();
-  let s = sRaw;
+  let s = sRaw.replace(/\s*р\.?\s*н\.?\s*$/i, "").trim();
   while (/р\.$/.test(s)) {
     s = s.replace(/р\.$/, "").trim();
   }

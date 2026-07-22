@@ -131,7 +131,9 @@ function materializeAllComputedData_(options) {
     typeof VacationOptionsWriter_.rebuildVacationSystem === "function"
   ) {
     try {
-      result.vacationSchedule = VacationOptionsWriter_.rebuildVacationSystem();
+      result.vacationSchedule = VacationOptionsWriter_.rebuildVacationSystem({
+        skipUnchanged: !(options && options.forceVacationRebuild === true),
+      });
     } catch (scheduleError) {
       result.vacationSchedule = {
         ok: false,
