@@ -73,27 +73,28 @@
   }
 
   var WASB_BROWSER_SESSION_KEY_ = "wasb.access.browserSession";
+  var __wasbBrowserSessionToken__ = "";
+
+  function purgeLegacyWasbBrowserSessionStorage_() {
+    try {
+      localStorage.removeItem(WASB_BROWSER_SESSION_KEY_);
+    } catch (_) {}
+  }
+
+  purgeLegacyWasbBrowserSessionStorage_();
 
   function saveWasbBrowserSession_(token) {
     const value = String(token || "").trim();
     if (!value) return;
-    try {
-      localStorage.setItem(WASB_BROWSER_SESSION_KEY_, value);
-    } catch (_) {}
+    __wasbBrowserSessionToken__ = value;
   }
 
   function readWasbBrowserSession_() {
-    try {
-      return String(localStorage.getItem(WASB_BROWSER_SESSION_KEY_) || "").trim();
-    } catch (_) {
-      return "";
-    }
+    return String(__wasbBrowserSessionToken__ || "").trim();
   }
 
   function clearWasbBrowserSession_() {
-    try {
-      localStorage.removeItem(WASB_BROWSER_SESSION_KEY_);
-    } catch (_) {}
+    __wasbBrowserSessionToken__ = "";
   }
 
   function captureBrowserSessionFromResult_(result) {
