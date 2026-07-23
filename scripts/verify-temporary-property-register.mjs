@@ -118,5 +118,8 @@ assert.equal(register.parseLegacyProperty("Подовжувач - 1 шт. (жо�
 assert.match(source, /function apiSetupTemporaryPropertyRegister\(\)/);
 assert.match(source, /backupLegacySheet_/);
 assert.match(source, /TemporaryPropertyRegister_\.handleEdit/);
+assert.match(source, /withEventSpreadsheet_/);
+assert.match(source, /e\.source/);
+assert.match(source, /function apiRefreshTemporaryPropertyRegister\(\)/);
 
 console.log("Temporary-property register contract: OK");

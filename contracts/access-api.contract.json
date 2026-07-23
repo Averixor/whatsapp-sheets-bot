@@ -299,6 +299,10 @@
     {
       "name": "apiSetupTemporaryPropertyRegister",
       "reason": "GAS-editor one-time setup/migration for the temporary property register; not client-reachable"
+    },
+    {
+      "name": "apiRefreshTemporaryPropertyRegister",
+      "reason": "GAS-editor/menu refresh for temporary property register validation/formatting; not client-reachable"
     }
   ],
   "deprecatedEndpoints": [

@@ -309,7 +309,12 @@ function getClientRuntimeContract_() {
 function onOpen(e) {
   try {
     const ui = SpreadsheetApp.getUi();
-    ui.createMenu("WASB").addItem("Відкрити панель", "showSidebar").addToUi();
+    ui.createMenu("WASB")
+      .addItem("Відкрити панель", "showSidebar")
+      .addSeparator()
+      .addItem("Налаштувати облік майна", "apiSetupTemporaryPropertyRegister")
+      .addItem("Оновити облік майна", "apiRefreshTemporaryPropertyRegister")
+      .addToUi();
   } catch (err) {
     console.error("onOpen menu error:", err);
   }

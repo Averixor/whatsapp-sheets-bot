@@ -34,6 +34,8 @@ The main asset remains the parent row; accessories are generated as linked compo
 ## Edit behaviour
 
 `TemporaryPropertyRegister_.handleEdit(e)` is called from the project `onEdit(e)` router.
+The handler uses the spreadsheet supplied by the edit event, so dependent dropdowns
+continue to work in a simple trigger even when `WASB_SPREADSHEET_ID` is configured.
 
 - Changing a category clears the previous model and applies the category-specific model dropdown.
 - Choosing a model fills unit, catalog code, record type, and default quantity.
@@ -48,10 +50,17 @@ The main asset remains the parent row; accessories are generated as linked compo
 
 ## Migration and setup
 
-Run:
+Run once:
 
 ```javascript
 apiSetupTemporaryPropertyRegister()
+```
+
+For a safe repeat refresh without migration, use the spreadsheet menu
+`WASB → Оновити облік майна` or run:
+
+```javascript
+apiRefreshTemporaryPropertyRegister()
 ```
 
 The setup function seeds both reference sheets, verifies the working header, backs up a legacy register, migrates recognized records, creates component rows, applies validation and formatting, and returns a migration report.

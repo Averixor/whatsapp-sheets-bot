@@ -206,8 +206,23 @@ const TemporaryPropertyRegister_ = (function () {
     };
   }
 
+  let eventSpreadsheet_ = null;
+
   function spreadsheet_() {
-    return getWasbSpreadsheet_();
+    // Simple onEdit(e) triggers must work only with the spreadsheet that caused
+    // the event. Calling SpreadsheetApp.openById() from a simple trigger may
+    // require authorization and silently break dependent dropdowns.
+    return eventSpreadsheet_ || getWasbSpreadsheet_();
+  }
+
+  function withEventSpreadsheet_(spreadsheet, callback) {
+    const previous = eventSpreadsheet_;
+    eventSpreadsheet_ = spreadsheet || previous;
+    try {
+      return callback();
+    } finally {
+      eventSpreadsheet_ = previous;
+    }
   }
 
   function text_(value) {
@@ -748,43 +763,50 @@ const TemporaryPropertyRegister_ = (function () {
       if (!sheet || sheet.getName() !== config_().sheetName) return false;
       if (!isModernSheet_(sheet)) return false;
 
-      const startRow = e.range.getRow();
-      const endRow = startRow + e.range.getNumRows() - 1;
-      const startCol = e.range.getColumn();
-      const endCol = startCol + e.range.getNumColumns() - 1;
-      if (endRow < DEFAULTS.FIRST_DATA_ROW || startCol > HEADERS.length) return false;
+      const eventSpreadsheet =
+        (e.source && typeof e.source.getSheetByName === "function")
+          ? e.source
+          : (typeof sheet.getParent === "function" ? sheet.getParent() : null);
 
-      const catalog = readCatalog_();
-      for (let row = Math.max(startRow, DEFAULTS.FIRST_DATA_ROW); row <= endRow; row++) {
-        const rowType = text_(sheet.getRange(row, COL.ROW_TYPE).getDisplayValue());
-        const isComponent = rowType === ROW_TYPE.COMPONENT;
+      return withEventSpreadsheet_(eventSpreadsheet, function () {
+        const startRow = e.range.getRow();
+        const endRow = startRow + e.range.getNumRows() - 1;
+        const startCol = e.range.getColumn();
+        const endCol = startCol + e.range.getNumColumns() - 1;
+        if (endRow < DEFAULTS.FIRST_DATA_ROW || startCol > HEADERS.length) return false;
 
-        if (!isComponent && startCol <= COL.CATEGORY && endCol >= COL.CATEGORY) {
-          sheet.getRange(row, COL.MODEL).clearContent();
-          sheet.getRange(row, COL.UNIT).clearContent();
-          sheet.getRange(row, COL.CATALOG_CODE).clearContent();
-          applyModelValidationForRow_(sheet, row, catalog);
+        const catalog = readCatalog_();
+        for (let row = Math.max(startRow, DEFAULTS.FIRST_DATA_ROW); row <= endRow; row++) {
+          const rowType = text_(sheet.getRange(row, COL.ROW_TYPE).getDisplayValue());
+          const isComponent = rowType === ROW_TYPE.COMPONENT;
+
+          if (!isComponent && startCol <= COL.CATEGORY && endCol >= COL.CATEGORY) {
+            sheet.getRange(row, COL.MODEL).clearContent();
+            sheet.getRange(row, COL.UNIT).clearContent();
+            sheet.getRange(row, COL.CATALOG_CODE).clearContent();
+            applyModelValidationForRow_(sheet, row, catalog);
+          }
+
+          if (!isComponent && startCol <= COL.MODEL && endCol >= COL.MODEL) {
+            hydrateMainRow_(sheet, row);
+          }
+
+          if (!isComponent && startCol <= COL.ISSUED_QTY && endCol >= COL.ISSUED_QTY) {
+            const code = text_(sheet.getRange(row, COL.CATALOG_CODE).getDisplayValue());
+            const item = catalog.byCode[code];
+            if (item) syncComponents_(sheet, row, item);
+          }
+
+          if (
+            startCol <= COL.RETURNED_DATE &&
+            endCol >= COL.ISSUED_QTY
+          ) {
+            const parentRow = parentRowForRow_(sheet, row);
+            recomputeGroup_(sheet, parentRow);
+          }
         }
-
-        if (!isComponent && startCol <= COL.MODEL && endCol >= COL.MODEL) {
-          hydrateMainRow_(sheet, row);
-        }
-
-        if (!isComponent && startCol <= COL.ISSUED_QTY && endCol >= COL.ISSUED_QTY) {
-          const code = text_(sheet.getRange(row, COL.CATALOG_CODE).getDisplayValue());
-          const item = catalog.byCode[code];
-          if (item) syncComponents_(sheet, row, item);
-        }
-
-        if (
-          startCol <= COL.RETURNED_DATE &&
-          endCol >= COL.ISSUED_QTY
-        ) {
-          const parentRow = parentRowForRow_(sheet, row);
-          recomputeGroup_(sheet, parentRow);
-        }
-      }
-      return true;
+        return true;
+      });
     } catch (error) {
       try {
         Logger.log("TemporaryPropertyRegister_.handleEdit: " + (error && error.message ? error.message : error));
@@ -1091,4 +1113,11 @@ const TemporaryPropertyRegister_ = (function () {
  */
 function apiSetupTemporaryPropertyRegister() {
   return TemporaryPropertyRegister_.setup({ migrateLegacy: true });
+}
+
+/**
+ * Безпечне повторне застосування перевірок, форматування та зведень без міграції.
+ */
+function apiRefreshTemporaryPropertyRegister() {
+  return TemporaryPropertyRegister_.setup({ migrateLegacy: false });
 }
