@@ -62,7 +62,8 @@ After local CI and deploy:
 npm run check
 npm run deploy:prod
 apiStage7MaterializeComputedData()  # after PERSONNEL / PHONES / VACATIONS / birthday / Status edits
-apiStage7MaterializeMonthJournal({ monthSheet: "07" })  # if month-derived journal sheets must be refreshed
+apiStage7MaterializeMonthJournal({ monthSheet: "07" })  # active/requested month; sidebar: Оновити журнал місяця
+apiStage7MaterializeAllMonthJournals()  # optional bootstrap: all existing 01–12 (GAS editor only)
 apiStage7ClearPhoneCache()          # run in the production GAS editor after deploy
 ```
 
@@ -120,7 +121,7 @@ Domain folders (`reports/`, `vacations/`, `core/`, `ui/`, …) are mechanical mo
   (`Дієвий`, `Active`, `Відрядження`, EN) mapped on read only.
 - Final (logical) headers: `ID | FML | … | Unit | Status`. Physical in reference "Книга Взводу Охорони.xlsx": `Cells`, `ID v/s`, split `Last name` / `First name` / `Patronymic` (FML synthesized), **`Email` in column L**, **`Callsign` in column M**, `Rank`, `OSH 4`, **`Status` in column Q** — see `contracts/reference-workbook-layout.contract.json`. `TEMPLATE` is legacy-only (not in reference file). Code reads by **header names only** (aliases cover variants). See `RUNBOOK.md` §14.
 - Missing `Status` header is self-healed at runtime (reference column **Q** when free, otherwise next safe column) before validation/materialize paths proceed.
-- After every production deploy or PERSONNEL edits: run **`apiStage7MaterializeComputedData()`** when derived columns may be stale; run **`apiStage7ClearPhoneCache()`** for phone cache invalidation (mandatory after deploy). If month fact/history sheets are used, refresh them separately with **`apiStage7MaterializeMonthJournal()`**.
+- After every production deploy or PERSONNEL edits: run **`apiStage7MaterializeComputedData()`** when derived columns may be stale; run **`apiStage7ClearPhoneCache()`** for phone cache invalidation (mandatory after deploy). If month fact/history sheets are used, refresh the active/requested month with **`apiStage7MaterializeMonthJournal()`** (sidebar button), or bootstrap every existing `01`–`12` with **`apiStage7MaterializeAllMonthJournals()`** (GAS editor only).
 - See `.cursor/rules/personnel-data-keys.mdc`.
 
 ### Daily summaries (do not regress)

@@ -44,14 +44,38 @@ function resolveMonthJournalSheetName_(payload) {
   var explicit = String(opts.monthSheet || opts.month || "").trim();
   if (/^\d{2}$/.test(explicit)) return explicit;
 
+  // Canonical "активний місяць" for the sidebar / normal update path.
+  try {
+    if (typeof getBotMonthSheetName_ === "function") {
+      var botMonth = String(getBotMonthSheetName_() || "").trim();
+      if (/^\d{2}$/.test(botMonth)) {
+        var ssBot = getWasbSpreadsheet_();
+        if (ssBot && ssBot.getSheetByName(botMonth)) return botMonth;
+      }
+    }
+  } catch (_) {}
+
+  // Fallback: currently open month tab (editor / ad-hoc).
   try {
     var ss = getWasbSpreadsheet_();
     var active = ss && ss.getActiveSheet ? ss.getActiveSheet() : null;
     var activeName = active ? String(active.getName() || "").trim() : "";
-    if (/^\d{2}$/.test(activeName)) return activeName;
+    if (/^\d{2}$/.test(activeName) && ss.getSheetByName(activeName)) {
+      return activeName;
+    }
   } catch (_) {}
 
   return "";
+}
+
+function listExistingMonthSheetNames_() {
+  var ss = getWasbSpreadsheet_();
+  var names = [];
+  for (var month = 1; month <= 12; month++) {
+    var name = (month < 10 ? "0" : "") + month;
+    if (ss.getSheetByName(name)) names.push(name);
+  }
+  return names;
 }
 
 function _monthJournalHeaderNorm_(value) {
@@ -423,8 +447,8 @@ function _monthJournalWriteRows_(sheet, headers, rows) {
 
   if (!rows.length) return 0;
 
-  var endRow = 1 + rows.length;
-  sheet.getRange(2, 1, endRow, headerCount).setValues(rows);
+  // Sheet.getRange(row, column, numRows, numColumns) — third arg is height, not end row.
+  sheet.getRange(2, 1, rows.length, headerCount).setValues(rows);
   return rows.length;
 }
 
@@ -620,5 +644,68 @@ function materializeMonthJournalBundle_(monthSheetName) {
     peopleCount: summaryResult.peopleCount || 0,
     journal: journalResult,
     summary: summaryResult,
+  };
+}
+
+/**
+ * Bootstrap / maintenance: materialize ЖУРНАЛ_MM + ПІДСУМОК_MM for every
+ * existing month tab 01–12. Do not call from the regular sidebar update —
+ * that path must refresh only the active bot month.
+ */
+function materializeAllExistingMonthJournals_() {
+  var months = listExistingMonthSheetNames_();
+  var results = [];
+  var journalRowsWritten = 0;
+  var summaryRowsWritten = 0;
+  var affectedSheets = [];
+
+  for (var i = 0; i < months.length; i++) {
+    var month = months[i];
+    try {
+      var result = materializeMonthJournalBundle_(month);
+      if (!result || typeof result !== "object") {
+        result = {
+          ok: false,
+          monthSheet: month,
+          reason: "empty_result",
+          message: "Порожня відповідь materialize",
+        };
+      } else if (!result.monthSheet) {
+        result.monthSheet = month;
+      }
+      results.push(result);
+      if (result.ok !== false) {
+        journalRowsWritten += Number(result.journalRowsWritten) || 0;
+        summaryRowsWritten += Number(result.summaryRowsWritten) || 0;
+        if (result.journalSheet) affectedSheets.push(result.journalSheet);
+        if (result.summarySheet) affectedSheets.push(result.summarySheet);
+        affectedSheets.push(month);
+      }
+    } catch (err) {
+      results.push({
+        ok: false,
+        monthSheet: month,
+        reason: "exception",
+        message: err && err.message ? String(err.message) : String(err || ""),
+      });
+    }
+  }
+
+  var failed = results.filter(function (item) {
+    return !item || item.ok === false;
+  });
+
+  return {
+    ok: failed.length === 0,
+    months: months,
+    monthCount: months.length,
+    processedCount: results.length,
+    failedCount: failed.length,
+    journalRowsWritten: journalRowsWritten,
+    summaryRowsWritten: summaryRowsWritten,
+    results: results,
+    affectedSheets: affectedSheets.filter(function (name, index, list) {
+      return name && list.indexOf(name) === index;
+    }),
   };
 }

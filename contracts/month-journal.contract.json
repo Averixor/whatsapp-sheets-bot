@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "sourceOfTruth": "reports/MonthJournalMaterialize.gs",
   "derivedSheetNames": {
     "journalPrefix": "ЖУРНАЛ_",
@@ -39,12 +39,31 @@
     "mode": "read-only-lookup",
     "forbidWritesToSheet": "PERSONNEL"
   },
+  "monthResolution": {
+    "activeMonthHelper": "getBotMonthSheetName_",
+    "listExistingHelper": "listExistingMonthSheetNames_",
+    "order": [
+      "explicit monthSheet|month",
+      "getBotMonthSheetName_",
+      "active sheet 01-12"
+    ]
+  },
   "api": {
     "functionName": "apiStage7MaterializeMonthJournal",
-    "emptyMonthMessage": "Відкрийте місячний аркуш 01–12",
+    "emptyMonthMessage": "Немає активного місячного аркуша 01–12",
     "publicEndpoint": true,
     "minRole": "maintainer",
-    "routingAction": "materializeMonthJournal"
+    "routingAction": "materializeMonthJournal",
+    "scope": "activeMonthOnly"
+  },
+  "apiAllMonths": {
+    "functionName": "apiStage7MaterializeAllMonthJournals",
+    "bundleHelper": "materializeAllExistingMonthJournals_",
+    "publicEndpoint": true,
+    "minRole": "maintainer",
+    "routingAction": "materializeAllMonthJournals",
+    "uiAllowed": false,
+    "scope": "allExistingMonthSheets"
   },
   "sidebar": {
     "buttonLabel": "Оновити журнал місяця",

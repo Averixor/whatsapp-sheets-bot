@@ -40,7 +40,8 @@ npm run check              # all local verify scripts (alias: npm run ci)
 git add -A && git commit -m "fix: …"
 npm run push:remote        # GitHub + production clasp push (no second CI run)
 apiStage7MaterializeComputedData()  # after PERSONNEL / PHONES / VACATIONS / birthday / Status changes
-apiStage7MaterializeMonthJournal({ monthSheet: "07" })  # if a month journal/summary must be refreshed
+apiStage7MaterializeMonthJournal({ monthSheet: "07" })  # active/requested month; sidebar: Оновити журнал місяця
+apiStage7MaterializeAllMonthJournals()  # optional bootstrap: all existing 01–12 (GAS editor only)
 apiStage7ClearPhoneCache()          # run in the production GAS editor after deploy
 ```
 
@@ -62,7 +63,7 @@ production project with `executionApi.access = MYSELF`.
   - **`WASB_OWNER_EMAIL`** — security mail with full user key for owner
   - **`WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`** — off in normal operation
   - **`WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP`** — legacy plaintext temp-password lookup during migration only; off in normal operation
-- After every production deploy and after **PERSONNEL**, **PHONES**, **VACATIONS**, birthday, or `Status` changes: run **`apiStage7MaterializeComputedData()`** when derived columns may be stale. If you changed a month sheet and need refreshed fact/history views, run **`apiStage7MaterializeMonthJournal({ monthSheet: "MM" })`** for that month. Then run **`apiStage7ClearPhoneCache()`** in the GAS editor and reload the sidebar.
+- After every production deploy and after **PERSONNEL**, **PHONES**, **VACATIONS**, birthday, or `Status` changes: run **`apiStage7MaterializeComputedData()`** when derived columns may be stale. If you changed a month sheet and need refreshed fact/history views, run **`apiStage7MaterializeMonthJournal({ monthSheet: "MM" })`** for that month (sidebar button updates the active bot month only). For a first-run bootstrap of every existing `01`–`12`, use **`apiStage7MaterializeAllMonthJournals()`** in the GAS editor (no sidebar button). Then run **`apiStage7ClearPhoneCache()`** in the GAS editor and reload the sidebar.
 
 Full workflow, release checklist, and post-deploy checks: **`CONTRIBUTING.md`** and **`RUNBOOK.md`**.
 
@@ -98,11 +99,11 @@ The workflow does not deploy to Apps Script. Deployment remains local via
 
 **Also in Git (maintainers; not uploaded to GAS editor):**
 
-| File                                   | Purpose                                  |
-| -------------------------------------- | ---------------------------------------- |
+| File | Purpose |
+| --- | --- |
 | [`CONTRIBUTING.md`](./CONTRIBUTING.md) | Local workflow, CI, clasp, commit policy |
-| [`AGENTS.md`](./AGENTS.md)             | Cursor / cloud agent instructions        |
-| [`docs/README.md`](./docs/README.md)   | Documentation index and ownership rules  |
+| [`AGENTS.md`](./AGENTS.md) | Cursor / cloud agent instructions |
+| [`docs/README.md`](./docs/README.md) | Documentation index and ownership rules |
 | [`docs/developer-guide.md`](./docs/developer-guide.md) | First-week maintainer map: layers, safe zones |
 | [`docs/module-map.md`](./docs/module-map.md) | Domain folders: where GAS modules live, which CI guards them |
 | [`docs/adr/002-domain-folder-map.md`](./docs/adr/002-domain-folder-map.md) | Phased folder moves (ADR-002) |
@@ -223,7 +224,8 @@ Turn it back off immediately after the needed keys are registered.
 - `apiStage7BootstrapRuntimeAndAlertsSheets()` — service sheet bootstrap (`sheets/ServiceSheetsBootstrap.gs`)
 - `apiStage7BootstrapAccessSheet()` — `ACCESS` bootstrap
 - `apiStage7MaterializeComputedData()` — helper columns, PHONES/BIRTHDAY/VACATIONS/panel materialize, status validation, monthly callsign sync
-- `apiStage7MaterializeMonthJournal()` — derived `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` for the active or requested month
+- `apiStage7MaterializeMonthJournal()` — derived `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` for the active or requested month (sidebar: **Оновити журнал місяця**)
+- `apiStage7MaterializeAllMonthJournals()` — same derived sheets for every existing month tab `01`–`12` (GAS editor / maintainer only; no sidebar button)
 
 ## Non-goals for this bundle
 

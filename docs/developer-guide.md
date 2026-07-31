@@ -94,7 +94,7 @@ npm run push:remote
 
 Or CI + clasp only: `npm run deploy:prod`. Full pipeline with map refresh: `npm run ship -- "fix: …"`.
 
-Після deploy у GAS editor: **`apiStage7MaterializeComputedData()`** (після змін PERSONNEL/PHONES/VACATIONS/birthday/Status), за потреби **`apiStage7MaterializeMonthJournal({ monthSheet: "MM" })`** (якщо мінявся місячний лист або потрібні `ЖУРНАЛ_MM` / `ПІДСУМОК_MM`), потім **`apiStage7ClearPhoneCache()`**, потім перевірка картки людини, reference sidebar views, і health (`apiStage7QuickHealthCheck()`). Повний checklist: [RUNBOOK.md](../RUNBOOK.md) §12–§13.
+Після deploy у GAS editor: **`apiStage7MaterializeComputedData()`** (після змін PERSONNEL/PHONES/VACATIONS/birthday/Status), за потреби **`apiStage7MaterializeMonthJournal({ monthSheet: "MM" })`** (активний/запитаний місяць; кнопка сайдбару **Оновити журнал місяця**), або **`apiStage7MaterializeAllMonthJournals()`** (bootstrap усіх наявних `01`–`12`, лише редактор), потім **`apiStage7ClearPhoneCache()`**, потім перевірка картки людини, reference sidebar views, і health (`apiStage7QuickHealthCheck()`). Повний checklist: [RUNBOOK.md](../RUNBOOK.md) §12–§13.
 
 ## Куди далі
 

@@ -569,7 +569,7 @@ There is **no** Apps Script deployment in CI (`clasp` is local only). See `.gith
 6. In Apps Script → **Project settings → Script properties**: ensure **`WASB_SPREADSHEET_ID`** is set if you rely on triggers/headless runs (use your production spreadsheet ID).
 7. Reload the spreadsheet UI; close and reopen the sidebar.
 8. Confirm production `appsscript.json` still has `executionApi.access = MYSELF`.
-9. After PERSONNEL / PHONES / VACATIONS / birthday / `Status` edits: **`apiStage7MaterializeComputedData()`**, then **`apiStage7ClearPhoneCache()`** after every deploy; re-check a person card and personnel modal. If you changed a month sheet and rely on derived fact/history views, also run **`apiStage7MaterializeMonthJournal({ monthSheet: "MM" })`** for that month.
+9. After PERSONNEL / PHONES / VACATIONS / birthday / `Status` edits: **`apiStage7MaterializeComputedData()`**, then **`apiStage7ClearPhoneCache()`** after every deploy; re-check a person card and personnel modal. If you changed a month sheet and rely on derived fact/history views, also run **`apiStage7MaterializeMonthJournal({ monthSheet: "MM" })`** for that month (sidebar updates the active bot month only). For a first-run bootstrap of every existing `01`–`12`, run **`apiStage7MaterializeAllMonthJournals()`** in the GAS editor.
 
 ### Repository file map
 
@@ -618,7 +618,8 @@ Immediately after push, run in the production GAS editor:
 
 ```text
 apiStage7MaterializeComputedData()
-apiStage7MaterializeMonthJournal({ monthSheet: "07" })   # when the month journal / summary must be refreshed
+apiStage7MaterializeMonthJournal({ monthSheet: "07" })   # active/requested month; sidebar: Оновити журнал місяця
+apiStage7MaterializeAllMonthJournals()                  # optional: all existing 01–12 (editor only)
 apiStage7ClearPhoneCache()
 ```
 
@@ -644,7 +645,8 @@ Run from the Apps Script editor when relevant after a deploy or config change:
 - `runAccessPolicyChecks()` — access policy assertions
 - `runSmokeTests()` — regression bundle (`smoke/SmokeTests.gs`, deployed with production)
 - `apiStage7MaterializeComputedData()` — перезбірка обчислюваних колонок (PERSONNEL helper, PHONES, Birthday, VACATIONS, Status панелі), auto-heal/validation `PERSONNEL.Status`, monthly callsign sync; sidebar: **Оновити обчислювані дані**
-- `apiStage7MaterializeMonthJournal({ monthSheet: "07" })` — derived `ЖУРНАЛ_MM` / `ПІДСУМОК_MM`; sidebar: **Оновити журнал місяця**
+- `apiStage7MaterializeMonthJournal({ monthSheet: "07" })` — derived `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` for the active/requested month; sidebar: **Оновити журнал місяця**
+- `apiStage7MaterializeAllMonthJournals()` — same for every existing month tab `01`–`12` (GAS editor / maintainer only; no sidebar button)
 - `apiStage7ClearPhoneCache()` — invalidate phone/profile caches (після кожного production deploy; **не** замінює materialize)
 
 ## 14. PERSONNEL sheet (canonical people data)
