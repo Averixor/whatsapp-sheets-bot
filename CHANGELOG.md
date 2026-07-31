@@ -28,6 +28,13 @@ Historical record of changes. For the current operational truth, use `README.md`
 - **Docs:** removed duplicate `/ WEAPON` typos in `ARCHITECTURE.md`, `docs/module-map.md`, `docs/developer-guide.md`, `docs/README.md`, and `RUNBOOK.md`.
 - **CI:** `verify-reference-workbook-layout.mjs` and `verify-personnel-status-contract.mjs` cross-check Status column parity across contracts.
 
+## 2026-07-31 — Month journal active-month vs all-months split
+
+- **Sidebar / `apiStage7MaterializeMonthJournal()`:** refresh only the active bot month (fallback: open `01`–`12` tab).
+- **`apiStage7MaterializeAllMonthJournals()`:** maintainer bootstrap for every existing month sheet `01`–`12` (no sidebar button; `uiAllowed: false`).
+- **Write fix:** `getRange` height uses `rows.length` (not end-row).
+- **Docs:** Stage7 API lists in `README.md`, `RUNBOOK.md`, `AGENTS.md`, `ARCHITECTURE.md`, `docs/developer-guide.md` mention both APIs.
+
 ## 2026-07-03 — Docs and governance synced to current code
 
 - **Docs:** aligned `README.md`, `RUNBOOK.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `AGENTS.md`, `docs/README.md`, `docs/developer-guide.md`, `docs/module-map.md`, and ADR summaries with the current Stage 7 codebase.

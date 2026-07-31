@@ -441,7 +441,7 @@
       const summaryRows = Number(payload.summaryRowsWritten || 0);
 
       if (result?.success) {
-        showToast("Журнал місяця оновлено");
+        showToast("Журнал активного місяця оновлено");
         showStandardResult("Журнал місяця");
         setHtml(
           "resultContent",
@@ -449,7 +449,7 @@
           <div class="result-item">
             <div class="result-label" style="color: var(--success-color);">Успішно</div>
             <div class="result-value">
-              <p>${escapeHtml(result.message || "Журнал місяця оновлено")}</p>
+              <p>${escapeHtml(result.message || "Журнал активного місяця оновлено")}</p>
               <p style="font-size:0.85rem; margin-top:8px;">
                 ${escapeHtml(journalSheet)}: ${escapeHtml(String(journalRows))} записів<br>
                 ${escapeHtml(summarySheet)}: ${escapeHtml(String(summaryRows))} осіб

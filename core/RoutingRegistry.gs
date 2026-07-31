@@ -553,6 +553,20 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ =
         verifyAfterWrite: false,
       }),
 
+      materializeAllMonthJournals: Object.freeze({
+        routeName: "maintenance.materializeAllMonthJournals",
+        publicApiMethod: "apiStage7MaterializeAllMonthJournals",
+        useCase: "materializeAllExistingMonthJournals_",
+        category: "maintenance",
+        compatibilityStatus: "canonical",
+        mode: "write",
+        lockRequired: true,
+        dryRunSupported: false,
+        uiAllowed: false,
+        clientActionAliases: ["materializeAllMonthJournals"],
+        verifyAfterWrite: false,
+      }),
+
       restartBot: Object.freeze({
         routeName: "maintenance.restartBot",
         publicApiMethod: "apiStage7RestartBot",

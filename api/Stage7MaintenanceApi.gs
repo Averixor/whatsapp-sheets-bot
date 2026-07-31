@@ -434,13 +434,13 @@ function apiStage7MaterializeMonthJournal(payload) {
   if (!monthSheet) {
     return _stage7BuildMaintenanceResponse_(
       false,
-      "Відкрийте місячний аркуш 01–12",
+      "Немає активного місячного аркуша 01–12",
       {
         ok: false,
         reason: "not_month_sheet",
       },
       "stage7MaterializeMonthJournal",
-      ["Відкрийте місячний аркуш 01–12"],
+      ["Немає активного місячного аркуша 01–12"],
     );
   }
 
@@ -462,10 +462,7 @@ function apiStage7MaterializeMonthJournal(payload) {
   return _stage7BuildMaintenanceResponse_(
     ok,
     ok
-      ? "Журнал місяця оновлено: " +
-        String(names.journal || "") +
-        ", " +
-        String(names.summary || "")
+      ? "Журнал активного місяця оновлено (" + String(monthSheet) + ")"
       : result && result.message
         ? result.message
         : "Не вдалося оновити журнал місяця",
@@ -482,6 +479,60 @@ function apiStage7MaterializeMonthJournal(payload) {
         ? [names.journal, names.summary, monthSheet].filter(Boolean)
         : [monthSheet],
       monthSheet: monthSheet,
+    },
+  );
+}
+
+/**
+ * Maintenance / first-run bootstrap: rebuild journals for every existing
+ * month sheet 01–12. Not wired to the sidebar button — past months stay
+ * untouched on the regular "Оновити журнал місяця" action.
+ */
+function apiStage7MaterializeAllMonthJournals() {
+  _stage7AssertRole_("maintainer", "materialize all month journals");
+
+  var result =
+    typeof materializeAllExistingMonthJournals_ === "function"
+      ? materializeAllExistingMonthJournals_()
+      : {
+          ok: false,
+          reason: "materialize_all_unavailable",
+          message: "materializeAllExistingMonthJournals_ недоступна",
+          monthCount: 0,
+          failedCount: 0,
+          affectedSheets: [],
+        };
+
+  var ok = !!(result && result.ok !== false);
+  var monthCount = Number(result && result.monthCount) || 0;
+  var failedCount = Number(result && result.failedCount) || 0;
+  var message = ok
+    ? monthCount > 0
+      ? "Журнали оновлено для всіх наявних місяців (" + monthCount + ")"
+      : "Немає місячних аркушів 01–12 для оновлення"
+    : failedCount > 0
+      ? "Частина журналів не оновилась (" +
+        failedCount +
+        " з " +
+        monthCount +
+        ")"
+      : (result && result.message) ||
+        "Не вдалося оновити журнали місяців";
+
+  return _stage7BuildMaintenanceResponse_(
+    ok,
+    message,
+    result || {},
+    "stage7MaterializeAllMonthJournals",
+    ok
+      ? []
+      : [message],
+    {
+      affectedSheets: Array.isArray(result && result.affectedSheets)
+        ? result.affectedSheets
+        : [],
+      monthCount: monthCount,
+      failedCount: failedCount,
     },
   );
 }

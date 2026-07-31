@@ -101,6 +101,7 @@ Representative entrypoints:
 - `apiStage7RunRepair()`
 - `apiStage7MaterializeComputedData()`
 - `apiStage7MaterializeMonthJournal()`
+- `apiStage7MaterializeAllMonthJournals()`
 
 ### Compatibility facade
 
@@ -326,8 +327,9 @@ Month-journal materialization is separate from `apiStage7MaterializeComputedData
 
 - source: month sheet `01`..`12` + PERSONNEL + DICT + DICT_SUM
 - output: `ЖУРНАЛ_MM` and `ПІДСУМОК_MM`
-- maintenance API: `apiStage7MaterializeMonthJournal()`
-- UI action: sidebar button **Оновити журнал місяця**
+- maintenance API (active/requested month): `apiStage7MaterializeMonthJournal()`
+- maintenance API (all existing `01`–`12`, no sidebar): `apiStage7MaterializeAllMonthJournals()`
+- UI action: sidebar button **Оновити журнал місяця** (active bot month only)
 
 ## 7.4 Inventory reconciliation
 
