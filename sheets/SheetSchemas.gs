@@ -174,6 +174,102 @@ function _monthlyLayoutHeaderNorm_(value) {
     .replace(/\s+/g, " ");
 }
 
+var MONTHLY_SUMMARY_BLOCK_ANCHOR_KEY_ = "За_списком";
+var MONTHLY_SUMMARY_BLOCK_STAFF_KEY_ = "За_штатом";
+
+function _monthlySummaryKey_(value) {
+  return String(value == null ? "" : value)
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/_+/g, "_");
+}
+
+function _monthlyFindSummaryBlockAnchor_(sheet, lastRow) {
+  if (!sheet || lastRow < 1) return null;
+
+  var lastCol = Math.max(Number(sheet.getLastColumn()) || 0, 1);
+  var scanCols = [2, 3, 1, 4].filter(function (col) {
+    return col <= lastCol;
+  });
+  var fallback = null;
+
+  for (var c = 0; c < scanCols.length; c++) {
+    var col = scanCols[c];
+    var labels = [];
+    try {
+      labels = sheet.getRange(1, col, lastRow, 1).getDisplayValues();
+    } catch (_) {
+      continue;
+    }
+
+    for (var i = labels.length - 1; i >= 0; i--) {
+      var key = _monthlySummaryKey_((labels[i] || [])[0]);
+      if (key !== MONTHLY_SUMMARY_BLOCK_ANCHOR_KEY_) {
+        continue;
+      }
+
+      var candidate = { labelCol: col, anchorRow: i + 1 };
+      var previousKey =
+        i > 0 ? _monthlySummaryKey_((labels[i - 1] || [])[0]) : "";
+      if (previousKey === MONTHLY_SUMMARY_BLOCK_STAFF_KEY_) {
+        return candidate;
+      }
+      if (!fallback) fallback = candidate;
+    }
+  }
+
+  return fallback;
+}
+
+/**
+ * Shared monthly-layout locator for the formula summary block.
+ * Kept outside reports so sheet maintenance can protect the block before writes.
+ */
+function findMonthlySummaryBlockLocation_(sheet) {
+  if (!sheet || typeof sheet.getRange !== "function") return null;
+
+  var lastRow = Math.max(Number(sheet.getLastRow()) || 0, 1);
+  var anchor = _monthlyFindSummaryBlockAnchor_(sheet, lastRow);
+  if (!anchor || anchor.anchorRow < 1 || anchor.labelCol < 1) return null;
+
+  var labelCol = anchor.labelCol;
+  var startRow = anchor.anchorRow;
+  if (startRow > 1) {
+    var previousKey = _monthlySummaryKey_(
+      sheet.getRange(startRow - 1, labelCol).getDisplayValue(),
+    );
+    if (previousKey === MONTHLY_SUMMARY_BLOCK_STAFF_KEY_) {
+      startRow--;
+    }
+  }
+
+  var endRow = startRow;
+  for (var row = startRow; row <= lastRow; row++) {
+    var label = String(
+      sheet.getRange(row, labelCol).getDisplayValue() || "",
+    ).trim();
+    if (!label) break;
+    endRow = row;
+  }
+
+  return {
+    labelCol: labelCol,
+    startRow: startRow,
+    endRow: endRow,
+    anchorRow: anchor.anchorRow,
+  };
+}
+
+function _monthlySheetRowIsBlank_(sheet, row) {
+  if (!sheet || row < 1) return false;
+  var lastCol = Math.max(Number(sheet.getLastColumn()) || 0, 1);
+  var values = sheet.getRange(row, 1, 1, lastCol).getDisplayValues()[0] || [];
+  for (var col = 0; col < values.length; col++) {
+    if (String(values[col] == null ? "" : values[col]).trim()) return false;
+  }
+  return true;
+}
+
 function _monthlyDataEndRowFromSheet_(
   sheet,
   fallbackRow,
@@ -187,6 +283,15 @@ function _monthlyDataEndRowFromSheet_(
       _ssConfigValue_("LAST_DATA_ROW", fallbackRow || 44),
     fallbackRow || 44,
   );
+  var summaryBlock = findMonthlySummaryBlockLocation_(sheet);
+  var maxDataEndRow = 1000;
+  if (summaryBlock && summaryBlock.startRow > 2) {
+    maxDataEndRow = summaryBlock.startRow - 1;
+    if (_monthlySheetRowIsBlank_(sheet, maxDataEndRow)) {
+      maxDataEndRow--;
+    }
+    configuredDataEndRow = Math.min(configuredDataEndRow, maxDataEndRow);
+  }
   var sheetLastRow = 0;
   try {
     sheetLastRow = Number(sheet.getLastRow()) || 0;
@@ -194,6 +299,7 @@ function _monthlyDataEndRowFromSheet_(
 
   var scanLastRow = Math.min(
     Math.max(sheetLastRow, configuredDataEndRow, 2),
+    maxDataEndRow,
     1000,
   );
   var cols = Array.isArray(markerCols) && markerCols.length ? markerCols : [2];

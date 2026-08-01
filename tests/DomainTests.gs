@@ -460,11 +460,12 @@ function _runMonthJournalDomainTests_(report) {
 
   _domainPush_(
     report,
-    "monthJournal.derived sheet names follow month suffix",
+    "monthJournal.derived sheet names are fixed JOURNAL/SUMMARY",
     function () {
       var names = monthJournalDerivedSheetNames_("07");
-      _domainAssertEqual_(names.journal, "ЖУРНАЛ_07", "journal sheet");
-      _domainAssertEqual_(names.summary, "ПІДСУМОК_07", "summary sheet");
+      _domainAssertEqual_(names.journal, "JOURNAL", "journal sheet");
+      _domainAssertEqual_(names.summary, "SUMMARY", "summary sheet");
+      _domainAssertEqual_(names.month, "07", "month key");
       return names.journal;
     },
   );
