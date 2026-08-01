@@ -225,7 +225,7 @@ const runtimeMarkers = [
   [journalSource, /function _monthJournalCollectRows_/, "month source stage"],
   [journalSource, /function materializeMonthJournal_/, "journal result stage"],
   [journalSource, /function materializeMonthPersonSummary_/, "summary result stage"],
-  [journalSource, /function _monthJournalReplaceMonthSlice_/, "global rewrite stage"],
+  [journalSource, /function _monthJournalWriteRows_/, "global rewrite stage"],
   [maintenanceSource, /case "materializeComputedData"/, "operation summary boundary"],
   [monthlyCallsignSource, /monthlySyncMode === "all"/, "monthly mode branch"],
 ];
