@@ -389,6 +389,14 @@ Main validation tools:
 - `tests/AccessE2ETests.gs`
 - `tests/DomainTests.gs`
 
+**System status foundation (this branch):** internal modules
+`diagnostics/SystemStatus.Foundation.gs`, `SystemStatus.Probes.gs`,
+`SystemStatus.Fingerprints.gs` with contracts
+`contracts/system-status.contract.json` and
+`contracts/system-status-fingerprints.contract.json`. Local CI:
+`verify-system-status-foundation.mjs`, `verify-system-status-fingerprints.mjs`.
+No sidebar/public Stage7 routing yet (planned SS-3).
+
 Diagnostics are for verification, not as a replacement for server-side enforcement.
 
 ## 10. Script properties and spreadsheet binding
