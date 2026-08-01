@@ -2,11 +2,12 @@
 
 ## 2026-08-02 — System status foundation (feature branch)
 
-- **Code:** `diagnostics/SystemStatus.Foundation.gs`, `SystemStatus.Probes.gs`, `SystemStatus.Fingerprints.gs` plus contracts `contracts/system-status.contract.json` / `contracts/system-status-fingerprints.contract.json`.
+- **Code:** `diagnostics/SystemStatus.Foundation.gs`, `SystemStatus.Probes.gs`, `SystemStatus.Fingerprints.gs`, `SystemStatus.Runtime.gs` plus contracts `contracts/system-status.contract.json` / `contracts/system-status-fingerprints.contract.json`.
 - **CI:** `scripts/verify-system-status-foundation.mjs`, `scripts/verify-system-status-fingerprints.mjs`.
 - **Scope:** internal foundation (SS-1/SS-2); not yet a sidebar/public Stage7 surface (SS-3).
 - **Docs:** `docs/module-map.md` Diagnostics row updated on this branch only.
-- **SS-2A9:** closed canonical-scope semantic domains (`vacationSourceMode` enum `legacy|requests`, target month `01`–`12` coherence, fail-closed malformed scope before skip); contract v11 + adversarial verify/GAS repros retained over earlier main fingerprint projection.
+- **SS-2A9:** closed canonical-scope semantic domains (`vacationSourceMode` enum `legacy|requests`, target month `01`–`12` coherence, fail-closed malformed scope before skip); adversarial verify/GAS repros retained over earlier main fingerprint projection.
+- **SS-2B:** runtime construction of typed per-stage `operationScope` + `trustedContextMap` (`SystemStatusRuntime_`); wired through `materializeAllComputedData_` for public WorkflowOrchestrator and daily `checkVacationsAndBirthdays` (document lock); Foundation/regression exercise constructed scopes via `evaluateOperation`; fingerprints contract v12 with `runtimeConstructionImplemented: true`.
 
 ## 2026-07-31 — Unified JOURNAL / SUMMARY (all months)
 

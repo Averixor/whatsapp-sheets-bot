@@ -1841,13 +1841,139 @@ function runSystemStatusFingerprintTests_() {
   });
 
   _systemStatusFingerprintCheck_(report, "writer lock contexts forbid nesting", function () {
-    _systemStatusFingerprintEqual_(SystemStatusFingerprints_.writerLockContract.currentRuntime.daily.state, "unlocked_direct_writer");
+    _systemStatusFingerprintEqual_(SystemStatusFingerprints_.writerLockContract.currentRuntime.daily.state, "locked_by_daily_caller");
     _systemStatusFingerprintEqual_(SystemStatusFingerprints_.writerLockContract.currentRuntime.public.state, "locked_by_workflow_orchestrator");
     _systemStatusFingerprintAssert_(SystemStatusFingerprints_.evaluateWriterLockContext("public", { documentLockHeld: true, lockOwner: "workflow_orchestrator", nestedAcquisitionAttempted: false, sharedCoreAcquiresLock: false }).eligible);
     _systemStatusFingerprintAssert_(SystemStatusFingerprints_.evaluateWriterLockContext("daily", { documentLockHeld: true, lockOwner: "daily_caller", nestedAcquisitionAttempted: false, sharedCoreAcquiresLock: false }).eligible);
     _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateWriterLockContext("public", null).status, "unknown");
     _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateWriterLockContext("public", { documentLockHeld: true, lockOwner: "workflow_orchestrator", nestedAcquisitionAttempted: true }).status, "failed");
     _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateWriterLockContext("daily", { documentLockHeld: false, lockOwner: "daily_caller" }).status, "failed");
+  });
+
+  _systemStatusFingerprintCheck_(report, "SS-2B runtime construction scopes", function () {
+    _systemStatusFingerprintAssert_(
+      typeof SystemStatusRuntime_ === "object" && SystemStatusRuntime_,
+      "SystemStatusRuntime_ missing",
+    );
+    _systemStatusFingerprintAssert_(
+      SystemStatusRuntime_.runtimeConstructionImplemented === true,
+      "runtimeConstructionImplemented flag",
+    );
+    var fixtureOptions = {
+      targetMonthCountForTests: 2,
+      carTargetExistsForTests: true,
+      carTargetRowCountForTests: 3,
+      weaponTargetExistsForTests: false,
+      weaponTargetRowCountForTests: 0,
+      vacationSourceModeForTests: "legacy",
+      moduleAvailableForTests: true,
+      targetMonthForTests: "",
+      sendPanelExistsForTests: true,
+      documentLockHeld: true,
+      lockOwner: "workflow_orchestrator",
+      runId: "ss2b-runtime-test",
+    };
+    var operationScope = SystemStatusRuntime_.buildComputedOperationScope(fixtureOptions);
+    var trustedContextMap = SystemStatusRuntime_.buildComputedTrustedContextMap(
+      Object.assign({}, fixtureOptions, { operationScope: operationScope }),
+    );
+    _systemStatusFingerprintEqual_(operationScope["computed.monthly_callsigns"].targetMonthCount, 2);
+    _systemStatusFingerprintEqual_(operationScope["computed.assignment_weapon"].targetExists, false);
+    _systemStatusFingerprintEqual_(operationScope["computed.assignment_weapon"].targetRowCount, 0);
+    _systemStatusFingerprintEqual_(operationScope["computed.vacation_computed"].vacationSourceMode, "legacy");
+    _systemStatusFingerprintEqual_(operationScope["computed.vacation_monthly_sync"].targetMonth, "");
+    _systemStatusFingerprintEqual_(
+      trustedContextMap["computed.vacation_monthly_sync"].canonicalInvocation.target,
+      "",
+    );
+    _systemStatusFingerprintAssert_(
+      /^sha256:[0-9a-f]{64}$/.test(
+        trustedContextMap["computed.vacation_monthly_sync"].canonicalInvocation.scopeFingerprint,
+      ),
+      "scopeFingerprint digest",
+    );
+
+    function fullInputs_() {
+      var inputs = {};
+      Object.keys(SystemStatusFingerprints_.stagePolicy)
+        .filter(function (stageId) { return stageId.indexOf("computed.") === 0; })
+        .forEach(function (stageId) {
+          inputs[stageId] = _systemStatusFingerprintEvidence_(
+            stageId,
+            _systemStatusFingerprintSuccessfulResult_(stageId),
+          );
+        });
+      return inputs;
+    }
+
+    var legacyFull = SystemStatusFingerprints_.evaluateOperation(
+      "computed", fullInputs_(), operationScope, trustedContextMap,
+    );
+    _systemStatusFingerprintEqual_(legacyFull.status, "full");
+    var skippedMonthly = legacyFull.stages.filter(function (item) {
+      return item.stageId === "computed.vacation_monthly_sync";
+    })[0];
+    _systemStatusFingerprintEqual_(skippedMonthly.status, "skipped", "trusted empty target skip");
+
+    var requestsScope = SystemStatusRuntime_.buildComputedOperationScope(
+      Object.assign({}, fixtureOptions, { vacationSourceModeForTests: "requests" }),
+    );
+    var requestsTrusted = SystemStatusRuntime_.buildComputedTrustedContextMap(
+      Object.assign({}, fixtureOptions, {
+        vacationSourceModeForTests: "requests",
+        operationScope: requestsScope,
+      }),
+    );
+    var requestsEval = SystemStatusFingerprints_.evaluateOperation(
+      "computed", fullInputs_(), requestsScope, requestsTrusted,
+    );
+    var vacationStage = requestsEval.stages.filter(function (item) {
+      return item.stageId === "computed.vacation_computed";
+    })[0];
+    _systemStatusFingerprintEqual_(vacationStage.status, "skipped");
+
+    var typoScope = SystemStatusRuntime_.buildComputedOperationScope(
+      Object.assign({}, fixtureOptions, { vacationSourceModeForTests: "requets" }),
+    );
+    var typoEval = SystemStatusFingerprints_.evaluateOperation(
+      "computed", fullInputs_(), typoScope, trustedContextMap,
+    );
+    _systemStatusFingerprintAssert_(typoEval.hasUnknownEvidence, "typo mode unknown");
+    _systemStatusFingerprintAssert_(typoEval.isFullSuccess !== true, "typo mode not full");
+
+    var missingScope = Object.assign({}, operationScope);
+    delete missingScope["computed.assignment_car"];
+    var missingEval = SystemStatusFingerprints_.evaluateOperation(
+      "computed", fullInputs_(), missingScope, trustedContextMap,
+    );
+    _systemStatusFingerprintAssert_(
+      missingEval.unknownStageIds.indexOf("computed.assignment_car") !== -1,
+      "missing constructed scope unknown",
+    );
+
+    var forgedInputs = fullInputs_();
+    forgedInputs["computed.vacation_monthly_sync"] = {
+      attempted: false,
+      resultPresent: false,
+      result: { ok: true },
+      scope: { targetMonth: "07" },
+      scopeKnown: true,
+      skipPredicateSatisfied: true,
+    };
+    var forgedEval = SystemStatusFingerprints_.evaluateOperation(
+      "computed", forgedInputs, operationScope, trustedContextMap,
+    );
+    var forgedMonthly = forgedEval.stages.filter(function (item) {
+      return item.stageId === "computed.vacation_monthly_sync";
+    })[0];
+    _systemStatusFingerprintEqual_(forgedMonthly.status, "skipped");
+    _systemStatusFingerprintEqual_(
+      forgedMonthly.skipPredicateSatisfied, true, "canonical empty-target skip still wins",
+    );
+    _systemStatusFingerprintAssert_(
+      forgedEval.isFullSuccess === true,
+      "forged evidence.scope must not block trusted empty-target skip",
+    );
   });
 
   _systemStatusFingerprintCheck_(report, "fingerprint output privacy", function () {

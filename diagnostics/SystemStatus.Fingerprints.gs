@@ -4,6 +4,8 @@
  * This module intentionally does not call PropertiesService or any materializer.
  * Property/config/clock values are injected through an execution context. Runtime
  * receipt persistence and production cache invalidation belong to SS-2B.
+ * Runtime operationScope / trustedContextMap construction lives in
+ * SystemStatus.Runtime.gs (SS-2B); this module stays pure/evaluator-only.
  */
 
 var SYSTEM_STATUS_FINGERPRINT_ALGORITHM_VERSION_ =
@@ -329,9 +331,10 @@ var SystemStatusFingerprints_ = (function () {
       daily: Object.freeze({
         caller: "checkVacationsAndBirthdays",
         writer: "materializeAllComputedData_",
-        state: "unlocked_direct_writer",
+        state: "locked_by_daily_caller",
         workflowWrite: false,
         workflowLock: false,
+        dailyCallerAcquiresDocumentLock: true,
       }),
     }),
     requiredSs2bIntegration: Object.freeze({

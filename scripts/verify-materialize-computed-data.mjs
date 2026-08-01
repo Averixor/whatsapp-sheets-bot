@@ -60,7 +60,12 @@ assert.match(useCases, /idempotency: type !== "materializeComputedData"/);
 assert.match(useCases, /case "materializeComputedData"/);
 assert.match(
   useCases,
-  /materializeAllComputedData_\(\{ source: "dailyJob" \}\)/,
+  /materializeAllComputedData_\(\{\s*source:\s*"dailyJob"[\s\S]*?lockOwner:\s*"daily_caller"/,
+);
+assert.match(useCases, /LockService\.getDocumentLock\s*\(\s*\)/);
+assert.match(
+  orchestrator,
+  /SystemStatusRuntime_\.evaluateComputedMaterialize/,
 );
 assert.doesNotMatch(
   useCases.match(/case "clearPhoneCache"[\s\S]*?case "restartBot"/)?.[0] ||

@@ -48,7 +48,7 @@ This project cannot be "run" locally in the traditional sense. There is no dev s
 
 ### Testing
 
-- **Local (automated):** `npm run ci` — **35** verify/audit scripts (+ `precheck`), no Google credentials.
+- **Local (automated):** `npm run ci` — **35** verify/audit scripts (+ `precheck`), no Google credentials. System-status: `npm run ci:system-status` (Foundation + Fingerprints; SS-2B runtime scope construction in `diagnostics/SystemStatus.Runtime.gs`).
 - **Remote (manual):** `apiRunStage7RegressionTests()` or `runSmokeTests()` in the GAS editor.
 
 Documentation index: [`docs/README.md`](./docs/README.md). Verify release status

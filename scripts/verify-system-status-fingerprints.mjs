@@ -11,6 +11,7 @@ const read = (relativePath) =>
 
 const contract = JSON.parse(read("contracts/system-status-fingerprints.contract.json"));
 const fingerprintSource = read("diagnostics/SystemStatus.Fingerprints.gs");
+const runtimeSource = read("diagnostics/SystemStatus.Runtime.gs");
 const testsSource = read("tests/SystemStatusFingerprintTests.gs");
 const packageJson = JSON.parse(read("package.json"));
 const operationSource = read("operations/MaterializeComputedData.gs");
@@ -28,7 +29,7 @@ const journalSource = read("reports/MonthJournalMaterialize.gs");
 const runnerSource = read("tests/Stage7TestRunner.Maintenance.gs");
 const smokeSource = read("smoke/SmokeTests.gs");
 
-assert.equal(contract.version, 11);
+assert.equal(contract.version, 12);
 assert.equal(
   contract.receiptBoundary,
   "stage_scoped_with_operation_run_summary",
@@ -241,6 +242,21 @@ assert.doesNotMatch(fingerprintSource, /\.clear(Content|Contents)?\s*\(/);
 assert.doesNotMatch(fingerprintSource, /localeCompare\s*\(/);
 assert.doesNotMatch(fingerprintSource, /function\s+apiStage7|apiStage7[A-Za-z0-9_]*\s*\(/);
 assert.doesNotMatch(fingerprintSource, /LockService\s*\./);
+assert.match(runtimeSource, /var SystemStatusRuntime_/);
+assert.match(runtimeSource, /function buildComputedOperationScope_/);
+assert.match(runtimeSource, /function buildComputedTrustedContextMap_/);
+assert.match(runtimeSource, /function evaluateComputedMaterialize_/);
+assert.match(runtimeSource, /runtimeConstructionImplemented:\s*RUNTIME_CONSTRUCTION_IMPLEMENTED_/);
+const runtimeCodeBody = runtimeSource.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+assert.doesNotMatch(runtimeCodeBody, /evidence\.scope(?:Known)?/);
+assert.doesNotMatch(runtimeCodeBody, /evidence\.skipPredicateSatisfied/);
+assert.doesNotMatch(runtimeCodeBody, /\.scopeKnown\b/);
+assert.doesNotMatch(runtimeCodeBody, /\.skipPredicateSatisfied\b/);
+assert.match(operationSource, /SystemStatusRuntime_\.evaluateComputedMaterialize/);
+assert.match(maintenanceSource, /LockService\.getDocumentLock\s*\(\s*\)/);
+assert.match(maintenanceSource, /lockOwner:\s*"daily_caller"/);
+assert.match(maintenanceSource, /documentLockHeld:\s*true/);
+assert.match(maintenanceSource, /lockOwner:\s*"workflow_orchestrator"/);
 assert.match(fingerprintSource, /function createExecutionContext_/);
 assert.match(fingerprintSource, /readMode/);
 assert.match(fingerprintSource, /projectionVersion/);
@@ -330,6 +346,9 @@ const context = vm.createContext({
 });
 vm.runInContext(fingerprintSource, context, {
   filename: "diagnostics/SystemStatus.Fingerprints.gs",
+});
+vm.runInContext(runtimeSource, context, {
+  filename: "diagnostics/SystemStatus.Runtime.gs",
 });
 vm.runInContext(testsSource, context, {
   filename: "tests/SystemStatusFingerprintTests.gs",
@@ -988,19 +1007,24 @@ assert.deepEqual(
   "writer lock contract drifted",
 );
 assert.equal(contract.writerLockContract.currentRuntime.public.state, "locked_by_workflow_orchestrator");
-assert.equal(contract.writerLockContract.currentRuntime.daily.state, "unlocked_direct_writer");
+assert.equal(contract.writerLockContract.currentRuntime.daily.state, "locked_by_daily_caller");
 assert.equal(contract.writerLockContract.currentRuntime.daily.workflowWrite, false);
 assert.equal(contract.writerLockContract.currentRuntime.daily.workflowLock, false);
+assert.equal(contract.writerLockContract.currentRuntime.daily.dailyCallerAcquiresDocumentLock, true);
 assert.match(maintenanceApiSource, /function apiStage7MaterializeComputedData\s*\([\s\S]*?runMaintenanceScenario\s*\(\s*\{[\s\S]*?type:\s*"materializeComputedData"/);
 assert.match(maintenanceSource, /materializeComputedData:\s*true/);
 assert.match(workflowSource, /const lockRequired = cfg\.lock !== false && !!cfg\.write/);
 assert.match(workflowSource, /LockService\.getDocumentLock\s*\(\s*\)/);
 assert.match(workflowSource, /default:\s*return 'workflow'/);
-assert.match(maintenanceSource, /function checkVacationsAndBirthdays\s*\([\s\S]*?write:\s*false,[\s\S]*?lock:\s*false,[\s\S]*?materializeAllComputedData_\s*\(\s*\{\s*source:\s*"dailyJob"\s*\}\s*\)/);
+assert.match(
+  maintenanceSource,
+  /function checkVacationsAndBirthdays\s*\([\s\S]*?write:\s*false,[\s\S]*?lock:\s*false,[\s\S]*?LockService\.getDocumentLock\s*\(\s*\)[\s\S]*?materializeAllComputedData_\s*\(\s*\{[\s\S]*?source:\s*"dailyJob"[\s\S]*?lockOwner:\s*"daily_caller"/,
+);
 assert.equal(contract.writerLockContract.requiredSs2bIntegration.public.acquisition, "already_locked");
 assert.equal(contract.writerLockContract.requiredSs2bIntegration.daily.acquisition, "acquire_document_lock");
 assert.equal(contract.writerLockContract.requiredSs2bIntegration.public.nestedAcquireAllowed, false);
 assert.equal(contract.writerLockContract.requiredSs2bIntegration.daily.sharedCoreAcquiresLock, false);
+assert.equal(contract.canonicalScopeBoundary.runtimeConstructionImplemented, true);
 assert.equal(contract.ss2bHandoff.trustedContextBoundary.derivedFromEvidenceAllowed, false);
 assert.equal(contract.ss2bHandoff.trustedContextBoundary.evidenceExpectedBindingUsed, false);
 assert.equal(contract.ss2bHandoff.trustedContextBoundary.evidenceTrustedContextUsed, false);
@@ -1015,14 +1039,16 @@ assert.equal(
   "evaluateOperation(operationId,stageInputs,operationScope,trustedContextMap)",
 );
 assert.equal(contract.ss2bHandoff.trustedContextBoundary.source, "canonical_operation_invocation_and_lock_context");
-assert.equal(contract.ss2bHandoff.trustedContextBoundary.runtimeConstructionImplemented, false);
+assert.equal(contract.ss2bHandoff.trustedContextBoundary.runtimeConstructionImplemented, true);
 assert.equal(contract.ss2bHandoff.canonicalScopeBoundary.derivedFromEvidenceAllowed, false);
 assert.equal(contract.ss2bHandoff.canonicalScopeBoundary.evidenceScopeUsed, false);
 assert.equal(contract.ss2bHandoff.canonicalScopeBoundary.evidenceScopeKnownUsed, false);
 assert.equal(contract.ss2bHandoff.canonicalScopeBoundary.evidenceSkipPredicateSatisfiedUsed, false);
 assert.equal(contract.ss2bHandoff.canonicalScopeBoundary.monthlyTrustedInvocationRequiredForSkip, true);
 assert.equal(contract.ss2bHandoff.canonicalScopeBoundary.monthlyTrustedTargetCrossCheck, true);
-assert.equal(contract.ss2bHandoff.canonicalScopeBoundary.runtimeConstructionImplemented, false);
+assert.equal(contract.ss2bHandoff.canonicalScopeBoundary.runtimeConstructionImplemented, true);
+assert.equal(contract.ss2bHandoff.runtimeModule, "diagnostics/SystemStatus.Runtime.gs");
+assert.match(contract.ss2bHandoff.implementedThroughSs2b, /SystemStatusRuntime_/);
 assert.deepEqual(
   contract.ss2bHandoff.trustedContextBoundary.requiredSs2bCallers,
   ["apiStage7MaterializeComputedData via WorkflowOrchestrator", "checkVacationsAndBirthdays daily caller"],

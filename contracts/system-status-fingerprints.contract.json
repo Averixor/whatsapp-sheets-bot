@@ -1,5 +1,5 @@
 {
-  "version": 11,
+  "version": 12,
   "receiptBoundary": "stage_scoped_with_operation_run_summary",
   "algorithm": {
     "id": "ss2a-canonical-sha256-stream-v1",
@@ -115,12 +115,12 @@
       "computed.vacation_monthly_sync": {"skipWhen": "no_target_month", "fields": ["targetMonth"], "trustedInvocationRequiredForSkip": true, "trustedInvocationTargetCrossCheck": true, "conflictState": "failed"},
       "computed.send_panel_status": {"skipWhen": "target_missing", "fields": ["targetExists"]}
     },
-    "runtimeConstructionImplemented": false
+    "runtimeConstructionImplemented": true
   },
   "writerLockContract": {
     "currentRuntime": {
       "public": {"caller": "apiStage7MaterializeComputedData", "writer": "materializeAllComputedData_", "state": "locked_by_workflow_orchestrator"},
-      "daily": {"caller": "checkVacationsAndBirthdays", "writer": "materializeAllComputedData_", "state": "unlocked_direct_writer", "workflowWrite": false, "workflowLock": false}
+      "daily": {"caller": "checkVacationsAndBirthdays", "writer": "materializeAllComputedData_", "state": "locked_by_daily_caller", "workflowWrite": false, "workflowLock": false, "dailyCallerAcquiresDocumentLock": true}
     },
     "requiredSs2bIntegration": {
       "public": {"acquisition": "already_locked", "lockOwner": "workflow_orchestrator", "sharedCoreAcquiresLock": false, "nestedAcquireAllowed": false},
@@ -459,8 +459,10 @@
     "monthlySyncResultEvidence": ["targetCells", "metadata", "pendingPlan", "conflicts", "stageId", "target", "scopeFingerprint", "runId"],
     "commitPolicy": "live pre/post reads plus affected/global cache invalidation inside the materialize critical section",
     "implementedThroughSs2a9": "pure keyed transitions, typed Birthday semantic normalization including blank no-op and Gregorian validity, closed canonical-scope semantic domains (vacationSourceMode enum legacy|requests, targetMonth 01-12 with empty only for no_target_month, targetExists=false requires targetRowCount=0), fail-closed malformed-scope unknown before skip predicates, separate trusted execution-context and canonical per-stage scope propagation through stage/operation evaluators, module-owned skip decisions, structured unknown/failed decisions, digest-validated structured proofs, compatibility decision, and runtime-traced lock contract only",
-    "trustedContextBoundary": {"evaluatorArgument": "trustedExecutionContext", "stageEvaluatorSignature": "evaluateStage(stageId,evidence,canonicalScope,trustedExecutionContext)", "operationEvaluatorSignature": "evaluateOperation(operationId,stageInputs,operationScope,trustedContextMap)", "expectedBindingBuilder": "SystemStatusFingerprints_.buildExpectedBindingFromTrustedContext", "source": "canonical_operation_invocation_and_lock_context", "canonicalInvocationFields": ["operation", "stageId", "target", "scopeFingerprint", "runId"], "lockContextFields": ["documentLockHeld", "lockOwner"], "derivedFromEvidenceAllowed": false, "evidenceExpectedBindingUsed": false, "evidenceTrustedContextUsed": false, "structuredStatusPropagation": true, "unknownOperationStatusAllowed": true, "runtimeConstructionImplemented": false, "requiredSs2bCallers": ["apiStage7MaterializeComputedData via WorkflowOrchestrator", "checkVacationsAndBirthdays daily caller"]},
-    "canonicalScopeBoundary": {"stageEvaluatorArgument": "canonicalScope", "operationEvaluatorArgument": "operationScope", "operationScopeShape": "per_stage_map", "skipPredicateOwner": "SystemStatusFingerprints_ module policy", "derivedFromEvidenceAllowed": false, "evidenceScopeUsed": false, "evidenceScopeKnownUsed": false, "evidenceSkipPredicateSatisfiedUsed": false, "semanticDomains": {"vacationSourceMode": ["legacy", "requests"], "targetMonthPattern": "^(0[1-9]|1[0-2])$", "targetExistsFalseRequiresZeroRows": true}, "monthlyTrustedInvocationRequiredForSkip": true, "monthlyTrustedTargetCrossCheck": true, "runtimeConstructionImplemented": false, "requiredSs2bCallers": ["apiStage7MaterializeComputedData via WorkflowOrchestrator", "checkVacationsAndBirthdays daily caller"]}
+    "implementedThroughSs2b": "runtime construction of typed per-stage operationScope and trustedContextMap via SystemStatusRuntime_, wired through materializeAllComputedData_ for apiStage7MaterializeComputedData (WorkflowOrchestrator lock) and checkVacationsAndBirthdays (daily document lock); Foundation/regression exercise constructed scopes with evaluateOperation; evidence.scope cannot forge skip",
+    "runtimeModule": "diagnostics/SystemStatus.Runtime.gs",
+    "trustedContextBoundary": {"evaluatorArgument": "trustedExecutionContext", "stageEvaluatorSignature": "evaluateStage(stageId,evidence,canonicalScope,trustedExecutionContext)", "operationEvaluatorSignature": "evaluateOperation(operationId,stageInputs,operationScope,trustedContextMap)", "expectedBindingBuilder": "SystemStatusFingerprints_.buildExpectedBindingFromTrustedContext", "source": "canonical_operation_invocation_and_lock_context", "canonicalInvocationFields": ["operation", "stageId", "target", "scopeFingerprint", "runId"], "lockContextFields": ["documentLockHeld", "lockOwner"], "derivedFromEvidenceAllowed": false, "evidenceExpectedBindingUsed": false, "evidenceTrustedContextUsed": false, "structuredStatusPropagation": true, "unknownOperationStatusAllowed": true, "runtimeConstructionImplemented": true, "requiredSs2bCallers": ["apiStage7MaterializeComputedData via WorkflowOrchestrator", "checkVacationsAndBirthdays daily caller"]},
+    "canonicalScopeBoundary": {"stageEvaluatorArgument": "canonicalScope", "operationEvaluatorArgument": "operationScope", "operationScopeShape": "per_stage_map", "skipPredicateOwner": "SystemStatusFingerprints_ module policy", "derivedFromEvidenceAllowed": false, "evidenceScopeUsed": false, "evidenceScopeKnownUsed": false, "evidenceSkipPredicateSatisfiedUsed": false, "semanticDomains": {"vacationSourceMode": ["legacy", "requests"], "targetMonthPattern": "^(0[1-9]|1[0-2])$", "targetExistsFalseRequiresZeroRows": true}, "monthlyTrustedInvocationRequiredForSkip": true, "monthlyTrustedTargetCrossCheck": true, "runtimeConstructionImplemented": true, "requiredSs2bCallers": ["apiStage7MaterializeComputedData via WorkflowOrchestrator", "checkVacationsAndBirthdays daily caller"]}
   },
   "versionCompatibility": {
     "receiptVersion": "ss2b-stage-receipt-v1",

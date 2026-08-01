@@ -180,5 +180,26 @@ function materializeAllComputedData_(options) {
     if (!panelOk) result.ok = false;
   }
 
+  if (
+    typeof SystemStatusRuntime_ === "object" &&
+    SystemStatusRuntime_ &&
+    typeof SystemStatusRuntime_.evaluateComputedMaterialize === "function"
+  ) {
+    try {
+      result.systemStatusEvaluation = SystemStatusRuntime_.evaluateComputedMaterialize(
+        result,
+        options || {},
+      );
+    } catch (statusError) {
+      result.systemStatusEvaluation = {
+        ok: false,
+        reason:
+          statusError && statusError.message
+            ? String(statusError.message)
+            : String(statusError || "system_status_evaluation_failed"),
+      };
+    }
+  }
+
   return result;
 }
