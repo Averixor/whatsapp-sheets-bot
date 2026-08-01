@@ -11,28 +11,28 @@ var SYSTEM_STATUS_FINGERPRINT_ALGORITHM_VERSION_ =
 var SYSTEM_STATUS_FINGERPRINT_DEFAULT_CHUNK_BYTES_ = 4096;
 var SYSTEM_STATUS_FINGERPRINT_MAX_CHUNK_BYTES_ = 8192;
 var SYSTEM_STATUS_FINGERPRINT_MAX_PROJECTION_BYTES_ = 2000000;
-var SYSTEM_STATUS_FINGERPRINT_MANIFEST_VERSION_ = "ss2a5-executable-projection-v5";
-var SYSTEM_STATUS_FINGERPRINT_SIGNATURE_VERSION_ = "ss2a5-stage-signatures-v5";
+var SYSTEM_STATUS_FINGERPRINT_MANIFEST_VERSION_ = "ss2a9-executable-projection-v10";
+var SYSTEM_STATUS_FINGERPRINT_SIGNATURE_VERSION_ = "ss2a9-stage-signatures-v10";
 var SYSTEM_STATUS_FINGERPRINT_RECEIPT_VERSION_ = "ss2b-stage-receipt-v1";
 
 var SYSTEM_STATUS_FINGERPRINT_STAGE_VERSIONS_ = Object.freeze({
-  "computed.personnel_helpers": "personnel-helpers-v4",
+  "computed.personnel_helpers": "personnel-helpers-v6",
   "computed.phones_result": "phones-result-v2",
   "computed.birthday_result": "birthday-result-v2",
-  "computed.monthly_callsigns": "monthly-callsigns-v2",
-  "computed.assignment_car": "assignment-car-v4",
-  "computed.assignment_weapon": "assignment-weapon-v4",
-  "computed.vacation_computed": "vacation-computed-v2",
-  "computed.vacation_schedule": "vacation-schedule-v2",
-  "computed.vacation_monthly_sync": "vacation-monthly-sync-v5",
-  "computed.send_panel_status": "send-panel-status-v2",
-  "computed.operation_summary": "computed-operation-summary-v2",
-  "month_journal.target_resolution": "month-target-v2",
+  "computed.monthly_callsigns": "monthly-callsigns-v3",
+  "computed.assignment_car": "assignment-car-v6",
+  "computed.assignment_weapon": "assignment-weapon-v6",
+  "computed.vacation_computed": "vacation-computed-v4",
+  "computed.vacation_schedule": "vacation-schedule-v3",
+  "computed.vacation_monthly_sync": "vacation-monthly-sync-v10",
+  "computed.send_panel_status": "send-panel-status-v3",
+  "computed.operation_summary": "computed-operation-summary-v5",
+  "month_journal.target_resolution": "month-target-v3",
   "month_journal.source_projection": "month-source-v2",
   "month_journal.journal_slice": "journal-slice-v3",
   "month_journal.summary_slice": "summary-slice-v3",
   "month_journal.non_target_preservation": "month-preservation-v3",
-  "month_journal.operation_summary": "month-operation-summary-v2",
+  "month_journal.operation_summary": "month-operation-summary-v3",
 });
 
 var SYSTEM_STATUS_FINGERPRINT_STAGE_POLICY_ = Object.freeze({
@@ -108,9 +108,11 @@ var SystemStatusFingerprints_ = (function () {
     });
   }
 
-  function _injectedDependency_(id, fields, ignored, evidenceRole) {
+  function _injectedDependency_(id, fields, ignored, evidenceRole, options) {
+    var opts = options || {};
     return _dependency_(id, "injected", ["injected"], fields, ignored, {
       evidenceRole: evidenceRole,
+      ignoreEmptyTail: opts.ignoreEmptyTail === true,
     });
   }
 
@@ -119,7 +121,7 @@ var SystemStatusFingerprints_ = (function () {
     "computed.personnel_helpers": Object.freeze({
       source: Object.freeze([
         _rangeDependency_("personnel", "PERSONNEL", "named_source_columns", ["values", "display"], [["fml", "space_text"], ["lastName", "text"], ["firstName", "text"], ["patronymic", "text"], ["callsign", "text"], ["phone", "text"], ["phone2", "text"], ["rank", "text"], ["title", "text"]], ["birthdayRaw", "birthdayDisplay", "position", "status", "template", "formatting", "technical", "emptyTail"]),
-        _injectedDependency_("personnelBirthdayPrior", [["rowKey", "text"], ["birthdaySemantic", "birthday_day"]], ["birthdayRaw", "birthdayDisplay", "formatting"], "mutable_target_prior_state"),
+        _injectedDependency_("personnelBirthdayPrior", [["rowKey", "text"], ["birthdaySemantic", "birthday_day"]], ["birthdayRaw", "birthdayDisplay", "formatting", "emptyTail"], "mutable_target_prior_state", { ignoreEmptyTail: true }),
         _injectedDependency_("clock", [["clockDay", "date_day"], ["timezone", "text"]], []),
       ]),
       result: Object.freeze([_rangeDependency_("personnelDerived", "PERSONNEL", "birthday_age_days", ["display"], [["birthday", "text"], ["age", "text"], ["daysUntilBirthday", "text"]], commonIgnored)]),
@@ -181,8 +183,11 @@ var SystemStatusFingerprints_ = (function () {
       result: Object.freeze([_rangeDependency_("sendPanelStatus", "SEND_PANEL", "E_data_rows", ["display"], [["status", "text"]], ["columnsFtoG", "formatting", "emptyTail"])]),
     }),
     "computed.operation_summary": Object.freeze({
-      source: Object.freeze([_injectedDependency_("computedStageEvidence", [["stageId", "text"], ["scopeKnown", "boolean"], ["attempted", "boolean"], ["resultPresent", "boolean"], ["status", "text"]], ["rawResult"])]),
-      result: Object.freeze([_injectedDependency_("computedRunSummary", [["status", "text"], ["isFullSuccess", "boolean"]], ["rawStages"])]),
+      source: Object.freeze([
+        _injectedDependency_("computedStageEvidence", [["stageId", "text"], ["attempted", "boolean"], ["resultPresent", "boolean"], ["status", "text"]], ["rawResult", "scope", "scopeKnown", "skipPredicateSatisfied"]),
+        _injectedDependency_("computedCanonicalScopes", [["stageId", "text"], ["skipWhen", "text"], ["scope", "identity"]], ["evidenceScope", "callerSkipBoolean"]),
+      ]),
+      result: Object.freeze([_injectedDependency_("computedRunSummary", [["status", "text"], ["isFullSuccess", "boolean"], ["decision", "identity"], ["reasonCodes", "identity"], ["unknownStageIds", "identity"], ["failedStageIds", "identity"], ["hasUnknownEvidence", "boolean"], ["hasConfirmedFailure", "boolean"]], ["rawStages"])]),
     }),
     "month_journal.target_resolution": Object.freeze({
       source: Object.freeze([_injectedDependency_("monthTargetContext", [["monthSheet", "text"], ["month", "text"], ["activeMonthProperty", "text"], ["clockMonth", "text"], ["targetSheet", "text"], ["existingSheetNames", "identity"], ["activeSheetName", "text"]], ["formatting"])]),
@@ -211,8 +216,8 @@ var SystemStatusFingerprints_ = (function () {
       result: Object.freeze([_injectedDependency_("preservationResult", [["journalStable", "boolean"], ["summaryStable", "boolean"], ["headersChanged", "boolean"], ["ambiguous", "boolean"]], ["rawRows"])]),
     }),
     "month_journal.operation_summary": Object.freeze({
-      source: Object.freeze([_injectedDependency_("monthStageEvidence", [["stageId", "text"], ["scopeKnown", "boolean"], ["attempted", "boolean"], ["resultPresent", "boolean"], ["status", "text"]], ["rawResult"])]),
-      result: Object.freeze([_injectedDependency_("monthRunSummary", [["status", "text"], ["isFullSuccess", "boolean"]], ["rawStages"])]),
+      source: Object.freeze([_injectedDependency_("monthStageEvidence", [["stageId", "text"], ["attempted", "boolean"], ["resultPresent", "boolean"], ["status", "text"]], ["rawResult", "scope", "scopeKnown", "skipPredicateSatisfied"])]),
+      result: Object.freeze([_injectedDependency_("monthRunSummary", [["status", "text"], ["isFullSuccess", "boolean"], ["decision", "identity"], ["reasonCodes", "identity"], ["unknownStageIds", "identity"], ["failedStageIds", "identity"], ["hasUnknownEvidence", "boolean"], ["hasConfirmedFailure", "boolean"]], ["rawStages"])]),
     }),
   });
 
@@ -280,6 +285,16 @@ var SystemStatusFingerprints_ = (function () {
       ]),
       missingProofState: "unknown",
       presentMismatchState: "failed",
+      expectedBindingSource: "trusted_execution_context",
+      expectedBindingArgument: "trustedExecutionContext",
+      expectedBindingBuilder: "buildExpectedBindingFromTrustedContext",
+      derivedFromEvidenceAllowed: false,
+      evidenceExpectedBindingUsed: false,
+      evidenceTrustedContextUsed: false,
+      stageWrapperTrustedContextArgument: "trustedExecutionContext",
+      operationWrapperTrustedContextArgument: "trustedContextMap",
+      structuredStatusPropagation: true,
+      digestValidationBeforeComparison: true,
     }),
     "month_journal.journal_slice": Object.freeze({
       mode: "target_slice_replace",
@@ -299,6 +314,8 @@ var SystemStatusFingerprints_ = (function () {
       writableFields: Object.freeze(["birthdaySemantic"]),
       preservedFields: Object.freeze(["rowKey"]),
       semanticInvariant: "prior_equals_expected_equals_post",
+      emptySemanticState: "eligible_noop",
+      invalidSemanticState: "failed",
     }),
   });
 
@@ -661,37 +678,67 @@ var SystemStatusFingerprints_ = (function () {
 
   function _birthdaySemanticDay_(value) {
     if (value instanceof Date && !isNaN(value.getTime())) {
-      return [value.getFullYear(), value.getMonth() + 1, value.getDate()]
+      return {
+        state: "valid",
+        day: [value.getFullYear(), value.getMonth() + 1, value.getDate()]
         .map(function (part, index) {
           return index === 0 ? String(part) : String(part).padStart(2, "0");
         })
-        .join("-");
+        .join("-"),
+      };
     }
     var text = String(value == null ? "" : value).trim();
     text = text.replace(/\s*р\.?\s*н\.?\s*$/i, "").trim();
     while (/р\.$/.test(text)) text = text.replace(/р\.$/, "").trim();
-    if (!text) return "";
+    if (!text) return { state: "empty", day: "" };
     var match = text.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
     if (!match) {
       var ua = text.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
       if (ua) match = [ua[0], ua[3], ua[2], ua[1]];
     }
-    if (!match) return "";
+    if (!match) return { state: "invalid", day: "" };
     var year = Number(match[1]);
     var month = Number(match[2]);
     var day = Number(match[3]);
     var date = new Date(year, month - 1, day);
     if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
-      return "";
+      return { state: "invalid", day: "" };
     }
-    return String(year).padStart(4, "0") + "-" +
-      String(month).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+    return {
+      state: "valid",
+      day: String(year).padStart(4, "0") + "-" +
+        String(month).padStart(2, "0") + "-" + String(day).padStart(2, "0"),
+    };
+  }
+
+  function _validBirthdaySemantic_(value) {
+    if (!value || typeof value !== "object") return false;
+    if (value.state === "empty") return value.day === "";
+    if (value.state === "invalid") return value.day === "";
+    return value.state === "valid" && _validCalendarDay_(value.day);
+  }
+
+  function _validCalendarDay_(value) {
+    var match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return false;
+    var year = Number(match[1]);
+    var month = Number(match[2]);
+    var day = Number(match[3]);
+    var date = new Date(year, month - 1, day);
+    return date.getFullYear() === year && date.getMonth() === month - 1 &&
+      date.getDate() === day;
+  }
+
+  function _semanticEmpty_(value) {
+    return value && typeof value === "object" &&
+      value.state === "empty" && value.day === "";
   }
 
   function _rowEmpty_(row) {
     return Object.keys(row || {}).every(function (key) {
       var value = row[key];
-      return value === "" || value === null || typeof value === "undefined";
+      return value === "" || value === null || typeof value === "undefined" ||
+        _semanticEmpty_(value);
     });
   }
 
@@ -1284,13 +1331,15 @@ var SystemStatusFingerprints_ = (function () {
       var expected = expectedIndex.byKey["$" + key];
       var after = postIndex.byKey["$" + key];
       if (policy.mode === "birthday_semantic_patch") {
-        var priorDay = String(before.birthdaySemantic || "");
-        var expectedDay = String(expected.birthdaySemantic || "");
-        var postDay = String(after.birthdaySemantic || "");
-        if (!priorDay || !expectedDay || !postDay) {
+        var priorDay = before.birthdaySemantic;
+        var expectedDay = expected.birthdaySemantic;
+        var postDay = after.birthdaySemantic;
+        if (!_validBirthdaySemantic_(priorDay) || !_validBirthdaySemantic_(expectedDay) ||
+            !_validBirthdaySemantic_(postDay) || priorDay.state === "invalid" ||
+            expectedDay.state === "invalid" || postDay.state === "invalid") {
           return _transitionDecision_(stageId, "failed", ["birthday_semantic_invalid"]);
         }
-        if (priorDay !== expectedDay || priorDay !== postDay) {
+        if (!_canonicalEqual_(priorDay, expectedDay) || !_canonicalEqual_(priorDay, postDay)) {
           return _transitionDecision_(stageId, "failed", ["birthday_semantic_changed"]);
         }
       }
@@ -1333,6 +1382,45 @@ var SystemStatusFingerprints_ = (function () {
     return /^sha256:[0-9a-f]{64}$/.test(String(value || ""));
   }
 
+  function _buildExpectedBindingFromTrustedContext_(stageId, trustedExecutionContext) {
+    var trusted = trustedExecutionContext && typeof trustedExecutionContext === "object"
+      ? trustedExecutionContext
+      : null;
+    if (!trusted) {
+      return { status: "unknown", reason: "trusted_context_unavailable", binding: null };
+    }
+    var invocation = trusted.canonicalInvocation;
+    var lockContext = trusted.lockContext;
+    if (trusted.source !== "canonical_operation_invocation_and_lock_context" ||
+        !invocation || typeof invocation !== "object" ||
+        !lockContext || typeof lockContext !== "object" ||
+        !String(invocation.operation || "") || !String(invocation.stageId || "") ||
+        !String(invocation.target || "") || !_validDigest_(invocation.scopeFingerprint) ||
+        !String(invocation.runId || "") ||
+        typeof lockContext.documentLockHeld !== "boolean" ||
+        !String(lockContext.lockOwner || "")) {
+      return { status: "unknown", reason: "trusted_context_malformed", binding: null };
+    }
+    var expectedOperation = String(stageId || "").split(".")[0];
+    if (String(invocation.operation) !== expectedOperation ||
+        String(invocation.stageId) !== String(stageId || "")) {
+      return { status: "failed", reason: "trusted_context_mismatch", binding: null };
+    }
+    if (lockContext.documentLockHeld !== true) {
+      return { status: "failed", reason: "trusted_context_lock_mismatch", binding: null };
+    }
+    return {
+      status: "eligible",
+      reason: "trusted_context_valid",
+      binding: Object.freeze({
+        stageId: String(invocation.stageId),
+        target: String(invocation.target),
+        scopeFingerprint: String(invocation.scopeFingerprint),
+        runId: String(invocation.runId),
+      }),
+    };
+  }
+
   function _evaluateStructuredMonthlyProofs_(stageId, transition, policy, expectedBinding) {
     var binding = transition && transition.binding;
     if (!binding || typeof binding !== "object") {
@@ -1372,7 +1460,8 @@ var SystemStatusFingerprints_ = (function () {
       var proofMalformed = requiredProofFields.some(function (field) {
         return !_hasOwn_(proof, field) || !String(proof[field] || "");
       });
-      if (proofMalformed || !_validDigest_(proof.expectedFingerprint) ||
+      if (proofMalformed || !_validDigest_(proof.scopeFingerprint) ||
+          !_validDigest_(proof.expectedFingerprint) ||
           !_validDigest_(proof.postFingerprint) ||
           (proofName !== "conflicts" && !_validDigest_(proof.priorFingerprint))) {
         return _transitionDecision_(stageId, "unknown", ["structured_proof_malformed"]);
@@ -1432,10 +1521,21 @@ var SystemStatusFingerprints_ = (function () {
     return _transitionDecision_(stageId, "eligible", []);
   }
 
-  function _evaluateTransitionEvidenceCore_(stageId, evidence) {
+  function _evaluateTransitionEvidenceCore_(stageId, evidence, trustedExecutionContext) {
     var id = String(stageId || "");
     var stage = SYSTEM_STATUS_FINGERPRINT_EXECUTABLE_REGISTRY_[id];
     if (!stage) return _transitionDecision_(id, "unknown", ["stage_unknown"]);
+    var policy = stage.transitionPolicy || { mode: "immutable_only" };
+    var trustedBinding = null;
+    if (policy.mode === "vacation_monthly_atomic") {
+      var trustedBuild = _buildExpectedBindingFromTrustedContext_(
+        id, trustedExecutionContext,
+      );
+      if (trustedBuild.status !== "eligible") {
+        return _transitionDecision_(id, trustedBuild.status, [trustedBuild.reason]);
+      }
+      trustedBinding = trustedBuild.binding;
+    }
     var value = evidence && typeof evidence === "object" ? evidence : {};
     if (value.evidenceState === "missing" || value.evidenceState === "corrupt" ||
         value.evidenceState === "budget_exceeded") {
@@ -1460,7 +1560,6 @@ var SystemStatusFingerprints_ = (function () {
       }
     }
 
-    var policy = stage.transitionPolicy || { mode: "immutable_only" };
     var transitionDecision = _transitionDecision_(id, "eligible", []);
     if (policy.mode === "cell_patch" || policy.mode === "birthday_semantic_patch" ||
         policy.mode === "vacation_monthly_atomic") {
@@ -1481,7 +1580,7 @@ var SystemStatusFingerprints_ = (function () {
 
     if (policy.mode === "vacation_monthly_atomic") {
       var structuredDecision = _evaluateStructuredMonthlyProofs_(
-        id, value.transition, policy, value.expectedBinding,
+        id, value.transition, policy, trustedBinding,
       );
       if (!structuredDecision.eligibleForReceipt) return structuredDecision;
     }
@@ -1496,9 +1595,11 @@ var SystemStatusFingerprints_ = (function () {
     return _transitionDecision_(id, "eligible", []);
   }
 
-  function evaluateTransitionEvidence_(stageId, evidence) {
+  function evaluateTransitionEvidence_(stageId, evidence, trustedExecutionContext) {
     try {
-      return _evaluateTransitionEvidenceCore_(stageId, evidence);
+      return _evaluateTransitionEvidenceCore_(
+        stageId, evidence, trustedExecutionContext,
+      );
     } catch (error) {
       return _transitionDecision_(String(stageId || ""), "unknown", [
         error && /budget/i.test(String(error.message || error))
@@ -1572,58 +1673,192 @@ var SystemStatusFingerprints_ = (function () {
     };
   }
 
+  function _validCalendarMonthToken_(value) {
+    return /^(0[1-9]|1[0-2])$/.test(String(value || ""));
+  }
+
+  function _validVacationSourceMode_(value) {
+    return value === "legacy" || value === "requests";
+  }
+
+  function _validNonNegativeInt_(value) {
+    return typeof value === "number" &&
+      isFinite(value) &&
+      Math.floor(value) === value &&
+      value >= 0;
+  }
+
   function _skipPredicate_(name, scope) {
     var data = scope || {};
     if (name === "never") return false;
     if (name === "no_target_months") return Number(data.targetMonthCount) === 0;
-    if (name === "target_missing_or_empty") return data.targetExists === false || Number(data.targetRowCount) === 0;
-    if (name === "vacation_source_not_legacy") return String(data.vacationSourceMode || "") !== "legacy";
+    if (name === "target_missing_or_empty") {
+      return data.targetExists === false || data.targetRowCount === 0;
+    }
+    if (name === "vacation_source_not_legacy") {
+      return data.vacationSourceMode === "requests";
+    }
     if (name === "module_unavailable") return data.moduleAvailable === false;
-    if (name === "no_target_month") return !/^\d{2}$/.test(String(data.targetMonth || ""));
+    if (name === "no_target_month") return data.targetMonth === "";
     if (name === "target_missing") return data.targetExists === false;
     return false;
   }
 
-  function _stageResultSuccess_(stageId, result) {
-    var value = result;
-    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-    if (stageId === "computed.monthly_callsigns") {
-      return value.ok !== false && (!value.mode || value.mode !== "all" || value.failedCount === 0);
+  function _canonicalScopeDecision_(stageId, policy, canonicalScope, trustedExecutionContext) {
+    var skipWhen = String(policy && policy.skipWhen || "never");
+    if (skipWhen === "never") {
+      return { status: "eligible", skip: false, reasonCodes: [] };
     }
-    if (stageId === "computed.vacation_schedule") {
-      return value.threw !== true && value.resultObjectPresent === true;
+    if (!canonicalScope || typeof canonicalScope !== "object" || Array.isArray(canonicalScope)) {
+      return {
+        status: "unknown",
+        skip: false,
+        reasonCodes: [canonicalScope == null
+          ? "canonical_scope_unavailable"
+          : "canonical_scope_malformed"],
+      };
     }
-    if (stageId === "computed.vacation_monthly_sync") {
-      return value.ok !== false &&
-        evaluateTransitionEvidence_(stageId, value.transitionEvidence).eligibleForReceipt === true;
+    var scope = canonicalScope;
+    var valid = false;
+    if (skipWhen === "no_target_months") {
+      valid = _hasOwn_(scope, "targetMonthCount") &&
+        _validNonNegativeInt_(scope.targetMonthCount);
+    } else if (skipWhen === "target_missing_or_empty") {
+      valid = _hasOwn_(scope, "targetExists") &&
+        typeof scope.targetExists === "boolean" &&
+        _hasOwn_(scope, "targetRowCount") &&
+        _validNonNegativeInt_(scope.targetRowCount) &&
+        (scope.targetExists === true || scope.targetRowCount === 0);
+    } else if (skipWhen === "vacation_source_not_legacy") {
+      valid = _hasOwn_(scope, "vacationSourceMode") &&
+        typeof scope.vacationSourceMode === "string" &&
+        _validVacationSourceMode_(scope.vacationSourceMode);
+    } else if (skipWhen === "module_unavailable") {
+      valid = _hasOwn_(scope, "moduleAvailable") &&
+        typeof scope.moduleAvailable === "boolean";
+    } else if (skipWhen === "no_target_month") {
+      valid = _hasOwn_(scope, "targetMonth") &&
+        typeof scope.targetMonth === "string" &&
+        (scope.targetMonth === "" || _validCalendarMonthToken_(scope.targetMonth));
+    } else if (skipWhen === "target_missing") {
+      valid = _hasOwn_(scope, "targetExists") &&
+        typeof scope.targetExists === "boolean";
     }
-    if (stageId === "computed.send_panel_status") return value.ok === true;
-    if (stageId === "month_journal.target_resolution") {
-      return /^\d{2}$/.test(String(value.targetMonth || "")) && value.sheetExists === true;
+    if (!valid) {
+      return {
+        status: "unknown",
+        skip: false,
+        reasonCodes: ["canonical_scope_malformed"],
+      };
     }
-    if (stageId === "month_journal.source_projection") return value.available === true;
-    if (stageId === "month_journal.non_target_preservation") {
-      return value.stable === true && value.ambiguous !== true;
+    var skip = _skipPredicate_(skipWhen, scope);
+    if (stageId === "computed.vacation_monthly_sync" && skip &&
+        !trustedExecutionContext) {
+      return {
+        status: "unknown",
+        skip: false,
+        reasonCodes: ["canonical_scope_trusted_context_unavailable"],
+      };
     }
-    return value.ok === true || value.success === true;
+    if (stageId === "computed.vacation_monthly_sync" && trustedExecutionContext) {
+      var trusted = trustedExecutionContext;
+      var invocation = trusted && trusted.canonicalInvocation;
+      if (trusted.source !== "canonical_operation_invocation_and_lock_context" ||
+          !invocation || typeof invocation !== "object" ||
+          String(invocation.operation || "") !== "computed" ||
+          String(invocation.stageId || "") !== stageId ||
+          typeof invocation.target !== "string") {
+        if (skip) {
+          return {
+            status: "unknown",
+            skip: false,
+            reasonCodes: ["canonical_scope_trusted_context_malformed"],
+          };
+        }
+      } else if (String(invocation.target) !== String(scope.targetMonth)) {
+        return {
+          status: "failed",
+          skip: false,
+          reasonCodes: ["canonical_scope_trusted_target_conflict"],
+        };
+      }
+    }
+    return {
+      status: "eligible",
+      skip: skip,
+      reasonCodes: skip ? ["skip_predicate_satisfied"] : [],
+    };
   }
 
-  function evaluateStage_(stageId, evidence, legacyScope) {
+  function _stageResultDecision_(stageId, result, trustedExecutionContext) {
+    var value = result;
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return _transitionDecision_(stageId, "failed", ["stage_result_malformed"]);
+    }
+    var success = false;
+    if (stageId === "computed.monthly_callsigns") {
+      success = value.ok !== false && (!value.mode || value.mode !== "all" || value.failedCount === 0);
+    } else if (stageId === "computed.vacation_schedule") {
+      success = value.threw !== true && value.resultObjectPresent === true;
+    } else if (stageId === "computed.vacation_monthly_sync") {
+      if (value.ok === false) {
+        return _transitionDecision_(stageId, "failed", ["stage_result_predicate_failed"]);
+      }
+      return evaluateTransitionEvidence_(
+        stageId, value.transitionEvidence, trustedExecutionContext,
+      );
+    } else if (stageId === "computed.send_panel_status") {
+      success = value.ok === true;
+    } else if (stageId === "month_journal.target_resolution") {
+      success = _validCalendarMonthToken_(value.targetMonth) && value.sheetExists === true;
+    } else if (stageId === "month_journal.source_projection") {
+      success = value.available === true;
+    } else if (stageId === "month_journal.non_target_preservation") {
+      success = value.stable === true && value.ambiguous !== true;
+    } else {
+      success = value.ok === true || value.success === true;
+    }
+    return _transitionDecision_(
+      stageId,
+      success ? "eligible" : "failed",
+      success ? [] : ["stage_result_predicate_failed"],
+    );
+  }
+
+  function evaluateStage_(stageId, evidence, canonicalScope, trustedExecutionContext) {
     var id = String(stageId || "");
     var policy = SYSTEM_STATUS_FINGERPRINT_STAGE_POLICY_[id];
     if (!policy) throw new Error("Unknown stage success policy: " + id);
     var input = evidence && typeof evidence === "object" &&
-      (_hasOwn_(evidence, "scopeKnown") || _hasOwn_(evidence, "attempted") ||
-        _hasOwn_(evidence, "resultPresent"))
+      (_hasOwn_(evidence, "attempted") || _hasOwn_(evidence, "resultPresent") ||
+        _hasOwn_(evidence, "result"))
       ? evidence
-      : { result: evidence, scope: legacyScope };
-    var scope = input.scope && typeof input.scope === "object" ? input.scope : {};
-    var scopeKnown = input.scopeKnown === true;
+      : { result: evidence };
     var attempted = input.attempted === true;
     var resultPresent = input.resultPresent === true;
-    var predicateSatisfied = scopeKnown && _skipPredicate_(policy.skipWhen, scope);
-    var declaredSkip = input.skipPredicateSatisfied === true;
-    if (declaredSkip && predicateSatisfied && attempted === false) {
+    var scopeDecision = _canonicalScopeDecision_(
+      id, policy, canonicalScope, trustedExecutionContext,
+    );
+    if (scopeDecision.status !== "eligible") {
+      var scopeFailure = _transitionDecision_(
+        id, scopeDecision.status, scopeDecision.reasonCodes,
+      );
+      return {
+        stageId: id,
+        policy: policy.policy,
+        required: policy.policy === "required",
+        optional: policy.policy === "optional",
+        scopeKnown: false,
+        attempted: attempted,
+        resultPresent: resultPresent,
+        skipPredicateSatisfied: false,
+        status: scopeFailure.status,
+        success: false,
+        decision: scopeFailure,
+        reasonCodes: scopeFailure.reasonCodes.slice(),
+      };
+    }
+    if (scopeDecision.skip) {
       return {
         stageId: id,
         policy: policy.policy,
@@ -1631,29 +1866,61 @@ var SystemStatusFingerprints_ = (function () {
         optional: policy.policy === "optional",
         scopeKnown: true,
         attempted: false,
-        resultPresent: resultPresent,
+        resultPresent: false,
         skipPredicateSatisfied: true,
         status: "skipped",
         success: true,
+        decision: _transitionDecision_(id, "eligible", ["skip_predicate_satisfied"]),
+        reasonCodes: ["skip_predicate_satisfied"],
       };
     }
-    var success = scopeKnown && attempted && resultPresent &&
-      _stageResultSuccess_(id, input.result);
+    var decision;
+    if (!attempted) {
+      decision = _transitionDecision_(id, "failed", ["stage_not_attempted"]);
+    } else if (!resultPresent) {
+      decision = _transitionDecision_(id, "failed", ["stage_result_unavailable"]);
+    } else {
+      decision = _stageResultDecision_(id, input.result, trustedExecutionContext);
+    }
+    var success = decision.status === "eligible" && decision.eligibleForReceipt === true;
     return {
       stageId: id,
       policy: policy.policy,
       required: policy.policy === "required",
       optional: policy.policy === "optional",
-      scopeKnown: scopeKnown,
+      scopeKnown: true,
       attempted: attempted,
       resultPresent: resultPresent,
-      skipPredicateSatisfied: predicateSatisfied && declaredSkip,
-      status: success ? "success" : scopeKnown ? "failed" : "unknown",
+      skipPredicateSatisfied: false,
+      status: success ? "success" : decision.status,
       success: success,
+      decision: decision,
+      reasonCodes: decision.reasonCodes.slice(),
     };
   }
 
-  function evaluateOperation_(operation, stageInputs) {
+  function _operationStageScope_(operationScope, stageId) {
+    var scope = operationScope && typeof operationScope === "object"
+      ? operationScope
+      : null;
+    if (!scope) return null;
+    if (scope.stages && typeof scope.stages === "object" &&
+        _hasOwn_(scope.stages, stageId)) {
+      return scope.stages[stageId];
+    }
+    return _hasOwn_(scope, stageId) ? scope[stageId] : null;
+  }
+
+  function _operationTrustedContext_(trustedContextMap, stageId) {
+    var trusted = trustedContextMap && typeof trustedContextMap === "object"
+      ? trustedContextMap
+      : null;
+    if (!trusted) return null;
+    if (trusted.canonicalInvocation && trusted.lockContext) return trusted;
+    return _hasOwn_(trusted, stageId) ? trusted[stageId] : null;
+  }
+
+  function evaluateOperation_(operation, stageInputs, operationScope, trustedContextMap) {
     var prefix = String(operation || "") + ".";
     var inputs = stageInputs || {};
     var evaluated = [];
@@ -1662,20 +1929,54 @@ var SystemStatusFingerprints_ = (function () {
       .sort(_codeUnitCompare_)
       .forEach(function (stageId) {
         var input = _hasOwn_(inputs, stageId) ? inputs[stageId] : null;
-        evaluated.push(evaluateStage_(stageId, input));
+        evaluated.push(evaluateStage_(
+          stageId,
+          input,
+          _operationStageScope_(operationScope, stageId),
+          _operationTrustedContext_(trustedContextMap, stageId),
+        ));
       });
     var attempted = evaluated.filter(function (item) { return item.status !== "skipped"; });
-    var failed = attempted.filter(function (item) { return item.status !== "success"; });
+    var failed = attempted.filter(function (item) { return item.status === "failed"; });
+    var unknown = attempted.filter(function (item) { return item.status === "unknown"; });
     var succeeded = attempted.filter(function (item) { return item.status === "success"; });
-    var status = !failed.length && attempted.length
+    var status = !failed.length && !unknown.length && attempted.length
         ? "full"
         : succeeded.length
           ? "partial"
-          : "failed";
+          : failed.length
+            ? "failed"
+            : unknown.length
+              ? "unknown"
+              : "skipped";
+    var operationReasonCodes = [];
+    attempted.forEach(function (item) {
+      (item.reasonCodes || []).forEach(function (reasonCode) {
+        operationReasonCodes.push(item.stageId + ":" + reasonCode);
+      });
+    });
+    var decisionStatus = failed.length
+      ? "failed"
+      : unknown.length
+        ? "unknown"
+        : status === "full"
+          ? "eligible"
+          : "skipped";
+    var decision = _transitionDecision_(
+      String(operation || "") + ".operation_summary",
+      decisionStatus,
+      operationReasonCodes,
+    );
     return {
       operation: String(operation || ""),
       status: status,
       isFullSuccess: status === "full",
+      decision: decision,
+      reasonCodes: decision.reasonCodes.slice(),
+      unknownStageIds: unknown.map(function (item) { return item.stageId; }),
+      failedStageIds: failed.map(function (item) { return item.stageId; }),
+      hasUnknownEvidence: unknown.length > 0,
+      hasConfirmedFailure: failed.length > 0,
       stages: evaluated,
     };
   }
@@ -1695,6 +1996,7 @@ var SystemStatusFingerprints_ = (function () {
     }),
     codeUnitCompare: _codeUnitCompare_,
     normalizeBirthdaySemantic: _birthdaySemanticDay_,
+    buildExpectedBindingFromTrustedContext: _buildExpectedBindingFromTrustedContext_,
     digestCanonical: _digestCanonical_,
     projectRows: projectRows_,
     buildStageSourceFingerprint: function (stageId, projection, options) {
