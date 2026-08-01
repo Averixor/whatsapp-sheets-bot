@@ -2438,12 +2438,20 @@ const onOpenMenuBlock = code.match(
 assert.ok(onOpenMenuBlock, "onOpen must register WASB menu");
 assert.equal(
   (onOpenMenuBlock[1].match(/\.addItem\(/g) || []).length,
-  3,
-  "WASB menu must expose sidebar + temporary property setup/refresh items",
+  1,
+  "WASB top menu must expose only Відкрити панель",
 );
 assert.match(code, /addItem\("Відкрити панель", "showSidebar"\)/);
-assert.match(code, /addItem\("Налаштувати облік майна", "apiSetupTemporaryPropertyRegister"\)/);
-assert.match(code, /addItem\("Оновити облік майна", "apiRefreshTemporaryPropertyRegister"\)/);
+assert.doesNotMatch(
+  code,
+  /addItem\("Налаштувати облік майна"/,
+  "temporary property setup must not be a top-menu item",
+);
+assert.doesNotMatch(
+  code,
+  /addItem\("Оновити облік майна"/,
+  "temporary property refresh must not be a top-menu item",
+);
 assert.doesNotMatch(code, /Перейти до відпусток/);
 assert.doesNotMatch(code, /Оновити меню/);
 assert.doesNotMatch(code, /createMenu\("Відпустки"\)/);

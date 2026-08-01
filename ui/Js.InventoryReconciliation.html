@@ -106,7 +106,7 @@
       const configForm = canConfigure_()
         ? '<div class="recon-folder-form">' +
           '<label for="reconFolderValue">Посилання або ідентифікатор папки</label>' +
-          '<input id="reconFolderValue" class="input recon-folder-input" type="text" placeholder="https://drive.google.com/drive/folders/…" />' +
+          '<input id="reconFolderValue" name="reconFolderValue" class="input recon-folder-input" type="text" placeholder="https://drive.google.com/drive/folders/…" />' +
           '<button type="button" class="btn btn-secondary" onclick="InventoryReconciliationModule.saveFolder()">Зберегти папку</button>' +
           "</div>"
         : !configured
