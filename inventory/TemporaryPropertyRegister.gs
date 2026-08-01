@@ -1081,6 +1081,48 @@ const TemporaryPropertyRegister_ = (function () {
     return parents;
   }
 
+  function summarizeOutstandingRows_(rows) {
+    const persons = {};
+    let outstandingRecords = 0;
+    (Array.isArray(rows) ? rows : []).forEach(function (row) {
+      const values = Array.isArray(row) ? row : [];
+      const calculated = calculateOwnStatus_(
+        values[COL.ISSUED_QTY - 1],
+        values[COL.RETURNED_QTY - 1],
+      );
+      if (calculated.balance <= 0) return;
+      outstandingRecords++;
+      const callsign = key_(values[COL.CALLSIGN - 1]);
+      if (callsign) persons[callsign] = true;
+    });
+    return {
+      outstandingRecords: outstandingRecords,
+      persons: Object.keys(persons).length,
+    };
+  }
+
+  /** Read-only aggregate; never runs setup, migration, formatting or repair. */
+  function getReadOnlyStatus() {
+    const cfg = config_();
+    const sheet = spreadsheet_().getSheetByName(cfg.sheetName);
+    if (!sheet) {
+      return { exists: false, modern: false, outstandingRecords: 0, persons: 0 };
+    }
+    const modern = isModernSheet_(sheet);
+    if (!modern || sheet.getLastRow() < DEFAULTS.FIRST_DATA_ROW) {
+      return { exists: true, modern: modern, outstandingRecords: 0, persons: 0 };
+    }
+    const rows = sheet
+      .getRange(
+        DEFAULTS.FIRST_DATA_ROW,
+        1,
+        sheet.getLastRow() - DEFAULTS.FIRST_DATA_ROW + 1,
+        HEADERS.length,
+      )
+      .getValues();
+    return Object.assign({ exists: true, modern: true }, summarizeOutstandingRows_(rows));
+  }
+
   function getCatalogSeed() {
     return DEFAULT_CATALOG.map(function (row) { return row.slice(); });
   }
@@ -1099,11 +1141,13 @@ const TemporaryPropertyRegister_ = (function () {
     handleEdit: handleEdit,
     setup: setup,
     readForCallsign: readForCallsign,
+    getReadOnlyStatus: getReadOnlyStatus,
     parseLegacyProperty: parseLegacyProperty_,
     calculateOwnStatus: calculateOwnStatus_,
     getCatalogSeed: getCatalogSeed,
     getKitSeed: getKitSeed,
     isModernSheet: isModernSheet_,
+    summarizeOutstandingRowsForTests: summarizeOutstandingRows_,
   };
 })();
 

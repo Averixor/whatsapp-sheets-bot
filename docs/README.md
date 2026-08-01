@@ -28,7 +28,7 @@ snapshots to the repository.
 | [format-rules-governance.md](./format-rules-governance.md)             | Manual conditional-format registry and rebuild protection                                                                 |
 | [user-facing-copy.md](./user-facing-copy.md)                           | UX copy: UA UI text, no technical names in user-facing strings; enforced by `verify-user-facing-copy.mjs`                 |
 | [branch-archive.md](./branch-archive.md)                               | Archived former working branches (`archive/*` tags)                                                                       |
-| [project-files-complete.txt](./project-files-complete.txt)             | Canonical depth-first file tree (governance map); excludes local `.clasp*.json`; refresh with `npm run map:project-files` | Canonical depth-first file tree (governance map); excludes local `.clasp*.json`; refresh with `npm run map:project-files` |
+| [project-files-complete.txt](./project-files-complete.txt)             | Canonical depth-first file tree (governance map); excludes local `.clasp*.json`; refresh with `npm run map:project-files` |
 
 ## Refactor Planning
 
@@ -42,9 +42,10 @@ recorded in [`contracts/SNAPSHOT_CHANGELOG.md`](../contracts/SNAPSHOT_CHANGELOG.
 
 Current workbook/runtime additions guarded by contracts and CI:
 
-- `contracts/month-journal.contract.json` + `scripts/verify-month-journal-materialize.mjs` for derived `ЖУРНАЛ_MM` / `ПІДСУМОК_MM`
+- `contracts/month-journal.contract.json` + `scripts/verify-month-journal-materialize.mjs` for unified `JOURNAL` / `SUMMARY`
 - `contracts/reference-repositories.contract.json` + `scripts/verify-reference-repositories.mjs` for `PHONE_DIRECTORY` / `CAR` / `WEAPON`
 - `contracts/personnel-status.contract.json` + `scripts/verify-personnel-status-contract.mjs` for `PERSONNEL.Status` and self-heal invariants
+- `contracts/system-status.contract.json` + `contracts/system-status-fingerprints.contract.json` + `scripts/verify-system-status-*.mjs` for system-status foundation/fingerprints (this branch; not yet a public Stage7 UI)
 
 **Reference data table:** Code and docs are kept in sync with the provided
 "Книга Взводу Охорони.xlsx" (PERSONNEL: split names + **`Email` column L** + **`Callsign` column M**; month **06** compact B=Позивний;

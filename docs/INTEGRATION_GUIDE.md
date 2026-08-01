@@ -28,9 +28,12 @@ npm run ci
 npx clasp push
 ```
 
-Після завантаження коду відкрийте редактор Apps Script прив'язаної Google-таблиці та один раз запустіть:
+Після завантаження коду відкрийте панель (**WASB → Відкрити панель**) і один раз
+натисніть **Налаштувати облік майна**, або в редакторі Apps Script запустіть:
 
 ```javascript
+apiStage7SetupTemporaryPropertyRegister()
+// GAS-editor alias:
 apiSetupTemporaryPropertyRegister()
 ```
 

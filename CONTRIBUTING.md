@@ -77,7 +77,7 @@ Then in the spreadsheet: close the sidebar → open it again → open a person c
 
 The repository runs a lightweight CI workflow on push and pull requests to **`main`** (also **`workflow_dispatch`**).
 
-It runs the complete `npm run ci` contract suite (**35** verify/audit scripts after `precheck`): GAS sanity, clasp patterns, **Ukrainian/Russian language** and **user-facing copy** guards, reference workbook layout, reference repositories, workbook and monthly callsign contracts, send-panel bounds, temporary-property register, materialize / month-journal / age-birthday countdown, vacation planner,
+It runs the complete `npm run ci` contract suite (**36** verify/audit scripts after `precheck`; inventory reconciliation also runs via `verify-clasp-push-patterns.mjs`): GAS sanity, clasp patterns, **Ukrainian/Russian language** and **user-facing copy** guards, reference workbook layout, reference repositories, workbook and monthly callsign contracts, send-panel bounds, temporary-property register, materialize / month-journal / age-birthday countdown, vacation planner,
 recipient contracts, personnel-status and format-rules contracts, function graph, client
 parsing/layers/XSS, response envelope, facade/snapshot/bridge governance, access
 API governance, access policy checks and hotfixes, OAuth scopes, project file map, and jsconfig verification.

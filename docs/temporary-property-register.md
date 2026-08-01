@@ -50,16 +50,21 @@ continue to work in a simple trigger even when `WASB_SPREADSHEET_ID` is configur
 
 ## Migration and setup
 
-Run once:
+Top spreadsheet menu is only **WASB → Відкрити панель**. Property setup/refresh live in the sidebar.
+
+One-time setup/migration (sidebar **Налаштувати облік майна**):
 
 ```javascript
+apiStage7SetupTemporaryPropertyRegister()
+// GAS-editor alias (excluded from client):
 apiSetupTemporaryPropertyRegister()
 ```
 
-For a safe repeat refresh without migration, use the spreadsheet menu
-`WASB → Оновити облік майна` or run:
+Safe repeat refresh without migration (sidebar **Оновити облік майна**):
 
 ```javascript
+apiStage7RefreshTemporaryPropertyRegister()
+// GAS-editor alias (excluded from client):
 apiRefreshTemporaryPropertyRegister()
 ```
 

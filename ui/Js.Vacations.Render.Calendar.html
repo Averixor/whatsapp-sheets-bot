@@ -191,7 +191,7 @@
         "</span>" +
         '<button type="button" class="btn btn-secondary vacations-btn-sm" onclick="VacationModule.shiftMonthCalendar(1)" aria-label="Наступний місяць">▶</button>' +
         "<label for=\"vacCalendarYear\">Рік</label>" +
-        '<select id="vacCalendarYear">' +
+        '<select id="vacCalendarYear" name="vacCalendarYear">' +
         years
           .map(function (item) {
             var sel = Number(item) === year ? " selected" : "";
@@ -208,7 +208,7 @@
           .join("") +
         "</select>" +
         "<label for=\"vacCalendarMonth\">Місяць</label>" +
-        '<select id="vacCalendarMonth">' +
+        '<select id="vacCalendarMonth" name="vacCalendarMonth">' +
         months
           .map(function (item) {
             var sel = Number(item.value) === month ? " selected" : "";

@@ -24,7 +24,7 @@ This repository is packaged for Google Apps Script through `clasp`:
 - viewer hardening: viewer may see the personnel list, but may open only their own card and cannot open the detailed summary
 - role-separated maintenance access: maintainer, admin, sysadmin, and owner have different server-side permissions
 - lightweight sidebar bootstrap and read-only access descriptor support for faster UI startup
-- derived month journal sheets per month: `ЖУРНАЛ_MM` and `ПІДСУМОК_MM`
+- derived month journal sheets: unified `JOURNAL` + `SUMMARY` (all months `01`–`12`, keyed by column **Місяць**)
 - optional sidebar reference sheets: `PHONE_DIRECTORY` (service phones), `CAR` (vehicle register), and `WEAPON` (weapons/property register)
 - inventory reconciliation sidebar (**Звірка**): month checkboxes on `INVENTORY_RECONCILIATION`, Drive document links, auto-sync index
 - temporary-property register: dependent category/model dropdowns, automatic units and kit components, returns, balances, fuel details, and person-card integration
@@ -40,8 +40,9 @@ npm run check              # all local verify scripts (alias: npm run ci)
 git add -A && git commit -m "fix: …"
 npm run push:remote        # GitHub + production clasp push (no second CI run)
 apiStage7MaterializeComputedData()  # after PERSONNEL / PHONES / VACATIONS / birthday / Status changes
-apiStage7MaterializeMonthJournal({ monthSheet: "07" })  # active/requested month; sidebar: Оновити журнал місяця
-apiStage7MaterializeAllMonthJournals()  # optional bootstrap: all existing 01–12 (GAS editor only)
+apiStage7MaterializeMonthJournal({ monthSheet: "07" })  # active month slice in JOURNAL/SUMMARY; sidebar: Оновити журнал місяця
+apiStage7MaterializeAllMonthJournals()                  # bootstrap all 01–12 (uiAllowed: false; GAS editor)
+apiStage7MaterializeAllMonthJournals({ nextCursor: 3 }) # continuation; fields in response.data.result
 apiStage7ClearPhoneCache()          # run in the production GAS editor after deploy
 ```
 
@@ -63,7 +64,7 @@ production project with `executionApi.access = MYSELF`.
   - **`WASB_OWNER_EMAIL`** — security mail with full user key for owner
   - **`WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`** — off in normal operation
   - **`WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP`** — legacy plaintext temp-password lookup during migration only; off in normal operation
-- After every production deploy and after **PERSONNEL**, **PHONES**, **VACATIONS**, birthday, or `Status` changes: run **`apiStage7MaterializeComputedData()`** when derived columns may be stale. If you changed a month sheet and need refreshed fact/history views, run **`apiStage7MaterializeMonthJournal({ monthSheet: "MM" })`** for that month (sidebar button updates the active bot month only). For a first-run bootstrap of every existing `01`–`12`, use **`apiStage7MaterializeAllMonthJournals()`** in the GAS editor (no sidebar button). Then run **`apiStage7ClearPhoneCache()`** in the GAS editor and reload the sidebar.
+- After every production deploy and after **PERSONNEL**, **PHONES**, **VACATIONS**, birthday, or `Status` changes: run **`apiStage7MaterializeComputedData()`** when derived columns may be stale. If you changed a month sheet and need refreshed fact/history views, run **`apiStage7MaterializeMonthJournal({ monthSheet: "MM" })`** (sidebar updates only the active bot month’s slice inside `JOURNAL` / `SUMMARY`; past months stay intact). First-run bootstrap of every existing `01`–`12`: **`apiStage7MaterializeAllMonthJournals()`** — **не підключено до UI** (`uiAllowed: false`); **призначено для запуску з GAS editor** (public `api*` + maintainer; could be called via `google.script.run` if wired manually). Continuation fields are inside the Stage7 envelope (`response.data.result.done` / `nextCursor` / `batchMonths` / `cursor`), not top-level — loop with `{ nextCursor: N }` until `done` (default 3 months per call). Legacy `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` tabs are superseded and left alone. Then run **`apiStage7ClearPhoneCache()`** and reload the sidebar.
 
 Full workflow, release checklist, and post-deploy checks: **`CONTRIBUTING.md`** and **`RUNBOOK.md`**.
 
@@ -71,7 +72,7 @@ Full workflow, release checklist, and post-deploy checks: **`CONTRIBUTING.md`** 
 
 The repository runs a lightweight CI workflow on **`push`** and **`pull_request`** to **`main`**, and **`workflow_dispatch`**.
 
-It runs the full **`npm run ci`** suite (**35** Node verify/audit scripts after `npm run precheck` — see `package.json` and **RUNBOOK.md** §12), including:
+It runs the full **`npm run ci`** suite (**36** Node verify/audit scripts after `npm run precheck` — see `package.json` and **RUNBOOK.md** §12; inventory reconciliation is also covered via `verify-clasp-push-patterns.mjs`), including:
 
 - GAS sanity, clasp push patterns, **Ukrainian/Russian language** (`verify-no-russian-text.mjs`), **user-facing copy** (`verify-user-facing-copy.mjs`)
 - Reference workbook layout, reference repositories, workbook contract, monthly callsign sync, send-panel bounds, temporary-property register, materialize / month-journal / age-birthday countdown
@@ -142,7 +143,7 @@ runtime `.gs` at repo root; all `.html` live in `ui/`.
 2. Deploy with **`clasp push`** from this repository (nested `!**/*.gs` and `!**/*.html` from all domain folders per `.claspignore`), or upload the same tree in the GAS editor.
 3. Import only GAS runtime files from this repository; there is no `_extras/` folder in the compact bundle.
 4. Run `apiStage7BootstrapRuntimeAndAlertsSheets()` once.
-5. Run `apiSetupTemporaryPropertyRegister()` once to create or migrate the temporary-property register.
+5. Run sidebar **Налаштувати облік майна** (`apiStage7SetupTemporaryPropertyRegister()`) once to create or migrate the temporary-property register, or the GAS-editor alias `apiSetupTemporaryPropertyRegister()`.
 6. Run `apiStage7BootstrapAccessSheet()` once.
 7. Fill the `ACCESS` sheet.
 8. Run `apiStage7ApplyProtections({ dryRun: true })` and review the report.
@@ -224,8 +225,8 @@ Turn it back off immediately after the needed keys are registered.
 - `apiStage7BootstrapRuntimeAndAlertsSheets()` — service sheet bootstrap (`sheets/ServiceSheetsBootstrap.gs`)
 - `apiStage7BootstrapAccessSheet()` — `ACCESS` bootstrap
 - `apiStage7MaterializeComputedData()` — helper columns, PHONES/BIRTHDAY/VACATIONS/panel materialize, status validation, monthly callsign sync
-- `apiStage7MaterializeMonthJournal()` — derived `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` for the active or requested month (sidebar: **Оновити журнал місяця**)
-- `apiStage7MaterializeAllMonthJournals()` — same derived sheets for every existing month tab `01`–`12` (GAS editor / maintainer only; no sidebar button)
+- `apiStage7MaterializeMonthJournal()` — refresh active/requested month’s slice in `JOURNAL` / `SUMMARY` (sidebar: **Оновити журнал місяця**)
+- `apiStage7MaterializeAllMonthJournals({ nextCursor?, monthsPerCall? })` — chunked bootstrap of all existing `01`–`12` into `JOURNAL` / `SUMMARY` (**не підключено до UI**, `uiAllowed: false`; **призначено для GAS editor**; public `api*` + maintainer). Continuation: `response.data.result.nextCursor` until `response.data.result.done`
 
 ## Non-goals for this bundle
 

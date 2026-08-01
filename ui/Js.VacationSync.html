@@ -214,7 +214,7 @@
         '<button type="button" class="btn btn-secondary vacations-btn-sm" onclick="VacationMonthlySyncModule.close()">Закрити</button>' +
         "</div>" +
         '<label class="vacation-sync-exception-label" for="vacationSyncExceptionReason">Коментар для винятків</label>' +
-        '<input id="vacationSyncExceptionReason" class="vacations-form input" type="text" placeholder="Причина винятку (необовʼязково)" value="' +
+        '<input id="vacationSyncExceptionReason" name="vacationSyncExceptionReason" class="vacations-form input" type="text" placeholder="Причина винятку (необовʼязково)" value="' +
         this.esc(this.state.exceptionReason) +
         '" oninput="VacationMonthlySyncModule.state.exceptionReason=this.value">' +
         '<div id="vacationSyncReviewPanel" class="vacation-sync-review-panel wasb-is-hidden"></div>' +

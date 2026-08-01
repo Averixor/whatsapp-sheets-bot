@@ -439,6 +439,14 @@
       adaptStage4UtilityResponse(
         await Api.run("apiStage7MaterializeMonthJournal", payload || {}),
       ),
+    setupTemporaryPropertyRegister: async () =>
+      adaptStage4UtilityResponse(
+        await Api.run("apiStage7SetupTemporaryPropertyRegister"),
+      ),
+    refreshTemporaryPropertyRegister: async () =>
+      adaptStage4UtilityResponse(
+        await Api.run("apiStage7RefreshTemporaryPropertyRegister"),
+      ),
     restartBot: async () =>
       adaptStage4UtilityResponse(await Api.run("apiStage7RestartBot")),
     setupVacationTriggers: async () =>
@@ -578,6 +586,10 @@
     clearPhoneCache: MaintenanceApi.clearPhoneCache,
     materializeComputedData: MaintenanceApi.materializeComputedData,
     materializeMonthJournal: MaintenanceApi.materializeMonthJournal,
+    setupTemporaryPropertyRegister:
+      MaintenanceApi.setupTemporaryPropertyRegister,
+    refreshTemporaryPropertyRegister:
+      MaintenanceApi.refreshTemporaryPropertyRegister,
     restartBot: MaintenanceApi.restartBot,
     setupVacationTriggers: MaintenanceApi.setupVacationTriggers,
     cleanupDuplicateTriggers: MaintenanceApi.cleanupDuplicateTriggers,

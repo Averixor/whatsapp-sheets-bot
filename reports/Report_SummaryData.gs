@@ -28,9 +28,6 @@ const SIMPLE_DAILY_SUMMARY_LABELS = Object.freeze({
   БР: "БР",
 });
 
-const SUMMARY_BLOCK_ANCHOR_KEY_ = "За_списком";
-const SUMMARY_BLOCK_STAFF_KEY_ = "За_штатом";
-
 function normalizeText_(value) {
   return String(value == null ? "" : value)
     .replace(/\s+/g, " ")
@@ -91,110 +88,10 @@ function parseSummaryNumber_(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
-function _summaryPersonnelEndRow_(sheet) {
-  try {
-    const codeRangeA1 =
-      typeof getMonthlyCodeRangeA1ForSheet_ === "function"
-        ? getMonthlyCodeRangeA1ForSheet_(sheet)
-        : "";
-    if (codeRangeA1) {
-      const ref = sheet.getRange(codeRangeA1);
-      return Number(ref.getLastRow()) || 2;
-    }
-  } catch (_) {}
-  return Number(
-    (typeof MONTHLY_CONFIG !== "undefined" &&
-      MONTHLY_CONFIG &&
-      MONTHLY_CONFIG.LAST_DATA_ROW) ||
-      (CONFIG && CONFIG.LAST_DATA_ROW) ||
-      30,
-  );
-}
-
-function _summaryLabelScanCols_(sheet) {
-  const cols = [2, 3];
-  let firstDateCol = 3;
-  try {
-    if (typeof detectMonthlyLayoutFromSheet_ === "function") {
-      const layout = detectMonthlyLayoutFromSheet_(sheet);
-      if (layout && layout.matrix && layout.matrix.startCol) {
-        firstDateCol = Number(layout.matrix.startCol) || firstDateCol;
-      }
-    }
-  } catch (_) {}
-  if (firstDateCol > 4) {
-    return [1, 2, 3, 4];
-  }
-  return cols;
-}
-
-function _findSummaryBlockAnchor_(sheet, scanStartRow, lastRow, scanCols) {
-  if (!sheet || scanStartRow > lastRow) return null;
-
-  const rowCount = Math.max(lastRow - scanStartRow + 1, 1);
-  for (let c = 0; c < scanCols.length; c++) {
-    const col = scanCols[c];
-    let labels = [];
-    try {
-      labels = sheet
-        .getRange(scanStartRow, col, rowCount, 1)
-        .getDisplayValues();
-    } catch (_) {
-      continue;
-    }
-    for (let i = 0; i < labels.length; i++) {
-      const key = normalizeSummaryKey_(labels[i][0]);
-      if (key === SUMMARY_BLOCK_ANCHOR_KEY_) {
-        return {
-          labelCol: col,
-          anchorRow: scanStartRow + i,
-        };
-      }
-    }
-  }
-  return null;
-}
-
 function findSummaryBlockLocation_(sheet) {
-  if (!sheet || typeof sheet.getRange !== "function") return null;
-
-  const personnelEndRow = _summaryPersonnelEndRow_(sheet);
-  const lastRow = Math.max(Number(sheet.getLastRow()) || 0, personnelEndRow + 1);
-  const scanStartRow = Math.max(personnelEndRow + 1, 2);
-  const scanCols = _summaryLabelScanCols_(sheet);
-
-  const anchor =
-    _findSummaryBlockAnchor_(sheet, scanStartRow, lastRow, scanCols) ||
-    _findSummaryBlockAnchor_(sheet, 1, lastRow, [1, 2, 3, 4]);
-
-  if (!anchor || anchor.anchorRow < 1 || anchor.labelCol < 1) {
-    return null;
-  }
-
-  const labelCol = anchor.labelCol;
-  let startRow = anchor.anchorRow;
-  if (startRow > 1) {
-    const prevKey = normalizeSummaryKey_(
-      sheet.getRange(startRow - 1, labelCol).getDisplayValue(),
-    );
-    if (prevKey === SUMMARY_BLOCK_STAFF_KEY_) {
-      startRow = startRow - 1;
-    }
-  }
-
-  let endRow = startRow;
-  for (let row = startRow; row <= lastRow; row++) {
-    const label = normalizeText_(sheet.getRange(row, labelCol).getDisplayValue());
-    if (!label) break;
-    endRow = row;
-  }
-
-  return {
-    labelCol: labelCol,
-    startRow: startRow,
-    endRow: endRow,
-    anchorRow: anchor.anchorRow,
-  };
+  return typeof findMonthlySummaryBlockLocation_ === "function"
+    ? findMonthlySummaryBlockLocation_(sheet)
+    : null;
 }
 
 function getMonthSheetByDate_(date) {

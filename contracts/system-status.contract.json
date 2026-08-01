@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "sectionIds": [
+    "key_data",
+    "current_month_journal",
+    "vacation_conflicts",
+    "inventory_reconciliation",
+    "temporary_property",
+    "managed_triggers",
+    "launch_settings",
+    "access_data_quality"
+  ],
+  "statuses": ["healthy", "attention", "critical", "unavailable"],
+  "freshness": ["current", "stale", "unknown", "not_applicable"],
+  "actionIds": [
+    "materialize_computed_data",
+    "materialize_current_month_journal",
+    "clear_phone_cache",
+    "run_diagnostics",
+    "check_vacation_conflicts",
+    "open_inventory_reconciliation"
+  ],
+  "actionPolicy": {
+    "materialize_computed_data": { "minimumRole": "maintainer", "requiresConfirmation": true },
+    "materialize_current_month_journal": { "minimumRole": "maintainer", "requiresConfirmation": true },
+    "clear_phone_cache": { "minimumRole": "sysadmin", "requiresConfirmation": true },
+    "run_diagnostics": { "minimumRole": "maintainer", "requiresConfirmation": false },
+    "check_vacation_conflicts": { "minimumRole": "maintainer", "requiresConfirmation": false },
+    "open_inventory_reconciliation": { "minimumRole": "maintainer", "requiresConfirmation": false }
+  },
+  "presentationAllowlist": {
+    "snapshot": ["generatedAt", "overall", "summary", "sections", "actions"],
+    "summary": ["healthy", "attention", "critical", "unavailable"],
+    "section": [
+      "id",
+      "title",
+      "status",
+      "summary",
+      "details",
+      "checkedAt",
+      "freshness",
+      "metrics",
+      "actionIds",
+      "retryable"
+    ],
+    "metric": ["label", "value", "tone"],
+    "action": ["id", "label", "minimumRole", "requiresConfirmation"]
+  }
+}

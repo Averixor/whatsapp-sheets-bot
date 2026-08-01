@@ -155,13 +155,13 @@
         '<div class="vacations-form vacations-form--spaced">' +
         '<div class="vacations-subtitle">Перенести відпустку</div>' +
         "<label for=\"vacMoveVacation\">Відпустка</label>" +
-        '<select id="vacMoveVacation">' +
+        '<select id="vacMoveVacation" name="vacMoveVacation">' +
         this.moveOptions(this.state.moveIndex) +
         "</select>" +
         "<label for=\"vacMoveStart\">Нова дата початку</label>" +
-        '<input id="vacMoveStart" type="date">' +
+        '<input id="vacMoveStart" name="vacMoveStart" type="date">' +
         "<label for=\"vacMoveDays\">Кількість днів</label>" +
-        '<input id="vacMoveDays" type="number" min="1" max="60" value="15">' +
+        '<input id="vacMoveDays" name="vacMoveDays" type="number" min="1" max="60" value="15">' +
         '<button type="button" class="btn btn-primary" onclick="VacationModule.submitMove()">Перенести</button>' +
         "</div>"
       );
@@ -236,7 +236,7 @@
       return (
         '<div class="vacations-form vacations-form--inline">' +
         "<label for=\"vacScheduleYear\">Рік графіка</label>" +
-        '<select id="vacScheduleYear">' +
+        '<select id="vacScheduleYear" name="vacScheduleYear">' +
         options
           .map(function (year) {
             var sel = Number(year) === selected ? " selected" : "";
@@ -341,20 +341,20 @@
             '<div class="result-screen-title">Додати відпустку</div>' +
             '<div class="vacations-form">' +
             "<label for=\"vacAddPerson\">Військовослужбовець</label>" +
-            '<select id="vacAddPerson">' +
+            '<select id="vacAddPerson" name="vacAddPerson">' +
             this.peopleOptions("") +
             "</select>" +
             "<label for=\"vacAddType\">Тип</label>" +
-            '<select id="vacAddType">' +
+            '<select id="vacAddType" name="vacAddType">' +
             '<option value="В1">В1 — перша</option>' +
             '<option value="В2">В2 — друга</option>' +
             '<option value="ВД">ВД — додаткова</option>' +
             '<option value="СО">СО — сімейні обставини</option>' +
             "</select>" +
             "<label for=\"vacAddStart\">Дата початку</label>" +
-            '<input id="vacAddStart" type="date">' +
+            '<input id="vacAddStart" name="vacAddStart" type="date">' +
             "<label for=\"vacAddDays\">Кількість днів</label>" +
-            '<input id="vacAddDays" type="number" min="1" max="60" value="15">' +
+            '<input id="vacAddDays" name="vacAddDays" type="number" min="1" max="60" value="15">' +
             '<button type="button" class="btn btn-primary" onclick="VacationModule.submitAdd()">Додати</button>' +
             "</div></div>"
           );
@@ -366,11 +366,11 @@
             '<div class="result-screen-title">Підібрати дату</div>' +
             '<div class="vacations-form">' +
             "<label for=\"vacFindPerson\">Військовослужбовець</label>" +
-            '<select id="vacFindPerson">' +
+            '<select id="vacFindPerson" name="vacFindPerson">' +
             this.peopleOptions(draft.fml || "") +
             "</select>" +
             "<label for=\"vacFindNumber\">Слот</label>" +
-            '<select id="vacFindNumber">' +
+            '<select id="vacFindNumber" name="vacFindNumber">' +
             '<option value="1"' +
             (draftNumber === 1 ? " selected" : "") +
             ">В1 — перша</option>" +
@@ -379,15 +379,15 @@
             ">В2 — друга</option>" +
             "</select>" +
             "<label for=\"vacFindStart\">Бажана дата</label>" +
-            '<input id="vacFindStart" type="date" value="' +
+            '<input id="vacFindStart" name="vacFindStart" type="date" value="' +
             this.esc(draft.startDate || "") +
             '">' +
             "<label for=\"vacFindDays\">Кількість днів</label>" +
-            '<input id="vacFindDays" type="number" min="1" max="60" value="' +
+            '<input id="vacFindDays" name="vacFindDays" type="number" min="1" max="60" value="' +
             this.esc(draft.days || 15) +
             '">' +
             "<label for=\"vacFindWindow\">Вікно пошуку (± днів)</label>" +
-            '<input id="vacFindWindow" type="number" min="0" max="180" value="' +
+            '<input id="vacFindWindow" name="vacFindWindow" type="number" min="0" max="180" value="' +
             this.esc(draft.searchWindow || 30) +
             '">' +
             '<button type="button" class="btn btn-primary" onclick="VacationModule.submitFind()">Підібрати</button>' +
@@ -406,18 +406,18 @@
             '<div class="vacations-form vacations-form--spaced">' +
             '<div class="vacations-subtitle">Швидка перевірка дати</div>' +
             "<label for=\"vacCheckPerson\">Військовослужбовець</label>" +
-            '<select id="vacCheckPerson">' +
+            '<select id="vacCheckPerson" name="vacCheckPerson">' +
             this.peopleOptions("") +
             "</select>" +
             "<label for=\"vacCheckNumber\">Слот</label>" +
-            '<select id="vacCheckNumber">' +
+            '<select id="vacCheckNumber" name="vacCheckNumber">' +
             '<option value="1">В1 — перша</option>' +
             '<option value="2">В2 — друга</option>' +
             "</select>" +
             "<label for=\"vacCheckStart\">Дата початку</label>" +
-            '<input id="vacCheckStart" type="date">' +
+            '<input id="vacCheckStart" name="vacCheckStart" type="date">' +
             "<label for=\"vacCheckDays\">Кількість днів</label>" +
-            '<input id="vacCheckDays" type="number" min="1" max="60" value="15">' +
+            '<input id="vacCheckDays" name="vacCheckDays" type="number" min="1" max="60" value="15">' +
             '<button type="button" class="btn btn-secondary" onclick="VacationModule.checkDate()">Перевірити дату</button>' +
             "</div>" +
             "</div>"

@@ -428,6 +428,24 @@
 
                 <button
                   class="btn btn-secondary health-actions-btn"
+                  data-role-min="admin"
+                  type="button"
+                  onclick="SidebarApp.setupTemporaryPropertyRegister()"
+                >
+                  📦 Налаштувати облік майна
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="maintainer"
+                  type="button"
+                  onclick="SidebarApp.refreshTemporaryPropertyRegister()"
+                >
+                  🔄 Оновити облік майна
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
                   data-role-min="sysadmin"
                   type="button"
                   onclick="SidebarApp.clearPhoneCache()"
@@ -683,7 +701,7 @@
               >Пошук за позивним</label
             >
             <input
-              id="personnelSearchInput"
+              id="personnelSearchInput" name="personnelSearchInput"
               class="personnel-search"
               type="text"
               placeholder="Пошук позивного..."
