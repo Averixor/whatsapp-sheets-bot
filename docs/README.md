@@ -45,6 +45,7 @@ Current workbook/runtime additions guarded by contracts and CI:
 - `contracts/month-journal.contract.json` + `scripts/verify-month-journal-materialize.mjs` for derived `ЖУРНАЛ_MM` / `ПІДСУМОК_MM`
 - `contracts/reference-repositories.contract.json` + `scripts/verify-reference-repositories.mjs` for `PHONE_DIRECTORY` / `CAR` / `WEAPON`
 - `contracts/personnel-status.contract.json` + `scripts/verify-personnel-status-contract.mjs` for `PERSONNEL.Status` and self-heal invariants
+- `contracts/system-status.contract.json` + `contracts/system-status-fingerprints.contract.json` + `scripts/verify-system-status-*.mjs` for system-status foundation/fingerprints (this branch; not yet a public Stage7 UI)
 
 **Reference data table:** Code and docs are kept in sync with the provided
 "Книга Взводу Охорони.xlsx" (PERSONNEL: split names + **`Email` column L** + **`Callsign` column M**; month **06** compact B=Позивний;
