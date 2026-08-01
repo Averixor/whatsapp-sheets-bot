@@ -1,8 +1,8 @@
 # WASB — повний список файлів репозиторію
 # Порядок: дерево каталогів (depth-first, алфавіт у кожній папці)
 # Виключено: .git/, node_modules/, локальні .clasp*.json (крім *.example.json)
-# Файлів: 294
-# Оновлено: 2026-08-01T19:14:48Z
+# Файлів: 303
+# Оновлено: 2026-08-01T20:42:29Z
 
 .
   .clasp.example.json
@@ -71,6 +71,8 @@ contracts/
   reference-repositories.contract.json
   reference-workbook-layout.contract.json
   SNAPSHOT_CHANGELOG.md
+  system-status-fingerprints.contract.json
+  system-status.contract.json
   user-facing-copy.contract.json
   xss-policy.contract.json
 
@@ -107,6 +109,9 @@ diagnostics/
   Diagnostics.Stage7.Baseline.gs
   Diagnostics.Stage7.Core.gs
   Diagnostics.Stage7.Historical.gs
+  SystemStatus.Fingerprints.gs
+  SystemStatus.Foundation.gs
+  SystemStatus.Probes.gs
 
 docs/
   branch-archive.md
@@ -221,6 +226,8 @@ scripts/
   verify-reference-workbook-layout.mjs
   verify-send-panel-bounds.mjs
   verify-snapshot-governance.mjs
+  verify-system-status-fingerprints.mjs
+  verify-system-status-foundation.mjs
   verify-temporary-property-register.mjs
   verify-usecase-facade.mjs
   verify-user-facing-copy.mjs
@@ -283,6 +290,8 @@ tests/
   Stage7TestRunner.Sheet.gs
   Stage7TestRunner.Summaries.gs
   Stage7TestRunner.Ui.gs
+  SystemStatusFingerprintTests.gs
+  SystemStatusFoundationTests.gs
 
 ui/
   JavaScript.html

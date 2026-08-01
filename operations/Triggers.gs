@@ -75,6 +75,18 @@ const Stage7Triggers_ = (function () {
     });
   }
 
+  function listManagedDefinitions() {
+    var registry = _registry();
+    return Object.keys(registry).map(function (key) {
+      var item = registry[key];
+      return {
+        jobName: item.jobName,
+        handler: item.handler,
+        kind: item.kind,
+      };
+    });
+  }
+
   function cleanupManagedTriggers() {
     const handlers = listJobs().map(function (item) {
       return item.handler;
@@ -305,6 +317,7 @@ const Stage7Triggers_ = (function () {
 
   return {
     listJobs: listJobs,
+    listManagedDefinitions: listManagedDefinitions,
     cleanupManagedTriggers: cleanupManagedTriggers,
     installManagedTriggers: installManagedTriggers,
     runJob: runJob,
