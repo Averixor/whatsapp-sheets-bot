@@ -311,9 +311,6 @@ function onOpen(e) {
     const ui = SpreadsheetApp.getUi();
     ui.createMenu("WASB")
       .addItem("Відкрити панель", "showSidebar")
-      .addSeparator()
-      .addItem("Налаштувати облік майна", "apiSetupTemporaryPropertyRegister")
-      .addItem("Оновити облік майна", "apiRefreshTemporaryPropertyRegister")
       .addToUi();
   } catch (err) {
     console.error("onOpen menu error:", err);

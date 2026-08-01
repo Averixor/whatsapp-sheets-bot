@@ -56,12 +56,15 @@ Run once:
 apiSetupTemporaryPropertyRegister()
 ```
 
-For a safe repeat refresh without migration, use the spreadsheet menu
-`WASB → Оновити облік майна` or run:
+For a safe repeat refresh without migration, use the sidebar
+(**WASB → Відкрити панель → Оновити облік майна**) or run:
 
 ```javascript
 apiRefreshTemporaryPropertyRegister()
 ```
+
+One-time setup/migration is also on the sidebar (**Налаштувати облік майна**)
+or via `apiSetupTemporaryPropertyRegister()` in the GAS editor.
 
 The setup function seeds both reference sheets, verifies the working header, backs up a legacy register, migrates recognized records, creates component rows, applies validation and formatting, and returns a migration report.
 

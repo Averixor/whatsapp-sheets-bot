@@ -122,4 +122,31 @@ assert.match(source, /withEventSpreadsheet_/);
 assert.match(source, /e\.source/);
 assert.match(source, /function apiRefreshTemporaryPropertyRegister\(\)/);
 
+const maintenanceApi = readRepoFileByBasename(repoRoot, "Stage7MaintenanceApi.gs", {
+  errorPrefix: "verify-temporary-property-register",
+});
+assert.match(
+  maintenanceApi,
+  /function apiStage7SetupTemporaryPropertyRegister\(\)/,
+);
+assert.match(
+  maintenanceApi,
+  /function apiStage7RefreshTemporaryPropertyRegister\(\)/,
+);
+
+const codeGs = readRepoFileByBasename(repoRoot, "Code.gs", {
+  errorPrefix: "verify-temporary-property-register",
+});
+assert.match(codeGs, /addItem\("Відкрити панель", "showSidebar"\)/);
+assert.doesNotMatch(codeGs, /addItem\("Налаштувати облік майна"/);
+assert.doesNotMatch(codeGs, /addItem\("Оновити облік майна"/);
+
+const sidebar = readRepoFileByBasename(repoRoot, "Sidebar.html", {
+  errorPrefix: "verify-temporary-property-register",
+});
+assert.match(sidebar, /SidebarApp\.setupTemporaryPropertyRegister\(\)/);
+assert.match(sidebar, /SidebarApp\.refreshTemporaryPropertyRegister\(\)/);
+assert.match(sidebar, /Налаштувати облік майна/);
+assert.match(sidebar, /Оновити облік майна/);
+
 console.log("Temporary-property register contract: OK");

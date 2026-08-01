@@ -111,10 +111,18 @@
           var input = document.createElement("input");
           input.type = options.inputType || "text";
           input.id = "wasbModalPromptInput";
+          input.name = "wasbModalPromptInput";
           input.className = "wasb-modal__input";
           input.value = String(options.defaultValue || "");
           input.placeholder = String(options.placeholder || "");
           input.autocomplete = "off";
+          var label = document.createElement("label");
+          label.className = "sr-only";
+          label.htmlFor = "wasbModalPromptInput";
+          label.textContent = String(
+            options.inputLabel || options.placeholder || "Значення",
+          );
+          bodyEl.appendChild(label);
           bodyEl.appendChild(input);
         } else {
           var paragraph = document.createElement("p");

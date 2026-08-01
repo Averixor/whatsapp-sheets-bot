@@ -55,6 +55,8 @@
     "apiStage7MaterializeComputedData",
     "apiStage7MaterializeMonthJournal",
     "apiStage7MaterializeAllMonthJournals",
+    "apiStage7SetupTemporaryPropertyRegister",
+    "apiStage7RefreshTemporaryPropertyRegister",
     "apiStage7RestartBot",
     "apiStage7SetupVacationTriggers",
     "apiStage7CleanupDuplicateTriggers",
@@ -164,6 +166,7 @@
       "apiStage7MaterializeComputedData",
       "apiStage7MaterializeMonthJournal",
       "apiStage7MaterializeAllMonthJournals",
+      "apiStage7RefreshTemporaryPropertyRegister",
       "apiStage7QuickHealthCheck",
       "apiStage7HealthCheck",
       "apiRunStage7Diagnostics",
@@ -183,7 +186,8 @@
       "apiStage7NormalizeAccessSheetFormatting",
       "apiStage7BootstrapAccessSheet",
       "apiStage7RepairSystemSheets",
-      "apiStage7BootstrapRuntimeAndAlertsSheets"
+      "apiStage7BootstrapRuntimeAndAlertsSheets",
+      "apiStage7SetupTemporaryPropertyRegister"
     ],
     "sysadmin": [
       "apiStage7ClearCache",
@@ -300,11 +304,11 @@
     },
     {
       "name": "apiSetupTemporaryPropertyRegister",
-      "reason": "GAS-editor one-time setup/migration for the temporary property register; not client-reachable"
+      "reason": "GAS-editor one-time setup/migration alias; sidebar uses apiStage7SetupTemporaryPropertyRegister"
     },
     {
       "name": "apiRefreshTemporaryPropertyRegister",
-      "reason": "GAS-editor/menu refresh for temporary property register validation/formatting; not client-reachable"
+      "reason": "GAS-editor refresh alias; sidebar uses apiStage7RefreshTemporaryPropertyRegister"
     }
   ],
   "deprecatedEndpoints": [
