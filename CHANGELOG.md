@@ -6,7 +6,16 @@
 - **CI:** `scripts/verify-system-status-foundation.mjs`, `scripts/verify-system-status-fingerprints.mjs`.
 - **Scope:** internal foundation (SS-1/SS-2); not yet a sidebar/public Stage7 surface (SS-3).
 - **Docs:** `docs/module-map.md` Diagnostics row updated on this branch only.
+- **SS-2A9:** closed canonical-scope semantic domains (`vacationSourceMode` enum `legacy|requests`, target month `01`–`12` coherence, fail-closed malformed scope before skip); contract v11 + adversarial verify/GAS repros retained over earlier main fingerprint projection.
 
+## 2026-07-31 — Unified JOURNAL / SUMMARY (all months)
+
+- **Sheets:** per-month `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` superseded by English tabs **`JOURNAL`** and **`SUMMARY`** (column **Місяць**; full person summary only — no short-summary sheet).
+- **Sidebar / `apiStage7MaterializeMonthJournal()`:** replaces only the active bot month’s slice; past months stay intact.
+- **`apiStage7MaterializeAllMonthJournals({ nextCursor?, monthsPerCall? })`:** chunked bootstrap (default 3 months/call); **не підключено до UI** (`uiAllowed: false`); **призначено для GAS editor** (public `api*` + maintainer). Continuation fields are inside the Stage7 envelope (`response.data.result.done` / `nextCursor` / `batchMonths` / `cursor`), not top-level.
+- **SUMMARY merge:** existing data rows read with `getValues()` (numeric counters stay numbers); headers may use `getDisplayValues()`.
+- **API payload:** slim client responses (no `journalRows`); sheet writes remain full.
+- **Legacy:** old `ЖУРНАЛ_*` / `ПІДСУМОК_*` tabs are not auto-deleted.
 
 ## 2026-07-11 — Docs synced to inventory reconciliation and runtime chain
 
@@ -39,7 +48,7 @@ Historical record of changes. For the current operational truth, use `README.md`
 ## 2026-07-31 — Month journal active-month vs all-months split
 
 - **Sidebar / `apiStage7MaterializeMonthJournal()`:** refresh only the active bot month (fallback: open `01`–`12` tab).
-- **`apiStage7MaterializeAllMonthJournals()`:** maintainer bootstrap for every existing month sheet `01`–`12` (no sidebar button; `uiAllowed: false`).
+- **`apiStage7MaterializeAllMonthJournals()`:** maintainer bootstrap for every existing month sheet `01`–`12` (**не підключено до UI**, `uiAllowed: false`; **призначено для GAS editor**; public `api*` + maintainer). Continuation in `response.data.result.*`.
 - **Write fix:** `getRange` height uses `rows.length` (not end-row).
 - **Docs:** Stage7 API lists in `README.md`, `RUNBOOK.md`, `AGENTS.md`, `ARCHITECTURE.md`, `docs/developer-guide.md` mention both APIs.
 

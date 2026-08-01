@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 11,
   "receiptBoundary": "stage_scoped_with_operation_run_summary",
   "algorithm": {
     "id": "ss2a-canonical-sha256-stream-v1",
@@ -61,13 +61,61 @@
     }
   },
   "transitionPolicies": {
-    "computed.personnel_helpers": {"mode": "birthday_semantic_patch", "rowKeyField": "rowKey", "reorderPolicy": "reject", "writableFields": ["birthdaySemantic"], "preservedFields": ["rowKey"], "semanticInvariant": "prior_equals_expected_equals_post"},
+    "computed.personnel_helpers": {"mode": "birthday_semantic_patch", "rowKeyField": "rowKey", "reorderPolicy": "reject", "writableFields": ["birthdaySemantic"], "preservedFields": ["rowKey"], "semanticInvariant": "prior_equals_expected_equals_post", "emptySemanticState": "eligible_noop", "invalidSemanticState": "failed"},
     "computed.assignment_car": {"mode": "cell_patch", "rowKeyField": "rowKey", "reorderPolicy": "reject", "writableFields": ["ownerFml", "helperCallsign"], "preservedFields": ["rowKey", "columnsBtoG"]},
     "computed.assignment_weapon": {"mode": "cell_patch", "rowKeyField": "rowKey", "reorderPolicy": "reject", "writableFields": ["lastName", "firstName", "patronymic", "rank", "phone", "callsign"], "preservedFields": ["rowKey", "columnsFtoZ"]},
-    "computed.vacation_monthly_sync": {"mode": "vacation_monthly_atomic", "rowKeyField": "cellKey", "reorderPolicy": "reject", "writableFields": ["cellValue", "cellDisplay"], "preservedFields": ["cellKey", "validationAllowed", "note", "dateRaw", "dateDisplay", "callsign", "fml"], "structuredProofs": ["targetCells", "metadata", "pendingPlan", "conflicts"], "missingProofState": "unknown", "presentMismatchState": "failed"},
+    "computed.vacation_monthly_sync": {"mode": "vacation_monthly_atomic", "rowKeyField": "cellKey", "reorderPolicy": "reject", "writableFields": ["cellValue", "cellDisplay"], "preservedFields": ["cellKey", "validationAllowed", "note", "dateRaw", "dateDisplay", "callsign", "fml"], "structuredProofs": ["targetCells", "metadata", "pendingPlan", "conflicts"], "missingProofState": "unknown", "presentMismatchState": "failed", "expectedBindingSource": "trusted_execution_context", "expectedBindingArgument": "trustedExecutionContext", "expectedBindingBuilder": "buildExpectedBindingFromTrustedContext", "derivedFromEvidenceAllowed": false, "evidenceExpectedBindingUsed": false, "evidenceTrustedContextUsed": false, "stageWrapperTrustedContextArgument": "trustedExecutionContext", "operationWrapperTrustedContextArgument": "trustedContextMap", "structuredStatusPropagation": true, "digestValidationBeforeComparison": true},
     "month_journal.journal_slice": {"mode": "target_slice_replace", "remapNonTargetByHeader": false},
     "month_journal.summary_slice": {"mode": "target_slice_replace", "remapNonTargetByHeader": true},
     "month_journal.non_target_preservation": {"mode": "preservation_only"}
+  },
+  "operationDecisionPolicy": {
+    "broadStatusField": "status",
+    "evidenceDecisionField": "decision",
+    "decisionShape": ["status", "eligibleForReceipt", "reasonCodes"],
+    "unknownPreventsFull": true,
+    "confirmedFailurePrecedence": true,
+    "reasonCodesPrefixedByStageId": true,
+    "partialMayContainUnknown": true
+  },
+  "canonicalScopeBoundary": {
+    "stageEvaluatorArgument": "canonicalScope",
+    "operationEvaluatorArgument": "operationScope",
+    "operationScopeShape": "per_stage_map",
+    "skipPredicateOwner": "SystemStatusFingerprints_ module policy",
+    "derivedFromEvidenceAllowed": false,
+    "evidenceScopeUsed": false,
+    "evidenceScopeKnownUsed": false,
+    "evidenceSkipPredicateSatisfiedUsed": false,
+    "missingOrMalformedScopeState": "unknown",
+    "semanticDomains": {
+      "vacationSourceMode": {
+        "enum": ["legacy", "requests"],
+        "skipPredicate": "vacation_source_not_legacy",
+        "skipWhenEquals": "requests",
+        "validation": "exact_enum_only_no_trim_no_casefold"
+      },
+      "targetMonth": {
+        "pattern": "^(0[1-9]|1[0-2])$",
+        "emptyAllowedForSkipWhen": ["no_target_month"],
+        "invalidExamples": ["00", "13", "99"]
+      },
+      "targetMissingOrEmpty": {
+        "fields": ["targetExists", "targetRowCount"],
+        "invariant": "targetExists=false requires targetRowCount=0",
+        "skipWhen": "target_missing_or_empty"
+      }
+    },
+    "scopeDependentStages": {
+      "computed.monthly_callsigns": {"skipWhen": "no_target_months", "fields": ["targetMonthCount"]},
+      "computed.assignment_car": {"skipWhen": "target_missing_or_empty", "fields": ["targetExists", "targetRowCount"]},
+      "computed.assignment_weapon": {"skipWhen": "target_missing_or_empty", "fields": ["targetExists", "targetRowCount"]},
+      "computed.vacation_computed": {"skipWhen": "vacation_source_not_legacy", "fields": ["vacationSourceMode"]},
+      "computed.vacation_schedule": {"skipWhen": "module_unavailable", "fields": ["moduleAvailable"]},
+      "computed.vacation_monthly_sync": {"skipWhen": "no_target_month", "fields": ["targetMonth"], "trustedInvocationRequiredForSkip": true, "trustedInvocationTargetCrossCheck": true, "conflictState": "failed"},
+      "computed.send_panel_status": {"skipWhen": "target_missing", "fields": ["targetExists"]}
+    },
+    "runtimeConstructionImplemented": false
   },
   "writerLockContract": {
     "currentRuntime": {
@@ -150,7 +198,7 @@
   "stages": [
     {
       "stageId": "computed.personnel_helpers",
-      "version": "personnel-helpers-v4",
+      "version": "personnel-helpers-v6",
       "policy": "required",
       "skipPredicate": "never",
       "extractor": "injected readRange equivalent of _personnelMaterializeBuildSourceRows_ without ensurePersonnelStatusColumnHeader_",
@@ -165,7 +213,7 @@
           "duplicates": "preserve",
           "ignored": ["Birthday raw/display handled by personnelBirthdayPrior semantic transition", "Position", "Status", "TEMPLATE", "formatting", "columns not named above", "empty trailing managed rows after the last semantic row"]
         },
-        {"kind": "mutable_target_prior_state", "fields": ["physical rowKey", "Birthday parsed semantic day"], "normalizers": ["normalizeBirthdayText_/parseBirthdayValue_ equivalent birthday_day: Date, ISO YMD, bare UA DMY, DD.MM.YYYY р. н."], "rowOrder": "semantic", "duplicates": "reject", "reorderPolicy": "reject", "invariant": "prior semantic day equals expected semantic day equals post semantic day; representation-only rewrite"},
+        {"kind": "mutable_target_prior_state", "fields": ["physical rowKey", "Birthday parsed semantic day"], "normalizers": ["normalizeBirthdayText_/parseBirthdayValue_ equivalent birthday_day: Date, ISO YMD, bare UA DMY, DD.MM.YYYY р. н.; typed valid day passes Gregorian calendar validation"], "rowOrder": "semantic", "duplicates": "reject", "reorderPolicy": "reject", "invariant": "prior semantic day equals expected semantic day equals post semantic day; representation-only rewrite"},
         {
           "kind": "clock",
           "fields": ["clockDay", "timezone"],
@@ -203,7 +251,7 @@
     },
     {
       "stageId": "computed.monthly_callsigns",
-      "version": "monthly-callsigns-v2",
+      "version": "monthly-callsigns-v3",
       "policy": "required",
       "skipPredicate": "no_target_months",
       "extractor": "syncMonthlyCallsignsForPersonnelUpdate_ projection with injected active-month property/fallback",
@@ -220,7 +268,7 @@
     },
     {
       "stageId": "computed.assignment_car",
-      "version": "assignment-car-v4",
+      "version": "assignment-car-v6",
       "policy": "optional",
       "skipPredicate": "target_missing_or_empty",
       "extractor": "CAR A:H plus PERSONNEL transition",
@@ -232,7 +280,7 @@
     },
     {
       "stageId": "computed.assignment_weapon",
-      "version": "assignment-weapon-v4",
+      "version": "assignment-weapon-v6",
       "policy": "optional",
       "skipPredicate": "target_missing_or_empty",
       "extractor": "WEAPON A:E and AA plus PERSONNEL transition",
@@ -244,19 +292,19 @@
     },
     {
       "stageId": "computed.vacation_computed",
-      "version": "vacation-computed-v2",
+      "version": "vacation-computed-v4",
       "policy": "optional",
       "skipPredicate": "vacation_source_not_legacy",
       "extractor": "VACATIONS A:I rows 2:max(lastRow,66) without DataAccess self-heal",
       "sources": [{"kind": "property", "fields": ["VACATION_PLANNER_CONFIG.SOURCE_MODE_PROPERTY"], "readModes": ["injected"]}, {"sheet": "VACATION_PLANNER_CONFIG.SHEETS.SOURCE", "range": "A2:I(max(lastRow,66))", "fields": ["FML", "Start date raw/display", "Vacation No", "Travel"], "readModes": ["values", "display"], "normalizers": ["DateUtils_.parseDateAny", "_normFml_", "_vacationTypeLabelForInterval_"], "rowOrder": "semantic", "duplicates": "preserve", "ignored": ["formatting", "computed input values C/E/F/G/I except result evidence", "empty trailing managed rows"]}, {"kind": "clock", "fields": ["clockDay", "timezone"]}],
       "results": [{"sheet": "VACATIONS", "range": "C,E:G,I rows 2:max(lastRow,66)", "fields": ["End date", "Active", "Notify", "Days left", "Interval check"], "readModes": ["values", "display"], "rowOrder": "semantic", "duplicates": "preserve"}],
-      "successPredicate": "non-legacy source is skipped; legacy result.ok !== false",
+      "successPredicate": "vacationSourceMode enum is exact {legacy,requests}; requests is skipped; legacy result.ok !== false; any other mode is canonical_scope_malformed/unknown",
       "isFullSuccessContribution": true,
       "cost": {"maxSpreadsheetCalls": 5, "maxRangeReads": 3, "maxCells": 1170, "maxBytes": 140000}
     },
     {
       "stageId": "computed.vacation_schedule",
-      "version": "vacation-schedule-v2",
+      "version": "vacation-schedule-v3",
       "policy": "optional",
       "skipPredicate": "module_unavailable",
       "extractor": "VacationOptionsWriter_.rebuildVacationSystem input projections",
@@ -268,20 +316,20 @@
     },
     {
       "stageId": "computed.vacation_monthly_sync",
-      "version": "vacation-monthly-sync-v5",
+      "version": "vacation-monthly-sync-v10",
       "policy": "optional",
       "skipPredicate": "no_target_month",
       "extractor": "VacationMonthlySync_._buildPlan_ equivalent with injected Document Property snapshots",
       "sources": [{"kind": "option_property_clock", "fields": ["monthSheet", "CONFIG.BOT_MONTH_PROP_KEY", "clock month", "CONFIG.TARGET_SHEET"], "readModes": ["injected"]}, {"kind": "property", "fields": ["WASB_VACATION_MONTHLY_SYNC_META_V1", "WASB_VACATION_MONTHLY_SYNC_EXCEPTIONS_V1"], "readModes": ["injected"]}, {"sheet": "active vacation source", "fields": ["record id", "person key/id", "FML", "Callsign", "start/end raw+typed", "active/status", "monthly/fact code", "vacation type/no"], "readModes": ["values", "display"], "rowOrder": "semantic", "duplicates": "preserve"}, {"sheet": "PERSONNEL", "range": "repository ID/callsign/FML lookup rows", "fields": ["ID", "personKey derived from resolved Callsign", "Callsign", "FML", "LastName", "FirstName", "Patronymic"], "readModes": ["values", "display"], "normalizers": ["PersonnelRepository_.getById", "getByCallsignAnyStatus", "getByFml(activeOnly:false)", "resolvePersonnelDisplayCallsign_", "FML synthesis"], "rowOrder": "semantic", "duplicates": "preserve all; runtime lookup maps use last matching ID/callsign/FML row", "ignored": ["Status", "active", "Position", "TEMPLATE", "formatting", "empty trailing rows"]}, {"sheet": "target month", "range": "code matrix plus date header and callsign/FML columns", "fields": ["values", "display values", "data validation allowed values", "notes", "date raw/display", "Callsign", "FML"], "readModes": ["values", "display", "validations", "notes"], "normalizers": ["_dateStart_", "_normCallsign_", "_normFmlKey_", "_validationAllowedValues_"], "rowOrder": "semantic", "duplicates": "preserve", "ignored": ["formatting other than validation rules"]}],
       "results": [{"sheet": "target month", "range": "code matrix", "fields": ["auto-filled code values", "existing non-owned values preserved"], "readModes": ["values", "display"], "rowOrder": "semantic", "duplicates": "reject"}, {"kind": "structured digest-bound evidence", "fields": ["targetCells prior/expected/post", "metadata prior/expected/post", "pendingPlan prior/expected/post", "conflicts expected/post", "stageId", "target", "scopeFingerprint", "runId"], "note": "SS-2A builders accept bounded injected digests only and do not read/write properties"}],
-      "successPredicate": "no target month is skipped; missing/malformed structured proof is unknown; present well-formed mismatch is failed; eligibility requires all proofs bound to expected stage/target/scope/run",
+      "successPredicate": "no target month is skipped; missing/malformed trusted execution context or structured proof remains unknown through direct/stage/operation evaluators; present well-formed mismatch remains failed; eligibility requires all proofs bound to a module-built expected binding from the separate trusted execution-context argument; evidence.expectedBinding and evidence.trustedExecutionContext are ignored",
       "ss2bCommitBoundary": "live pre/post reads, affected/global invalidation and all structured result proofs inside the materialize critical section",
       "isFullSuccessContribution": true,
       "cost": {"maxSpreadsheetCalls": 14, "maxRangeReads": 10, "maxCells": 4600, "maxBytes": 560000}
     },
     {
       "stageId": "computed.send_panel_status",
-      "version": "send-panel-status-v2",
+      "version": "send-panel-status-v3",
       "policy": "optional",
       "skipPredicate": "target_missing",
       "extractor": "SEND_PANEL rows over CONFIG.SEND_PANEL_DATA_START_ROW:lastRow",
@@ -293,25 +341,25 @@
     },
     {
       "stageId": "computed.operation_summary",
-      "version": "computed-operation-summary-v2",
+      "version": "computed-operation-summary-v5",
       "policy": "summary",
       "skipPredicate": "all_stages_skipped",
       "extractor": "pure evaluateOperation_ over stage results/scopes",
-      "sources": [{"transitionFrom": "all computed stages", "fields": ["stageId", "policy", "status"]}],
-      "results": [{"fields": ["full", "partial", "failed", "skipped"], "persisted": false}],
-      "successPredicate": "full only when every eligible stage succeeds; partial when success and failure coexist",
+      "sources": [{"transitionFrom": "all computed stages", "fields": ["stageId", "policy", "status", "attempted", "resultPresent"]}, {"kind": "canonical per-stage scope map", "fields": ["stageId", "skipWhen", "scope"], "note": "constructed separately from evidence"}],
+      "results": [{"fields": ["full", "partial", "failed", "unknown", "skipped", "decision", "reasonCodes", "unknownStageIds", "failedStageIds", "hasUnknownEvidence", "hasConfirmedFailure"], "persisted": false}],
+      "successPredicate": "full only when every eligible stage succeeds; unknown evidence remains distinct from confirmed failure and prevents full",
       "isFullSuccessContribution": false,
       "cost": {"maxSpreadsheetCalls": 0, "maxRangeReads": 0, "maxCells": 0, "maxBytes": 16000}
     },
     {
       "stageId": "month_journal.target_resolution",
-      "version": "month-target-v2",
+      "version": "month-target-v3",
       "policy": "required",
       "skipPredicate": "never",
       "extractor": "resolveMonthJournalSheetName_ equivalent using injected inputs only",
       "sources": [{"kind": "options", "fields": ["monthSheet", "month"]}, {"kind": "property", "fields": ["CONFIG.BOT_MONTH_PROP_KEY"], "readModes": ["injected"]}, {"kind": "clock_config", "fields": ["clock month", "CONFIG.TARGET_SHEET"]}, {"kind": "spreadsheet state", "fields": ["existing sheet names", "active sheet name"], "readModes": ["injected"]}],
       "results": [{"fields": ["target month 01-12"]}],
-      "successPredicate": "resolved target matches ^[0-9]{2}$ and sheet exists",
+      "successPredicate": "resolved target matches ^(0[1-9]|1[0-2])$ and sheet exists",
       "isFullSuccessContribution": true,
       "cost": {"maxSpreadsheetCalls": 4, "maxRangeReads": 0, "maxCells": 0, "maxBytes": 8000}
     },
@@ -365,28 +413,28 @@
     },
     {
       "stageId": "month_journal.operation_summary",
-      "version": "month-operation-summary-v2",
+      "version": "month-operation-summary-v3",
       "policy": "summary",
       "skipPredicate": "all_stages_skipped",
       "extractor": "pure evaluateOperation_ over month journal stage results/scopes",
       "sources": [{"transitionFrom": "all month_journal stages", "fields": ["stageId", "policy", "status"]}],
-      "results": [{"fields": ["full", "partial", "failed", "skipped"], "persisted": false}],
-      "successPredicate": "full only when target/source/JOURNAL/SUMMARY/preservation stages succeed",
+      "results": [{"fields": ["full", "partial", "failed", "unknown", "skipped", "decision", "reasonCodes", "unknownStageIds", "failedStageIds", "hasUnknownEvidence", "hasConfirmedFailure"], "persisted": false}],
+      "successPredicate": "full only when target/source/JOURNAL/SUMMARY/preservation stages succeed; unknown evidence remains distinct from confirmed failure",
       "isFullSuccessContribution": false,
       "cost": {"maxSpreadsheetCalls": 0, "maxRangeReads": 0, "maxCells": 0, "maxBytes": 16000}
     }
   ],
   "executableProjectionContract": {
-    "version": "ss2a5-executable-projection-v5",
+    "version": "ss2a9-executable-projection-v10",
     "builderId": "SystemStatusFingerprints_.buildStageSourceFingerprintFromContext/buildStageResultFingerprintFromContext",
     "manifestExport": "SystemStatusFingerprints_.executableManifest",
-    "manifestCanonicalJsonSha256": "6cf58e398f37ab1c581a66427121b7660f045d411883732a72c7b8e9afc60b94",
+    "manifestCanonicalJsonSha256": "0ce943276cfdf929344607707a0135d8b1c174ffa71ba5088232893c9d6c8ca2",
     "stageCount": 17,
     "requiredDependencyAttributes": ["id", "kind", "sheet", "range", "readModes", "fields", "order", "duplicates", "ignoreEmptyTail", "ignoredFields", "required", "presence", "evidenceRole"],
     "dependencyPresencePolicy": {"defaultRequired": true, "emptyArrayIsPresent": true, "missingBinding": "unavailable", "missingInjectedKey": "unavailable", "adapterFailure": "unavailable", "requiredUnavailableFingerprint": null},
     "fieldTuple": ["name", "normalizer"],
     "stageSignatures": {
-      "computed.personnel_helpers": {"source": ["personnel|range|PERSONNEL|named_source_columns|values,display|fml:space_text,lastName:text,firstName:text,patronymic:text,callsign:text,phone:text,phone2:text,rank:text,title:text|semantic|preserve|tail|birthdayRaw,birthdayDisplay,position,status,template,formatting,technical,emptyTail", "personnelBirthdayPrior|injected|||injected|rowKey:text,birthdaySemantic:birthday_day|semantic|preserve|all|birthdayRaw,birthdayDisplay,formatting", "clock|injected|||injected|clockDay:date_day,timezone:text|semantic|preserve|all|"], "result": ["personnelDerived|range|PERSONNEL|birthday_age_days|display|birthday:text,age:text,daysUntilBirthday:text|semantic|preserve|tail|formatting,technical,emptyTail"]},
+      "computed.personnel_helpers": {"source": ["personnel|range|PERSONNEL|named_source_columns|values,display|fml:space_text,lastName:text,firstName:text,patronymic:text,callsign:text,phone:text,phone2:text,rank:text,title:text|semantic|preserve|tail|birthdayRaw,birthdayDisplay,position,status,template,formatting,technical,emptyTail", "personnelBirthdayPrior|injected|||injected|rowKey:text,birthdaySemantic:birthday_day|semantic|preserve|tail|birthdayRaw,birthdayDisplay,formatting,emptyTail", "clock|injected|||injected|clockDay:date_day,timezone:text|semantic|preserve|all|"], "result": ["personnelDerived|range|PERSONNEL|birthday_age_days|display|birthday:text,age:text,daysUntilBirthday:text|semantic|preserve|tail|formatting,technical,emptyTail"]},
       "computed.phones_result": {"source": ["personnelRows|injected|||injected|callsign:text,phone:text,phone2:text|semantic|preserve|all|formatting"], "result": ["phones|range|PHONES|A1:C_managed|display|callsign:text,phone:text,phone2:text|semantic|preserve|tail|formatting,technical,emptyTail"]},
       "computed.birthday_result": {"source": ["personnelBirthdayRows|injected|||injected|callsign:text,birthday:identity,clockDay:date_day,timezone:text|semantic|preserve|all|formatting"], "result": ["birthday|range|BIRTHDAY|A1:D_managed|display|callsign:text,birthday:text,age:text,daysUntilBirthday:text|semantic|preserve|tail|formatting,technical,emptyTail"]},
       "computed.monthly_callsigns": {"source": ["monthlyCallsignInput|injected|||injected|callsign:text,lastName:text,monthlySyncMode:text,monthSheet:text,includeHistory:boolean,mode:text,activeMonthProperty:text,clockMonth:text,targetSheet:text,layoutGeometry:text|semantic|preserve|all|formatting"], "result": ["monthlyCallsigns|range|target_months|callsign_column|display|month:text,callsign:text|semantic|preserve|tail|formatting,technical,emptyTail"]},
@@ -396,13 +444,13 @@
       "computed.vacation_schedule": {"source": ["vacationScheduleContext|injected|||injected|sourceMode:text,scheduleYearProperty:number,clockDay:date_day,timezone:text,currentYear:number,rules:identity,options:identity,sheets:identity,sourceRange:text|semantic|preserve|all|", "vacationScheduleSource|range|active_vacation_source|repository_fields|values,display|recordId:text,personKey:text,fml:space_text,callsign:text,startRaw:identity,startTyped:identity,endRaw:identity,endTyped:identity,vacationType:text,vacationNumber:text,travel:text,status:text,active:boolean,monthlyCode:text,factCode:text|semantic|preserve|tail|formatting,technical,emptyTail", "vacationSchedulePersonnel|range|PERSONNEL|repository_rows|values,display|active:boolean,statusCanonical:text,status:text,personKey:text,fml:space_text,callsign:text|semantic|preserve|tail|formatting,technical,emptyTail", "vacationScheduleMonths|range|months_01_12|layout_codes_identity_dates|values,display|month:text,codes:identity,callsign:text,fml:space_text,dateRaw:identity,dateDisplay:text|semantic|preserve|tail|formatting,technical,emptyTail", "vacationRightPanel|range|legacy_vacation_source|manual_detector|display|hasData:boolean,manualFields:identity|semantic|preserve|tail|formatting"], "result": ["vacationScheduleResult|range|VACATION_SCHEDULE_AND_CHECK|full_outputs|values,display|headers:identity,scheduleRows:identity,checkRows:identity|semantic|preserve|tail|formatting,technical,emptyTail"]},
       "computed.vacation_monthly_sync": {"source": ["vacationMonthlyContext|injected|||injected|monthSheet:text,activeMonthProperty:text,clockMonth:text,targetSheet:text,exceptionsSnapshot:identity|semantic|preserve|all|", "vacationMonthlyMetadataPrior|injected|||injected|metadataSnapshot:identity|semantic|preserve|all|rawEntries,pii", "vacationMonthlySource|range|active_vacation_source|repository_fields|values,display|recordId:text,personKey:text,personId:text,fml:space_text,callsign:text,startRaw:identity,startTyped:identity,endRaw:identity,endTyped:identity,active:boolean,status:text,monthlyCode:text,factCode:text,vacationType:text,vacationNumber:text|semantic|preserve|tail|formatting,technical,emptyTail", "vacationMonthlyPersonnel|range|PERSONNEL|id_callsign_fml_lookup|values,display|id:text,personKey:text,callsign:text,fml:space_text,lastName:text,firstName:text,patronymic:text|semantic|preserve|tail|status,active,position,template,formatting,technical,emptyTail", "vacationMonthlyTarget|range|target_month|code_matrix_dates_identity|values,display,validations,notes|cellKey:text,cellValue:identity,cellDisplay:text,validationAllowed:identity,note:text,dateRaw:identity,dateDisplay:text,callsign:text,fml:space_text|semantic|preserve|tail|formatting"], "result": ["vacationMonthlyEvidence|injected|||injected|stageId:text,target:text,scopeFingerprint:text,runId:text,targetCells:identity,metadata:identity,pendingPlan:identity,conflicts:identity|semantic|preserve|all|rawRows,pii,propertyValues,exceptionText"]},
       "computed.send_panel_status": {"source": ["sendPanelInputs|range|SEND_PANEL|A:D_data_rows|display|fml:text,phone:text,code:text,tasks:text|semantic|preserve|tail|columnsEtoG,formatting,emptyTail"], "result": ["sendPanelStatus|range|SEND_PANEL|E_data_rows|display|status:text|semantic|preserve|tail|columnsFtoG,formatting,emptyTail"]},
-      "computed.operation_summary": {"source": ["computedStageEvidence|injected|||injected|stageId:text,scopeKnown:boolean,attempted:boolean,resultPresent:boolean,status:text|semantic|preserve|all|rawResult"], "result": ["computedRunSummary|injected|||injected|status:text,isFullSuccess:boolean|semantic|preserve|all|rawStages"]},
+      "computed.operation_summary": {"source": ["computedStageEvidence|injected|||injected|stageId:text,attempted:boolean,resultPresent:boolean,status:text|semantic|preserve|all|rawResult,scope,scopeKnown,skipPredicateSatisfied", "computedCanonicalScopes|injected|||injected|stageId:text,skipWhen:text,scope:identity|semantic|preserve|all|evidenceScope,callerSkipBoolean"], "result": ["computedRunSummary|injected|||injected|status:text,isFullSuccess:boolean,decision:identity,reasonCodes:identity,unknownStageIds:identity,failedStageIds:identity,hasUnknownEvidence:boolean,hasConfirmedFailure:boolean|semantic|preserve|all|rawStages"]},
       "month_journal.target_resolution": {"source": ["monthTargetContext|injected|||injected|monthSheet:text,month:text,activeMonthProperty:text,clockMonth:text,targetSheet:text,existingSheetNames:identity,activeSheetName:text|semantic|preserve|all|formatting"], "result": ["monthTargetResult|injected|||injected|targetMonth:text,sheetExists:boolean|semantic|preserve|all|"]},
       "month_journal.source_projection": {"source": ["monthSource|range|target_month|layout_codes_dates_callsign_notes|values,display|code:text,dateRaw:identity,dateDisplay:text,callsign:text,note:text,layoutGeometry:identity,headerAliases:identity|semantic|preserve|tail|formatting,outsideLayout,emptyCode,emptyCallsign", "dictSum|range|DICT_SUM|full_data_range|display|headerAliases:identity,code:text,label:text,order:number,showZero:boolean|semantic|preserve|tail|formatting,emptyTail", "dict|range|DICT|canonical_fields|display|code:text,label:text,place:text,task:text|semantic|preserve|tail|formatting,emptyTail", "monthPersonnel|range|PERSONNEL|repository_rows|values,display|callsign:text,fml:space_text,rank:text,title:text,position:text,status:text|semantic|preserve|tail|formatting,technical,emptyTail", "monthSourceContext|injected|||injected|dateRow:number,timezone:text|semantic|preserve|all|"], "result": ["journalRows|injected|||injected|month:text,date:text,dayNumber:number,callsign:text,fml:space_text,rank:text,position:text,code:text,shortLabel:text,serviceType:text,place:text,task:text,note:text,sourceRow:number,unknownCode:boolean|semantic|preserve|all|formatting"]},
       "month_journal.journal_slice": {"source": ["journalTransition|injected|||injected|journalRows:identity|semantic|preserve|all|", "journalBefore|range|JOURNAL|headers_and_all_rows|display|headers:identity,month:text,row:identity|semantic|preserve|tail|formatting,emptyTail"], "result": ["journalAfter|range|JOURNAL|canonical_headers_and_target_slice|display|headers:identity,month:text,date:text,callsign:text,fml:space_text,rank:text,position:text,code:text,shortLabel:text,serviceType:text,place:text,task:text,note:text,source:text|semantic|preserve|tail|formatting,nonTargetRows,emptyTail"]},
       "month_journal.summary_slice": {"source": ["summaryTransition|injected|||injected|journalRows:identity|semantic|preserve|all|", "summaryDictSum|range|DICT_SUM|full_data_range|display|headerAliases:identity,code:text,label:text,order:number,showZero:boolean|semantic|preserve|tail|formatting,emptyTail", "summaryBefore|range|SUMMARY|headers_and_all_rows|values,display|headers:identity,month:text,row:identity|semantic|preserve|tail|formatting,emptyTail"], "result": ["summaryAfter|range|SUMMARY|global_headers_and_target_slice|values,display|headers:identity,month:text,callsign:text,fml:space_text,rank:text,position:text,codeColumns:identity,other:number,total:number|semantic|preserve|tail|formatting,nonTargetRows,emptyTail"]},
       "month_journal.non_target_preservation": {"source": ["preservationReads|injected|||injected|beforeJournalHeaders:identity,beforeJournalRows:identity,afterJournalHeaders:identity,afterJournalRows:identity,beforeSummaryHeaders:identity,beforeSummaryRows:identity,afterSummaryHeaders:identity,afterSummaryRows:identity|semantic|preserve|all|targetRows,formatting"], "result": ["preservationResult|injected|||injected|journalStable:boolean,summaryStable:boolean,headersChanged:boolean,ambiguous:boolean|semantic|preserve|all|rawRows"]},
-      "month_journal.operation_summary": {"source": ["monthStageEvidence|injected|||injected|stageId:text,scopeKnown:boolean,attempted:boolean,resultPresent:boolean,status:text|semantic|preserve|all|rawResult"], "result": ["monthRunSummary|injected|||injected|status:text,isFullSuccess:boolean|semantic|preserve|all|rawStages"]}
+      "month_journal.operation_summary": {"source": ["monthStageEvidence|injected|||injected|stageId:text,attempted:boolean,resultPresent:boolean,status:text|semantic|preserve|all|rawResult,scope,scopeKnown,skipPredicateSatisfied"], "result": ["monthRunSummary|injected|||injected|status:text,isFullSuccess:boolean,decision:identity,reasonCodes:identity,unknownStageIds:identity,failedStageIds:identity,hasUnknownEvidence:boolean,hasConfirmedFailure:boolean|semantic|preserve|all|rawStages"]}
     },
     "parityPolicy": "focused verifier checks digest, stage IDs, versions, evidence roles, transitions, writer lock contract, read modes, normalizers, row order, duplicates and ignored-field mutations",
     "arbitraryCallerProjectionIsCoverageEvidence": false
@@ -410,12 +458,14 @@
   "ss2bHandoff": {
     "monthlySyncResultEvidence": ["targetCells", "metadata", "pendingPlan", "conflicts", "stageId", "target", "scopeFingerprint", "runId"],
     "commitPolicy": "live pre/post reads plus affected/global cache invalidation inside the materialize critical section",
-    "implementedInSs2a4": "pure keyed transitions, Birthday semantic normalization, structured digest proofs, compatibility decision, and runtime-traced lock contract only"
+    "implementedThroughSs2a9": "pure keyed transitions, typed Birthday semantic normalization including blank no-op and Gregorian validity, closed canonical-scope semantic domains (vacationSourceMode enum legacy|requests, targetMonth 01-12 with empty only for no_target_month, targetExists=false requires targetRowCount=0), fail-closed malformed-scope unknown before skip predicates, separate trusted execution-context and canonical per-stage scope propagation through stage/operation evaluators, module-owned skip decisions, structured unknown/failed decisions, digest-validated structured proofs, compatibility decision, and runtime-traced lock contract only",
+    "trustedContextBoundary": {"evaluatorArgument": "trustedExecutionContext", "stageEvaluatorSignature": "evaluateStage(stageId,evidence,canonicalScope,trustedExecutionContext)", "operationEvaluatorSignature": "evaluateOperation(operationId,stageInputs,operationScope,trustedContextMap)", "expectedBindingBuilder": "SystemStatusFingerprints_.buildExpectedBindingFromTrustedContext", "source": "canonical_operation_invocation_and_lock_context", "canonicalInvocationFields": ["operation", "stageId", "target", "scopeFingerprint", "runId"], "lockContextFields": ["documentLockHeld", "lockOwner"], "derivedFromEvidenceAllowed": false, "evidenceExpectedBindingUsed": false, "evidenceTrustedContextUsed": false, "structuredStatusPropagation": true, "unknownOperationStatusAllowed": true, "runtimeConstructionImplemented": false, "requiredSs2bCallers": ["apiStage7MaterializeComputedData via WorkflowOrchestrator", "checkVacationsAndBirthdays daily caller"]},
+    "canonicalScopeBoundary": {"stageEvaluatorArgument": "canonicalScope", "operationEvaluatorArgument": "operationScope", "operationScopeShape": "per_stage_map", "skipPredicateOwner": "SystemStatusFingerprints_ module policy", "derivedFromEvidenceAllowed": false, "evidenceScopeUsed": false, "evidenceScopeKnownUsed": false, "evidenceSkipPredicateSatisfiedUsed": false, "semanticDomains": {"vacationSourceMode": ["legacy", "requests"], "targetMonthPattern": "^(0[1-9]|1[0-2])$", "targetExistsFalseRequiresZeroRows": true}, "monthlyTrustedInvocationRequiredForSkip": true, "monthlyTrustedTargetCrossCheck": true, "runtimeConstructionImplemented": false, "requiredSs2bCallers": ["apiStage7MaterializeComputedData via WorkflowOrchestrator", "checkVacationsAndBirthdays daily caller"]}
   },
   "versionCompatibility": {
     "receiptVersion": "ss2b-stage-receipt-v1",
-    "manifestVersion": "ss2a5-executable-projection-v5",
-    "signatureVersion": "ss2a5-stage-signatures-v5",
+    "manifestVersion": "ss2a9-executable-projection-v10",
+    "signatureVersion": "ss2a9-stage-signatures-v10",
     "mismatchFreshness": "unknown",
     "matchingFreshness": "comparable",
     "readTimeMigrationAllowed": false,

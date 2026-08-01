@@ -147,15 +147,126 @@ function _personnelBuildMonthlyCallsignValues_(personnelSheet) {
   };
 }
 
+function _monthlyCopyPersonnelRowTemplate_(
+  sheet,
+  sourceRow,
+  targetStartRow,
+  rowCount,
+) {
+  if (!sheet || rowCount <= 0 || targetStartRow <= sourceRow) return;
+
+  var lastCol = Math.max(Number(sheet.getLastColumn()) || 0, 1);
+  var sourceRange = sheet.getRange(sourceRow, 1, 1, lastCol);
+  var targetRange = sheet.getRange(targetStartRow, 1, rowCount, lastCol);
+
+  sourceRange.copyTo(
+    targetRange,
+    SpreadsheetApp.CopyPasteType.PASTE_FORMAT,
+    false,
+  );
+  sourceRange.copyTo(
+    targetRange,
+    SpreadsheetApp.CopyPasteType.PASTE_DATA_VALIDATION,
+    false,
+  );
+  sourceRange.copyTo(
+    targetRange,
+    SpreadsheetApp.CopyPasteType.PASTE_CONDITIONAL_FORMATTING,
+    false,
+  );
+
+  var rowHeight = Number(sheet.getRowHeight(sourceRow)) || 0;
+  if (rowHeight > 0) {
+    if (typeof sheet.setRowHeights === "function") {
+      sheet.setRowHeights(targetStartRow, rowCount, rowHeight);
+    } else {
+      for (var row = targetStartRow; row < targetStartRow + rowCount; row++) {
+        sheet.setRowHeight(row, rowHeight);
+      }
+    }
+  }
+
+  var formulaSource = sheet.getRange(sourceRow, 1);
+  var formulaR1C1 =
+    typeof formulaSource.getFormulaR1C1 === "function"
+      ? String(formulaSource.getFormulaR1C1() || "")
+      : "";
+  if (formulaR1C1) {
+    formulaSource.copyTo(
+      sheet.getRange(targetStartRow, 1, rowCount, 1),
+      SpreadsheetApp.CopyPasteType.PASTE_FORMULA,
+      false,
+    );
+  }
+}
+
+function _monthlyEnsurePersonnelCapacity_(monthSheet, requiredRows) {
+  var codeRangeA1 = getMonthlyCodeRangeA1ForSheet_(monthSheet);
+  var codeRef = monthSheet.getRange(codeRangeA1);
+  var startRow = codeRef.getRow();
+  var currentDataEndRow = codeRef.getLastRow();
+  var summaryBlock = findMonthlySummaryBlockLocation_(monthSheet);
+
+  if (!summaryBlock || summaryBlock.startRow <= startRow) {
+    throw new Error(
+      'На місячному аркуші "' +
+        monthSheet.getName() +
+        '" не знайдено формульний блок зведення «За штатом» / «За списком»; ' +
+        "синхронізацію зупинено без змін.",
+    );
+  }
+
+  var separatorRows = _monthlySheetRowIsBlank_(
+    monthSheet,
+    summaryBlock.startRow - 1,
+  )
+    ? 1
+    : 0;
+  var capacityEndRow = summaryBlock.startRow - separatorRows - 1;
+  currentDataEndRow = Math.min(currentDataEndRow, capacityEndRow);
+
+  var requiredEndRow = startRow + Math.max(Number(requiredRows) || 0, 0) - 1;
+  var rowsInserted = Math.max(requiredEndRow - capacityEndRow, 0);
+  if (rowsInserted > 0) {
+    monthSheet.insertRowsBefore(summaryBlock.startRow, rowsInserted);
+    capacityEndRow += rowsInserted;
+    summaryBlock = findMonthlySummaryBlockLocation_(monthSheet);
+    if (!summaryBlock || summaryBlock.startRow <= requiredEndRow) {
+      throw new Error(
+        'Не вдалося безпечно змістити формульний блок зведення на аркуші "' +
+          monthSheet.getName() +
+          '".',
+      );
+    }
+  }
+
+  var formatStartRow = currentDataEndRow + 1;
+  if (formatStartRow <= requiredEndRow) {
+    _monthlyCopyPersonnelRowTemplate_(
+      monthSheet,
+      currentDataEndRow,
+      formatStartRow,
+      requiredEndRow - formatStartRow + 1,
+    );
+  }
+
+  return {
+    startRow: startRow,
+    capacityEndRow: capacityEndRow,
+    capacityRows: Math.max(capacityEndRow - startRow + 1, 0),
+    rowsInserted: rowsInserted,
+    separatorRows: separatorRows,
+    summaryStartRow: summaryBlock.startRow,
+    codeRangeA1: getMonthlyCodeRangeA1ForSheet_(monthSheet),
+  };
+}
+
 function syncMonthlyCallsignsFromPersonnel_(targetSheetOrName) {
   var personnelSheet = _personnelResolveSheetForMonthlySync_();
   var monthSheet = _monthlyResolveTargetSheet_(targetSheetOrName);
   var built = _personnelBuildMonthlyCallsignValues_(personnelSheet);
   var values = built.values || [];
 
-  var codeRef = monthSheet.getRange(getMonthlyCodeRangeA1ForSheet_(monthSheet));
-  var startRow = codeRef.getRow();
-  var maxRows = codeRef.getNumRows();
   var callsignCol = findMonthlyCallsignColumn_(monthSheet);
   var warnings = [];
 
@@ -170,21 +281,10 @@ function syncMonthlyCallsignsFromPersonnel_(targetSheetOrName) {
     };
   }
 
-  if (values.length > maxRows) {
-    warnings.push(
-      "Лист " +
-        monthSheet.getName() +
-        ": у PERSONNEL " +
-        values.length +
-        " рядок, слотів графіка " +
-        maxRows +
-        "; синхронізовано перші " +
-        maxRows +
-        ".",
-    );
-  }
-
-  var output = values.slice(0, maxRows);
+  var capacity = _monthlyEnsurePersonnelCapacity_(monthSheet, values.length);
+  var startRow = capacity.startRow;
+  var maxRows = capacity.capacityRows;
+  var output = values.slice();
   while (output.length < maxRows) {
     output.push([""]);
   }
@@ -209,11 +309,16 @@ function syncMonthlyCallsignsFromPersonnel_(targetSheetOrName) {
     ok: true,
     sheet: monthSheet.getName(),
     personnelSheet: personnelSheet.getName(),
-    rowsWritten: callsignChanged ? Math.min(values.length, maxRows) : 0,
+    rowsWritten: callsignChanged ? values.length : 0,
     skippedWrite: !callsignChanged,
     personnelRows: built.personnelRows,
     callsignColumn: callsignCol,
     startRow: startRow,
+    capacityRows: maxRows,
+    rowsInserted: capacity.rowsInserted,
+    separatorRows: capacity.separatorRows,
+    summaryStartRow: capacity.summaryStartRow,
+    codeRangeA1: getMonthlyCodeRangeA1ForSheet_(monthSheet),
     warnings: warnings,
   };
 }

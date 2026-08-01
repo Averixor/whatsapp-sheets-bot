@@ -567,6 +567,34 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ =
         verifyAfterWrite: false,
       }),
 
+      setupTemporaryPropertyRegister: Object.freeze({
+        routeName: "maintenance.setupTemporaryPropertyRegister",
+        publicApiMethod: "apiStage7SetupTemporaryPropertyRegister",
+        useCase: "TemporaryPropertyRegister_.setup",
+        category: "maintenance",
+        compatibilityStatus: "canonical",
+        mode: "write",
+        lockRequired: true,
+        dryRunSupported: false,
+        uiAllowed: true,
+        clientActionAliases: ["setupTemporaryPropertyRegister"],
+        verifyAfterWrite: false,
+      }),
+
+      refreshTemporaryPropertyRegister: Object.freeze({
+        routeName: "maintenance.refreshTemporaryPropertyRegister",
+        publicApiMethod: "apiStage7RefreshTemporaryPropertyRegister",
+        useCase: "TemporaryPropertyRegister_.setup",
+        category: "maintenance",
+        compatibilityStatus: "canonical",
+        mode: "write",
+        lockRequired: true,
+        dryRunSupported: false,
+        uiAllowed: true,
+        clientActionAliases: ["refreshTemporaryPropertyRegister"],
+        verifyAfterWrite: false,
+      }),
+
       restartBot: Object.freeze({
         routeName: "maintenance.restartBot",
         publicApiMethod: "apiStage7RestartBot",

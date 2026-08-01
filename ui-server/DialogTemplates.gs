@@ -12,6 +12,10 @@ const DialogTemplates_ = (function () {
     return `
       function fallbackCopy(text) {
         const el = document.createElement('textarea');
+        el.id = 'wasbClipboardFallback';
+        el.name = 'wasbClipboardFallback';
+        el.setAttribute('aria-hidden', 'true');
+        el.tabIndex = -1;
         el.value = text;
         el.style.position = 'fixed';
         el.style.left = '-9999px';
@@ -65,7 +69,8 @@ const DialogTemplates_ = (function () {
         <div style="margin-bottom:6px;"><b>Телефон:</b> ${esc(item.phone || '')}</div>
         <div><b>Код / клітинка:</b> ${esc(item.code || '')} ${item.cell ? '(' + esc(item.cell) + ')' : ''}</div>
       </div>
-      <textarea id="msgText" readonly style="width:100%;height:180px;border:1px solid #cbd5e1;border-radius:10px;padding:12px;box-sizing:border-box;">${esc(item.message || '')}</textarea>
+      <label for="msgText" style="display:block;margin:0 0 6px 0;font-weight:700;color:#0f172a;">Текст повідомлення</label>
+      <textarea id="msgText" name="msgText" readonly style="width:100%;height:180px;border:1px solid #cbd5e1;border-radius:10px;padding:12px;box-sizing:border-box;">${esc(item.message || '')}</textarea>
       <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;">
         <button onclick="copyTextSmart(document.getElementById('msgText').value)" style="padding:10px 16px;border:none;border-radius:10px;background:#0ea5e9;color:#fff;font-weight:700;cursor:pointer;">Копіювати</button>
         <a href="${safe}" target="_blank" style="display:inline-block;padding:10px 16px;border-radius:10px;background:#25D366;color:#fff;text-decoration:none;font-weight:700;">Відкрити</a>
@@ -82,7 +87,8 @@ const DialogTemplates_ = (function () {
         <div style="border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:10px;background:#fff;">
           <div style="font-weight:700;color:#0f172a;margin-bottom:4px;">${index + 1}. ${esc(item.fml || '')}</div>
           <div style="font-size:12px;color:#475569;margin-bottom:8px;">${esc(item.phone || '')} · ${esc(item.code || '')} ${item.cell ? '· ' + esc(item.cell) : ''}</div>
-          <textarea readonly style="width:100%;height:92px;border:1px solid #cbd5e1;border-radius:8px;padding:8px;box-sizing:border-box;">${esc(item.message || '')}</textarea>
+          <label for="msgText${index}" style="display:block;margin:0 0 4px 0;font-size:12px;font-weight:700;color:#0f172a;">Текст повідомлення</label>
+          <textarea id="msgText${index}" name="msgText${index}" readonly style="width:100%;height:92px;border:1px solid #cbd5e1;border-radius:8px;padding:8px;box-sizing:border-box;">${esc(item.message || '')}</textarea>
           <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
             <button onclick="copyTextSmart(this.parentNode.previousElementSibling.value)" style="padding:8px 12px;border:none;border-radius:8px;background:#0ea5e9;color:#fff;cursor:pointer;">📋</button>
             <a href="${PreviewLinkService_.safeWaLink(item.link || '')}" target="_blank" style="display:inline-block;padding:8px 12px;border-radius:8px;background:#25D366;color:#fff;text-decoration:none;">📱</a>
@@ -112,7 +118,8 @@ const DialogTemplates_ = (function () {
     const item = data || {};
     const body = `
       <div style="margin-bottom:10px;color:#334155;">Дата: <b>${esc(item.date || '')}</b></div>
-      <textarea id="summaryText" readonly style="width:100%;height:260px;border:1px solid #cbd5e1;border-radius:10px;padding:12px;box-sizing:border-box;">${esc(item.summary || '')}</textarea>
+      <label for="summaryText" style="display:block;margin:0 0 6px 0;font-weight:700;color:#0f172a;">Текст зведення</label>
+      <textarea id="summaryText" name="summaryText" readonly style="width:100%;height:260px;border:1px solid #cbd5e1;border-radius:10px;padding:12px;box-sizing:border-box;">${esc(item.summary || '')}</textarea>
       <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;">
         <button onclick="copyTextSmart(document.getElementById('summaryText').value)" style="padding:10px 16px;border:none;border-radius:10px;background:#0ea5e9;color:#fff;font-weight:700;cursor:pointer;">Копіювати</button>
         ${item.link ? `<a href="${PreviewLinkService_.safeWaLink(item.link)}" target="_blank" style="display:inline-block;padding:10px 16px;border-radius:10px;background:#25D366;color:#fff;text-decoration:none;font-weight:700;">Відкрити</a>` : ''}

@@ -453,25 +453,31 @@ function apiStage7MaterializeMonthJournal(payload) {
           message: "materializeMonthJournalBundle_ недоступна",
         };
 
-  var ok = !!(result && result.ok !== false);
+  // Never ship in-memory journalRows / nested journal dumps to HtmlService.
+  var report =
+    typeof slimMonthJournalBundleResult_ === "function"
+      ? slimMonthJournalBundleResult_(result)
+      : result || {};
+
+  var ok = !!(report && report.ok !== false);
   var names =
     typeof monthJournalDerivedSheetNames_ === "function"
       ? monthJournalDerivedSheetNames_(monthSheet)
-      : { journal: "", summary: "" };
+      : { journal: "JOURNAL", summary: "SUMMARY" };
 
   return _stage7BuildMaintenanceResponse_(
     ok,
     ok
       ? "Журнал активного місяця оновлено (" + String(monthSheet) + ")"
-      : result && result.message
-        ? result.message
+      : report && report.message
+        ? report.message
         : "Не вдалося оновити журнал місяця",
-    result || {},
+    report,
     "stage7MaterializeMonthJournal",
     ok
       ? []
       : [
-          (result && result.message) ||
+          (report && report.message) ||
             "Не вдалося оновити журнал місяця",
         ],
     {
@@ -484,18 +490,125 @@ function apiStage7MaterializeMonthJournal(payload) {
 }
 
 /**
- * Maintenance / first-run bootstrap: rebuild journals for every existing
- * month sheet 01–12. Not wired to the sidebar button — past months stay
- * untouched on the regular "Оновити журнал місяця" action.
+ * Sidebar / client: one-time setup or migration of the temporary property register.
+ * GAS-editor alias remains apiSetupTemporaryPropertyRegister (excluded from client).
  */
-function apiStage7MaterializeAllMonthJournals() {
+function apiStage7SetupTemporaryPropertyRegister() {
+  _stage7AssertRole_("admin", "setup temporary property register");
+
+  var result =
+    typeof TemporaryPropertyRegister_ === "object" &&
+    TemporaryPropertyRegister_ &&
+    typeof TemporaryPropertyRegister_.setup === "function"
+      ? TemporaryPropertyRegister_.setup({ migrateLegacy: true })
+      : {
+          success: false,
+          message: "TemporaryPropertyRegister_ недоступний",
+        };
+
+  var ok = !!(result && result.success !== false);
+  var migrated = Number(result && result.migratedRows) || 0;
+  var backup = String((result && result.backupSheet) || "").trim();
+  var message = ok
+    ? migrated > 0
+      ? "Облік майна налаштовано (перенесено рядків: " +
+        migrated +
+        (backup ? "; резерв: " + backup : "") +
+        ")"
+      : "Облік майна налаштовано"
+    : (result && result.message) || "Не вдалося налаштувати облік майна";
+
+  return _stage7BuildMaintenanceResponse_(
+    ok,
+    message,
+    result || {},
+    "stage7SetupTemporaryPropertyRegister",
+    ok ? [] : [message],
+    {
+      dryRun: false,
+      affectedSheets: ok
+        ? [result.sheet, result.catalogSheet, result.kitsSheet].filter(Boolean)
+        : [],
+      appliedChangesCount: ok ? 1 : 0,
+    },
+  );
+}
+
+/**
+ * Sidebar / client: re-apply temporary property validations and formatting (no migration).
+ * GAS-editor alias remains apiRefreshTemporaryPropertyRegister (excluded from client).
+ */
+function apiStage7RefreshTemporaryPropertyRegister() {
+  _stage7AssertRole_("maintainer", "refresh temporary property register");
+
+  var result =
+    typeof TemporaryPropertyRegister_ === "object" &&
+    TemporaryPropertyRegister_ &&
+    typeof TemporaryPropertyRegister_.setup === "function"
+      ? TemporaryPropertyRegister_.setup({ migrateLegacy: false })
+      : {
+          success: false,
+          message: "TemporaryPropertyRegister_ недоступний",
+        };
+
+  var ok = !!(result && result.success !== false);
+  var message = ok
+    ? "Облік майна оновлено"
+    : (result && result.message) || "Не вдалося оновити облік майна";
+
+  return _stage7BuildMaintenanceResponse_(
+    ok,
+    message,
+    result || {},
+    "stage7RefreshTemporaryPropertyRegister",
+    ok ? [] : [message],
+    {
+      dryRun: false,
+      affectedSheets: ok
+        ? [result.sheet, result.catalogSheet, result.kitsSheet].filter(Boolean)
+        : [],
+      appliedChangesCount: ok ? 1 : 0,
+    },
+  );
+}
+
+/**
+ * Maintenance / first-run bootstrap: fill JOURNAL + SUMMARY from every
+ * existing month sheet 01–12. Chunked — pass payload.nextCursor (or cursor)
+ * from the previous response until done=true.
+ * Not wired to the sidebar (uiAllowed: false); intended for GAS editor.
+ * Public api* + maintainer — could be called via google.script.run if wired
+ * manually. Continuation fields are inside the Stage7 envelope:
+ * response.data.result.{done,nextCursor,batchMonths,cursor} — not top-level.
+ * Regular "Оновити журнал місяця" refreshes only the active month slice.
+ *
+ * @param {Object=} payload
+ * @param {number=} payload.cursor start index (default 0)
+ * @param {number=} payload.nextCursor alias for cursor (continuation)
+ * @param {number=} payload.monthsPerCall months per GAS call (default 3)
+ */
+function apiStage7MaterializeAllMonthJournals(payload) {
   _stage7AssertRole_("maintainer", "materialize all month journals");
+
+  var opts = payload && typeof payload === "object" ? payload : {};
+  var cursorRaw =
+    opts.nextCursor != null && opts.nextCursor !== ""
+      ? opts.nextCursor
+      : opts.cursor;
+  var callOpts = {
+    cursor: cursorRaw != null && cursorRaw !== "" ? Number(cursorRaw) : 0,
+    monthsPerCall:
+      opts.monthsPerCall != null && opts.monthsPerCall !== ""
+        ? Number(opts.monthsPerCall)
+        : undefined,
+  };
 
   var result =
     typeof materializeAllExistingMonthJournals_ === "function"
-      ? materializeAllExistingMonthJournals_()
+      ? materializeAllExistingMonthJournals_(callOpts)
       : {
           ok: false,
+          done: true,
           reason: "materialize_all_unavailable",
           message: "materializeAllExistingMonthJournals_ недоступна",
           monthCount: 0,
@@ -504,35 +617,86 @@ function apiStage7MaterializeAllMonthJournals() {
         };
 
   var ok = !!(result && result.ok !== false);
+  var done = !!(result && result.done);
   var monthCount = Number(result && result.monthCount) || 0;
   var failedCount = Number(result && result.failedCount) || 0;
-  var message = ok
-    ? monthCount > 0
-      ? "Журнали оновлено для всіх наявних місяців (" + monthCount + ")"
-      : "Немає місячних аркушів 01–12 для оновлення"
-    : failedCount > 0
-      ? "Частина журналів не оновилась (" +
-        failedCount +
-        " з " +
-        monthCount +
-        ")"
-      : (result && result.message) ||
-        "Не вдалося оновити журнали місяців";
+  var processedCount = Number(result && result.processedCount) || 0;
+  var batchMonths = Array.isArray(result && result.batchMonths)
+    ? result.batchMonths
+    : [];
+  var nextCursor =
+    result && result.nextCursor != null ? result.nextCursor : null;
+
+  var message;
+  if (!ok) {
+    message =
+      failedCount > 0
+        ? "Частина зрізів журналу не оновилась (" +
+          failedCount +
+          " у батчі; cursor=" +
+          String(result.cursor) +
+          ")"
+        : (result && result.message) ||
+          "Не вдалося оновити журнал / підсумок";
+  } else if (monthCount === 0) {
+    message = "Немає місячних аркушів 01–12 для оновлення";
+  } else if (done) {
+    message =
+      "Журнал і підсумок: bootstrap завершено (" + monthCount + " міс.)";
+  } else {
+    message =
+      "Журнал і підсумок: батч " +
+      batchMonths.join(",") +
+      " (" +
+      processedCount +
+      "); повторіть з nextCursor=" +
+      String(nextCursor);
+  }
+
+  // Slim per-month results only — drop any accidental nested row dumps.
+  var slimResults = Array.isArray(result && result.results)
+    ? result.results.map(function (item) {
+        return typeof slimMonthJournalBundleResult_ === "function"
+          ? slimMonthJournalBundleResult_(item)
+          : item;
+      })
+    : [];
+
+  var report = {
+    ok: ok,
+    done: done,
+    cursor: Number(result && result.cursor) || 0,
+    nextCursor: nextCursor,
+    monthsPerCall: Number(result && result.monthsPerCall) || 0,
+    months: Array.isArray(result && result.months) ? result.months : [],
+    batchMonths: batchMonths,
+    monthCount: monthCount,
+    processedCount: processedCount,
+    failedCount: failedCount,
+    journalRowsWritten: Number(result && result.journalRowsWritten) || 0,
+    summaryRowsWritten: Number(result && result.summaryRowsWritten) || 0,
+    journalSheet: (result && result.journalSheet) || "JOURNAL",
+    summarySheet: (result && result.summarySheet) || "SUMMARY",
+    results: slimResults,
+    affectedSheets: Array.isArray(result && result.affectedSheets)
+      ? result.affectedSheets
+      : [],
+    reason: (result && result.reason) || "",
+    message: (result && result.message) || message,
+  };
 
   return _stage7BuildMaintenanceResponse_(
     ok,
     message,
-    result || {},
+    report,
     "stage7MaterializeAllMonthJournals",
-    ok
-      ? []
-      : [message],
+    ok ? [] : [message],
     {
-      affectedSheets: Array.isArray(result && result.affectedSheets)
-        ? result.affectedSheets
-        : [],
+      affectedSheets: report.affectedSheets,
       monthCount: monthCount,
       failedCount: failedCount,
+      done: done,
+      nextCursor: nextCursor,
     },
   );
 }

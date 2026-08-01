@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Month journal materialize — module, API, sidebar, access contract.
+ * Month journal materialize — unified JOURNAL/SUMMARY, API, sidebar, access.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -45,23 +45,81 @@ const resultsUi = readRepoFileByBasename(repoRoot, "Js.Render.Results.html", {
 
 assert.match(journal, /function materializeMonthJournal_/);
 assert.match(journal, /function materializeMonthPersonSummary_/);
+assert.match(journal, /function slimMonthJournalBundleResult_/);
 assert.match(journal, /function materializeMonthJournalBundle_/);
 assert.match(journal, /function materializeAllExistingMonthJournals_/);
 assert.match(journal, /function listExistingMonthSheetNames_/);
+assert.match(journal, /function _monthJournalRemapSummaryRow_/);
+assert.match(journal, /function _monthJournalReplaceMonthSlice_/);
+// SUMMARY merge/preserve: data rows via getValues (numeric counters); headers may use display.
+{
+  const summaryFnMatch = journal.match(
+    /function materializeMonthPersonSummary_\([\s\S]*?\n(?=function\s)/,
+  );
+  assert.ok(
+    summaryFnMatch,
+    "materializeMonthPersonSummary_ body not found for getValues guard",
+  );
+  const summaryFn = summaryFnMatch[0];
+  assert.match(
+    summaryFn,
+    /existingData\s*=\s*existingSheet[\s\S]{0,160}?\.getValues\(\s*\)/,
+    "SUMMARY preserve path must read existing data with getValues()",
+  );
+  assert.doesNotMatch(
+    summaryFn,
+    /existingData\s*=\s*existingSheet[\s\S]{0,160}?\.getDisplayValues\(\s*\)/,
+    "SUMMARY preserve path must not read existing data with getDisplayValues()",
+  );
+}
+assert.match(journal, /MONTH_JOURNAL_DEFAULT_MONTHS_PER_CALL_/);
+assert.match(journal, /nextCursor/);
+assert.match(journal, /done:\s*done/);
+// Client/API responses must not embed full in-memory journalRows (HtmlService INTERNAL).
+assert.match(journal, /slimMonthJournalBundleResult_/);
+assert.doesNotMatch(
+  journal,
+  /return \{[\s\S]{0,400}journal:\s*journalResult/,
+);
+assert.match(maintenanceApi, /slimMonthJournalBundleResult_/);
+assert.match(maintenanceApi, /nextCursor/);
 assert.match(journal, /function buildMonthJournalCompressedSummary_/);
 assert.match(journal, /function findMonthlyNotesCol_/);
 assert.match(journal, /getBotMonthSheetName_/);
-// getRange(row, column, numRows, numColumns) — write height must be rows.length, not 1+rows.length
+// getRange(row, column, numRows, numColumns) — write height must be rows.length / merged.length
 assert.match(
   journal,
-  /getRange\(\s*2\s*,\s*1\s*,\s*rows\.length\s*,\s*headerCount\s*\)\.setValues\(\s*rows\s*\)/,
+  /getRange\(\s*2\s*,\s*1\s*,\s*(?:rows|merged)\.length\s*,\s*headerCount\s*\)\.setValues\(\s*(?:rows|merged)\s*\)/,
 );
 assert.doesNotMatch(journal, /var endRow\s*=\s*1\s*\+\s*rows\.length/);
+
+// Unified English sheet names — no per-month UA suffixes.
+assert.match(
+  journal,
+  new RegExp(
+    `MONTH_JOURNAL_SHEET_NAME_\\s*=\\s*"${escapeRegExp(contract.derivedSheetNames.journal)}"`,
+  ),
+);
+assert.match(
+  journal,
+  new RegExp(
+    `MONTH_JOURNAL_SUMMARY_SHEET_NAME_\\s*=\\s*"${escapeRegExp(contract.derivedSheetNames.summary)}"`,
+  ),
+);
+assert.doesNotMatch(journal, /ЖУРНАЛ_/);
+assert.doesNotMatch(journal, /ПІДСУМОК_/);
+assert.match(
+  journal,
+  new RegExp(escapeRegExp(contract.monthKeyHeader)),
+);
 
 contract.journalHeaders.forEach((header) => {
   assert.match(journal, new RegExp(escapeRegExp(header)));
 });
 contract.summaryBaseHeaders.forEach((header) => {
+  assert.match(journal, new RegExp(escapeRegExp(header)));
+});
+(contract.summaryTrailingHeaders || []).forEach((header) => {
   assert.match(journal, new RegExp(escapeRegExp(header)));
 });
 contract.notesHeaderMatchers.forEach((matcher) => {
@@ -70,14 +128,6 @@ contract.notesHeaderMatchers.forEach((matcher) => {
 contract.dependencies.forEach((dependency) => {
   assert.match(journal, new RegExp(escapeRegExp(dependency)));
 });
-assert.match(
-  journal,
-  new RegExp(escapeRegExp(contract.derivedSheetNames.journalPrefix)),
-);
-assert.match(
-  journal,
-  new RegExp(escapeRegExp(contract.derivedSheetNames.summaryPrefix)),
-);
 assert.match(journal, new RegExp(escapeRegExp(contract.unknownCodeLabel)));
 
 if (contract.personnelPolicy?.mode === "read-only-lookup") {
@@ -183,5 +233,5 @@ assert.match(
 );
 
 console.log(
-  `verify-month-journal-materialize: OK (${contract.sidebar.buttonLabel}; all=${contract.apiAllMonths.functionName})`,
+  `verify-month-journal-materialize: OK (${contract.derivedSheetNames.journal}+${contract.derivedSheetNames.summary}; ${contract.sidebar.buttonLabel}; all=${contract.apiAllMonths.functionName})`,
 );

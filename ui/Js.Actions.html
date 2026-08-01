@@ -72,7 +72,7 @@
               Проєкт *
             </label>
             <select
-              id="reqProject"
+              id="reqProject" name="reqProject"
               class="input"
               style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);"
             >
@@ -83,7 +83,7 @@
               Тема *
             </label>
             <input
-              id="reqTitle"
+              id="reqTitle" name="reqTitle"
               class="input"
               type="text"
               maxlength="140"
@@ -95,7 +95,7 @@
               Опис *
             </label>
             <textarea
-              id="reqDetails"
+              id="reqDetails" name="reqDetails"
               class="input"
               rows="8"
               maxlength="3000"
@@ -230,6 +230,10 @@
   function fallbackCopy(text) {
     try {
       const el = document.createElement("textarea");
+      el.id = "wasbClipboardFallback";
+      el.name = "wasbClipboardFallback";
+      el.setAttribute("aria-hidden", "true");
+      el.tabIndex = -1;
       el.value = text;
       el.style.position = "fixed";
       el.style.left = "-9999px";
@@ -1228,7 +1232,7 @@
           <div class="result-item">
             <label class="result-label" for="phoneDirectorySearch">Пошук</label>
             <input
-              id="phoneDirectorySearch"
+              id="phoneDirectorySearch" name="phoneDirectorySearch"
               class="input"
               type="search"
               value="${escapeAttr(query || "")}" 
@@ -1375,7 +1379,7 @@
           <div class="result-item">
             <label class="result-label" for="carsRegisterSearch">Пошук</label>
             <input
-              id="carsRegisterSearch"
+              id="carsRegisterSearch" name="carsRegisterSearch"
               class="input"
               type="search"
               value="${escapeAttr(query || "")}" 
@@ -1501,7 +1505,7 @@
           <div class="result-item">
             <label class="result-label" for="weaponsRegisterSearch">Пошук</label>
             <input
-              id="weaponsRegisterSearch"
+              id="weaponsRegisterSearch" name="weaponsRegisterSearch"
               class="input"
               type="search"
               value="${escapeAttr(query || "")}" 
@@ -1620,6 +1624,8 @@
     clearPhoneCache,
     materializeComputedData,
     materializeMonthJournal,
+    setupTemporaryPropertyRegister,
+    refreshTemporaryPropertyRegister,
     runMaterializeComputedData_,
     restartBot,
     setupTrigger,

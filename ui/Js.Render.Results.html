@@ -49,10 +49,10 @@
         <div class="month-switcher-hint">Виберіть місяць, на який потрібно перемкнути активний бот.</div>
         <div class="month-switcher-badge">Активний місяць: ${escapeHtml(STATE.currentMonth || "—")}</div>
 
-        <label class="month-switcher-field" for="monthSelect">
+        <label class="month-switcher-field">
           <span class="month-switcher-field__label">Виберіть місяць</span>
           <span class="month-switcher-select-wrap">
-            <select id="monthSelect" class="month-switcher-select">${options}</select>
+            <select id="monthSelect" name="monthSelect" class="month-switcher-select">${options}</select>
           </span>
         </label>
 
@@ -460,6 +460,73 @@
         );
       } else {
         showToast("" + (result?.message || "Не вдалося оновити журнал місяця"));
+      }
+    } catch (error) {
+      showToast("" + normalizeError(error));
+    }
+  }
+
+  async function setupTemporaryPropertyRegister() {
+    assertAdminAction_("setupTemporaryPropertyRegister");
+    if (
+      !(await showConfirmModal({
+        title: "Облік майна",
+        message:
+          "Налаштувати облік майна? За потреби буде створено резервну копію старого журналу перед міграцією.",
+      }))
+    )
+      return;
+
+    logToConsole("Налаштування обліку майна...", "info");
+
+    try {
+      const result = await ActionDispatcher.run(
+        "setupTemporaryPropertyRegister",
+        () => MaintenanceApi.setupTemporaryPropertyRegister(),
+      );
+      if (result?.success) {
+        showToast("Облік майна налаштовано");
+        showStandardResult("Облік майна");
+        setHtml(
+          "resultContent",
+          `
+          <div class="result-item">
+            <div class="result-label" style="color: var(--success-color);">Успішно</div>
+            <div class="result-value">${escapeHtml(result.message || "Облік майна налаштовано")}</div>
+          </div>
+        `,
+        );
+      } else {
+        showToast("" + (result?.message || result?.error || "Помилка"));
+      }
+    } catch (error) {
+      showToast("" + normalizeError(error));
+    }
+  }
+
+  async function refreshTemporaryPropertyRegister() {
+    assertAdminAction_("refreshTemporaryPropertyRegister");
+    logToConsole("Оновлення обліку майна...", "info");
+
+    try {
+      const result = await ActionDispatcher.run(
+        "refreshTemporaryPropertyRegister",
+        () => MaintenanceApi.refreshTemporaryPropertyRegister(),
+      );
+      if (result?.success) {
+        showToast("Облік майна оновлено");
+        showStandardResult("Облік майна");
+        setHtml(
+          "resultContent",
+          `
+          <div class="result-item">
+            <div class="result-label" style="color: var(--success-color);">Успішно</div>
+            <div class="result-value">${escapeHtml(result.message || "Облік майна оновлено")}</div>
+          </div>
+        `,
+        );
+      } else {
+        showToast("" + (result?.message || result?.error || "Помилка"));
       }
     } catch (error) {
       showToast("" + normalizeError(error));

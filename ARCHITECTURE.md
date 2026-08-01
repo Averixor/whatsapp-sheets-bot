@@ -101,7 +101,7 @@ Representative entrypoints:
 - `apiStage7RunRepair()`
 - `apiStage7MaterializeComputedData()`
 - `apiStage7MaterializeMonthJournal()`
-- `apiStage7MaterializeAllMonthJournals()`
+- `apiStage7MaterializeAllMonthJournals()` // chunked bootstrap; uiAllowed:false; continuation in response.data.result.nextCursor until done
 
 ### Compatibility facade
 
@@ -132,7 +132,7 @@ Key repositories and services:
 - `reports/Report_SummaryData.gs` — read short-summary values from monthly formula block
 - `reports/Report_DailySimple.gs` — format short daily summary text
 - `reports/Report_DailyDetailed.gs` — detailed daily summary (people + DICT_SUM groups)
-- `reports/MonthJournalMaterialize.gs` — derived `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` from month sheets + PERSONNEL + DICT/DICT_SUM
+- `reports/MonthJournalMaterialize.gs` — derived unified `JOURNAL` / `SUMMARY` from month sheets + PERSONNEL + DICT/DICT_SUM
 - `reports/Summaries.gs` — legacy entrypoints (`buildDaySummaryForColumn_`, summary dialogs)
 - `vacations/VacationsRepository.gs`
 - `vacations/VacationPlannerService.gs`, `vacations/VacationMonthCalendar.gs`, `vacations/Vacation_Suggestions.gs`
@@ -244,8 +244,8 @@ Main operational sheets typically include:
 - `VACATIONS` — legacy vacation source (`A:I` only; `K:Q` presentation/migration)
 - `VACATION_REQUESTS` — opt-in flat vacation source; activated explicitly with
   Script Property `WASB_VACATION_SOURCE=VACATION_REQUESTS`
-- `ЖУРНАЛ_MM` — derived month fact table, one person × one day × one code
-- `ПІДСУМОК_MM` — derived month person summary with counters and compressed history
+- `JOURNAL` — derived fact table for all months `01`–`12` (column **Місяць** scopes rows; one person × one day × one code)
+- `SUMMARY` — full person×month summary with DICT_SUM counters and compressed history text
 - `LOG`
 - `TEMPLATES`
 
@@ -326,10 +326,12 @@ These reads are owned by `ReferenceSheetsRepository_` in `data/DictionaryReposit
 Month-journal materialization is separate from `apiStage7MaterializeComputedData()`:
 
 - source: month sheet `01`..`12` + PERSONNEL + DICT + DICT_SUM
-- output: `ЖУРНАЛ_MM` and `ПІДСУМОК_MM`
-- maintenance API (active/requested month): `apiStage7MaterializeMonthJournal()`
-- maintenance API (all existing `01`–`12`, no sidebar): `apiStage7MaterializeAllMonthJournals()`
+- output: unified English tabs `JOURNAL` and `SUMMARY` (column **Місяць**; no per-month sheet suffixes)
+- active update: replaces only that month’s rows; other months stay intact
+- bootstrap: `apiStage7MaterializeAllMonthJournals({ cursor?, monthsPerCall? })` — chunked (default 3 months/call); **не підключено до UI** (`uiAllowed: false`); **призначено для GAS editor** (public `api*` + maintainer). Continuation fields live inside the Stage7 envelope (`response.data.result.done` / `nextCursor` / `batchMonths` / `cursor`), not top-level — re-invoke with `{ nextCursor }` until `done`
+- maintenance API (active/requested month slice): `apiStage7MaterializeMonthJournal()`
 - UI action: sidebar button **Оновити журнал місяця** (active bot month only)
+- legacy `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` tabs are superseded and not deleted automatically
 
 ## 7.4 Inventory reconciliation
 

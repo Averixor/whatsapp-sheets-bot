@@ -47,16 +47,34 @@ function _systemStatusFingerprintSuccessfulResult_(stageId) {
   return { ok: true };
 }
 
+function _systemStatusMonthlyTrustedContext_(invocationOverrides, lockOverrides) {
+  return {
+    source: "canonical_operation_invocation_and_lock_context",
+    canonicalInvocation: Object.assign({
+      operation: "computed",
+      stageId: "computed.vacation_monthly_sync",
+      target: "07",
+      scopeFingerprint: "sha256:" + "a".repeat(64),
+      runId: "test-run-07",
+    }, invocationOverrides || {}),
+    lockContext: Object.assign({
+      documentLockHeld: true,
+      lockOwner: "workflow_orchestrator",
+    }, lockOverrides || {}),
+  };
+}
+
 function _systemStatusMonthlyStructuredEvidence_() {
   var digest = function (character) {
     return "sha256:" + String(character).repeat(64);
   };
-  var binding = {
+  var expectedBinding = {
     stageId: "computed.vacation_monthly_sync",
     target: "07",
     scopeFingerprint: digest("a"),
     runId: "test-run-07",
   };
+  var binding = Object.assign({}, expectedBinding);
   var priorRows = [{ cellKey: "07:R2:C3", cellValue: "", cellDisplay: "", validationAllowed: ["В"], note: "", dateRaw: 1, dateDisplay: "01.07", callsign: "A", fml: "B" }];
   var expectedRows = [{ cellKey: "07:R2:C3", cellValue: "В", cellDisplay: "В", validationAllowed: ["В"], note: "", dateRaw: 1, dateDisplay: "01.07", callsign: "A", fml: "B" }];
   var proof = function (prior, expected, post) {
@@ -67,7 +85,7 @@ function _systemStatusMonthlyStructuredEvidence_() {
     });
   };
   return {
-    expectedBinding: binding,
+    expectedBinding: Object.assign({}, expectedBinding),
     immutable: {
       preFingerprint: "immutable",
       postFingerprint: "immutable",
@@ -95,17 +113,39 @@ function _systemStatusMonthlyStructuredEvidence_() {
   };
 }
 
-function _systemStatusFingerprintEvidence_(stageId, result, scope, overrides) {
-  return Object.assign({
-    scopeKnown: true,
+function _systemStatusFingerprintEvidence_(stageId, result, overrides) {
+  var evidence = {
     attempted: true,
     resultPresent: true,
     required: SystemStatusFingerprints_.stagePolicy[stageId].policy === "required",
     optional: SystemStatusFingerprints_.stagePolicy[stageId].policy === "optional",
-    skipPredicateSatisfied: false,
-    scope: scope || {},
     result: result,
-  }, overrides || {});
+  };
+  return Object.assign(evidence, overrides || {});
+}
+
+function _systemStatusFingerprintCanonicalScope_(stageId, overrides) {
+  var skipWhen = SystemStatusFingerprints_.stagePolicy[stageId].skipWhen;
+  var scope = null;
+  if (skipWhen === "no_target_months") scope = { targetMonthCount: 1 };
+  if (skipWhen === "target_missing_or_empty") scope = { targetExists: true, targetRowCount: 1 };
+  if (skipWhen === "vacation_source_not_legacy") scope = { vacationSourceMode: "legacy" };
+  if (skipWhen === "module_unavailable") scope = { moduleAvailable: true };
+  if (skipWhen === "no_target_month") scope = { targetMonth: "07" };
+  if (skipWhen === "target_missing") scope = { targetExists: true };
+  return scope ? Object.assign(scope, overrides || {}) : null;
+}
+
+function _systemStatusFingerprintCanonicalScopeMap_(operation) {
+  var prefix = String(operation || "") + ".";
+  var scopes = {};
+  Object.keys(SystemStatusFingerprints_.stagePolicy)
+    .filter(function (stageId) { return stageId.indexOf(prefix) === 0; })
+    .forEach(function (stageId) {
+      var scope = _systemStatusFingerprintCanonicalScope_(stageId);
+      if (scope) scopes[stageId] = scope;
+    });
+  return scopes;
 }
 
 function _systemStatusFingerprintFixtureValue_(normalizer, changed) {
@@ -700,7 +740,6 @@ function runSystemStatusFingerprintTests_() {
     var projection = _systemStatusFingerprintBuilderFixture_("computed.operation_summary", "source");
     projection.context.injected.computedStageEvidence = [{
       stageId: new Array(18000).join("x"),
-      scopeKnown: true,
       attempted: true,
       resultPresent: true,
       status: "success",
@@ -811,9 +850,9 @@ function runSystemStatusFingerprintTests_() {
         _systemStatusFingerprintEvidence_(
           "computed.vacation_computed",
           null,
-          { vacationSourceMode: "requests" },
-          { attempted: false, resultPresent: false, skipPredicateSatisfied: true },
+          { attempted: false, resultPresent: false },
         ),
+        { vacationSourceMode: "requests" },
       ).status,
       "skipped",
     );
@@ -823,8 +862,8 @@ function runSystemStatusFingerprintTests_() {
         _systemStatusFingerprintEvidence_(
           "computed.assignment_car",
           { ok: false },
-          { targetExists: true, targetRowCount: 2 },
         ),
+        { targetExists: true, targetRowCount: 2 },
       ).status,
       "failed",
     );
@@ -834,9 +873,9 @@ function runSystemStatusFingerprintTests_() {
         _systemStatusFingerprintEvidence_(
           "computed.assignment_car",
           null,
-          { targetExists: false, targetRowCount: 0 },
-          { attempted: false, resultPresent: false, skipPredicateSatisfied: true },
+          { attempted: false, resultPresent: false },
         ),
+        { targetExists: false, targetRowCount: 0 },
       ).status,
       "skipped",
     );
@@ -847,25 +886,119 @@ function runSystemStatusFingerprintTests_() {
         resultPresent: false,
         skipPredicateSatisfied: true,
         scope: { targetExists: false, targetRowCount: 0 },
-      }).status,
+      }, null).status,
       "unknown",
       "Unknown scope was treated as proven skip",
     );
   });
 
+  _systemStatusFingerprintCheck_(report, "canonical scope boundary rejects evidence skip forgery", function () {
+    var stageId = "computed.vacation_monthly_sync";
+    var trusted = _systemStatusMonthlyTrustedContext_();
+    var fakeTransition = _systemStatusMonthlyStructuredEvidence_();
+    fakeTransition.scope = { targetMonth: "" };
+    fakeTransition.scopeKnown = true;
+    fakeTransition.skipPredicateSatisfied = true;
+    fakeTransition.attempted = false;
+    _systemStatusFingerprintEqual_(
+      SystemStatusFingerprints_.evaluateTransitionEvidence(
+        stageId, fakeTransition, trusted,
+      ).status,
+      "eligible",
+      "Direct evaluator trusted fake wrapper scope",
+    );
+    var fakeWrapper = _systemStatusFingerprintEvidence_(
+      stageId,
+      { ok: true, transitionEvidence: fakeTransition },
+      {
+        scope: { targetMonth: "" },
+        scopeKnown: true,
+        skipPredicateSatisfied: true,
+        attempted: false,
+      },
+    );
+    var stage = SystemStatusFingerprints_.evaluateStage(
+      stageId, fakeWrapper, { targetMonth: "07" }, trusted,
+    );
+    _systemStatusFingerprintEqual_(stage.status, "failed");
+    _systemStatusFingerprintEqual_(stage.reasonCodes[0], "stage_not_attempted");
+    _systemStatusFingerprintAssert_(!stage.skipPredicateSatisfied, "Fake skip was accepted");
+
+    var missingScope = SystemStatusFingerprints_.evaluateStage(
+      "computed.assignment_car",
+      _systemStatusFingerprintEvidence_("computed.assignment_car", { ok: true }),
+      null,
+    );
+    _systemStatusFingerprintEqual_(missingScope.status, "unknown");
+    _systemStatusFingerprintEqual_(missingScope.reasonCodes[0], "canonical_scope_unavailable");
+    var malformedScope = SystemStatusFingerprints_.evaluateStage(
+      "computed.assignment_car",
+      _systemStatusFingerprintEvidence_("computed.assignment_car", { ok: true }),
+      { targetExists: "yes", targetRowCount: 1 },
+    );
+    _systemStatusFingerprintEqual_(malformedScope.status, "unknown");
+    _systemStatusFingerprintEqual_(malformedScope.reasonCodes[0], "canonical_scope_malformed");
+
+    var noTargetTrusted = _systemStatusMonthlyTrustedContext_({ target: "" });
+    var unboundSkip = SystemStatusFingerprints_.evaluateStage(
+      stageId, fakeWrapper, { targetMonth: "" }, null,
+    );
+    _systemStatusFingerprintEqual_(unboundSkip.status, "unknown");
+    _systemStatusFingerprintEqual_(
+      unboundSkip.reasonCodes[0], "canonical_scope_trusted_context_unavailable",
+    );
+    var validSkip = SystemStatusFingerprints_.evaluateStage(
+      stageId, fakeWrapper, { targetMonth: "" }, noTargetTrusted,
+    );
+    _systemStatusFingerprintEqual_(validSkip.status, "skipped");
+    var conflictingSkip = SystemStatusFingerprints_.evaluateStage(
+      stageId, fakeWrapper, { targetMonth: "" }, trusted,
+    );
+    _systemStatusFingerprintEqual_(conflictingSkip.status, "failed");
+    _systemStatusFingerprintEqual_(
+      conflictingSkip.reasonCodes[0], "canonical_scope_trusted_target_conflict",
+    );
+
+    var inputs = {};
+    Object.keys(SystemStatusFingerprints_.stagePolicy)
+      .filter(function (id) { return id.indexOf("computed.") === 0; })
+      .forEach(function (id) {
+        inputs[id] = id === stageId
+          ? fakeWrapper
+          : _systemStatusFingerprintEvidence_(
+            id, _systemStatusFingerprintSuccessfulResult_(id),
+          );
+      });
+    var scopes = _systemStatusFingerprintCanonicalScopeMap_("computed");
+    var trustedMap = {}; trustedMap[stageId] = trusted;
+    var operation = SystemStatusFingerprints_.evaluateOperation(
+      "computed", inputs, scopes, trustedMap,
+    );
+    var monthlyStage = operation.stages.filter(function (item) {
+      return item.stageId === stageId;
+    })[0];
+    _systemStatusFingerprintEqual_(monthlyStage.status, "failed");
+    _systemStatusFingerprintAssert_(!operation.isFullSuccess);
+    _systemStatusFingerprintEqual_(operation.decision.status, "failed");
+
+    var missingScopeMap = _systemStatusFingerprintCanonicalScopeMap_("computed");
+    delete missingScopeMap["computed.assignment_car"];
+    var missingScopeOperation = SystemStatusFingerprints_.evaluateOperation(
+      "computed", inputs, missingScopeMap, trustedMap,
+    );
+    _systemStatusFingerprintAssert_(!missingScopeOperation.isFullSuccess);
+    _systemStatusFingerprintAssert_(
+      missingScopeOperation.unknownStageIds.indexOf("computed.assignment_car") !== -1,
+      "Missing operation scope was not preserved as unknown",
+    );
+  });
+
   _systemStatusFingerprintCheck_(report, "every eligible stage failure", function () {
-    var nonSkippingScope = {
-      targetMonthCount: 1,
-      targetExists: true,
-      targetRowCount: 1,
-      vacationSourceMode: "legacy",
-      moduleAvailable: true,
-      targetMonth: "07",
-    };
     Object.keys(SystemStatusFingerprints_.stagePolicy).forEach(function (stageId) {
       var evaluated = SystemStatusFingerprints_.evaluateStage(
         stageId,
-        _systemStatusFingerprintEvidence_(stageId, { ok: false }, nonSkippingScope),
+        _systemStatusFingerprintEvidence_(stageId, { ok: false }),
+        _systemStatusFingerprintCanonicalScope_(stageId),
       );
       _systemStatusFingerprintEqual_(evaluated.status, "failed", stageId + " failure policy");
     });
@@ -885,15 +1018,150 @@ function runSystemStatusFingerprintTests_() {
       _systemStatusFingerprintEqual_(
         SystemStatusFingerprints_.evaluateStage(
           stageId,
-          _systemStatusFingerprintEvidence_(stageId, null, cases[stageId], {
+          _systemStatusFingerprintEvidence_(stageId, null, {
             attempted: false,
             resultPresent: false,
-            skipPredicateSatisfied: true,
           }),
+          cases[stageId],
+          stageId === "computed.vacation_monthly_sync"
+            ? _systemStatusMonthlyTrustedContext_({ target: "" })
+            : null,
         ).status,
         "skipped",
         stageId + " skip policy",
       );
+    });
+  });
+
+  _systemStatusFingerprintCheck_(report, "semantic domain hardening fail-closed", function () {
+    function assertMalformed_(label, evaluated) {
+      _systemStatusFingerprintAssert_(evaluated.status !== "skipped", label + " skipped");
+      _systemStatusFingerprintAssert_(
+        evaluated.skipPredicateSatisfied !== true, label + " skipPredicateSatisfied",
+      );
+      _systemStatusFingerprintAssert_(evaluated.status !== "full", label + " full");
+      _systemStatusFingerprintEqual_(evaluated.status, "unknown", label + " status");
+      _systemStatusFingerprintEqual_(
+        evaluated.reasonCodes[0], "canonical_scope_malformed", label + " reason",
+      );
+    }
+    function stageEval_(stageId, scope) {
+      return SystemStatusFingerprints_.evaluateStage(
+        stageId,
+        _systemStatusFingerprintEvidence_(
+          stageId,
+          _systemStatusFingerprintSuccessfulResult_(stageId),
+        ),
+        scope,
+        stageId === "computed.vacation_monthly_sync"
+          ? _systemStatusMonthlyTrustedContext_({
+            target: scope && Object.prototype.hasOwnProperty.call(scope, "targetMonth")
+              ? scope.targetMonth
+              : "07",
+          })
+          : null,
+      );
+    }
+    [
+      { vacationSourceMode: "requets" },
+      { vacationSourceMode: "legacy " },
+      { vacationSourceMode: "LEGACY" },
+      { vacationSourceMode: "" },
+      { vacationSourceMode: null },
+    ].forEach(function (scope) {
+      assertMalformed_(
+        "vacation " + String(scope.vacationSourceMode),
+        stageEval_("computed.vacation_computed", scope),
+      );
+    });
+    assertMalformed_(
+      "false+99",
+      stageEval_("computed.assignment_car", { targetExists: false, targetRowCount: 99 }),
+    );
+    assertMalformed_(
+      "false+1",
+      stageEval_("computed.assignment_car", { targetExists: false, targetRowCount: 1 }),
+    );
+    ["00", "13", "99"].forEach(function (month) {
+      assertMalformed_(
+        "month " + month,
+        stageEval_("computed.vacation_monthly_sync", { targetMonth: month }),
+      );
+    });
+    _systemStatusFingerprintEqual_(
+      stageEval_("computed.vacation_computed", { vacationSourceMode: "requests" }).status,
+      "skipped",
+    );
+    _systemStatusFingerprintEqual_(
+      stageEval_("computed.vacation_computed", { vacationSourceMode: "legacy" }).status,
+      "success",
+    );
+    _systemStatusFingerprintEqual_(
+      stageEval_("computed.assignment_car", { targetExists: false, targetRowCount: 0 }).status,
+      "skipped",
+    );
+    _systemStatusFingerprintEqual_(
+      stageEval_("computed.assignment_car", { targetExists: true, targetRowCount: 0 }).status,
+      "skipped",
+    );
+    _systemStatusFingerprintEqual_(
+      stageEval_("computed.assignment_car", { targetExists: true, targetRowCount: 99 }).status,
+      "success",
+    );
+    ["01", "12"].forEach(function (month) {
+      var evaluated = stageEval_(
+        "computed.vacation_monthly_sync",
+        { targetMonth: month },
+      );
+      _systemStatusFingerprintAssert_(evaluated.status !== "skipped", "month " + month);
+      _systemStatusFingerprintAssert_(evaluated.status !== "unknown", "month " + month);
+      _systemStatusFingerprintAssert_(
+        evaluated.skipPredicateSatisfied !== true, "month " + month,
+      );
+      _systemStatusFingerprintAssert_(
+        evaluated.reasonCodes.indexOf("canonical_scope_malformed") === -1,
+        "month " + month + " malformed",
+      );
+    });
+    _systemStatusFingerprintEqual_(
+      stageEval_("computed.vacation_monthly_sync", { targetMonth: "07" }).status,
+      "success",
+    );
+    _systemStatusFingerprintEqual_(
+      stageEval_("computed.vacation_monthly_sync", { targetMonth: "" }).status,
+      "skipped",
+    );
+
+    function operationWithScope_(stageId, scope) {
+      var inputs = {};
+      Object.keys(SystemStatusFingerprints_.stagePolicy)
+        .filter(function (id) { return id.indexOf("computed.") === 0; })
+        .forEach(function (id) {
+          inputs[id] = _systemStatusFingerprintEvidence_(
+            id, _systemStatusFingerprintSuccessfulResult_(id),
+          );
+        });
+      var scopes = _systemStatusFingerprintCanonicalScopeMap_("computed");
+      scopes[stageId] = scope;
+      var trustedMap = {};
+      trustedMap["computed.vacation_monthly_sync"] = _systemStatusMonthlyTrustedContext_();
+      return SystemStatusFingerprints_.evaluateOperation(
+        "computed", inputs, scopes, trustedMap,
+      );
+    }
+    var typoOperation = operationWithScope_(
+      "computed.vacation_computed",
+      { vacationSourceMode: "requets" },
+    );
+    var false99Operation = operationWithScope_(
+      "computed.assignment_car",
+      { targetExists: false, targetRowCount: 99 },
+    );
+    [typoOperation, false99Operation].forEach(function (operation) {
+      _systemStatusFingerprintAssert_(operation.status !== "skipped");
+      _systemStatusFingerprintAssert_(operation.isFullSuccess !== true);
+      _systemStatusFingerprintAssert_(operation.status !== "full");
+      _systemStatusFingerprintAssert_(operation.hasUnknownEvidence);
     });
   });
 
@@ -904,61 +1172,65 @@ function runSystemStatusFingerprintTests_() {
         .filter(function (stageId) { return stageId.indexOf("computed.") === 0; })
         .forEach(function (stageId) {
           inputs[stageId] = {
-            scopeKnown: true,
             attempted: true,
             resultPresent: true,
             result: stageId === failedStage
               ? { ok: false }
               : _systemStatusFingerprintSuccessfulResult_(stageId),
-            scope: {
-              targetMonthCount: 1,
-              targetExists: true,
-              targetRowCount: 1,
-              vacationSourceMode: "legacy",
-              moduleAvailable: true,
-              targetMonth: "07",
-            },
           };
         });
       return inputs;
     }
+    var trustedContextMap = {
+      "computed.vacation_monthly_sync": _systemStatusMonthlyTrustedContext_(),
+    };
     _systemStatusFingerprintEqual_(
-      SystemStatusFingerprints_.evaluateOperation("computed", computedInputs_("")).status,
+      SystemStatusFingerprints_.evaluateOperation(
+        "computed", computedInputs_(""),
+        _systemStatusFingerprintCanonicalScopeMap_("computed"), trustedContextMap,
+      ).status,
       "full",
     );
     _systemStatusFingerprintEqual_(
       SystemStatusFingerprints_.evaluateOperation(
         "computed",
         computedInputs_("computed.phones_result"),
+        _systemStatusFingerprintCanonicalScopeMap_("computed"),
+        trustedContextMap,
       ).status,
       "partial",
     );
     [
       {},
-      { "computed.personnel_helpers": { scopeKnown: true } },
+      { "computed.personnel_helpers": { attempted: false } },
       { "computed.personnel_helpers": "malformed" },
     ].forEach(function (input) {
-      var evaluated = SystemStatusFingerprints_.evaluateOperation("computed", input);
+      var evaluated = SystemStatusFingerprints_.evaluateOperation(
+        "computed", input, _systemStatusFingerprintCanonicalScopeMap_("computed"), null,
+      );
       _systemStatusFingerprintAssert_(!evaluated.isFullSuccess, "Incomplete evidence returned full success");
       _systemStatusFingerprintAssert_(evaluated.status !== "full", "Malformed evidence returned full");
     });
     _systemStatusFingerprintAssert_(
-      !SystemStatusFingerprints_.evaluateOperation("month_journal", {}).isFullSuccess,
+      !SystemStatusFingerprints_.evaluateOperation("month_journal", {}, {}).isFullSuccess,
       "Empty month-journal evidence returned full success",
     );
   });
 
   _systemStatusFingerprintCheck_(report, "monthly sync stage success requires structured transition evidence", function () {
     var stageId = "computed.vacation_monthly_sync";
+    var trusted = _systemStatusMonthlyTrustedContext_();
     ["metadata", "pendingPlan", "conflicts"].forEach(function (field) {
       var result = _systemStatusFingerprintSuccessfulResult_(stageId);
       delete result.transitionEvidence.transition[field];
       _systemStatusFingerprintEqual_(
         SystemStatusFingerprints_.evaluateStage(
           stageId,
-          _systemStatusFingerprintEvidence_(stageId, result, { targetMonth: "07" }),
+          _systemStatusFingerprintEvidence_(stageId, result),
+          { targetMonth: "07" },
+          trusted,
         ).status,
-        "failed",
+        "unknown",
         field + " proof was not fail-closed",
       );
     });
@@ -969,11 +1241,129 @@ function runSystemStatusFingerprintTests_() {
           ok: true,
           metadataConfirmed: true,
           pendingPlanConfirmed: true,
-        }, { targetMonth: "07" }),
+        }),
+        { targetMonth: "07" },
+        trusted,
       ).status,
-      "failed",
+      "unknown",
       "Naked booleans were accepted",
     );
+  });
+
+  _systemStatusFingerprintCheck_(report, "trusted context and structured status propagate through wrappers", function () {
+    var stageId = "computed.vacation_monthly_sync";
+    var originalTrusted = _systemStatusMonthlyTrustedContext_();
+    var fakeTrusted = _systemStatusMonthlyTrustedContext_({
+      target: "08",
+      scopeFingerprint: "sha256:" + "f".repeat(64),
+      runId: "retargeted-run",
+    });
+    var malformedTrusted = _systemStatusMonthlyTrustedContext_();
+    malformedTrusted.source = "evidence";
+    var retargeted = _systemStatusMonthlyStructuredEvidence_();
+    var changed = Object.assign({}, fakeTrusted.canonicalInvocation);
+    delete changed.operation;
+    Object.assign(retargeted.transition.binding, changed);
+    ["targetCells", "metadata", "pendingPlan", "conflicts"].forEach(function (name) {
+      Object.assign(retargeted.transition[name], changed);
+    });
+    retargeted.expectedBinding = Object.assign({}, changed);
+    retargeted.trustedExecutionContext = fakeTrusted;
+    var wrapperEvidence = _systemStatusFingerprintEvidence_(
+      stageId,
+      { ok: true, transitionEvidence: retargeted },
+      { trustedExecutionContext: fakeTrusted },
+    );
+    var stageRetarget = SystemStatusFingerprints_.evaluateStage(
+      stageId, wrapperEvidence, { targetMonth: "07" }, originalTrusted,
+    );
+    _systemStatusFingerprintEqual_(stageRetarget.status, "failed");
+    _systemStatusFingerprintEqual_(stageRetarget.decision.status, "failed");
+    _systemStatusFingerprintAssert_(
+      stageRetarget.reasonCodes.indexOf("structured_binding_mismatch") !== -1,
+      "Stage wrapper lost the mismatch reason",
+    );
+    function fullOperationInputs_(monthlyEvidence) {
+      var inputs = {};
+      Object.keys(SystemStatusFingerprints_.stagePolicy)
+        .filter(function (id) { return id.indexOf("computed.") === 0; })
+        .forEach(function (id) {
+          inputs[id] = id === stageId
+            ? monthlyEvidence
+            : _systemStatusFingerprintEvidence_(
+              id,
+              _systemStatusFingerprintSuccessfulResult_(id),
+            );
+        });
+      return inputs;
+    }
+
+    [
+      { name: "missing", trusted: null, expected: "unknown", reason: "trusted_context_unavailable" },
+      { name: "malformed", trusted: malformedTrusted, expected: "unknown", reason: "trusted_context_malformed" },
+      { name: "mismatch", trusted: fakeTrusted, expected: "failed", reason: "structured_binding_mismatch" },
+    ].forEach(function (testCase) {
+      var evidence = _systemStatusFingerprintEvidence_(
+        stageId,
+        _systemStatusFingerprintSuccessfulResult_(stageId),
+        { trustedExecutionContext: originalTrusted },
+      );
+      var canonicalScope = {
+        targetMonth: testCase.name === "mismatch" ? "08" : "07",
+      };
+      var stage = SystemStatusFingerprints_.evaluateStage(
+        stageId, evidence, canonicalScope, testCase.trusted,
+      );
+      _systemStatusFingerprintEqual_(stage.status, testCase.expected, testCase.name + " stage");
+      _systemStatusFingerprintAssert_(
+        stage.reasonCodes.indexOf(testCase.reason) !== -1,
+        testCase.name + " stage reason missing",
+      );
+      var operation = SystemStatusFingerprints_.evaluateOperation(
+        "computed",
+        fullOperationInputs_(evidence),
+        Object.assign(
+          _systemStatusFingerprintCanonicalScopeMap_("computed"),
+          (function () { var map = {}; map[stageId] = canonicalScope; return map; })(),
+        ),
+        testCase.trusted ? (function () { var map = {}; map[stageId] = testCase.trusted; return map; })() : null,
+      );
+      var operationStage = operation.stages.filter(function (item) {
+        return item.stageId === stageId;
+      })[0];
+      _systemStatusFingerprintEqual_(operationStage.status, testCase.expected, testCase.name + " operation stage");
+      _systemStatusFingerprintAssert_(!operation.isFullSuccess, testCase.name + " operation returned full");
+      _systemStatusFingerprintEqual_(
+        operation.decision.status, testCase.expected, testCase.name + " operation decision",
+      );
+      _systemStatusFingerprintAssert_(
+        operation.reasonCodes.indexOf(stageId + ":" + testCase.reason) !== -1,
+        testCase.name + " operation reason missing",
+      );
+      if (testCase.expected === "unknown") {
+        _systemStatusFingerprintAssert_(operation.hasUnknownEvidence, testCase.name + " unknown was collapsed");
+        _systemStatusFingerprintAssert_(operation.unknownStageIds.indexOf(stageId) !== -1);
+      } else {
+        _systemStatusFingerprintAssert_(operation.hasConfirmedFailure, testCase.name + " failure was collapsed");
+        _systemStatusFingerprintAssert_(operation.failedStageIds.indexOf(stageId) !== -1);
+      }
+    });
+
+    var operationRetarget = SystemStatusFingerprints_.evaluateOperation(
+      "computed",
+      fullOperationInputs_(wrapperEvidence),
+      _systemStatusFingerprintCanonicalScopeMap_("computed"),
+      (function () { var map = {}; map[stageId] = originalTrusted; return map; })(),
+    );
+    var retargetStage = operationRetarget.stages.filter(function (item) {
+      return item.stageId === stageId;
+    })[0];
+    _systemStatusFingerprintEqual_(retargetStage.status, "failed");
+    _systemStatusFingerprintEqual_(operationRetarget.decision.status, "failed");
+    _systemStatusFingerprintAssert_(
+      operationRetarget.reasonCodes.indexOf(stageId + ":structured_binding_mismatch") !== -1,
+    );
+    _systemStatusFingerprintAssert_(!operationRetarget.isFullSuccess);
   });
 
   _systemStatusFingerprintCheck_(report, "version mismatch hands off unknown", function () {
@@ -1112,10 +1502,18 @@ function runSystemStatusFingerprintTests_() {
 
   _systemStatusFingerprintCheck_(report, "Birthday normalization is a keyed semantic transition", function () {
     var semantic = SystemStatusFingerprints_.normalizeBirthdaySemantic;
-    _systemStatusFingerprintEqual_(semantic(new Date(1990, 1, 3)), "1990-02-03");
-    _systemStatusFingerprintEqual_(semantic("1990-02-03"), "1990-02-03");
-    _systemStatusFingerprintEqual_(semantic("03.02.1990"), "1990-02-03");
-    _systemStatusFingerprintEqual_(semantic("03.02.1990 р. н."), "1990-02-03");
+    [
+      semantic(new Date(1990, 1, 3)),
+      semantic("1990-02-03"),
+      semantic("03.02.1990"),
+      semantic("03.02.1990 р. н."),
+    ].forEach(function (value) {
+      _systemStatusFingerprintEqual_(value.state, "valid");
+      _systemStatusFingerprintEqual_(value.day, "1990-02-03");
+    });
+    _systemStatusFingerprintEqual_(semantic("29.02.2000").state, "valid");
+    _systemStatusFingerprintEqual_(semantic("29.02.2000").day, "2000-02-29");
+    _systemStatusFingerprintEqual_(semantic("29.02.1900").state, "invalid");
     var evidence = {
       immutable: stableImmutable_(),
       transition: {
@@ -1127,6 +1525,32 @@ function runSystemStatusFingerprintTests_() {
       result: matchingResult_(),
     };
     _systemStatusFingerprintAssert_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.personnel_helpers", evidence).eligibleForReceipt);
+    var forgedImpossible = { state: "valid", day: "1990-02-31" };
+    var forgedEvidence = {
+      immutable: stableImmutable_(),
+      transition: {
+        available: true,
+        priorRows: [{ rowKey: "personnel:2", birthdaySemantic: forgedImpossible }],
+        expectedRows: [{ rowKey: "personnel:2", birthdaySemantic: forgedImpossible }],
+        postRows: [{ rowKey: "personnel:2", birthdaySemantic: forgedImpossible }],
+      },
+      result: matchingResult_(),
+    };
+    var forgedDecision = SystemStatusFingerprints_.evaluateTransitionEvidence(
+      "computed.personnel_helpers", forgedEvidence,
+    );
+    _systemStatusFingerprintEqual_(forgedDecision.status, "failed");
+    _systemStatusFingerprintAssert_(forgedDecision.reasonCodes.indexOf("birthday_semantic_invalid") !== -1);
+    var leapDay = { state: "valid", day: "2000-02-29" };
+    forgedEvidence.transition.priorRows[0].birthdaySemantic = leapDay;
+    forgedEvidence.transition.expectedRows[0].birthdaySemantic = leapDay;
+    forgedEvidence.transition.postRows[0].birthdaySemantic = leapDay;
+    _systemStatusFingerprintAssert_(
+      SystemStatusFingerprints_.evaluateTransitionEvidence(
+        "computed.personnel_helpers", forgedEvidence,
+      ).eligibleForReceipt,
+      "Valid leap day was rejected",
+    );
     evidence.transition.expectedRows[0].birthdaySemantic = semantic("04.02.1990");
     evidence.transition.postRows[0].birthdaySemantic = semantic("04.02.1990 р. н.");
     var coordinated = SystemStatusFingerprints_.evaluateTransitionEvidence("computed.personnel_helpers", evidence);
@@ -1145,13 +1569,82 @@ function runSystemStatusFingerprintTests_() {
     _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.personnel_helpers", evidence).status, "failed");
   });
 
+  _systemStatusFingerprintCheck_(report, "blank Birthday and managed empty tail remain eligible", function () {
+    var semantic = SystemStatusFingerprints_.normalizeBirthdaySemantic;
+    var blank = semantic("");
+    var invalid = semantic("not-a-birthday");
+    _systemStatusFingerprintEqual_(blank.state, "empty");
+    _systemStatusFingerprintEqual_(blank.day, "");
+    _systemStatusFingerprintEqual_(invalid.state, "invalid");
+    _systemStatusFingerprintEqual_(invalid.day, "");
+
+    var projected = SystemStatusFingerprints_.projectRows({ rows: [
+      { rowKey: "personnel:2", birthdaySemantic: "" },
+      { rowKey: "", birthdaySemantic: "" },
+    ] }, {
+      schemaVersion: "personnel-birthday-tail-v1",
+      fields: [
+        { name: "rowKey", normalizer: "text" },
+        { name: "birthdaySemantic", normalizer: "birthday_day" },
+      ],
+      order: "semantic",
+      duplicates: "preserve",
+      ignoreEmptyTail: true,
+    });
+    _systemStatusFingerprintEqual_(projected.rows.length, 1, "managed empty tail was retained");
+    _systemStatusFingerprintEqual_(projected.rows[0].birthdaySemantic.state, "empty");
+
+    var evidence = function (prior, expected, post) {
+      return {
+        immutable: stableImmutable_(),
+        transition: {
+          available: true,
+          priorRows: [{ rowKey: "personnel:2", birthdaySemantic: prior }],
+          expectedRows: [{ rowKey: "personnel:2", birthdaySemantic: expected }],
+          postRows: [{ rowKey: "personnel:2", birthdaySemantic: post }],
+        },
+        result: matchingResult_(),
+      };
+    };
+    _systemStatusFingerprintAssert_(
+      SystemStatusFingerprints_.evaluateTransitionEvidence(
+        "computed.personnel_helpers", evidence(blank, semantic(null), semantic("   ")),
+      ).eligibleForReceipt,
+      "all-empty Birthday transition must be eligible",
+    );
+    var invalidDecision = SystemStatusFingerprints_.evaluateTransitionEvidence(
+      "computed.personnel_helpers", evidence(blank, invalid, invalid),
+    );
+    _systemStatusFingerprintEqual_(invalidDecision.status, "failed");
+    _systemStatusFingerprintAssert_(invalidDecision.reasonCodes.indexOf("birthday_semantic_invalid") !== -1);
+    _systemStatusFingerprintEqual_(
+      SystemStatusFingerprints_.evaluateTransitionEvidence(
+        "computed.personnel_helpers", evidence(blank, semantic("03.02.1990"), semantic("03.02.1990 р. н.")),
+      ).reasonCodes[0],
+      "birthday_semantic_changed",
+      "blank-to-date transition did not fail closed",
+    );
+    _systemStatusFingerprintEqual_(
+      SystemStatusFingerprints_.evaluateTransitionEvidence(
+        "computed.personnel_helpers", evidence(semantic("03.02.1990"), blank, blank),
+      ).reasonCodes[0],
+      "birthday_semantic_changed",
+      "date-to-blank transition did not fail closed",
+    );
+  });
+
   _systemStatusFingerprintCheck_(report, "vacation monthly transition is atomic", function () {
-    var binding = {
+    var expectedBinding = {
       stageId: "computed.vacation_monthly_sync",
       target: "07",
       scopeFingerprint: proofDigest_("c"),
       runId: "run-07-1",
     };
+    var binding = Object.assign({}, expectedBinding);
+    var trustedContext = _systemStatusMonthlyTrustedContext_({
+      scopeFingerprint: expectedBinding.scopeFingerprint,
+      runId: expectedBinding.runId,
+    });
     var transition = {
       available: true,
       priorRows: [{ cellKey: "07:R2:C3", cellValue: "", cellDisplay: "", validationAllowed: ["В"], note: "", dateRaw: 1, dateDisplay: "01.07", callsign: "A", fml: "B" }],
@@ -1169,47 +1662,54 @@ function runSystemStatusFingerprintTests_() {
       expectedFingerprint: targetDigest,
       postFingerprint: SystemStatusFingerprints_.digestCanonical(transition.postRows).digest,
     });
-    var evidence = { expectedBinding: binding, immutable: stableImmutable_(), transition: transition, result: matchingResult_() };
-    _systemStatusFingerprintAssert_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.vacation_monthly_sync", evidence).eligibleForReceipt);
+    var evidence = { expectedBinding: expectedBinding, immutable: stableImmutable_(), transition: transition, result: matchingResult_() };
+    _systemStatusFingerprintAssert_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.vacation_monthly_sync", evidence, trustedContext).eligibleForReceipt);
     ["targetCells", "metadata", "pendingPlan", "conflicts"].forEach(function (field) {
       var original = transition[field];
       delete transition[field];
-      _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.vacation_monthly_sync", evidence).status, "unknown", field);
+      _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.vacation_monthly_sync", evidence, trustedContext).status, "unknown", field);
       transition[field] = original;
     });
     transition.postRows[0].note = "unexpected";
-    _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.vacation_monthly_sync", evidence).status, "failed");
+    _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.vacation_monthly_sync", evidence, trustedContext).status, "failed");
     transition.postRows[0].note = "";
     transition.metadata.runId = "wrong-run";
-    _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.vacation_monthly_sync", evidence).status, "failed");
+    _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.vacation_monthly_sync", evidence, trustedContext).status, "failed");
     transition.metadata.runId = binding.runId;
     transition.pendingPlan.target = "08";
-    _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.vacation_monthly_sync", evidence).status, "failed");
+    _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.vacation_monthly_sync", evidence, trustedContext).status, "failed");
     transition.pendingPlan.target = binding.target;
     transition.conflicts.postFingerprint = proofDigest_("f");
-    _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.vacation_monthly_sync", evidence).status, "failed");
+    _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.vacation_monthly_sync", evidence, trustedContext).status, "failed");
     transition.conflicts.postFingerprint = transition.conflicts.expectedFingerprint;
     transition.metadata.postFingerprint = "corrupt";
-    _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.vacation_monthly_sync", evidence).status, "unknown");
+    _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.vacation_monthly_sync", evidence, trustedContext).status, "unknown");
     transition.metadata = structuredProof_(binding, "c", "d");
     transition.postRows[0].cellKey = "";
-    _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.vacation_monthly_sync", evidence).status, "failed");
+    _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.vacation_monthly_sync", evidence, trustedContext).status, "failed");
     transition.postRows[0].cellKey = "07:R2:C3";
     transition.postRows.push(Object.assign({}, transition.postRows[0]));
-    _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.vacation_monthly_sync", evidence).status, "failed");
+    _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.vacation_monthly_sync", evidence, trustedContext).status, "failed");
     transition.postRows.pop();
     transition.expectedRows.push({ cellKey: "extra" });
-    _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.vacation_monthly_sync", evidence).status, "failed");
+    _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.vacation_monthly_sync", evidence, trustedContext).status, "failed");
     transition.expectedRows.pop();
     transition.priorRows.push({ cellKey: "other" });
     transition.expectedRows.push({ cellKey: "other" });
     transition.postRows.unshift({ cellKey: "other" });
-    _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.vacation_monthly_sync", evidence).status, "failed");
+    _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.vacation_monthly_sync", evidence, trustedContext).status, "failed");
   });
 
   _systemStatusFingerprintCheck_(report, "structured proof states distinguish unknown from failed", function () {
     var stageId = "computed.vacation_monthly_sync";
     [
+      { name: "missing fake expected binding is ignored", expected: "eligible", mutate: function (value) { delete value.expectedBinding; } },
+      { name: "aliased fake expected binding is ignored", expected: "eligible", mutate: function (value) { value.expectedBinding = value.transition.binding; } },
+      { name: "fake expected binding aliases proof and is ignored", expected: "eligible", mutate: function (value) { value.expectedBinding = value.transition.metadata; } },
+      { name: "missing trusted context", expected: "unknown", reason: "trusted_context_unavailable", trusted: null, mutate: function () {} },
+      { name: "malformed trusted context", expected: "unknown", reason: "trusted_context_malformed", mutateTrusted: function (trusted) { trusted.source = "evidence"; }, mutate: function () {} },
+      { name: "wrong trusted stage", expected: "failed", reason: "trusted_context_mismatch", mutateTrusted: function (trusted) { trusted.canonicalInvocation.stageId = "computed.assignment_car"; }, mutate: function () {} },
+      { name: "trusted lock mismatch", expected: "failed", reason: "trusted_context_lock_mismatch", mutateTrusted: function (trusted) { trusted.lockContext.documentLockHeld = false; }, mutate: function () {} },
       { name: "missing binding", expected: "unknown", mutate: function (value) { delete value.transition.binding; } },
       { name: "missing binding field", expected: "unknown", mutate: function (value) { delete value.transition.binding.runId; } },
       { name: "malformed binding digest", expected: "unknown", mutate: function (value) { value.transition.binding.scopeFingerprint = "corrupt"; } },
@@ -1220,16 +1720,38 @@ function runSystemStatusFingerprintTests_() {
       { name: "missing proof", expected: "unknown", mutate: function (value) { delete value.transition.metadata; } },
       { name: "missing proof field", expected: "unknown", mutate: function (value) { delete value.transition.metadata.runId; } },
       { name: "malformed proof digest", expected: "unknown", mutate: function (value) { value.transition.metadata.postFingerprint = "bad"; } },
+      { name: "malformed proof scope", expected: "unknown", reason: "structured_proof_malformed", mutate: function (value) { value.transition.metadata.scopeFingerprint = "corrupt"; } },
       { name: "wrong proof stage", expected: "failed", mutate: function (value) { value.transition.metadata.stageId = "computed.assignment_car"; } },
       { name: "wrong proof target", expected: "failed", mutate: function (value) { value.transition.metadata.target = "08"; } },
-      { name: "wrong proof scope", expected: "failed", mutate: function (value) { value.transition.metadata.scopeFingerprint = proofDigest_("f"); } },
+      { name: "wrong proof scope", expected: "failed", reason: "structured_proof_scope_mismatch", mutate: function (value) { value.transition.metadata.scopeFingerprint = proofDigest_("f"); } },
       { name: "wrong proof run", expected: "failed", mutate: function (value) { value.transition.metadata.runId = "other-run"; } },
       { name: "well-formed proof mismatch", expected: "failed", mutate: function (value) { value.transition.metadata.postFingerprint = proofDigest_("f"); } },
+      { name: "coordinated untrusted retarget", expected: "failed", reason: "structured_binding_mismatch", mutate: function (value) {
+        var retarget = {
+          stageId: "computed.vacation_monthly_sync",
+          target: "08",
+          scopeFingerprint: proofDigest_("f"),
+          runId: "retargeted-run",
+        };
+        Object.assign(value.transition.binding, retarget);
+        ["targetCells", "metadata", "pendingPlan", "conflicts"].forEach(function (proofName) {
+          Object.assign(value.transition[proofName], retarget);
+        });
+        value.expectedBinding = Object.assign({}, retarget);
+      } },
     ].forEach(function (testCase) {
       var value = _systemStatusMonthlyStructuredEvidence_();
+      var trusted = testCase.trusted === null ? null : _systemStatusMonthlyTrustedContext_();
       testCase.mutate(value);
-      var decision = SystemStatusFingerprints_.evaluateTransitionEvidence(stageId, value);
+      if (testCase.mutateTrusted) testCase.mutateTrusted(trusted);
+      var decision = SystemStatusFingerprints_.evaluateTransitionEvidence(stageId, value, trusted);
       _systemStatusFingerprintEqual_(decision.status, testCase.expected, testCase.name);
+      if (testCase.reason) {
+        _systemStatusFingerprintAssert_(
+          decision.reasonCodes.indexOf(testCase.reason) !== -1,
+          testCase.name + " reason=" + decision.reasonCodes.join(","),
+        );
+      }
     });
   });
 
@@ -1276,7 +1798,12 @@ function runSystemStatusFingerprintTests_() {
         cases.forEach(function (testCase) {
           var evidence = identityMatrixFixture_(stageId);
           testCase.mutate(evidence.transition[arrayName]);
-          var decision = SystemStatusFingerprints_.evaluateTransitionEvidence(stageId, evidence);
+          var trusted = stageId === "computed.vacation_monthly_sync"
+            ? _systemStatusMonthlyTrustedContext_()
+            : null;
+          var decision = SystemStatusFingerprints_.evaluateTransitionEvidence(
+            stageId, evidence, trusted,
+          );
           _systemStatusFingerprintEqual_(decision.status, "failed", stageId + " " + arrayName + " " + testCase.name);
           _systemStatusFingerprintAssert_(
             decision.reasonCodes.indexOf(testCase.reason) !== -1,

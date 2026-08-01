@@ -21,7 +21,7 @@ alwaysApply: true
 ## Реалізація
 
 - `sheets/MonthlyCallsignSync.gs` — `syncMonthlyCallsignsFromPersonnel_`, `syncAllMonthlyCallsignsFromPersonnel_`
-- `personnel/PersonnelMaterialize.gs` — PHONES + BIRTHDAY через `resolvePersonnelDisplayCallsign_`; після materialize — sync усіх місячних аркушів `01`…`12`
+- `personnel/PersonnelMaterialize.gs` — PHONES + BIRTHDAY через `resolvePersonnelDisplayCallsign_`; після materialize за замовчуванням синхронізується лише активний місяць, історія — тільки в явному режимі `history/all`
 - Виклики: `usecases/UseCases.MonthOps.gs`, `sheets/MonthSheets.gs`
 - Контракт: `scripts/verify-monthly-callsign-sync.mjs`
 
@@ -30,3 +30,6 @@ alwaysApply: true
 - Не повертати формулу / materialize **M→L, D→L** на PERSONNEL для Callsign.
 - Не змішувати TEMPLATE у monthly sync замість явного Callsign + Last name fallback.
 - Колонку на місячному листі шукати за заголовком (`позивн`, `позывной`, `callsign`), не лише за фіксованою літерою.
+- Зберігати позиційне відображення рядків PERSONNEL без стискання порожніх рядків.
+- Якщо кадрових рядків не вистачає, розширювати їх перед формульним блоком зведення, не перезаписуючи його та залишаючи наявний порожній розділювач.
+- Нові рядки отримують формат, validation, висоту та формулу колонки A з робочого рядка, але не значення графіка.

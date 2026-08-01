@@ -28,7 +28,7 @@ const journalSource = read("reports/MonthJournalMaterialize.gs");
 const runnerSource = read("tests/Stage7TestRunner.Maintenance.gs");
 const smokeSource = read("smoke/SmokeTests.gs");
 
-assert.equal(contract.version, 6);
+assert.equal(contract.version, 11);
 assert.equal(
   contract.receiptBoundary,
   "stage_scoped_with_operation_run_summary",
@@ -225,7 +225,7 @@ const runtimeMarkers = [
   [journalSource, /function _monthJournalCollectRows_/, "month source stage"],
   [journalSource, /function materializeMonthJournal_/, "journal result stage"],
   [journalSource, /function materializeMonthPersonSummary_/, "summary result stage"],
-  [journalSource, /function _monthJournalWriteRows_/, "global rewrite stage"],
+  [journalSource, /function _monthJournalReplaceMonthSlice_/, "global rewrite stage"],
   [maintenanceSource, /case "materializeComputedData"/, "operation summary boundary"],
   [monthlyCallsignSource, /monthlySyncMode === "all"/, "monthly mode branch"],
 ];
@@ -262,6 +262,56 @@ assert.match(fingerprintSource, /buildStagePreservationFingerprintFromContext/);
 assert.match(fingerprintSource, /function _indexTransitionRows_/);
 assert.match(fingerprintSource, /function _evaluateStructuredMonthlyProofs_/);
 assert.match(fingerprintSource, /function _birthdaySemanticDay_/);
+assert.match(fingerprintSource, /function _buildExpectedBindingFromTrustedContext_/);
+assert.match(
+  fingerprintSource,
+  /function evaluateTransitionEvidence_\(stageId, evidence, trustedExecutionContext\)/,
+);
+assert.match(
+  fingerprintSource,
+  /function evaluateStage_\(stageId, evidence, canonicalScope, trustedExecutionContext\)/,
+);
+assert.match(
+  fingerprintSource,
+  /function evaluateOperation_\(operation, stageInputs, operationScope, trustedContextMap\)/,
+);
+assert.doesNotMatch(fingerprintSource, /value\.expectedBinding/);
+assert.doesNotMatch(fingerprintSource, /input\.trustedExecutionContext/);
+assert.doesNotMatch(fingerprintSource, /input\.scope(?:Known)?/);
+assert.doesNotMatch(fingerprintSource, /input\.skipPredicateSatisfied/);
+assert.doesNotMatch(fingerprintSource, /evidence\.scope(?:Known)?/);
+assert.doesNotMatch(fingerprintSource, /evidence\.skipPredicateSatisfied/);
+assert.match(fingerprintSource, /function _canonicalScopeDecision_/);
+const stageWrapperStart = fingerprintSource.indexOf("function evaluateStage_");
+const stageWrapperEnd = fingerprintSource.indexOf("function _operationStageScope_", stageWrapperStart);
+const stageWrapperSource = fingerprintSource.slice(stageWrapperStart, stageWrapperEnd);
+assert.doesNotMatch(stageWrapperSource, /evidence\.trustedExecutionContext/);
+assert.doesNotMatch(stageWrapperSource, /input\.expectedBinding/);
+const operationWrapperStart = fingerprintSource.indexOf("function evaluateOperation_");
+const operationWrapperEnd = fingerprintSource.indexOf("return Object.freeze", operationWrapperStart);
+const operationWrapperSource = fingerprintSource.slice(operationWrapperStart, operationWrapperEnd);
+assert.doesNotMatch(operationWrapperSource, /stageInputs\[[^\]]+\]\.trustedExecutionContext/);
+assert.doesNotMatch(operationWrapperSource, /stageInputs\[[^\]]+\]\.(?:scope|scopeKnown|skipPredicateSatisfied)/);
+const evidenceFixtureStart = testsSource.indexOf("function _systemStatusFingerprintEvidence_");
+const evidenceFixtureEnd = testsSource.indexOf(
+  "function _systemStatusFingerprintCanonicalScope_", evidenceFixtureStart,
+);
+const evidenceFixtureSource = testsSource.slice(evidenceFixtureStart, evidenceFixtureEnd);
+assert.doesNotMatch(evidenceFixtureSource, /scopeKnown|skipPredicateSatisfied|\bscope\s*:/);
+const transitionCoreStart = fingerprintSource.indexOf("function _evaluateTransitionEvidenceCore_");
+const transitionCoreEnd = fingerprintSource.indexOf("function evaluateTransitionEvidence_", transitionCoreStart);
+const transitionCoreSource = fingerprintSource.slice(transitionCoreStart, transitionCoreEnd);
+assert.ok(
+  transitionCoreSource.indexOf("_buildExpectedBindingFromTrustedContext_") <
+    transitionCoreSource.indexOf("var value = evidence"),
+  "trusted expected binding must be built before evidence is read",
+);
+assert.match(personnelSource, /text\.replace\(\/\\s\*р\\\.\?\\s\*н\\\.\?\\s\*\$\/i/);
+assert.match(
+  personnelSource,
+  /return day \+ "\." \+ month \+ "\." \+ year \+ " р\. н\."/,
+  "Birthday fingerprint canonicalizer must track the real materializer output shape",
+);
 
 const context = vm.createContext({
   console,
@@ -284,12 +334,501 @@ vm.runInContext(fingerprintSource, context, {
 vm.runInContext(testsSource, context, {
   filename: "tests/SystemStatusFingerprintTests.gs",
 });
+const directBirthdayProof = JSON.parse(vm.runInContext(`JSON.stringify((function () {
+  var semantic = SystemStatusFingerprints_.normalizeBirthdaySemantic;
+  var values = [
+    semantic(new Date(1990, 1, 3)),
+    semantic("1990-02-03"),
+    semantic("03.02.1990"),
+    semantic("03.02.1990 р. н."),
+  ];
+  var evidence = function (prior, expected, post) {
+    return {
+      immutable: {
+        preFingerprint: "immutable",
+        postFingerprint: "immutable",
+        preReadOrigin: "live",
+        postReadOrigin: "live",
+        preRequiredAvailable: true,
+        postRequiredAvailable: true,
+      },
+      transition: {
+        available: true,
+        priorRows: [{ rowKey: "personnel:2", birthdaySemantic: prior }],
+        expectedRows: [{ rowKey: "personnel:2", birthdaySemantic: expected }],
+        postRows: [{ rowKey: "personnel:2", birthdaySemantic: post }],
+      },
+      result: { available: true, fingerprint: "result", expectedFingerprint: "result" },
+    };
+  };
+  var blank = semantic("");
+  var invalid = semantic("not-a-birthday");
+  return {
+    values: values,
+    blank: blank,
+    invalid: invalid,
+    blankDecision: SystemStatusFingerprints_.evaluateTransitionEvidence(
+      "computed.personnel_helpers", evidence(blank, semantic(null), semantic("   ")),
+    ),
+    wrongDayDecision: SystemStatusFingerprints_.evaluateTransitionEvidence(
+      "computed.personnel_helpers",
+      evidence(values[0], semantic("04.02.1990"), semantic("04.02.1990 р. н.")),
+    ),
+    forgedImpossibleDecision: SystemStatusFingerprints_.evaluateTransitionEvidence(
+      "computed.personnel_helpers",
+      evidence(
+        { state: "valid", day: "1990-02-31" },
+        { state: "valid", day: "1990-02-31" },
+        { state: "valid", day: "1990-02-31" },
+      ),
+    ),
+    leapDayDecision: SystemStatusFingerprints_.evaluateTransitionEvidence(
+      "computed.personnel_helpers",
+      evidence(
+        { state: "valid", day: "2000-02-29" },
+        { state: "valid", day: "2000-02-29" },
+        { state: "valid", day: "2000-02-29" },
+      ),
+    ),
+  };
+})())`, context));
+for (const semantic of directBirthdayProof.values) {
+  assert.deepEqual(semantic, { state: "valid", day: "1990-02-03" });
+}
+assert.deepEqual(directBirthdayProof.blank, { state: "empty", day: "" });
+assert.deepEqual(directBirthdayProof.invalid, { state: "invalid", day: "" });
+assert.equal(directBirthdayProof.blankDecision.status, "eligible");
+assert.equal(directBirthdayProof.wrongDayDecision.status, "failed");
+assert.ok(directBirthdayProof.wrongDayDecision.reasonCodes.includes("birthday_semantic_changed"));
+assert.equal(directBirthdayProof.forgedImpossibleDecision.status, "failed");
+assert.deepEqual(directBirthdayProof.forgedImpossibleDecision.reasonCodes, ["birthday_semantic_invalid"]);
+assert.equal(directBirthdayProof.leapDayDecision.status, "eligible");
+const directStructuredProof = JSON.parse(vm.runInContext(`JSON.stringify((function () {
+  var trusted = _systemStatusMonthlyTrustedContext_();
+  var malformedScope = _systemStatusMonthlyStructuredEvidence_();
+  malformedScope.transition.metadata.scopeFingerprint = "corrupt";
+  var wrongScope = _systemStatusMonthlyStructuredEvidence_();
+  wrongScope.transition.metadata.scopeFingerprint = "sha256:" + "f".repeat(64);
+  var retarget = _systemStatusMonthlyStructuredEvidence_();
+  var changed = {
+    stageId: "computed.vacation_monthly_sync",
+    target: "08",
+    scopeFingerprint: "sha256:" + "f".repeat(64),
+    runId: "retargeted-run",
+  };
+  Object.assign(retarget.transition.binding, changed);
+  ["targetCells", "metadata", "pendingPlan", "conflicts"].forEach(function (name) {
+    Object.assign(retarget.transition[name], changed);
+  });
+  retarget.expectedBinding = Object.assign({}, changed);
+  var fakeTrusted = _systemStatusMonthlyTrustedContext_({
+    target: changed.target,
+    scopeFingerprint: changed.scopeFingerprint,
+    runId: changed.runId,
+  });
+  retarget.trustedExecutionContext = fakeTrusted;
+  var fakeExpectedIgnored = _systemStatusMonthlyStructuredEvidence_();
+  fakeExpectedIgnored.expectedBinding = Object.assign({}, changed);
+  var malformedTrusted = _systemStatusMonthlyTrustedContext_();
+  malformedTrusted.source = "evidence";
+  var baseStageEvidence = function () {
+    return _systemStatusFingerprintEvidence_(
+      "computed.vacation_monthly_sync",
+      { ok: true, transitionEvidence: _systemStatusMonthlyStructuredEvidence_() },
+      { trustedExecutionContext: fakeTrusted },
+    );
+  };
+  var retargetStageEvidence = _systemStatusFingerprintEvidence_(
+    "computed.vacation_monthly_sync",
+    { ok: true, transitionEvidence: retarget },
+    { trustedExecutionContext: fakeTrusted },
+  );
+  var stageDecision = function (evidence, trustedContext, targetMonth) {
+    return SystemStatusFingerprints_.evaluateStage(
+      "computed.vacation_monthly_sync", evidence,
+      { targetMonth: targetMonth || "07" }, trustedContext,
+    );
+  };
+  var operationDecision = function (evidence, trustedContext, targetMonth) {
+    var inputs = {};
+    Object.keys(SystemStatusFingerprints_.stagePolicy)
+      .filter(function (stageId) { return stageId.indexOf("computed.") === 0; })
+      .forEach(function (stageId) {
+        inputs[stageId] = stageId === "computed.vacation_monthly_sync"
+          ? evidence
+          : _systemStatusFingerprintEvidence_(
+            stageId,
+            _systemStatusFingerprintSuccessfulResult_(stageId),
+          );
+      });
+    var scopes = _systemStatusFingerprintCanonicalScopeMap_("computed");
+    scopes["computed.vacation_monthly_sync"] = {
+      targetMonth: targetMonth || "07",
+    };
+    var map = trustedContext
+      ? { "computed.vacation_monthly_sync": trustedContext }
+      : null;
+    return SystemStatusFingerprints_.evaluateOperation(
+      "computed", inputs, scopes, map,
+    );
+  };
+  return {
+    missingTrusted: SystemStatusFingerprints_.evaluateTransitionEvidence(
+      "computed.vacation_monthly_sync", _systemStatusMonthlyStructuredEvidence_(), null,
+    ),
+    malformedTrusted: SystemStatusFingerprints_.evaluateTransitionEvidence(
+      "computed.vacation_monthly_sync", _systemStatusMonthlyStructuredEvidence_(), malformedTrusted,
+    ),
+    malformedScope: SystemStatusFingerprints_.evaluateTransitionEvidence(
+      "computed.vacation_monthly_sync", malformedScope, trusted,
+    ),
+    wrongScope: SystemStatusFingerprints_.evaluateTransitionEvidence(
+      "computed.vacation_monthly_sync", wrongScope, trusted,
+    ),
+    coordinatedRetarget: SystemStatusFingerprints_.evaluateTransitionEvidence(
+      "computed.vacation_monthly_sync", retarget, trusted,
+    ),
+    fakeExpectedIgnored: SystemStatusFingerprints_.evaluateTransitionEvidence(
+      "computed.vacation_monthly_sync", fakeExpectedIgnored, trusted,
+    ),
+    stageMissingTrusted: stageDecision(baseStageEvidence(), null),
+    stageMalformedTrusted: stageDecision(baseStageEvidence(), malformedTrusted),
+    stageMismatchTrusted: stageDecision(baseStageEvidence(), fakeTrusted, "08"),
+    stageCoordinatedRetarget: stageDecision(retargetStageEvidence, trusted),
+    operationMissingTrusted: operationDecision(baseStageEvidence(), null),
+    operationMalformedTrusted: operationDecision(baseStageEvidence(), malformedTrusted),
+    operationMismatchTrusted: operationDecision(baseStageEvidence(), fakeTrusted, "08"),
+    operationCoordinatedRetarget: operationDecision(retargetStageEvidence, trusted),
+  };
+})())`, context));
+assert.equal(directStructuredProof.missingTrusted.status, "unknown");
+assert.deepEqual(directStructuredProof.missingTrusted.reasonCodes, ["trusted_context_unavailable"]);
+assert.equal(directStructuredProof.malformedTrusted.status, "unknown");
+assert.deepEqual(directStructuredProof.malformedTrusted.reasonCodes, ["trusted_context_malformed"]);
+assert.equal(directStructuredProof.malformedScope.status, "unknown");
+assert.deepEqual(directStructuredProof.malformedScope.reasonCodes, ["structured_proof_malformed"]);
+assert.equal(directStructuredProof.wrongScope.status, "failed");
+assert.deepEqual(directStructuredProof.wrongScope.reasonCodes, ["structured_proof_scope_mismatch"]);
+assert.equal(directStructuredProof.coordinatedRetarget.status, "failed");
+assert.deepEqual(directStructuredProof.coordinatedRetarget.reasonCodes, ["structured_binding_mismatch"]);
+assert.equal(directStructuredProof.fakeExpectedIgnored.status, "eligible");
+const monthlyStageFromOperation = (operation) => operation.stages.find(
+  (stage) => stage.stageId === "computed.vacation_monthly_sync",
+);
+assert.equal(directStructuredProof.stageMissingTrusted.status, "unknown");
+assert.deepEqual(directStructuredProof.stageMissingTrusted.reasonCodes, ["trusted_context_unavailable"]);
+assert.equal(directStructuredProof.stageMalformedTrusted.status, "unknown");
+assert.deepEqual(directStructuredProof.stageMalformedTrusted.reasonCodes, ["trusted_context_malformed"]);
+assert.equal(directStructuredProof.stageMismatchTrusted.status, "failed");
+assert.deepEqual(directStructuredProof.stageMismatchTrusted.reasonCodes, ["structured_binding_mismatch"]);
+assert.equal(directStructuredProof.stageCoordinatedRetarget.status, "failed");
+assert.deepEqual(directStructuredProof.stageCoordinatedRetarget.reasonCodes, ["structured_binding_mismatch"]);
+for (const operation of [
+  directStructuredProof.operationMissingTrusted,
+  directStructuredProof.operationMalformedTrusted,
+]) {
+  assert.equal(monthlyStageFromOperation(operation).status, "unknown");
+  assert.ok(operation.hasUnknownEvidence);
+  assert.ok(operation.unknownStageIds.includes("computed.vacation_monthly_sync"));
+  assert.equal(operation.decision.status, "unknown");
+  assert.ok(operation.reasonCodes.includes(
+    "computed.vacation_monthly_sync:" + monthlyStageFromOperation(operation).reasonCodes[0],
+  ));
+  assert.equal(operation.isFullSuccess, false);
+}
+for (const operation of [
+  directStructuredProof.operationMismatchTrusted,
+  directStructuredProof.operationCoordinatedRetarget,
+]) {
+  assert.equal(monthlyStageFromOperation(operation).status, "failed");
+  assert.ok(operation.hasConfirmedFailure);
+  assert.ok(operation.failedStageIds.includes("computed.vacation_monthly_sync"));
+  assert.equal(operation.decision.status, "failed");
+  assert.ok(operation.reasonCodes.includes(
+    "computed.vacation_monthly_sync:structured_binding_mismatch",
+  ));
+  assert.equal(operation.isFullSuccess, false);
+}
+const directCanonicalScopeProof = JSON.parse(vm.runInContext(`JSON.stringify((function () {
+  var stageId = "computed.vacation_monthly_sync";
+  var trusted = _systemStatusMonthlyTrustedContext_();
+  var noTargetTrusted = _systemStatusMonthlyTrustedContext_({ target: "" });
+  var transition = _systemStatusMonthlyStructuredEvidence_();
+  transition.scope = { targetMonth: "" };
+  transition.scopeKnown = true;
+  transition.skipPredicateSatisfied = true;
+  transition.attempted = false;
+  var fakeWrapper = _systemStatusFingerprintEvidence_(
+    stageId,
+    { ok: true, transitionEvidence: transition },
+    {
+      scope: { targetMonth: "" },
+      scopeKnown: true,
+      skipPredicateSatisfied: true,
+      attempted: false,
+    },
+  );
+  function fullInputs(monthlyEvidence) {
+    var inputs = {};
+    Object.keys(SystemStatusFingerprints_.stagePolicy)
+      .filter(function (id) { return id.indexOf("computed.") === 0; })
+      .forEach(function (id) {
+        inputs[id] = id === stageId
+          ? monthlyEvidence
+          : _systemStatusFingerprintEvidence_(
+            id, _systemStatusFingerprintSuccessfulResult_(id),
+          );
+      });
+    return inputs;
+  }
+  var trustedMap = {}; trustedMap[stageId] = trusted;
+  var operationScopes = _systemStatusFingerprintCanonicalScopeMap_("computed");
+  var forgedOperation = SystemStatusFingerprints_.evaluateOperation(
+    "computed", fullInputs(fakeWrapper), operationScopes, trustedMap,
+  );
+  var validInputs = fullInputs(_systemStatusFingerprintEvidence_(
+    stageId, _systemStatusFingerprintSuccessfulResult_(stageId),
+  ));
+  var missingScopes = _systemStatusFingerprintCanonicalScopeMap_("computed");
+  delete missingScopes["computed.assignment_car"];
+  var malformedScopes = _systemStatusFingerprintCanonicalScopeMap_("computed");
+  malformedScopes["computed.assignment_car"] = {
+    targetExists: "yes", targetRowCount: 1,
+  };
+  return {
+    directForgedScope: SystemStatusFingerprints_.evaluateTransitionEvidence(
+      stageId, transition, trusted,
+    ),
+    stageForgedSkip: SystemStatusFingerprints_.evaluateStage(
+      stageId, fakeWrapper, { targetMonth: "07" }, trusted,
+    ),
+    operationForgedSkip: forgedOperation,
+    stageMissingScope: SystemStatusFingerprints_.evaluateStage(
+      "computed.assignment_car",
+      _systemStatusFingerprintEvidence_("computed.assignment_car", { ok: true }),
+      null,
+    ),
+    stageMalformedScope: SystemStatusFingerprints_.evaluateStage(
+      "computed.assignment_car",
+      _systemStatusFingerprintEvidence_("computed.assignment_car", { ok: true }),
+      { targetExists: "yes", targetRowCount: 1 },
+    ),
+    operationMissingScope: SystemStatusFingerprints_.evaluateOperation(
+      "computed", validInputs, missingScopes, trustedMap,
+    ),
+    operationMalformedScope: SystemStatusFingerprints_.evaluateOperation(
+      "computed", validInputs, malformedScopes, trustedMap,
+    ),
+    unboundNoTargetSkip: SystemStatusFingerprints_.evaluateStage(
+      stageId, fakeWrapper, { targetMonth: "" }, null,
+    ),
+    validNoTargetSkip: SystemStatusFingerprints_.evaluateStage(
+      stageId, fakeWrapper, { targetMonth: "" }, noTargetTrusted,
+    ),
+    conflictingNoTargetSkip: SystemStatusFingerprints_.evaluateStage(
+      stageId, fakeWrapper, { targetMonth: "" }, trusted,
+    ),
+  };
+})())`, context));
+assert.equal(directCanonicalScopeProof.directForgedScope.status, "eligible");
+assert.equal(directCanonicalScopeProof.stageForgedSkip.status, "failed");
+assert.deepEqual(directCanonicalScopeProof.stageForgedSkip.reasonCodes, ["stage_not_attempted"]);
+assert.equal(directCanonicalScopeProof.stageForgedSkip.skipPredicateSatisfied, false);
+const forgedMonthlyStage = monthlyStageFromOperation(
+  directCanonicalScopeProof.operationForgedSkip,
+);
+assert.equal(forgedMonthlyStage.status, "failed");
+assert.equal(directCanonicalScopeProof.operationForgedSkip.isFullSuccess, false);
+assert.equal(directCanonicalScopeProof.stageMissingScope.status, "unknown");
+assert.deepEqual(
+  directCanonicalScopeProof.stageMissingScope.reasonCodes,
+  ["canonical_scope_unavailable"],
+);
+assert.equal(directCanonicalScopeProof.stageMalformedScope.status, "unknown");
+assert.deepEqual(
+  directCanonicalScopeProof.stageMalformedScope.reasonCodes,
+  ["canonical_scope_malformed"],
+);
+for (const operation of [
+  directCanonicalScopeProof.operationMissingScope,
+  directCanonicalScopeProof.operationMalformedScope,
+]) {
+  assert.equal(operation.isFullSuccess, false);
+  assert.equal(operation.decision.status, "unknown");
+  assert.ok(operation.unknownStageIds.includes("computed.assignment_car"));
+}
+assert.equal(directCanonicalScopeProof.unboundNoTargetSkip.status, "unknown");
+assert.deepEqual(
+  directCanonicalScopeProof.unboundNoTargetSkip.reasonCodes,
+  ["canonical_scope_trusted_context_unavailable"],
+);
+assert.equal(directCanonicalScopeProof.validNoTargetSkip.status, "skipped");
+assert.equal(directCanonicalScopeProof.conflictingNoTargetSkip.status, "failed");
+assert.deepEqual(
+  directCanonicalScopeProof.conflictingNoTargetSkip.reasonCodes,
+  ["canonical_scope_trusted_target_conflict"],
+);
+
+function assertMalformedScopeClosed_(label, evaluated, operation) {
+  assert.notEqual(evaluated.status, "skipped", `${label}: stage skipped`);
+  assert.notEqual(evaluated.skipPredicateSatisfied, true, `${label}: skipPredicateSatisfied`);
+  assert.notEqual(evaluated.status, "full", `${label}: stage full`);
+  assert.equal(evaluated.status, "unknown", `${label}: expected unknown`);
+  assert.deepEqual(evaluated.reasonCodes, ["canonical_scope_malformed"], `${label}: reason`);
+  if (operation) {
+    assert.notEqual(operation.status, "skipped", `${label}: operation skipped`);
+    assert.notEqual(operation.isFullSuccess, true, `${label}: operation full`);
+    assert.notEqual(operation.status, "full", `${label}: operation status full`);
+    assert.ok(operation.hasUnknownEvidence, `${label}: missing unknown evidence`);
+  }
+}
+
+const semanticDomainProof = JSON.parse(vm.runInContext(`JSON.stringify((function () {
+  function stageEval(stageId, scope) {
+    return SystemStatusFingerprints_.evaluateStage(
+      stageId,
+      _systemStatusFingerprintEvidence_(
+        stageId,
+        _systemStatusFingerprintSuccessfulResult_(stageId),
+      ),
+      scope,
+      stageId === "computed.vacation_monthly_sync"
+        ? _systemStatusMonthlyTrustedContext_({
+          target: scope && Object.prototype.hasOwnProperty.call(scope, "targetMonth")
+            ? scope.targetMonth
+            : "07",
+        })
+        : null,
+    );
+  }
+  function operationWithScope(stageId, scope) {
+    var inputs = {};
+    Object.keys(SystemStatusFingerprints_.stagePolicy)
+      .filter(function (id) { return id.indexOf("computed.") === 0; })
+      .forEach(function (id) {
+        inputs[id] = _systemStatusFingerprintEvidence_(
+          id, _systemStatusFingerprintSuccessfulResult_(id),
+        );
+      });
+    var scopes = _systemStatusFingerprintCanonicalScopeMap_("computed");
+    scopes[stageId] = scope;
+    var trustedMap = {};
+    trustedMap["computed.vacation_monthly_sync"] = _systemStatusMonthlyTrustedContext_();
+    if (stageId === "computed.vacation_monthly_sync") {
+      trustedMap[stageId] = _systemStatusMonthlyTrustedContext_({
+        target: scope && Object.prototype.hasOwnProperty.call(scope, "targetMonth")
+          ? scope.targetMonth
+          : "07",
+      });
+    }
+    return SystemStatusFingerprints_.evaluateOperation(
+      "computed", inputs, scopes, trustedMap,
+    );
+  }
+  var vacationModes = {
+    typo: stageEval("computed.vacation_computed", { vacationSourceMode: "requets" }),
+    trailingSpace: stageEval("computed.vacation_computed", { vacationSourceMode: "legacy " }),
+    upperLegacy: stageEval("computed.vacation_computed", { vacationSourceMode: "LEGACY" }),
+    empty: stageEval("computed.vacation_computed", { vacationSourceMode: "" }),
+    nullMode: stageEval("computed.vacation_computed", { vacationSourceMode: null }),
+    requests: stageEval("computed.vacation_computed", { vacationSourceMode: "requests" }),
+    legacy: stageEval("computed.vacation_computed", { vacationSourceMode: "legacy" }),
+  };
+  var targets = {
+    false99: stageEval("computed.assignment_car", { targetExists: false, targetRowCount: 99 }),
+    false1: stageEval("computed.assignment_car", { targetExists: false, targetRowCount: 1 }),
+    false0: stageEval("computed.assignment_car", { targetExists: false, targetRowCount: 0 }),
+    true0: stageEval("computed.assignment_car", { targetExists: true, targetRowCount: 0 }),
+    true99: stageEval("computed.assignment_car", { targetExists: true, targetRowCount: 99 }),
+  };
+  var months = {};
+  ["00", "13", "99", "01", "12", ""].forEach(function (month) {
+    months[month || "empty"] = stageEval(
+      "computed.vacation_monthly_sync",
+      { targetMonth: month },
+    );
+  });
+  return {
+    vacationModes: vacationModes,
+    targets: targets,
+    months: months,
+    typoOperation: operationWithScope(
+      "computed.vacation_computed",
+      { vacationSourceMode: "requets" },
+    ),
+    false99Operation: operationWithScope(
+      "computed.assignment_car",
+      { targetExists: false, targetRowCount: 99 },
+    ),
+  };
+})())`, context));
+
+for (const [label, evaluated] of Object.entries({
+  "vacation typo": semanticDomainProof.vacationModes.typo,
+  "vacation trailing space": semanticDomainProof.vacationModes.trailingSpace,
+  "vacation LEGACY": semanticDomainProof.vacationModes.upperLegacy,
+  "vacation empty": semanticDomainProof.vacationModes.empty,
+  "vacation null": semanticDomainProof.vacationModes.nullMode,
+  "targetExists false+99": semanticDomainProof.targets.false99,
+  "targetExists false+1": semanticDomainProof.targets.false1,
+  "month 00": semanticDomainProof.months["00"],
+  "month 13": semanticDomainProof.months["13"],
+  "month 99": semanticDomainProof.months["99"],
+})) {
+  assertMalformedScopeClosed_(label, evaluated);
+}
+assert.equal(semanticDomainProof.vacationModes.requests.status, "skipped");
+assert.equal(semanticDomainProof.vacationModes.legacy.status, "success");
+assert.equal(semanticDomainProof.targets.false0.status, "skipped");
+assert.equal(semanticDomainProof.targets.true0.status, "skipped");
+assert.equal(semanticDomainProof.targets.true99.status, "success");
+for (const month of ["01", "12"]) {
+  const evaluated = semanticDomainProof.months[month];
+  assert.notEqual(evaluated.status, "skipped", `month ${month} skipped`);
+  assert.notEqual(evaluated.status, "unknown", `month ${month} unknown`);
+  assert.notEqual(evaluated.skipPredicateSatisfied, true, `month ${month} skipPredicate`);
+  assert.ok(
+    !evaluated.reasonCodes.includes("canonical_scope_malformed"),
+    `month ${month} malformed`,
+  );
+}
+assert.equal(
+  JSON.parse(vm.runInContext(`JSON.stringify(
+    SystemStatusFingerprints_.evaluateStage(
+      "computed.vacation_monthly_sync",
+      _systemStatusFingerprintEvidence_(
+        "computed.vacation_monthly_sync",
+        _systemStatusFingerprintSuccessfulResult_("computed.vacation_monthly_sync"),
+      ),
+      { targetMonth: "07" },
+      _systemStatusMonthlyTrustedContext_(),
+    )
+  )`, context)).status,
+  "success",
+);
+assert.equal(semanticDomainProof.months.empty.status, "skipped");
+assertMalformedScopeClosed_(
+  "exact repro typo mode",
+  semanticDomainProof.vacationModes.typo,
+  semanticDomainProof.typoOperation,
+);
+assertMalformedScopeClosed_(
+  "exact repro false+99",
+  semanticDomainProof.targets.false99,
+  semanticDomainProof.false99Operation,
+);
+
 const executableManifest = vm.runInContext("SystemStatusFingerprints_.executableManifest", context);
 const executableJson = JSON.stringify(executableManifest);
 const executableDigest = crypto.createHash("sha256").update(executableJson).digest("hex");
 assert.equal(executableDigest, contract.executableProjectionContract.manifestCanonicalJsonSha256);
 assert.equal(Object.keys(executableManifest).length, contract.executableProjectionContract.stageCount);
 assert.deepEqual(Object.keys(executableManifest).sort(), Object.keys(stageById).sort());
+const personnelBirthdayPrior = executableManifest["computed.personnel_helpers"].source
+  .find((dependency) => dependency.id === "personnelBirthdayPrior");
+assert.ok(personnelBirthdayPrior, "personnel Birthday prior-state dependency missing");
+assert.equal(personnelBirthdayPrior.ignoreEmptyTail, true);
+assert.ok(personnelBirthdayPrior.ignoredFields.includes("emptyTail"));
 const dependencySignature = (dependency) => [
   dependency.id,
   dependency.kind,
@@ -377,6 +916,72 @@ assert.deepEqual(
   contract.transitionPolicies["computed.vacation_monthly_sync"].structuredProofs,
   ["targetCells", "metadata", "pendingPlan", "conflicts"],
 );
+assert.equal(contract.transitionPolicies["computed.vacation_monthly_sync"].missingProofState, "unknown");
+assert.equal(contract.transitionPolicies["computed.vacation_monthly_sync"].presentMismatchState, "failed");
+assert.equal(contract.transitionPolicies["computed.vacation_monthly_sync"].expectedBindingSource, "trusted_execution_context");
+assert.equal(contract.transitionPolicies["computed.vacation_monthly_sync"].expectedBindingArgument, "trustedExecutionContext");
+assert.equal(contract.transitionPolicies["computed.vacation_monthly_sync"].expectedBindingBuilder, "buildExpectedBindingFromTrustedContext");
+assert.equal(contract.transitionPolicies["computed.vacation_monthly_sync"].derivedFromEvidenceAllowed, false);
+assert.equal(contract.transitionPolicies["computed.vacation_monthly_sync"].evidenceExpectedBindingUsed, false);
+assert.equal(contract.transitionPolicies["computed.vacation_monthly_sync"].evidenceTrustedContextUsed, false);
+assert.equal(contract.transitionPolicies["computed.vacation_monthly_sync"].stageWrapperTrustedContextArgument, "trustedExecutionContext");
+assert.equal(contract.transitionPolicies["computed.vacation_monthly_sync"].operationWrapperTrustedContextArgument, "trustedContextMap");
+assert.equal(contract.transitionPolicies["computed.vacation_monthly_sync"].structuredStatusPropagation, true);
+assert.equal(contract.transitionPolicies["computed.vacation_monthly_sync"].digestValidationBeforeComparison, true);
+assert.equal(contract.operationDecisionPolicy.broadStatusField, "status");
+assert.equal(contract.operationDecisionPolicy.evidenceDecisionField, "decision");
+assert.deepEqual(
+  contract.operationDecisionPolicy.decisionShape,
+  ["status", "eligibleForReceipt", "reasonCodes"],
+);
+assert.equal(contract.operationDecisionPolicy.unknownPreventsFull, true);
+assert.equal(contract.operationDecisionPolicy.confirmedFailurePrecedence, true);
+assert.equal(contract.operationDecisionPolicy.reasonCodesPrefixedByStageId, true);
+assert.equal(contract.operationDecisionPolicy.partialMayContainUnknown, true);
+assert.equal(contract.canonicalScopeBoundary.stageEvaluatorArgument, "canonicalScope");
+assert.equal(contract.canonicalScopeBoundary.operationEvaluatorArgument, "operationScope");
+assert.equal(contract.canonicalScopeBoundary.operationScopeShape, "per_stage_map");
+assert.equal(contract.canonicalScopeBoundary.derivedFromEvidenceAllowed, false);
+assert.equal(contract.canonicalScopeBoundary.evidenceScopeUsed, false);
+assert.equal(contract.canonicalScopeBoundary.evidenceScopeKnownUsed, false);
+assert.equal(contract.canonicalScopeBoundary.evidenceSkipPredicateSatisfiedUsed, false);
+assert.equal(contract.canonicalScopeBoundary.missingOrMalformedScopeState, "unknown");
+assert.deepEqual(
+  contract.canonicalScopeBoundary.semanticDomains.vacationSourceMode.enum,
+  ["legacy", "requests"],
+);
+assert.equal(
+  contract.canonicalScopeBoundary.semanticDomains.vacationSourceMode.skipWhenEquals,
+  "requests",
+);
+assert.equal(
+  contract.canonicalScopeBoundary.semanticDomains.targetMonth.pattern,
+  "^(0[1-9]|1[0-2])$",
+);
+assert.deepEqual(
+  contract.canonicalScopeBoundary.semanticDomains.targetMonth.emptyAllowedForSkipWhen,
+  ["no_target_month"],
+);
+assert.equal(
+  contract.canonicalScopeBoundary.semanticDomains.targetMissingOrEmpty.invariant,
+  "targetExists=false requires targetRowCount=0",
+);
+assert.equal(
+  contract.canonicalScopeBoundary.scopeDependentStages["computed.vacation_monthly_sync"]
+    .trustedInvocationTargetCrossCheck,
+  true,
+);
+assert.equal(
+  contract.canonicalScopeBoundary.scopeDependentStages["computed.vacation_monthly_sync"]
+    .trustedInvocationRequiredForSkip,
+  true,
+);
+assert.equal(
+  contract.transitionPolicies["computed.personnel_helpers"].semanticInvariant,
+  "prior_equals_expected_equals_post",
+);
+assert.equal(contract.transitionPolicies["computed.personnel_helpers"].emptySemanticState, "eligible_noop");
+assert.equal(contract.transitionPolicies["computed.personnel_helpers"].invalidSemanticState, "failed");
 assert.deepEqual(
   JSON.parse(JSON.stringify(vm.runInContext("SystemStatusFingerprints_.writerLockContract", context))),
   contract.writerLockContract,
@@ -396,6 +1001,32 @@ assert.equal(contract.writerLockContract.requiredSs2bIntegration.public.acquisit
 assert.equal(contract.writerLockContract.requiredSs2bIntegration.daily.acquisition, "acquire_document_lock");
 assert.equal(contract.writerLockContract.requiredSs2bIntegration.public.nestedAcquireAllowed, false);
 assert.equal(contract.writerLockContract.requiredSs2bIntegration.daily.sharedCoreAcquiresLock, false);
+assert.equal(contract.ss2bHandoff.trustedContextBoundary.derivedFromEvidenceAllowed, false);
+assert.equal(contract.ss2bHandoff.trustedContextBoundary.evidenceExpectedBindingUsed, false);
+assert.equal(contract.ss2bHandoff.trustedContextBoundary.evidenceTrustedContextUsed, false);
+assert.equal(contract.ss2bHandoff.trustedContextBoundary.structuredStatusPropagation, true);
+assert.equal(contract.ss2bHandoff.trustedContextBoundary.unknownOperationStatusAllowed, true);
+assert.equal(
+  contract.ss2bHandoff.trustedContextBoundary.stageEvaluatorSignature,
+  "evaluateStage(stageId,evidence,canonicalScope,trustedExecutionContext)",
+);
+assert.equal(
+  contract.ss2bHandoff.trustedContextBoundary.operationEvaluatorSignature,
+  "evaluateOperation(operationId,stageInputs,operationScope,trustedContextMap)",
+);
+assert.equal(contract.ss2bHandoff.trustedContextBoundary.source, "canonical_operation_invocation_and_lock_context");
+assert.equal(contract.ss2bHandoff.trustedContextBoundary.runtimeConstructionImplemented, false);
+assert.equal(contract.ss2bHandoff.canonicalScopeBoundary.derivedFromEvidenceAllowed, false);
+assert.equal(contract.ss2bHandoff.canonicalScopeBoundary.evidenceScopeUsed, false);
+assert.equal(contract.ss2bHandoff.canonicalScopeBoundary.evidenceScopeKnownUsed, false);
+assert.equal(contract.ss2bHandoff.canonicalScopeBoundary.evidenceSkipPredicateSatisfiedUsed, false);
+assert.equal(contract.ss2bHandoff.canonicalScopeBoundary.monthlyTrustedInvocationRequiredForSkip, true);
+assert.equal(contract.ss2bHandoff.canonicalScopeBoundary.monthlyTrustedTargetCrossCheck, true);
+assert.equal(contract.ss2bHandoff.canonicalScopeBoundary.runtimeConstructionImplemented, false);
+assert.deepEqual(
+  contract.ss2bHandoff.trustedContextBoundary.requiredSs2bCallers,
+  ["apiStage7MaterializeComputedData via WorkflowOrchestrator", "checkVacationsAndBirthdays daily caller"],
+);
 assert.equal(contract.executableProjectionContract.dependencyPresencePolicy.emptyArrayIsPresent, true);
 assert.equal(contract.executableProjectionContract.dependencyPresencePolicy.requiredUnavailableFingerprint, null);
 assert.equal(contract.versionCompatibility.receiptVersion, "ss2b-stage-receipt-v1");
@@ -404,9 +1035,40 @@ assert.equal(contract.versionCompatibility.mismatchFreshness, "unknown");
 assert.equal(contract.versionCompatibility.matchingFreshness, "comparable");
 assert.equal(contract.versionCompatibility.readTimeMigrationAllowed, false);
 assert.equal(contract.versionCompatibility.oldEvidenceMutationAllowed, false);
+const oldSs2a9Compatibility = JSON.parse(vm.runInContext(`JSON.stringify(
+  SystemStatusFingerprints_.evaluateVersionCompatibility(
+    "computed.vacation_monthly_sync",
+    {
+      receiptVersion: "ss2b-stage-receipt-v1",
+      manifestVersion: "ss2a9-executable-projection-v9",
+      signatureVersion: "ss2a9-stage-signatures-v9",
+      algorithmVersion: "ss2a-canonical-sha256-stream-v1",
+      stageVersion: "vacation-monthly-sync-v9",
+    }
+  )
+)`, context));
+assert.equal(oldSs2a9Compatibility.compatible, false);
+assert.equal(oldSs2a9Compatibility.freshness, "unknown");
+assert.ok(oldSs2a9Compatibility.mismatchedFields.includes("manifestVersion"));
+assert.ok(oldSs2a9Compatibility.mismatchedFields.includes("signatureVersion"));
+assert.ok(oldSs2a9Compatibility.mismatchedFields.includes("stageVersion"));
+assert.equal(contract.versionCompatibility.manifestVersion, "ss2a9-executable-projection-v10");
+assert.equal(contract.versionCompatibility.signatureVersion, "ss2a9-stage-signatures-v10");
 const gasReport = vm.runInContext("runSystemStatusFingerprintTests_()", context);
 assert.equal(gasReport.ok, true, JSON.stringify(gasReport, null, 2));
-assert.ok(gasReport.checks.length >= 36, "focused GAS suite is too small");
+assert.ok(gasReport.checks.length >= 44, "focused GAS suite is too small");
+for (const stageId of [
+  "computed.assignment_car",
+  "computed.assignment_weapon",
+  "computed.vacation_monthly_sync",
+]) {
+  assert.ok(
+    gasReport.checks.some(
+      (check) => check.name === `${stageId} full identity mutation matrix` && check.status === "OK",
+    ),
+    `${stageId}: full identity mutation matrix missing`,
+  );
+}
 assert.ok(gasReport.checks.every((check) => check.status === "OK"));
 
 const publicFingerprint = vm.runInContext(
