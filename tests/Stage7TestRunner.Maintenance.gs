@@ -189,6 +189,22 @@ function stage7TestRunnerBuildMaintenanceTasks_(taskFn, optArgFn) {
       "runStage6ADomainTests_",
       optArgFn("domain"),
     ),
+    taskFn(
+      "system-status-foundation",
+      "Перевірка основи стану системи",
+      "domain",
+      "full",
+      "warning",
+      "runSystemStatusFoundationTests_",
+    ),
+    taskFn(
+      "system-status-fingerprints",
+      "Перевірка відбитків стану системи",
+      "domain",
+      "full",
+      "warning",
+      "runSystemStatusFingerprintTests_",
+    ),
   ];
 }
 
@@ -217,5 +233,7 @@ function stage7TestRunnerExplicitRegistryMaintenance_() {
     runHistoricalQuickDiagnosticsInternal_:
       runHistoricalQuickDiagnosticsInternal_,
     runStage6ADomainTests_: runStage6ADomainTests_,
+    runSystemStatusFoundationTests_: runSystemStatusFoundationTests_,
+    runSystemStatusFingerprintTests_: runSystemStatusFingerprintTests_,
   };
 }

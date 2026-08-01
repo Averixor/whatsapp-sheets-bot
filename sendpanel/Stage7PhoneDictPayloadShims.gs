@@ -23,8 +23,26 @@ function _stage7ShimFindHeaderCol_(headers, names, fallbackIndex) {
   return typeof fallbackIndex === "number" ? fallbackIndex : -1;
 }
 
-function loadPhonesIndex_() {
-  if (typeof isPersonnelSheetAvailable_ === "function" && isPersonnelSheetAvailable_()) {
+function loadPhonesIndex_(options) {
+  var opts = options || {};
+  if (opts.readOnly === true) {
+    var readOnlyPersonnelLoader =
+      typeof opts.readOnlyPersonnelLoaderForTests === "function"
+        ? opts.readOnlyPersonnelLoaderForTests
+        : typeof PersonnelRepository_ === "object" &&
+            PersonnelRepository_ &&
+            typeof PersonnelRepository_.getReadOnlyPhonesIndex === "function"
+          ? function () { return PersonnelRepository_.getReadOnlyPhonesIndex(); }
+          : null;
+    try {
+      var readOnlyPersonnelIndex = readOnlyPersonnelLoader
+        ? readOnlyPersonnelLoader()
+        : null;
+      if (readOnlyPersonnelIndex) return readOnlyPersonnelIndex;
+    } catch (_) {
+      // Canonical runtime semantics: transient PERSONNEL reads fall back to PHONES.
+    }
+  } else if (typeof isPersonnelSheetAvailable_ === "function" && isPersonnelSheetAvailable_()) {
     try {
       return buildPhonesIndexFromPersonnel_();
     } catch (personnelErr) {
@@ -39,7 +57,7 @@ function loadPhonesIndex_() {
     }
   }
 
-  var ss = getWasbSpreadsheet_();
+  var ss = opts.spreadsheetForTests || getWasbSpreadsheet_();
   var sheetName =
     typeof CONFIG !== "undefined" && CONFIG && CONFIG.PHONES_SHEET
       ? CONFIG.PHONES_SHEET
@@ -55,6 +73,8 @@ function loadPhonesIndex_() {
     items: [],
     versionMarker: "stage7-phones-index-compat-v2",
     source: "PHONES",
+    sourceAvailable: !!sheet,
+    readOnly: opts.readOnly === true,
   };
 
   if (!sheet || sheet.getLastRow() < 2) {
@@ -200,39 +220,125 @@ function loadPhonesIndex_() {
   return out;
 }
 
-function loadPhonesMap_() {
-  var index = loadPhonesIndex_();
+function _stage7PhoneMapAliasesForItem_(item) {
+  var aliases = [];
+  function add_(value) {
+    var key = String(value || "").trim();
+    if (key && aliases.indexOf(key) === -1) aliases.push(key);
+  }
+  if (!item) return aliases;
+  if (item.fml) {
+    add_(item.fml);
+    if (typeof normalizeFML_ === "function") add_(normalizeFML_(item.fml));
+    if (typeof _normFmlForProfiles_ === "function") {
+      add_(_normFmlForProfiles_(item.fml));
+    }
+  }
+  if (item.callsign) {
+    add_(item.callsign);
+    if (typeof _normCallsignKey_ === "function") {
+      add_(_normCallsignKey_(item.callsign));
+    }
+  }
+  if (item.role) {
+    add_(item.role);
+    if (typeof _normCallsignKey_ === "function") {
+      add_(_normCallsignKey_(item.role));
+    }
+  }
+  return aliases;
+}
+
+function _stage7BuildPhonesMapFromIndex_(index) {
   var map = {};
 
   (index.items || []).forEach(function (item) {
     if (!item || !item.phone) return;
-
-    if (item.fml) {
-      map[item.fml] = item.phone;
-      if (typeof normalizeFML_ === "function") {
-        map[normalizeFML_(item.fml)] = item.phone;
-      }
-      if (typeof _normFmlForProfiles_ === "function") {
-        map[_normFmlForProfiles_(item.fml)] = item.phone;
-      }
-    }
-
-    if (item.callsign) {
-      map[item.callsign] = item.phone;
-      if (typeof _normCallsignKey_ === "function") {
-        map[_normCallsignKey_(item.callsign)] = item.phone;
-      }
-    }
-
-    if (item.role) {
-      map[item.role] = item.phone;
-      if (typeof _normCallsignKey_ === "function") {
-        map[_normCallsignKey_(item.role)] = item.phone;
-      }
-    }
+    _stage7PhoneMapAliasesForItem_(item).forEach(function (key) {
+      map[key] = item.phone;
+    });
   });
 
   return map;
+}
+
+function loadPhonesMap_() {
+  return _stage7BuildPhonesMapFromIndex_(loadPhonesIndex_());
+}
+
+function _stage7SummarizePhonesIndexConsistency_(index, map) {
+  var source = index && typeof index === "object" ? index : {};
+  var items = Array.isArray(source.items) ? source.items : [];
+  var phoneMap = map && typeof map === "object" ? map : {};
+  var validRecords = 0;
+  var invalidRecords = 0;
+  var mismatches = 0;
+
+  function expectedKeys_(item) {
+    var fml = String((item && item.fml) || "").trim();
+    var callsign = String((item && item.callsign) || "").trim();
+    var role = String((item && item.role) || "").trim();
+    return {
+      byFml: fml
+        ? typeof _normFmlForProfiles_ === "function"
+          ? _normFmlForProfiles_(fml)
+          : fml.toUpperCase()
+        : "",
+      byNorm: fml
+        ? typeof normalizeFML_ === "function"
+          ? normalizeFML_(fml)
+          : fml.toLowerCase()
+        : "",
+      byCallsign: callsign || role
+        ? typeof _normCallsignKey_ === "function"
+          ? _normCallsignKey_(callsign || role)
+          : String(callsign || role).toUpperCase()
+        : "",
+      byRole: role || callsign
+        ? typeof _normCallsignKey_ === "function"
+          ? _normCallsignKey_(role || callsign)
+          : String(role || callsign).toUpperCase()
+        : "",
+    };
+  }
+
+  function matches_(lookup, key, item) {
+    return !key || !!lookup && lookup[key] === item;
+  }
+
+  items.forEach(function (item) {
+    if (!item || !item.phone) {
+      invalidRecords++;
+      return;
+    }
+    validRecords++;
+    var keys = expectedKeys_(item);
+    if (!matches_(source.byFml, keys.byFml, item)) mismatches++;
+    if (!matches_(source.byNorm, keys.byNorm, item)) mismatches++;
+    if (!matches_(source.byCallsign, keys.byCallsign, item)) mismatches++;
+    if (!matches_(source.byRole, keys.byRole, item)) mismatches++;
+    if (!source.byPhone || source.byPhone[item.phone] !== item) mismatches++;
+    if (item.phone2 && (!source.byPhone || source.byPhone[item.phone2] !== item)) {
+      mismatches++;
+    }
+    _stage7PhoneMapAliasesForItem_(item).forEach(function (key) {
+      if (key && phoneMap[key] !== item.phone) mismatches++;
+    });
+  });
+
+  return {
+    available: source.sourceAvailable === true,
+    source: String(source.source || ""),
+    validRecords: validRecords,
+    invalidRecords: invalidRecords,
+    mapIndexMismatches: mismatches,
+  };
+}
+
+function getPhonesReadOnlyStatus_() {
+  var index = loadPhonesIndex_({ readOnly: true });
+  var map = _stage7BuildPhonesMapFromIndex_(index);
+  return _stage7SummarizePhonesIndexConsistency_(index, map);
 }
 
 function findPhone_(query, options) {

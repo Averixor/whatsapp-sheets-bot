@@ -1,0 +1,444 @@
+{
+  "version": 6,
+  "receiptBoundary": "stage_scoped_with_operation_run_summary",
+  "algorithm": {
+    "id": "ss2a-canonical-sha256-stream-v1",
+    "canonicalObjectKeys": "utf16_code_unit_ascending",
+    "localeCollationAllowed": false,
+    "defaultChunkBytes": 4096,
+    "maxChunkBytes": 8192,
+    "maxProjectionBytes": 2000000,
+    "rawWorkbookConcatenationAllowed": false
+  },
+  "executionContext": {
+    "cacheLifetime": "single_gas_execution",
+    "cacheKeyFields": [
+      "spreadsheetId",
+      "sheet",
+      "range",
+      "readMode",
+      "projectionVersion"
+    ],
+    "readModes": ["values", "display", "formulas", "validations", "notes", "injected"],
+    "maxSpreadsheetCalls": 96,
+    "maxRangeReads": 64,
+    "maxCellsRead": 40000,
+    "maxBytesRead": 4000000,
+    "maxProjectionBytes": 2000000,
+    "maxProjectionBytesTotal": 4000000,
+    "budgetSemantics": {
+      "executionContextCaps": "operation_wide_hard_caps",
+      "stageCosts": "stage_local_non_additive_trace_upper_bounds_due_to_shared_reads",
+      "projectionCap": "per_projection_plus_operation_total",
+      "spreadsheetCallUnit": "one adapter Spreadsheet service call unless adapter declares a larger exact count",
+      "rangeReadUnit": "one adapter range read unless adapter declares a larger exact count",
+      "stageCostEnforcement": "automatic from executable manifest; caller limits may only tighten declared bounds"
+    },
+    "postWritePolicy": "invalidate_affected_projection_ids_and_all_global_rewrite_sheet_entries",
+    "crossExecutionCacheAllowedForEvidence": false
+  },
+  "stabilityPolicy": {
+    "preSource": "live_projection",
+    "postSource": "same_live_projection_after_stage_write",
+    "immutableSuccessWhen": "pre_and_post_fingerprints_match, both reads are live, and every required immutable dependency is available",
+    "mutableSuccessWhen": "the live post-state exactly matches the expected transition and preservation baseline; prior-state equality is not required",
+    "mismatchOutcome": "no_success_receipt",
+    "missingCorruptOrBudgetOutcome": "unknown",
+    "implementedInSs2aAs": "pure_transition_simulation_only"
+  },
+  "evidenceRoles": {
+    "allowed": ["immutable_input", "mutable_target_prior_state", "result", "preservation_baseline"],
+    "defaultSource": "immutable_input",
+    "defaultResult": "result",
+    "sourceOverrides": {
+      "computed.personnel_helpers": {"personnelBirthdayPrior": "mutable_target_prior_state"},
+      "computed.assignment_car": {"carPriorState": "mutable_target_prior_state", "carPreservation": "preservation_baseline"},
+      "computed.assignment_weapon": {"weaponPriorState": "mutable_target_prior_state", "weaponPreservation": "preservation_baseline"},
+      "computed.vacation_monthly_sync": {"vacationMonthlyMetadataPrior": "mutable_target_prior_state", "vacationMonthlyTarget": "mutable_target_prior_state"},
+      "month_journal.journal_slice": {"journalBefore": "mutable_target_prior_state"},
+      "month_journal.summary_slice": {"summaryBefore": "mutable_target_prior_state"},
+      "month_journal.non_target_preservation": {"preservationReads": "preservation_baseline"}
+    }
+  },
+  "transitionPolicies": {
+    "computed.personnel_helpers": {"mode": "birthday_semantic_patch", "rowKeyField": "rowKey", "reorderPolicy": "reject", "writableFields": ["birthdaySemantic"], "preservedFields": ["rowKey"], "semanticInvariant": "prior_equals_expected_equals_post"},
+    "computed.assignment_car": {"mode": "cell_patch", "rowKeyField": "rowKey", "reorderPolicy": "reject", "writableFields": ["ownerFml", "helperCallsign"], "preservedFields": ["rowKey", "columnsBtoG"]},
+    "computed.assignment_weapon": {"mode": "cell_patch", "rowKeyField": "rowKey", "reorderPolicy": "reject", "writableFields": ["lastName", "firstName", "patronymic", "rank", "phone", "callsign"], "preservedFields": ["rowKey", "columnsFtoZ"]},
+    "computed.vacation_monthly_sync": {"mode": "vacation_monthly_atomic", "rowKeyField": "cellKey", "reorderPolicy": "reject", "writableFields": ["cellValue", "cellDisplay"], "preservedFields": ["cellKey", "validationAllowed", "note", "dateRaw", "dateDisplay", "callsign", "fml"], "structuredProofs": ["targetCells", "metadata", "pendingPlan", "conflicts"], "missingProofState": "unknown", "presentMismatchState": "failed"},
+    "month_journal.journal_slice": {"mode": "target_slice_replace", "remapNonTargetByHeader": false},
+    "month_journal.summary_slice": {"mode": "target_slice_replace", "remapNonTargetByHeader": true},
+    "month_journal.non_target_preservation": {"mode": "preservation_only"}
+  },
+  "writerLockContract": {
+    "currentRuntime": {
+      "public": {"caller": "apiStage7MaterializeComputedData", "writer": "materializeAllComputedData_", "state": "locked_by_workflow_orchestrator"},
+      "daily": {"caller": "checkVacationsAndBirthdays", "writer": "materializeAllComputedData_", "state": "unlocked_direct_writer", "workflowWrite": false, "workflowLock": false}
+    },
+    "requiredSs2bIntegration": {
+      "public": {"acquisition": "already_locked", "lockOwner": "workflow_orchestrator", "sharedCoreAcquiresLock": false, "nestedAcquireAllowed": false},
+      "daily": {"acquisition": "acquire_document_lock", "lockOwner": "daily_caller", "sharedCoreAcquiresLock": false, "nestedAcquireAllowed": false}
+    }
+  },
+  "operations": [
+    {
+      "operationId": "computed",
+      "entrypoint": "apiStage7MaterializeComputedData",
+      "runtime": "Stage7UseCases_.runMaintenanceScenario -> materializeAllComputedData_",
+      "options": ["monthlySyncMode", "monthSheet", "includeHistory", "mode"],
+      "internalDirectCallOptions": ["forceVacationRebuild"],
+      "publicOptionBoundary": "apiStage7MaterializeComputedData does not forward forceVacationRebuild",
+      "stageIds": [
+        "computed.personnel_helpers",
+        "computed.phones_result",
+        "computed.birthday_result",
+        "computed.monthly_callsigns",
+        "computed.assignment_car",
+        "computed.assignment_weapon",
+        "computed.vacation_computed",
+        "computed.vacation_schedule",
+        "computed.vacation_monthly_sync",
+        "computed.send_panel_status",
+        "computed.operation_summary"
+      ],
+      "edges": [
+        ["computed.personnel_helpers", "computed.phones_result"],
+        ["computed.personnel_helpers", "computed.birthday_result"],
+        ["computed.personnel_helpers", "computed.monthly_callsigns"],
+        ["computed.personnel_helpers", "computed.assignment_car"],
+        ["computed.personnel_helpers", "computed.assignment_weapon"],
+        ["computed.personnel_helpers", "computed.vacation_schedule"],
+        ["computed.personnel_helpers", "computed.vacation_monthly_sync"],
+        ["computed.monthly_callsigns", "computed.vacation_schedule"],
+        ["computed.monthly_callsigns", "computed.vacation_monthly_sync"],
+        ["computed.vacation_computed", "computed.vacation_schedule"],
+        ["computed.vacation_computed", "computed.vacation_monthly_sync"],
+        ["computed.personnel_helpers", "computed.operation_summary"],
+        ["computed.phones_result", "computed.operation_summary"],
+        ["computed.birthday_result", "computed.operation_summary"],
+        ["computed.monthly_callsigns", "computed.operation_summary"],
+        ["computed.assignment_car", "computed.operation_summary"],
+        ["computed.assignment_weapon", "computed.operation_summary"],
+        ["computed.vacation_computed", "computed.operation_summary"],
+        ["computed.vacation_schedule", "computed.operation_summary"],
+        ["computed.vacation_monthly_sync", "computed.operation_summary"],
+        ["computed.send_panel_status", "computed.operation_summary"]
+      ]
+    },
+    {
+      "operationId": "month_journal",
+      "entrypoint": "apiStage7MaterializeMonthJournal",
+      "runtime": "resolveMonthJournalSheetName_ -> materializeMonthJournalBundle_",
+      "options": ["monthSheet", "month"],
+      "stageIds": [
+        "month_journal.target_resolution",
+        "month_journal.source_projection",
+        "month_journal.journal_slice",
+        "month_journal.summary_slice",
+        "month_journal.non_target_preservation",
+        "month_journal.operation_summary"
+      ],
+      "edges": [
+        ["month_journal.target_resolution", "month_journal.source_projection"],
+        ["month_journal.source_projection", "month_journal.journal_slice"],
+        ["month_journal.journal_slice", "month_journal.summary_slice"],
+        ["month_journal.journal_slice", "month_journal.non_target_preservation"],
+        ["month_journal.summary_slice", "month_journal.non_target_preservation"],
+        ["month_journal.non_target_preservation", "month_journal.operation_summary"]
+      ]
+    }
+  ],
+  "stages": [
+    {
+      "stageId": "computed.personnel_helpers",
+      "version": "personnel-helpers-v4",
+      "policy": "required",
+      "skipPredicate": "never",
+      "extractor": "injected readRange equivalent of _personnelMaterializeBuildSourceRows_ without ensurePersonnelStatusColumnHeader_",
+      "sources": [
+        {
+          "sheet": "CONFIG.PERSONNEL_SHEET",
+          "range": "header row 1 plus data rows 2:max(lastRow,32,MONTHLY_CONFIG.LAST_DATA_ROW+1), named source columns only",
+          "readModes": ["values", "display"],
+          "fields": ["FML", "LastName", "FirstName", "Patronymic", "Callsign", "Phone", "2_Phone", "Rank", "Title"],
+          "normalizers": ["_personnelBuildHeaderColIndex_", "_personnelMaterializeSynthesizeFml_", "resolvePersonnelDisplayCallsign_", "String(value).trim for Phone/2_Phone"],
+          "rowOrder": "semantic",
+          "duplicates": "preserve",
+          "ignored": ["Birthday raw/display handled by personnelBirthdayPrior semantic transition", "Position", "Status", "TEMPLATE", "formatting", "columns not named above", "empty trailing managed rows after the last semantic row"]
+        },
+        {"kind": "mutable_target_prior_state", "fields": ["physical rowKey", "Birthday parsed semantic day"], "normalizers": ["normalizeBirthdayText_/parseBirthdayValue_ equivalent birthday_day: Date, ISO YMD, bare UA DMY, DD.MM.YYYY р. н."], "rowOrder": "semantic", "duplicates": "reject", "reorderPolicy": "reject", "invariant": "prior semantic day equals expected semantic day equals post semantic day; representation-only rewrite"},
+        {
+          "kind": "clock",
+          "fields": ["clockDay", "timezone"],
+          "normalizers": ["DateUtils_.toDayStart", "getTimeZone_"]
+        }
+      ],
+      "results": [{"sheet": "PERSONNEL", "fields": ["Birthday", "Age", "Days_until_birthday"], "readModes": ["display"], "rowOrder": "semantic", "duplicates": "preserve"}],
+      "successPredicate": "result.ok !== false and result.error == null",
+      "isFullSuccessContribution": true,
+      "cost": {"maxSpreadsheetCalls": 6, "maxRangeReads": 3, "maxCells": 992, "maxBytes": 120000}
+    },
+    {
+      "stageId": "computed.phones_result",
+      "version": "phones-result-v2",
+      "policy": "required",
+      "skipPredicate": "never",
+      "extractor": "PERSONNEL projection reused from computed.personnel_helpers",
+      "sources": [{"transitionFrom": "computed.personnel_helpers", "fields": ["Callsign", "Phone", "2_Phone"], "readModes": ["injected"], "rowOrder": "semantic", "duplicates": "preserve", "ignored": ["manual PHONES values are result evidence, not source"]}],
+      "results": [{"sheet": "CONFIG.PHONES_SHEET", "range": "A1:C(max managed row)", "fields": ["Callsign", "Phone", "Phone 2"], "readModes": ["display"], "normalizers": ["String(value).trim"], "rowOrder": "semantic", "duplicates": "preserve", "ignored": ["formatting", "empty trailing managed rows"]}],
+      "successPredicate": "result.ok !== false and result.error == null",
+      "isFullSuccessContribution": true,
+      "cost": {"maxSpreadsheetCalls": 3, "maxRangeReads": 2, "maxCells": 99, "maxBytes": 24000}
+    },
+    {
+      "stageId": "computed.birthday_result",
+      "version": "birthday-result-v2",
+      "policy": "required",
+      "skipPredicate": "never",
+      "extractor": "PERSONNEL projection plus injected clock reused from computed.personnel_helpers",
+      "sources": [{"transitionFrom": "computed.personnel_helpers", "fields": ["Callsign", "Birthday", "clockDay", "timezone"], "readModes": ["injected"], "rowOrder": "semantic", "duplicates": "preserve"}],
+      "results": [{"sheet": "CONFIG.BIRTHDAY_HELPER_SHEET", "range": "A1:D(max managed row)", "fields": ["Callsign", "Birthday", "Age", "Days_until_birthday"], "readModes": ["display"], "rowOrder": "semantic", "duplicates": "preserve", "ignored": ["formatting", "empty trailing managed rows"]}],
+      "successPredicate": "result.ok !== false and result.error == null",
+      "isFullSuccessContribution": true,
+      "cost": {"maxSpreadsheetCalls": 4, "maxRangeReads": 2, "maxCells": 132, "maxBytes": 32000}
+    },
+    {
+      "stageId": "computed.monthly_callsigns",
+      "version": "monthly-callsigns-v2",
+      "policy": "required",
+      "skipPredicate": "no_target_months",
+      "extractor": "syncMonthlyCallsignsForPersonnelUpdate_ projection with injected active-month property/fallback",
+      "sources": [
+        {"transitionFrom": "computed.personnel_helpers", "fields": ["Callsign", "LastName"], "readModes": ["injected"], "rowOrder": "semantic", "duplicates": "preserve"},
+        {"kind": "options", "fields": ["monthlySyncMode", "monthSheet", "includeHistory", "mode"], "normalizers": ["_monthlyCallsignSyncModeFromOptions_"]},
+        {"kind": "property", "fields": ["CONFIG.BOT_MONTH_PROP_KEY"], "readModes": ["injected"], "fallbacks": ["clock month", "CONFIG.TARGET_SHEET"]},
+        {"sheet": "target month 01-12", "range": "date/header row and monthly code geometry", "fields": ["callsign header alias", "code range startRow", "code range row count"], "readModes": ["display"], "rowOrder": "semantic", "duplicates": "preserve"}
+      ],
+      "results": [{"sheet": "selected current/single/all existing month sheets", "range": "monthly callsign column over code-range rows", "fields": ["Callsign"], "readModes": ["display"], "rowOrder": "semantic", "duplicates": "preserve"}],
+      "successPredicate": "single result.ok !== false; all mode has failedCount === 0",
+      "isFullSuccessContribution": true,
+      "cost": {"maxSpreadsheetCalls": 48, "maxRangeReads": 38, "maxCells": 1152, "maxBytes": 160000}
+    },
+    {
+      "stageId": "computed.assignment_car",
+      "version": "assignment-car-v4",
+      "policy": "optional",
+      "skipPredicate": "target_missing_or_empty",
+      "extractor": "CAR A:H plus PERSONNEL transition",
+      "sources": [{"transitionFrom": "computed.personnel_helpers", "fields": ["FML", "Callsign", "Phone", "Phone 2"]}, {"sheet": "CONFIG.CAR_SHEET", "range": "A2:H(lastRow)", "fields": ["owner FML A", "helper Callsign H"], "readModes": ["display"], "rowOrder": "semantic", "duplicates": "preserve", "ignored": ["formatting", "B:G values except preservation"]}],
+      "results": [{"sheet": "CAR", "range": "A2:H(lastRow)", "fields": ["owner FML A", "helper Callsign H"], "readModes": ["display"], "rowOrder": "semantic", "duplicates": "preserve"}],
+      "successPredicate": "missing/empty target is skipped; otherwise result.ok !== false",
+      "isFullSuccessContribution": true,
+      "cost": {"maxSpreadsheetCalls": 5, "maxRangeReads": 2, "maxCells": 1600, "maxBytes": 180000}
+    },
+    {
+      "stageId": "computed.assignment_weapon",
+      "version": "assignment-weapon-v4",
+      "policy": "optional",
+      "skipPredicate": "target_missing_or_empty",
+      "extractor": "WEAPON A:E and AA plus PERSONNEL transition",
+      "sources": [{"transitionFrom": "computed.personnel_helpers", "fields": ["FML", "LastName", "FirstName", "Patronymic", "Rank", "Title", "Phone", "Callsign"]}, {"sheet": "CONFIG.WEAPON_SHEET", "range": "A2:E(lastRow),AA2:AA(lastRow)", "fields": ["LastName", "FirstName", "Patronymic", "Rank", "Phone", "Callsign"], "readModes": ["display"], "rowOrder": "semantic", "duplicates": "preserve", "ignored": ["formatting", "F:Z"]}],
+      "results": [{"sheet": "WEAPON", "range": "A2:E(lastRow),AA2:AA(lastRow)", "fields": ["LastName", "FirstName", "Patronymic", "Rank", "Phone", "Callsign"], "readModes": ["display"], "rowOrder": "semantic", "duplicates": "preserve"}],
+      "successPredicate": "missing/empty target is skipped; otherwise result.ok !== false",
+      "isFullSuccessContribution": true,
+      "cost": {"maxSpreadsheetCalls": 8, "maxRangeReads": 4, "maxCells": 1200, "maxBytes": 180000}
+    },
+    {
+      "stageId": "computed.vacation_computed",
+      "version": "vacation-computed-v2",
+      "policy": "optional",
+      "skipPredicate": "vacation_source_not_legacy",
+      "extractor": "VACATIONS A:I rows 2:max(lastRow,66) without DataAccess self-heal",
+      "sources": [{"kind": "property", "fields": ["VACATION_PLANNER_CONFIG.SOURCE_MODE_PROPERTY"], "readModes": ["injected"]}, {"sheet": "VACATION_PLANNER_CONFIG.SHEETS.SOURCE", "range": "A2:I(max(lastRow,66))", "fields": ["FML", "Start date raw/display", "Vacation No", "Travel"], "readModes": ["values", "display"], "normalizers": ["DateUtils_.parseDateAny", "_normFml_", "_vacationTypeLabelForInterval_"], "rowOrder": "semantic", "duplicates": "preserve", "ignored": ["formatting", "computed input values C/E/F/G/I except result evidence", "empty trailing managed rows"]}, {"kind": "clock", "fields": ["clockDay", "timezone"]}],
+      "results": [{"sheet": "VACATIONS", "range": "C,E:G,I rows 2:max(lastRow,66)", "fields": ["End date", "Active", "Notify", "Days left", "Interval check"], "readModes": ["values", "display"], "rowOrder": "semantic", "duplicates": "preserve"}],
+      "successPredicate": "non-legacy source is skipped; legacy result.ok !== false",
+      "isFullSuccessContribution": true,
+      "cost": {"maxSpreadsheetCalls": 5, "maxRangeReads": 3, "maxCells": 1170, "maxBytes": 140000}
+    },
+    {
+      "stageId": "computed.vacation_schedule",
+      "version": "vacation-schedule-v2",
+      "policy": "optional",
+      "skipPredicate": "module_unavailable",
+      "extractor": "VacationOptionsWriter_.rebuildVacationSystem input projections",
+      "sources": [{"kind": "property", "fields": ["VACATION_PLANNER_CONFIG.SOURCE_MODE_PROPERTY", "WASB_VACATION_SCHEDULE_YEAR"], "readModes": ["injected"]}, {"kind": "clock", "fields": ["clockDay", "timezone", "currentYear"]}, {"kind": "config", "fields": ["VACATION_PLANNER_CONFIG.RULES", "VACATION_PLANNER_CONFIG.OPTIONS", "VACATION_PLANNER_CONFIG.SHEETS", "VACATION_PLANNER_CONFIG.SOURCE_RANGE"]}, {"sheet": "active vacation source", "range": "repository source fields used by listAll", "fields": ["record id", "person key", "FML", "Callsign", "start/end raw+typed", "vacation type/no", "travel", "status", "active", "monthly/fact code"], "readModes": ["values", "display"], "rowOrder": "semantic", "duplicates": "preserve"}, {"sheet": "PERSONNEL", "fields": ["active", "statusCanonical", "status", "personKey", "FML", "Callsign"], "readModes": ["values", "display"], "rowOrder": "semantic", "duplicates": "preserve"}, {"sheet": "all existing 01-12", "range": "monthly code matrix, callsign/FML columns, date headers", "fields": ["codes", "Callsign", "FML", "date raw/display"], "readModes": ["values", "display"], "rowOrder": "semantic", "duplicates": "preserve"}, {"sheet": "legacy vacation right panel", "fields": ["manual data detector fields"], "readModes": ["display"]}],
+      "results": [{"sheet": "VACATION_PLANNER_CONFIG.SHEETS.SCHEDULE", "range": "global schedule output", "fields": ["canonical headers", "schedule rows"], "readModes": ["values", "display"], "rowOrder": "semantic", "duplicates": "preserve"}, {"sheet": "VACATION_PLANNER_CONFIG.SHEETS.CHECK", "range": "global checks output", "fields": ["canonical headers", "rule", "person", "date", "description", "severity"], "readModes": ["values", "display"], "rowOrder": "semantic", "duplicates": "preserve"}],
+      "successPredicate": "module unavailable is skipped; otherwise no thrown error and result object exists",
+      "isFullSuccessContribution": true,
+      "cost": {"maxSpreadsheetCalls": 80, "maxRangeReads": 56, "maxCells": 16000, "maxBytes": 1200000}
+    },
+    {
+      "stageId": "computed.vacation_monthly_sync",
+      "version": "vacation-monthly-sync-v5",
+      "policy": "optional",
+      "skipPredicate": "no_target_month",
+      "extractor": "VacationMonthlySync_._buildPlan_ equivalent with injected Document Property snapshots",
+      "sources": [{"kind": "option_property_clock", "fields": ["monthSheet", "CONFIG.BOT_MONTH_PROP_KEY", "clock month", "CONFIG.TARGET_SHEET"], "readModes": ["injected"]}, {"kind": "property", "fields": ["WASB_VACATION_MONTHLY_SYNC_META_V1", "WASB_VACATION_MONTHLY_SYNC_EXCEPTIONS_V1"], "readModes": ["injected"]}, {"sheet": "active vacation source", "fields": ["record id", "person key/id", "FML", "Callsign", "start/end raw+typed", "active/status", "monthly/fact code", "vacation type/no"], "readModes": ["values", "display"], "rowOrder": "semantic", "duplicates": "preserve"}, {"sheet": "PERSONNEL", "range": "repository ID/callsign/FML lookup rows", "fields": ["ID", "personKey derived from resolved Callsign", "Callsign", "FML", "LastName", "FirstName", "Patronymic"], "readModes": ["values", "display"], "normalizers": ["PersonnelRepository_.getById", "getByCallsignAnyStatus", "getByFml(activeOnly:false)", "resolvePersonnelDisplayCallsign_", "FML synthesis"], "rowOrder": "semantic", "duplicates": "preserve all; runtime lookup maps use last matching ID/callsign/FML row", "ignored": ["Status", "active", "Position", "TEMPLATE", "formatting", "empty trailing rows"]}, {"sheet": "target month", "range": "code matrix plus date header and callsign/FML columns", "fields": ["values", "display values", "data validation allowed values", "notes", "date raw/display", "Callsign", "FML"], "readModes": ["values", "display", "validations", "notes"], "normalizers": ["_dateStart_", "_normCallsign_", "_normFmlKey_", "_validationAllowedValues_"], "rowOrder": "semantic", "duplicates": "preserve", "ignored": ["formatting other than validation rules"]}],
+      "results": [{"sheet": "target month", "range": "code matrix", "fields": ["auto-filled code values", "existing non-owned values preserved"], "readModes": ["values", "display"], "rowOrder": "semantic", "duplicates": "reject"}, {"kind": "structured digest-bound evidence", "fields": ["targetCells prior/expected/post", "metadata prior/expected/post", "pendingPlan prior/expected/post", "conflicts expected/post", "stageId", "target", "scopeFingerprint", "runId"], "note": "SS-2A builders accept bounded injected digests only and do not read/write properties"}],
+      "successPredicate": "no target month is skipped; missing/malformed structured proof is unknown; present well-formed mismatch is failed; eligibility requires all proofs bound to expected stage/target/scope/run",
+      "ss2bCommitBoundary": "live pre/post reads, affected/global invalidation and all structured result proofs inside the materialize critical section",
+      "isFullSuccessContribution": true,
+      "cost": {"maxSpreadsheetCalls": 14, "maxRangeReads": 10, "maxCells": 4600, "maxBytes": 560000}
+    },
+    {
+      "stageId": "computed.send_panel_status",
+      "version": "send-panel-status-v2",
+      "policy": "optional",
+      "skipPredicate": "target_missing",
+      "extractor": "SEND_PANEL rows over CONFIG.SEND_PANEL_DATA_START_ROW:lastRow",
+      "sources": [{"sheet": "CONFIG.SEND_PANEL_SHEET", "range": "A:D data rows", "fields": ["FML", "Phone", "Code", "Tasks"], "readModes": ["display"], "rowOrder": "semantic", "duplicates": "preserve", "ignored": ["formatting", "columns E:G as source inputs", "empty trailing managed rows"]}],
+      "results": [{"sheet": "SEND_PANEL", "range": "status column E data rows", "fields": ["Status"], "readModes": ["display"], "rowOrder": "semantic", "duplicates": "preserve"}],
+      "successPredicate": "missing target is skipped; existing target ensureSendPanelStatusFormula_ returns true",
+      "isFullSuccessContribution": true,
+      "cost": {"maxSpreadsheetCalls": 5, "maxRangeReads": 3, "maxCells": 1400, "maxBytes": 180000}
+    },
+    {
+      "stageId": "computed.operation_summary",
+      "version": "computed-operation-summary-v2",
+      "policy": "summary",
+      "skipPredicate": "all_stages_skipped",
+      "extractor": "pure evaluateOperation_ over stage results/scopes",
+      "sources": [{"transitionFrom": "all computed stages", "fields": ["stageId", "policy", "status"]}],
+      "results": [{"fields": ["full", "partial", "failed", "skipped"], "persisted": false}],
+      "successPredicate": "full only when every eligible stage succeeds; partial when success and failure coexist",
+      "isFullSuccessContribution": false,
+      "cost": {"maxSpreadsheetCalls": 0, "maxRangeReads": 0, "maxCells": 0, "maxBytes": 16000}
+    },
+    {
+      "stageId": "month_journal.target_resolution",
+      "version": "month-target-v2",
+      "policy": "required",
+      "skipPredicate": "never",
+      "extractor": "resolveMonthJournalSheetName_ equivalent using injected inputs only",
+      "sources": [{"kind": "options", "fields": ["monthSheet", "month"]}, {"kind": "property", "fields": ["CONFIG.BOT_MONTH_PROP_KEY"], "readModes": ["injected"]}, {"kind": "clock_config", "fields": ["clock month", "CONFIG.TARGET_SHEET"]}, {"kind": "spreadsheet state", "fields": ["existing sheet names", "active sheet name"], "readModes": ["injected"]}],
+      "results": [{"fields": ["target month 01-12"]}],
+      "successPredicate": "resolved target matches ^[0-9]{2}$ and sheet exists",
+      "isFullSuccessContribution": true,
+      "cost": {"maxSpreadsheetCalls": 4, "maxRangeReads": 0, "maxCells": 0, "maxBytes": 8000}
+    },
+    {
+      "stageId": "month_journal.source_projection",
+      "version": "month-source-v2",
+      "policy": "required",
+      "skipPredicate": "never",
+      "extractor": "_monthJournalCollectRows_ inputs without cached/self-healing repositories",
+      "sources": [{"sheet": "target month", "range": "detected code matrix, date header, Callsign column, optional Notes column", "fields": ["code display", "date raw/display", "Callsign display", "note display", "layout geometry/header aliases"], "readModes": ["values", "display"], "normalizers": ["detectMonthlyLayoutFromSheet_", "_monthJournalDayNumberFromHeader_", "_monthJournalFormatDateDisplay_"], "rowOrder": "semantic", "duplicates": "preserve", "ignored": ["formatting", "columns outside detected layout/Callsign/Notes", "empty code cells", "rows with empty Callsign"]}, {"sheet": "DICT_SUM", "range": "full getDataRange including header aliases", "fields": ["code", "label", "order", "showZero"], "readModes": ["display"], "normalizers": ["normalizeDictSumHeader_", "parseDictSumBoolean_", "numeric order then runtime code collation"], "rowOrder": "semantic after runtime order sort", "duplicates": "preserve every sorted occurrence; later byCode assignment wins"}, {"sheet": "DICT", "range": "canonical dictionary fields", "fields": ["code", "label", "place", "task"], "readModes": ["display"], "normalizers": ["loadDictMap_"], "rowOrder": "semantic through duplicate overwrite behavior", "duplicates": "last code wins"}, {"sheet": "PERSONNEL", "fields": ["Callsign", "FML", "Rank/Title", "Position", "Status"], "readModes": ["values", "display"], "normalizers": ["getPersonnelByCallsignAnyStatus_"], "rowOrder": "semantic through first/last lookup construction", "duplicates": "preserve and fingerprint"}, {"kind": "config_clock", "fields": ["CONFIG.DATE_ROW", "timezone"], "readModes": ["injected"]}],
+      "results": [{"transitionTo": "month_journal.journal_slice", "fields": ["month", "date", "dayNumber", "Callsign", "FML", "Rank", "Position", "code", "short label", "service type", "place", "task", "note", "source row", "unknown code"], "rowOrder": "semantic by day then runtime callsign order", "duplicates": "preserve"}],
+      "successPredicate": "layout and all required live projections available",
+      "isFullSuccessContribution": true,
+      "cost": {"maxSpreadsheetCalls": 15, "maxRangeReads": 11, "maxCells": 4200, "maxBytes": 480000}
+    },
+    {
+      "stageId": "month_journal.journal_slice",
+      "version": "journal-slice-v3",
+      "policy": "required",
+      "skipPredicate": "never",
+      "extractor": "JOURNAL header + full rows required because runtime globally rewrites kept and target slices",
+      "sources": [{"transitionFrom": "month_journal.source_projection"}, {"sheet": "JOURNAL", "range": "header plus all existing rows", "fields": ["canonical headers", "month key", "non-target rows"], "readModes": ["display"], "rowOrder": "semantic", "duplicates": "preserve", "ignored": ["formatting", "fully empty residual rows"]}],
+      "results": [{"sheet": "JOURNAL", "range": "global canonical headers plus target month slice", "fields": ["Місяць", "Дата", "Позивний", "ПІБ", "Звання", "Посада", "Код", "Коротко", "Вид служби", "Місце", "Завдання", "Примітка", "Джерело"], "readModes": ["display"], "rowOrder": "semantic", "duplicates": "preserve"}],
+      "successPredicate": "materializeMonthJournal_ result.ok !== false and target slice can be re-read",
+      "isFullSuccessContribution": true,
+      "cost": {"maxSpreadsheetCalls": 8, "maxRangeReads": 4, "maxCells": 8500, "maxBytes": 900000}
+    },
+    {
+      "stageId": "month_journal.summary_slice",
+      "version": "summary-slice-v3",
+      "policy": "required",
+      "skipPredicate": "never",
+      "extractor": "SUMMARY typed rows and display headers plus journalRows transition and live DICT_SUM order",
+      "sources": [{"transitionFrom": "month_journal.journal_slice", "fields": ["journalRows"]}, {"sheet": "DICT_SUM", "fields": ["orderedCodes including duplicates/order"], "readModes": ["display"], "rowOrder": "semantic", "duplicates": "preserve"}, {"sheet": "SUMMARY", "range": "header plus all existing rows", "fields": ["old headers", "typed non-target rows"], "readModes": ["values", "display"], "rowOrder": "semantic", "duplicates": "preserve"}],
+      "results": [{"sheet": "SUMMARY", "range": "global canonical/dynamic headers plus target month slice", "fields": ["Місяць", "Позивний", "ПІБ", "Звання", "Посада", "DICT_SUM ordered code columns", "Інше", "Підсумок"], "readModes": ["values", "display"], "rowOrder": "semantic by Callsign", "duplicates": "runtime groups duplicate Callsign rows"}],
+      "successPredicate": "materializeMonthPersonSummary_ result.ok !== false and target slice can be re-read",
+      "isFullSuccessContribution": true,
+      "cost": {"maxSpreadsheetCalls": 9, "maxRangeReads": 5, "maxCells": 8500, "maxBytes": 900000}
+    },
+    {
+      "stageId": "month_journal.non_target_preservation",
+      "version": "month-preservation-v3",
+      "policy": "required",
+      "skipPredicate": "never",
+      "extractor": "pure pre/post projection of non-target rows for JOURNAL and SUMMARY",
+      "sources": [{"transitionFrom": "pre-write JOURNAL/SUMMARY live projections", "fields": ["headers", "all non-target rows"]}, {"transitionFrom": "post-write JOURNAL/SUMMARY live projections", "fields": ["headers", "all non-target rows"]}],
+      "results": [{"fields": ["JOURNAL non-target digest unchanged", "SUMMARY non-target values preserved by occurrence-aware (normalizedHeader, ordinal) remap", "global headers captured separately"], "note": "Duplicate normalized SUMMARY headers never collapse to one map key; first/second occurrences remain independently evidenced"}],
+      "successPredicate": "canonical preservation projections match and ambiguous evidence is false under occurrence-aware header identity",
+      "isFullSuccessContribution": true,
+      "cost": {"maxSpreadsheetCalls": 0, "maxRangeReads": 0, "maxCells": 0, "maxBytes": 1800000}
+    },
+    {
+      "stageId": "month_journal.operation_summary",
+      "version": "month-operation-summary-v2",
+      "policy": "summary",
+      "skipPredicate": "all_stages_skipped",
+      "extractor": "pure evaluateOperation_ over month journal stage results/scopes",
+      "sources": [{"transitionFrom": "all month_journal stages", "fields": ["stageId", "policy", "status"]}],
+      "results": [{"fields": ["full", "partial", "failed", "skipped"], "persisted": false}],
+      "successPredicate": "full only when target/source/JOURNAL/SUMMARY/preservation stages succeed",
+      "isFullSuccessContribution": false,
+      "cost": {"maxSpreadsheetCalls": 0, "maxRangeReads": 0, "maxCells": 0, "maxBytes": 16000}
+    }
+  ],
+  "executableProjectionContract": {
+    "version": "ss2a5-executable-projection-v5",
+    "builderId": "SystemStatusFingerprints_.buildStageSourceFingerprintFromContext/buildStageResultFingerprintFromContext",
+    "manifestExport": "SystemStatusFingerprints_.executableManifest",
+    "manifestCanonicalJsonSha256": "6cf58e398f37ab1c581a66427121b7660f045d411883732a72c7b8e9afc60b94",
+    "stageCount": 17,
+    "requiredDependencyAttributes": ["id", "kind", "sheet", "range", "readModes", "fields", "order", "duplicates", "ignoreEmptyTail", "ignoredFields", "required", "presence", "evidenceRole"],
+    "dependencyPresencePolicy": {"defaultRequired": true, "emptyArrayIsPresent": true, "missingBinding": "unavailable", "missingInjectedKey": "unavailable", "adapterFailure": "unavailable", "requiredUnavailableFingerprint": null},
+    "fieldTuple": ["name", "normalizer"],
+    "stageSignatures": {
+      "computed.personnel_helpers": {"source": ["personnel|range|PERSONNEL|named_source_columns|values,display|fml:space_text,lastName:text,firstName:text,patronymic:text,callsign:text,phone:text,phone2:text,rank:text,title:text|semantic|preserve|tail|birthdayRaw,birthdayDisplay,position,status,template,formatting,technical,emptyTail", "personnelBirthdayPrior|injected|||injected|rowKey:text,birthdaySemantic:birthday_day|semantic|preserve|all|birthdayRaw,birthdayDisplay,formatting", "clock|injected|||injected|clockDay:date_day,timezone:text|semantic|preserve|all|"], "result": ["personnelDerived|range|PERSONNEL|birthday_age_days|display|birthday:text,age:text,daysUntilBirthday:text|semantic|preserve|tail|formatting,technical,emptyTail"]},
+      "computed.phones_result": {"source": ["personnelRows|injected|||injected|callsign:text,phone:text,phone2:text|semantic|preserve|all|formatting"], "result": ["phones|range|PHONES|A1:C_managed|display|callsign:text,phone:text,phone2:text|semantic|preserve|tail|formatting,technical,emptyTail"]},
+      "computed.birthday_result": {"source": ["personnelBirthdayRows|injected|||injected|callsign:text,birthday:identity,clockDay:date_day,timezone:text|semantic|preserve|all|formatting"], "result": ["birthday|range|BIRTHDAY|A1:D_managed|display|callsign:text,birthday:text,age:text,daysUntilBirthday:text|semantic|preserve|tail|formatting,technical,emptyTail"]},
+      "computed.monthly_callsigns": {"source": ["monthlyCallsignInput|injected|||injected|callsign:text,lastName:text,monthlySyncMode:text,monthSheet:text,includeHistory:boolean,mode:text,activeMonthProperty:text,clockMonth:text,targetSheet:text,layoutGeometry:text|semantic|preserve|all|formatting"], "result": ["monthlyCallsigns|range|target_months|callsign_column|display|month:text,callsign:text|semantic|preserve|tail|formatting,technical,emptyTail"]},
+      "computed.assignment_car": {"source": ["carPersonnel|injected|||injected|fml:space_text,callsign:text,phone:text,phone2:text|semantic|preserve|all|formatting", "carPriorState|injected|||injected|rowKey:text,ownerFml:space_text,helperCallsign:text|semantic|preserve|all|formatting", "carPreservation|injected|||injected|rowKey:text,columnsBtoG:identity|semantic|preserve|all|formatting"], "result": ["car|range|CAR|A2:H|display|ownerFml:space_text,helperCallsign:text|semantic|preserve|tail|columnsBtoG,formatting,emptyTail"]},
+      "computed.assignment_weapon": {"source": ["weaponPersonnel|injected|||injected|fml:space_text,lastName:text,firstName:text,patronymic:text,rank:text,title:text,phone:text,callsign:text|semantic|preserve|all|formatting", "weaponPriorState|injected|||injected|rowKey:text,lastName:text,firstName:text,patronymic:text,rank:text,phone:text,callsign:text|semantic|preserve|all|formatting", "weaponPreservation|injected|||injected|rowKey:text,columnsFtoZ:identity|semantic|preserve|all|formatting"], "result": ["weapon|range|WEAPON|A2:E_and_AA|display|lastName:text,firstName:text,patronymic:text,rank:text,phone:text,callsign:text|semantic|preserve|tail|columnsFtoZ,formatting,emptyTail"]},
+      "computed.vacation_computed": {"source": ["vacationComputedInput|injected|||injected|sourceMode:text,fml:space_text,startRaw:identity,startDisplay:text,vacationNumber:text,travel:text,clockDay:date_day,timezone:text|semantic|preserve|all|computedColumns,formatting,emptyTail"], "result": ["vacationComputed|range|VACATIONS|C_EG_I|values,display|endDate:identity,active:boolean,notify:boolean,daysLeft:number,intervalCheck:text|semantic|preserve|tail|formatting,technical,emptyTail"]},
+      "computed.vacation_schedule": {"source": ["vacationScheduleContext|injected|||injected|sourceMode:text,scheduleYearProperty:number,clockDay:date_day,timezone:text,currentYear:number,rules:identity,options:identity,sheets:identity,sourceRange:text|semantic|preserve|all|", "vacationScheduleSource|range|active_vacation_source|repository_fields|values,display|recordId:text,personKey:text,fml:space_text,callsign:text,startRaw:identity,startTyped:identity,endRaw:identity,endTyped:identity,vacationType:text,vacationNumber:text,travel:text,status:text,active:boolean,monthlyCode:text,factCode:text|semantic|preserve|tail|formatting,technical,emptyTail", "vacationSchedulePersonnel|range|PERSONNEL|repository_rows|values,display|active:boolean,statusCanonical:text,status:text,personKey:text,fml:space_text,callsign:text|semantic|preserve|tail|formatting,technical,emptyTail", "vacationScheduleMonths|range|months_01_12|layout_codes_identity_dates|values,display|month:text,codes:identity,callsign:text,fml:space_text,dateRaw:identity,dateDisplay:text|semantic|preserve|tail|formatting,technical,emptyTail", "vacationRightPanel|range|legacy_vacation_source|manual_detector|display|hasData:boolean,manualFields:identity|semantic|preserve|tail|formatting"], "result": ["vacationScheduleResult|range|VACATION_SCHEDULE_AND_CHECK|full_outputs|values,display|headers:identity,scheduleRows:identity,checkRows:identity|semantic|preserve|tail|formatting,technical,emptyTail"]},
+      "computed.vacation_monthly_sync": {"source": ["vacationMonthlyContext|injected|||injected|monthSheet:text,activeMonthProperty:text,clockMonth:text,targetSheet:text,exceptionsSnapshot:identity|semantic|preserve|all|", "vacationMonthlyMetadataPrior|injected|||injected|metadataSnapshot:identity|semantic|preserve|all|rawEntries,pii", "vacationMonthlySource|range|active_vacation_source|repository_fields|values,display|recordId:text,personKey:text,personId:text,fml:space_text,callsign:text,startRaw:identity,startTyped:identity,endRaw:identity,endTyped:identity,active:boolean,status:text,monthlyCode:text,factCode:text,vacationType:text,vacationNumber:text|semantic|preserve|tail|formatting,technical,emptyTail", "vacationMonthlyPersonnel|range|PERSONNEL|id_callsign_fml_lookup|values,display|id:text,personKey:text,callsign:text,fml:space_text,lastName:text,firstName:text,patronymic:text|semantic|preserve|tail|status,active,position,template,formatting,technical,emptyTail", "vacationMonthlyTarget|range|target_month|code_matrix_dates_identity|values,display,validations,notes|cellKey:text,cellValue:identity,cellDisplay:text,validationAllowed:identity,note:text,dateRaw:identity,dateDisplay:text,callsign:text,fml:space_text|semantic|preserve|tail|formatting"], "result": ["vacationMonthlyEvidence|injected|||injected|stageId:text,target:text,scopeFingerprint:text,runId:text,targetCells:identity,metadata:identity,pendingPlan:identity,conflicts:identity|semantic|preserve|all|rawRows,pii,propertyValues,exceptionText"]},
+      "computed.send_panel_status": {"source": ["sendPanelInputs|range|SEND_PANEL|A:D_data_rows|display|fml:text,phone:text,code:text,tasks:text|semantic|preserve|tail|columnsEtoG,formatting,emptyTail"], "result": ["sendPanelStatus|range|SEND_PANEL|E_data_rows|display|status:text|semantic|preserve|tail|columnsFtoG,formatting,emptyTail"]},
+      "computed.operation_summary": {"source": ["computedStageEvidence|injected|||injected|stageId:text,scopeKnown:boolean,attempted:boolean,resultPresent:boolean,status:text|semantic|preserve|all|rawResult"], "result": ["computedRunSummary|injected|||injected|status:text,isFullSuccess:boolean|semantic|preserve|all|rawStages"]},
+      "month_journal.target_resolution": {"source": ["monthTargetContext|injected|||injected|monthSheet:text,month:text,activeMonthProperty:text,clockMonth:text,targetSheet:text,existingSheetNames:identity,activeSheetName:text|semantic|preserve|all|formatting"], "result": ["monthTargetResult|injected|||injected|targetMonth:text,sheetExists:boolean|semantic|preserve|all|"]},
+      "month_journal.source_projection": {"source": ["monthSource|range|target_month|layout_codes_dates_callsign_notes|values,display|code:text,dateRaw:identity,dateDisplay:text,callsign:text,note:text,layoutGeometry:identity,headerAliases:identity|semantic|preserve|tail|formatting,outsideLayout,emptyCode,emptyCallsign", "dictSum|range|DICT_SUM|full_data_range|display|headerAliases:identity,code:text,label:text,order:number,showZero:boolean|semantic|preserve|tail|formatting,emptyTail", "dict|range|DICT|canonical_fields|display|code:text,label:text,place:text,task:text|semantic|preserve|tail|formatting,emptyTail", "monthPersonnel|range|PERSONNEL|repository_rows|values,display|callsign:text,fml:space_text,rank:text,title:text,position:text,status:text|semantic|preserve|tail|formatting,technical,emptyTail", "monthSourceContext|injected|||injected|dateRow:number,timezone:text|semantic|preserve|all|"], "result": ["journalRows|injected|||injected|month:text,date:text,dayNumber:number,callsign:text,fml:space_text,rank:text,position:text,code:text,shortLabel:text,serviceType:text,place:text,task:text,note:text,sourceRow:number,unknownCode:boolean|semantic|preserve|all|formatting"]},
+      "month_journal.journal_slice": {"source": ["journalTransition|injected|||injected|journalRows:identity|semantic|preserve|all|", "journalBefore|range|JOURNAL|headers_and_all_rows|display|headers:identity,month:text,row:identity|semantic|preserve|tail|formatting,emptyTail"], "result": ["journalAfter|range|JOURNAL|canonical_headers_and_target_slice|display|headers:identity,month:text,date:text,callsign:text,fml:space_text,rank:text,position:text,code:text,shortLabel:text,serviceType:text,place:text,task:text,note:text,source:text|semantic|preserve|tail|formatting,nonTargetRows,emptyTail"]},
+      "month_journal.summary_slice": {"source": ["summaryTransition|injected|||injected|journalRows:identity|semantic|preserve|all|", "summaryDictSum|range|DICT_SUM|full_data_range|display|headerAliases:identity,code:text,label:text,order:number,showZero:boolean|semantic|preserve|tail|formatting,emptyTail", "summaryBefore|range|SUMMARY|headers_and_all_rows|values,display|headers:identity,month:text,row:identity|semantic|preserve|tail|formatting,emptyTail"], "result": ["summaryAfter|range|SUMMARY|global_headers_and_target_slice|values,display|headers:identity,month:text,callsign:text,fml:space_text,rank:text,position:text,codeColumns:identity,other:number,total:number|semantic|preserve|tail|formatting,nonTargetRows,emptyTail"]},
+      "month_journal.non_target_preservation": {"source": ["preservationReads|injected|||injected|beforeJournalHeaders:identity,beforeJournalRows:identity,afterJournalHeaders:identity,afterJournalRows:identity,beforeSummaryHeaders:identity,beforeSummaryRows:identity,afterSummaryHeaders:identity,afterSummaryRows:identity|semantic|preserve|all|targetRows,formatting"], "result": ["preservationResult|injected|||injected|journalStable:boolean,summaryStable:boolean,headersChanged:boolean,ambiguous:boolean|semantic|preserve|all|rawRows"]},
+      "month_journal.operation_summary": {"source": ["monthStageEvidence|injected|||injected|stageId:text,scopeKnown:boolean,attempted:boolean,resultPresent:boolean,status:text|semantic|preserve|all|rawResult"], "result": ["monthRunSummary|injected|||injected|status:text,isFullSuccess:boolean|semantic|preserve|all|rawStages"]}
+    },
+    "parityPolicy": "focused verifier checks digest, stage IDs, versions, evidence roles, transitions, writer lock contract, read modes, normalizers, row order, duplicates and ignored-field mutations",
+    "arbitraryCallerProjectionIsCoverageEvidence": false
+  },
+  "ss2bHandoff": {
+    "monthlySyncResultEvidence": ["targetCells", "metadata", "pendingPlan", "conflicts", "stageId", "target", "scopeFingerprint", "runId"],
+    "commitPolicy": "live pre/post reads plus affected/global cache invalidation inside the materialize critical section",
+    "implementedInSs2a4": "pure keyed transitions, Birthday semantic normalization, structured digest proofs, compatibility decision, and runtime-traced lock contract only"
+  },
+  "versionCompatibility": {
+    "receiptVersion": "ss2b-stage-receipt-v1",
+    "manifestVersion": "ss2a5-executable-projection-v5",
+    "signatureVersion": "ss2a5-stage-signatures-v5",
+    "mismatchFreshness": "unknown",
+    "matchingFreshness": "comparable",
+    "readTimeMigrationAllowed": false,
+    "oldEvidenceMutationAllowed": false,
+    "nextFullSuccessWritesCurrentVersion": true
+  },
+  "privacy": {
+    "fingerprintOutputFields": ["stageId", "stageVersion", "algorithmVersion", "kind", "fingerprint", "bytesHashed", "chunkCount", "maxChunkBytes"],
+    "rawRowsPersisted": false,
+    "piiPersisted": false,
+    "phonesPersisted": false,
+    "callsignsPersisted": false
+  },
+  "forbiddenInSs2a": [
+    "PropertiesService",
+    "setProperty",
+    "deleteProperty",
+    "materialize flow edits",
+    "production lock changes",
+    "public API",
+    "routing",
+    "UI",
+    "single broad computedData receipt",
+    "localeCompare canonicalization"
+  ]
+}

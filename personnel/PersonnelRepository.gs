@@ -953,6 +953,11 @@ function personnelRecordToPhoneIndexItem_(record) {
     typeof normalizePhone_ === "function"
       ? normalizePhone_(record.phone)
       : String(record.phone || "").trim();
+  var phone2 =
+    typeof normalizePhone_ === "function"
+      ? normalizePhone_(record.phone2)
+      : String(record.phone2 || "").trim();
+  if (!phone && phone2) phone = phone2;
   var callsign = String(record.callsign || "").trim();
   return {
     row: record.sheetRow,
@@ -963,7 +968,8 @@ function personnelRecordToPhoneIndexItem_(record) {
     role: callsign,
     rawPhone: String(record.phone || "").trim(),
     birthday: record.birthday,
-    phone2: record.phone2,
+    phone2: phone2,
+    rawPhone2: String(record.phone2 || "").trim(),
     title: record.title,
     position: record.position,
     oshs: record.oshs,
@@ -972,7 +978,7 @@ function personnelRecordToPhoneIndexItem_(record) {
   };
 }
 
-function buildPhonesIndexFromPersonnel_() {
+function buildPhonesIndexFromPersonnelRecords_(records) {
   var out = {
     byCallsign: {},
     byFml: {},
@@ -984,7 +990,7 @@ function buildPhonesIndexFromPersonnel_() {
     source: "PERSONNEL",
   };
 
-  getPersonnelActiveRows_().forEach(function (record) {
+  (Array.isArray(records) ? records : []).forEach(function (record) {
     var item = personnelRecordToPhoneIndexItem_(record);
     if (!item) return;
     if (!item.fml && !item.phone && !item.callsign) return;
@@ -1015,9 +1021,14 @@ function buildPhonesIndexFromPersonnel_() {
     if (callsignKey) out.byCallsign[callsignKey] = item;
     if (callsignKey) out.byRole[callsignKey] = item;
     if (item.phone) out.byPhone[item.phone] = item;
+    if (item.phone2) out.byPhone[item.phone2] = item;
   });
 
   return out;
+}
+
+function buildPhonesIndexFromPersonnel_() {
+  return buildPhonesIndexFromPersonnelRecords_(getPersonnelActiveRows_());
 }
 
 function isPersonnelSheetAvailable_() {
@@ -1027,6 +1038,89 @@ function isPersonnelSheetAvailable_() {
   } catch (e) {
     return false;
   }
+}
+
+/**
+ * Strictly read-only PERSONNEL status for system diagnostics.
+ * Unlike the runtime loader, this path never creates the missing Status header.
+ */
+function _personnelReadOnlySnapshot_() {
+  var sh = _personnelGetSheet_(false);
+  if (!sh) {
+    return {
+      available: false,
+      dataRowsAvailable: false,
+      schemaIssueCount: 0,
+      records: [],
+    };
+  }
+
+  var lastColumn = Math.max(Number(sh.getLastColumn()) || 0, 1);
+  var lastRow = Math.max(Number(sh.getLastRow()) || 0, 1);
+  var values = sh.getRange(1, 1, lastRow, lastColumn).getDisplayValues();
+  var col;
+  try {
+    col = _personnelBuildHeaderColIndex_(values[0] || []);
+  } catch (_) {
+    return {
+      available: true,
+      dataRowsAvailable: lastRow >= 2,
+      schemaIssueCount: 1,
+      records: [],
+    };
+  }
+
+  var records = [];
+  values.slice(1).forEach(function (row, index) {
+    var record = _personnelRowToRecord_(row, index + 2, col);
+    if (!record) return;
+    records.push(record);
+  });
+  return {
+    available: true,
+    dataRowsAvailable: lastRow >= 2,
+    schemaIssueCount: 0,
+    records: records,
+  };
+}
+
+function getPersonnelReadOnlyStatus_() {
+  var snapshot = _personnelReadOnlySnapshot_();
+  var activeSeen = Object.create(null);
+  var duplicateActiveCallsigns = 0;
+  snapshot.records.forEach(function (record) {
+    if (!record || !record.active || !record.callsign) return;
+    var key =
+      typeof _normCallsignKey_ === "function"
+        ? _normCallsignKey_(record.callsign)
+        : String(record.callsign || "").trim().toUpperCase();
+    if (!key) return;
+    if (activeSeen[key]) duplicateActiveCallsigns++;
+    else activeSeen[key] = true;
+  });
+
+  return {
+    available: snapshot.available,
+    records: snapshot.records.length,
+    activeRecords: snapshot.records.filter(function (record) {
+      return record.active === true;
+    }).length,
+    schemaIssueCount: snapshot.schemaIssueCount,
+    duplicateActiveCallsigns: duplicateActiveCallsigns,
+  };
+}
+
+function getPersonnelReadOnlyPhonesIndex_() {
+  var snapshot = _personnelReadOnlySnapshot_();
+  if (
+    !snapshot.available ||
+    !snapshot.dataRowsAvailable ||
+    snapshot.schemaIssueCount > 0
+  ) return null;
+  var index = buildPhonesIndexFromPersonnelRecords_(snapshot.records);
+  index.sourceAvailable = true;
+  index.readOnly = true;
+  return index;
 }
 
 function mergePersonnelIntoPersonView_(base, personnel) {
@@ -1091,9 +1185,12 @@ var PersonnelRepository_ = PersonnelRepository_ || {
   invalidateCache: invalidatePersonnelCache_,
   isAvailable: isPersonnelSheetAvailable_,
   getWarnings: getPersonnelWarnings_,
+  getReadOnlyStatus: getPersonnelReadOnlyStatus_,
+  getReadOnlyPhonesIndex: getPersonnelReadOnlyPhonesIndex_,
   mergeIntoPerson: mergePersonnelIntoPersonView_,
   resolveForLookup: resolvePersonnelForLookup_,
   buildPhonesIndex: buildPhonesIndexFromPersonnel_,
+  buildPhonesIndexFromRecordsForTests: buildPhonesIndexFromPersonnelRecords_,
   normalizeStatus: normalizePersonnelStatus_,
   getStatusCanonical: getPersonnelStatusCanonical_,
   isStatusActive: isPersonnelStatusActive_,

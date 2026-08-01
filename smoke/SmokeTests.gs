@@ -701,6 +701,30 @@ function runRegressionTestSuite(options) {
     warnings: [],
   };
 
+  _smokePush_(report, "Основа стану системи", function () {
+    const foundation = runSystemStatusFoundationTests_();
+    _smokeAssert_(
+      foundation && Array.isArray(foundation.checks),
+      "runSystemStatusFoundationTests_() не повернув checks[]",
+    );
+    if (foundation.ok === false) {
+      throw new Error("Перевірка основи стану системи має FAIL");
+    }
+    return "checks=" + foundation.checks.length;
+  });
+
+  _smokePush_(report, "Відбитки стану системи", function () {
+    const fingerprints = runSystemStatusFingerprintTests_();
+    _smokeAssert_(
+      fingerprints && Array.isArray(fingerprints.checks),
+      "runSystemStatusFingerprintTests_() не повернув checks[]",
+    );
+    if (fingerprints.ok === false) {
+      throw new Error("Перевірка відбитків стану системи має FAIL");
+    }
+    return "checks=" + fingerprints.checks.length;
+  });
+
   _smokePush_(report, "Smoke suite", function () {
     const smoke = runSmokeTests(opts);
     _smokeAssert_(
@@ -813,6 +837,30 @@ function runRegressionTestSuiteFull_(options) {
     skipped: [],
     warnings: [],
   };
+
+  _smokePush_(report, "Основа стану системи", function () {
+    const foundation = runSystemStatusFoundationTests_();
+    _smokeAssert_(
+      foundation && Array.isArray(foundation.checks),
+      "runSystemStatusFoundationTests_() не повернув checks[]",
+    );
+    if (foundation.ok === false) {
+      throw new Error("Перевірка основи стану системи має FAIL");
+    }
+    return "checks=" + foundation.checks.length;
+  });
+
+  _smokePush_(report, "Відбитки стану системи", function () {
+    const fingerprints = runSystemStatusFingerprintTests_();
+    _smokeAssert_(
+      fingerprints && Array.isArray(fingerprints.checks),
+      "runSystemStatusFingerprintTests_() не повернув checks[]",
+    );
+    if (fingerprints.ok === false) {
+      throw new Error("Перевірка відбитків стану системи має FAIL");
+    }
+    return "checks=" + fingerprints.checks.length;
+  });
 
   _smokePush_(
     report,

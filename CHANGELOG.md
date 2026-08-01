@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-08-02 — System status foundation (feature branch)
+
+- **Code:** `diagnostics/SystemStatus.Foundation.gs`, `SystemStatus.Probes.gs`, `SystemStatus.Fingerprints.gs` plus contracts `contracts/system-status.contract.json` / `contracts/system-status-fingerprints.contract.json`.
+- **CI:** `scripts/verify-system-status-foundation.mjs`, `scripts/verify-system-status-fingerprints.mjs`.
+- **Scope:** internal foundation (SS-1/SS-2); not yet a sidebar/public Stage7 surface (SS-3).
+- **Docs:** `docs/module-map.md` Diagnostics row updated on this branch only.
+
+
 ## 2026-07-11 — Docs synced to inventory reconciliation and runtime chain
 
 - **ARCHITECTURE.md:** client `activeRuntimeChain` (Modals, Vacations partials, VacationSync, InventoryReconciliation); §7.3 WEAPON; new §7.4 inventory reconciliation.
