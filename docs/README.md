@@ -28,7 +28,7 @@ snapshots to the repository.
 | [format-rules-governance.md](./format-rules-governance.md)             | Manual conditional-format registry and rebuild protection                                                                 |
 | [user-facing-copy.md](./user-facing-copy.md)                           | UX copy: UA UI text, no technical names in user-facing strings; enforced by `verify-user-facing-copy.mjs`                 |
 | [branch-archive.md](./branch-archive.md)                               | Archived former working branches (`archive/*` tags)                                                                       |
-| [project-files-complete.txt](./project-files-complete.txt)             | Canonical depth-first file tree (governance map); excludes local `.clasp*.json`; refresh with `npm run map:project-files` | Canonical depth-first file tree (governance map); excludes local `.clasp*.json`; refresh with `npm run map:project-files` |
+| [project-files-complete.txt](./project-files-complete.txt)             | Canonical depth-first file tree (governance map); excludes local `.clasp*.json`; refresh with `npm run map:project-files` |
 
 ## Refactor Planning
 
