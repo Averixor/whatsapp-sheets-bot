@@ -237,39 +237,58 @@ function onChange(e) {
 
 // ==================== DIAGNOSTICS ====================
 
+function _getStage7TriggerCompatibilityPolicy_() {
+  return {
+    legacyInstallable: [
+      { handler: 'onEdit', eventType: ScriptApp.EventType.ON_EDIT, maxCount: 1 },
+      { handler: 'onChange', eventType: ScriptApp.EventType.ON_CHANGE, maxCount: 1 }
+    ]
+  };
+}
+
 function validateTriggers() {
   const triggers = ScriptApp.getProjectTriggers();
-  let onEditCount = 0;
-  let onChangeCount = 0;
+  const policy = _getStage7TriggerCompatibilityPolicy_();
+  const counts = {};
+  const handlerCounts = {};
 
   for (let i = 0; i < triggers.length; i++) {
     const trigger = triggers[i];
     const handler = trigger.getHandlerFunction();
     const eventType = trigger.getEventType();
-
-    if (handler === 'onEdit' && eventType === ScriptApp.EventType.ON_EDIT) {
-      onEditCount++;
-    }
-
-    if (handler === 'onChange' && eventType === ScriptApp.EventType.ON_CHANGE) {
-      onChangeCount++;
-    }
+    const key = handler + '\n' + eventType;
+    counts[key] = (counts[key] || 0) + 1;
+    handlerCounts[handler] = (handlerCounts[handler] || 0) + 1;
   }
 
   const issues = [];
-  if (onEditCount > 1) {
-    issues.push('Знайдено ' + onEditCount + ' onEdit тригерів (рекомендується 1)');
-  }
-
-  if (onChangeCount > 1) {
-    issues.push('Знайдено ' + onChangeCount + ' onChange тригерів (рекомендується 1)');
-  }
+  const policyCounts = {};
+  let wrongEventCount = 0;
+  policy.legacyInstallable.forEach(function (rule) {
+    const count = Number(counts[rule.handler + '\n' + rule.eventType] || 0);
+    const wrongCount = Math.max(Number(handlerCounts[rule.handler] || 0) - count, 0);
+    policyCounts[rule.handler] = count;
+    if (count > rule.maxCount) {
+      issues.push(
+        'Знайдено ' + count + ' ' + rule.handler + ' тригерів (рекомендується ' +
+          rule.maxCount + ')'
+      );
+    }
+    if (wrongCount > 0) {
+      wrongEventCount += wrongCount;
+      issues.push(
+        'Знайдено ' + wrongCount + ' ' + rule.handler +
+          ' тригерів з неправильним типом події'
+      );
+    }
+  });
 
   const result = {
     ok: issues.length === 0,
     totalTriggers: triggers.length,
-    onEditCount: onEditCount,
-    onChangeCount: onChangeCount,
+    onEditCount: Number(policyCounts.onEdit || 0),
+    onChangeCount: Number(policyCounts.onChange || 0),
+    wrongEventCount: wrongEventCount,
     issues: issues
   };
 

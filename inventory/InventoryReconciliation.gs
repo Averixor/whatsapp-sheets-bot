@@ -736,6 +736,72 @@ const InventoryReconciliation_ = (function () {
     };
   }
 
+  /**
+   * Read-only reconciliation status. It does not create the index, scan Drive,
+   * synchronize files, add notes, or apply formatting.
+   */
+  function getReadOnlyStatus() {
+    const cfg = config_();
+    const ss = spreadsheet_();
+    const folderId = getFolderId_();
+    const workingSheet = ss.getSheetByName(cfg.sheetName);
+    const indexSheet = ss.getSheetByName(cfg.indexSheetName);
+    const syncState = autoSyncState_();
+
+    if (!workingSheet) {
+      return {
+        available: false,
+        configured: !!folderId,
+        indexAvailable: !!indexSheet,
+        stale: syncState.stale,
+        lastSyncedAt: syncState.lastSyncedAt,
+        completePastMonths: 0,
+        incompletePastMonths: 0,
+        missingFiles: 0,
+        duplicateFiles: 0,
+        scanTruncated: null,
+      };
+    }
+
+    const layout = getLayout_();
+    const index = indexMap_();
+    const now = new Date();
+    let completePastMonths = 0;
+    let incompletePastMonths = 0;
+    let missingFiles = 0;
+
+    layout.months.forEach(function (monthInfo) {
+      if (!isPastMonth_(layout.year, monthInfo.month, now)) return;
+      const month = monthStatus_(
+        layout,
+        monthInfo,
+        readMonthChecks_(layout, monthInfo),
+        index,
+        now,
+      );
+      if (month.status === "complete") completePastMonths++;
+      else incompletePastMonths++;
+      missingFiles += Math.max(Number(month.total || 0) - Number(month.linked || 0), 0);
+    });
+
+    const duplicateFiles = Object.keys(index).reduce(function (sum, key) {
+      return sum + Math.max(Number(index[key].duplicateCount || 0), 0);
+    }, 0);
+
+    return {
+      available: true,
+      configured: !!folderId,
+      indexAvailable: !!indexSheet,
+      stale: syncState.stale,
+      lastSyncedAt: syncState.lastSyncedAt,
+      completePastMonths: completePastMonths,
+      incompletePastMonths: incompletePastMonths,
+      missingFiles: missingFiles,
+      duplicateFiles: duplicateFiles,
+      scanTruncated: null,
+    };
+  }
+
   function getSelected() {
     const ss = spreadsheet_();
     const activeSheet = ss.getActiveSheet();
@@ -778,6 +844,7 @@ const InventoryReconciliation_ = (function () {
     applyFormatting: applyFormatting,
     handleEdit: handleEdit,
     getDashboard: getDashboard,
+    getReadOnlyStatus: getReadOnlyStatus,
     getSelected: getSelected,
     setFolder: setFolder,
     syncFiles: syncFiles,
