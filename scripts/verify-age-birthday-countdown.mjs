@@ -46,22 +46,22 @@ assert.equal(formatBirthdayCell_(""), "");
 assert.equal(formatBirthdayCell_(null), "");
 assert.equal(formatBirthdayCell_("not-a-date"), "");
 assert.equal(formatBirthdayCell_("31.02.2026"), "");
-assert.equal(formatBirthdayCell_("20.09.2000"), "20.09.2000 р.н.");
-assert.equal(formatBirthdayCell_("20.09.2000р."), "20.09.2000 р.н.");
-assert.equal(formatBirthdayCell_("20.09.2000 р.н."), "20.09.2000 р.н.");
-assert.equal(formatBirthdayCell_("20.09.2000р.р."), "20.09.2000 р.н.");
+assert.equal(formatBirthdayCell_("20.09.2000"), "20.09.2000 р. н.");
+assert.equal(formatBirthdayCell_("20.09.2000 р."), "20.09.2000 р. н.");
+assert.equal(formatBirthdayCell_("20.09.2000 р. н."), "20.09.2000 р. н.");
+assert.equal(formatBirthdayCell_("20.09.2000 р. р."), "20.09.2000 р. н.");
 
 assert.equal(formatAgeCell_(""), "");
 assert.equal(formatAgeCell_(null), "");
-assert.equal(formatAgeCell_(25), "25р.");
-assert.equal(formatAgeCell_("25р."), "25р.");
-assert.equal(formatAgeCell_("25р.р."), "25р.");
+assert.equal(formatAgeCell_(25), "25 р.");
+assert.equal(formatAgeCell_("25 р."), "25 р.");
+assert.equal(formatAgeCell_("25 р. р."), "25 р.");
 
 assert.equal(calculateBirthdayCountdownUa_("", TODAY), "");
 assert.equal(calculateBirthdayCountdownUa_("not-a-date", TODAY), "");
 assert.equal(
   calculateBirthdayCountdownUa_("20.09.2000", TODAY),
-  "3м.",
+  "3 м.",
   "birthday later this year",
 );
 assert.equal(
@@ -71,27 +71,27 @@ assert.equal(
 );
 assert.notEqual(
   calculateBirthdayCountdownUa_("20.06.2000", TODAY),
-  "0м. 0д.",
+  "0 м. 0 д.",
   "today must not show zero countdown",
 );
 assert.equal(
   calculateBirthdayCountdownUa_("27.06.2000", TODAY),
-  "7д.",
+  "7 д.",
   "less than one month: omit zero months",
 );
 assert.equal(
   calculateBirthdayCountdownUa_("24.06.2000", TODAY),
-  "4д.",
+  "4 д.",
   "less than one month: omit zero months",
 );
 assert.equal(
   calculateBirthdayCountdownUa_("21.06.2000", TODAY),
-  "1д.",
+  "1 д.",
   "less than one month: omit zero months",
 );
 assert.equal(
   calculateBirthdayCountdownUa_("20.01.2000", TODAY),
-  "7м.",
+  "7 м.",
   "birthday already passed this year",
 );
 assert.equal(
@@ -99,17 +99,17 @@ assert.equal(
     vm.runInContext("new Date(2000, 8, 20)", formatCtx),
     TODAY,
   ),
-  "3м.",
+  "3 м.",
   "Date object input",
 );
 assert.equal(
   calculateBirthdayCountdownUa_("23.07.2000", TODAY),
-  "1м. 3д.",
+  "1 м. 3 д.",
   "months and days both shown when non-zero",
 );
 assert.equal(
   calculateBirthdayCountdownUa_("29.02.2000", TODAY),
-  "8м. 9д.",
+  "8 м. 9 д.",
   "Feb 29 birth date uses JS Date rollover (non-leap year → Mar 1 anchor)",
 );
 
@@ -121,7 +121,7 @@ assert.equal(
 );
 assert.equal(
   formatBirthdayCell_("20.09.2000"),
-  "20.09.2000 р.н.",
+  "20.09.2000 р. н.",
   "parseBirthdayValue handles dd.mm.yyyy text",
 );
 

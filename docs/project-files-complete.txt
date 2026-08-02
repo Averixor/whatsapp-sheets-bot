@@ -1,13 +1,12 @@
 # WASB — повний список файлів репозиторію
 # Порядок: дерево каталогів (depth-first, алфавіт у кожній папці)
 # Виключено: .git/, node_modules/, локальні .clasp*.json (крім *.example.json)
-# Файлів: 272
-# Оновлено: 2026-07-04T01:12:58Z
+# Файлів: 304
+# Оновлено: 2026-08-01T23:41:05Z
 
 .
   .clasp.example.json
   .claspignore
-  .cursorignore
   .gitignore
   .htmlvalidate.json
   .nvmrc
@@ -26,6 +25,7 @@
   WASB_RELEASE_AUDIT.md
 
 .cursor/rules/
+  git-safety.mdc
   monthly-callsign-sync.mdc
   personnel-data-keys.mdc
   user-facing-copy.mdc
@@ -71,6 +71,8 @@ contracts/
   reference-repositories.contract.json
   reference-workbook-layout.contract.json
   SNAPSHOT_CHANGELOG.md
+  system-status-fingerprints.contract.json
+  system-status.contract.json
   user-facing-copy.contract.json
   xss-policy.contract.json
 
@@ -107,14 +109,22 @@ diagnostics/
   Diagnostics.Stage7.Baseline.gs
   Diagnostics.Stage7.Core.gs
   Diagnostics.Stage7.Historical.gs
+  SystemStatus.Fingerprints.gs
+  SystemStatus.Foundation.gs
+  SystemStatus.Probes.gs
+  SystemStatus.Runtime.gs
 
 docs/
+  branch-archive.md
   daily-summary-architecture.md
   developer-guide.md
   format-rules-governance.md
+  INTEGRATION_GUIDE.md
+  inventory-reconciliation.md
   module-map.md
   project-files-complete.txt
   README.md
+  temporary-property-register.md
   user-facing-copy.md
   vacation-planner.md
 
@@ -126,6 +136,10 @@ docs/adr/
 
 docs/refactor/
   p2-candidates.md
+
+inventory/
+  InventoryReconciliation.gs
+  TemporaryPropertyRegister.gs
 
 maintenance/
   ConditionalFormatAdoptedRules.gs
@@ -152,6 +166,9 @@ personnel/
   PersonnelMaterialize.gs
   PersonnelRepository.gs
   PersonsRepository.gs
+
+reference-workbooks/
+  README.md
 
 reports/
   MonthJournalMaterialize.gs
@@ -184,6 +201,8 @@ scripts/
   update-project-files-map.mjs
   verify-access-api-governance.mjs
   verify-access-autofill-hotfix.mjs
+  verify-access-key-rebind.mjs
+  verify-access-policy-checks.mjs
   verify-access-temp-password-reissue.mjs
   verify-age-birthday-countdown.mjs
   verify-bridge-flags.mjs
@@ -193,6 +212,7 @@ scripts/
   verify-client-js.mjs
   verify-format-rules-governance.mjs
   verify-html-label-for.mjs
+  verify-inventory-reconciliation.mjs
   verify-jsconfig.mjs
   verify-materialize-computed-data.mjs
   verify-month-journal-materialize.mjs
@@ -207,8 +227,12 @@ scripts/
   verify-reference-workbook-layout.mjs
   verify-send-panel-bounds.mjs
   verify-snapshot-governance.mjs
+  verify-system-status-fingerprints.mjs
+  verify-system-status-foundation.mjs
+  verify-temporary-property-register.mjs
   verify-usecase-facade.mjs
   verify-user-facing-copy.mjs
+  verify-vacation-monthly-sync.mjs
   verify-vacation-planner.mjs
   verify-workbook-contract.mjs
 
@@ -267,6 +291,8 @@ tests/
   Stage7TestRunner.Sheet.gs
   Stage7TestRunner.Summaries.gs
   Stage7TestRunner.Ui.gs
+  SystemStatusFingerprintTests.gs
+  SystemStatusFoundationTests.gs
 
 ui/
   JavaScript.html
@@ -276,6 +302,7 @@ ui/
   Js.Diagnostics.html
   Js.Events.html
   Js.Helpers.html
+  Js.InventoryReconciliation.html
   Js.Modals.html
   Js.Render.Calendar.html
   Js.Render.Panel.html
@@ -292,11 +319,19 @@ ui/
   Js.Security.Policy.html
   Js.Security.Util.html
   Js.State.html
-  Js.Vacations.html
+  Js.Vacations.Actions.html
+  Js.Vacations.Constants.html
+  Js.Vacations.Formatters.html
+  Js.Vacations.Module.html
+  Js.Vacations.Render.Calendar.html
+  Js.Vacations.Render.Main.html
+  Js.Vacations.Render.Problems.html
+  Js.VacationSync.html
   PersonCalendar.html
   Sidebar.html
   Styles_00_Base.html
   Styles_30_Personnel.html
+  Styles_35_InventoryReconciliation.html
   Styles_40_SystemPanels.html
   Styles_50_Modals.html
   Styles_60_Health.html
@@ -325,6 +360,7 @@ vacations/
   VacationBulkFix.gs
   VacationEngine.gs
   VacationMonthCalendar.gs
+  VacationMonthlySync.gs
   VacationOptionsWriter.gs
   VacationPlannerConfig.gs
   VacationPlannerService.gs

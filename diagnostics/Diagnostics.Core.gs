@@ -51,6 +51,7 @@ function _userFacingSheetLabel_(name) {
     PHONES: "Телефони",
     PHONE_DIRECTORY: "Службові телефони",
     CAR: "Автотехніка",
+    WEAPON: "Озброєння",
     DICT: "Довідник",
     DICT_SUM: "Довідник підсумків",
     LOG: "Журнал дій",

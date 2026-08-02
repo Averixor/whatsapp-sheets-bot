@@ -173,6 +173,25 @@ function _writeAccessTempPasswordReissueByHeaderMap_(sheetRow, updates) {
   };
 }
 
+function _redactAccessTempPasswordColumnsForLog_(columns) {
+  const raw = Array.isArray(columns) ? columns : [];
+  const out = [];
+  let redacted = 0;
+
+  raw.forEach(function (column) {
+    const value = String(column || "").trim();
+    if (!value) return;
+    if (/password|token|hash|salt|plain/i.test(value)) {
+      redacted++;
+      return;
+    }
+    if (out.indexOf(value) === -1) out.push(value);
+  });
+
+  if (redacted) out.push("[redacted-sensitive-access-columns]");
+  return out;
+}
+
 function _verifyAccessTempPasswordReissueWrite_(before, after, expected) {
   const beforeHash = String(
     (before && before.temporaryPasswordHash) || "",
@@ -469,7 +488,9 @@ function reissueAccessTemporaryPassword_(payload) {
         ", role=" +
         preserved.role +
         ", columns=" +
-        writeResult.updatedColumns.join(",") +
+        _redactAccessTempPasswordColumnsForLog_(
+          writeResult.updatedColumns,
+        ).join(",") +
         ")",
     );
 

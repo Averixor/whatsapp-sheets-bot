@@ -237,6 +237,23 @@ function calcVacationIntervalCheck_(records, current) {
   return "";
 }
 
+function _vacationMaterializeCellKey_(value) {
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return "d:" + value.getTime();
+  }
+  if (typeof value === "boolean") {
+    return value ? "1" : "0";
+  }
+  if (typeof value === "number" && isFinite(value)) {
+    return "n:" + value;
+  }
+  return String(value == null ? "" : value).trim();
+}
+
+function _vacationMaterializeValuesEqual_(left, right) {
+  return _vacationMaterializeCellKey_(left) === _vacationMaterializeCellKey_(right);
+}
+
 function _vacationMaterializeBuildSourceRows_(sheet) {
   var rangeCfg = _vacationMaterializeSourceRange_();
   var startCol = Number(rangeCfg.startCol) || 1;
@@ -248,10 +265,9 @@ function _vacationMaterializeBuildSourceRows_(sheet) {
     return { rows: [], startCol: startCol, width: width, startRow: startRow, endRow: endRow };
   }
 
-  var values = sheet.getRange(startRow, startCol, rowCount, width).getValues();
-  var displays = sheet
-    .getRange(startRow, startCol, rowCount, width)
-    .getDisplayValues();
+  var dataRange = sheet.getRange(startRow, startCol, rowCount, width);
+  var values = dataRange.getValues();
+  var displays = dataRange.getDisplayValues();
   var today = _vacationMaterializeToday_();
   var rows = [];
 
@@ -310,6 +326,7 @@ function _vacationMaterializeBuildSourceRows_(sheet) {
     width: width,
     startRow: startRow,
     endRow: endRow,
+    sourceValues: values,
   };
 }
 
@@ -360,8 +377,6 @@ function _vacationMaterializeWriteColumn_(
   var rowCount = safeValues.length;
   if (!rowCount) return 0;
 
-  var managedRows = Math.max(endRow - startRow + 1, rowCount);
-  sheet.getRange(startRow, col, managedRows, 1).clearContent();
   sheet
     .getRange(startRow, col, rowCount, 1)
     .setValues(
@@ -370,6 +385,37 @@ function _vacationMaterializeWriteColumn_(
       }),
     );
   return rowCount;
+}
+
+function _vacationMaterializeMergeComputedRows_(currentValues, builtRows) {
+  var merged = [];
+  var changed = false;
+  var offsets = VACATION_COMPUTED_COLUMN_OFFSETS_;
+
+  for (var i = 0; i < builtRows.length; i++) {
+    var source = (currentValues[i] || []).slice();
+    while (source.length < 9) source.push("");
+    var row = builtRows[i] || {};
+    var computed = [
+      row.endDate,
+      row.active,
+      row.notify,
+      row.daysLeft,
+      row.intervalCheck,
+    ];
+    for (var j = 0; j < offsets.length; j++) {
+      var offset = offsets[j];
+      if (
+        !_vacationMaterializeValuesEqual_(source[offset], computed[j])
+      ) {
+        changed = true;
+      }
+      source[offset] = computed[j];
+    }
+    merged.push(source);
+  }
+
+  return { values: merged, changed: changed };
 }
 
 function materializeVacationComputedColumns_(sheet, options) {
@@ -435,57 +481,55 @@ function materializeVacationComputedColumns_(sheet, options) {
     return { ok: true, rowsWritten: 0, sheet: sheet.getName() };
   }
 
-  function shouldWriteRow_(index) {
-    if (!rowFilter) return true;
-    return !!rowFilter[startRow + index];
-  }
-
-  function writeFilteredColumn_(offset, picker) {
-    if (!rowFilter) {
-      return _vacationMaterializeWriteColumn_(
-        sheet,
-        startRow,
-        startCol,
-        offset,
-        rows.map(picker),
-        endRow,
-      );
+  var merged = { changed: true };
+  if (rowFilter) {
+    function shouldWriteRow_(index) {
+      return !!rowFilter[startRow + index];
     }
 
-    var values = [];
-    rows.forEach(function (row, index) {
-      if (!shouldWriteRow_(index)) return;
-      values.push([picker(row)]);
-    });
-    if (!values.length) return 0;
+    function writeFilteredColumn_(offset, picker) {
+      var values = [];
+      rows.forEach(function (row, index) {
+        if (!shouldWriteRow_(index)) return;
+        values.push([picker(row)]);
+      });
+      if (!values.length) return 0;
 
-    var targetRows = [];
-    rows.forEach(function (row, index) {
-      if (shouldWriteRow_(index)) targetRows.push(startRow + index);
+      var targetRows = [];
+      rows.forEach(function (row, index) {
+        if (shouldWriteRow_(index)) targetRows.push(startRow + index);
+      });
+      var col = startCol + offset;
+      targetRows.forEach(function (rowNumber, index) {
+        sheet.getRange(rowNumber, col).setValue(values[index][0]);
+      });
+      return values.length;
+    }
+
+    writeFilteredColumn_(2, function (row) {
+      return row.endDate;
     });
-    var col = startCol + offset;
-    targetRows.forEach(function (rowNumber, index) {
-      sheet.getRange(rowNumber, col).clearContent();
-      sheet.getRange(rowNumber, col).setValue(values[index][0]);
+    writeFilteredColumn_(4, function (row) {
+      return row.active;
     });
-    return values.length;
+    writeFilteredColumn_(5, function (row) {
+      return row.notify;
+    });
+    writeFilteredColumn_(6, function (row) {
+      return row.daysLeft;
+    });
+    writeFilteredColumn_(8, function (row) {
+      return row.intervalCheck;
+    });
+  } else {
+    var currentValues = Array.isArray(built.sourceValues)
+      ? built.sourceValues
+      : sheet.getRange(startRow, startCol, rows.length, width).getValues();
+    merged = _vacationMaterializeMergeComputedRows_(currentValues, rows);
+    if (merged.changed) {
+      sheet.getRange(startRow, startCol, rows.length, width).setValues(merged.values);
+    }
   }
-
-  writeFilteredColumn_(2, function (row) {
-    return row.endDate;
-  });
-  writeFilteredColumn_(4, function (row) {
-    return row.active;
-  });
-  writeFilteredColumn_(5, function (row) {
-    return row.notify;
-  });
-  writeFilteredColumn_(6, function (row) {
-    return row.daysLeft;
-  });
-  writeFilteredColumn_(8, function (row) {
-    return row.intervalCheck;
-  });
 
   if (!rowFilter) {
     try {
@@ -508,6 +552,7 @@ function materializeVacationComputedColumns_(sheet, options) {
   return {
     ok: true,
     rowsWritten: rowsWritten,
+    skippedWrite: !rowFilter && !merged.changed,
     sheet: sheet.getName(),
     endRow: endRow,
   };

@@ -193,7 +193,7 @@ Manual replay from maintenance API: `apiRunStage7Job(jobName, { trigger: false }
 
 Не починати з випадкового редагування ACCESS, PERSONNEL або коду. Спочатку — симптом → шар → файл або аркуш.
 
-```
+```text
 Симптом
   ↓
 Який api* / сценарій викликано?
@@ -225,7 +225,7 @@ Manual replay from maintenance API: `apiRunStage7Job(jobName, { trigger: false }
 
 **Типовий маршрут:**
 
-```
+```text
 guest / login fail
   → AccessControl_
   → AuthResolver / ACCESS lookup
@@ -253,7 +253,7 @@ guest / login fail
 
 **Типовий маршрут:**
 
-```
+```text
 "Недостатньо прав"
   → визначити api*
   → AccessEnforcement_
@@ -280,7 +280,7 @@ guest / login fail
 
 **Типовий маршрут:**
 
-```
+```text
 немає кнопки
   → Js.* / sidebar rendering
   → user context
@@ -296,13 +296,13 @@ guest / login fail
 
 **Перевірити:**
 
-- рядок у PERSONNEL (Callsign у колонці L, Status українською);
+- рядок у PERSONNEL (Email у колонці L, Callsign у колонці M, Status українською);
 - телефон / `2_Phone`;
 - після змін даних або deploy — **`apiStage7ClearPhoneCache()`**.
 
 **Типовий маршрут:**
 
-```
+```text
 не той телефон / ПІБ / callsign
   → PERSONNEL
   → нормалізація ключів
@@ -325,7 +325,7 @@ guest / login fail
 
 **Типовий маршрут:**
 
-```
+```text
 неправильне зведення
   → reports/Report_SummaryData.gs / reports/Report_DailySimple.gs
   → дата / колонка
@@ -348,9 +348,9 @@ guest / login fail
 
 **Типовий маршрут:**
 
-```
+```text
 помилка у відпустках
-  → vacation UI (`ui/Js.Vacations.html`)
+  → vacation UI (`ui/Js.Vacations.*.html` partials)
   → vacations/VacationPlannerService.gs, vacations/VacationMonthCalendar.gs
   → selected month
   → VACATIONS / VACATION_REQUESTS
@@ -371,14 +371,14 @@ guest / login fail
 2. `clasp status` — правильний script project.
 3. Script Properties: `WASB_SPREADSHEET_ID`, `WASB_OWNER_EMAIL`.
 4. ACCESS bootstrap не зламаний.
-5. **`apiStage7MaterializeComputedData()`** після змін PERSONNEL / PHONES / Birthday / VACATIONS або коли потрібно оновити вік, дні до ДН, відпусткові колонки.
+5. **`apiStage7MaterializeComputedData()`** після змін PERSONNEL / PHONES / Birthday / VACATIONS або коли потрібно оновити вік, дні до ДН, відпусткові колонки та **синхронізацію відпусток із місячним графіком** (автозаповнення порожніх клітинок; конфлікти — у панелі **Конфлікти з відпустками**).
 6. **`apiStage7ClearPhoneCache()`** після кожного production deploy (лише інвалідація кешу телефонів).
 7. `apiStage7QuickHealthCheck()` / `apiStage7HealthCheck()`.
 8. contract parity (`verify-access-api-governance` у CI).
 
 **Типовий маршрут:**
 
-```
+```text
 після deploy все зламалось
   → npm run ci
   → clasp / remote
@@ -404,7 +404,7 @@ guest / login fail
 
 **Типовий маршрут:**
 
-```
+```text
 новий api* → CI fail
   → public або excluded + reason
   → оновити contract + ProjectMetadata role policy
@@ -497,7 +497,7 @@ If something breaks:
 ## 11. Recommended release hygiene
 
 - keep `main` stable
-- do active work in `dev`
+- do active work on short-lived feature branches (merge into `main`; there is no long-lived remote `dev` branch)
 - tag release points
 - keep `CHANGELOG.md` concise and current
 - keep one-off reports outside this compact GAS import ZIP
@@ -510,51 +510,56 @@ The repository runs CI automatically on **`push`** and **`pull_request`** to **`
 
 Local equivalent: **`npm run check`** (alias **`npm run ci`**).
 
-| Script | Purpose |
-|--------|---------|
-| `verify-node-version.mjs` | Node 24 engine gate (`precheck`) |
-| `ci-gas-sanity.mjs` | Syntax check all `.gs` files |
-| `verify-clasp-push-patterns.mjs` | `.claspignore` / push patterns |
-| `verify-no-russian-text.mjs` | Ban Russian markers in project text |
-| `verify-user-facing-copy.mjs` | Ban technical tokens in user-visible copy (`contracts/user-facing-copy.contract.json`) |
-| `verify-reference-workbook-layout.mjs` | Reference xlsx header layout contract |
-| `verify-reference-repositories.mjs` | `PHONE_DIRECTORY` / `CAR` parser semantics and workbook coverage |
-| `verify-workbook-contract.mjs` | Monthly layout geometry, formula-block short summary, detailed summary grouping |
-| `verify-monthly-callsign-sync.mjs` | PERSONNEL → monthly «Позивні» sync contract |
-| `verify-send-panel-bounds.mjs` | SEND_PANEL row bounds contract |
-| `verify-materialize-computed-data.mjs` | PERSONNEL materialize / computed columns API contract |
-| `verify-month-journal-materialize.mjs` | `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` wiring, API, access, sidebar |
-| `verify-age-birthday-countdown.mjs` | Birthday `DD.MM.YYYY р.н.`, Age `Nр.`, countdown UA labels |
-| `verify-vacation-planner.mjs` | Vacation planner rules, calendar, repository contracts |
-| `verify-recipient-contract.mjs` | Recipient routing and dark-select UI contract |
-| `verify-personnel-status-contract.mjs` | PERSONNEL Status dropdown/active/inactive vs `personnel/PersonnelRepository.gs` |
-| `verify-format-rules-governance.mjs` | Manual conditional-format registry |
-| `audit-function-graph.mjs` | Bound entrypoint refs vs definitions |
-| `verify-client-includes.mjs` | `ui/JavaScript.html` include order |
-| `verify-html-label-for.mjs` | HTML `label for=` hygiene |
-| `verify-client-js.mjs` | Combined sidebar client parse-check |
-| `verify-client-deps.mjs` | Client layer graph (`contracts/client-layers.contract.json`) |
-| `audit-client-xss.mjs` | Unsafe `innerHTML` / `setHtml` interpolations |
-| `audit-envelope-compat.mjs` | Server envelope + client adapters + transport bridge |
-| `verify-usecase-facade.mjs` | `Stage7UseCases_` contract vs snapshot |
-| `verify-snapshot-governance.mjs` | Snapshot mutations require `contracts/SNAPSHOT_CHANGELOG.md` |
-| `verify-bridge-flags.mjs` | `USE_NEW_API_PATH` registry (`contracts/bridge-flags.registry.json`) |
-| `verify-access-api-governance.mjs` | Access endpoints, role policies, client routes |
-| `verify-access-autofill-hotfix.mjs` | ACCESS row autofill hotfix contract |
-| `verify-access-temp-password-reissue.mjs` | Temporary password reissue flow |
-| `verify-oauth-scopes.mjs` | Manifest scopes vs allowlist |
-| `verify-project-files-map.mjs` | `docs/project-files-complete.txt` matches working tree |
-| `verify-jsconfig.mjs` | `jsconfig.json` include/exclude globs |
+| Script                                    | Purpose                                                                                |
+| ----------------------------------------- | -------------------------------------------------------------------------------------- |
+| `verify-node-version.mjs`                 | Node `>=24` engine gate (`precheck`; honors explicit `<` / `<=` if set)                |
+| `ci-gas-sanity.mjs`                       | Syntax check all `.gs` files                                                           |
+| `verify-clasp-push-patterns.mjs`          | `.claspignore` / push patterns (also runs `verify-inventory-reconciliation.mjs`)       |
+| `verify-no-russian-text.mjs`              | Ban Russian markers in project text                                                    |
+| `verify-user-facing-copy.mjs`             | Ban technical tokens in user-visible copy (`contracts/user-facing-copy.contract.json`) |
+| `verify-reference-workbook-layout.mjs`    | Reference xlsx header layout contract                                                  |
+| `verify-reference-repositories.mjs`       | `PHONE_DIRECTORY` / `CAR` / `WEAPON` parser semantics and workbook coverage            |
+| `verify-workbook-contract.mjs`            | Monthly layout geometry, formula-block short summary, detailed summary grouping        |
+| `verify-monthly-callsign-sync.mjs`        | PERSONNEL → monthly «Позивні» sync contract                                            |
+| `verify-send-panel-bounds.mjs`            | SEND_PANEL row bounds contract                                                         |
+| `verify-temporary-property-register.mjs`  | Temporary-property register headers, catalog/kits, status math (`ci:workbook`)         |
+| `verify-materialize-computed-data.mjs`    | PERSONNEL materialize / computed columns API contract                                  |
+| `verify-month-journal-materialize.mjs`    | Unified `JOURNAL` / `SUMMARY` wiring, chunked bootstrap, API, access, sidebar |
+| `verify-age-birthday-countdown.mjs`       | Birthday `DD.MM.YYYY р. н.`, Age `N р.`, countdown UA labels                           |
+| `verify-vacation-planner.mjs`             | Vacation planner rules, calendar, repository contracts                                 |
+| `verify-vacation-monthly-sync.mjs`        | One-way vacation → monthly sheet sync (auto-fill, conflicts, removals)                 |
+| `verify-recipient-contract.mjs`           | Recipient routing and dark-select UI contract                                          |
+| `verify-personnel-status-contract.mjs`    | PERSONNEL Status dropdown/active/inactive vs `personnel/PersonnelRepository.gs`        |
+| `verify-format-rules-governance.mjs`      | Manual conditional-format registry                                                     |
+| `audit-function-graph.mjs`                | Bound entrypoint refs vs definitions                                                   |
+| `verify-client-includes.mjs`              | `ui/JavaScript.html` include order                                                     |
+| `verify-html-label-for.mjs`               | HTML `label for=` hygiene                                                              |
+| `verify-client-js.mjs`                    | Combined sidebar client parse-check                                                    |
+| `verify-client-deps.mjs`                  | Client layer graph (`contracts/client-layers.contract.json`)                           |
+| `audit-client-xss.mjs`                    | Unsafe `innerHTML` / `setHtml` interpolations                                          |
+| `audit-envelope-compat.mjs`               | Server envelope + client adapters + transport bridge                                   |
+| `verify-usecase-facade.mjs`               | `Stage7UseCases_` contract vs snapshot                                                 |
+| `verify-snapshot-governance.mjs`          | Snapshot mutations require `contracts/SNAPSHOT_CHANGELOG.md`                           |
+| `verify-bridge-flags.mjs`                 | `USE_NEW_API_PATH` registry (`contracts/bridge-flags.registry.json`)                   |
+| `verify-access-api-governance.mjs`        | Access endpoints, role policies, client routes                                         |
+| `verify-access-policy-checks.mjs`         | Access policy check surface vs contract                                                |
+| `verify-access-autofill-hotfix.mjs`       | ACCESS row autofill hotfix contract                                                    |
+| `verify-access-temp-password-reissue.mjs` | Temporary password reissue flow                                                        |
+| `verify-oauth-scopes.mjs`                 | Manifest scopes vs allowlist (`drive.readonly` for inventory reconciliation)           |
+| `verify-project-files-map.mjs`            | `docs/project-files-complete.txt` matches working tree                                 |
+| `verify-jsconfig.mjs`                     | `jsconfig.json` include/exclude globs                                                  |
 
 There is **no** Apps Script deployment in CI (`clasp` is local only). See `.github/workflows/ci.yml`.
 
 ---
 
 0. If the change adds, removes, or moves repository files, refresh the map:
+
    ```bash
    npm run map:project-files
    git diff -- docs/project-files-complete.txt
    ```
+
    (`npm run release:check` / `npm run ci` fails if the map is stale.)
 1. Run local checks (`npm run check`; see `CONTRIBUTING.md`).
 2. Confirm `audit-function-graph` ends with **`MISSING: none`**.
@@ -564,7 +569,7 @@ There is **no** Apps Script deployment in CI (`clasp` is local only). See `.gith
 6. In Apps Script → **Project settings → Script properties**: ensure **`WASB_SPREADSHEET_ID`** is set if you rely on triggers/headless runs (use your production spreadsheet ID).
 7. Reload the spreadsheet UI; close and reopen the sidebar.
 8. Confirm production `appsscript.json` still has `executionApi.access = MYSELF`.
-9. After PERSONNEL / PHONES / VACATIONS / birthday / `Status` edits: **`apiStage7MaterializeComputedData()`**, then **`apiStage7ClearPhoneCache()`** after every deploy; re-check a person card and personnel modal. If you changed a month sheet and rely on derived fact/history views, also run **`apiStage7MaterializeMonthJournal({ monthSheet: "MM" })`** for that month.
+9. After PERSONNEL / PHONES / VACATIONS / birthday / `Status` edits: **`apiStage7MaterializeComputedData()`**, then **`apiStage7ClearPhoneCache()`** after every deploy; re-check a person card and personnel modal. If you changed a month sheet and rely on derived fact/history views, also run **`apiStage7MaterializeMonthJournal({ monthSheet: "MM" })`** (sidebar updates only the active bot month’s slice in `JOURNAL` / `SUMMARY`). First-run bootstrap of every existing `01`–`12`: run **`apiStage7MaterializeAllMonthJournals()`** (**не підключено до UI**, `uiAllowed: false`; **призначено для GAS editor**; public `api*` + maintainer), then repeat with `{ nextCursor }` from **`response.data.result.nextCursor`** until **`response.data.result.done`** (fields are inside the Stage7 envelope, not top-level). Legacy `ЖУРНАЛ_*` / `ПІДСУМОК_*` tabs may remain; new sheets supersede them.
 
 ### Repository file map
 
@@ -613,9 +618,14 @@ Immediately after push, run in the production GAS editor:
 
 ```text
 apiStage7MaterializeComputedData()
-apiStage7MaterializeMonthJournal({ monthSheet: "07" })   # when the month journal / summary must be refreshed
+apiStage7MaterializeMonthJournal({ monthSheet: "07" })   # active month slice in JOURNAL/SUMMARY; sidebar: Оновити журнал місяця
+apiStage7MaterializeAllMonthJournals()                  # bootstrap all 01–12 (uiAllowed: false; GAS editor)
+apiStage7MaterializeAllMonthJournals({ nextCursor: 3 }) # continuation; see response.data.result.nextCursor / done
+apiStage7MaterializeAllMonthJournals({ nextCursor: 6 }) # next batch until response.data.result.done
 apiStage7ClearPhoneCache()
 ```
+
+All-months continuation fields live inside the Stage7 envelope (`response.success`, `response.data.result.done`, `response.data.result.nextCursor`, `response.data.result.batchMonths`, `response.data.result.cursor`) — not as top-level response properties.
 
 Then reload the spreadsheet/sidebar and verify a person card, personnel modal,
 SEND_PANEL row, and the expected role.
@@ -624,7 +634,7 @@ SEND_PANEL row, and the expected role.
 
 | File | Commit? | Notes |
 | ------ | -------- | ------ |
-| `.clasp.example.json` | yes | Template — copy to `.clasp.json` locally |
+| `.clasp.example.json` | yes | Placeholder template — copy to `.clasp.json` locally and fill real IDs only there |
 | `.clasp.json` | **no** | Your production `scriptId` |
 
 Open the bound script: **`npm run gas:open`** (`clasp open-script` in clasp 3.x).
@@ -635,10 +645,12 @@ Run from the Apps Script editor when relevant after a deploy or config change:
 
 - `apiStage7GetAccessDescriptor()` — lightweight descriptor sanity
 - `apiStage7DebugAccess()` — access debug payload
+- `apiStage7ReissueOwnerTemporaryPasswordManual()` — owner-only temporary password reissue helper; requires Script Properties **`WASB_OWNER_EMAIL`** and **`WASB_OWNER_LOGIN`**; logs only redacted metadata (`success`, row number, role, non-sensitive changed-column summary)
 - `runAccessPolicyChecks()` — access policy assertions
 - `runSmokeTests()` — regression bundle (`smoke/SmokeTests.gs`, deployed with production)
-- `apiStage7MaterializeComputedData()` — пересборка обчислюваних колонок (PERSONNEL helper, PHONES, Birthday, VACATIONS, Status панелі), auto-heal/validation `PERSONNEL.Status`, monthly callsign sync; sidebar: **Оновити обчислювані дані**
-- `apiStage7MaterializeMonthJournal({ monthSheet: "07" })` — derived `ЖУРНАЛ_MM` / `ПІДСУМОК_MM`; sidebar: **Оновити журнал місяця**
+- `apiStage7MaterializeComputedData()` — перезбірка обчислюваних колонок (PERSONNEL helper, PHONES, Birthday, VACATIONS, Status панелі), auto-heal/validation `PERSONNEL.Status`, monthly callsign sync; sidebar: **Оновити обчислювані дані**
+- `apiStage7MaterializeMonthJournal({ monthSheet: "07" })` — refresh active/requested month’s slice in `JOURNAL` / `SUMMARY`; sidebar: **Оновити журнал місяця**
+- `apiStage7MaterializeAllMonthJournals({ nextCursor?, monthsPerCall? })` — chunked bootstrap of every existing `01`–`12` into `JOURNAL` / `SUMMARY` (**не підключено до UI**, `uiAllowed: false`; **призначено для GAS editor**; public `api*` + maintainer — could be called via `google.script.run` if wired manually). Re-invoke with `{ nextCursor }` from `response.data.result` until `done`
 - `apiStage7ClearPhoneCache()` — invalidate phone/profile caches (після кожного production deploy; **не** замінює materialize)
 
 ## 14. PERSONNEL sheet (canonical people data)
@@ -647,34 +659,35 @@ Run from the Apps Script editor when relevant after a deploy or config change:
 
 ### Final header row (row 1)
 
-Logical (canonical): `ID | FML | Birthday | Age | Days_until_birthday | Phone | 2_Phone | Callsign | Title | Position | OSH_4 | Unit | Status`
+Logical (canonical): `Cells | ID_VS | ID | LastName | FirstName | Patronymic | Birthday | Age | Days_until_birthday | Phone | 2_Phone | Email | Callsign | Rank | Position | OSH_4 | Status`
 
 **Reference workbook "Книга Взводу Охорони" physical layout (supported):**
 
 Contract: `contracts/reference-workbook-layout.contract.json` (headers extracted from the reference xlsx).
 
-**PERSONNEL (row 1, columns A–P):**
+**PERSONNEL (row 1, columns A–Q):**
 
 | Col | Header | Role |
 | --- | --- | --- |
 | A | Cells | Ignored (sheet row marker) |
 | B | ID v/s | Optional internal id (`ID_VS`) |
-| C | ID | Армія+ (optional data) |
+| C | ID Army+ | Армія+ (optional data) |
 | D–F | Last name / First name / Patronymic | Code synthesizes `FML` |
-| G–I | Birthday / Age / Days until birthday | Materialized display: **Birthday** `DD.MM.YYYY р.н.` (space before suffix; legacy `…р.` normalizes on read); **Age** `Nр.` (e.g. `25р.`); **Days until birthday** — UA countdown text (`personnel/PersonnelMaterialize.gs`) |
+| G–I | Birthday / Age / Days until birthday | Materialized display: **Birthday** `DD.MM.YYYY р. н.` (space before suffix; legacy `… р.` normalizes on read); **Age** `N р.` (e.g. `25 р.`); **Days until birthday** — UA countdown (`N м.`, `N д.`, `N м. N д.`, or `Сьогодні`; space before abbreviation; `personnel/PersonnelMaterialize.gs`) |
 | J–K | Phone / Phone 2 | Phones |
-| **L** | **Callsign** | **Working callsign** (e.g. `ГРАФ`) — schedule key |
-| M | Rank | Rank (instead of Title) |
-| N | Position | Position |
-| O | OSH 4 | OSH_4 (space ok) |
-| P | Status | UA dropdown (9 values) |
+| L | Email | Optional contact email |
+| **M** | **Callsign** | **Working callsign** (e.g. `ГРАФ`) — schedule key |
+| N | Rank | Rank (instead of Title) |
+| O | Position | Position |
+| P | OSH 4 | OSH_4 (space ok) |
+| Q | Status | UA dropdown (9 values) |
 
 **Monthly sheets:**
 
-- **06 (compact):** A = БР (formula), **B = Позивний**, dates from **C** (`C2:AF30` code range).
+- **07 (compact/current):** **B = Позивний**, dates from **C** (`C2:AG32` code range). **06** remains a compact historical sheet (`C2:AF30`).
 - **02–05 (standard):** A = ТЕЛЕФОН, **B = ПОЗИВНИЙ**, dates from **H**.
 
-**Monthly «Позивні» sync:** `Callsign` from PERSONNEL → monthly callsign column; empty Callsign → `Last name` (row-aligned). See `sheets/MonthlyCallsignSync.gs`.
+**Monthly «Позивні» sync:** `Callsign` from PERSONNEL → monthly callsign column; empty Callsign → `Last name`; empty Last name → `First name` (row-aligned). See `sheets/MonthlyCallsignSync.gs`.
 
 `TEMPLATE` column is supported only in **legacy** workbooks (not in the reference xlsx). Code reads **exclusively by header names** (aliases for UA/EN/split variants).
 
@@ -683,14 +696,14 @@ Required (logical): `FML` (or split name parts), `Birthday`, `Phone`, `Callsign`
 
 ### One-time / migration in the spreadsheet
 
-1. If column **`Status`** is missing, runtime self-heal creates header **`Status`** in reference column **P** (or appends a safe new column if P is occupied), then applies dropdown validation.
+1. If column **`Status`** is missing, runtime self-heal creates header **`Status`** in reference column **Q** (or appends a safe new column if P is occupied), then applies dropdown validation.
 2. For everyone on duty: leave **`Status` empty** (defaults to **`В наявності`**) or pick an active dropdown value:
    **`В наявності`**, **`У відрядженні`**, **`Відпустка`**, **`Лікарняний`**, **`Тимчасовий`**, **`Гусачівка`**, **`БЗВП`**. Do not mix EN/UA in the same column.
 3. For departed or absent-without-leave: set **`Вибув`** or **`СЗЧ`** — excluded from schedule, phones, and cards. Do **not** use **`Переведений`** (legacy values map to **`Вибув`** on read).
 
 **Dropdown order (9 values):** `В наявності` → `У відрядженні` → `Вибув` → `Відпустка` → `Лікарняний` → `Тимчасовий` → `Гусачівка` → `БЗВП` → `СЗЧ`. Legacy labels (`Дієвий`, `Відрядження`, `Active`, EN) normalize on read.
 
-**Data validation (dropdown):** apply to the **whole** Status column from row 2, e.g. `PERSONNEL!P2:P`, not a single cell like `P10`. After deploy, run **`applyPersonnelStatusColumnValidation()`** in the Apps Script editor, **`ensurePersonnelStatusColumn()`** for header + dropdown self-heal, or **`ensureSystemSheetByName_('PERSONNEL')`** / bootstrap self-heal to apply the list automatically.
+**Data validation (dropdown):** apply to the **whole** Status column from row 2, e.g. `PERSONNEL!Q2:Q`, not a single cell like `P10`. After deploy, run **`applyPersonnelStatusColumnValidation()`** in the Apps Script editor, **`ensurePersonnelStatusColumn()`** for header + dropdown self-heal, or **`ensureSystemSheetByName_('PERSONNEL')`** / bootstrap self-heal to apply the list automatically.
 
 **`ID`** (Армія+) may stay empty or temporary; it is not required for cards, schedule, phones, or birthdays.
 
@@ -714,6 +727,7 @@ Canonical resolver (**`DataAccess.gs`**):
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **`WASB_SPREADSHEET_ID`**                    | Target spreadsheet for headless runs (triggers, executions without open UI). Required when no container spreadsheet context exists.                                                         |
 | **`WASB_OWNER_EMAIL`**                       | Owner email for security notifications that may include the full user key. Quick health warns if unset.                                                                                     |
+| **`WASB_OWNER_LOGIN`**                       | Owner `ACCESS.login` value used only by `apiStage7ReissueOwnerTemporaryPasswordManual()` to identify the owner row without hardcoded source values.                                         |
 | **`WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`**     | Emergency email bridge during migration only. Keep disabled (`false` / unset) in normal operation.                                                                                          |
 | **`WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP`** | Legacy plaintext temp-password column lookup during migration only. Keep disabled in normal operation; run `apiStage7NormalizeAccessSheetFormatting()` to clear `temporary_password_plain`. |
 
@@ -771,11 +785,11 @@ For day-to-day operations, prefer calling **`apiStage7*`** and documented Stage7
 
 ## 19. Reflective helpers: eval / `Function('return this')`
 
-| Location                         | Usage                                                                                                                                | Role                               | Risk                                        | Decision                                                                          |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------- |
-| **`Stage7TestRunner.gs`**        | ~~`eval(name)`~~ removed; explicit registry **`getStage7TestRunnerExplicitRegistry_()`** + **`globalThis[name]`** for discovery only | Manual / menu test runner          | Was **medium** (string eval); now **lower** | **DONE (P2.e)** — registered task names bind to real functions; no runtime `eval` |
-| **`diagnostics/Diagnostics.Core.gs`**        | `_global_()` → `Function('return this')()`                                                                                           | Diagnostics global scope           | Low                                         | **DEFER**                                                                         |
-| **`Diagnostics.Stage7.Core.gs`** | `_diagGlobal_()` → same pattern after `globalThis`                                                                                   | Stage7 diagnostics                 | Low                                         | **DEFER**                                                                         |
+| Location                              | Usage                                                                                                                                | Role                      | Risk                                        | Decision                                                                          |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------- |
+| **`Stage7TestRunner.gs`**             | ~~`eval(name)`~~ removed; explicit registry **`getStage7TestRunnerExplicitRegistry_()`** + **`globalThis[name]`** for discovery only | Manual / menu test runner | Was **medium** (string eval); now **lower** | **DONE (P2.e)** — registered task names bind to real functions; no runtime `eval` |
+| **`diagnostics/Diagnostics.Core.gs`** | `_global_()` → `Function('return this')()`                                                                                           | Diagnostics global scope  | Low                                         | **DEFER**                                                                         |
+| **`Diagnostics.Stage7.Core.gs`**      | `_diagGlobal_()` → same pattern after `globalThis`                                                                                   | Stage7 diagnostics        | Low                                         | **DEFER**                                                                         |
 
 Do **not** reintroduce `eval` for resolving test or handler names; extend **`getStage7TestRunnerExplicitRegistry_()`** when adding fixed registry tasks.
 
@@ -800,7 +814,6 @@ Do **not** reintroduce `eval` for resolving test or handler names; extend **`get
 Заголовки рядка 1 збігаються з порядком **`appendRow`** у **`apiSubmitRequest`**: **timestamp**, **user_email**, **project_id**, **project_name**, **title**, **details**, **dedupe_key**, **status**. Шаблон: **`dedupe_key`** = `wasb-template-row-v1`, **`status`** = `template`; **`findDuplicate_`** сканує колонку dedupe по всіх даних рядках до останнього заповненого рядка.
 
 ### Перевірка
-
 
 ## 21. Vacation source migration
 
@@ -866,7 +879,7 @@ intact for diagnosis. Do not delete `VACATIONS` during the compatibility period.
 
 Повний опис: [`docs/vacation-planner.md`](./docs/vacation-planner.md).
 
-### Що перевірити після деплою
+### Що перевірити після деплою (міні-календар)
 
 1. Під сіткою лише **Проблемних дат** і **Навантажених днів** (без рядків про «Макс. одночасно» / «Коротке перевантаження»).
 2. **◀ / ▶** реально змінюють місяць і рік (у т.ч. Грудень ↔ Січень).
@@ -874,9 +887,75 @@ intact for diagnosis. Do not delete `VACATIONS` during the compatibility period.
 4. Tooltip при наведенні — дата, кількість, статус, підказка про клік (не лише `YYYY-MM-DD`).
 5. Клік по проблемному дню — деталі + варіанти переносу.
 
-### Локальна перевірка
+### Локальна перевірка (міні-календар)
 
 ```bash
 npm run ci:vacations
+node scripts/verify-vacation-monthly-sync.mjs
 npm run ci
 ```
+
+### Синхронізація з місячним графіком
+
+`VacationMonthlySync_` (`vacations/VacationMonthlySync.gs`) заповнює порожні
+клітинки кодом `Відпус` після `apiStage7CreateNextMonth()` і
+`apiStage7MaterializeComputedData()`. Конфлікти з уже заповненими клітинками —
+у панелі **Конфлікти з відпустками** (`ui/Js.VacationSync.html`). Деталі:
+[`docs/vacation-planner.md`](./docs/vacation-planner.md) § Monthly schedule sync.
+
+## 24. Inventory reconciliation (звірка)
+
+Панель: **WASB → Відкрити панель → Звірка**.
+
+Повний опис: [`docs/inventory-reconciliation.md`](./docs/inventory-reconciliation.md).
+
+### Що перевірити після деплою (звірка)
+
+1. Після першого deploy з модулем звірки — повторно авторизувати OAuth scope **`drive.readonly`** (перегляд наявних файлів/папок Drive).
+2. **sysadmin** задає кореневу папку Drive; інші ролі бачать прогрес місяців і можуть відкривати прив’язані документи.
+3. Поточний і майбутні місяці лишаються без заливки; зелений статус дозволено лише минулому місяцю з усіма позначками та документами.
+4. Кнопка **Синхронізувати файли** оновлює прихований захищений `INVENTORY_RECONCILIATION_FILES` і примітки клітинок.
+5. Для поточної книги перевірте 9 служб і 108 очікуваних документів; кількість обчислюється динамічно.
+
+### Локальна перевірка (звірка)
+
+```bash
+npm run ci
+npx clasp status
+npm audit --audit-level=moderate
+```
+
+`scripts/verify-inventory-reconciliation.mjs` входить у CI як side-effect імпорт
+з `verify-clasp-push-patterns.mjs` (`npm run ci:gas`); його також можна
+запускати окремо.
+
+## 25. Temporary property register (тимчасово видане майно)
+
+Аркуші: `Property_issued_for_temporary_u`, `PROPERTY_CATALOG`, `PROPERTY_KITS`.
+Модуль: `inventory/TemporaryPropertyRegister.gs` (edit routing —
+`access/AccessSheetTriggers.gs`). Картки людей показують залишки в секції
+**Тимчасово видане майно**.
+
+Одноразова ініціалізація / міграція з GAS editor:
+
+```javascript
+apiSetupTemporaryPropertyRegister()
+```
+
+Повний опис: [`docs/temporary-property-register.md`](./docs/temporary-property-register.md).
+
+### Локальна перевірка (тимчасове майно)
+
+```bash
+npm run ci:workbook
+```
+
+### Тимчасово прийнятий ризик npm
+
+Станом на 2026-07-12 `@google/clasp@3.3.0` є останньою доступною версією. П'ять
+`moderate`-попереджень походять від транзитивної `uuid@9.x` у ланцюжку
+`@google/clasp` → `googleapis` / `googleapis-common` → `gaxios`. Це локальний
+інструментарій розгортання, а не код Apps Script. Не застосовувати
+`npm audit fix --force`: запропонований npm перехід на `@google/clasp@2.5.0`
+є несумісним і не вважається виправленням. Повторно перевірити після виходу
+новішої версії `@google/clasp`.

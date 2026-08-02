@@ -21,6 +21,9 @@ var POLICY_CHECKS_CONFIG_ = {
     "DICT_SUM",
     "TEMPLATES",
     "LOG",
+    "PHONE_DIRECTORY",
+    "CAR",
+    "WEAPON",
     "VACATIONS",
     "VACATION_REQUESTS",
     "VACATION_SCHEDULE",
@@ -29,11 +32,18 @@ var POLICY_CHECKS_CONFIG_ = {
     "SEND_PANEL",
     "PHONES",
     "PERSONNEL",
+    "INVENTORY_RECONCILIATION_FILES",
   ],
 
   STRICT_PROTECTED_SHEETS_MODE: false,
 
-  REQUIRED_MAINTENANCE_ACTIONS: ["repair", "protections", "triggers"],
+  REQUIRED_MAINTENANCE_ACTIONS: ["відновлення", "захист аркушів", "тригери"],
+
+  MAINTENANCE_ACTION_ALIASES: {
+    "відновлення": ["відновлення", "repair"],
+    "захист аркушів": ["захист аркушів", "protections"],
+    "тригери": ["тригери", "triggers"],
+  },
 
   ROLES_WITH_ACTIONS: [
     "viewer",
@@ -99,6 +109,7 @@ function isAccessApiEndpointAllowedForRole_(endpointName, role) {
 if (typeof Object.freeze === "function") {
   Object.freeze(POLICY_CHECKS_CONFIG_.EXPECTED_PROTECTED_SHEETS);
   Object.freeze(POLICY_CHECKS_CONFIG_.REQUIRED_MAINTENANCE_ACTIONS);
+  Object.freeze(POLICY_CHECKS_CONFIG_.MAINTENANCE_ACTION_ALIASES);
   Object.freeze(POLICY_CHECKS_CONFIG_.ROLES_WITH_ACTIONS);
   Object.freeze(POLICY_CHECKS_CONFIG_);
 }
@@ -335,6 +346,15 @@ function _actionSetHasAny_(actionSet, candidates) {
     }
   }
   return false;
+}
+
+function _maintenanceActionCandidates_(canonicalAction) {
+  var key = _safeToString_(canonicalAction).trim();
+  var aliases = POLICY_CHECKS_CONFIG_.MAINTENANCE_ACTION_ALIASES;
+  if (aliases && Array.isArray(aliases[key]) && aliases[key].length) {
+    return aliases[key].slice();
+  }
+  return key ? [key] : [];
 }
 
 /**
@@ -1028,7 +1048,7 @@ function runAccessPolicyChecks(options) {
         var required = POLICY_CHECKS_CONFIG_.REQUIRED_MAINTENANCE_ACTIONS;
 
         for (var i = 0; i < required.length; i++) {
-          if (!_actionSetHasAny_(set, [required[i]])) {
+          if (!_actionSetHasAny_(set, _maintenanceActionCandidates_(required[i]))) {
             throw new Error("sysadmin missing action: " + required[i]);
           }
         }
@@ -1119,9 +1139,18 @@ function runAccessPolicyChecks(options) {
 
           output[role] = {
             count: actions.length,
-            hasRepair: _actionSetHasAny_(set, ["repair"]),
-            hasProtections: _actionSetHasAny_(set, ["protections"]),
-            hasTriggers: _actionSetHasAny_(set, ["triggers"]),
+            hasRepair: _actionSetHasAny_(
+              set,
+              _maintenanceActionCandidates_("відновлення"),
+            ),
+            hasProtections: _actionSetHasAny_(
+              set,
+              _maintenanceActionCandidates_("захист аркушів"),
+            ),
+            hasTriggers: _actionSetHasAny_(
+              set,
+              _maintenanceActionCandidates_("тригери"),
+            ),
           };
         }
 
@@ -1316,6 +1345,7 @@ function runAccessPolicyChecks(options) {
           "apiStage7RegisterAccessWithTemporaryPassword",
           "apiStage7LoginByIdentifierAndCallsign",
           "apiStage7LoginByAccessKey",
+          "apiStage7ResumeBrowserSession",
           "apiStage7ListBindableCallsigns",
           "apiStage7ReportAccessViolation",
           "apiStage7ReportClientAccessSignal",
@@ -1342,6 +1372,7 @@ function runAccessPolicyChecks(options) {
           "apiStage7RegisterAccessWithTemporaryPassword",
           "apiStage7LoginByIdentifierAndCallsign",
           "apiStage7LoginByAccessKey",
+          "apiStage7ResumeBrowserSession",
           "apiStage7ListBindableCallsigns",
           "apiStage7ReportClientAccessSignal",
           "apiStage7GetAccessDescriptorLite",
@@ -1383,6 +1414,7 @@ function runAccessPolicyChecks(options) {
           "apiStage7SubmitAccessKeyRequest",
           "apiStage7LoginByIdentifierAndCallsign",
           "apiStage7LoginByAccessKey",
+          "apiStage7ResumeBrowserSession",
           "apiStage7ListBindableCallsigns",
           "apiStage7ReportClientAccessSignal",
           "apiSubmitRequest",

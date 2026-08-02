@@ -21,25 +21,28 @@ var PERSONNEL_SHEET_NAME =
 
 /** Sheet must have these header columns (ID and computed birthday helpers are optional). */
 /** Canonical (logical) header order. Physical layout in reference workbook "Книга Взводу Охорони" (see contracts/reference-workbook-layout.contract.json):
- *  A Cells (ignored), B ID v/s, C ID, D–F Last/First/Patronymic (code synthesizes FML), G–I birthday helpers,
- *  J–K phones, L Callsign (working values, e.g. ГРАФ), M Rank, N Position, O OSH 4, P Status.
+ *  A Cells (ignored), B ID v/s, C ID Army+, D–F Last/First/Patronymic (code synthesizes FML), G–I birthday helpers,
+ *  J–K phones, L Email, M Callsign (working values, e.g. ГРАФ), N Rank, O Position, P OSH 4, Q Status.
  *  TEMPLATE is supported only as a legacy alternate layout — not present in the reference xlsx.
  *  Reading is header-name based with aliases (see _personnelCanonicalHeaderKey_).
  */
 var PERSONNEL_CANONICAL_HEADER_ORDER_ = [
+  "Cells",
+  "ID_VS",
   "ID",
-  "FML",
+  "LastName",
+  "FirstName",
+  "Patronymic",
   "Birthday",
   "Age",
   "Days_until_birthday",
   "Phone",
   "2_Phone",
+  "Email",
   "Callsign",
-  "TEMPLATE",
   "Rank",
   "Position",
   "OSH_4",
-  "Unit",
   "Status",
 ];
 
@@ -55,6 +58,7 @@ var PERSONNEL_REQUIRED_HEADER_KEYS = [
 
 /** ID, Unit, Rank/Title, 2_Phone, TEMPLATE (legacy), ID_VS, computed birthday helpers, split names (Last/First/Patronymic) — optional. */
 var PERSONNEL_OPTIONAL_HEADER_KEYS = [
+  "Cells",
   "ID",
   "Age",
   "Days_until_birthday",
@@ -64,6 +68,7 @@ var PERSONNEL_OPTIONAL_HEADER_KEYS = [
   "ID_VS",
   "Rank",
   "TEMPLATE",
+  "Email",
   "LastName",
   "FirstName",
   "Patronymic",
@@ -375,9 +380,10 @@ function _personnelCanonicalHeaderKey_(rawHeader) {
     id: "ID",
     "id армія+": "ID",
     "id army+": "ID",
+    "id army plus": "ID",
     "армія+": "ID",
     "id v/s": "ID_VS",
-    cells: "",
+    cells: "Cells",
     fml: "FML",
     піб: "FML",
     pib: "FML",
@@ -387,7 +393,10 @@ function _personnelCanonicalHeaderKey_(rawHeader) {
     фамилия: "LastName",
     "first name": "FirstName",
     firstname: "FirstName",
-    "ім'я": "FirstName",
+    // Apostrophes stripped by _personnelNormalizeHeaderCell_ → "імя" / "имя"
+    імя: "FirstName",
+    имя: "FirstName",
+    name: "FirstName",
     patronymic: "Patronymic",
     "по батькові": "Patronymic",
     birthday: "Birthday",
@@ -398,6 +407,8 @@ function _personnelCanonicalHeaderKey_(rawHeader) {
     "days until birthday": "Days_until_birthday",
     phone: "Phone",
     телефон: "Phone",
+    email: "Email",
+    "e-mail": "Email",
     "2_phone": "2_Phone",
     "2 phone": "2_Phone",
     "phone 2": "2_Phone",
@@ -447,7 +458,7 @@ function _personnelGetSheet_(mustExist) {
         PERSONNEL_REQUIRED_HEADER_KEYS.concat(
           PERSONNEL_OPTIONAL_HEADER_KEYS,
         ).join(", ") +
-        " (етalon «Книга Взводу Охорони»: Last/First/Patronymic + Callsign у колонці L; TEMPLATE — лише legacy)",
+        " (еталон «Книга Взводу Охорони»: Last/First/Patronymic + Email + Callsign у колонці M; TEMPLATE — лише legacy)",
     );
   }
   return sh || null;
@@ -508,8 +519,8 @@ function _personnelBuildHeaderColIndex_(headersRow) {
   return col;
 }
 
-/** Reference workbook column P (1-based). */
-var PERSONNEL_REFERENCE_STATUS_COL_ = 16;
+/** Reference workbook column Q (1-based). */
+var PERSONNEL_REFERENCE_STATUS_COL_ = 17;
 
 function _personnelFindStatusColumnIndex_(headersRow) {
   var headers = headersRow || [];
@@ -522,7 +533,7 @@ function _personnelFindStatusColumnIndex_(headersRow) {
 }
 
 /**
- * Creates missing Status header on PERSONNEL (column P in reference layout, or next free column).
+ * Creates missing Status header on PERSONNEL (column Q in reference layout, or next free column).
  * Does not overwrite unrelated headers. Empty data cells stay empty (= В наявності on read).
  */
 function ensurePersonnelStatusColumnHeader_(sheet) {
@@ -617,12 +628,15 @@ function _personnelReadCell_(row, colIndex) {
 }
 
 /**
- * Display callsign for sheets and runtime lookup: Callsign → Last name (same as monthly «Позивні»).
+ * Display callsign for sheets and runtime lookup:
+ * Callsign → Last name → First name (same as monthly «Позивні»).
  */
-function resolvePersonnelDisplayCallsign_(callsignRaw, lastNameRaw) {
+function resolvePersonnelDisplayCallsign_(callsignRaw, lastNameRaw, firstNameRaw) {
   var callsign = String(callsignRaw == null ? "" : callsignRaw).trim();
   if (callsign) return callsign;
-  return String(lastNameRaw == null ? "" : lastNameRaw).trim();
+  var lastName = String(lastNameRaw == null ? "" : lastNameRaw).trim();
+  if (lastName) return lastName;
+  return String(firstNameRaw == null ? "" : firstNameRaw).trim();
 }
 
 function _personnelRowLastName_(row, col) {
@@ -634,6 +648,14 @@ function _personnelRowLastName_(row, col) {
 function _personnelRowToRecord_(row, sheetRow, col) {
   var callsign = String(_personnelReadCell_(row, col.Callsign) || "").trim();
   var lastName = _personnelRowLastName_(row, col);
+  var firstName =
+    col.FirstName !== undefined && col.FirstName >= 0
+      ? String(_personnelReadCell_(row, col.FirstName) || "").trim()
+      : "";
+  var patronymic =
+    col.Patronymic !== undefined && col.Patronymic >= 0
+      ? String(_personnelReadCell_(row, col.Patronymic) || "").trim()
+      : "";
   var fml = String(_personnelReadCell_(row, col.FML) || "").trim();
   var id =
     col.ID >= 0 ? String(_personnelReadCell_(row, col.ID) || "").trim() : "";
@@ -649,20 +671,11 @@ function _personnelRowToRecord_(row, sheetRow, col) {
   var statusCanonical = getPersonnelStatusCanonical_(status);
   var active = isPersonnelStatusActive_(status);
 
-  // Reference workbook layout: split name parts; Callsign column L holds working values.
+  // Reference workbook layout: split name parts; Callsign column M holds working values.
   if (!fml) {
-    var ln =
-      col.LastName !== undefined && col.LastName >= 0
-        ? String(_personnelReadCell_(row, col.LastName) || "").trim()
-        : "";
-    var fn =
-      col.FirstName !== undefined && col.FirstName >= 0
-        ? String(_personnelReadCell_(row, col.FirstName) || "").trim()
-        : "";
-    var pn =
-      col.Patronymic !== undefined && col.Patronymic >= 0
-        ? String(_personnelReadCell_(row, col.Patronymic) || "").trim()
-        : "";
+    var ln = lastName;
+    var fn = firstName;
+    var pn = patronymic;
     if (ln || fn || pn) {
       fml = [ln, fn, pn]
         .filter(function (x) {
@@ -674,7 +687,7 @@ function _personnelRowToRecord_(row, sheetRow, col) {
     }
   }
 
-  callsign = resolvePersonnelDisplayCallsign_(callsign, lastName);
+  callsign = resolvePersonnelDisplayCallsign_(callsign, lastName, firstName);
 
   if (!fml && !callsign) {
     if (unit) return null;
@@ -684,6 +697,9 @@ function _personnelRowToRecord_(row, sheetRow, col) {
   var record = {
     id: id,
     fml: fml,
+    lastName: lastName,
+    firstName: firstName,
+    patronymic: patronymic,
     birthday: String(_personnelReadCell_(row, col.Birthday) || "").trim(),
     age: String(_personnelReadCell_(row, col.Age) || "").trim(),
     daysUntilBirthday: String(
@@ -691,6 +707,7 @@ function _personnelRowToRecord_(row, sheetRow, col) {
     ).trim(),
     phone: String(_personnelReadCell_(row, col.Phone) || "").trim(),
     phone2: String(_personnelReadCell_(row, col["2_Phone"]) || "").trim(),
+    email: String(col.Email >= 0 ? _personnelReadCell_(row, col.Email) || "" : "").trim(),
     callsign: callsign,
     template:
       col.TEMPLATE >= 0
@@ -717,11 +734,15 @@ function _personnelRowToRecord_(row, sheetRow, col) {
 
   record.ID = record.id;
   record.FML = record.fml;
+  record.LastName = record.lastName;
+  record.FirstName = record.firstName;
+  record.Patronymic = record.patronymic;
   record.Birthday = record.birthday;
   record.Age = record.age;
   record.Days_until_birthday = record.daysUntilBirthday;
   record.Phone = record.phone;
   record["2_Phone"] = record.phone2;
+  record.Email = record.email;
   record.Callsign = record.callsign;
   record.Title = record.title;
   record.Position = record.position;
@@ -938,6 +959,11 @@ function personnelRecordToPhoneIndexItem_(record) {
     typeof normalizePhone_ === "function"
       ? normalizePhone_(record.phone)
       : String(record.phone || "").trim();
+  var phone2 =
+    typeof normalizePhone_ === "function"
+      ? normalizePhone_(record.phone2)
+      : String(record.phone2 || "").trim();
+  if (!phone && phone2) phone = phone2;
   var callsign = String(record.callsign || "").trim();
   return {
     row: record.sheetRow,
@@ -948,7 +974,8 @@ function personnelRecordToPhoneIndexItem_(record) {
     role: callsign,
     rawPhone: String(record.phone || "").trim(),
     birthday: record.birthday,
-    phone2: record.phone2,
+    phone2: phone2,
+    rawPhone2: String(record.phone2 || "").trim(),
     title: record.title,
     position: record.position,
     oshs: record.oshs,
@@ -957,7 +984,7 @@ function personnelRecordToPhoneIndexItem_(record) {
   };
 }
 
-function buildPhonesIndexFromPersonnel_() {
+function buildPhonesIndexFromPersonnelRecords_(records) {
   var out = {
     byCallsign: {},
     byFml: {},
@@ -969,7 +996,7 @@ function buildPhonesIndexFromPersonnel_() {
     source: "PERSONNEL",
   };
 
-  getPersonnelActiveRows_().forEach(function (record) {
+  (Array.isArray(records) ? records : []).forEach(function (record) {
     var item = personnelRecordToPhoneIndexItem_(record);
     if (!item) return;
     if (!item.fml && !item.phone && !item.callsign) return;
@@ -1000,9 +1027,14 @@ function buildPhonesIndexFromPersonnel_() {
     if (callsignKey) out.byCallsign[callsignKey] = item;
     if (callsignKey) out.byRole[callsignKey] = item;
     if (item.phone) out.byPhone[item.phone] = item;
+    if (item.phone2) out.byPhone[item.phone2] = item;
   });
 
   return out;
+}
+
+function buildPhonesIndexFromPersonnel_() {
+  return buildPhonesIndexFromPersonnelRecords_(getPersonnelActiveRows_());
 }
 
 function isPersonnelSheetAvailable_() {
@@ -1014,11 +1046,97 @@ function isPersonnelSheetAvailable_() {
   }
 }
 
+/**
+ * Strictly read-only PERSONNEL status for system diagnostics.
+ * Unlike the runtime loader, this path never creates the missing Status header.
+ */
+function _personnelReadOnlySnapshot_() {
+  var sh = _personnelGetSheet_(false);
+  if (!sh) {
+    return {
+      available: false,
+      dataRowsAvailable: false,
+      schemaIssueCount: 0,
+      records: [],
+    };
+  }
+
+  var lastColumn = Math.max(Number(sh.getLastColumn()) || 0, 1);
+  var lastRow = Math.max(Number(sh.getLastRow()) || 0, 1);
+  var values = sh.getRange(1, 1, lastRow, lastColumn).getDisplayValues();
+  var col;
+  try {
+    col = _personnelBuildHeaderColIndex_(values[0] || []);
+  } catch (_) {
+    return {
+      available: true,
+      dataRowsAvailable: lastRow >= 2,
+      schemaIssueCount: 1,
+      records: [],
+    };
+  }
+
+  var records = [];
+  values.slice(1).forEach(function (row, index) {
+    var record = _personnelRowToRecord_(row, index + 2, col);
+    if (!record) return;
+    records.push(record);
+  });
+  return {
+    available: true,
+    dataRowsAvailable: lastRow >= 2,
+    schemaIssueCount: 0,
+    records: records,
+  };
+}
+
+function getPersonnelReadOnlyStatus_() {
+  var snapshot = _personnelReadOnlySnapshot_();
+  var activeSeen = Object.create(null);
+  var duplicateActiveCallsigns = 0;
+  snapshot.records.forEach(function (record) {
+    if (!record || !record.active || !record.callsign) return;
+    var key =
+      typeof _normCallsignKey_ === "function"
+        ? _normCallsignKey_(record.callsign)
+        : String(record.callsign || "").trim().toUpperCase();
+    if (!key) return;
+    if (activeSeen[key]) duplicateActiveCallsigns++;
+    else activeSeen[key] = true;
+  });
+
+  return {
+    available: snapshot.available,
+    records: snapshot.records.length,
+    activeRecords: snapshot.records.filter(function (record) {
+      return record.active === true;
+    }).length,
+    schemaIssueCount: snapshot.schemaIssueCount,
+    duplicateActiveCallsigns: duplicateActiveCallsigns,
+  };
+}
+
+function getPersonnelReadOnlyPhonesIndex_() {
+  var snapshot = _personnelReadOnlySnapshot_();
+  if (
+    !snapshot.available ||
+    !snapshot.dataRowsAvailable ||
+    snapshot.schemaIssueCount > 0
+  ) return null;
+  var index = buildPhonesIndexFromPersonnelRecords_(snapshot.records);
+  index.sourceAvailable = true;
+  index.readOnly = true;
+  return index;
+}
+
 function mergePersonnelIntoPersonView_(base, personnel) {
   if (!personnel) return base;
   var out = Object.assign({}, base || {});
   if (personnel.id) out.id = personnel.id;
   if (personnel.fml) out.fml = personnel.fml;
+  if (personnel.lastName) out.lastName = personnel.lastName;
+  if (personnel.firstName) out.firstName = personnel.firstName;
+  if (personnel.patronymic) out.patronymic = personnel.patronymic;
   if (personnel.callsign) out.callsign = personnel.callsign;
   if (personnel.title || personnel.rank) {
     out.rank = personnel.title || personnel.rank;
@@ -1073,9 +1191,12 @@ var PersonnelRepository_ = PersonnelRepository_ || {
   invalidateCache: invalidatePersonnelCache_,
   isAvailable: isPersonnelSheetAvailable_,
   getWarnings: getPersonnelWarnings_,
+  getReadOnlyStatus: getPersonnelReadOnlyStatus_,
+  getReadOnlyPhonesIndex: getPersonnelReadOnlyPhonesIndex_,
   mergeIntoPerson: mergePersonnelIntoPersonView_,
   resolveForLookup: resolvePersonnelForLookup_,
   buildPhonesIndex: buildPhonesIndexFromPersonnel_,
+  buildPhonesIndexFromRecordsForTests: buildPhonesIndexFromPersonnelRecords_,
   normalizeStatus: normalizePersonnelStatus_,
   getStatusCanonical: getPersonnelStatusCanonical_,
   isStatusActive: isPersonnelStatusActive_,

@@ -1,7 +1,7 @@
 /**
  * PersonnelMaterialize.gs — computed PERSONNEL helper columns and derived sheets.
  * Replaces manual ARRAYFORMULA on PERSONNEL (Age, Days_until_birthday).
- * Callsign on PERSONNEL is not materialized; derived sheets (PHONES, BIRTHDAY, months 01–12) use Callsign → Last name via resolvePersonnelDisplayCallsign_.
+ * Callsign on PERSONNEL is not materialized; derived sheets (PHONES, BIRTHDAY, active month) use Callsign → Last name → First name via resolvePersonnelDisplayCallsign_.
  */
 
 var PERSONNEL_MATERIALIZE_MANAGED_ROW_COUNT_ = 31;
@@ -48,10 +48,20 @@ function _personnelMaterializeClearHelperColumnFormulas_(sheet, startRow, endRow
     var formulaRange = _personnelMaterializeRange_(sheet, startRow, endRow, col, col);
     if (!formulaRange) return;
     var formulas = formulaRange.getFormulas();
+    var formulaCount = 0;
     for (var i = 0; i < formulas.length; i++) {
-      var formula = String((formulas[i] && formulas[i][0]) || "").trim();
-      if (formula) {
-        sheet.getRange(startRow + i, col).clearContent();
+      if (String((formulas[i] && formulas[i][0]) || "").trim()) {
+        formulaCount++;
+      }
+    }
+    if (formulaCount === formulas.length && formulaCount > 0) {
+      formulaRange.clearContent();
+      return;
+    }
+    for (var j = 0; j < formulas.length; j++) {
+      var cellFormula = String((formulas[j] && formulas[j][0]) || "").trim();
+      if (cellFormula) {
+        sheet.getRange(startRow + j, col).clearContent();
       }
     }
   } catch (_) {}
@@ -161,7 +171,7 @@ function formatBirthdayCell_(value) {
   var month = String(date.getMonth() + 1).padStart(2, "0");
   var year = date.getFullYear();
 
-  return day + "." + month + "." + year + " р.н.";
+  return day + "." + month + "." + year + " р. н.";
 }
 
 function formatAgeCell_(value) {
@@ -172,7 +182,7 @@ function formatAgeCell_(value) {
   var clean = normalizeAgeText_(value);
   if (!clean) return "";
 
-  return clean + "р.";
+  return clean + " р.";
 }
 
 function formatBirthdayCountdownDisplay_(months, days) {
@@ -183,12 +193,12 @@ function formatBirthdayCountdownDisplay_(months, days) {
     return "Сьогодні";
   }
   if (months === 0) {
-    return days + "д.";
+    return days + " д.";
   }
   if (days === 0) {
-    return months + "м.";
+    return months + " м.";
   }
-  return months + "м. " + days + "д.";
+  return months + " м. " + days + " д.";
 }
 
 function calculateBirthdayCountdownUa_(birthdayValue, todayValue) {
@@ -256,7 +266,11 @@ function _personnelMaterializeEffectiveCallsign_(rawRow, col) {
     col.LastName !== undefined && col.LastName >= 0
       ? String(_personnelReadCell_(rawRow, col.LastName) || "").trim()
       : "";
-  return resolvePersonnelDisplayCallsign_(callsignRaw, lastName);
+  var firstName =
+    col.FirstName !== undefined && col.FirstName >= 0
+      ? String(_personnelReadCell_(rawRow, col.FirstName) || "").trim()
+      : "";
+  return resolvePersonnelDisplayCallsign_(callsignRaw, lastName, firstName);
 }
 
 function getPersonnelMaterializeStartRow_() {
@@ -386,6 +400,26 @@ function _personnelMaterializeBuildSourceRows_(sheet) {
       col["2_Phone"] >= 0
         ? String(_personnelReadCell_(rawRow, col["2_Phone"]) || "").trim()
         : "";
+    var lastName =
+      col.LastName !== undefined && col.LastName >= 0
+        ? String(_personnelReadCell_(rawRow, col.LastName) || "").trim()
+        : "";
+    var firstName =
+      col.FirstName !== undefined && col.FirstName >= 0
+        ? String(_personnelReadCell_(rawRow, col.FirstName) || "").trim()
+        : "";
+    var patronymic =
+      col.Patronymic !== undefined && col.Patronymic >= 0
+        ? String(_personnelReadCell_(rawRow, col.Patronymic) || "").trim()
+        : "";
+    var rank =
+      col.Rank !== undefined && col.Rank >= 0
+        ? String(_personnelReadCell_(rawRow, col.Rank) || "").trim()
+        : "";
+    var title =
+      col.Title !== undefined && col.Title >= 0
+        ? String(_personnelReadCell_(rawRow, col.Title) || "").trim()
+        : "";
 
     rows.push({
       fml: fml,
@@ -397,10 +431,115 @@ function _personnelMaterializeBuildSourceRows_(sheet) {
       birthdayValue: parsedBirthday,
       phone: phone,
       phone2: phone2,
+      lastName: lastName,
+      firstName: firstName,
+      patronymic: patronymic,
+      rank: rank,
+      title: title,
     });
   }
 
   return { rows: rows, col: col, startRow: startRow, endRow: endRow };
+}
+
+function _personnelMaterializeCellKey_(value) {
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return "d:" + value.getTime();
+  }
+  if (typeof value === "boolean") {
+    return value ? "1" : "0";
+  }
+  if (typeof value === "number" && isFinite(value)) {
+    return "n:" + value;
+  }
+  return String(value == null ? "" : value).trim();
+}
+
+function _personnelMaterializeColumnEqual_(current, next) {
+  var left = Array.isArray(current) ? current : [];
+  var right = Array.isArray(next) ? next : [];
+  if (left.length !== right.length) return false;
+  for (var i = 0; i < left.length; i++) {
+    var leftCell = left[i];
+    var rightCell = right[i];
+    var leftValue = Array.isArray(leftCell) ? leftCell[0] : leftCell;
+    var rightValue = Array.isArray(rightCell) ? rightCell[0] : rightCell;
+    if (
+      _personnelMaterializeCellKey_(leftValue) !==
+      _personnelMaterializeCellKey_(rightValue)
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function _personnelMaterializeWriteColumnIfChanged_(
+  sheet,
+  startRow,
+  endRow,
+  colIndex,
+  values,
+) {
+  if (!sheet || colIndex === undefined || colIndex < 0) return 0;
+  var safeValues = Array.isArray(values) ? values : [];
+  var rowCount = safeValues.length;
+  if (!rowCount) return 0;
+
+  var col = colIndex + 1;
+  var writeEndRow = Math.min(
+    Number(endRow) || startRow + rowCount - 1,
+    startRow + rowCount - 1,
+  );
+  var range = _personnelMaterializeRange_(sheet, startRow, writeEndRow, col, col);
+  if (!range) return 0;
+
+  var nextValues = safeValues.slice(0, writeEndRow - startRow + 1).map(function (value) {
+    return [value];
+  });
+  var currentValues = range.getDisplayValues();
+  if (_personnelMaterializeColumnEqual_(currentValues, nextValues)) {
+    return 0;
+  }
+
+  range.setValues(nextValues);
+  return writeEndRow - startRow + 1;
+}
+
+function _personnelMaterializeWriteMatrixIfChanged_(sheet, startRow, values) {
+  var safeValues = Array.isArray(values) ? values : [];
+  if (!safeValues.length) return 0;
+
+  var width = (safeValues[0] || []).length;
+  if (!width) return 0;
+
+  var range = sheet.getRange(startRow, 1, safeValues.length, width);
+  var currentValues = range.getDisplayValues();
+  if (_personnelMaterializeRowsEqualDisplay_(currentValues, safeValues)) {
+    return 0;
+  }
+  range.setValues(safeValues);
+  return safeValues.length;
+}
+
+function _personnelMaterializeRowsEqualDisplay_(left, right) {
+  var a = Array.isArray(left) ? left : [];
+  var b = Array.isArray(right) ? right : [];
+  if (a.length !== b.length) return false;
+  for (var r = 0; r < a.length; r++) {
+    var leftRow = a[r] || [];
+    var rightRow = b[r] || [];
+    if (leftRow.length !== rightRow.length) return false;
+    for (var c = 0; c < leftRow.length; c++) {
+      if (
+        _personnelMaterializeCellKey_(leftRow[c]) !==
+        _personnelMaterializeCellKey_(rightRow[c])
+      ) {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 function _personnelMaterializeWriteColumn_(sheet, startRow, endRow, colIndex, values) {
@@ -413,7 +552,6 @@ function _personnelMaterializeWriteColumn_(sheet, startRow, endRow, colIndex, va
   var writeEndRow = Math.min(Number(endRow) || startRow + rowCount - 1, startRow + rowCount - 1);
   var range = _personnelMaterializeRange_(sheet, startRow, writeEndRow, col, col);
   if (!range) return 0;
-  range.clearContent();
   range.setValues(
     safeValues.slice(0, writeEndRow - startRow + 1).map(function (value) {
       return [value];
@@ -489,7 +627,7 @@ function materializePersonnelHelperColumns_(sheet, builtArg) {
 
   rowsWritten = Math.max(
     rowsWritten,
-    _personnelMaterializeWriteColumn_(
+    _personnelMaterializeWriteColumnIfChanged_(
       sheet,
       startRow,
       endRow,
@@ -507,7 +645,13 @@ function materializePersonnelHelperColumns_(sheet, builtArg) {
   if (col.Age >= 0) {
     rowsWritten = Math.max(
       rowsWritten,
-      _personnelMaterializeWriteColumn_(sheet, startRow, endRow, col.Age, ageValues),
+      _personnelMaterializeWriteColumnIfChanged_(
+        sheet,
+        startRow,
+        endRow,
+        col.Age,
+        ageValues,
+      ),
     );
     _personnelMaterializeClearColumnTail_(
       sheet,
@@ -520,7 +664,7 @@ function materializePersonnelHelperColumns_(sheet, builtArg) {
   if (col.Days_until_birthday >= 0) {
     rowsWritten = Math.max(
       rowsWritten,
-      _personnelMaterializeWriteColumn_(
+      _personnelMaterializeWriteColumnIfChanged_(
         sheet,
         startRow,
         endRow,
@@ -628,11 +772,8 @@ function materializePhonesSheet_(sheet, sourceRows, options) {
       .setValues([expectedHeaders]);
   }
 
-  sheet
-    .getRange(startRow, 1, managedRows, expectedHeaders.length)
-    .clearContent();
   if (rows.length) {
-    sheet.getRange(startRow, 1, rows.length, expectedHeaders.length).setValues(rows);
+    _personnelMaterializeWriteMatrixIfChanged_(sheet, startRow, rows);
   }
 
   return {
@@ -724,11 +865,8 @@ function materializeBirthdayHelperSheet_(sheet, sourceRows, options) {
   var col = _phonesMaterializeHeaderColIndex_(expectedHeaders);
   if (col.Callsign < 0) col = { Callsign: 0, Birthday: 1, Age: 2, Days_until_birthday: 3 };
 
-  sheet
-    .getRange(startRow, 1, managedRows, expectedHeaders.length)
-    .clearContent();
   if (rows.length) {
-    sheet.getRange(startRow, 1, rows.length, expectedHeaders.length).setValues(rows);
+    _personnelMaterializeWriteMatrixIfChanged_(sheet, startRow, rows);
   }
 
   return {
@@ -736,6 +874,293 @@ function materializeBirthdayHelperSheet_(sheet, sourceRows, options) {
     rowsWritten: rows.length,
     sheet: sheet.getName(),
     endRow: endRow,
+  };
+}
+
+
+function _personnelAssignmentSyncNormFml_(value) {
+  if (typeof _normFml_ === "function") return _normFml_(value);
+  return String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function _personnelAssignmentSyncNormPhone_(value) {
+  if (typeof normalizePhone_ === "function") return normalizePhone_(value) || "";
+  var digits = String(value || "").replace(/\D/g, "");
+  return digits ? "+" + digits : "";
+}
+
+function _personnelAssignmentSyncSplitFml_(fml) {
+  var parts = String(fml || "").trim().replace(/\s+/g, " ").split(" ").filter(Boolean);
+  return {
+    lastName: parts[0] || "",
+    firstName: parts[1] || "",
+    patronymic: parts.slice(2).join(" "),
+  };
+}
+
+function _personnelRowsFromBuiltSource_(built) {
+  return (built && built.rows ? built.rows : [])
+    .filter(function (row) {
+      return row && (row.fml || row.callsign);
+    })
+    .map(function (row) {
+      return {
+        fml: row.fml || "",
+        callsign: row.callsign || "",
+        phone: row.phone || "",
+        phone2: row.phone2 || "",
+        lastName: row.lastName || "",
+        firstName: row.firstName || "",
+        patronymic: row.patronymic || "",
+        rank: row.rank || "",
+        title: row.title || "",
+      };
+    });
+}
+
+function _personnelAssignmentSyncRows_(built) {
+  if (built && Array.isArray(built.rows) && built.rows.length) {
+    return _personnelRowsFromBuiltSource_(built);
+  }
+  if (typeof invalidatePersonnelCache_ === "function") {
+    invalidatePersonnelCache_();
+  }
+  if (typeof getPersonnelRows_ !== "function") return [];
+  return getPersonnelRows_() || [];
+}
+
+function _personnelAssignmentSyncNormCallsign_(value) {
+  return String(value || "").trim().replace(/\s+/g, " ").toUpperCase();
+}
+
+function _personnelAssignmentSyncFind_(rows, fml, phone, callsign) {
+  var callsignKey = _personnelAssignmentSyncNormCallsign_(callsign);
+  var fmlKey = _personnelAssignmentSyncNormFml_(fml);
+  var phoneKey = _personnelAssignmentSyncNormPhone_(phone);
+  var list = rows || [];
+
+  if (callsignKey) {
+    for (var c = 0; c < list.length; c += 1) {
+      if (_personnelAssignmentSyncNormCallsign_(list[c] && list[c].callsign) === callsignKey) {
+        return list[c];
+      }
+    }
+  }
+
+  if (fmlKey) {
+    for (var i = 0; i < list.length; i += 1) {
+      if (_personnelAssignmentSyncNormFml_(list[i] && list[i].fml) === fmlKey) {
+        return list[i];
+      }
+    }
+  }
+
+  if (phoneKey) {
+    for (var j = 0; j < list.length; j += 1) {
+      var row = list[j] || {};
+      if (
+        _personnelAssignmentSyncNormPhone_(row.phone) === phoneKey ||
+        _personnelAssignmentSyncNormPhone_(row.phone2) === phoneKey
+      ) {
+        return row;
+      }
+    }
+  }
+
+  return null;
+}
+
+function _personnelAssignmentEnsureColumn_(sheet, col, header, hide) {
+  if (!sheet || !col) return;
+  try {
+    var maxColumns = typeof sheet.getMaxColumns === "function" ? sheet.getMaxColumns() : 0;
+    if (maxColumns < col && typeof sheet.insertColumnsAfter === "function") {
+      sheet.insertColumnsAfter(Math.max(maxColumns, 1), col - maxColumns);
+    }
+  } catch (_) {}
+  try {
+    var headerRange = sheet.getRange(1, col);
+    var currentHeader = String(headerRange.getDisplayValue ? headerRange.getDisplayValue() : "").trim();
+    if (!currentHeader && header) headerRange.setValue(header);
+  } catch (_) {}
+  if (hide && typeof sheet.hideColumns === "function") {
+    try {
+      sheet.hideColumns(col);
+    } catch (_) {}
+  }
+}
+
+function _personnelAssignmentSameRow_(a, b) {
+  var left = a || [];
+  var right = b || [];
+  var len = Math.max(left.length, right.length);
+  for (var i = 0; i < len; i += 1) {
+    if (String(left[i] || "").trim() !== String(right[i] || "").trim()) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function materializeCarOwnersFromPersonnel_(personnelRows) {
+  var ss = getWasbSpreadsheet_();
+  var sheetName =
+    typeof CONFIG !== "undefined" && CONFIG && CONFIG.CAR_SHEET
+      ? CONFIG.CAR_SHEET
+      : "CAR";
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet || sheet.getLastRow() < 2) {
+    return { ok: true, sheet: sheetName, rowsMatched: 0, rowsChanged: 0, helperColumn: "H" };
+  }
+
+  _personnelAssignmentEnsureColumn_(sheet, 8, "Callsign", true);
+
+  var rowCount = sheet.getLastRow() - 1;
+  var range = sheet.getRange(2, 1, rowCount, 8);
+  var values = range.getDisplayValues();
+  var out = [];
+  var rowsMatched = 0;
+  var rowsChanged = 0;
+  var helperFilled = 0;
+
+  for (var i = 0; i < values.length; i += 1) {
+    var row = values[i] || [];
+    var owner = String(row[0] || "").trim();
+    var helperCallsign = String(row[7] || "").trim();
+    var matched = _personnelAssignmentSyncFind_(personnelRows, owner, "", helperCallsign);
+    var next = row.slice(0, 8);
+
+    if (matched) {
+      rowsMatched += 1;
+      next[0] = matched.fml || owner;
+      next[7] = matched.callsign || helperCallsign;
+      if (next[7]) helperFilled += 1;
+    }
+
+    if (!_personnelAssignmentSameRow_(row, next)) rowsChanged += 1;
+    out.push(next);
+  }
+
+  if (rowsChanged > 0) {
+    range.setValues(out);
+  }
+
+  return {
+    ok: true,
+    sheet: sheet.getName(),
+    rowsMatched: rowsMatched,
+    rowsChanged: rowsChanged,
+    helperColumn: "H",
+    helperFilled: helperFilled,
+  };
+}
+
+function materializeWeaponOwnersFromPersonnel_(personnelRows) {
+  var ss = getWasbSpreadsheet_();
+  var sheetName =
+    typeof CONFIG !== "undefined" && CONFIG && CONFIG.WEAPON_SHEET
+      ? CONFIG.WEAPON_SHEET
+      : "WEAPON";
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet || sheet.getLastRow() < 2) {
+    return { ok: true, sheet: sheetName, rowsMatched: 0, rowsChanged: 0, helperColumn: "AA" };
+  }
+
+  _personnelAssignmentEnsureColumn_(sheet, 27, "Callsign", true);
+
+  var rowCount = sheet.getLastRow() - 1;
+  var identityRange = sheet.getRange(2, 1, rowCount, 5);
+  var identityValues = identityRange.getDisplayValues();
+  var callsignRange = sheet.getRange(2, 27, rowCount, 1);
+  var callsignValues = callsignRange.getDisplayValues();
+  var identityOut = [];
+  var callsignOut = [];
+  var identityChanged = 0;
+  var callsignChanged = 0;
+  var rowsMatched = 0;
+  var helperFilled = 0;
+
+  for (var i = 0; i < identityValues.length; i += 1) {
+    var row = identityValues[i] || [];
+    var rawFml = [row[0], row[1], row[2]]
+      .map(function (part) {
+        return String(part || "").trim();
+      })
+      .filter(Boolean)
+      .join(" ");
+    var helperCallsign = String((callsignValues[i] && callsignValues[i][0]) || "").trim();
+    var matched = _personnelAssignmentSyncFind_(personnelRows, rawFml, row[4], helperCallsign);
+    var nextIdentity = [
+      String(row[0] || "").trim(),
+      String(row[1] || "").trim(),
+      String(row[2] || "").trim(),
+      String(row[3] || "").trim(),
+      String(row[4] || "").trim(),
+    ];
+    var nextCallsign = helperCallsign;
+
+    if (matched) {
+      rowsMatched += 1;
+      var parts = _personnelAssignmentSyncSplitFml_(matched.fml || rawFml);
+      nextIdentity = [
+        matched.lastName || parts.lastName,
+        matched.firstName || parts.firstName,
+        matched.patronymic || parts.patronymic,
+        matched.rank || matched.title || "",
+        matched.phone || "",
+      ];
+      nextCallsign = matched.callsign || helperCallsign;
+      if (nextCallsign) helperFilled += 1;
+    }
+
+    if (!_personnelAssignmentSameRow_(row, nextIdentity)) identityChanged += 1;
+    if (String(nextCallsign || "").trim() !== helperCallsign) callsignChanged += 1;
+    identityOut.push(nextIdentity);
+    callsignOut.push([nextCallsign]);
+  }
+
+  if (identityChanged > 0) {
+    identityRange.setValues(identityOut);
+  }
+  if (callsignChanged > 0) {
+    callsignRange.setValues(callsignOut);
+  }
+
+  return {
+    ok: true,
+    sheet: sheet.getName(),
+    rowsMatched: rowsMatched,
+    rowsChanged: identityChanged,
+    helperColumn: "AA",
+    helperChanged: callsignChanged,
+    helperFilled: helperFilled,
+  };
+}
+
+function materializeAssignmentIdentitySheetsFromPersonnel_(built) {
+  var rows = _personnelAssignmentSyncRows_(built);
+  var car = null;
+  var weapon = null;
+  try {
+    car = materializeCarOwnersFromPersonnel_(rows);
+  } catch (carErr) {
+    car = {
+      ok: false,
+      error: carErr && carErr.message ? carErr.message : String(carErr),
+    };
+  }
+  try {
+    weapon = materializeWeaponOwnersFromPersonnel_(rows);
+  } catch (weaponErr) {
+    weapon = {
+      ok: false,
+      error: weaponErr && weaponErr.message ? weaponErr.message : String(weaponErr),
+    };
+  }
+  return {
+    ok: !!(car && car.ok !== false && weapon && weapon.ok !== false),
+    car: car,
+    weapon: weapon,
   };
 }
 
@@ -772,16 +1197,14 @@ function materializePersonnelDerivedSheets_(options) {
   var phonesResult = materializePhonesSheet_(null, built.rows, options || {});
   var birthdayResult = materializeBirthdayHelperSheet_(null, built.rows, options || {});
 
-  if (typeof invalidatePersonnelCache_ === "function") {
-    invalidatePersonnelCache_();
-  }
-
   var monthlySync = null;
   try {
-    if (typeof syncAllMonthlyCallsignsFromPersonnel_ === "function") {
-      monthlySync = syncAllMonthlyCallsignsFromPersonnel_();
+    if (typeof syncMonthlyCallsignsForPersonnelUpdate_ === "function") {
+      monthlySync = syncMonthlyCallsignsForPersonnelUpdate_(options || {});
     } else if (typeof syncActiveMonthlyCallsignsFromPersonnel_ === "function") {
       monthlySync = syncActiveMonthlyCallsignsFromPersonnel_();
+    } else if (typeof syncMonthlyCallsignsFromPersonnel_ === "function") {
+      monthlySync = syncMonthlyCallsignsFromPersonnel_();
     } else {
       monthlySync = {
         ok: false,
@@ -796,6 +1219,20 @@ function materializePersonnelDerivedSheets_(options) {
     };
   }
 
+  var equipmentAssignments = null;
+  try {
+    equipmentAssignments = materializeAssignmentIdentitySheetsFromPersonnel_(built);
+  } catch (equipmentErr) {
+    equipmentAssignments = {
+      ok: false,
+      error: equipmentErr && equipmentErr.message ? equipmentErr.message : String(equipmentErr),
+    };
+  }
+
+  if (typeof invalidatePersonnelCache_ === "function") {
+    invalidatePersonnelCache_();
+  }
+
   return {
     ok: !!(personnelResult && personnelResult.ok),
     source: options && options.source ? String(options.source) : "",
@@ -804,5 +1241,6 @@ function materializePersonnelDerivedSheets_(options) {
     birthday: birthdayResult,
     rowsWritten: built.rows.length,
     monthlyCallsigns: monthlySync,
+    assignmentIdentity: equipmentAssignments,
   };
 }

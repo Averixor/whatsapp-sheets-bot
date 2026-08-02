@@ -640,7 +640,45 @@ for (const file of contract.monthlyScheduleCopyPaths || []) {
     /\.clearFormats?\(\)|\.setConditionalFormatRules\(/,
     `${file} must not erase monthly formatting after copy`,
   );
+  assert.match(
+    source,
+    /replaceConditionalFormatRulesFromSheet_\(\s*src,\s*newSheet,?\s*\)/,
+    `${file} must restore CF from the source month after create/sync`,
+  );
+  assert.doesNotMatch(
+    source,
+    /CopyPasteType\.PASTE_CONDITIONAL_FORMATTING/,
+    `${file} must not use PASTE_CONDITIONAL_FORMATTING (destroys sheet CF rules)`,
+  );
 }
+
+assert.match(
+  governanceSource,
+  /function replaceConditionalFormatRulesFromSheet_/,
+  "governance must expose exact CF replace helper for month create restore",
+);
+assert.match(
+  governanceSource,
+  /function _formatRulesMapRangeBetweenMonthlySheets_/,
+  "governance must remap monthly CF ranges onto the target schedule grid",
+);
+assert.match(
+  governanceSource,
+  /function extendConditionalFormatRulesThroughRow_/,
+  "governance must expose CF range extend helper for capacity growth",
+);
+
+const monthlyCallsignSync = read("MonthlyCallsignSync.gs");
+assert.doesNotMatch(
+  monthlyCallsignSync,
+  /CopyPasteType\.PASTE_CONDITIONAL_FORMATTING/,
+  "monthly callsign capacity growth must not paste conditional formatting",
+);
+assert.match(
+  monthlyCallsignSync,
+  /extendConditionalFormatRulesThroughRow_/,
+  "monthly callsign capacity growth must extend CF rule ranges safely",
+);
 
 for (const [api, role] of Object.entries(contract.apis)) {
   const source = governanceSource.includes(`function ${api}`)

@@ -411,11 +411,16 @@ function apiStage7ClearPhoneCache() {
   return Stage7UseCases_.runMaintenanceScenario({ type: "clearPhoneCache" });
 }
 
-function apiStage7MaterializeComputedData() {
+function apiStage7MaterializeComputedData(payload) {
   _stage7AssertRole_("maintainer", "materialize computed data");
+  var opts = payload && typeof payload === "object" ? payload : {};
   return Stage7UseCases_.runMaintenanceScenario({
     type: "materializeComputedData",
     source: "api",
+    monthlySyncMode: opts.monthlySyncMode,
+    monthSheet: opts.monthSheet,
+    includeHistory: opts.includeHistory,
+    mode: opts.mode,
   });
 }
 
@@ -429,13 +434,13 @@ function apiStage7MaterializeMonthJournal(payload) {
   if (!monthSheet) {
     return _stage7BuildMaintenanceResponse_(
       false,
-      "Відкрийте місячний аркуш 01–12",
+      "Немає активного місячного аркуша 01–12",
       {
         ok: false,
         reason: "not_month_sheet",
       },
       "stage7MaterializeMonthJournal",
-      ["Відкрийте місячний аркуш 01–12"],
+      ["Немає активного місячного аркуша 01–12"],
     );
   }
 
@@ -448,28 +453,31 @@ function apiStage7MaterializeMonthJournal(payload) {
           message: "materializeMonthJournalBundle_ недоступна",
         };
 
-  var ok = !!(result && result.ok !== false);
+  // Never ship in-memory journalRows / nested journal dumps to HtmlService.
+  var report =
+    typeof slimMonthJournalBundleResult_ === "function"
+      ? slimMonthJournalBundleResult_(result)
+      : result || {};
+
+  var ok = !!(report && report.ok !== false);
   var names =
     typeof monthJournalDerivedSheetNames_ === "function"
       ? monthJournalDerivedSheetNames_(monthSheet)
-      : { journal: "", summary: "" };
+      : { journal: "JOURNAL", summary: "SUMMARY" };
 
   return _stage7BuildMaintenanceResponse_(
     ok,
     ok
-      ? "Журнал місяця оновлено: " +
-        String(names.journal || "") +
-        ", " +
-        String(names.summary || "")
-      : result && result.message
-        ? result.message
+      ? "Журнал активного місяця оновлено (" + String(monthSheet) + ")"
+      : report && report.message
+        ? report.message
         : "Не вдалося оновити журнал місяця",
-    result || {},
+    report,
     "stage7MaterializeMonthJournal",
     ok
       ? []
       : [
-          (result && result.message) ||
+          (report && report.message) ||
             "Не вдалося оновити журнал місяця",
         ],
     {
@@ -477,6 +485,218 @@ function apiStage7MaterializeMonthJournal(payload) {
         ? [names.journal, names.summary, monthSheet].filter(Boolean)
         : [monthSheet],
       monthSheet: monthSheet,
+    },
+  );
+}
+
+/**
+ * Sidebar / client: one-time setup or migration of the temporary property register.
+ * GAS-editor alias remains apiSetupTemporaryPropertyRegister (excluded from client).
+ */
+function apiStage7SetupTemporaryPropertyRegister() {
+  _stage7AssertRole_("admin", "setup temporary property register");
+
+  var result =
+    typeof TemporaryPropertyRegister_ === "object" &&
+    TemporaryPropertyRegister_ &&
+    typeof TemporaryPropertyRegister_.setup === "function"
+      ? TemporaryPropertyRegister_.setup({ migrateLegacy: true })
+      : {
+          success: false,
+          message: "TemporaryPropertyRegister_ недоступний",
+        };
+
+  var ok = !!(result && result.success !== false);
+  var migrated = Number(result && result.migratedRows) || 0;
+  var backup = String((result && result.backupSheet) || "").trim();
+  var message = ok
+    ? migrated > 0
+      ? "Облік майна налаштовано (перенесено рядків: " +
+        migrated +
+        (backup ? "; резерв: " + backup : "") +
+        ")"
+      : "Облік майна налаштовано"
+    : (result && result.message) || "Не вдалося налаштувати облік майна";
+
+  return _stage7BuildMaintenanceResponse_(
+    ok,
+    message,
+    result || {},
+    "stage7SetupTemporaryPropertyRegister",
+    ok ? [] : [message],
+    {
+      dryRun: false,
+      affectedSheets: ok
+        ? [result.sheet, result.catalogSheet, result.kitsSheet].filter(Boolean)
+        : [],
+      appliedChangesCount: ok ? 1 : 0,
+    },
+  );
+}
+
+/**
+ * Sidebar / client: re-apply temporary property validations and formatting (no migration).
+ * GAS-editor alias remains apiRefreshTemporaryPropertyRegister (excluded from client).
+ */
+function apiStage7RefreshTemporaryPropertyRegister() {
+  _stage7AssertRole_("maintainer", "refresh temporary property register");
+
+  var result =
+    typeof TemporaryPropertyRegister_ === "object" &&
+    TemporaryPropertyRegister_ &&
+    typeof TemporaryPropertyRegister_.setup === "function"
+      ? TemporaryPropertyRegister_.setup({ migrateLegacy: false })
+      : {
+          success: false,
+          message: "TemporaryPropertyRegister_ недоступний",
+        };
+
+  var ok = !!(result && result.success !== false);
+  var message = ok
+    ? "Облік майна оновлено"
+    : (result && result.message) || "Не вдалося оновити облік майна";
+
+  return _stage7BuildMaintenanceResponse_(
+    ok,
+    message,
+    result || {},
+    "stage7RefreshTemporaryPropertyRegister",
+    ok ? [] : [message],
+    {
+      dryRun: false,
+      affectedSheets: ok
+        ? [result.sheet, result.catalogSheet, result.kitsSheet].filter(Boolean)
+        : [],
+      appliedChangesCount: ok ? 1 : 0,
+    },
+  );
+}
+
+/**
+ * Maintenance / first-run bootstrap: fill JOURNAL + SUMMARY from every
+ * existing month sheet 01–12. Chunked — pass payload.nextCursor (or cursor)
+ * from the previous response until done=true.
+ * Not wired to the sidebar (uiAllowed: false); intended for GAS editor.
+ * Public api* + maintainer — could be called via google.script.run if wired
+ * manually. Continuation fields are inside the Stage7 envelope:
+ * response.data.result.{done,nextCursor,batchMonths,cursor} — not top-level.
+ * Regular "Оновити журнал місяця" refreshes only the active month slice.
+ *
+ * @param {Object=} payload
+ * @param {number=} payload.cursor start index (default 0)
+ * @param {number=} payload.nextCursor alias for cursor (continuation)
+ * @param {number=} payload.monthsPerCall months per GAS call (default 3)
+ */
+function apiStage7MaterializeAllMonthJournals(payload) {
+  _stage7AssertRole_("maintainer", "materialize all month journals");
+
+  var opts = payload && typeof payload === "object" ? payload : {};
+  var cursorRaw =
+    opts.nextCursor != null && opts.nextCursor !== ""
+      ? opts.nextCursor
+      : opts.cursor;
+  var callOpts = {
+    cursor: cursorRaw != null && cursorRaw !== "" ? Number(cursorRaw) : 0,
+    monthsPerCall:
+      opts.monthsPerCall != null && opts.monthsPerCall !== ""
+        ? Number(opts.monthsPerCall)
+        : undefined,
+  };
+
+  var result =
+    typeof materializeAllExistingMonthJournals_ === "function"
+      ? materializeAllExistingMonthJournals_(callOpts)
+      : {
+          ok: false,
+          done: true,
+          reason: "materialize_all_unavailable",
+          message: "materializeAllExistingMonthJournals_ недоступна",
+          monthCount: 0,
+          failedCount: 0,
+          affectedSheets: [],
+        };
+
+  var ok = !!(result && result.ok !== false);
+  var done = !!(result && result.done);
+  var monthCount = Number(result && result.monthCount) || 0;
+  var failedCount = Number(result && result.failedCount) || 0;
+  var processedCount = Number(result && result.processedCount) || 0;
+  var batchMonths = Array.isArray(result && result.batchMonths)
+    ? result.batchMonths
+    : [];
+  var nextCursor =
+    result && result.nextCursor != null ? result.nextCursor : null;
+
+  var message;
+  if (!ok) {
+    message =
+      failedCount > 0
+        ? "Частина зрізів журналу не оновилась (" +
+          failedCount +
+          " у батчі; cursor=" +
+          String(result.cursor) +
+          ")"
+        : (result && result.message) ||
+          "Не вдалося оновити журнал / підсумок";
+  } else if (monthCount === 0) {
+    message = "Немає місячних аркушів 01–12 для оновлення";
+  } else if (done) {
+    message =
+      "Журнал і підсумок: bootstrap завершено (" + monthCount + " міс.)";
+  } else {
+    message =
+      "Журнал і підсумок: батч " +
+      batchMonths.join(",") +
+      " (" +
+      processedCount +
+      "); повторіть з nextCursor=" +
+      String(nextCursor);
+  }
+
+  // Slim per-month results only — drop any accidental nested row dumps.
+  var slimResults = Array.isArray(result && result.results)
+    ? result.results.map(function (item) {
+        return typeof slimMonthJournalBundleResult_ === "function"
+          ? slimMonthJournalBundleResult_(item)
+          : item;
+      })
+    : [];
+
+  var report = {
+    ok: ok,
+    done: done,
+    cursor: Number(result && result.cursor) || 0,
+    nextCursor: nextCursor,
+    monthsPerCall: Number(result && result.monthsPerCall) || 0,
+    months: Array.isArray(result && result.months) ? result.months : [],
+    batchMonths: batchMonths,
+    monthCount: monthCount,
+    processedCount: processedCount,
+    failedCount: failedCount,
+    journalRowsWritten: Number(result && result.journalRowsWritten) || 0,
+    summaryRowsWritten: Number(result && result.summaryRowsWritten) || 0,
+    journalSheet: (result && result.journalSheet) || "JOURNAL",
+    summarySheet: (result && result.summarySheet) || "SUMMARY",
+    results: slimResults,
+    affectedSheets: Array.isArray(result && result.affectedSheets)
+      ? result.affectedSheets
+      : [],
+    reason: (result && result.reason) || "",
+    message: (result && result.message) || message,
+  };
+
+  return _stage7BuildMaintenanceResponse_(
+    ok,
+    message,
+    report,
+    "stage7MaterializeAllMonthJournals",
+    ok ? [] : [message],
+    {
+      affectedSheets: report.affectedSheets,
+      monthCount: monthCount,
+      failedCount: failedCount,
+      done: done,
+      nextCursor: nextCursor,
     },
   );
 }
@@ -806,7 +1026,7 @@ function _invokeProjectTestChunk_(options) {
     return runProjectTestChunk(options || {});
   }
   throw new Error(
-    "Модуль тестів проєкту недоступний. Виконайте clasp push (tests/Stage7TestRunner*.gs має бути в deploy).",
+    "Модуль тестів проєкту недоступний (Stage7TestRunner). Зробіть clasp push з актуального репозиторію — tests/Stage7TestRunner*.gs входять у deploy.",
   );
 }
 
@@ -1061,6 +1281,33 @@ function apiStage7LoginByAccessKey(accessKeyOrPayload) {
   );
 }
 
+function apiStage7ResumeBrowserSession(payload) {
+  const result =
+    typeof AccessControl_ === "object" && AccessControl_.resumeBrowserSession
+      ? AccessControl_.resumeBrowserSession(payload || {})
+      : {
+          success: false,
+          ok: false,
+          message: "AccessControl_ недоступний",
+          code: "access.session.unavailable",
+        };
+  const success = result && result.success !== false;
+  const message =
+    result && result.message
+      ? result.message
+      : success
+        ? "Сесію відновлено"
+        : "Не вдалося відновити сесію";
+  return _stage7BuildMaintenanceResponse_(
+    success,
+    message,
+    result || {},
+    "stage7ResumeBrowserSession",
+    success ? [] : [message],
+    { affectedSheets: [appGetCore("ACCESS_SHEET", "ACCESS")] },
+  );
+}
+
 function apiStage7RegisterAccessWithTemporaryPassword(payload) {
   const result =
     typeof AccessControl_ === "object" &&
@@ -1137,14 +1384,83 @@ function apiStage7ReissueAccessTemporaryPassword(payload) {
   );
 }
 
+function _stage7RedactAccessReissueLogMetadata_(response) {
+  const result =
+    response && response.data && response.data.result
+      ? response.data.result
+      : response && typeof response === "object"
+        ? response
+        : {};
+  const rawColumns = Array.isArray(result.updatedColumns)
+    ? result.updatedColumns
+    : Array.isArray(result.changedColumns)
+      ? result.changedColumns
+      : [];
+  const changedColumns = [];
+  let redactedSensitiveColumns = 0;
+
+  rawColumns.forEach(function (column) {
+    const value = String(column || "").trim();
+    if (!value) return;
+    if (/password|token|hash|salt|plain/i.test(value)) {
+      redactedSensitiveColumns++;
+      return;
+    }
+    if (changedColumns.indexOf(value) === -1) changedColumns.push(value);
+  });
+  if (redactedSensitiveColumns) {
+    changedColumns.push("[redacted-sensitive-access-columns]");
+  }
+
+  return {
+    success: !!(response && response.success),
+    rowNumber: result.matchedRowNumber || result.accessSheetRow || "",
+    role: result.role || result.matchedRole || "",
+    changedColumns: changedColumns,
+  };
+}
+
 function apiStage7ReissueOwnerTemporaryPasswordManual() {
+  const props = PropertiesService.getScriptProperties();
+  const ownerEmail = String(props.getProperty("WASB_OWNER_EMAIL") || "").trim();
+  const ownerLogin = String(props.getProperty("WASB_OWNER_LOGIN") || "").trim();
+  const missing = [];
+  if (!ownerEmail) missing.push("WASB_OWNER_EMAIL");
+  if (!ownerLogin) missing.push("WASB_OWNER_LOGIN");
+
+  if (missing.length) {
+    const message =
+      "Для manual перевипуску owner temporary password задайте Script Properties: " +
+      missing.join(", ") +
+      ".";
+    return _stage7BuildMaintenanceResponse_(
+      false,
+      message,
+      {
+        ok: false,
+        success: false,
+        code: "access.reissue.owner_config_missing",
+        missingScriptProperties: missing,
+      },
+      "stage7ReissueOwnerTemporaryPasswordManual",
+      [message],
+      { affectedSheets: [appGetCore("ACCESS_SHEET", "ACCESS")] },
+    );
+  }
+
   const result = apiStage7ReissueAccessTemporaryPassword({
-    email: "ryabinin.sergei.alekseevich@gmail.com",
-    login: "ШАХТАР",
+    email: ownerEmail,
+    login: ownerLogin,
     expectedRole: "owner",
   });
-  const payload = JSON.stringify(result, null, 2);
-  console.log(payload);
-  Logger.log(payload);
+  const metadata = _stage7RedactAccessReissueLogMetadata_(result);
+  console.log(
+    "[ACCESS] Owner temporary password manual reissue: " +
+      JSON.stringify(metadata),
+  );
+  Logger.log(
+    "[ACCESS] Owner temporary password manual reissue: " +
+      JSON.stringify(metadata),
+  );
   return result;
 }

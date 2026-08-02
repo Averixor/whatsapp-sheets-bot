@@ -1,0 +1,387 @@
+<script>
+  // Js.Vacations.Render.Problems — problem cards, suggestions, bulk-fix preview.
+
+  function buildVacationProblemSuggestions_(problem) {
+    var type = normalizeVacationRuleType_(
+      String((problem && (problem.type || problem.rule)) || "").trim(),
+    );
+    if (type === "INVALID_DATE") {
+      return [
+        "Перевірити дату початку та дату завершення у джерелі плану відпусток.",
+        "Перезаписати відпустку через модуль 🏖️ Відпустки, щоб формули перерахували дату.",
+      ];
+    }
+    if (type === "INVALID_DURATION") {
+      return [
+        "Зменшити або виправити кількість днів відпустки.",
+        "Перевірити travel-дні: вони не повинні ламати основну тривалість.",
+      ];
+    }
+    if (type === "MAX_PERSON_YEAR") {
+      return [
+        "Скасувати або перенести одну з відпусток цієї людини на інший рік.",
+        "Перевірити, чи не дублюється запис у джерелі плану відпусток.",
+      ];
+    }
+    if (type === "MIN_PERSON_YEAR") {
+      return [
+        "Додати першу відпустку для цієї людини у плані відпусток.",
+        "Скористатися підбором дат, щоб знайти безпечний період без нових конфліктів.",
+      ];
+    }
+    if (type === "PERSON_OVERLAP") {
+      return [
+        "Перенести одну з відпусток цієї людини.",
+        "Якщо це дублікат — скасувати зайвий запис.",
+      ];
+    }
+    if (type === "PERSON_GAP") {
+      return [
+        "Збільшити інтервал між відпустками цієї людини.",
+        "Скористатися підбором дат для найближчого допустимого варіанту.",
+      ];
+    }
+    if (type === "START_GAP") {
+      return [
+        "Рознести дати старту між цими людьми.",
+        "Перенести одну відпустку на декілька днів раніше або пізніше.",
+      ];
+    }
+    if (type === "MAX_CONCURRENT") {
+      return [
+        "Перенести одну з відпусток з цього періоду.",
+        "Вибрати людину з найменш критичним графіком і підібрати нову дату.",
+        "Скористатися вкладкою «Підібрати» для проблемного військовослужбовця.",
+      ];
+    }
+    if (type === "HIGH_LOAD_PERIOD" || type === "MONTH_BALANCE") {
+      return [
+        "Перевірити навантаження підрозділу у вибраному періоді.",
+        "За потреби підібрати менш завантажену дату.",
+      ];
+    }
+    if (type === "PERSONNEL_VACATION_WITHOUT_PLAN") {
+      return [
+        "Перевірити поточний статус людини в особовому складі.",
+        "Якщо людина у відпустці — додати або виправити відповідний запис у плані відпусток.",
+      ];
+    }
+    if (type === "MONTHLY_VACATION_WITHOUT_PLAN") {
+      return [
+        "Перевірити код «Відпус» у місячному графіку.",
+        "Якщо відпустка фактична — додати або виправити відповідний запис у плані відпусток.",
+      ];
+    }
+    if (type === "PLAN_WITHOUT_MONTHLY_VACATION") {
+      return [
+        "Перевірити дати активної відпустки у плані відпусток.",
+        "Якщо план уже застосований — встановити код «Відпус» у місячному графіку.",
+      ];
+    }
+    if (type === "RIGHT_PANEL_LEGACY_DATA") {
+      return [
+        "Знайдено записи у K:Q. Натисніть, щоб перенести їх в основне джерело A:I.",
+      ];
+    }
+    return [
+      "Перевірити запис у джерелі плану відпусток.",
+      "Спробувати перенести відпустку через модуль 🏖️ Відпустки.",
+    ];
+  }
+
+  function renderVacationFixSuggestions_(problem) {
+    var suggestions = Array.isArray(problem && problem.fixSuggestions)
+      ? problem.fixSuggestions
+      : [];
+    if (!suggestions.length) {
+      return buildVacationProblemSuggestions_(problem)
+        .map(function (text) {
+          return "<li>" + escapeHtml(text) + "</li>";
+        })
+        .join("");
+    }
+    return suggestions
+      .map(function (item, suggestionIndex) {
+        var effectHtml = (item.effect || [])
+          .map(function (effect) {
+            return "<li>" + escapeHtml(effect) + "</li>";
+          })
+          .join("");
+        var risksHtml = (item.risks || [])
+          .map(function (risk) {
+            return "<li>" + escapeHtml(risk) + "</li>";
+          })
+          .join("");
+        var applyAction = item.canAutoApply
+          ? '<div class="result-screen-actions">' +
+            '<button class="btn btn-secondary vacations-btn-sm" type="button" onclick="VacationModule.applyFixSuggestion(' +
+            Number((problem && problem.__index) != null ? problem.__index : 0) +
+            ", " +
+            Number(suggestionIndex) +
+            ')">Застосувати</button>' +
+            "</div>"
+          : item.autoApplyReason
+            ? '<div class="vacations-muted">' +
+              escapeHtml(item.autoApplyReason) +
+              "</div>"
+            : "";
+        return (
+          '<li class="vacation-fix-suggestion">' +
+          "<strong>" +
+          escapeHtml(item.title || item.personName || "Пропозиція") +
+          "</strong>" +
+          '<div class="vacations-muted">Було: ' +
+          escapeHtml((item.oldStart || "—") + " – " + (item.oldEnd || "—")) +
+          "</div>" +
+          '<div class="vacations-muted">Стало: ' +
+          escapeHtml((item.newStart || "—") + " – " + (item.newEnd || "—")) +
+          "</div>" +
+          (effectHtml
+            ? '<div class="vacation-problem-card__subtitle">Ефект:</div><ul>' +
+              effectHtml +
+              "</ul>"
+            : "") +
+          (risksHtml
+            ? '<div class="vacation-problem-card__subtitle">Ризик:</div><ul>' +
+              risksHtml +
+              "</ul>"
+            : "") +
+          applyAction +
+          "</li>"
+        );
+      })
+      .join("");
+  }
+
+  function renderVacationBulkPlanPreview_(plan) {
+    if (!plan || !plan.success) {
+      return '<div class="vacations-empty">План не побудовано.</div>';
+    }
+    var moves = Array.isArray(plan.moves) ? plan.moves : [];
+    var remaining = Array.isArray(plan.remainingProblems)
+      ? plan.remainingProblems
+      : [];
+    var html =
+      '<div class="vacations-card vacations-bulk-plan">' +
+      '<div class="vacations-card__head"><strong>Попередній перегляд пакетного рішення</strong></div>' +
+      '<div class="vacation-problem-card__person">Знайдено проблем: ' +
+      escapeHtml(plan.totalProblems || 0) +
+      "</div>" +
+      '<div class="vacations-muted">Може бути вирішено: ' +
+      escapeHtml(plan.resolvedProblems || 0) +
+      "</div>" +
+      '<div class="vacations-muted">Залишиться: ' +
+      escapeHtml(plan.unresolvedProblems || 0) +
+      "</div>";
+    if (Array.isArray(plan.warnings) && plan.warnings.length) {
+      html +=
+        '<div class="vacations-problem-summary-warning">' +
+        escapeHtml(plan.warnings.join(" ")) +
+        "</div>";
+    }
+    if (!moves.length) {
+      html +=
+        '<div class="vacations-muted vacations-problem-summary-line">Автоматичних перенесень не знайдено.</div>';
+    } else {
+      html += '<ul class="vacations-bulk-plan__moves">';
+      moves.forEach(function (move) {
+        html +=
+          "<li><strong>" +
+          escapeHtml(move.fml || "—") +
+          "</strong> (" +
+          escapeHtml(move.type || "—") +
+          ")<br>" +
+          escapeHtml(move.oldStart || move.oldStartIso || "—") +
+          " → " +
+          escapeHtml(move.newStart || move.newStartIso || "—") +
+          "<br><span class=\"vacations-muted\">Виправляє: " +
+          escapeHtml((move.fixes || []).join(", ") || "—") +
+          "</span>";
+        if (move.risks && move.risks.length) {
+          html +=
+            '<br><span class="vacations-muted">Ризики: ' +
+            escapeHtml(move.risks.join("; ")) +
+            "</span>";
+        }
+        html += "</li>";
+      });
+      html += "</ul>";
+    }
+    if (remaining.length) {
+      html +=
+        '<div class="vacation-problem-card__subtitle">Не вдалося автоматично:</div><ul class="vacations-problem-summary-list">';
+      remaining.slice(0, 8).forEach(function (item) {
+        html +=
+          "<li>" +
+          escapeHtml(item.type || "—") +
+          ": " +
+          escapeHtml(item.fml || "—") +
+          " — " +
+          escapeHtml(item.description || "") +
+          "</li>";
+      });
+      html += "</ul>";
+    }
+    html += "</div>";
+    return html;
+  }
+
+  function renderVacationProblemsSummary_(checks, plan) {
+    var list = Array.isArray(checks) ? checks : [];
+    var errors = 0;
+    var warnings = 0;
+    list.forEach(function (item) {
+      var severity = String((item && item.severity) || "ERROR").toUpperCase();
+      if (severity === "WARNING" || severity === "WARN") warnings++;
+      else errors++;
+    });
+    var html =
+      '<div class="vacations-card vacations-problems-summary">' +
+      '<div class="vacations-card__head"><strong>Підсумок проблем</strong></div>' +
+      '<div class="vacation-problem-card__person">Знайдено: ' +
+      escapeHtml(list.length) +
+      "</div>" +
+      '<div class="vacations-muted">Критичних: ' +
+      escapeHtml(errors) +
+      "</div>" +
+      '<div class="vacations-muted">Попереджень: ' +
+      escapeHtml(warnings) +
+      "</div>";
+    if (plan && plan.success) {
+      html +=
+        '<div class="vacations-muted vacations-problem-summary-line">У плані перенесень: ' +
+        escapeHtml((plan.moves || []).length) +
+        ", вирішується проблем: " +
+        escapeHtml(plan.resolvedProblems || 0) +
+        "</div>";
+    }
+    html += "</div>";
+    return html;
+  }
+
+  function renderVacationProblems_(checks) {
+    var list = Array.isArray(checks) ? checks : [];
+    if (!list.length) {
+      return '<div class="vacations-card vacations-empty">Проблемних питань не знайдено.</div>';
+    }
+    return list
+      .map(function (item, index) {
+        var type = normalizeVacationRuleType_(
+          String((item && (item.type || item.rule)) || "").trim(),
+        );
+        var label = humanVacationRuleLabel_(type);
+        var problem = Object.assign({}, item, { __index: index });
+        var suggestions = renderVacationFixSuggestions_(problem);
+        var canFindNewDate =
+          ["PERSON_GAP", "START_GAP", "MAX_CONCURRENT"].indexOf(type) !== -1 &&
+          !(Array.isArray(item.fixSuggestions) && item.fixSuggestions.length);
+        var findAction = canFindNewDate
+          ? '<div class="result-screen-actions">' +
+            '<button class="btn btn-secondary vacations-btn-sm" type="button" onclick="VacationModule.openFindFromProblem(' +
+            Number(index) +
+            ')">Підібрати нову дату</button>' +
+            "</div>"
+          : "";
+        var migrationAction =
+          type === "RIGHT_PANEL_LEGACY_DATA"
+            ? '<div class="vacations-muted">Знайдено записи у K:Q. Натисніть, щоб перенести їх в основне джерело A:I.</div>' +
+              '<div class="result-screen-actions">' +
+              '<button class="btn btn-primary vacations-btn-sm" type="button" onclick="VacationModule.applyRightPanelMigration()">Міграція K:Q → A:I</button>' +
+              "</div>"
+            : "";
+        var monthLabel =
+          type === "MONTH_BALANCE" &&
+          String(item.date || "").match(/^\d{4}-\d{1,2}$/)
+            ? '<div class="vacations-muted">Місяць: ' +
+              escapeHtml(formatMonthLabelUa_(item.date)) +
+              "</div>"
+            : "";
+        return (
+          '<div class="vacations-card vacation-problem-card">' +
+          '<div class="vacations-card__head vacation-card-header">' +
+          '<strong class="vacations-card__title vacation-card-title">' +
+          escapeHtml(label) +
+          '</strong><span class="vacations-badge vacation-card-badge">' +
+          escapeHtml((item && item.severity) || "ERROR") +
+          "</span></div>" +
+          '<div class="vacation-problem-card__person">' +
+          escapeHtml((item && item.fml) || "—") +
+          "</div>" +
+          monthLabel +
+          '<div class="vacations-muted">Дата: ' +
+          escapeHtml(formatDateUa((item && item.date) || "—")) +
+          "</div>" +
+          '<div class="vacation-problem-card__description">' +
+          escapeHtml((item && (item.description || item.details)) || "") +
+          "</div>" +
+          '<div class="vacation-problem-card__subtitle">Варіанти вирішення:</div>' +
+          "<ul>" +
+          suggestions +
+          "</ul>" +
+          migrationAction +
+          findAction +
+          "</div>"
+        );
+      })
+      .join("");
+  }
+
+  const VacationModuleRenderProblems_ = {
+    checksHtml() {
+      if (this.state.isProblemsLoading) {
+        return '<div class="vacations-card vacations-empty">Перевіряю графік…</div>';
+      }
+      if (!this.state.problemsLoaded) {
+        return (
+          '<div class="vacations-card vacations-empty">Натисніть «Знайти проблеми», щоб перевірити графік.</div>' +
+          '<div class="result-screen-actions">' +
+          '<button class="btn btn-primary" type="button" onclick="VacationModule.loadProblems()">🔎 Знайти проблеми</button>' +
+          "</div>"
+        );
+      }
+      return (
+        this.problemsSummaryHtml() +
+        this.bulkFixActionsHtml() +
+        this.bulkFixPreviewHtml() +
+        renderVacationProblems_(this.state.checks)
+      );
+    },
+
+    problemsSummaryHtml() {
+      if (!this.state.problemsLoaded) return "";
+      return renderVacationProblemsSummary_(
+        this.state.checks,
+        this.state.bulkFixPlan,
+      );
+    },
+
+    bulkFixActionsHtml() {
+      if (!this.state.problemsLoaded) return "";
+      var hasPlan =
+        this.state.bulkFixPlan &&
+        this.state.bulkFixPlan.success &&
+        Array.isArray(this.state.bulkFixPlan.moves) &&
+        this.state.bulkFixPlan.moves.length > 0;
+      return (
+        '<div class="result-screen-actions vacations-bulk-actions">' +
+        '<button class="btn btn-secondary vacations-btn-sm" type="button" onclick="VacationModule.buildBulkFixPlan()">Підібрати пакетне рішення</button>' +
+        '<button class="btn btn-primary vacations-btn-sm" type="button"' +
+        (hasPlan ? "" : " disabled") +
+        ' onclick="VacationModule.applyBulkFixPlan()">Застосувати пакетне рішення</button>' +
+        '<button class="btn btn-secondary vacations-btn-sm" type="button" onclick="VacationModule.loadProblems()">Оновити проблеми</button>' +
+        "</div>"
+      );
+    },
+
+    bulkFixPreviewHtml() {
+      if (!this.state.bulkFixPlan || !this.state.bulkFixPlan.success) {
+        return "";
+      }
+      return (
+        '<div id="vacationBulkFixPreview">' +
+        renderVacationBulkPlanPreview_(this.state.bulkFixPlan) +
+        "</div>"
+      );
+    },
+  };
+</script>

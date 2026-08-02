@@ -47,7 +47,15 @@
   function formatLogArgsPreview_(args) {
     if (!args || !args.length) return "";
     try {
-      const preview = JSON.stringify(args.length === 1 ? args[0] : args);
+      const safe =
+        typeof window.redactSensitiveForLog_ === "function"
+          ? window.redactSensitiveForLog_(
+              args.length === 1 ? args[0] : args,
+            )
+          : args.length === 1
+            ? args[0]
+            : args;
+      const preview = JSON.stringify(safe);
       if (!preview || preview === "{}" || preview === "[]") return "";
       return preview.length > 140 ? preview.slice(0, 137) + "…" : preview;
     } catch (_) {
@@ -64,8 +72,46 @@
     return "";
   }
 
+  var WASB_BROWSER_SESSION_KEY_ = "wasb.access.browserSession";
+  var __wasbBrowserSessionToken__ = "";
+
+  function purgeLegacyWasbBrowserSessionStorage_() {
+    try {
+      localStorage.removeItem(WASB_BROWSER_SESSION_KEY_);
+    } catch (_) {}
+  }
+
+  purgeLegacyWasbBrowserSessionStorage_();
+
+  function saveWasbBrowserSession_(token) {
+    const value = String(token || "").trim();
+    if (!value) return;
+    __wasbBrowserSessionToken__ = value;
+  }
+
+  function readWasbBrowserSession_() {
+    return String(__wasbBrowserSessionToken__ || "").trim();
+  }
+
+  function clearWasbBrowserSession_() {
+    __wasbBrowserSessionToken__ = "";
+  }
+
+  function captureBrowserSessionFromResult_(result) {
+    if (!result) return;
+    const token =
+      result.browserSessionToken ||
+      (result.data && result.data.browserSessionToken) ||
+      "";
+    if (token) saveWasbBrowserSession_(token);
+  }
+
   window.formatLogArgsPreview_ = formatLogArgsPreview_;
   window.formatApiResultSummary_ = formatApiResultSummary_;
+  window.saveWasbBrowserSession_ = saveWasbBrowserSession_;
+  window.readWasbBrowserSession_ = readWasbBrowserSession_;
+  window.clearWasbBrowserSession_ = clearWasbBrowserSession_;
+  window.captureBrowserSessionFromResult_ = captureBrowserSessionFromResult_;
 
   function normalizeConsoleLogType_(type) {
     const value = String(type || "info").toLowerCase();
@@ -835,6 +881,10 @@
       clearLog: "Очищення логів",
       restartBot: "Перезапуск бота",
       applyProtections: "Захист службових листів",
+      previewProtections: "Перегляд захисту листів",
+      bootstrapRuntime: "Створення службових листів",
+      bootstrapAccess: "Ініціалізація листа доступу",
+      runRegressionTests: "Регресійні тести",
       pendingRepairs: "Операції, що потребують виправлення",
       vacationReminder: "Нагадування про відпустки",
       vacations: "Відпустки",
@@ -842,6 +892,8 @@
       debugAccess: "Перевірка доступу",
       phoneDirectory: "Службові телефони",
       carsRegister: "Автотехніка",
+      weaponsRegister: "Озброєння",
+      inventoryReconciliation: "Звірка",
       requests: "Заявки",
     };
 
@@ -922,9 +974,14 @@
           );
           if (result?.success) {
             logToConsole(`✓ ${result.message}`, "success");
-            navigateTo("createNextMonth", () => {
-              displayInResult("createMonth", result);
-            });
+            const openedConflicts =
+              typeof maybeOpenVacationMonthlySyncConflicts_ === "function" &&
+              maybeOpenVacationMonthlySyncConflicts_(result);
+            if (!openedConflicts) {
+              navigateTo("createNextMonth", () => {
+                displayInResult("createMonth", result);
+              });
+            }
           } else {
             navigateTo("createNextMonth", () => {
               displayInResult("error", {
@@ -945,6 +1002,16 @@
 
         case "carsRegister":
           navigateTo("carsRegister", () => showCarsRegister());
+          break;
+
+        case "weaponsRegister":
+          navigateTo("weaponsRegister", () => showWeaponsRegister());
+          break;
+
+        case "inventoryReconciliation":
+          navigateTo("inventoryReconciliation", () =>
+            showInventoryReconciliation(),
+          );
           break;
 
         case "vacationReminder": {
@@ -1092,6 +1159,22 @@
 
         case "applyProtections":
           await applyProtections();
+          break;
+
+        case "previewProtections":
+          await previewProtections();
+          break;
+
+        case "bootstrapRuntime":
+          await bootstrapRuntimeSheets();
+          break;
+
+        case "bootstrapAccess":
+          await bootstrapAccessSheet();
+          break;
+
+        case "runRegressionTests":
+          await runRegressionTests();
           break;
 
         case "requests":

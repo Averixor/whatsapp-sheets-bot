@@ -157,6 +157,57 @@ function healthCheck() {
     };
   });
 
+  _runHealthCheckItem_(report, "Технічний індекс звірки", "WARN", function () {
+    const sheetName =
+      (typeof CONFIG === "object" && CONFIG.INVENTORY_RECONCILIATION_FILES_SHEET) ||
+      "INVENTORY_RECONCILIATION_FILES";
+    let sheet = getWasbSpreadsheet_().getSheetByName(sheetName);
+    let healError = "";
+    if (
+      !sheet &&
+      typeof InventoryReconciliation_ !== "undefined" &&
+      InventoryReconciliation_ &&
+      typeof InventoryReconciliation_.ensureIndexSheet === "function"
+    ) {
+      try {
+        InventoryReconciliation_.ensureIndexSheet();
+        sheet = getWasbSpreadsheet_().getSheetByName(sheetName);
+      } catch (error) {
+        healError = error && error.message ? error.message : String(error || "");
+      }
+    }
+    if (!sheet) {
+      return {
+        status: "WARN",
+        details: healError
+          ? "Технічний індекс ще не створено: " + healError
+          : "Технічний індекс ще не створено",
+        howTo: "Відкрийте розділ Звірка або виконайте синхронізацію файлів звірки",
+      };
+    }
+    const protections =
+      typeof sheet.getProtections === "function"
+        ? sheet.getProtections(SpreadsheetApp.ProtectionType.SHEET)
+        : [];
+    const hidden = sheet.isSheetHidden();
+    const blockingProtection = protections.some(function (protection) {
+      return !protection.isWarningOnly();
+    });
+    return {
+      status: hidden && blockingProtection ? "OK" : "FAIL",
+      severity: hidden && blockingProtection ? "INFO" : "CRITICAL",
+      details:
+        "Індекс " +
+        (hidden ? "приховано" : "не приховано") +
+        "; блокувальний захист: " +
+        (blockingProtection ? "так" : "ні"),
+      howTo:
+        hidden && blockingProtection
+          ? ""
+          : "Приховайте технічний індекс і повторно застосуйте захист аркушів",
+    };
+  });
+
   _runHealthCheckItem_(report, "Панель надсилання", "WARN", function () {
     const ensured = _ensureSendPanelTechnicalSheet_();
     const sh = ensured.sheet;

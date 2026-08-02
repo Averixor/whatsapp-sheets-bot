@@ -1,10 +1,18 @@
 /************ КОНФІГУРАЦІЯ ************/
 const CONFIG = {
   // Основні налаштування аркушів
-  TARGET_SHEET: "06",
+  TARGET_SHEET: "07",
   PHONES_SHEET: "PHONES",
   PHONE_DIRECTORY_SHEET: "PHONE_DIRECTORY",
   CAR_SHEET: "CAR",
+  WEAPON_SHEET: "WEAPON",
+  TEMP_PROPERTY_SHEET: "Property_issued_for_temporary_u",
+  PROPERTY_CATALOG_SHEET: "PROPERTY_CATALOG",
+  PROPERTY_KITS_SHEET: "PROPERTY_KITS",
+  INVENTORY_RECONCILIATION_SHEET: "INVENTORY_RECONCILIATION",
+  INVENTORY_RECONCILIATION_FILES_SHEET: "INVENTORY_RECONCILIATION_FILES",
+  INVENTORY_RECONCILIATION_FOLDER_PROP_KEY:
+    "WASB_INVENTORY_RECONCILIATION_FOLDER_ID",
   PERSONNEL_SHEET: "PERSONNEL",
   DICT_SHEET: "DICT",
   DICT_SUM_SHEET: "DICT_SUM",
@@ -17,7 +25,7 @@ const CONFIG = {
   BR_COL: 1,
   DATE_ROW: 1,
   CALLSIGN_COL: 2,
-  CODE_RANGE_A1: "C2:AF30",
+  CODE_RANGE_A1: "C2:AG32",
   OS_FML_RANGE_A1: "",
 
   // Технічні параметри
@@ -51,7 +59,7 @@ const MONTHLY_CONFIG = {
   DATE_ROW: CONFIG.DATE_ROW,
   FML_COL: CONFIG.FML_COL,
   FIRST_DATA_ROW: 2,
-  LAST_DATA_ROW: 30,
+  LAST_DATA_ROW: 32,
   CLEAR_RANGES: [CONFIG.CODE_RANGE_A1],
   MONTH_NAMES: {
     "01": "Січень",
@@ -71,8 +79,8 @@ const MONTHLY_CONFIG = {
   SLOT_COL_WIDTH: 30,
   /** Monthly sheet column B (callsign / identity) width in pixels. */
   CALLSIGN_COL_WIDTH: 160,
-  /** Monthly sheet width for columns C..last. */
-  DATA_COL_WIDTH: 110,
+  /** Monthly sheet width for schedule/code day columns (adaptive C..last day). */
+  DATA_COL_WIDTH: 130,
 };
 
 /************ ГРУПИ ТА НАЗВИ ************/
@@ -83,16 +91,16 @@ const SUMMARY_GROUPS = {
   Евак: ["Евак"],
   "1РБпАК": ["1РБпАК"],
   "2РБпАК": ["2РБпАК"],
-  "1УРБпАК": ["1УРБпАК"],
-  "2УРБпАК": ["2УРБпАК"],
+  "1РУБпАК": ["1РУБпАК"],
+  "2РУБпАК": ["2РУБпАК"],
   КП: ["КП"],
   Резерв: ["Резерв"],
   "*ВЗ": ["*ВЗ"],
   "*ВМЗ": ["*ВМЗ"],
   "*1РБпАК": ["*1РБпАК"],
   "*2РБпАК": ["*2РБпАК"],
-  "*1УРБпАК": ["*1УРБпАК"],
-  "*2УРБпАК": ["*2УРБпАК"],
+  "*1РУБпАК": ["*1РУБпАК"],
+  "*2РУБпАК": ["*2РУБпАК"],
   Відрядження: ["Відрядження", "Відряд"],
   Відпустка: ["Відпустка", "Відпус"],
   Лікарняний: ["Лікарняний", "Лікарн"],
@@ -112,16 +120,16 @@ const FULL_NAMES = {
   Евак: "Медевак",
   "1РБпАК": "Охорона позиції 1 роти БпАК",
   "2РБпАК": "Охорона позиції 2 роти БпАК",
-  "1УРБпАК": "Охорона позиції 1 роти УБпАК",
-  "2УРБпАК": "Охорона позиції 2 роти УБпАК",
+  "1РУБпАК": "Охорона позиції 1 роти УБпАК",
+  "2РУБпАК": "Охорона позиції 2 роти УБпАК",
   КП: "Командний пункт",
   Резерв: "Резерв",
   "*ВЗ": "Відряджений/-і до взводу зв′язку",
   "*ВМЗ": "Відряджений/-і до взводу МЗ",
   "*1РБпАК": "Відряджений/-і до 1 роти БпАК",
   "*2РБпАК": "Відряджений/-і до 2 роти БпАК",
-  "*1УРБпАК": "Відряджений/-і до 1 роти УБпАК",
-  "*2УРБпАК": "Відряджений/-і до 2 роти УБпАК",
+  "*1РУБпАК": "Відряджений/-і до 1 роти УБпАК",
+  "*2РУБпАК": "Відряджений/-і до 2 роти УБпАК",
   Відрядження: "У відрядженні",
   Відряд: "У відрядженні",
   Відпустка: "Відпустка",
@@ -265,11 +273,19 @@ function getClientRuntimeContract_() {
     runtimeModules: [
       "Js.Core.html",
       "Js.State.html",
+      "Js.Modals.html",
       "Js.Api.html",
       "Js.Render.Panel.html",
       "Js.Render.Calendar.html",
       "Js.Render.Results.html",
-      "Js.Vacations.html",
+      "Js.Vacations.Constants.html",
+      "Js.Vacations.Formatters.html",
+      "Js.Vacations.Render.Problems.html",
+      "Js.Vacations.Render.Calendar.html",
+      "Js.Vacations.Render.Main.html",
+      "Js.Vacations.Actions.html",
+      "Js.Vacations.Module.html",
+      "Js.VacationSync.html",
       "Js.Diagnostics.html",
       "Js.Security.Boot.html",
       "Js.Security.Util.html",
@@ -293,7 +309,9 @@ function getClientRuntimeContract_() {
 function onOpen(e) {
   try {
     const ui = SpreadsheetApp.getUi();
-    ui.createMenu("WASB").addItem("Відкрити панель", "showSidebar").addToUi();
+    ui.createMenu("WASB")
+      .addItem("Відкрити панель", "showSidebar")
+      .addToUi();
   } catch (err) {
     console.error("onOpen menu error:", err);
   }
@@ -514,7 +532,8 @@ function debugPhones() {
       3,
     );
     function cleanBirthday(value) {
-      const s = String(value || "").trim();
+      let s = String(value || "").trim();
+      s = s.replace(/\s*р\.?\s*н\.?\s*$/i, "").trim();
       if (!s) return "";
       if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(s)) {
         const parts = s.split(".");

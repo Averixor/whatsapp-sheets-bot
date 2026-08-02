@@ -796,6 +796,12 @@
     border-bottom: none;
   }
 
+  .result-item--reference-missing-person {
+    padding-left: var(--space-sm);
+    border-left: 3px solid var(--warning-color);
+    background: var(--warning-soft-bg);
+  }
+
   .result-label {
     font-weight: 500;
     color: var(--whatsapp-teal);
@@ -811,6 +817,19 @@
     word-break: break-word;
     font-size: 0.9rem;
     line-height: 1.5;
+  }
+
+  .reference-missing-person-badge {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 4px;
+    padding: 2px 7px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--warning-soft-border);
+    color: var(--warning-soft-text);
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.3;
   }
 
   .result-link {

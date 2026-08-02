@@ -1,12 +1,15 @@
 {
-  "version": 1,
+  "version": 3,
   "sourceOfTruth": "reports/MonthJournalMaterialize.gs",
   "derivedSheetNames": {
-    "journalPrefix": "ЖУРНАЛ_",
-    "summaryPrefix": "ПІДСУМОК_"
+    "journal": "JOURNAL",
+    "summary": "SUMMARY"
   },
+  "monthKeyHeader": "Місяць",
   "unknownCodeLabel": "Невідомий код",
+  "defaultMonthsPerCall": 3,
   "journalHeaders": [
+    "Місяць",
     "Дата",
     "Позивний",
     "ПІБ",
@@ -21,10 +24,15 @@
     "Джерело"
   ],
   "summaryBaseHeaders": [
+    "Місяць",
     "Позивний",
     "ПІБ",
     "Звання",
     "Посада"
+  ],
+  "summaryTrailingHeaders": [
+    "Інше",
+    "Підсумок"
   ],
   "notesHeaderMatchers": [
     "приміт",
@@ -39,15 +47,49 @@
     "mode": "read-only-lookup",
     "forbidWritesToSheet": "PERSONNEL"
   },
+  "monthResolution": {
+    "activeMonthHelper": "getBotMonthSheetName_",
+    "listExistingHelper": "listExistingMonthSheetNames_",
+    "order": [
+      "explicit monthSheet|month",
+      "getBotMonthSheetName_",
+      "active sheet 01-12"
+    ]
+  },
   "api": {
     "functionName": "apiStage7MaterializeMonthJournal",
-    "emptyMonthMessage": "Відкрийте місячний аркуш 01–12",
+    "emptyMonthMessage": "Немає активного місячного аркуша 01–12",
     "publicEndpoint": true,
     "minRole": "maintainer",
-    "routingAction": "materializeMonthJournal"
+    "routingAction": "materializeMonthJournal",
+    "scope": "activeMonthSliceOnly"
+  },
+  "apiAllMonths": {
+    "functionName": "apiStage7MaterializeAllMonthJournals",
+    "bundleHelper": "materializeAllExistingMonthJournals_",
+    "publicEndpoint": true,
+    "minRole": "maintainer",
+    "routingAction": "materializeAllMonthJournals",
+    "uiAllowed": false,
+    "scope": "allExistingMonthSheetsChunked",
+    "intendedInvocation": "GAS editor (not wired to sidebar UI; public api* endpoint with maintainer role — could be called via google.script.run if wired manually)",
+    "continuation": {
+      "cursorField": "cursor",
+      "nextCursorField": "nextCursor",
+      "doneField": "done",
+      "monthsPerCallField": "monthsPerCall",
+      "envelopePath": "response.data.result",
+      "note": "Continuation fields live inside the Stage7 envelope (response.data.result.*), not as top-level response properties. Practical loop: apiStage7MaterializeAllMonthJournals(); then apiStage7MaterializeAllMonthJournals({ nextCursor: N }) until response.data.result.done."
+    }
   },
   "sidebar": {
     "buttonLabel": "Оновити журнал місяця",
     "action": "materializeMonthJournal"
+  },
+  "legacyUaSheets": {
+    "journalPrefix": "ЖУРНАЛ_",
+    "summaryPrefix": "ПІДСУМОК_",
+    "superseded": true,
+    "note": "New JOURNAL/SUMMARY supersede per-month UA sheets; old tabs may remain untouched."
   }
 }

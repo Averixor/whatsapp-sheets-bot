@@ -310,16 +310,16 @@ function loadWorkbookFunctions() {
       Евак: "Медевак",
       "1РБпАК": "Охорона позиції 1 роти БпАК",
       "2РБпАК": "Охорона позиції 2 роти БпАК",
-      "1УРБпАК": "Охорона позиції 1 роти УБпАК",
-      "2УРБпАК": "Охорона позиції 2 роти УБпАК",
+      "1РУБпАК": "Охорона позиції 1 роти УБпАК",
+      "2РУБпАК": "Охорона позиції 2 роти УБпАК",
       КП: "Командний пункт",
       Резерв: "Резерв",
       "*ВЗ": "Відряджений/-і до взводу зв′язку",
       "*ВМЗ": "Відряджений/-і до взводу МЗ",
       "*1РБпАК": "Відряджений/-і до 1 роти БпАК",
       "*2РБпАК": "Відряджений/-і до 2 роти БпАК",
-      "*1УРБпАК": "Відряджений/-і до 1 роти УБпАК",
-      "*2УРБпАК": "Відряджений/-і до 2 роти УБпАК",
+      "*1РУБпАК": "Відряджений/-і до 1 роти УБпАК",
+      "*2РУБпАК": "Відряджений/-і до 2 роти УБпАК",
       Відрядження: "У відрядженні",
       Відпустка: "Відпустка",
       Лікарняний: "Ушпитален/Лікарняний",
@@ -563,16 +563,16 @@ const expectedDictSumTruth = [
   ["Евак", 25, "Медевак"],
   ["1РБпАК", 30, "Охорона позиції 1 роти БпАК"],
   ["2РБпАК", 35, "Охорона позиції 2 роти БпАК"],
-  ["1УРБпАК", 40, "Охорона позиції 1 роти УБпАК"],
-  ["2УРБпАК", 100, "Охорона позиції 2 роти УБпАК"],
+  ["1РУБпАК", 40, "Охорона позиції 1 роти УБпАК"],
+  ["2РУБпАК", 100, "Охорона позиції 2 роти УБпАК"],
   ["КП", 105, "Командний пункт"],
   ["Резерв", 140, "Резерв"],
   ["*ВЗ", 145, "Відряджений/-і до взводу зв′язку"],
   ["*ВМЗ", 150, "Відряджений/-і до взводу МЗ"],
   ["*1РБпАК", 155, "Відряджений/-і до 1 роти БпАК"],
   ["*2РБпАК", 160, "Відряджений/-і до 2 роти БпАК"],
-  ["*1УРБпАК", 165, "Відряджений/-і до 1 роти УБпАК"],
-  ["*2УРБпАК", 200, "Відряджений/-і до 2 роти УБпАК"],
+  ["*1РУБпАК", 165, "Відряджений/-і до 1 роти УБпАК"],
+  ["*2РУБпАК", 200, "Відряджений/-і до 2 роти УБпАК"],
   ["Відрядження", 205, "У відрядженні"],
   ["Відпустка", 210, "Відпустка"],
   ["Лікарняний", 215, "Ушпитален/Лікарняний"],
@@ -688,6 +688,48 @@ assert.doesNotMatch(
   readGasByBasename("MonthSheets.gs"),
   /weekendFont|setFontColor\(['"]#cc0000['"]\)/,
   "weekend date headers must not paint red text",
+);
+
+const codeConfigSource = fs.readFileSync(
+  path.join(repoRoot, "core", "Code.gs"),
+  "utf8",
+);
+assert.match(
+  codeConfigSource,
+  /SLOT_COL_WIDTH:\s*30/,
+  "monthly column A width must be 30",
+);
+assert.match(
+  codeConfigSource,
+  /CALLSIGN_COL_WIDTH:\s*160/,
+  "monthly column B width must be 160",
+);
+assert.match(
+  codeConfigSource,
+  /DATA_COL_WIDTH:\s*130/,
+  "monthly schedule/day column width must be 130",
+);
+
+const sheetStandardsSource = readGasByBasename("SheetStandards.gs");
+assert.match(
+  sheetStandardsSource,
+  /getMonthlyCodeRangeA1ForSheet_/,
+  "monthly column widths must adapt to live schedule/code range",
+);
+assert.match(
+  sheetStandardsSource,
+  /findMonthlyNotesCol_/,
+  "monthly column widths must stop before notes column when present",
+);
+assert.match(
+  monthOpsSource,
+  /applyColumnWidthsStandardsToSheet_\(newSheet\)/,
+  "Stage7 createNextMonth must re-apply column widths after syncs",
+);
+assert.match(
+  readGasByBasename("MonthSheets.gs"),
+  /applyColumnWidthsStandardsToSheet_\(newSheet\)/,
+  "legacy createNextMonthSheet must re-apply column widths after syncs",
 );
 
 console.log(

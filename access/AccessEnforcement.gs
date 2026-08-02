@@ -201,10 +201,21 @@ var AccessEnforcement_ =
 
     function _safeStringify_(value, limit) {
       var maxLen = Number(limit) || 9000;
+      var payload = value;
+
+      try {
+        if (
+          typeof SecurityRedaction_ === "object" &&
+          SecurityRedaction_ &&
+          _isFunction_(SecurityRedaction_.sanitizeObject)
+        ) {
+          payload = SecurityRedaction_.sanitizeObject(value);
+        }
+      } catch (_) {}
 
       try {
         if (_isFunction_(stage7SafeStringify_)) {
-          var viaStage7 = stage7SafeStringify_(value, maxLen);
+          var viaStage7 = stage7SafeStringify_(payload, maxLen);
           if (typeof viaStage7 === "string") {
             return viaStage7.length > maxLen
               ? viaStage7.slice(0, maxLen)
@@ -217,7 +228,7 @@ var AccessEnforcement_ =
       var text = "";
 
       try {
-        text = JSON.stringify(value, function (key, val) {
+        text = JSON.stringify(payload, function (key, val) {
           if (val instanceof Date) {
             return Utilities.formatDate(
               val,
@@ -359,6 +370,9 @@ var AccessEnforcement_ =
         _configValue_("DICT_SUM_SHEET", "DICT_SUM"),
         _configValue_("TEMPLATES_SHEET", "TEMPLATES"),
         _configValue_("LOG_SHEET", "LOG"),
+        _configValue_("PHONE_DIRECTORY_SHEET", "PHONE_DIRECTORY"),
+        _configValue_("CAR_SHEET", "CAR"),
+        _configValue_("WEAPON_SHEET", "WEAPON"),
         _vacationConfigValue_("VACATIONS_SHEET", "VACATIONS"),
         "VACATION_REQUESTS",
         "VACATION_SCHEDULE",
@@ -367,6 +381,10 @@ var AccessEnforcement_ =
         _configValue_("SEND_PANEL_SHEET", "SEND_PANEL"),
         _configValue_("PERSONNEL_SHEET", "PERSONNEL"),
         _configValue_("PHONES_SHEET", "PHONES"),
+        _configValue_(
+          "INVENTORY_RECONCILIATION_FILES_SHEET",
+          "INVENTORY_RECONCILIATION_FILES",
+        ),
       ]);
     }
 
@@ -1465,13 +1483,25 @@ function stage7SecurityAuditOnEdit(e) {
 
     if (hasAccess && actor.registered === true) return;
 
+    // ACCESS may hold hashes/salts/temp secrets — never log cell payloads.
+    var accessSheetForAudit = _configValueForTrigger_("ACCESS_SHEET", "ACCESS");
+    var redactAccessCellValues = sheetName === accessSheetForAudit;
     AccessEnforcement_.reportViolation(
       "sheetEditDeniedOrSuspicious",
       {
         sheet: sheetName,
         a1Notation: _extractA1ForTrigger_(e),
-        oldValue: typeof e.oldValue !== "undefined" ? e.oldValue : "",
-        newValue: typeof e.value !== "undefined" ? e.value : "",
+        oldValue: redactAccessCellValues
+          ? "[REDACTED]"
+          : typeof e.oldValue !== "undefined"
+            ? e.oldValue
+            : "",
+        newValue: redactAccessCellValues
+          ? "[REDACTED]"
+          : typeof e.value !== "undefined"
+            ? e.value
+            : "",
+        cellValuesRedacted: !!redactAccessCellValues,
         isProtectedSheet: isProtectedSheet,
         editorEmailFromEvent: userEmail || "",
       },
@@ -1619,6 +1649,9 @@ function _getProtectedSheetsForTrigger_() {
     _configValueForTrigger_("DICT_SHEET", "DICT"),
     _configValueForTrigger_("DICT_SUM_SHEET", "DICT_SUM"),
     _configValueForTrigger_("LOG_SHEET", "LOG"),
+    _configValueForTrigger_("PHONE_DIRECTORY_SHEET", "PHONE_DIRECTORY"),
+    _configValueForTrigger_("CAR_SHEET", "CAR"),
+    _configValueForTrigger_("WEAPON_SHEET", "WEAPON"),
     _configValueForTrigger_("SEND_PANEL_SHEET", "SEND_PANEL"),
     _configValueForTrigger_("PERSONNEL_SHEET", "PERSONNEL"),
     _configValueForTrigger_("PHONES_SHEET", "PHONES"),

@@ -30,6 +30,7 @@ Accepted (робоча домовленість; **не** фінальна ар�
 | ----- | ----------- | -------- |
 | `reports/` | Зведення, денні/місячні звіти | `Report_*.gs`, `Summaries.gs`, `Summary*.gs` |
 | `vacations/` | Відпустки, перевірки, календар | `Vacation*.gs` |
+| `inventory/` | Звірка служб; тимчасово видане майно | `InventoryReconciliation.gs`, `TemporaryPropertyRegister.gs` |
 | `sendpanel/` | Панель надсилання, отримувачі | `SendPanel*.gs`, `UseCases.SendPanel.gs` |
 | `access/` | Доступ, ролі, ACCESS | `AccessControl.*.gs`, `AccessEnforcement.gs` |
 | `personnel/` | Особовий склад, картки | `PersonnelRepository.gs`, `PersonCards.gs` |
@@ -44,7 +45,7 @@ Accepted (робоча домовленість; **не** фінальна ар�
 | `diagnostics/` | Health і runtime-діагностика | `Diagnostics.*.gs` (production) |
 | `security/` | Аудит, редагування чутливих даних | `AuditTrail.gs`, `SecurityRedaction.gs` |
 | `operations/` | Операційні сценарії, тригери | `Triggers.gs`, `Reconciliation.gs` |
-| `tests/` | Локальні test runners (clasp **excluded**) | `Stage7TestRunner*.gs`, `*Tests.gs` |
+| `tests/` | Test runners (deployed with clasp) | `Stage7TestRunner*.gs`, `*Tests.gs` |
 
 `contracts/`, `scripts/`, `docs/` — як і раніше, не GAS runtime.
 

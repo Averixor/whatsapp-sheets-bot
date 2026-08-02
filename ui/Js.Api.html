@@ -267,6 +267,92 @@
       };
     },
 
+    async getWeaponsRegister() {
+      const response = await Api.run("apiStage7GetWeaponsRegister");
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success,
+        message: response?.message || "",
+        error: response?.error || null,
+        data: result,
+        items: Array.isArray(result.items) ? result.items : [],
+        persons: Array.isArray(result.persons) ? result.persons : [],
+        stats: result.stats || {},
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response,
+      };
+    },
+
+    async getInventoryReconciliation(options = {}) {
+      const response = await Api.run(
+        "apiStage7GetInventoryReconciliation",
+        options || {},
+      );
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success,
+        message: response?.message || "",
+        error: response?.error || null,
+        data: result,
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response,
+      };
+    },
+
+    async syncInventoryReconciliation() {
+      const response = await Api.run("apiStage7SyncInventoryReconciliation");
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success,
+        message: response?.message || "",
+        error: response?.error || null,
+        data: result,
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response,
+      };
+    },
+
+    async setInventoryReconciliationFolder(folderValue) {
+      const response = await Api.run(
+        "apiStage7SetInventoryReconciliationFolder",
+        folderValue || "",
+      );
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success,
+        message: response?.message || "",
+        error: response?.error || null,
+        data: result,
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response,
+      };
+    },
+
+    async getSelectedInventoryReconciliation() {
+      const response = await Api.run(
+        "apiStage7GetSelectedInventoryReconciliation",
+      );
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success && result.success !== false,
+        message: response?.message || "",
+        error: response?.error || result.error || null,
+        data: result,
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response,
+      };
+    },
+
     async createNextMonth(options = {}) {
       const response = await Api.run("apiStage7CreateNextMonth", options);
       const result = unwrapStage4Result(response) || {};
@@ -324,6 +410,18 @@
         ),
       );
     },
+
+    async loginByCredentials(payload = {}) {
+      return adaptStage4UtilityResponse(
+        await Api.run("apiStage7LoginByAccessKey", payload || {}),
+      );
+    },
+
+    async resumeBrowserSession(payload = {}) {
+      return adaptStage4UtilityResponse(
+        await Api.run("apiStage7ResumeBrowserSession", payload || {}),
+      );
+    },
   };
 
   var MaintenanceApi = {
@@ -340,6 +438,14 @@
     materializeMonthJournal: async (payload = {}) =>
       adaptStage4UtilityResponse(
         await Api.run("apiStage7MaterializeMonthJournal", payload || {}),
+      ),
+    setupTemporaryPropertyRegister: async () =>
+      adaptStage4UtilityResponse(
+        await Api.run("apiStage7SetupTemporaryPropertyRegister"),
+      ),
+    refreshTemporaryPropertyRegister: async () =>
+      adaptStage4UtilityResponse(
+        await Api.run("apiStage7RefreshTemporaryPropertyRegister"),
       ),
     restartBot: async () =>
       adaptStage4UtilityResponse(await Api.run("apiStage7RestartBot")),
@@ -420,6 +526,14 @@
           payload || {},
         ),
       ),
+    loginByCredentials: async (payload = {}) =>
+      adaptStage4UtilityResponse(
+        await Api.run("apiStage7LoginByAccessKey", payload || {}),
+      ),
+    resumeBrowserSession: async (payload = {}) =>
+      adaptStage4UtilityResponse(
+        await Api.run("apiStage7ResumeBrowserSession", payload || {}),
+      ),
     loginByIdentifierAndCallsign: async (payload = {}) =>
       adaptStage4UtilityResponse(
         await Api.run("apiStage7LoginByIdentifierAndCallsign", payload || {}),
@@ -438,6 +552,10 @@
     bootstrapAccessSheet: async () =>
       adaptStage4UtilityResponse(
         await Api.run("apiStage7BootstrapAccessSheet"),
+      ),
+    bootstrapRuntimeAndAlertsSheets: async () =>
+      adaptStage4UtilityResponse(
+        await Api.run("apiStage7BootstrapRuntimeAndAlertsSheets"),
       ),
     reportClientAccessSignal: async (actionName, details = {}) =>
       adaptStage4UtilityResponse(
@@ -468,6 +586,10 @@
     clearPhoneCache: MaintenanceApi.clearPhoneCache,
     materializeComputedData: MaintenanceApi.materializeComputedData,
     materializeMonthJournal: MaintenanceApi.materializeMonthJournal,
+    setupTemporaryPropertyRegister:
+      MaintenanceApi.setupTemporaryPropertyRegister,
+    refreshTemporaryPropertyRegister:
+      MaintenanceApi.refreshTemporaryPropertyRegister,
     restartBot: MaintenanceApi.restartBot,
     setupVacationTriggers: MaintenanceApi.setupVacationTriggers,
     cleanupDuplicateTriggers: MaintenanceApi.cleanupDuplicateTriggers,

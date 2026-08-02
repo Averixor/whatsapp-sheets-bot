@@ -31,10 +31,9 @@ Individual subscripts: `npm run ci:gas`, `npm run ci:client`, `npm run ci:copy`,
 | `npm run gas:open` | Open GAS editor (`npx clasp open-script`, clasp 3.x) |
 | `npm run gas:push` / `gas:status` | Production clasp helpers |
 
-
 ### Node.js version
 
-CI requires **Node.js 24** (matching `.github/workflows/ci.yml` and `.nvmrc`). `npm run ci` runs `npm run precheck` first (`scripts/verify-node-version.mjs`).
+CI and local dev recommend **Node.js 24** (`.github/workflows/ci.yml`, `.nvmrc`). `package.json` `engines.node` is **`>=24`** with no upper cap — Node 25, 26, … pass `npm run precheck` unless you add an explicit `<` / `<=` in engines. `npm run ci` runs precheck first (`scripts/verify-node-version.mjs`).
 
 ```bash
 nvm use    # reads .nvmrc (24)
@@ -49,7 +48,7 @@ This project cannot be "run" locally in the traditional sense. There is no dev s
 
 ### Testing
 
-- **Local (automated):** `npm run ci` — **32** verify scripts (+ `precheck`), no Google credentials.
+- **Local (automated):** `npm run ci` — **35** verify/audit scripts (+ `precheck`), no Google credentials. System-status: `npm run ci:system-status` (Foundation + Fingerprints; SS-2B runtime scope construction in `diagnostics/SystemStatus.Runtime.gs`).
 - **Remote (manual):** `apiRunStage7RegressionTests()` or `runSmokeTests()` in the GAS editor.
 
 Documentation index: [`docs/README.md`](./docs/README.md). Verify release status
@@ -63,7 +62,9 @@ After local CI and deploy:
 npm run check
 npm run deploy:prod
 apiStage7MaterializeComputedData()  # after PERSONNEL / PHONES / VACATIONS / birthday / Status edits
-apiStage7MaterializeMonthJournal({ monthSheet: "07" })  # if month-derived journal sheets must be refreshed
+apiStage7MaterializeMonthJournal({ monthSheet: "07" })  # active month slice in JOURNAL/SUMMARY; sidebar: Оновити журнал місяця
+apiStage7MaterializeAllMonthJournals()                  # bootstrap all 01–12 (uiAllowed: false; GAS editor)
+apiStage7MaterializeAllMonthJournals({ nextCursor: 3 }) # continuation via response.data.result.nextCursor
 apiStage7ClearPhoneCache()          # run in the production GAS editor after deploy
 ```
 
@@ -114,14 +115,15 @@ Domain folders (`reports/`, `vacations/`, `core/`, `ui/`, …) are mechanical mo
 ### PERSONNEL keys (do not regress)
 
 - Monthly schedule row key: **Callsign**; personal fields from `PERSONNEL` by Callsign (fallback **FML**).
+- Display callsign on monthly/PHONES/BIRTHDAY sheets: **Callsign → Last name → First name** (never TEMPLATE). See `.cursor/rules/monthly-callsign-sync.mdc`.
 - **ID Army+** is optional data, not a required system key.
 - **Position** is not a person key.
 - **Status** (UA only in sheet): dropdown — `В наявності`, `У відрядженні`, `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`.
   Runtime-active: all except `Вибув` and `СЗЧ`; empty = `В наявності`. Legacy
   (`Дієвий`, `Active`, `Відрядження`, EN) mapped on read only.
-- Final (logical) headers: `ID | FML | … | Unit | Status`. Physical in reference "Книга Взводу Охорони.xlsx": `Cells`, `ID v/s`, split `Last name` / `First name` / `Patronymic` (FML synthesized), **`Callsign` in column L**, `Rank`, `OSH 4`, `Status` — see `contracts/reference-workbook-layout.contract.json`. `TEMPLATE` is legacy-only (not in reference file). Code reads by **header names only** (aliases cover variants). See `RUNBOOK.md` §14.
-- Missing `Status` header is self-healed at runtime (reference column **P** when free, otherwise next safe column) before validation/materialize paths proceed.
-- After every production deploy or PERSONNEL edits: run **`apiStage7MaterializeComputedData()`** when derived columns may be stale; run **`apiStage7ClearPhoneCache()`** for phone cache invalidation (mandatory after deploy). If month fact/history sheets are used, refresh them separately with **`apiStage7MaterializeMonthJournal()`**.
+- Final (logical) headers: `ID | FML | … | Unit | Status`. Physical in reference "Книга Взводу Охорони.xlsx": `Cells`, `ID v/s`, split `Last name` / `First name` / `Patronymic` (FML synthesized), **`Email` in column L**, **`Callsign` in column M**, `Rank`, `OSH 4`, **`Status` in column Q** — see `contracts/reference-workbook-layout.contract.json`. `TEMPLATE` is legacy-only (not in reference file). Code reads by **header names only** (aliases cover variants). See `RUNBOOK.md` §14.
+- Missing `Status` header is self-healed at runtime (reference column **Q** when free, otherwise next safe column) before validation/materialize paths proceed.
+- After every production deploy or PERSONNEL edits: run **`apiStage7MaterializeComputedData()`** when derived columns may be stale; run **`apiStage7ClearPhoneCache()`** for phone cache invalidation (mandatory after deploy). Month fact/history lives on unified **`JOURNAL`** / **`SUMMARY`**: refresh the active month slice with **`apiStage7MaterializeMonthJournal()`** (sidebar), or bootstrap all existing `01`–`12` with **`apiStage7MaterializeAllMonthJournals()`** — **не підключено до UI** (`uiAllowed: false`); **призначено для GAS editor** (public `api*` + maintainer). Continuation fields are in the Stage7 envelope (`response.data.result.done` / `nextCursor`), not top-level — repeat with `{ nextCursor }` until `done`.
 - See `.cursor/rules/personnel-data-keys.mdc`.
 
 ### Daily summaries (do not regress)
@@ -142,10 +144,28 @@ Domain folders (`reports/`, `vacations/`, `core/`, `ui/`, …) are mechanical mo
 - Rules source: `vacations/VacationPlannerConfig.gs` (`MAX_CONCURRENT`, `OVERLOAD_*`, `MIN_VACATION_DAYS`, `MIN_DAYS_GAP`, `MIN_START_GAP_DAYS`).
 - Mini-calendar cells: day number + divider + count only (no names in grid).
 - Footer summary: **Проблемних дат** / **Навантажених днів** only (no static rule lines).
-- Navigation ◀/▶ must pass explicit `{ year, month }` to `loadMonthCalendar` (see `ui/Js.Vacations.html`).
-- Modules: `vacations/VacationMonthCalendar.gs`, `vacations/Vacation_Suggestions.gs`, `ui/Js.Vacations.html`.
+- Navigation ◀/▶ must pass explicit `{ year, month }` to `loadMonthCalendar` (see `ui/Js.Vacations.Actions.html`).
+- Modules: `vacations/VacationMonthCalendar.gs`, `vacations/Vacation_Suggestions.gs`, `vacations/VacationMonthlySync.gs`, `ui/Js.Vacations.*.html` partials, `ui/Js.VacationSync.html`.
 - Design doc: [`docs/vacation-planner.md`](./docs/vacation-planner.md).
-- Local contract: `scripts/verify-vacation-planner.mjs` (`npm run ci:vacations`).
+- Local contract: `scripts/verify-vacation-planner.mjs`, `scripts/verify-vacation-monthly-sync.mjs` (`npm run ci:vacations`).
+
+### Inventory reconciliation (do not regress)
+
+- Sheets: `INVENTORY_RECONCILIATION` (visible), `INVENTORY_RECONCILIATION_FILES` (hidden index).
+- Drive folder id: Script Property `WASB_INVENTORY_RECONCILIATION_FOLDER_ID`; OAuth scope `drive.readonly` required.
+- Modules: `inventory/InventoryReconciliation.gs`, `ui/Js.InventoryReconciliation.html`, `ui/Styles_35_InventoryReconciliation.html`.
+- Design doc: [`docs/inventory-reconciliation.md`](./docs/inventory-reconciliation.md).
+
+### Temporary property register (do not regress)
+
+- Sheets: `Property_issued_for_temporary_u` (working register), `PROPERTY_CATALOG` (dropdown/unit source), `PROPERTY_KITS` (kit composition).
+- Module: `inventory/TemporaryPropertyRegister.gs`; edit routing: `access/AccessSheetTriggers.gs`.
+- Main quantities are numeric; unit is stored separately. Parent asset rows may have linked auto-generated component rows.
+- Fuel cans use separate `Вид палива` and `Об'єм палива, л` fields.
+- One-time setup/migration: **`apiSetupTemporaryPropertyRegister()`**. It backs up a legacy sheet before conversion.
+- Person cards read outstanding temporary property through `PersonsRepository_` and render it under **Тимчасово видане майно**.
+- Design doc: [`docs/temporary-property-register.md`](./docs/temporary-property-register.md).
+- Local contract: `scripts/verify-temporary-property-register.mjs` (`npm run ci:workbook`).
 
 ### User-facing copy (do not regress)
 

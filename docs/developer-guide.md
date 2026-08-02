@@ -29,10 +29,12 @@ Google Sheets       — ACCESS, PERSONNEL, місячні листи, …
 | ACCESS | Доступи, ролі, bootstrap, lockout |
 | PERSONNEL | Люди, Callsign, Status (UA), телефони |
 | Місячні аркуші (`01`…`12`) | Добовий графік, формульний блок |
-| `MonthJournalMaterialize` | Derived `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` from month sheets + PERSONNEL + DICT |
-| `ReferenceSheetsRepository_` | Optional sidebar reference sheets `PHONE_DIRECTORY` / `CAR` |
+| `MonthJournalMaterialize` | Derived unified `JOURNAL` / `SUMMARY` from month sheets + PERSONNEL + DICT |
+| `ReferenceSheetsRepository_` | Optional sidebar reference sheets `PHONE_DIRECTORY` / `CAR` / `WEAPON` |
 | `Report_*` | Зведення дня (short з formula block, detailed окремо) — modules in `reports/` |
-| Vacation modules | Відпустки, перевірки, міні-календар — server modules in `vacations/` |
+| Vacation modules | Відпустки, перевірки, міні-календар, monthly sync — server modules in `vacations/`; UI in `ui/Js.Vacations.*.html` + `ui/Js.VacationSync.html` |
+| `InventoryReconciliation_` | Звірка служб: `INVENTORY_RECONCILIATION`, Drive index, sidebar **Звірка** (`inventory/InventoryReconciliation.gs`) |
+| `TemporaryPropertyRegister_` | Тимчасово видане майно: `Property_issued_for_temporary_u` + `PROPERTY_CATALOG` / `PROPERTY_KITS` (`inventory/TemporaryPropertyRegister.gs`) |
 | `contracts/` + `scripts/verify-*` | Захист від тихої деградації (governance CI) |
 
 Детальніша архітектура: [ARCHITECTURE.md](../ARCHITECTURE.md). Доступ і RBAC: [SECURITY.md](../SECURITY.md).
@@ -47,7 +49,7 @@ Google Sheets       — ACCESS, PERSONNEL, місячні листи, …
 | Guard markers (`_stage7AssertRole_`, `assertCan…`) | Обхід permissions |
 | PERSONNEL keys (Callsign, Status UA) | Графік, картки, телефони, health; Status auto-heal/validation |
 | Formula block на місячних листах | Short summary ([daily-summary-architecture.md](./daily-summary-architecture.md)) |
-| `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` derived sheets | Фактична історія місяця; окремий materialize path |
+| `JOURNAL` / `SUMMARY` derived sheets | Фактична історія всіх місяців; зріз активного місяця оновлюється окремо |
 | Bootstrap ACCESS / protections | Login для всіх користувачів |
 | Production `clasp` remote | Ризик deploy не в той script project |
 
@@ -92,7 +94,7 @@ npm run push:remote
 
 Or CI + clasp only: `npm run deploy:prod`. Full pipeline with map refresh: `npm run ship -- "fix: …"`.
 
-Після deploy у GAS editor: **`apiStage7MaterializeComputedData()`** (після змін PERSONNEL/PHONES/VACATIONS/birthday/Status), за потреби **`apiStage7MaterializeMonthJournal({ monthSheet: "MM" })`** (якщо мінявся місячний лист або потрібні `ЖУРНАЛ_MM` / `ПІДСУМОК_MM`), потім **`apiStage7ClearPhoneCache()`**, потім перевірка картки людини, reference sidebar views, і health (`apiStage7QuickHealthCheck()`). Повний checklist: [RUNBOOK.md](../RUNBOOK.md) §12–§13.
+Після deploy у GAS editor: **`apiStage7MaterializeComputedData()`** (після змін PERSONNEL/PHONES/VACATIONS/birthday/Status), за потреби **`apiStage7MaterializeMonthJournal({ monthSheet: "MM" })`** (зріз активного місяця в `JOURNAL`/`SUMMARY`; кнопка сайдбару **Оновити журнал місяця**), або **`apiStage7MaterializeAllMonthJournals()`** з повтором `{ nextCursor }` до `response.data.result.done` (bootstrap усіх наявних `01`–`12`; **не підключено до UI**, `uiAllowed: false`; **призначено для GAS editor**; public `api*` + maintainer — continuation у `response.data.result.*`, не top-level), потім **`apiStage7ClearPhoneCache()`**, потім перевірка картки людини, reference sidebar views, і health (`apiStage7QuickHealthCheck()`). Повний checklist: [RUNBOOK.md](../RUNBOOK.md) §12–§13.
 
 ## Куди далі
 
@@ -103,4 +105,6 @@ Or CI + clasp only: `npm run deploy:prod`. Full pipeline with map refresh: `npm 
 | Identity, lockout, RBAC | [SECURITY.md](../SECURITY.md) |
 | Зведення дня | [daily-summary-architecture.md](./daily-summary-architecture.md) |
 | Відпустки | [vacation-planner.md](./vacation-planner.md) |
+| Звірка (inventory) | [inventory-reconciliation.md](./inventory-reconciliation.md) |
+| Тимчасово видане майно | [temporary-property-register.md](./temporary-property-register.md) |
 | Локальний workflow | [CONTRIBUTING.md](../CONTRIBUTING.md) |

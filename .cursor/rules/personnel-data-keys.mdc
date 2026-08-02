@@ -13,14 +13,14 @@ alwaysApply: true
 |--------|------|
 | **ID** | ID Армія+ — **додаткове поле**, не стабільний технічний ключ. |
 | **FML** | Людина (ПІБ). Практичний ключ разом із Callsign. (Синтезується з Last name + First name + Patronymic якщо немає FML колонки.) |
-| **Callsign** | Робочий позивний. **Основний ключ для місячного графіка** і lookup у PERSONNEL. У еталоні «Книга Взводу Охорони» — колонка **L** (`Callsign`, значення на кшталт `ГРАФ`). |
+| **Callsign** | Робочий позивний. **Основний ключ для місячного графіка** і lookup у PERSONNEL. У еталоні «Книга Взводу Охорони» — колонка **M** (`Callsign`, значення на кшталт `ГРАФ`). Колонка **L** — `Email`. |
 | **Position** | Посада / місце в структурі — **не ключ людини**. |
 | **Status** | Лише **українські** значення в аркуші (не змішувати з EN). |
 | **Unit** | Підрозділ (опційно). |
 
 Логічний фінальний рядок заголовків: `ID | FML | Birthday | Age | Days_until_birthday | Phone | 2_Phone | Callsign | Title | Position | OSH_4 | Unit | Status`
 
-Фізична структура в еталонній таблиці «Книга Взводу Охорони.xlsx» (PERSONNEL, A–P): `Cells` (ignore), `ID v/s`, `ID`, `Last name`, `First name`, `Patronymic`, birthday helpers, phones, **`Callsign` (L)**, `Rank`, `Position`, `OSH 4`, `Status`. Контракт: `contracts/reference-workbook-layout.contract.json`. `TEMPLATE` — лише legacy (у еталоні немає). Код читає **виключно за назвами заголовків**.
+Фізична структура в еталонній таблиці «Книга Взводу Охорони.xlsx» (PERSONNEL, A–Q): `Cells` (ignore), `ID v/s`, `ID`, `Last name`, `First name`, `Patronymic`, birthday helpers, phones, **`Email` (L)**, **`Callsign` (M)**, `Rank`, `Position`, `OSH 4` (P), `Status` (Q). Контракт: `contracts/reference-workbook-layout.contract.json`. `TEMPLATE` — лише legacy (у еталоні немає). Код читає **виключно за назвами заголовків**.
 
 ## Status (українською в таблиці)
 

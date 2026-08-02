@@ -78,6 +78,56 @@ var PersonsRepository_ =
       return base;
     }
 
+
+    function getEquipmentForPerson_(person) {
+      const warnings = [];
+      let cars = [];
+      let weapons = [];
+      let temporaryProperty = [];
+
+      if (
+        typeof ReferenceSheetsRepository_ === "object" &&
+        ReferenceSheetsRepository_ &&
+        typeof ReferenceSheetsRepository_.getEquipmentForPerson === "function"
+      ) {
+        try {
+          const equipment = ReferenceSheetsRepository_.getEquipmentForPerson(person || {});
+          cars = Array.isArray(equipment && equipment.cars) ? equipment.cars : [];
+          weapons = Array.isArray(equipment && equipment.weapons)
+            ? equipment.weapons
+            : [];
+          if (Array.isArray(equipment && equipment.warnings)) {
+            warnings.push.apply(warnings, equipment.warnings);
+          }
+        } catch (e) {
+          warnings.push(e && e.message ? String(e.message) : String(e));
+        }
+      }
+
+      if (
+        typeof TemporaryPropertyRegister_ === "object" &&
+        TemporaryPropertyRegister_ &&
+        typeof TemporaryPropertyRegister_.readForCallsign === "function"
+      ) {
+        try {
+          temporaryProperty = TemporaryPropertyRegister_.readForCallsign(
+            person && person.callsign ? person.callsign : "",
+            false,
+          );
+        } catch (e) {
+          warnings.push(e && e.message ? String(e.message) : String(e));
+        }
+      }
+
+      return {
+        cars: cars,
+        weapons: weapons,
+        temporaryProperty: temporaryProperty,
+        total: cars.length + weapons.length + temporaryProperty.length,
+        warnings: warnings,
+      };
+    }
+
     /**
      * Рядки місячного листа: позивний + БР + координати рядка; персональні поля з PERSONNEL.
      */
@@ -297,11 +347,15 @@ var PersonsRepository_ =
         : null;
 
       const fmlForVacation = merged.fml || payload.fml || "";
+      const equipment = getEquipmentForPerson_(merged);
 
       return {
         id: merged.id || "",
-        callsign: merged.callsign || item.callsign,
+        callsign: merged.callsign || rowMeta.callsign,
         fml: merged.fml || payload.fml || "",
+        lastName: merged.lastName || "",
+        firstName: merged.firstName || "",
+        patronymic: merged.patronymic || "",
         rank: merged.rank || merged.title || "",
         position: merged.position || "",
         oshs: merged.oshs || "",
@@ -327,6 +381,10 @@ var PersonsRepository_ =
           safeDate,
         ),
         vac: VacationsRepository_.getCurrentForFml(fmlForVacation, safeDate),
+        equipment: equipment,
+        cars: equipment.cars,
+        weapons: equipment.weapons,
+        temporaryProperty: equipment.temporaryProperty || [],
         phoneDisplay: _formatPhoneDisplay_(phone),
       };
     }

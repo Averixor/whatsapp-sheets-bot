@@ -28,7 +28,10 @@ assert.match(orchestrator, /function materializeAllComputedData_/);
 assert.match(orchestrator, /materializePersonnelDerivedSheets_/);
 assert.match(orchestrator, /materializeVacationComputedColumns_/);
 assert.match(orchestrator, /VacationOptionsWriter_\.rebuildVacationSystem/);
+assert.match(orchestrator, /skipUnchanged/);
 assert.match(orchestrator, /vacationSchedule/);
+assert.match(orchestrator, /materializeVacationMonthlyScheduleSync_/);
+assert.match(orchestrator, /vacationMonthlySync/);
 assert.match(orchestrator, /ensureSendPanelStatusFormula_/);
 assert.match(
   readRepoFileByBasename(repoRoot, "PersonnelMaterialize.gs", {
@@ -40,7 +43,7 @@ assert.match(
   readRepoFileByBasename(repoRoot, "PersonnelMaterialize.gs", {
     errorPrefix: "verify-materialize-computed-data",
   }),
-  /syncAllMonthlyCallsignsFromPersonnel_/,
+  /syncMonthlyCallsignsForPersonnelUpdate_/,
 );
 assert.match(
   readRepoFileByBasename(repoRoot, "PersonnelMaterialize.gs", {
@@ -50,13 +53,20 @@ assert.match(
 );
 
 assert.match(maintenanceApi, /function apiStage7MaterializeComputedData/);
+assert.match(maintenanceApi, /monthlySyncMode/);
+assert.match(useCases, /monthlySyncMode: input && input.monthlySyncMode/);
 assert.match(maintenanceApi, /materializeComputedData/);
 
 assert.match(useCases, /idempotency: type !== "materializeComputedData"/);
 assert.match(useCases, /case "materializeComputedData"/);
 assert.match(
   useCases,
-  /materializeAllComputedData_\(\{ source: "dailyJob" \}\)/,
+  /materializeAllComputedData_\(\{\s*source:\s*"dailyJob"[\s\S]*?lockOwner:\s*"daily_caller"/,
+);
+assert.match(useCases, /LockService\.getDocumentLock\s*\(\s*\)/);
+assert.match(
+  orchestrator,
+  /SystemStatusRuntime_\.evaluateComputedMaterialize/,
 );
 assert.doesNotMatch(
   useCases.match(/case "clearPhoneCache"[\s\S]*?case "restartBot"/)?.[0] ||
@@ -65,7 +75,12 @@ assert.doesNotMatch(
   "clearPhoneCache must not materialize derived sheets",
 );
 
-assert.doesNotMatch(utils.match(/function clearPhoneCache[\s\S]*?^}/m)?.[0] || "", /materializePersonnelDerivedSheets_/);
+assert.match(
+  readRepoFileByBasename(repoRoot, "UseCases.MonthOps.gs", {
+    errorPrefix: "verify-materialize-computed-data",
+  }),
+  /syncVacationsWithMonthlySheet_/,
+);
 
 const materializeContext = vm.createContext({
   console,
@@ -163,5 +178,11 @@ const sidebar = readRepoFileByBasename(repoRoot, "Sidebar.html", {
 });
 assert.match(sidebar, /Оновити обчислювані дані/);
 assert.match(sidebar, /materializeComputedData/);
+
+const jsCore = readRepoFileByBasename(repoRoot, "Js.Core.html", {
+  errorPrefix: "verify-materialize-computed-data",
+});
+assert.match(jsCore, /resolveApiSlowWarnMs_/);
+assert.match(jsCore, /apiStage7MaterializeComputedData:\s*120000/);
 
 console.log("verify-materialize-computed-data: OK");

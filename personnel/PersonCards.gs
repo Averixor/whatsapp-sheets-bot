@@ -105,6 +105,130 @@ function getPersonCardData(callsign, dateStr) {
   }
 }
 
+
+function _personCardAssetLine_(label, value) {
+  const safeValue = String(value || "").trim();
+  if (!safeValue) return "";
+  return `<div class="asset-line"><span>${_personCardSafeHtml_(label)}</span>${_personCardSafeHtml_(safeValue)}</div>`;
+}
+
+function _personCardRenderCar_(item) {
+  const car = item || {};
+  return `<div class="asset-card asset-card-car">
+    <div class="asset-title">${_personCardSafeHtml_(car.assetName || "Автотехніка")}</div>
+    ${_personCardAssetLine_("Військовий номер", car.militaryNumber || "—")}
+    ${_personCardAssetLine_("Шасі", car.chassisNumber || "—")}
+    ${_personCardAssetLine_("Рік", car.year || "—")}
+    ${_personCardAssetLine_("Стан", car.status || "—")}
+    ${_personCardAssetLine_("Вартість", car.costDisplay || "—")}
+  </div>`;
+}
+
+function _personCardRenderWeapon_(item) {
+  const weapon = item || {};
+  return `<div class="asset-card asset-card-weapon">
+    <div class="asset-title">${_personCardSafeHtml_(weapon.assetName || "Майно")}</div>
+    ${_personCardAssetLine_("Блок", weapon.blockLabel || "—")}
+    ${_personCardAssetLine_("Номенклатура", weapon.nomenclatureCode || "—")}
+    ${_personCardAssetLine_("Заводський номер", weapon.serialNumber || "—")}
+    ${_personCardAssetLine_("Рік", weapon.year || "—")}
+    ${_personCardAssetLine_("Ціна", weapon.unitPriceDisplay || "—")}
+    ${_personCardAssetLine_("Місце", weapon.location || "—")}
+  </div>`;
+}
+
+function _personCardPropertyQty_(value, unit) {
+  const raw = Number(value);
+  const amount = Number.isFinite(raw) ? raw : 0;
+  const normalized = Math.round(amount * 1000) / 1000;
+  return `${normalized} ${String(unit || "шт.").trim() || "шт."}`;
+}
+
+function _personCardRenderTemporaryPropertyComponent_(item) {
+  const component = item || {};
+  return `<div class="asset-component">
+    <div class="asset-component-name">${_personCardSafeHtml_(component.assetName || "Комплектуюча")}</div>
+    <div class="asset-component-meta">
+      ${_personCardSafeHtml_(_personCardPropertyQty_(component.remaining, component.unit))}
+      · ${_personCardSafeHtml_(component.status || "—")}
+    </div>
+  </div>`;
+}
+
+function _personCardRenderTemporaryProperty_(item) {
+  const property = item || {};
+  const components = Array.isArray(property.components) ? property.components : [];
+  const fuel = [property.fuelType, property.fuelVolume ? `${property.fuelVolume} л` : ""]
+    .filter(Boolean)
+    .join(", ");
+  const componentsHtml = components.length
+    ? `<div class="asset-components">
+        <div class="asset-components-title">Комплектність</div>
+        ${components.map(_personCardRenderTemporaryPropertyComponent_).join("")}
+      </div>`
+    : "";
+
+  return `<div class="asset-card asset-card-temporary">
+    <div class="asset-title">${_personCardSafeHtml_(property.assetName || "Майно")}</div>
+    ${_personCardAssetLine_("Пост / об'єкт", property.post || "—")}
+    ${_personCardAssetLine_("Категорія", property.category || "—")}
+    ${_personCardAssetLine_("Видано", _personCardPropertyQty_(property.issued, property.unit))}
+    ${_personCardAssetLine_("Повернуто", _personCardPropertyQty_(property.returned, property.unit))}
+    ${_personCardAssetLine_("Залишок", _personCardPropertyQty_(property.remaining, property.unit))}
+    ${_personCardAssetLine_("Дата видачі", property.issuedDate || "—")}
+    ${_personCardAssetLine_("Дата повернення", property.returnedDate || "—")}
+    ${_personCardAssetLine_("Паливо", fuel)}
+    ${_personCardAssetLine_("Статус", property.status || "—")}
+    ${_personCardAssetLine_("Примітка", property.note)}
+    ${componentsHtml}
+  </div>`;
+}
+
+function _personCardEquipmentHtml_(data) {
+  const cars = Array.isArray(data && data.cars)
+    ? data.cars
+    : data && data.equipment && Array.isArray(data.equipment.cars)
+      ? data.equipment.cars
+      : [];
+  const weapons = Array.isArray(data && data.weapons)
+    ? data.weapons
+    : data && data.equipment && Array.isArray(data.equipment.weapons)
+      ? data.equipment.weapons
+      : [];
+  const temporaryProperty = Array.isArray(data && data.temporaryProperty)
+    ? data.temporaryProperty
+    : data && data.equipment && Array.isArray(data.equipment.temporaryProperty)
+      ? data.equipment.temporaryProperty
+      : [];
+  if (!cars.length && !weapons.length && !temporaryProperty.length) return "";
+
+  const carsHtml = cars.length
+    ? `<div class="asset-section">
+        <div class="asset-section-title">Автотехніка</div>
+        <div class="asset-list">${cars.map(_personCardRenderCar_).join("")}</div>
+      </div>`
+    : "";
+  const weaponsHtml = weapons.length
+    ? `<div class="asset-section">
+        <div class="asset-section-title">Озброєння та майно</div>
+        <div class="asset-list">${weapons.map(_personCardRenderWeapon_).join("")}</div>
+      </div>`
+    : "";
+  const temporaryHtml = temporaryProperty.length
+    ? `<div class="asset-section">
+        <div class="asset-section-title">Тимчасово видане майно</div>
+        <div class="asset-list">${temporaryProperty.map(_personCardRenderTemporaryProperty_).join("")}</div>
+      </div>`
+    : "";
+
+  return `<div class="assets-wrap">
+    <div class="assets-header">Облік майна</div>
+    ${carsHtml}
+    ${weaponsHtml}
+    ${temporaryHtml}
+  </div>`;
+}
+
 function openPersonCardByCallsign_(callsign) {
   return openPersonCardByCallsignAndDate_(callsign, _todayStr_());
 }
@@ -135,6 +259,7 @@ function openPersonCardByCallsignAndDate_(callsign, dateStr) {
   const escapedMessage = _personCardSafeHtml_(data.message || "");
   const callsignJs = _personCardJsString_(data.callsign || "");
   const waLink = String(data.waLink || "").trim();
+  const equipmentHtml = _personCardEquipmentHtml_(data);
 
   const currentVacHtml =
     data.vac && data.vac.inVacation && Array.isArray(data.vac.matches)
@@ -365,6 +490,105 @@ function openPersonCardByCallsignAndDate_(callsign, dateStr) {
             line-height: 1.35;
           }
 
+          .assets-wrap {
+            margin-top: 14px;
+            border: 1px solid rgba(96, 165, 250, 0.35);
+            border-radius: 14px;
+            padding: 12px;
+            background: rgba(15, 23, 42, 0.58);
+          }
+
+          .assets-header {
+            font-size: 14px;
+            font-weight: 800;
+            margin-bottom: 10px;
+            color: #ffffff;
+          }
+
+          .asset-section + .asset-section {
+            margin-top: 12px;
+          }
+
+          .asset-section-title {
+            color: #93c5fd;
+            font-size: 12px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+          }
+
+          .asset-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+          }
+
+          .asset-card {
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 12px;
+            padding: 10px;
+            background: rgba(2, 6, 23, 0.38);
+          }
+
+          .asset-title {
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 800;
+            line-height: 1.3;
+            margin-bottom: 6px;
+          }
+
+          .asset-line {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            color: #dbeafe;
+            font-size: 12px;
+            line-height: 1.35;
+            padding: 2px 0;
+          }
+
+          .asset-line span {
+            color: #9fb2cb;
+            flex-shrink: 0;
+          }
+
+          .asset-components {
+            margin-top: 8px;
+            border-top: 1px solid rgba(148, 163, 184, 0.2);
+            padding-top: 7px;
+          }
+
+          .asset-components-title {
+            color: #93c5fd;
+            font-size: 11px;
+            font-weight: 800;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+          }
+
+          .asset-component {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 3px 0 3px 8px;
+            border-left: 2px solid rgba(96, 165, 250, 0.45);
+            font-size: 11px;
+            line-height: 1.35;
+          }
+
+          .asset-component-name {
+            color: #dbeafe;
+          }
+
+          .asset-component-meta {
+            color: #9fb2cb;
+            text-align: right;
+            flex-shrink: 0;
+          }
+
           .actions {
             display: flex;
             gap: 8px;
@@ -566,6 +790,7 @@ function openPersonCardByCallsignAndDate_(callsign, dateStr) {
 
           ${currentVacHtml}
           ${nextVacHtml}
+          ${equipmentHtml}
 
           <div class="actions">
             ${whatsappHtml}

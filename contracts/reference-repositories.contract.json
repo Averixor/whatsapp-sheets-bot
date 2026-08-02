@@ -52,91 +52,341 @@
     "carsRegister": {
       "sheetName": "CAR",
       "headers": [
-        "П.І.Б",
-        "Найменування військового майна",
-        "Військовий номер",
-        "Номер шасі",
-        "Рік випуску",
-        "Вартість",
-        "Стан"
+        "Callsign",
+        "Name of military property",
+        "Military registration number",
+        "Chassis number",
+        "Year of manufacture",
+        "Value",
+        "Condition"
       ],
       "fixtureRows": [
         [
-          "П.І.Б",
-          "Найменування військового майна",
-          "Військовий номер",
-          "Номер шасі",
-          "Рік випуску",
-          "Вартість",
-          "Стан"
+          "Callsign",
+          "Name of military property",
+          "Military registration number",
+          "Chassis number",
+          "Year of manufacture",
+          "Value",
+          "Condition"
         ],
         [
-          "Іваненко Іван Іванович",
-          "Автомобіль легковий",
-          "АА0001",
-          "VIN001",
-          "2020",
-          "100 000,50",
-          "Справна"
-        ],
-        [
-          "Петренко Петро Петрович",
-          "",
-          "АА0002",
-          "VIN002",
-          "2019",
-          "50000",
+          "ГУГЛ",
+          "легковий  FORD RANGER",
+          "9213К3",
+          "WF0LMFE404W420552",
+          "2005",
+          "100 000,00",
           "Не БГ (ремонт)"
         ],
         [
-          "—",
-          "Мотоцикл",
-          "",
-          "VIN003",
-          "2021",
-          "75000",
-          "Обмежено БГ — потрібен ремонт."
+          "－",
+          "легковий  FORD RANGER",
+          "9268К3",
+          "WF0LMFE106W633377",
+          "2007",
+          "246 101,00",
+          "Не БГ (ремонт)"
         ],
         [
-          "Сидоренко С.С.",
-          "Вантажний автомобіль",
-          "АА0004",
-          "VIN004",
-          "2018",
-          "25000",
-          "Справна (БГ)."
+          "СОВА",
+          "автофургон VOLKSWAGEN TRANSPORTER T4",
+          "3181К3",
+          "WV2ZZZ70Z2H043277",
+          "2001",
+          "164 000,00",
+          "Обмежено БГ"
+        ],
+        [
+          "*Чубейко",
+          "автофургон VOLKSWAGEN TRANSPORTER T5",
+          "9283К3",
+          "WV1ZZZ7HZ9H118369",
+          "2009",
+          "325 000,00",
+          "Обмежено БГ"
+        ],
+        [
+          "Бондарчук В.І.",
+          "легковий PEUGEOT 301",
+          "9197К3",
+          "VF3DDNFP0MJ899361",
+          "2022",
+          "355 000,00",
+          "Справна"
+        ],
+        [
+          "－",
+          "мотоцикл FORTE CROSS 300 MSX",
+          "5661К3",
+          "LB430Y5C9SC207813",
+          "2025",
+          "51 130,00",
+          "Справна"
+        ],
+        [
+          "－",
+          "мотоцикл FORTE CROSS 300 MSX",
+          "5662К3",
+          "LB430Y5CXSC207786",
+          "2025",
+          "51 130,00",
+          "Справна"
+        ],
+        [
+          "Шапка П.П.",
+          "вантажний IVECO FIAT 40-10.2",
+          "9303К3",
+          "ZCFD4078209024633",
+          "1991",
+          "128 942,21",
+          "Не БГ (дефіцит)"
+        ],
+        [
+          "Чуйко К.В.",
+          "легковий MITSUBISHI DELICA",
+          "3157К3",
+          "PD8W0013263",
+          "1994",
+          "52 000,00",
+          "Не БГ (дефіцит)"
+        ],
+        [
+          "МАЙОР",
+          "легковий  NISSAN NAVARA",
+          "3164К3",
+          "JN1CPUD22U0077648",
+          "2003",
+          "212 00,00",
+          "Втрачена"
         ]
       ],
       "expected": {
-        "itemCount": 3,
+        "itemCount": 10,
         "assetNames": [
-          "Автомобіль легковий",
-          "Мотоцикл",
-          "Вантажний автомобіль"
+          "легковий FORD RANGER",
+          "легковий FORD RANGER",
+          "автофургон VOLKSWAGEN TRANSPORTER T4",
+          "автофургон VOLKSWAGEN TRANSPORTER T5",
+          "легковий PEUGEOT 301",
+          "мотоцикл FORTE CROSS 300 MSX",
+          "мотоцикл FORTE CROSS 300 MSX",
+          "вантажний IVECO FIAT 40-10.2",
+          "легковий MITSUBISHI DELICA",
+          "легковий NISSAN NAVARA"
         ],
         "stats": {
-          "total": 3,
-          "assigned": 2,
-          "unassigned": 1,
-          "totalCost": 200000.5
+          "total": 10,
+          "assigned": 7,
+          "unassigned": 3,
+          "unresolvedOwners": 4,
+          "totalCost": 1494503.21
         },
-        "warningPattern": "Пропущено рядків без найменування майна: 1",
+        "warningPattern": "Автотехніка: власників не знайдено в особовому складі: 4",
         "normalizedStatuses": [
-          "Справна",
+          "Не БГ (ремонт)",
+          "Не БГ (ремонт)",
           "Обмежено БГ",
-          "Справна"
+          "Обмежено БГ",
+          "Справна",
+          "Справна",
+          "Справна",
+          "Не БГ (дефіцит)",
+          "Не БГ (дефіцит)",
+          "Втрачена"
         ],
         "statusDescriptionAtIndex": {
-          "index": 1,
-          "value": "Потрібен ремонт."
+          "index": 0,
+          "value": "На ремонті."
         },
         "byStatus": [
-          "Справна:2",
-          "Обмежено БГ:1"
+          "Справна:3",
+          "Обмежено БГ:2",
+          "Не БГ (ремонт):2",
+          "Не БГ (дефіцит):2",
+          "Втрачена:1"
+        ],
+        "missingOwners": [
+          "*Чубейко",
+          "Бондарчук В.І.",
+          "Шапка П.П.",
+          "Чуйко К.В."
         ],
         "searchIncludesAtIndex": {
-          "index": 1,
-          "value": "обмежено бг"
+          "index": 9,
+          "value": "майор"
+        }
+      }
+    },
+    "weaponsRegister": {
+      "sheetName": "WEAPON",
+      "headers": [
+        "Last name",
+        "First name",
+        "Patronymic",
+        "Rank",
+        "Phone",
+        "Name of military property",
+        "Year of manufacture",
+        "Nomenclature code",
+        "Serial number",
+        "Unit price",
+        "Date of assignment",
+        "Location",
+        "Name of military property",
+        "Year of manufacture",
+        "Nomenclature code",
+        "Serial number",
+        "Unit price",
+        "Date of assignment",
+        "Location",
+        "",
+        "Name of military property",
+        "Year of manufacture",
+        "Nomenclature code",
+        "Serial number",
+        "Unit price",
+        "Location"
+      ],
+      "fixtureRows": [
+        [
+          "Last name",
+          "First name",
+          "Patronymic",
+          "Rank",
+          "Phone",
+          "Name of military property",
+          "Year of manufacture",
+          "Nomenclature code",
+          "Serial number",
+          "Unit price",
+          "Date of assignment",
+          "Location",
+          "Name of military property",
+          "Year of manufacture",
+          "Nomenclature code",
+          "Serial number",
+          "Unit price",
+          "Date of assignment",
+          "Location",
+          "",
+          "Name of military property",
+          "Year of manufacture",
+          "Nomenclature code",
+          "Serial number",
+          "Unit price",
+          "Location"
+        ],
+        [
+          "Іваненко",
+          "Іван",
+          "Іванович",
+          "солдат",
+          "0671112233",
+          "АК-74",
+          "1988",
+          "1005",
+          "AB1234",
+          "12000,50",
+          "01.07.2026",
+          "Зброярня",
+          "Магазин",
+          "1988",
+          "2001",
+          "MG001",
+          "500",
+          "01.07.2026",
+          "Зброярня",
+          "",
+          "Штик-ніж",
+          "1987",
+          "3002",
+          "SN987",
+          "2500",
+          "Сейф №1"
+        ],
+        [
+          "Петренко",
+          "Петро",
+          "Петрович",
+          "сержант",
+          "0674445566",
+          "",
+          "2020",
+          "1006",
+          "XX000",
+          "11000",
+          "02.07.2026",
+          "Кімната зброї",
+          "Пістолет",
+          "2019",
+          "5000",
+          "PT100",
+          "18000",
+          "02.07.2026",
+          "Сейф №2",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "Кулемет",
+          "2015",
+          "9001",
+          "KM555",
+          "45000",
+          "",
+          "Склад",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      ],
+      "expected": {
+        "itemCount": 5,
+        "assetNames": [
+          "АК-74",
+          "Магазин",
+          "Штик-ніж",
+          "Пістолет",
+          "Кулемет"
+        ],
+        "stats": {
+          "total": 5,
+          "persons": 2,
+          "assigned": 4,
+          "unassigned": 1,
+          "totalUnitPrice": 78000.5
+        },
+        "warningPattern": "Пропущено блоків без найменування майна: 1",
+        "byType": [
+          "Автомати:1",
+          "Кулемети:1",
+          "Пістолети:1"
+        ],
+        "searchIncludesAtIndex": {
+          "index": 0,
+          "value": "ab1234"
         }
       }
     }
@@ -145,6 +395,7 @@
     "phoneDirectoryLabel": "Службові телефони",
     "carsRegisterLabel": "Автотехніка",
     "whatsAppButtonLabel": "WA",
-    "noDataBadgeLabel": "Н/Д"
+    "noDataBadgeLabel": "Н/Д",
+    "weaponsRegisterLabel": "Озброєння"
   }
 }

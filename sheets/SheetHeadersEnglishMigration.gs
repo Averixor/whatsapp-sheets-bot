@@ -50,7 +50,12 @@ function wasbNormalizeAllSheetHeadersToEnglish() {
       max = 0;
     if (schema.headerBased && Array.isArray(schema.canonicalHeaderOrder)) {
       return schema.canonicalHeaderOrder.map(function (header) {
-        if (header === "Days_until_birthday") return "Days Until Birthday";
+        if (header === "Cells") return "Cells";
+        if (header === "ID_VS") return "ID v/s";
+        if (header === "ID") return "ID Army+";
+        if (header === "LastName") return "Last name";
+        if (header === "FirstName") return "First name";
+        if (header === "Days_until_birthday") return "Days until birthday";
         if (header === "2_Phone") return "Phone 2";
         if (header === "OSH_4") return "OSH 4";
         return header;
@@ -100,6 +105,7 @@ function wasbNormalizeAllSheetHeadersToEnglish() {
       return changed;
     });
   [
+    ["PERSONNEL", (CONFIG && CONFIG.PERSONNEL_SHEET) || "PERSONNEL", 1],
     ["PHONES", (CONFIG && CONFIG.PHONES_SHEET) || "PHONES", 1],
     ["DICT", (CONFIG && CONFIG.DICT_SHEET) || "DICT", 1],
     ["DICT_SUM", (CONFIG && CONFIG.DICT_SUM_SHEET) || "DICT_SUM", 1],
@@ -111,6 +117,8 @@ function wasbNormalizeAllSheetHeadersToEnglish() {
       1,
     ],
     ["LOG", (CONFIG && CONFIG.LOG_SHEET) || "LOG", 1],
+    ["CAR", (CONFIG && CONFIG.CAR_SHEET) || "CAR", 1],
+    ["WEAPON", (CONFIG && CONFIG.WEAPON_SHEET) || "WEAPON", 1],
     [
       "SEND_PANEL",
       (CONFIG && CONFIG.SEND_PANEL_SHEET) || "SEND_PANEL",
@@ -124,7 +132,7 @@ function wasbNormalizeAllSheetHeadersToEnglish() {
       });
   });
   var fixed = {
-    TEMPLATES: ["KEY", "TEXT", "ENABLED", "TAGS HINTS", "NOTE"],
+    TEMPLATES: ["KEY", "TEXT", "ENABLED", "TAGS HINT", "NOTE"],
     ALERTS_LOG: [
       "Timestamp",
       "Type",

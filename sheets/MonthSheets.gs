@@ -96,6 +96,41 @@ function _setMonthDatesRow_(sheet, month, year) {
   };
 }
 
+/**
+ * Re-copy data validations from the source month after post-create sync.
+ * Conditional formatting is restored separately via
+ * replaceConditionalFormatRulesFromSheet_ (never CF paste).
+ */
+function _copyMonthSheetDataValidationsFromSource_(sourceSheet, targetSheet) {
+  if (!sourceSheet || !targetSheet) {
+    return { ok: false, dataValidationsCopied: false };
+  }
+
+  var validationsCopied = false;
+  try {
+    var rows = Math.min(
+      Math.max(Number(sourceSheet.getLastRow()) || 0, 1),
+      Math.max(Number(targetSheet.getLastRow()) || 0, 1),
+    );
+    var cols = Math.min(
+      Math.max(Number(sourceSheet.getLastColumn()) || 0, 1),
+      Math.max(Number(targetSheet.getLastColumn()) || 0, 1),
+    );
+    if (rows > 0 && cols > 0) {
+      var validations = sourceSheet
+        .getRange(1, 1, rows, cols)
+        .getDataValidations();
+      targetSheet.getRange(1, 1, rows, cols).setDataValidations(validations);
+      validationsCopied = true;
+    }
+  } catch (_) {}
+
+  return {
+    ok: validationsCopied,
+    dataValidationsCopied: validationsCopied,
+  };
+}
+
 function createNextMonthSheet() {
   const ui = SpreadsheetApp.getUi();
   try {
@@ -122,18 +157,85 @@ function createNextMonthSheet() {
     const srcMY = _inferMonthYearFromSheet_(src);
     const targetMonth = nextNum;
     const targetYear = (targetMonth < srcMY.month) ? (srcMY.year + 1) : srcMY.year;
+    const sourceFormulaBounds =
+      typeof _monthlyCodeBoundsFromSheet_ === "function"
+        ? _monthlyCodeBoundsFromSheet_(src)
+        : null;
 
     const monthGrid = _setMonthDatesRow_(newSheet, targetMonth, targetYear);
     newSheet.getRange(monthGrid.clearRangeA1).clearContent();
 
     applyGlobalSheetStandards_();
+    var callsignSync = null;
     try {
       if (typeof syncMonthlyCallsignsFromPersonnel_ === "function") {
-        syncMonthlyCallsignsFromPersonnel_(newSheet);
+        callsignSync = syncMonthlyCallsignsFromPersonnel_(newSheet, {
+          allowShrink: true,
+          skipFormulaRewrite: true,
+        });
       }
     } catch (syncErr) {
       console.error(syncErr);
     }
+    try {
+      if (typeof rewriteMonthlyScheduleFormulasToCodeRange_ === "function") {
+        var afterBounds =
+          callsignSync && callsignSync.scheduleBounds
+            ? callsignSync.scheduleBounds
+            : typeof _monthlyCodeBoundsFromSheet_ === "function"
+              ? _monthlyCodeBoundsFromSheet_(newSheet)
+              : null;
+        if (
+          afterBounds &&
+          callsignSync &&
+          callsignSync.capacityEndRow &&
+          typeof _monthlyBoundsWithEndRow_ === "function"
+        ) {
+          afterBounds = _monthlyBoundsWithEndRow_(
+            afterBounds,
+            callsignSync.capacityEndRow,
+          );
+        }
+        rewriteMonthlyScheduleFormulasToCodeRange_(
+          newSheet,
+          sourceFormulaBounds,
+          afterBounds,
+        );
+      }
+    } catch (formulaSyncErr) {
+      console.error(formulaSyncErr);
+    }
+    try {
+      if (typeof syncVacationsWithMonthlySheet_ === "function") {
+        syncVacationsWithMonthlySheet_({
+          sheet: newSheet,
+          source: "createMonthSheet",
+        });
+      }
+    } catch (vacationSyncErr) {
+      console.error(vacationSyncErr);
+    }
+
+    try {
+      replaceConditionalFormatRulesFromSheet_(src, newSheet);
+    } catch (formatSyncErr) {
+      console.error(formatSyncErr);
+      throw new Error(
+        "Не вдалося перенести умовне форматування до нового місячного аркуша",
+      );
+    }
+    try {
+      _copyMonthSheetDataValidationsFromSource_(src, newSheet);
+    } catch (_) {}
+
+    try {
+      if (typeof applyColumnWidthsStandardsToSheet_ === "function") {
+        applyColumnWidthsStandardsToSheet_(newSheet);
+      }
+    } catch (widthErr) {
+      console.error(widthErr);
+    }
+
     newSheet.activate();
     highlightActiveMonthTab_(nextName);
 

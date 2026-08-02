@@ -83,8 +83,8 @@
                 if (typeof openAccessLoginFlow === 'function')
                   openAccessLoginFlow('login');
               "
-              title="Увійти за ключем доступу"
-              aria-label="Увійти за ключем доступу"
+              title="Увійти"
+              aria-label="Увійти"
             >
               <span class="whatsapp-icon" aria-hidden="true">🔑</span>
             </button>
@@ -209,6 +209,30 @@
             </button>
 
             <button
+              id="btnWeaponsRegister"
+              class="menu-item"
+              data-role-min="maintainer"
+              type="button"
+              onclick="SidebarApp.handleMenuAction('weaponsRegister')"
+              title="Відкрити реєстр озброєння та майна"
+            >
+              <span class="menu-icon" aria-hidden="true">🪖</span>
+              <span class="menu-text">Озброєння</span>
+            </button>
+
+            <button
+              id="btnInventoryReconciliation"
+              class="menu-item"
+              data-role-min="maintainer"
+              type="button"
+              onclick="SidebarApp.handleMenuAction('inventoryReconciliation')"
+              title="Переглянути статуси звірки та пов’язані документи"
+            >
+              <span class="menu-icon" aria-hidden="true">🧾</span>
+              <span class="menu-text">Звірка</span>
+            </button>
+
+            <button
               id="btnVacations"
               class="menu-item"
               data-role-min="maintainer"
@@ -295,6 +319,33 @@
 
                 <button
                   class="btn btn-secondary health-actions-btn health-actions-btn--wide"
+                  data-role-min="admin"
+                  type="button"
+                  onclick="SidebarApp.handleMenuAction('bootstrapRuntime')"
+                >
+                  📋 Створити службові листи
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn health-actions-btn--wide"
+                  data-role-min="admin"
+                  type="button"
+                  onclick="SidebarApp.handleMenuAction('bootstrapAccess')"
+                >
+                  🔐 Ініціалізувати лист доступу
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="sysadmin"
+                  type="button"
+                  onclick="SidebarApp.handleMenuAction('previewProtections')"
+                >
+                  👁 Переглянути захист листів
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
                   data-role-min="sysadmin"
                   type="button"
                   onclick="SidebarApp.handleMenuAction('applyProtections')"
@@ -309,6 +360,15 @@
                   onclick="SidebarApp.runHealthCheck()"
                 >
                   🩺 Перевірка системи
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="admin"
+                  type="button"
+                  onclick="SidebarApp.handleMenuAction('runRegressionTests')"
+                >
+                  🧪 Регресійні тести
                 </button>
 
                 <button
@@ -364,6 +424,24 @@
                   onclick="SidebarApp.materializeMonthJournal()"
                 >
                   📓 Оновити журнал місяця
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="admin"
+                  type="button"
+                  onclick="SidebarApp.setupTemporaryPropertyRegister()"
+                >
+                  📦 Налаштувати облік майна
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="maintainer"
+                  type="button"
+                  onclick="SidebarApp.refreshTemporaryPropertyRegister()"
+                >
+                  🔄 Оновити облік майна
                 </button>
 
                 <button
@@ -623,7 +701,7 @@
               >Пошук за позивним</label
             >
             <input
-              id="personnelSearchInput"
+              id="personnelSearchInput" name="personnelSearchInput"
               class="personnel-search"
               type="text"
               placeholder="Пошук позивного..."

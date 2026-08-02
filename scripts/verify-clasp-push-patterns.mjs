@@ -5,7 +5,9 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { repoRoot } from './lib/load-contract.mjs';
+import './verify-inventory-reconciliation.mjs';
 
 const NESTED_INCLUDE_PATTERNS = ['!**/*.gs', '!**/*.html'];
 
@@ -61,6 +63,23 @@ function main() {
         );
       }
     }
+  }
+
+  const clasp = spawnSync('npx', ['clasp', 'status'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    shell: process.platform === 'win32',
+  });
+  const statusOutput = `${clasp.stdout || ''}\n${clasp.stderr || ''}`;
+  if (clasp.status === 0) {
+    if (!/tests[\\/]Stage7TestRunner\.gs/i.test(statusOutput)) {
+      errors.push('clasp status must track tests/Stage7TestRunner.gs');
+    }
+    if (!/smoke[\\/]SmokeTests.*\.gs/i.test(statusOutput)) {
+      errors.push('clasp status must track smoke/SmokeTests*.gs');
+    }
+  } else if (!/scriptId|\.clasp\.json|not logged in|credentials|Project settings not found/i.test(statusOutput)) {
+    errors.push(`clasp status failed unexpectedly: ${statusOutput.trim()}`);
   }
 
   if (errors.length) {

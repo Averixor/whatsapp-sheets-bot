@@ -27,6 +27,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
+          # CI pin; package.json engines.node is >=24 (no upper major cap).
           node-version: "24"
           package-manager-cache: false
 

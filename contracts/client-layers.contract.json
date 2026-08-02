@@ -25,7 +25,7 @@
     {
       "id": "features",
       "files": [
-        "Js.Vacations",
+        "Js.Vacations.Module",
         "Js.Diagnostics",
         "Js.Security.Boot",
         "Js.Security.Util",

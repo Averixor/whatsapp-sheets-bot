@@ -200,11 +200,15 @@
         );
         return;
       }
+      if (typeof captureBrowserSessionFromResult_ === "function") {
+        captureBrowserSessionFromResult_(result);
+        captureBrowserSessionFromResult_(result.data);
+      }
       setAccessLoginModalMessage_(
         (result && result.message) || "Доступ активовано. Оновіть панель.",
         false,
       );
-      showToast("Доступ активовано");
+      showToast((result && result.message) || "Доступ активовано");
       setTimeout(function () {
         try {
           closeAccessLoginModal();

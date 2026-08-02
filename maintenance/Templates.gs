@@ -1,7 +1,7 @@
 /**
  * Templates.gs — template engine + TEMPLATES sheet access + WhatsApp link builder
  *
- * TEMPLATES sheet: A=KEY, B=TEXT, C=ENABLED(checkbox), D=TAGS_HINT, E=NOTE
+ * TEMPLATES sheet: A=KEY, B=TEXT, C=ENABLED(checkbox), D=TAGS HINT, E=NOTE
  */
 
 const TEMPLATES_SHEET_NAME = "TEMPLATES";

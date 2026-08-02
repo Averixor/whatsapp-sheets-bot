@@ -242,6 +242,7 @@ function apiStage7BootstrapSidebar() {
         "Заявки",
         CONFIG.PHONE_DIRECTORY_SHEET || "PHONE_DIRECTORY",
         CONFIG.CAR_SHEET || "CAR",
+        CONFIG.WEAPON_SHEET || "WEAPON",
       ].map(function (name) {
         return { name: name, exists: !!ss.getSheetByName(name) };
       }),
@@ -426,6 +427,108 @@ function apiStage7GetCarsRegister() {
       startedAt: startedAt,
       affectedSheets: [CONFIG.CAR_SHEET || "CAR"],
     },
+  );
+}
+
+function apiStage7GetWeaponsRegister() {
+  const startedAt = _stage7FastStartedAt_();
+  _stage7AssertRole_("maintainer", "get weapons register");
+
+  const data = ReferenceSheetsRepository_.readWeaponsRegister();
+  return _stage7FastResponse_(
+    "getWeaponsRegister",
+    "Реєстр озброєння та майна завантажено",
+    data,
+    data.warnings || [],
+    {
+      startedAt: startedAt,
+      affectedSheets: [CONFIG.WEAPON_SHEET || "WEAPON"],
+    },
+  );
+}
+
+function apiStage7GetInventoryReconciliation(options) {
+  const startedAt = _stage7FastStartedAt_();
+  _stage7AssertRole_("maintainer", "get inventory reconciliation");
+
+  const data = InventoryReconciliation_.getDashboard(options || {});
+  return _stage7FastResponse_(
+    "getInventoryReconciliation",
+    "Статуси звірки завантажено",
+    data,
+    [],
+    {
+      startedAt: startedAt,
+      affectedSheets: [
+        CONFIG.INVENTORY_RECONCILIATION_SHEET || "INVENTORY_RECONCILIATION",
+        CONFIG.INVENTORY_RECONCILIATION_FILES_SHEET || "INVENTORY_RECONCILIATION_FILES",
+      ],
+    },
+  );
+}
+
+function apiStage7SyncInventoryReconciliation() {
+  const startedAt = _stage7FastStartedAt_();
+  _stage7AssertRole_("maintainer", "sync inventory reconciliation");
+
+  const data = InventoryReconciliation_.syncFiles();
+  const warnings = [];
+  if (data.truncatedByFiles) {
+    warnings.push("Перевірено граничну кількість файлів; частина папки могла не потрапити до пошуку");
+  }
+  if (data.truncatedByDepth) {
+    warnings.push("Досягнуто граничну глибину вкладених папок; глибші рівні не переглянуто");
+  } else if (data.truncated && !data.truncatedByFiles) {
+    warnings.push("Перегляд папки звірки обмежено; частина вмісту могла не потрапити до пошуку");
+  }
+  return _stage7FastResponse_(
+    "syncInventoryReconciliation",
+    "Файли звірки синхронізовано",
+    data,
+    warnings,
+    {
+      startedAt: startedAt,
+      affectedSheets: [
+        CONFIG.INVENTORY_RECONCILIATION_SHEET || "INVENTORY_RECONCILIATION",
+        CONFIG.INVENTORY_RECONCILIATION_FILES_SHEET || "INVENTORY_RECONCILIATION_FILES",
+      ],
+      appliedChangesCount: Number(data.linkedFiles || 0),
+      dryRun: false,
+      lockUsed: true,
+      lockRequired: true,
+    },
+  );
+}
+
+function apiStage7SetInventoryReconciliationFolder(folderValue) {
+  const startedAt = _stage7FastStartedAt_();
+  _stage7AssertRole_("sysadmin", "configure inventory reconciliation folder");
+
+  const folder = InventoryReconciliation_.setFolder(folderValue || "");
+  return _stage7FastResponse_(
+    "setInventoryReconciliationFolder",
+    "Папку звірок збережено",
+    { folder: folder },
+    [],
+    {
+      startedAt: startedAt,
+      appliedChangesCount: 1,
+      dryRun: false,
+    },
+  );
+}
+
+function apiStage7GetSelectedInventoryReconciliation() {
+  const startedAt = _stage7FastStartedAt_();
+  _stage7AssertRole_("maintainer", "get selected inventory reconciliation");
+
+  const data = InventoryReconciliation_.getSelected();
+  return _stage7FastResponse_(
+    "getSelectedInventoryReconciliation",
+    data.success ? "Вибрану звірку визначено" : "Клітинку звірки не визначено",
+    data,
+    data.success ? [] : [data.error || "Оберіть клітинку звірки"],
+    { startedAt: startedAt },
   );
 }
 

@@ -1,33 +1,54 @@
 #!/usr/bin/env node
 /**
- * Monthly callsign sync — PERSONNEL callsign/last name → monthly «Позивні» column.
+ * Monthly callsign sync — PERSONNEL Callsign → Last name → First name → monthly «Позивні».
  */
 import assert from "node:assert/strict";
+import vm from "node:vm";
 import { repoRoot } from "./lib/load-contract.mjs";
 import { readRepoFileByBasename } from "./lib/gas-files.mjs";
 
-function monthlyCallsignValueFromPersonnelRow(callsignRaw, lastNameRaw) {
+function monthlyCallsignValueFromPersonnelRow(
+  callsignRaw,
+  lastNameRaw,
+  firstNameRaw,
+) {
   const callsign = String(callsignRaw ?? "").trim();
   if (callsign) return callsign;
-  return String(lastNameRaw ?? "").trim();
+  const lastName = String(lastNameRaw ?? "").trim();
+  if (lastName) return lastName;
+  return String(firstNameRaw ?? "").trim();
 }
 
-assert.equal(monthlyCallsignValueFromPersonnelRow("Беркут", "Иванов"), "Беркут");
-assert.equal(monthlyCallsignValueFromPersonnelRow("", "Петренко"), "Петренко");
-assert.equal(monthlyCallsignValueFromPersonnelRow("Сидор", "Сидоренко"), "Сидор");
-assert.equal(monthlyCallsignValueFromPersonnelRow("   ", "Петренко"), "Петренко");
-assert.equal(monthlyCallsignValueFromPersonnelRow("", ""), "");
-assert.equal(monthlyCallsignValueFromPersonnelRow(null, null), "");
+assert.equal(
+  monthlyCallsignValueFromPersonnelRow("Беркут", "Иванов", "Иван"),
+  "Беркут",
+);
+assert.equal(
+  monthlyCallsignValueFromPersonnelRow("", "Петренко", "Іван"),
+  "Петренко",
+);
+assert.equal(
+  monthlyCallsignValueFromPersonnelRow("Сидор", "Сидоренко", "Сидір"),
+  "Сидор",
+);
+assert.equal(
+  monthlyCallsignValueFromPersonnelRow("   ", "Петренко", "Іван"),
+  "Петренко",
+);
+assert.equal(monthlyCallsignValueFromPersonnelRow("", "", "Олена"), "Олена");
+assert.equal(monthlyCallsignValueFromPersonnelRow("", "", ""), "");
+assert.equal(monthlyCallsignValueFromPersonnelRow(null, null, null), "");
 
 const orderInput = [
-  ["A1", "Ln1"],
-  ["", "Ln2"],
-  ["C3", ""],
+  ["A1", "Ln1", "Fn1"],
+  ["", "Ln2", "Fn2"],
+  ["C3", "", "Fn3"],
+  ["", "", "Fn4"],
 ];
-const orderOutput = orderInput.map(([c, l]) =>
-  monthlyCallsignValueFromPersonnelRow(c, l),
+const orderOutput = orderInput.map(([c, l, f]) =>
+  monthlyCallsignValueFromPersonnelRow(c, l, f),
 );
-assert.deepEqual(orderOutput, ["A1", "Ln2", "C3"]);
+assert.deepEqual(orderOutput, ["A1", "Ln2", "C3", "Fn4"]);
 
 const syncModule = readRepoFileByBasename(
   repoRoot,
@@ -42,11 +63,69 @@ const personnelMaterialize = readRepoFileByBasename(
 const monthOps = readRepoFileByBasename(repoRoot, "UseCases.MonthOps.gs", {
   errorPrefix: "verify-monthly-callsign-sync",
 });
+const sheetSchemas = readRepoFileByBasename(repoRoot, "SheetSchemas.gs", {
+  errorPrefix: "verify-monthly-callsign-sync",
+});
+const summaryData = readRepoFileByBasename(repoRoot, "Report_SummaryData.gs", {
+  errorPrefix: "verify-monthly-callsign-sync",
+});
 
 assert.match(syncModule, /function syncMonthlyCallsignsFromPersonnel_/);
 assert.match(syncModule, /function findMonthlyCallsignColumn_/);
 assert.match(syncModule, /monthlyCallsignValueFromPersonnelRow_/);
-assert.match(syncModule, /getRange\(startRow, callsignCol, output\.length, 1\)\.setValues/);
+assert.match(syncModule, /targetRange\.setValues\(output\)/);
+assert.match(syncModule, /skippedWrite/);
+assert.match(syncModule, /insertRowsBefore\(summaryBlock\.startRow, rowsInserted\)/);
+assert.match(syncModule, /SpreadsheetApp\.CopyPasteType\.PASTE_FORMAT/);
+assert.match(syncModule, /SpreadsheetApp\.CopyPasteType\.PASTE_DATA_VALIDATION/);
+assert.match(syncModule, /extendConditionalFormatRulesThroughRow_/);
+assert.doesNotMatch(
+  syncModule,
+  /CopyPasteType\.PASTE_CONDITIONAL_FORMATTING/,
+  "PASTE_CONDITIONAL_FORMATTING corrupts sheet-level CF rules on real workbooks",
+);
+assert.match(syncModule, /SpreadsheetApp\.CopyPasteType\.PASTE_FORMULA/);
+assert.doesNotMatch(
+  syncModule,
+  /values\.slice\(0\s*,/,
+  "monthly callsigns must never be truncated to the old fixed capacity",
+);
+assert.match(
+  syncModule,
+  /function _monthlyBoundsWithEndRow_/,
+  "capacity end row must force schedule bounds after expand",
+);
+assert.match(
+  syncModule,
+  /activeRowsCount/,
+  "sync must report activeRowsCount for off-by-one regression checks",
+);
+assert.match(
+  syncModule,
+  /personnelLastRow - startRow \+ 1/,
+  "PERSONNEL numRows must be inclusive of the final data row",
+);
+assert.match(
+  sheetSchemas,
+  /_monthlyDataEndRowFromSheet_\(\s*\n\s*sheet,\s*\n\s*30,\s*\n\s*\[2\],\s*\n\s*false,/,
+  "compact schedule end must key off Callsign only (not BR+Callsign)",
+);
+assert.match(
+  monthOps,
+  /callsignSync\.scheduleBounds/,
+  "createNextMonth must remap formulas using capacity end bounds",
+);
+assert.match(
+  monthOps,
+  /callsignSync\.capacityEndRow/,
+  "createNextMonth must keep capacityEndRow when remapping formulas",
+);
+assert.match(sheetSchemas, /function findMonthlySummaryBlockLocation_/);
+assert.match(
+  summaryData,
+  /findMonthlySummaryBlockLocation_\(sheet\)/,
+  "reports must delegate to the shared monthly summary-block locator",
+);
 assert.match(syncModule, /Не знайдено аркуш PERSONNEL \/ Персонал/);
 assert.match(
   syncModule,
@@ -58,9 +137,109 @@ assert.match(
 );
 
 assert.match(syncModule, /function syncAllMonthlyCallsignsFromPersonnel_/);
+assert.match(syncModule, /function syncMonthlyCallsignsForPersonnelUpdate_/);
+assert.match(syncModule, /monthlySyncMode === "all"/);
+assert.match(syncModule, /return syncActiveMonthlyCallsignsFromPersonnel_/);
 assert.match(syncModule, /resolvePersonnelDisplayCallsign_/);
-assert.match(personnelMaterialize, /syncAllMonthlyCallsignsFromPersonnel_/);
-assert.match(monthOps, /syncMonthlyCallsignsFromPersonnel_\(newSheet\)/);
+assert.doesNotMatch(
+  syncModule,
+  /TEMPLATE/,
+  "monthly callsign display must never read TEMPLATE",
+);
+assert.match(personnelMaterialize, /syncMonthlyCallsignsForPersonnelUpdate_/);
+assert.doesNotMatch(
+  personnelMaterialize,
+  /syncAllMonthlyCallsignsFromPersonnel_\(\)/,
+  "default personnel materialize must not sync all months",
+);
+assert.match(
+  syncModule,
+  /function rewriteMonthlyScheduleFormulasToCodeRange_/,
+);
+assert.match(syncModule, /function _monthlyRemapScheduleFormulaText_/);
+assert.match(syncModule, /allowShrink/);
+assert.match(
+  monthOps,
+  /syncMonthlyCallsignsFromPersonnel_\(\s*newSheet,\s*\{[\s\S]*allowShrink:\s*true/,
+);
+assert.match(
+  monthOps,
+  /rewriteMonthlyScheduleFormulasToCodeRange_\(\s*newSheet,\s*sourceFormulaBounds/,
+);
+assert.match(monthOps, /syncVacationsWithMonthlySheet_/);
+assert.match(
+  monthOps,
+  /replaceConditionalFormatRulesFromSheet_\(\s*src,\s*newSheet,?\s*\)/,
+  "stage-7 month creation must restore source conditional formatting after sync",
+);
+assert.match(
+  monthOps,
+  /conditionalFormatSync:\s*conditionalFormatSync/,
+  "stage-7 month creation must return conditionalFormatSync",
+);
+assert.match(
+  monthOps,
+  /Не вдалося перенести умовне форматування до нового місячного аркуша/,
+  "stage-7 month creation must fail loudly if CF restore fails",
+);
+
+const legacyMonthOps = readRepoFileByBasename(repoRoot, "MonthSheets.gs", {
+  errorPrefix: "verify-monthly-callsign-sync",
+});
+assert.match(legacyMonthOps, /syncVacationsWithMonthlySheet_/);
+assert.match(
+  legacyMonthOps,
+  /function _copyMonthSheetDataValidationsFromSource_/,
+);
+assert.match(legacyMonthOps, /getDataValidations\(\)/);
+assert.match(legacyMonthOps, /setDataValidations\(/);
+assert.match(
+  legacyMonthOps,
+  /replaceConditionalFormatRulesFromSheet_\(src, newSheet\)/,
+  "legacy month creation must restore source conditional formatting after sync",
+);
+assert.match(
+  legacyMonthOps,
+  /syncMonthlyCallsignsFromPersonnel_\(\s*newSheet,\s*\{[\s\S]*allowShrink:\s*true/,
+);
+assert.match(
+  legacyMonthOps,
+  /rewriteMonthlyScheduleFormulasToCodeRange_\(\s*newSheet,\s*sourceFormulaBounds/,
+);
+assert.match(
+  legacyMonthOps,
+  /Не вдалося перенести умовне форматування до нового місячного аркуша/,
+  "legacy month creation must fail loudly if CF restore fails",
+);
+
+const formatGovernance = readRepoFileByBasename(
+  repoRoot,
+  "ConditionalFormatGovernance.gs",
+  { errorPrefix: "verify-monthly-callsign-sync" },
+);
+assert.match(
+  formatGovernance,
+  /function replaceConditionalFormatRulesFromSheet_/,
+);
+assert.match(formatGovernance, /sourceSheet\.getConditionalFormatRules\(\)/);
+assert.match(
+  formatGovernance,
+  /targetSheet\.setConditionalFormatRules\(dedupedRules\)/,
+);
+assert.match(
+  formatGovernance,
+  /snapshot\.lastRow === Number\(sourceGrid\.getLastRow\(\)\)/,
+  "copied monthly rules must expand with the target personnel grid",
+);
+assert.match(
+  formatGovernance,
+  /function extendConditionalFormatRulesThroughRow_/,
+);
+assert.doesNotMatch(
+  formatGovernance,
+  /CopyPasteType\.PASTE_CONDITIONAL_FORMATTING/,
+  "governance helpers must not rely on PASTE_CONDITIONAL_FORMATTING",
+);
 
 const personnelRepo = readRepoFileByBasename(
   repoRoot,
@@ -73,5 +252,856 @@ assert.match(
   /"\\u043f\\u043e\\u0437\\u044b\\u0432\\u043d\\u043e\\u0439": "Callsign"/,
 );
 assert.match(personnelRepo, /фамилия: "LastName"/);
+assert.match(personnelRepo, /імя: "FirstName"/);
+assert.match(personnelRepo, /имя: "FirstName"/);
+assert.match(
+  personnelRepo,
+  /function resolvePersonnelDisplayCallsign_\(\s*callsignRaw,\s*lastNameRaw,\s*firstNameRaw\s*\)/,
+);
+
+function colLetters(colNumber) {
+  let n = Number(colNumber) || 0;
+  let out = "";
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    out = String.fromCharCode(65 + rem) + out;
+    n = Math.floor((n - 1) / 26);
+  }
+  return out || "A";
+}
+
+function parseA1(value) {
+  const match = String(value).match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/i);
+  if (!match) throw new Error(`Unsupported test A1 range: ${value}`);
+  const col = (letters) =>
+    String(letters)
+      .toUpperCase()
+      .split("")
+      .reduce((total, char) => total * 26 + char.charCodeAt(0) - 64, 0);
+  return {
+    row: Number(match[2]),
+    col: col(match[1]),
+    numRows: Number(match[4]) - Number(match[2]) + 1,
+    numCols: col(match[3]) - col(match[1]) + 1,
+  };
+}
+
+function blankCell() {
+  return {
+    value: "",
+    formula: "",
+    formulaR1C1: "",
+    format: "",
+    validation: "",
+    conditionalFormat: "",
+  };
+}
+
+class FakeRange {
+  constructor(sheet, row, col, numRows = 1, numCols = 1) {
+    this.sheet = sheet;
+    this.row = Number(row);
+    this.col = Number(col);
+    this.numRows = Number(numRows ?? 1);
+    this.numCols = Number(numCols ?? 1);
+  }
+
+  getRow() {
+    return this.row;
+  }
+
+  getLastRow() {
+    return this.row + this.numRows - 1;
+  }
+
+  getColumn() {
+    return this.col;
+  }
+
+  getLastColumn() {
+    return this.col + this.numCols - 1;
+  }
+
+  getA1Notation() {
+    return `R${this.row}C${this.col}:R${this.getLastRow()}C${this.getLastColumn()}`;
+  }
+
+  getNumRows() {
+    return this.numRows;
+  }
+
+  getNumColumns() {
+    return this.numCols;
+  }
+
+  getDisplayValues() {
+    const out = [];
+    for (let rowOffset = 0; rowOffset < this.numRows; rowOffset++) {
+      const row = [];
+      for (let colOffset = 0; colOffset < this.numCols; colOffset++) {
+        row.push(this.sheet.displayAt(this.row + rowOffset, this.col + colOffset));
+      }
+      out.push(row);
+    }
+    return out;
+  }
+
+  getValues() {
+    const out = [];
+    for (let rowOffset = 0; rowOffset < this.numRows; rowOffset++) {
+      const row = [];
+      for (let colOffset = 0; colOffset < this.numCols; colOffset++) {
+        row.push(this.sheet.valueAt(this.row + rowOffset, this.col + colOffset));
+      }
+      out.push(row);
+    }
+    return out;
+  }
+
+  getFormulaR1C1() {
+    return this.sheet.cell(this.row, this.col).formulaR1C1;
+  }
+
+  getFormulas() {
+    const out = [];
+    for (let rowOffset = 0; rowOffset < this.numRows; rowOffset++) {
+      const row = [];
+      for (let colOffset = 0; colOffset < this.numCols; colOffset++) {
+        row.push(this.sheet.cell(this.row + rowOffset, this.col + colOffset).formula);
+      }
+      out.push(row);
+    }
+    return out;
+  }
+
+  setFormulas(values) {
+    assert.equal(values.length, this.numRows, "setFormulas row count");
+    values.forEach((sourceRow, rowOffset) => {
+      assert.equal(sourceRow.length, this.numCols, "setFormulas column count");
+      sourceRow.forEach((value, colOffset) => {
+        const target = this.sheet.cell(
+          this.row + rowOffset,
+          this.col + colOffset,
+        );
+        target.formula = String(value || "");
+        if (target.formula) target.value = "";
+      });
+    });
+    this.sheet.setFormulasCalls++;
+    return this;
+  }
+
+  getDisplayValue() {
+    return this.sheet.displayAt(this.row, this.col);
+  }
+
+  setValues(values) {
+    assert.equal(values.length, this.numRows, "setValues row count");
+    values.forEach((sourceRow, rowOffset) => {
+      assert.equal(sourceRow.length, this.numCols, "setValues column count");
+      sourceRow.forEach((value, colOffset) => {
+        const target = this.sheet.cell(
+          this.row + rowOffset,
+          this.col + colOffset,
+        );
+        target.value = value;
+        target.formula = "";
+        target.formulaR1C1 = "";
+      });
+    });
+    this.sheet.setValuesCalls++;
+    return this;
+  }
+
+  copyTo(targetRange, pasteType) {
+    for (let rowOffset = 0; rowOffset < targetRange.numRows; rowOffset++) {
+      for (let colOffset = 0; colOffset < targetRange.numCols; colOffset++) {
+        const source = this.sheet.cell(
+          this.row + (rowOffset % this.numRows),
+          this.col + (colOffset % this.numCols),
+        );
+        const target = this.sheet.cell(
+          targetRange.row + rowOffset,
+          targetRange.col + colOffset,
+        );
+        if (pasteType === "PASTE_FORMAT") target.format = source.format;
+        if (pasteType === "PASTE_DATA_VALIDATION") {
+          target.validation = source.validation;
+        }
+        if (pasteType === "PASTE_CONDITIONAL_FORMATTING") {
+          target.conditionalFormat = source.conditionalFormat;
+        }
+        if (pasteType === "PASTE_FORMULA") {
+          target.formulaR1C1 = source.formulaR1C1;
+          target.formula = source.formula;
+          target.value = "";
+        }
+      }
+    }
+    this.sheet.copyCalls.push({ pasteType, targetRow: targetRange.row });
+    return targetRange;
+  }
+}
+
+class FakeSheet {
+  constructor(name, rowCount = 80, colCount = 40) {
+    this.name = name;
+    this.colCount = colCount;
+    this.rows = Array.from({ length: rowCount }, () =>
+      Array.from({ length: colCount }, blankCell),
+    );
+    this.rowHeights = Array(rowCount).fill(21);
+    this.insertedRows = 0;
+    this.deletedRows = 0;
+    this.setValuesCalls = 0;
+    this.setFormulasCalls = 0;
+    this.copyCalls = [];
+    this.merges = [];
+    this.conditionalRules = [];
+  }
+
+  cell(row, col) {
+    while (this.rows.length < row) {
+      this.rows.push(Array.from({ length: this.colCount }, blankCell));
+      this.rowHeights.push(21);
+    }
+    return this.rows[row - 1][col - 1];
+  }
+
+  displayAt(row, col) {
+    const cell = this.cell(row, col);
+    if (cell.value !== "" && cell.value != null) return String(cell.value);
+    return cell.formula || cell.formulaR1C1 ? "0" : "";
+  }
+
+  getName() {
+    return this.name;
+  }
+
+  getLastRow() {
+    for (let row = this.rows.length; row >= 1; row--) {
+      if (
+        this.rows[row - 1].some(
+          (cell) =>
+            cell.value !== "" || cell.formula !== "" || cell.formulaR1C1 !== "",
+        )
+      ) {
+        return row;
+      }
+    }
+    return 0;
+  }
+
+  getLastColumn() {
+    for (let col = this.colCount; col >= 1; col--) {
+      if (
+        this.rows.some(
+          (row) =>
+            row[col - 1].value !== "" ||
+            row[col - 1].formula !== "" ||
+            row[col - 1].formulaR1C1 !== "",
+        )
+      ) {
+        return col;
+      }
+    }
+    return 0;
+  }
+
+  getRange(rowOrA1, col, numRows, numCols) {
+    if (typeof rowOrA1 === "string") {
+      const parsed = parseA1(rowOrA1);
+      return new FakeRange(
+        this,
+        parsed.row,
+        parsed.col,
+        parsed.numRows,
+        parsed.numCols,
+      );
+    }
+    return new FakeRange(this, rowOrA1, col, numRows, numCols);
+  }
+
+  insertRowsBefore(beforeRow, howMany) {
+    const rows = Array.from({ length: howMany }, () =>
+      Array.from({ length: this.colCount }, blankCell),
+    );
+    this.rows.splice(beforeRow - 1, 0, ...rows);
+    this.rowHeights.splice(beforeRow - 1, 0, ...Array(howMany).fill(21));
+    this.insertedRows += howMany;
+
+    const shiftRange = (range) => {
+      if (range.startRow >= beforeRow) {
+        range.startRow += howMany;
+        range.endRow += howMany;
+      } else if (range.endRow >= beforeRow) {
+        range.endRow += howMany;
+      }
+    };
+    this.merges.forEach(shiftRange);
+    this.conditionalRules.forEach(shiftRange);
+  }
+
+  deleteRows(startRow, howMany) {
+    this.rows.splice(startRow - 1, howMany);
+    this.rowHeights.splice(startRow - 1, howMany);
+    this.deletedRows += howMany;
+
+    const dropOrShift = (range) => {
+      if (range.endRow < startRow) return range;
+      if (range.startRow >= startRow + howMany) {
+        range.startRow -= howMany;
+        range.endRow -= howMany;
+        return range;
+      }
+      if (range.startRow >= startRow && range.endRow < startRow + howMany) {
+        return null;
+      }
+      if (range.startRow < startRow) {
+        range.endRow = Math.max(startRow - 1, range.endRow - howMany);
+        return range;
+      }
+      range.startRow = startRow;
+      range.endRow -= howMany;
+      return range;
+    };
+    this.merges = this.merges.map(dropOrShift).filter(Boolean);
+    this.conditionalRules = this.conditionalRules
+      .map(dropOrShift)
+      .filter(Boolean);
+  }
+
+  getConditionalFormatRules() {
+    return this.conditionalRules.map((rule) => ({
+      getRanges: () => [
+        {
+          getRow: () => rule.startRow,
+          getLastRow: () => rule.endRow,
+          getColumn: () => rule.startCol || 1,
+          getLastColumn: () => rule.endCol || this.colCount,
+          getA1Notation: () =>
+            `R${rule.startRow}C${rule.startCol || 1}:R${rule.endRow}C${
+              rule.endCol || this.colCount
+            }`,
+        },
+      ],
+      copy: () => ({
+        setRanges: (ranges) => ({
+          build: () => {
+            const range = ranges[0];
+            return {
+              startRow: range.getRow(),
+              endRow: range.getLastRow(),
+              startCol: range.getColumn(),
+              endCol: range.getLastColumn(),
+            };
+          },
+        }),
+      }),
+    }));
+  }
+
+  setConditionalFormatRules(rules) {
+    this.conditionalRules = (rules || []).map((rule) => {
+      if (rule && typeof rule.getRanges === "function") {
+        const range = rule.getRanges()[0];
+        return {
+          startRow: range.getRow(),
+          endRow: range.getLastRow(),
+          startCol: range.getColumn(),
+          endCol: range.getLastColumn(),
+        };
+      }
+      return rule;
+    });
+  }
+
+  getMaxRows() {
+    return this.rows.length;
+  }
+
+  getMaxColumns() {
+    return this.colCount;
+  }
+
+  getRowHeight(row) {
+    return this.rowHeights[row - 1];
+  }
+
+  setRowHeights(startRow, rowCount, height) {
+    for (let row = startRow; row < startRow + rowCount; row++) {
+      this.rowHeights[row - 1] = height;
+    }
+  }
+
+  setRowHeight(row, height) {
+    this.rowHeights[row - 1] = height;
+  }
+
+  valueAt(row, col) {
+    return this.cell(row, col).value;
+  }
+}
+
+function buildMonthSheet(layout, options = {}) {
+  const sheet = new FakeSheet(options.name || "07");
+  const firstDateCol = layout === "compact" ? 3 : 8;
+  const lastDateCol = firstDateCol + 30;
+  sheet.cell(1, 1).value = layout === "compact" ? "БР" : "Телефон";
+  sheet.cell(1, 2).value = "Позивний";
+  for (let col = firstDateCol; col <= lastDateCol; col++) {
+    sheet.cell(1, col).value = `${String(col - firstDateCol + 1).padStart(2, "0")}.07.2026`;
+  }
+
+  for (let row = 2; row <= 32; row++) {
+    sheet.cell(row, 1).value = layout === "compact" ? row - 1 : `38000${row}`;
+    if (layout === "compact") {
+      sheet.cell(row, 1).formulaR1C1 = "=COUNTA(RC[2]:RC[32])";
+    }
+    sheet.cell(row, 2).value = `OLD_${row}`;
+    sheet.cell(row, firstDateCol).value = `SCHEDULE_${row}`;
+    sheet.rowHeights[row - 1] = 27;
+    for (let col = 1; col <= lastDateCol; col++) {
+      sheet.cell(row, col).format = `working-${col}`;
+      sheet.cell(row, col).validation = `validation-${col}`;
+      sheet.cell(row, col).conditionalFormat = `conditional-${col}`;
+    }
+  }
+
+  if (options.includeSummary !== false) {
+    const summaryStart = options.summaryStart || 34;
+    sheet.cell(summaryStart, 2).value = "За_штатом";
+    sheet.cell(summaryStart, firstDateCol).value = 60;
+    sheet.cell(summaryStart, firstDateCol).formulaR1C1 = "=COUNTA(R2C:R[-2]C)";
+    const firstDateLetter = colLetters(firstDateCol);
+    const lastDateLetter = colLetters(lastDateCol);
+    sheet.cell(summaryStart, firstDateCol).formula =
+      `=COUNTA($${firstDateLetter}$2:$${lastDateLetter}$32)`;
+    sheet.cell(summaryStart, 2).format = "summary-label";
+    sheet.cell(summaryStart, 2).validation = "summary-validation";
+    sheet.cell(summaryStart, 2).conditionalFormat = "summary-conditional";
+    sheet.cell(summaryStart + 1, 2).value = "За_списком";
+    sheet.cell(summaryStart + 1, firstDateCol).value = 31;
+    sheet.cell(summaryStart + 1, firstDateCol).formulaR1C1 = "=COUNTA(R2C2:R[-3]C2)";
+    sheet.cell(summaryStart + 1, firstDateCol).formula =
+      `=$${firstDateLetter}$2:INDEX($${firstDateLetter}$2:$${lastDateLetter}$32, ROWS($${firstDateLetter}$2:$${lastDateLetter}$32), COUNT($${firstDateLetter}$1:$${lastDateLetter}$1))`;
+    sheet.cell(summaryStart + 2, 2).value = "В_наявності";
+    sheet.merges.push({ startRow: summaryStart, endRow: summaryStart });
+    sheet.conditionalRules.push({
+      startRow: 2,
+      endRow: 32,
+      startCol: firstDateCol,
+      endCol: lastDateCol,
+    });
+    sheet.conditionalRules.push({
+      startRow: summaryStart,
+      endRow: summaryStart + 2,
+      startCol: 2,
+      endCol: 2,
+    });
+  }
+
+  return sheet;
+}
+
+function buildPersonnel(lastRow, rowValues = {}) {
+  const sheet = new FakeSheet("PERSONNEL", Math.max(lastRow + 2, 80), 4);
+  sheet.cell(1, 1).value = "Callsign";
+  sheet.cell(1, 2).value = "Last name";
+  sheet.cell(1, 3).value = "First name";
+  for (let row = 2; row <= lastRow; row++) {
+    const record = rowValues[row] || {
+      callsign: `CALL_${row}`,
+      lastName: `LAST_${row}`,
+      firstName: `FIRST_${row}`,
+    };
+    sheet.cell(row, 1).value = record.callsign || "";
+    sheet.cell(row, 2).value = record.lastName || "";
+    sheet.cell(row, 3).value = record.firstName || "";
+  }
+  return sheet;
+}
+
+function scheduleSnapshot(sheet, firstDateCol) {
+  return Array.from({ length: 31 }, (_, index) =>
+    sheet.valueAt(index + 2, firstDateCol),
+  );
+}
+
+function loadSyncContext() {
+  let spreadsheet = null;
+  const context = vm.createContext({
+    console,
+    CONFIG: {
+      CODE_RANGE_A1: "C2:AG32",
+      DATE_ROW: 1,
+      CALLSIGN_COL: 2,
+      LAST_DATA_ROW: 32,
+      PERSONNEL_SHEET: "PERSONNEL",
+    },
+    MONTHLY_CONFIG: { DATE_ROW: 1, LAST_DATA_ROW: 32 },
+    VACATION_ENGINE_CONFIG: {},
+    SpreadsheetApp: {
+      CopyPasteType: {
+        PASTE_FORMAT: "PASTE_FORMAT",
+        PASTE_DATA_VALIDATION: "PASTE_DATA_VALIDATION",
+        PASTE_FORMULA: "PASTE_FORMULA",
+      },
+    },
+    getWasbSpreadsheet_: () => spreadsheet,
+    getPersonnelMaterializeStartRow_: () => 2,
+    getPersonnelActiveRows_: () => {
+      if (!spreadsheet) return [];
+      const personnel =
+        spreadsheet.getSheetByName("PERSONNEL") ||
+        spreadsheet.getSheetByName("Персонал");
+      if (!personnel) return [];
+      const lastRow = personnel.getLastRow();
+      const active = [];
+      for (let row = 2; row <= lastRow; row++) {
+        const callsign = String(personnel.displayAt(row, 1) || "").trim();
+        const lastName = String(personnel.displayAt(row, 2) || "").trim();
+        const firstName = String(personnel.displayAt(row, 3) || "").trim();
+        const display = monthlyCallsignValueFromPersonnelRow(
+          callsign,
+          lastName,
+          firstName,
+        );
+        if (!display) continue;
+        active.push({ callsign: display, lastName, firstName, active: true });
+      }
+      return active;
+    },
+    _personnelBuildHeaderColIndex_: (headers) => ({
+      Callsign: headers.indexOf("Callsign"),
+      LastName: headers.indexOf("Last name"),
+      FirstName: headers.indexOf("First name"),
+    }),
+    resolvePersonnelDisplayCallsign_: monthlyCallsignValueFromPersonnelRow,
+    extendConditionalFormatRulesThroughRow_(sheet, templateRow, throughRow) {
+      const fromRow = Number(templateRow) || 0;
+      const toRow = Number(throughRow) || 0;
+      if (!sheet || toRow <= fromRow) return { extended: 0, total: 0 };
+      let extended = 0;
+      sheet.conditionalRules = (sheet.conditionalRules || []).map((rule) => {
+        if (rule.startRow <= fromRow && rule.endRow >= fromRow && rule.endRow < toRow) {
+          extended += 1;
+          return { ...rule, endRow: toRow };
+        }
+        return rule;
+      });
+      return { extended, total: sheet.conditionalRules.length };
+    },
+  });
+
+  vm.runInContext(sheetSchemas, context, { filename: "SheetSchemas.gs" });
+  vm.runInContext(summaryData, context, { filename: "Report_SummaryData.gs" });
+  vm.runInContext(syncModule, context, { filename: "MonthlyCallsignSync.gs" });
+
+  return {
+    context,
+    use(monthSheet, personnelSheet) {
+      spreadsheet = {
+        getSheetByName(name) {
+          if (name === monthSheet.getName()) return monthSheet;
+          if (name === "PERSONNEL" || name === "Персонал") {
+            return personnelSheet;
+          }
+          return null;
+        },
+      };
+    },
+  };
+}
+
+function assertRowTemplateCopied(sheet, row, sourceRow, lastDateCol) {
+  assert.equal(sheet.rowHeights[row - 1], sheet.rowHeights[sourceRow - 1]);
+  for (let col = 1; col <= lastDateCol; col++) {
+    assert.equal(sheet.cell(row, col).format, sheet.cell(sourceRow, col).format);
+    assert.equal(
+      sheet.cell(row, col).validation,
+      sheet.cell(sourceRow, col).validation,
+    );
+  }
+}
+
+{
+  const runtime = loadSyncContext();
+  const month = buildMonthSheet("compact");
+  const personnel = buildPersonnel(33, {
+    33: { callsign: "", lastName: "Петренко" },
+  });
+  const scheduleBefore = scheduleSnapshot(month, 3);
+  runtime.use(month, personnel);
+
+  const result = runtime.context.syncMonthlyCallsignsFromPersonnel_(month);
+  assert.equal(result.rowsInserted, 1, "row 33 must expand a 2:32 area");
+  assert.equal(result.personnelRows, 32);
+  assert.equal(result.summaryStartRow, 35);
+  assert.equal(month.valueAt(33, 2), "Петренко");
+  assert.equal(month.valueAt(34, 2), "", "separator row must remain blank");
+  assert.deepEqual(scheduleSnapshot(month, 3), scheduleBefore);
+  assert.equal(month.valueAt(33, 3), "", "schedule values must not be copied");
+  assertRowTemplateCopied(month, 33, 32, 33);
+  assert.equal(month.cell(33, 1).formulaR1C1, "=COUNTA(RC[2]:RC[32])");
+  assert.equal(month.valueAt(35, 2), "За_штатом");
+  assert.equal(month.cell(35, 3).formulaR1C1, "=COUNTA(R2C:R[-2]C)");
+  assert.equal(
+    month.cell(35, 3).formula,
+    "=COUNTA($C$2:$AG$33)",
+    "absolute summary COUNTIF/COUNTA ranges must grow with the schedule",
+  );
+  assert.match(
+    month.cell(36, 3).formula,
+    /\$C\$2:\$AG\$33/,
+    "INDEX/ROWS schedule spans must remap to the new end row",
+  );
+  assert.equal(month.cell(35, 2).format, "summary-label");
+  assert.equal(month.cell(35, 2).validation, "summary-validation");
+  assert.equal(month.cell(35, 2).conditionalFormat, "summary-conditional");
+  assert.equal(month.merges[0].startRow, 35);
+  assert.equal(month.conditionalRules.length, 2, "sheet-level CF count must survive expand");
+  assert.equal(month.conditionalRules[0].startRow, 2);
+  assert.equal(month.conditionalRules[0].endRow, 33, "schedule CF must extend onto new row");
+  assert.equal(month.conditionalRules[1].startRow, 35);
+  assert.equal(
+    month.copyCalls.some((call) => call.pasteType === "PASTE_CONDITIONAL_FORMATTING"),
+    false,
+    "must not paste conditional formatting during capacity expand",
+  );
+  assert.ok(result.formulaSync && result.formulaSync.rewritten > 0);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(runtime.context.findSummaryBlockLocation_(month))),
+    JSON.parse(
+      JSON.stringify(runtime.context.findMonthlySummaryBlockLocation_(month)),
+    ),
+  );
+
+  const insertCount = month.insertedRows;
+  const writeCount = month.setValuesCalls;
+  const second = runtime.context.syncMonthlyCallsignsFromPersonnel_(month);
+  assert.equal(second.rowsInserted, 0);
+  assert.equal(second.skippedWrite, true);
+  assert.equal(month.insertedRows, insertCount);
+  assert.equal(month.setValuesCalls, writeCount);
+  assert.equal(second.summaryStartRow, 35);
+}
+
+{
+  const runtime = loadSyncContext();
+  const month = buildMonthSheet("compact");
+  const personnel = buildPersonnel(60, {
+    20: { callsign: "", lastName: "" },
+    40: { callsign: "", lastName: "" },
+    41: { callsign: "ПісляПрогалини", lastName: "" },
+    60: { callsign: "", lastName: "Шістдесят" },
+  });
+  const scheduleBefore = scheduleSnapshot(month, 3);
+  runtime.use(month, personnel);
+
+  const result = runtime.context.syncMonthlyCallsignsFromPersonnel_(month);
+  assert.equal(result.personnelRows, 59);
+  assert.equal(result.rowsInserted, 28);
+  assert.equal(result.summaryStartRow, 62);
+  assert.equal(result.capacityRows, 59);
+  assert.equal(month.valueAt(20, 2), "");
+  assert.equal(month.valueAt(40, 2), "");
+  assert.equal(month.valueAt(41, 2), "ПісляПрогалини");
+  assert.equal(month.valueAt(60, 2), "Шістдесят");
+  assert.equal(month.valueAt(61, 2), "");
+  assert.equal(month.valueAt(62, 2), "За_штатом");
+  assert.equal(month.cell(62, 3).formulaR1C1, "=COUNTA(R2C:R[-2]C)");
+  assert.equal(month.cell(62, 3).formula, "=COUNTA($C$2:$AG$60)");
+  assert.deepEqual(scheduleSnapshot(month, 3), scheduleBefore);
+
+  const second = runtime.context.syncMonthlyCallsignsFromPersonnel_(month);
+  assert.equal(second.rowsInserted, 0);
+  assert.equal(second.skippedWrite, true);
+  assert.equal(second.summaryStartRow, 62);
+}
+
+{
+  const runtime = loadSyncContext();
+  const month = buildMonthSheet("standard");
+  const personnel = buildPersonnel(33, {
+    33: { callsign: "", lastName: "Стандарт" },
+  });
+  const scheduleBefore = scheduleSnapshot(month, 8);
+  runtime.use(month, personnel);
+
+  const result = runtime.context.syncMonthlyCallsignsFromPersonnel_(month);
+  assert.equal(result.rowsInserted, 1);
+  assert.equal(month.valueAt(33, 2), "Стандарт");
+  assert.equal(month.cell(33, 1).formulaR1C1, "");
+  assert.equal(month.valueAt(33, 1), "");
+  assertRowTemplateCopied(month, 33, 32, 38);
+  assert.deepEqual(scheduleSnapshot(month, 8), scheduleBefore);
+}
+
+{
+  const runtime = loadSyncContext();
+  const month = buildMonthSheet("compact", { summaryStart: 36 });
+  const personnel = buildPersonnel(33);
+  runtime.use(month, personnel);
+  const result = runtime.context.syncMonthlyCallsignsFromPersonnel_(month);
+  assert.equal(result.rowsInserted, 0, "existing free rows must be used first");
+  assert.equal(result.summaryStartRow, 36);
+  assert.equal(month.valueAt(33, 2), "CALL_33");
+  assert.equal(month.valueAt(35, 2), "", "one separator must be retained");
+}
+
+{
+  const runtime = loadSyncContext();
+  const month = buildMonthSheet("compact", { includeSummary: false });
+  const personnel = buildPersonnel(33);
+  const before = JSON.stringify(
+    month.rows.map((row) => row.map((cell) => [cell.value, cell.formulaR1C1])),
+  );
+  runtime.use(month, personnel);
+
+  assert.throws(
+    () => runtime.context.syncMonthlyCallsignsFromPersonnel_(month),
+    /не знайдено формульний блок зведення.*синхронізацію зупинено без змін/i,
+  );
+  assert.equal(month.insertedRows, 0);
+  assert.equal(month.setValuesCalls, 0);
+  assert.equal(
+    JSON.stringify(
+      month.rows.map((row) => row.map((cell) => [cell.value, cell.formulaR1C1])),
+    ),
+    before,
+  );
+}
+
+{
+  const runtime = loadSyncContext();
+  assert.equal(
+    runtime.context._monthlyRemapScheduleFormulaText_(
+      '=BYCOL($C$2:INDEX($C$2:$AG$32, ROWS($C$2:$AG$32), COUNT($C$1:$AG$1)))',
+      { startRow: 2, endRow: 32, startCol: 3, endCol: 33 },
+      { startRow: 2, endRow: 40, startCol: 3, endCol: 34 },
+    ),
+    '=BYCOL($C$2:INDEX($C$2:$AH$40, ROWS($C$2:$AH$40), COUNT($C$1:$AH$1)))',
+  );
+  assert.equal(
+    runtime.context._monthlyRemapScheduleFormulaText_(
+      '=COUNTIF(H2:AL2, "БР")+COUNTIF(PERSONNEL!P2:P31, "<>")',
+      { startRow: 2, endRow: 32, startCol: 8, endCol: 38 },
+      { startRow: 2, endRow: 32, startCol: 8, endCol: 39 },
+    ),
+    '=COUNTIF(H2:AM2, "БР")+COUNTIF(PERSONNEL!P2:P31, "<>")',
+    "must remap same-row day spans but never sheet-qualified refs",
+  );
+}
+
+{
+  const runtime = loadSyncContext();
+  const month = buildMonthSheet("compact", { summaryStart: 40 });
+  // Extra empty capacity rows 33..38 before separator 39 / summary 40.
+  const personnel = buildPersonnel(30);
+  runtime.use(month, personnel);
+  const result = runtime.context.syncMonthlyCallsignsFromPersonnel_(month, {
+    allowShrink: true,
+  });
+  assert.equal(result.rowsDeleted, 8, "create-time shrink drops unused capacity");
+  assert.equal(result.capacityRows, 29);
+  assert.equal(result.summaryStartRow, 32);
+  assert.equal(month.valueAt(32, 2), "За_штатом");
+  assert.ok(result.formulaSync && result.formulaSync.rewritten > 0);
+  assert.equal(month.cell(32, 3).formula, "=COUNTA($C$2:$AG$30)");
+}
+
+{
+  // 33 PERSONNEL data rows (sheet rows 2..34). Grid must include the last person
+  // even when compact BR formulas are absent on template rows.
+  const runtime = loadSyncContext();
+  const month = buildMonthSheet("compact", { summaryStart: 35 });
+  for (let row = 2; row <= 32; row++) {
+    month.cell(row, 1).formulaR1C1 = "";
+  }
+  month.cell(33, 2).value = "OLD_33";
+  month.cell(35, 3).formula = "=COUNTA($C$2:$AG$33)";
+  const personnel = buildPersonnel(34, {
+    34: { callsign: "ОСТАННІЙ", lastName: "Коваленко" },
+  });
+  runtime.use(month, personnel);
+
+  const activeRows = runtime.context.getPersonnelActiveRows_();
+  assert.equal(activeRows.length, 33, "fixture must expose 33 active people");
+
+  const result = runtime.context.syncMonthlyCallsignsFromPersonnel_(month, {
+    allowShrink: true,
+  });
+  assert.equal(result.personnelRows, 33, "must read every PERSONNEL data row");
+  assert.equal(
+    result.capacityRows,
+    33,
+    "capacity must expand to every PERSONNEL data row",
+  );
+  assert.equal(
+    result.rowsWritten,
+    result.personnelRows,
+    "sync must write personnelRows callsigns (no off-by-one truncate)",
+  );
+  assert.equal(
+    result.activeRowsCount,
+    activeRows.length,
+    "sync must report activeRows.length for regression guards",
+  );
+  assert.ok(
+    result.personnelRows >= result.activeRowsCount,
+    "positional personnelRows must cover all active people",
+  );
+  assert.equal(month.valueAt(34, 2), "ОСТАННІЙ", "last callsign must be written");
+  assert.equal(result.capacityEndRow, 34);
+  assert.equal(result.codeRangeA1, "C2:AG34");
+  assert.equal(
+    runtime.context._monthlyCodeBoundsFromSheet_(month).endRow,
+    34,
+    "detected schedule bounds must include the last callsign row",
+  );
+  assert.equal(
+    month.cell(result.summaryStartRow, 3).formula,
+    "=COUNTA($C$2:$AG$34)",
+    "summary formulas must grow through the last schedule row",
+  );
+  assert.ok(result.formulaSync && result.formulaSync.rewritten > 0);
+}
+
+{
+  // Create-path style: skipFormulaRewrite during sync, then remap with capacity bounds.
+  const runtime = loadSyncContext();
+  const src = buildMonthSheet("compact", { summaryStart: 34, name: "07" });
+  for (let row = 2; row <= 32; row++) src.cell(row, 1).formulaR1C1 = "";
+  const month = buildMonthSheet("compact", { summaryStart: 34, name: "08" });
+  for (let row = 2; row <= 32; row++) month.cell(row, 1).formulaR1C1 = "";
+  month.cell(34, 3).formula = "=COUNTA($C$2:$AG$32)";
+  const personnel = buildPersonnel(34, {
+    34: { callsign: "ОСТАННІЙ", lastName: "Коваленко" },
+  });
+  runtime.use(month, personnel);
+
+  const sourceBounds = runtime.context._monthlyCodeBoundsFromSheet_(src);
+  assert.equal(sourceBounds.endRow, 32);
+  const syncResult = runtime.context.syncMonthlyCallsignsFromPersonnel_(month, {
+    allowShrink: true,
+    skipFormulaRewrite: true,
+  });
+  const afterBounds = runtime.context._monthlyBoundsWithEndRow_(
+    syncResult.scheduleBounds ||
+      runtime.context._monthlyCodeBoundsFromSheet_(month),
+    syncResult.capacityEndRow,
+  );
+  const formulaSync = runtime.context.rewriteMonthlyScheduleFormulasToCodeRange_(
+    month,
+    sourceBounds,
+    afterBounds,
+  );
+  assert.equal(month.valueAt(34, 2), "ОСТАННІЙ");
+  assert.equal(syncResult.capacityRows, 33);
+  assert.equal(afterBounds.endRow, 34);
+  assert.ok(formulaSync.rewritten > 0);
+  assert.equal(month.cell(syncResult.summaryStartRow, 3).formula, "=COUNTA($C$2:$AG$34)");
+}
 
 console.log("verify-monthly-callsign-sync: OK");

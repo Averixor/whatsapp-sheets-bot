@@ -39,19 +39,28 @@ assert.match(reissueSource, /before[\s\S]*temporary_password_expires_at/);
 assert.match(reissueSource, /after[\s\S]*temporary_password_expires_at/);
 assert.match(reissueSource, /_verifyAccessTempPasswordReissueWrite_/);
 assert.match(reissueSource, /_writeAccessTempPasswordReissueByHeaderMap_/);
+assert.match(reissueSource, /_redactAccessTempPasswordColumnsForLog_/);
 assert.match(reissueSource, /_getHeaderMap_/);
 assert.doesNotMatch(reissueSource, /getRange\([^)]*,\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)/);
 assert.doesNotMatch(reissueSource, /updates[\s\S]{0,120}\brole\b/);
 assert.match(reissueSource, /maskSensitiveValue_/);
 assert.doesNotMatch(reissueSource, /console\.log[\s\S]*password_hash/);
+assert.doesNotMatch(reissueSource, /console\.log[\s\S]*updatedColumns\.join/);
+assert.match(reissueSource, /redacted-sensitive-access-columns/);
 assert.match(maintenanceSource, /function apiStage7ReissueAccessTemporaryPassword/);
 assert.match(maintenanceSource, /function apiStage7ReissueOwnerTemporaryPasswordManual/);
+assert.match(maintenanceSource, /function _stage7RedactAccessReissueLogMetadata_/);
 assert.match(
   maintenanceSource,
-  /apiStage7ReissueAccessTemporaryPassword\(\{[\s\S]*email:\s*"ryabinin\.sergei\.alekseevich@gmail\.com"[\s\S]*login:\s*"ШАХТАР"[\s\S]*expectedRole:\s*"owner"[\s\S]*\}\)/,
+  /getScriptProperties\(\)[\s\S]*getProperty\("WASB_OWNER_EMAIL"\)[\s\S]*getProperty\("WASB_OWNER_LOGIN"\)/,
 );
-assert.match(maintenanceSource, /JSON\.stringify\(result,\s*null,\s*2\)/);
-assert.match(maintenanceSource, /Logger\.log\(payload\)/);
+assert.match(maintenanceSource, /missingScriptProperties/);
+assert.match(maintenanceSource, /changedColumns/);
+assert.match(maintenanceSource, /redacted-sensitive-access-columns/);
+assert.doesNotMatch(maintenanceSource, /ryabinin\.sergei\.alekseevich@gmail\.com/);
+assert.doesNotMatch(maintenanceSource, /login:\s*"ШАХТАР"/);
+assert.doesNotMatch(maintenanceSource, /JSON\.stringify\(result,\s*null,\s*2\)/);
+assert.doesNotMatch(maintenanceSource, /Logger\.log\(payload\)/);
 assert.match(maintenanceSource, /return result;/);
 assert.match(maintenanceSource, /reissueAccessTemporaryPassword_/);
 assert.match(maintenanceSource, /matchedRowNumber/);

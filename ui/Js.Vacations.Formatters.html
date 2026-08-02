@@ -1,0 +1,66 @@
+<script>
+  // Js.Vacations.Formatters — date and load-level display helpers.
+
+  function formatDateUa(value) {
+    if (typeof formatDateForDisplay === "function") {
+      return formatDateForDisplay(value);
+    }
+    if (!value) return "";
+    if (typeof value === "string") {
+      var text = value.trim();
+      if (/^\d{2}\.\d{2}\.\d{4}$/.test(text)) {
+        return text;
+      }
+      if (/\d{4}-\d{2}-\d{2}/.test(text)) {
+        return text.replace(
+          /\b(\d{4})-(\d{2})-(\d{2})\b/g,
+          function (_, year, month, day) {
+            return day + "." + month + "." + year;
+          },
+        );
+      }
+    }
+    var date = value instanceof Date ? value : new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+      var dayPart = String(date.getDate()).padStart(2, "0");
+      var monthPart = String(date.getMonth() + 1).padStart(2, "0");
+      return dayPart + "." + monthPart + "." + date.getFullYear();
+    }
+    return String(value);
+  }
+
+  function formatVacationShortDate_(value) {
+    var text = String(value || "").trim();
+    var match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) return match[3] + "." + match[2];
+    return formatDateUa(text);
+  }
+
+  function getVacationLoadLevelLabel_(loadLevel) {
+    var level = String(loadLevel || "normal");
+    if (level === "max") return "граничне навантаження";
+    if (level === "warning") return "попередження";
+    if (level === "error") return "помилка";
+    return "норма";
+  }
+
+  function formatMonthLabelUa_(yearMonth) {
+    var months = [
+      "січень",
+      "лютий",
+      "березень",
+      "квітень",
+      "травень",
+      "червень",
+      "липень",
+      "серпень",
+      "вересень",
+      "жовтень",
+      "листопад",
+      "грудень",
+    ];
+    var match = String(yearMonth || "").match(/^(\d{4})-(\d{1,2})$/);
+    if (!match) return String(yearMonth || "");
+    return months[Number(match[2]) - 1] + " " + match[1];
+  }
+</script>

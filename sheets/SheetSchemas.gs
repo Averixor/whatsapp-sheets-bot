@@ -174,6 +174,102 @@ function _monthlyLayoutHeaderNorm_(value) {
     .replace(/\s+/g, " ");
 }
 
+var MONTHLY_SUMMARY_BLOCK_ANCHOR_KEY_ = "За_списком";
+var MONTHLY_SUMMARY_BLOCK_STAFF_KEY_ = "За_штатом";
+
+function _monthlySummaryKey_(value) {
+  return String(value == null ? "" : value)
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/_+/g, "_");
+}
+
+function _monthlyFindSummaryBlockAnchor_(sheet, lastRow) {
+  if (!sheet || lastRow < 1) return null;
+
+  var lastCol = Math.max(Number(sheet.getLastColumn()) || 0, 1);
+  var scanCols = [2, 3, 1, 4].filter(function (col) {
+    return col <= lastCol;
+  });
+  var fallback = null;
+
+  for (var c = 0; c < scanCols.length; c++) {
+    var col = scanCols[c];
+    var labels = [];
+    try {
+      labels = sheet.getRange(1, col, lastRow, 1).getDisplayValues();
+    } catch (_) {
+      continue;
+    }
+
+    for (var i = labels.length - 1; i >= 0; i--) {
+      var key = _monthlySummaryKey_((labels[i] || [])[0]);
+      if (key !== MONTHLY_SUMMARY_BLOCK_ANCHOR_KEY_) {
+        continue;
+      }
+
+      var candidate = { labelCol: col, anchorRow: i + 1 };
+      var previousKey =
+        i > 0 ? _monthlySummaryKey_((labels[i - 1] || [])[0]) : "";
+      if (previousKey === MONTHLY_SUMMARY_BLOCK_STAFF_KEY_) {
+        return candidate;
+      }
+      if (!fallback) fallback = candidate;
+    }
+  }
+
+  return fallback;
+}
+
+/**
+ * Shared monthly-layout locator for the formula summary block.
+ * Kept outside reports so sheet maintenance can protect the block before writes.
+ */
+function findMonthlySummaryBlockLocation_(sheet) {
+  if (!sheet || typeof sheet.getRange !== "function") return null;
+
+  var lastRow = Math.max(Number(sheet.getLastRow()) || 0, 1);
+  var anchor = _monthlyFindSummaryBlockAnchor_(sheet, lastRow);
+  if (!anchor || anchor.anchorRow < 1 || anchor.labelCol < 1) return null;
+
+  var labelCol = anchor.labelCol;
+  var startRow = anchor.anchorRow;
+  if (startRow > 1) {
+    var previousKey = _monthlySummaryKey_(
+      sheet.getRange(startRow - 1, labelCol).getDisplayValue(),
+    );
+    if (previousKey === MONTHLY_SUMMARY_BLOCK_STAFF_KEY_) {
+      startRow--;
+    }
+  }
+
+  var endRow = startRow;
+  for (var row = startRow; row <= lastRow; row++) {
+    var label = String(
+      sheet.getRange(row, labelCol).getDisplayValue() || "",
+    ).trim();
+    if (!label) break;
+    endRow = row;
+  }
+
+  return {
+    labelCol: labelCol,
+    startRow: startRow,
+    endRow: endRow,
+    anchorRow: anchor.anchorRow,
+  };
+}
+
+function _monthlySheetRowIsBlank_(sheet, row) {
+  if (!sheet || row < 1) return false;
+  var lastCol = Math.max(Number(sheet.getLastColumn()) || 0, 1);
+  var values = sheet.getRange(row, 1, 1, lastCol).getDisplayValues()[0] || [];
+  for (var col = 0; col < values.length; col++) {
+    if (String(values[col] == null ? "" : values[col]).trim()) return false;
+  }
+  return true;
+}
+
 function _monthlyDataEndRowFromSheet_(
   sheet,
   fallbackRow,
@@ -187,6 +283,15 @@ function _monthlyDataEndRowFromSheet_(
       _ssConfigValue_("LAST_DATA_ROW", fallbackRow || 44),
     fallbackRow || 44,
   );
+  var summaryBlock = findMonthlySummaryBlockLocation_(sheet);
+  var maxDataEndRow = 1000;
+  if (summaryBlock && summaryBlock.startRow > 2) {
+    maxDataEndRow = summaryBlock.startRow - 1;
+    if (_monthlySheetRowIsBlank_(sheet, maxDataEndRow)) {
+      maxDataEndRow--;
+    }
+    configuredDataEndRow = Math.min(configuredDataEndRow, maxDataEndRow);
+  }
   var sheetLastRow = 0;
   try {
     sheetLastRow = Number(sheet.getLastRow()) || 0;
@@ -194,6 +299,7 @@ function _monthlyDataEndRowFromSheet_(
 
   var scanLastRow = Math.min(
     Math.max(sheetLastRow, configuredDataEndRow, 2),
+    maxDataEndRow,
     1000,
   );
   var cols = Array.isArray(markerCols) && markerCols.length ? markerCols : [2];
@@ -272,11 +378,14 @@ function detectMonthlyLayoutFromSheet_(sheet) {
   var cIsDate = _looksLikeMonthlyDateHeader_(row1[firstDateCol - 1]);
 
   if (isCallsignB && cIsDate && !isPhoneHeaderA) {
+    // Callsign is the schedule row key. Do not require BR (col A) as well —
+    // newly expanded rows may have callsigns before BR formulas calculate,
+    // and requireAllMarkers would keep codeRange stuck one/more rows short.
     var compactDataEndRow = _monthlyDataEndRowFromSheet_(
       sheet,
       30,
-      [1, 2],
-      true,
+      [2],
+      false,
     );
     var compactLastDateCol = _monthlyLastDateColFromRow_(row1, firstDateCol);
     var compactRangeA1 = _monthlyCodeRangeA1_(
@@ -604,12 +713,14 @@ function _ssBuildPersonnelSchema_() {
       "Status",
     ],
     optionalHeaders: [
+      "Cells",
       "ID",
       "ID_VS",
       "Age",
       "Days_until_birthday",
       "Unit",
       "2_Phone",
+      "Email",
       "Title",
       "Rank",
       "TEMPLATE",
@@ -618,23 +729,26 @@ function _ssBuildPersonnelSchema_() {
       "Patronymic",
     ],
     canonicalHeaderOrder: [
+      "Cells",
+      "ID_VS",
       "ID",
-      "FML",
+      "LastName",
+      "FirstName",
+      "Patronymic",
       "Birthday",
       "Age",
       "Days_until_birthday",
       "Phone",
       "2_Phone",
+      "Email",
       "Callsign",
-      "TEMPLATE",
       "Rank",
       "Position",
       "OSH_4",
-      "Unit",
       "Status",
     ],
     notes:
-      "Єдине джерело даних людини. Еталон «Книга Взводу Охорони»: Cells/ID v/s + split names + Callsign (L) + Rank + OSH 4 + Status — contracts/reference-workbook-layout.contract.json. Місячний графік: Callsign. Status dropdown (9 UA): В наявності … СЗЧ.",
+      "Єдине джерело даних людини. Еталон «Книга Взводу Охорони»: Cells/ID v/s/ID Army+ + split names + Email + Callsign (M) + Rank + OSH 4 + Status — contracts/reference-workbook-layout.contract.json. Місячний графік: Callsign. Status dropdown (9 UA): В наявності … СЗЧ.",
   });
 }
 
@@ -760,49 +874,49 @@ function _ssBuildCarSchema_() {
         type: "string",
         required: false,
         allowBlank: true,
-        label: "П.І.Б",
+        label: "Callsign",
       }),
       assetName: _ssFreeze_({
         col: 2,
         type: "string",
         required: true,
         allowBlank: false,
-        label: "Найменування військового майна",
+        label: "Name of military property",
       }),
       militaryNumber: _ssFreeze_({
         col: 3,
         type: "string",
         required: false,
         allowBlank: true,
-        label: "Військовий номер",
+        label: "Military registration number",
       }),
       chassisNumber: _ssFreeze_({
         col: 4,
         type: "string",
         required: false,
         allowBlank: true,
-        label: "Номер шасі",
+        label: "Chassis number",
       }),
       year: _ssFreeze_({
         col: 5,
         type: "number|string",
         required: false,
         allowBlank: true,
-        label: "Рік випуску",
+        label: "Year of manufacture",
       }),
       cost: _ssFreeze_({
         col: 6,
         type: "number|string",
         required: false,
         allowBlank: true,
-        label: "Вартість",
+        label: "Value",
       }),
       status: _ssFreeze_({
         col: 7,
         type: "string",
         required: false,
         allowBlank: true,
-        label: "Стан",
+        label: "Condition",
         allowedValues: _ssFreeze_([
           "Справна",
           "Обмежено БГ",
@@ -813,13 +927,13 @@ function _ssBuildCarSchema_() {
       }),
     }),
     headerAliases: _ssFreeze_({
-      owner: ["П.І.Б", "ПІБ", "FML", "Owner"],
-      assetName: ["Найменування військового майна", "Майно", "Asset"],
-      militaryNumber: ["Військовий номер", "Номер"],
-      chassisNumber: ["Номер шасі", "Шасі", "VIN"],
-      year: ["Рік випуску", "Рік", "Year"],
-      cost: ["Вартість", "Cost"],
-      status: ["Стан", "Статус", "Status"],
+      owner: ["Callsign", "Позивний", "FML", "Full name", "П.І.Б", "ПІБ", "Owner"],
+      assetName: ["Name of military property", "Найменування військового майна", "Майно", "Asset"],
+      militaryNumber: ["Military registration number", "Військовий номер", "Номер"],
+      chassisNumber: ["Chassis number", "Номер шасі", "Шасі", "VIN"],
+      year: ["Year of manufacture", "Рік випуску", "Рік", "Year"],
+      cost: ["Value", "Вартість", "Cost"],
+      status: ["Condition", "Стан", "Статус", "Status"],
     }),
     keyFields: ["militaryNumber", "chassisNumber"],
     requiredFields: ["assetName"],
@@ -839,7 +953,104 @@ function _ssBuildCarSchema_() {
       "status",
     ],
     notes:
-      "Реєстр автотехніки: відповідальна особа, найменування, військовий номер, шасі, рік, вартість і стан.",
+      "Реєстр автотехніки з реальної книги: Callsign, майно, військовий номер, шасі, рік, вартість і стан. Legacy FML у колонці A читається лише як сумісність.",
+  });
+}
+
+
+function _ssBuildWeaponSchema_() {
+  return _ssFreeze_({
+    key: "weapon",
+    legacyKey: "WEAPON",
+    type: "multiAssetTable",
+    title: "WEAPON",
+    name: _ssTrimmedString_(_ssConfigValue_("WEAPON_SHEET", "WEAPON"), "WEAPON"),
+    headerRow: 1,
+    dataStartRow: 2,
+    required: false,
+    fields: _ssFreeze_({
+      lastName: _ssFreeze_({ col: 1, type: "string", required: false, allowBlank: true, label: "Last name" }),
+      firstName: _ssFreeze_({ col: 2, type: "string", required: false, allowBlank: true, label: "First name" }),
+      patronymic: _ssFreeze_({ col: 3, type: "string", required: false, allowBlank: true, label: "Patronymic" }),
+      rank: _ssFreeze_({ col: 4, type: "string", required: false, allowBlank: true, label: "Rank" }),
+      phone: _ssFreeze_({ col: 5, type: "string", required: false, allowBlank: true, label: "Phone" }),
+
+      assetName1: _ssFreeze_({ col: 6, type: "string", required: false, allowBlank: true, label: "Name of military property" }),
+      year1: _ssFreeze_({ col: 7, type: "number|string", required: false, allowBlank: true, label: "Year of manufacture" }),
+      nomenclatureCode1: _ssFreeze_({ col: 8, type: "string", required: false, allowBlank: true, label: "Nomenclature code" }),
+      serialNumber1: _ssFreeze_({ col: 9, type: "string", required: false, allowBlank: true, label: "Serial number" }),
+      unitPrice1: _ssFreeze_({ col: 10, type: "number|string", required: false, allowBlank: true, label: "Unit price" }),
+      assignmentDate1: _ssFreeze_({ col: 11, type: "date|string", required: false, allowBlank: true, label: "Date of assignment" }),
+      location1: _ssFreeze_({ col: 12, type: "string", required: false, allowBlank: true, label: "Location" }),
+
+      assetName2: _ssFreeze_({ col: 13, type: "string", required: false, allowBlank: true, label: "Name of military property" }),
+      year2: _ssFreeze_({ col: 14, type: "number|string", required: false, allowBlank: true, label: "Year of manufacture" }),
+      nomenclatureCode2: _ssFreeze_({ col: 15, type: "string", required: false, allowBlank: true, label: "Nomenclature code" }),
+      serialNumber2: _ssFreeze_({ col: 16, type: "string", required: false, allowBlank: true, label: "Serial number" }),
+      unitPrice2: _ssFreeze_({ col: 17, type: "number|string", required: false, allowBlank: true, label: "Unit price" }),
+      assignmentDate2: _ssFreeze_({ col: 18, type: "date|string", required: false, allowBlank: true, label: "Date of assignment" }),
+      location2: _ssFreeze_({ col: 19, type: "string", required: false, allowBlank: true, label: "Location" }),
+
+      separator: _ssFreeze_({ col: 20, type: "string", required: false, allowBlank: true, label: "" }),
+      assetName3: _ssFreeze_({ col: 21, type: "string", required: false, allowBlank: true, label: "Name of military property" }),
+      year3: _ssFreeze_({ col: 22, type: "number|string", required: false, allowBlank: true, label: "Year of manufacture" }),
+      nomenclatureCode3: _ssFreeze_({ col: 23, type: "string", required: false, allowBlank: true, label: "Nomenclature code" }),
+      serialNumber3: _ssFreeze_({ col: 24, type: "string", required: false, allowBlank: true, label: "Serial number" }),
+      unitPrice3: _ssFreeze_({ col: 25, type: "number|string", required: false, allowBlank: true, label: "Unit price" }),
+      location3: _ssFreeze_({ col: 26, type: "string", required: false, allowBlank: true, label: "Location" }),
+    }),
+    headerAliases: _ssFreeze_({
+      lastName: ["Last name", "Surname", "Прізвище", "Фамилия"],
+      firstName: ["First name", "Name", "Ім'я", "Имя"],
+      patronymic: ["Patronymic", "По батькові", "Отчество"],
+      rank: ["Rank", "Звання"],
+      phone: ["Phone", "Телефон"],
+      assetName: ["Name of military property", "Найменування військового майна", "Майно"],
+      year: ["Year of manufacture", "Рік випуску"],
+      nomenclatureCode: ["Nomenclature code", "Код номенклатури"],
+      serialNumber: ["Serial number", "Заводський номер"],
+      unitPrice: ["Unit price", "Ціна за одиницю"],
+      assignmentDate: ["Date of assignment", "Дата закріплення", "Дата закриплення"],
+      location: ["Location", "Місцезнаходження"],
+    }),
+    keyFields: ["lastName", "firstName", "patronymic", "serialNumber1", "serialNumber2", "serialNumber3"],
+    requiredFields: [],
+    nullableFields: [
+      "lastName",
+      "firstName",
+      "patronymic",
+      "rank",
+      "phone",
+      "assetName1",
+      "assetName2",
+      "assetName3",
+      "serialNumber1",
+      "serialNumber2",
+      "serialNumber3",
+      "location1",
+      "location2",
+      "location3",
+    ],
+    searchableFields: [
+      "lastName",
+      "firstName",
+      "patronymic",
+      "phone",
+      "assetName1",
+      "assetName2",
+      "assetName3",
+      "serialNumber1",
+      "serialNumber2",
+      "serialNumber3",
+      "nomenclatureCode1",
+      "nomenclatureCode2",
+      "nomenclatureCode3",
+      "location1",
+      "location2",
+      "location3",
+    ],
+    notes:
+      "Реєстр WEAPON з реальної книги: особа в A:E і три блоки військового майна F:L, M:S, U:Z.",
   });
 }
 
@@ -1249,6 +1460,149 @@ function _ssBuildLogSchema_() {
   });
 }
 
+
+function _ssBuildTemporaryPropertySchema_() {
+  var headers = [
+    "Позивний",
+    "Пост / об'єкт",
+    "Вид майна",
+    "Найменування / модель",
+    "Видано",
+    "Од. обліку",
+    "Дата видачі",
+    "Повернуто",
+    "Дата повернення",
+    "Залишок",
+    "Статус",
+    "Вид палива",
+    "Об'єм палива, л",
+    "Комплектність / примітка",
+    "ID запису",
+    "ID комплекту",
+    "Батьківський ID",
+    "Тип рядка",
+    "Код майна",
+    "Авто-рядок",
+  ];
+  return _ssFreeze_({
+    key: "tempProperty",
+    legacyKey: "TEMP_PROPERTY",
+    type: "table",
+    title: "Тимчасово видане майно",
+    name: _ssTrimmedString_(
+      _ssConfigValue_("TEMP_PROPERTY_SHEET", "Property_issued_for_temporary_u"),
+      "Property_issued_for_temporary_u",
+    ),
+    headerRow: 1,
+    dataStartRow: 2,
+    required: false,
+    headerBased: true,
+    requiredHeaders: [
+      "Позивний",
+      "Вид майна",
+      "Найменування / модель",
+      "Видано",
+      "Од. обліку",
+      "Залишок",
+      "Статус",
+    ],
+    optionalHeaders: headers.filter(function (header) {
+      return ["Позивний", "Вид майна", "Найменування / модель", "Видано", "Од. обліку", "Залишок", "Статус"].indexOf(header) === -1;
+    }),
+    canonicalHeaderOrder: headers,
+    fields: _ssFreeze_({
+      callsign: _ssFreeze_({ col: 1, type: "string", required: true, allowBlank: false, label: "Позивний" }),
+      post: _ssFreeze_({ col: 2, type: "string", required: false, allowBlank: true, label: "Пост / об'єкт" }),
+      category: _ssFreeze_({ col: 3, type: "string", required: true, allowBlank: false, label: "Вид майна" }),
+      model: _ssFreeze_({ col: 4, type: "string", required: true, allowBlank: false, label: "Найменування / модель" }),
+      issuedQty: _ssFreeze_({ col: 5, type: "number", required: true, allowBlank: false, label: "Видано" }),
+      unit: _ssFreeze_({ col: 6, type: "string", required: true, allowBlank: false, label: "Од. обліку" }),
+      issuedDate: _ssFreeze_({ col: 7, type: "date|string", required: false, allowBlank: true, label: "Дата видачі" }),
+      returnedQty: _ssFreeze_({ col: 8, type: "number", required: false, allowBlank: true, label: "Повернуто" }),
+      returnedDate: _ssFreeze_({ col: 9, type: "date|string", required: false, allowBlank: true, label: "Дата повернення" }),
+      balance: _ssFreeze_({ col: 10, type: "number", required: true, allowBlank: false, label: "Залишок" }),
+      status: _ssFreeze_({ col: 11, type: "string", required: true, allowBlank: false, label: "Статус" }),
+      fuelType: _ssFreeze_({ col: 12, type: "string", required: false, allowBlank: true, label: "Вид палива" }),
+      fuelVolume: _ssFreeze_({ col: 13, type: "number", required: false, allowBlank: true, label: "Об'єм палива, л" }),
+      note: _ssFreeze_({ col: 14, type: "string", required: false, allowBlank: true, label: "Комплектність / примітка" }),
+      recordId: _ssFreeze_({ col: 15, type: "string", required: false, allowBlank: true, label: "ID запису" }),
+      kitId: _ssFreeze_({ col: 16, type: "string", required: false, allowBlank: true, label: "ID комплекту" }),
+      parentId: _ssFreeze_({ col: 17, type: "string", required: false, allowBlank: true, label: "Батьківський ID" }),
+      rowType: _ssFreeze_({ col: 18, type: "string", required: false, allowBlank: true, label: "Тип рядка" }),
+      catalogCode: _ssFreeze_({ col: 19, type: "string", required: false, allowBlank: true, label: "Код майна" }),
+      autoRow: _ssFreeze_({ col: 20, type: "boolean|string", required: false, allowBlank: true, label: "Авто-рядок" }),
+    }),
+    keyFields: ["recordId"],
+    requiredFields: ["callsign", "category", "model", "issuedQty", "unit", "balance", "status"],
+    nullableFields: ["post", "issuedDate", "returnedQty", "returnedDate", "fuelType", "fuelVolume", "note", "kitId", "parentId", "rowType", "catalogCode", "autoRow"],
+    searchableFields: ["callsign", "post", "category", "model", "status", "recordId", "kitId"],
+    notes: "Журнал видачі та повернення майна з пов'язаними рядками комплектуючих, залишком і статусом.",
+  });
+}
+
+function _ssBuildPropertyCatalogSchema_() {
+  var headers = ["Код", "Вид майна", "Найменування / модель", "Од. обліку", "Комплект", "Потрібні дані про паливо", "Доступно для вибору", "Примітка", "Порядок"];
+  return _ssFreeze_({
+    key: "propertyCatalog",
+    legacyKey: "PROPERTY_CATALOG",
+    type: "referenceTable",
+    title: "Довідник майна",
+    name: _ssTrimmedString_(_ssConfigValue_("PROPERTY_CATALOG_SHEET", "PROPERTY_CATALOG"), "PROPERTY_CATALOG"),
+    headerRow: 1,
+    dataStartRow: 2,
+    required: false,
+    headerBased: true,
+    requiredHeaders: headers,
+    optionalHeaders: [],
+    canonicalHeaderOrder: headers,
+    fields: _ssFreeze_({
+      code: _ssFreeze_({ col: 1, type: "string", required: true, allowBlank: false, label: "Код" }),
+      category: _ssFreeze_({ col: 2, type: "string", required: true, allowBlank: false, label: "Вид майна" }),
+      model: _ssFreeze_({ col: 3, type: "string", required: true, allowBlank: false, label: "Найменування / модель" }),
+      unit: _ssFreeze_({ col: 4, type: "string", required: true, allowBlank: false, label: "Од. обліку" }),
+      isKit: _ssFreeze_({ col: 5, type: "boolean|string", required: true, allowBlank: false, label: "Комплект" }),
+      requiresFuel: _ssFreeze_({ col: 6, type: "boolean|string", required: true, allowBlank: false, label: "Потрібні дані про паливо" }),
+      selectable: _ssFreeze_({ col: 7, type: "boolean|string", required: true, allowBlank: false, label: "Доступно для вибору" }),
+      note: _ssFreeze_({ col: 8, type: "string", required: false, allowBlank: true, label: "Примітка" }),
+      order: _ssFreeze_({ col: 9, type: "number", required: true, allowBlank: false, label: "Порядок" }),
+    }),
+    keyFields: ["code"],
+    requiredFields: ["code", "category", "model", "unit", "isKit", "requiresFuel", "selectable", "order"],
+    nullableFields: ["note"],
+    searchableFields: ["code", "category", "model", "note"],
+  });
+}
+
+function _ssBuildPropertyKitsSchema_() {
+  var headers = ["Код основного майна", "Комплектуюча", "Кількість", "Од. обліку", "Код комплектуючої", "Порядок"];
+  return _ssFreeze_({
+    key: "propertyKits",
+    legacyKey: "PROPERTY_KITS",
+    type: "referenceTable",
+    title: "Склад комплектів",
+    name: _ssTrimmedString_(_ssConfigValue_("PROPERTY_KITS_SHEET", "PROPERTY_KITS"), "PROPERTY_KITS"),
+    headerRow: 1,
+    dataStartRow: 2,
+    required: false,
+    headerBased: true,
+    requiredHeaders: headers,
+    optionalHeaders: [],
+    canonicalHeaderOrder: headers,
+    fields: _ssFreeze_({
+      parentCode: _ssFreeze_({ col: 1, type: "string", required: true, allowBlank: false, label: "Код основного майна" }),
+      component: _ssFreeze_({ col: 2, type: "string", required: true, allowBlank: false, label: "Комплектуюча" }),
+      quantity: _ssFreeze_({ col: 3, type: "number", required: true, allowBlank: false, label: "Кількість" }),
+      unit: _ssFreeze_({ col: 4, type: "string", required: true, allowBlank: false, label: "Од. обліку" }),
+      componentCode: _ssFreeze_({ col: 5, type: "string", required: true, allowBlank: false, label: "Код комплектуючої" }),
+      order: _ssFreeze_({ col: 6, type: "number", required: true, allowBlank: false, label: "Порядок" }),
+    }),
+    keyFields: ["parentCode", "componentCode"],
+    requiredFields: ["parentCode", "component", "quantity", "unit", "componentCode", "order"],
+    nullableFields: [],
+    searchableFields: ["parentCode", "component", "componentCode"],
+  });
+}
+
 function _ssBuildSchemas_() {
   return _ssFreeze_({
     monthly: _ssBuildMonthlySchema_(),
@@ -1256,6 +1610,10 @@ function _ssBuildSchemas_() {
     phones: _ssBuildPhonesSchema_(),
     phoneDirectory: _ssBuildPhoneDirectorySchema_(),
     car: _ssBuildCarSchema_(),
+    weapon: _ssBuildWeaponSchema_(),
+    tempProperty: _ssBuildTemporaryPropertySchema_(),
+    propertyCatalog: _ssBuildPropertyCatalogSchema_(),
+    propertyKits: _ssBuildPropertyKitsSchema_(),
     dict: _ssBuildDictSchema_(),
     dictSum: _ssBuildDictSumSchema_(),
     sendPanel: _ssBuildSendPanelSchema_(),
@@ -1279,6 +1637,17 @@ function _canonicalSchemaMap_() {
     phonedirectory: SHEET_SCHEMAS.phoneDirectory,
     CAR: SHEET_SCHEMAS.car,
     car: SHEET_SCHEMAS.car,
+    WEAPON: SHEET_SCHEMAS.weapon,
+    weapon: SHEET_SCHEMAS.weapon,
+    TEMP_PROPERTY: SHEET_SCHEMAS.tempProperty,
+    tempProperty: SHEET_SCHEMAS.tempProperty,
+    tempproperty: SHEET_SCHEMAS.tempProperty,
+    PROPERTY_CATALOG: SHEET_SCHEMAS.propertyCatalog,
+    propertyCatalog: SHEET_SCHEMAS.propertyCatalog,
+    propertycatalog: SHEET_SCHEMAS.propertyCatalog,
+    PROPERTY_KITS: SHEET_SCHEMAS.propertyKits,
+    propertyKits: SHEET_SCHEMAS.propertyKits,
+    propertykits: SHEET_SCHEMAS.propertyKits,
     DICT: SHEET_SCHEMAS.dict,
     dict: SHEET_SCHEMAS.dict,
     DICT_SUM: SHEET_SCHEMAS.dictSum,
@@ -1301,6 +1670,10 @@ function getRequiredSchemaKeys_() {
     "phones",
     "phoneDirectory",
     "car",
+    "weapon",
+    "tempProperty",
+    "propertyCatalog",
+    "propertyKits",
     "dict",
     "dictSum",
     "sendPanel",
@@ -1392,6 +1765,10 @@ var SheetSchemas_ = (function () {
       PHONES: _toLegacySchema_(SHEET_SCHEMAS.phones),
       PHONE_DIRECTORY: _toLegacySchema_(SHEET_SCHEMAS.phoneDirectory),
       CAR: _toLegacySchema_(SHEET_SCHEMAS.car),
+      WEAPON: _toLegacySchema_(SHEET_SCHEMAS.weapon),
+      TEMP_PROPERTY: _toLegacySchema_(SHEET_SCHEMAS.tempProperty),
+      PROPERTY_CATALOG: _toLegacySchema_(SHEET_SCHEMAS.propertyCatalog),
+      PROPERTY_KITS: _toLegacySchema_(SHEET_SCHEMAS.propertyKits),
       DICT: _toLegacySchema_(SHEET_SCHEMAS.dict),
       DICT_SUM: _toLegacySchema_(SHEET_SCHEMAS.dictSum),
       SEND_PANEL: _toLegacySchema_(SHEET_SCHEMAS.sendPanel),

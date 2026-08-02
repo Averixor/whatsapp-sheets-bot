@@ -34,6 +34,10 @@ function _stage7CreateNextMonthCore_(payload) {
   const srcMY = _inferMonthYearFromSheet_(src);
   const targetMonth = nextNum;
   const targetYear = targetMonth < srcMY.month ? srcMY.year + 1 : srcMY.year;
+  const sourceFormulaBounds =
+    typeof _monthlyCodeBoundsFromSheet_ === "function"
+      ? _monthlyCodeBoundsFromSheet_(src)
+      : null;
 
   const monthGrid = _setMonthDatesRow_(newSheet, targetMonth, targetYear);
   newSheet.getRange(monthGrid.clearRangeA1).clearContent();
@@ -42,12 +46,103 @@ function _stage7CreateNextMonthCore_(payload) {
     applyGlobalSheetStandards_();
   } catch (_) {}
 
+  var callsignSync = null;
   try {
     if (typeof syncMonthlyCallsignsFromPersonnel_ === "function") {
-      syncMonthlyCallsignsFromPersonnel_(newSheet);
+      callsignSync = syncMonthlyCallsignsFromPersonnel_(newSheet, {
+        allowShrink: true,
+        skipFormulaRewrite: true,
+      });
     }
   } catch (syncErr) {
     console.error(syncErr);
+  }
+
+  var formulaSync = null;
+  try {
+    if (typeof rewriteMonthlyScheduleFormulasToCodeRange_ === "function") {
+      var afterBounds =
+        callsignSync && callsignSync.scheduleBounds
+          ? callsignSync.scheduleBounds
+          : typeof _monthlyCodeBoundsFromSheet_ === "function"
+            ? _monthlyCodeBoundsFromSheet_(newSheet)
+            : null;
+      if (
+        afterBounds &&
+        callsignSync &&
+        callsignSync.capacityEndRow &&
+        typeof _monthlyBoundsWithEndRow_ === "function"
+      ) {
+        afterBounds = _monthlyBoundsWithEndRow_(
+          afterBounds,
+          callsignSync.capacityEndRow,
+        );
+      }
+      formulaSync = rewriteMonthlyScheduleFormulasToCodeRange_(
+        newSheet,
+        sourceFormulaBounds,
+        afterBounds,
+      );
+    }
+  } catch (formulaSyncErr) {
+    console.error(formulaSyncErr);
+    formulaSync = {
+      ok: false,
+      message:
+        formulaSyncErr && formulaSyncErr.message
+          ? String(formulaSyncErr.message)
+          : String(formulaSyncErr),
+    };
+  }
+
+  var vacationMonthlySync = null;
+  try {
+    if (typeof syncVacationsWithMonthlySheet_ === "function") {
+      vacationMonthlySync = syncVacationsWithMonthlySheet_({
+        sheet: newSheet,
+        source: "createMonthSheet",
+      });
+    }
+  } catch (vacationSyncErr) {
+    console.error(vacationSyncErr);
+    vacationMonthlySync = {
+      ok: false,
+      message:
+        vacationSyncErr && vacationSyncErr.message
+          ? String(vacationSyncErr.message)
+          : String(vacationSyncErr),
+    };
+  }
+
+  var conditionalFormatSync;
+  try {
+    conditionalFormatSync = replaceConditionalFormatRulesFromSheet_(
+      src,
+      newSheet,
+    );
+  } catch (formatSyncErr) {
+    console.error(formatSyncErr);
+    throw new Error(
+      "Не вдалося перенести умовне форматування до нового місячного аркуша",
+    );
+  }
+
+  var dataValidationsSync = null;
+  try {
+    if (typeof _copyMonthSheetDataValidationsFromSource_ === "function") {
+      dataValidationsSync = _copyMonthSheetDataValidationsFromSource_(
+        src,
+        newSheet,
+      );
+    }
+  } catch (_) {}
+
+  try {
+    if (typeof applyColumnWidthsStandardsToSheet_ === "function") {
+      applyColumnWidthsStandardsToSheet_(newSheet);
+    }
+  } catch (widthErr) {
+    console.error(widthErr);
   }
 
   if (payload.switchToNewMonth !== false) {
@@ -61,6 +156,10 @@ function _stage7CreateNextMonthCore_(payload) {
     sourceMonth: srcName,
     createdMonth: nextName,
     switched: payload.switchToNewMonth !== false,
+    vacationMonthlySync: vacationMonthlySync,
+    formulaSync: formulaSync,
+    conditionalFormatSync: conditionalFormatSync,
+    dataValidationsSync: dataValidationsSync,
   };
 }
 

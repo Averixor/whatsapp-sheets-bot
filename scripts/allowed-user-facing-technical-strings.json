@@ -14,7 +14,7 @@
     },
     {
       "pattern": "^PERSONNEL_VACATION_WITHOUT_PLAN$",
-      "files": ["ui/Js.Vacations.html"]
+      "files": ["ui/Js.Vacations.Constants.html", "ui/Js.Vacations.Render.Problems.html"]
     }
   ]
 }

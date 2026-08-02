@@ -10,6 +10,28 @@ import { loadContract, repoRoot } from "./lib/load-contract.mjs";
 import { readRepoFileByBasename } from "./lib/gas-files.mjs";
 
 const contract = loadContract("personnel-status.contract.json");
+const layoutContract = loadContract("reference-workbook-layout.contract.json");
+const personnelHeaders = layoutContract.sheets?.PERSONNEL || {};
+const statusColLetter = Object.entries(personnelHeaders).find(
+  ([, header]) => header === "Status",
+)?.[0];
+assert.equal(
+  statusColLetter,
+  "Q",
+  "reference-workbook-layout PERSONNEL Status must be column Q",
+);
+const statusColIndex = statusColLetter.charCodeAt(0) - 64;
+assert.equal(
+  contract.referenceStatusColumn,
+  statusColIndex,
+  "personnel-status.referenceStatusColumn must match reference-workbook-layout Status column",
+);
+assert.equal(
+  contract.selfHeal?.preferColumn,
+  statusColIndex,
+  "personnel-status.selfHeal.preferColumn must match reference-workbook-layout Status column",
+);
+
 const source = readRepoFileByBasename(repoRoot, "PersonnelRepository.gs", {
   errorPrefix: "verify-personnel-status-contract",
 });

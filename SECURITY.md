@@ -102,6 +102,11 @@ Role order:
 - repair actions
 - cache/system maintenance
 
+Policy checks (`access/AccessPolicyChecks.gs` → `runAccessPolicyChecks()`) require
+these **UA maintenance action keys** on the sysadmin role policy:
+`відновлення`, `захист аркушів`, `тригери` (see `POLICY_CHECKS_CONFIG_.REQUIRED_MAINTENANCE_ACTIONS`;
+EN aliases map on read via `MAINTENANCE_ACTION_ALIASES`).
+
 ### owner
 
 - full access
@@ -234,12 +239,13 @@ Canonical allowlist: `contracts/oauth-scopes.contract.json` (CI: `verify-oauth-s
 | ----- | ------- |
 | `spreadsheets` | SpreadsheetApp |
 | `drive.file` | Container spreadsheet (per-file Drive) |
+| `drive.readonly` | Read-only Drive folder traversal for inventory reconciliation documents |
 | `script.container.ui` | HtmlService sidebar/dialogs |
 | `script.send_mail` | MailApp security notifications |
 | `userinfo.email` | Session user email for ACCESS/audit |
 | `script.scriptapp` | Triggers, properties, locks |
 
-Removed after codebase audit (2026-05-29): full `drive`, `documents` — no `DriveApp` / `DocumentApp` usage. Never re-add `script.external_request` without explicit review.
+Removed after codebase audit (2026-05-29): full `drive`, `documents` — no full Drive write or `DocumentApp` usage. `drive.readonly` was added for inventory reconciliation (`DriveApp` folder scan). Never re-add `script.external_request` without explicit review.
 
 ## 10. Alerts, audit, and notifications
 

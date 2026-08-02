@@ -15,13 +15,23 @@ WASB is a spreadsheet-bound Google Apps Script application.
 - `ui/Sidebar.html` is the sidebar shell
 - `ui/JavaScript.html` aggregates the modular client runtime
 - `ui/Styles.html` bundles CSS partials via GAS `include()` (see partials `ui/Styles_*.html`)
-- active JS include chain (via `JavaScript.html`):
+- active JS include chain (via `JavaScript.html`; canonical order in `core/ProjectMetadata.gs` → `activeRuntimeChain` and `contracts/client-includes.contract.json`):
   - `Js.Core.html`
   - `Js.State.html`
+  - `Js.Modals.html`
   - `Js.Api.html`
   - `Js.Render.Panel.html`
   - `Js.Render.Calendar.html`
   - `Js.Render.Results.html`
+  - `Js.Vacations.Constants.html`
+  - `Js.Vacations.Formatters.html`
+  - `Js.Vacations.Render.Problems.html`
+  - `Js.Vacations.Render.Calendar.html`
+  - `Js.Vacations.Render.Main.html`
+  - `Js.Vacations.Actions.html`
+  - `Js.Vacations.Module.html`
+  - `Js.VacationSync.html`
+  - `Js.InventoryReconciliation.html`
   - `Js.Diagnostics.html`
   - `Js.Security.Boot.html`
   - `Js.Security.Util.html`
@@ -36,7 +46,7 @@ WASB is a spreadsheet-bound Google Apps Script application.
   - `Js.Helpers.html`
   - `Js.Events.html`
   - `Js.Actions.html`
-- `Js.Security.html` is a legacy shim and is not in the loader chain
+- `Js.Security.html` and monolithic `Js.Vacations.html` are legacy shims and are not in the loader chain
 
 ### Packaging policy
 
@@ -62,6 +72,8 @@ Representative entrypoints:
 - `apiStage7GetSendPanelData()`
 - `apiStage7GetPhoneDirectory()`
 - `apiStage7GetCarsRegister()`
+- `apiStage7GetWeaponsRegister()`
+- `apiStage7GetInventoryReconciliation()` / `apiStage7SyncInventoryReconciliation()`
 - `apiGenerateSendPanelForDate()`
 - `apiBuildDaySummary()`
 - `apiBuildDetailedSummary()`
@@ -89,6 +101,7 @@ Representative entrypoints:
 - `apiStage7RunRepair()`
 - `apiStage7MaterializeComputedData()`
 - `apiStage7MaterializeMonthJournal()`
+- `apiStage7MaterializeAllMonthJournals()` // chunked bootstrap; uiAllowed:false; continuation in response.data.result.nextCursor until done
 
 ### Compatibility facade
 
@@ -113,13 +126,13 @@ Key repositories and services:
 - `personnel/PersonnelRepository.gs`
 - `personnel/PersonsRepository.gs`
 - `sendpanel/SendPanelRepository.gs`
-- `data/DictionaryRepository.gs` — shared dictionary/phone/profile access plus `ReferenceSheetsRepository_` for `PHONE_DIRECTORY` / `CAR`
+- `data/DictionaryRepository.gs` — shared dictionary/phone/profile access plus `ReferenceSheetsRepository_` for `PHONE_DIRECTORY` / `CAR` / `WEAPON`
 - `reports/SummaryRepository.gs`
 - `reports/SummaryService.gs`
 - `reports/Report_SummaryData.gs` — read short-summary values from monthly formula block
 - `reports/Report_DailySimple.gs` — format short daily summary text
 - `reports/Report_DailyDetailed.gs` — detailed daily summary (people + DICT_SUM groups)
-- `reports/MonthJournalMaterialize.gs` — derived `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` from month sheets + PERSONNEL + DICT/DICT_SUM
+- `reports/MonthJournalMaterialize.gs` — derived unified `JOURNAL` / `SUMMARY` from month sheets + PERSONNEL + DICT/DICT_SUM
 - `reports/Summaries.gs` — legacy entrypoints (`buildDaySummaryForColumn_`, summary dialogs)
 - `vacations/VacationsRepository.gs`
 - `vacations/VacationPlannerService.gs`, `vacations/VacationMonthCalendar.gs`, `vacations/Vacation_Suggestions.gs`
@@ -231,8 +244,8 @@ Main operational sheets typically include:
 - `VACATIONS` — legacy vacation source (`A:I` only; `K:Q` presentation/migration)
 - `VACATION_REQUESTS` — opt-in flat vacation source; activated explicitly with
   Script Property `WASB_VACATION_SOURCE=VACATION_REQUESTS`
-- `ЖУРНАЛ_MM` — derived month fact table, one person × one day × one code
-- `ПІДСУМОК_MM` — derived month person summary with counters and compressed history
+- `JOURNAL` — derived fact table for all months `01`–`12` (column **Місяць** scopes rows; one person × one day × one code)
+- `SUMMARY` — full person×month summary with DICT_SUM counters and compressed history text
 - `LOG`
 - `TEMPLATES`
 
@@ -250,11 +263,11 @@ Protected / service sheets include:
 
 Три аркуші для заявок із сайдбару та місячного звіту за даними таблиці:
 
-| Sheet (name) | Primary module                                         | Seeded when                         |
-| ------------ | ------------------------------------------------------ | ----------------------------------- |
+| Sheet (name) | Primary module                                                 | Seeded when                         |
+| ------------ | -------------------------------------------------------------- | ----------------------------------- |
 | `Дані`       | `reports/MonthlyReport.gs` (`MonthlyReport_.ensureDataSheet_`) | Sidebar bootstrap; empty sheet only |
-| `Проєкти`    | `operations/ProjectRequests.gs` (`ensureProjectsSheet_`)          | same                                |
-| `Заявки`     | `operations/ProjectRequests.gs` (`ensureRequestsSheet_`)          | same                                |
+| `Проєкти`    | `operations/ProjectRequests.gs` (`ensureProjectsSheet_`)       | same                                |
+| `Заявки`     | `operations/ProjectRequests.gs` (`ensureRequestsSheet_`)       | same                                |
 
 Тригер входу: **`apiStage7BootstrapSidebar()`** → **`_ensureOptionalBusinessSheetsQuiet_()`** in `api/Stage7ServerApi.gs`. Деталі колонок і шаблонних рядків — **`RUNBOOK.md` §20**.
 
@@ -282,7 +295,7 @@ Full design: [`docs/daily-summary-architecture.md`](./docs/daily-summary-archite
 
 ## 7.2 Vacation planner and mini-calendar
 
-Vacation planning runs in the sidebar **Відпустки** tab (`ui/Js.Vacations.html`).
+Vacation planning runs in the sidebar **Відпустки** tab (`ui/Js.Vacations.*.html` partials via `JavaScript.html`).
 Source adapter: `vacations/VacationsRepository.gs` (default `VACATIONS` `A:I`).
 
 | Layer | Module | Role |
@@ -292,30 +305,69 @@ Source adapter: `vacations/VacationsRepository.gs` (default `VACATIONS` `A:I`).
 | Calendar | `vacations/VacationMonthCalendar.gs` | Month grid, day `loadLevel`, previews |
 | Suggestions | `vacations/Vacation_Suggestions.gs` | Safe move proposals per issue |
 | API | `vacations/VacationSidebarService.gs` | Sidebar entrypoints |
-| UI | `ui/Js.Vacations.html` | Tabs, mini-calendar, problems, bulk fix |
+| Monthly sync | `vacations/VacationMonthlySync.gs` | One-way approved vacation → month sheet (`Відпус`); conflicts via `ui/Js.VacationSync.html` |
+| UI | `ui/Js.Vacations.*.html` | Tabs, mini-calendar, problems, bulk fix (`Js.Vacations.Module` entry) |
 
-Mini-calendar: count-only cells, informative tooltip (`buildVacationDayTooltip_`),
-day details via `getVacationCalendarDayDetailsFromSidebar`. Footer shows only
-**Проблемних дат** / **Навантажених днів**.
+`VacationMonthlySync_` runs after month creation and inside `apiStage7MaterializeComputedData()` as stage **Синхронізація відпусток із місячним графіком**. Empty cells are auto-filled; non-empty mismatches become sidebar conflicts until a maintainer confirms. Metadata is stored in Document Properties; confirmed replacements append service notes.
 
-Full design: [`docs/vacation-planner.md`](./docs/vacation-planner.md). Contract:
-`scripts/verify-vacation-planner.mjs`.
+Full design: [`docs/vacation-planner.md`](./docs/vacation-planner.md). Contracts:
+`scripts/verify-vacation-planner.mjs`, `scripts/verify-vacation-monthly-sync.mjs`.
 
 ## 7.3 Reference sheets and month journal
 
-Sidebar maintainers can open two optional reference repositories:
+Sidebar maintainers can open three optional reference repositories:
 
 - `PHONE_DIRECTORY` — sectioned service phones with WhatsApp links (`apiStage7GetPhoneDirectory`)
 - `CAR` — vehicle register with owner/search/stats (`apiStage7GetCarsRegister`)
+- `WEAPON` — person-bound military property register (`apiStage7GetWeaponsRegister`)
 
 These reads are owned by `ReferenceSheetsRepository_` in `data/DictionaryRepository.gs`. Header/workbook expectations are guarded by `contracts/reference-workbook-layout.contract.json` and parser semantics by `scripts/verify-reference-repositories.mjs`.
 
 Month-journal materialization is separate from `apiStage7MaterializeComputedData()`:
 
 - source: month sheet `01`..`12` + PERSONNEL + DICT + DICT_SUM
-- output: `ЖУРНАЛ_MM` and `ПІДСУМОК_MM`
-- maintenance API: `apiStage7MaterializeMonthJournal()`
-- UI action: sidebar button **Оновити журнал місяця**
+- output: unified English tabs `JOURNAL` and `SUMMARY` (column **Місяць**; no per-month sheet suffixes)
+- active update: replaces only that month’s rows; other months stay intact
+- bootstrap: `apiStage7MaterializeAllMonthJournals({ cursor?, monthsPerCall? })` — chunked (default 3 months/call); **не підключено до UI** (`uiAllowed: false`); **призначено для GAS editor** (public `api*` + maintainer). Continuation fields live inside the Stage7 envelope (`response.data.result.done` / `nextCursor` / `batchMonths` / `cursor`), not top-level — re-invoke with `{ nextCursor }` until `done`
+- maintenance API (active/requested month slice): `apiStage7MaterializeMonthJournal()`
+- UI action: sidebar button **Оновити журнал місяця** (active bot month only)
+- legacy `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` tabs are superseded and not deleted automatically
+
+## 7.4 Inventory reconciliation
+
+Service inventory month tracking lives on `INVENTORY_RECONCILIATION` with a hidden
+Drive index sheet `INVENTORY_RECONCILIATION_FILES`.
+
+| Layer | Module | Role |
+| ----- | ------ | ---- |
+| Server | `inventory/InventoryReconciliation.gs` | Month status colors, Drive folder scan, file matching, cell notes |
+| API | `api/Stage7ServerApi.gs` | `apiStage7GetInventoryReconciliation`, `apiStage7SyncInventoryReconciliation`, `apiStage7SetInventoryReconciliationFolder`, `apiStage7GetSelectedInventoryReconciliation` |
+| UI | `ui/Js.InventoryReconciliation.html` | Sidebar **Звірка** section |
+| Trigger | `access/AccessSheetTriggers.gs` | `onEdit` recolor after checkbox changes |
+
+Folder id is stored in Script Property `WASB_INVENTORY_RECONCILIATION_FOLDER_ID`.
+Drive traversal requires OAuth scope `drive.readonly` (see `contracts/oauth-scopes.contract.json`).
+
+Full design: [`docs/inventory-reconciliation.md`](./docs/inventory-reconciliation.md).
+
+## 7.5 Temporary property register
+
+Temporary issue/return tracking lives on `Property_issued_for_temporary_u` with
+reference sheets `PROPERTY_CATALOG` (category/model/unit) and `PROPERTY_KITS`
+(kit composition).
+
+| Layer | Module | Role |
+| ----- | ------ | ---- |
+| Server | `inventory/TemporaryPropertyRegister.gs` | Dropdowns, kit component rows, balances, fuel fields, migration |
+| Setup API | `apiSetupTemporaryPropertyRegister()` | One-time seed/migrate/backup |
+| Trigger | `access/AccessSheetTriggers.gs` | `onEdit` routing to `TemporaryPropertyRegister_.handleEdit` |
+| Person cards | `personnel/PersonsRepository.gs`, `personnel/PersonCards.gs` | Outstanding items under **Тимчасово видане майно** |
+
+Main quantities are numeric; unit of account is stored separately. Fuel cans use
+`Вид палива` and `Об'єм палива, л`. Local contract:
+`scripts/verify-temporary-property-register.mjs` (`npm run ci:workbook`).
+
+Full design: [`docs/temporary-property-register.md`](./docs/temporary-property-register.md).
 
 ## 8. Sidebar runtime principles
 
@@ -333,9 +385,17 @@ Main validation tools:
 - `apiStage7HealthCheck()`
 - `apiRunStage7Diagnostics()`
 - `apiRunStage7RegressionTests()`
-- `smoke/SmokeTests.gs`
+- `smoke/SmokeTests.gs` (`runSmokeTests()`)
 - `tests/AccessE2ETests.gs`
 - `tests/DomainTests.gs`
+
+**System status foundation (this branch):** internal modules
+`diagnostics/SystemStatus.Foundation.gs`, `SystemStatus.Probes.gs`,
+`SystemStatus.Fingerprints.gs` with contracts
+`contracts/system-status.contract.json` and
+`contracts/system-status-fingerprints.contract.json`. Local CI:
+`verify-system-status-foundation.mjs`, `verify-system-status-fingerprints.mjs`.
+No sidebar/public Stage7 routing yet (planned SS-3).
 
 Diagnostics are for verification, not as a replacement for server-side enforcement.
 

@@ -910,6 +910,8 @@ function _testAccessControl_() {
     "temporary_password_salt",
     "temporary_password_expires_at",
     "temporary_password_used_at",
+    "browser_session_hash",
+    "browser_session_expires_at",
     "approved_by",
     "approved_at",
     "activated_at",
@@ -1072,6 +1074,7 @@ var AccessControl_ = Object.freeze({
   submitAccessKeyRequest: submitAccessKeyRequest,
   loginByIdentifierAndCallsign: loginByIdentifierAndCallsign,
   loginByAccessKey: loginByAccessKey,
+  resumeBrowserSession: resumeBrowserSession,
   registerAccessWithTemporaryPassword: registerAccessWithTemporaryPassword,
   reissueAccessTemporaryPassword: reissueAccessTemporaryPassword_,
 

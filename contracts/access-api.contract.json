@@ -24,6 +24,11 @@
     "apiStage7GetSendPanelData",
     "apiStage7GetPhoneDirectory",
     "apiStage7GetCarsRegister",
+    "apiStage7GetWeaponsRegister",
+    "apiStage7GetInventoryReconciliation",
+    "apiStage7SyncInventoryReconciliation",
+    "apiStage7SetInventoryReconciliationFolder",
+    "apiStage7GetSelectedInventoryReconciliation",
     "apiMarkPanelRowsAsPending",
     "apiMarkPanelRowsAsSent",
     "apiMarkPanelRowsAsSentFast",
@@ -49,6 +54,9 @@
     "apiStage7ClearPhoneCache",
     "apiStage7MaterializeComputedData",
     "apiStage7MaterializeMonthJournal",
+    "apiStage7MaterializeAllMonthJournals",
+    "apiStage7SetupTemporaryPropertyRegister",
+    "apiStage7RefreshTemporaryPropertyRegister",
     "apiStage7RestartBot",
     "apiStage7SetupVacationTriggers",
     "apiStage7CleanupDuplicateTriggers",
@@ -74,6 +82,7 @@
     "apiStage7ListBindableCallsigns",
     "apiStage7LoginByIdentifierAndCallsign",
     "apiStage7LoginByAccessKey",
+    "apiStage7ResumeBrowserSession",
     "apiStage7SubmitAccessKeyRequest",
     "apiStage7RegisterAccessWithTemporaryPassword",
     "apiStage7ReportAccessViolation",
@@ -111,6 +120,7 @@
       "apiStage7ListBindableCallsigns",
       "apiStage7LoginByIdentifierAndCallsign",
       "apiStage7LoginByAccessKey",
+      "apiStage7ResumeBrowserSession",
       "apiStage7SubmitAccessKeyRequest",
       "apiStage7RegisterAccessWithTemporaryPassword"
     ],
@@ -137,6 +147,10 @@
       "apiStage7GetSendPanelData",
       "apiStage7GetPhoneDirectory",
       "apiStage7GetCarsRegister",
+      "apiStage7GetWeaponsRegister",
+      "apiStage7GetInventoryReconciliation",
+      "apiStage7SyncInventoryReconciliation",
+      "apiStage7GetSelectedInventoryReconciliation",
       "apiMarkPanelRowsAsPending",
       "apiMarkPanelRowsAsSent",
       "apiMarkPanelRowsAsSentFast",
@@ -151,6 +165,8 @@
       "apiStage7DebugPhones",
       "apiStage7MaterializeComputedData",
       "apiStage7MaterializeMonthJournal",
+      "apiStage7MaterializeAllMonthJournals",
+      "apiStage7RefreshTemporaryPropertyRegister",
       "apiStage7QuickHealthCheck",
       "apiStage7HealthCheck",
       "apiRunStage7Diagnostics",
@@ -170,7 +186,8 @@
       "apiStage7NormalizeAccessSheetFormatting",
       "apiStage7BootstrapAccessSheet",
       "apiStage7RepairSystemSheets",
-      "apiStage7BootstrapRuntimeAndAlertsSheets"
+      "apiStage7BootstrapRuntimeAndAlertsSheets",
+      "apiStage7SetupTemporaryPropertyRegister"
     ],
     "sysadmin": [
       "apiStage7ClearCache",
@@ -186,7 +203,8 @@
       "apiStage7ReportAccessViolation",
       "apiStage7ApplyProtections",
       "apiStage7NormalizeAllSheetHeadersToEnglish",
-      "apiExportAdoptedFormatRules"
+      "apiExportAdoptedFormatRules",
+      "apiStage7SetInventoryReconciliationFolder"
     ]
   },
   "rolePolicyOverrides": {
@@ -283,6 +301,14 @@
     {
       "name": "apiStage7ReissueOwnerTemporaryPasswordManual",
       "reason": "GAS-editor manual wrapper for owner ACCESS temporary password reissue; not client-reachable"
+    },
+    {
+      "name": "apiSetupTemporaryPropertyRegister",
+      "reason": "GAS-editor one-time setup/migration alias; sidebar uses apiStage7SetupTemporaryPropertyRegister"
+    },
+    {
+      "name": "apiRefreshTemporaryPropertyRegister",
+      "reason": "GAS-editor refresh alias; sidebar uses apiStage7RefreshTemporaryPropertyRegister"
     }
   ],
   "deprecatedEndpoints": [

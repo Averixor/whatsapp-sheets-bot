@@ -19,8 +19,8 @@ function _stage7PushCheck_(checks, name, status, details, recommendation) {
     uiGroup: uiGroup,
     details: details || "",
     message: details || "",
-    recommendation: recommendation || "",
-    howTo: recommendation || "",
+    recommendation: normalizedStatus === "OK" ? "" : recommendation || "",
+    howTo: normalizedStatus === "OK" ? "" : recommendation || "",
   });
 }
 

@@ -21,6 +21,7 @@
     debugAccess() {},
     showPhoneDirectory() {},
     showCarsRegister() {},
+    showInventoryReconciliation() {},
     filterPhoneDirectory() {},
     filterCarsRegister() {},
     openReferenceLink() {},
@@ -71,7 +72,7 @@
               Проєкт *
             </label>
             <select
-              id="reqProject"
+              id="reqProject" name="reqProject"
               class="input"
               style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);"
             >
@@ -82,7 +83,7 @@
               Тема *
             </label>
             <input
-              id="reqTitle"
+              id="reqTitle" name="reqTitle"
               class="input"
               type="text"
               maxlength="140"
@@ -94,7 +95,7 @@
               Опис *
             </label>
             <textarea
-              id="reqDetails"
+              id="reqDetails" name="reqDetails"
               class="input"
               rows="8"
               maxlength="3000"
@@ -229,6 +230,10 @@
   function fallbackCopy(text) {
     try {
       const el = document.createElement("textarea");
+      el.id = "wasbClipboardFallback";
+      el.name = "wasbClipboardFallback";
+      el.setAttribute("aria-hidden", "true");
+      el.tabIndex = -1;
       el.value = text;
       el.style.position = "fixed";
       el.style.left = "-9999px";
@@ -416,24 +421,28 @@
       renderCommanderRecipientControls_() + renderBirthdayResult(result);
   }
 
-  function formatYearsUa(age) {
-    const n = Math.abs(Number(age)) % 100;
-    const n1 = n % 10;
+  function formatAgeDisplayUa(age) {
+    const raw = String(age == null ? "" : age).trim();
+    if (!raw) return "";
 
-    if (n > 10 && n < 20) return "років";
-    if (n1 === 1) return "рік";
-    if (n1 >= 2 && n1 <= 4) return "роки";
-    return "років";
+    const alreadyFormatted = raw.match(/^(\d+)\s*р\.$/);
+    if (alreadyFormatted) {
+      return `${alreadyFormatted[1]} р.`;
+    }
+
+    const a = Number(raw);
+    if (!Number.isFinite(a) || a <= 0) return "";
+    return `${a} р.`;
   }
 
   function formatBirthdayWithAge(birthday, age) {
     const b = String(birthday || "").trim();
-    const a = Number(age);
+    const agePart = formatAgeDisplayUa(age);
 
     if (!b) return "—";
-    if (!Number.isFinite(a) || a <= 0) return b;
+    if (!agePart) return b;
 
-    return `${b} (${a} ${formatYearsUa(a)})`;
+    return `${b} (${agePart})`;
   }
 
   function formatBirthdayDayWord(days) {
@@ -1223,7 +1232,7 @@
           <div class="result-item">
             <label class="result-label" for="phoneDirectorySearch">Пошук</label>
             <input
-              id="phoneDirectorySearch"
+              id="phoneDirectorySearch" name="phoneDirectorySearch"
               class="input"
               type="search"
               value="${escapeAttr(query || "")}" 
@@ -1316,15 +1325,153 @@
 
     const itemRowsHtml = filtered.length
       ? filtered
-          .map((item) => `
-            <div class="result-item">
+          .map((item) => {
+            const ownerMissing = item?.ownerMissing === true;
+            const ownerClass = ownerMissing
+              ? " result-item--reference-missing-person"
+              : "";
+            const ownerBadge = ownerMissing
+              ? '<div class="reference-missing-person-badge">Не знайдено в особовому складі</div>'
+              : "";
+            return `
+            <div class="result-item${ownerClass}">
               <div class="result-label">${escapeHtml(item.assetName || "—")}</div>
               <div class="result-value" style="font-weight:700;">${escapeHtml(item.ownerDisplay || "Не закріплено")}</div>
+              ${ownerBadge}
               <div style="color:var(--text-secondary);font-size:12px;line-height:1.45;margin-top:6px;">
+                Позивний: ${escapeHtml(item.ownerCallsign || item.ownerKey || "—")}<br>
                 Стан: ${escapeHtml(item.status || "Без стану")}${item.statusDescription ? ` — ${escapeHtml(item.statusDescription)}` : ""}<br>
                 Військовий номер: ${escapeHtml(item.militaryNumber || "—")}<br>
                 Шасі: ${escapeHtml(item.chassisNumber || "—")}<br>
                 Рік: ${escapeHtml(item.year || "—")} · Вартість: ${escapeHtml(item.costDisplay || "—")}
+              </div>
+            </div>
+          `;
+          })
+          .join("")
+      : `
+        <div class="result-item">
+          <div class="result-label">Результат</div>
+          <div class="result-value">Нічого не знайдено</div>
+        </div>
+      `;
+
+    const rowsHtml = renderReferenceWarnings_(payload.warnings) + itemRowsHtml;
+
+    setHtml(
+      "resultContent",
+      `
+        <div class="result-screen">
+          <div class="result-item">
+            <div class="result-label">Підсумок</div>
+            <div class="result-value">
+              ${escapeHtml(formatReferenceNumber_(stats.total))} записів · закріплено: ${escapeHtml(formatReferenceNumber_(stats.assigned))} · без позивного: ${escapeHtml(formatReferenceNumber_(stats.unassigned))}
+            </div>
+            <div style="color:var(--text-secondary);font-size:12px;line-height:1.45;margin-top:6px;">
+              Не знайдено в особовому складі: ${escapeHtml(formatReferenceNumber_(stats.unresolvedOwners))}<br>
+              Загальна вартість: ${escapeHtml(stats.totalCostDisplay || "0,00")}<br>
+              Роки: ${escapeHtml(stats.minYear || "—")} — ${escapeHtml(stats.maxYear || "—")}<br>
+              Типи: ${escapeHtml(renderCarTypeStats_(stats))}<br>
+              Стани: ${escapeHtml(renderCarStatusStats_(stats))}
+            </div>
+          </div>
+
+          <div class="result-item">
+            <label class="result-label" for="carsRegisterSearch">Пошук</label>
+            <input
+              id="carsRegisterSearch" name="carsRegisterSearch"
+              class="input"
+              type="search"
+              value="${escapeAttr(query || "")}" 
+              placeholder="ПІБ, авто, номер, шасі або стан"
+              oninput="SidebarApp.filterCarsRegister(this.value)"
+              style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);"
+            />
+          </div>
+
+          ${rowsHtml}
+        </div>
+      `,
+    );
+  }
+
+  function filterCarsRegister(query) {
+    renderCarsRegister(STATE.carsRegister || {}, query || "");
+    setTimeout(() => {
+      const el = $id("carsRegisterSearch");
+      if (!el) return;
+      el.focus();
+      const end = String(el.value || "").length;
+      el.setSelectionRange?.(end, end);
+    }, 0);
+  }
+
+
+  async function showWeaponsRegister() {
+    showStandardResult("🪖 Озброєння");
+    setHtml(
+      "resultContent",
+      `
+        <div class="result-screen">
+          <div class="result-item">
+            <div class="result-value">Завантажую реєстр озброєння та майна...</div>
+          </div>
+        </div>
+      `,
+    );
+
+    showLoading();
+    try {
+      const result = await ActionDispatcher.run(
+        "weaponsRegister",
+        () => Stage7Api.getWeaponsRegister(),
+        { successMessage: "" },
+      );
+      if (!result?.success) {
+        throw new Error(result?.error || "Не вдалося завантажити озброєння");
+      }
+      const data = result.data || result;
+      STATE.weaponsRegister = data;
+      renderWeaponsRegister(data, "");
+      logToConsole(
+        `✓ Озброєння: ${Number(data?.stats?.total || 0)} записів`,
+        "success",
+      );
+    } catch (error) {
+      logToConsole(`✕ Озброєння: ${normalizeError(error)}`, "error");
+      displayInResult("error", { error: normalizeError(error) });
+    } finally {
+      hideLoading();
+    }
+  }
+
+  function renderWeaponTypeStats_(stats) {
+    return renderCarStatList_(stats?.byType, "Інше");
+  }
+
+  function renderWeaponLocationStats_(stats) {
+    return renderCarStatList_(stats?.byLocation, "Без місця");
+  }
+
+  function renderWeaponsRegister(data, query) {
+    const payload = data || {};
+    const stats = payload.stats || {};
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    const filtered = items.filter((item) => referenceSearchMatch_(item, query));
+
+    const itemRowsHtml = filtered.length
+      ? filtered
+          .map((item) => `
+            <div class="result-item">
+              <div class="result-label">${escapeHtml(item.assetName || "—")}</div>
+              <div class="result-value" style="font-weight:700;">${escapeHtml(item.personDisplay || "Не закріплено")}</div>
+              <div style="color:var(--text-secondary);font-size:12px;line-height:1.45;margin-top:6px;">
+                Блок: ${escapeHtml(item.blockLabel || "—")}<br>
+                Звання: ${escapeHtml(item.rank || "—")} · Телефон: ${escapeHtml(item.phone || "—")}<br>
+                Номенклатура: ${escapeHtml(item.nomenclatureCode || "—")}<br>
+                Заводський номер: ${escapeHtml(item.serialNumber || "—")}<br>
+                Рік: ${escapeHtml(item.year || "—")} · Ціна: ${escapeHtml(item.unitPriceDisplay || "—")}<br>
+                Закріплено: ${escapeHtml(item.assignmentDateDisplay || "—")} · Місце: ${escapeHtml(item.location || "—")}
               </div>
             </div>
           `)
@@ -1345,25 +1492,25 @@
           <div class="result-item">
             <div class="result-label">Підсумок</div>
             <div class="result-value">
-              ${escapeHtml(formatReferenceNumber_(stats.total))} записів · закріплено: ${escapeHtml(formatReferenceNumber_(stats.assigned))} · без ПІБ: ${escapeHtml(formatReferenceNumber_(stats.unassigned))}
+              ${escapeHtml(formatReferenceNumber_(stats.total))} записів · осіб: ${escapeHtml(formatReferenceNumber_(stats.persons))} · без власника: ${escapeHtml(formatReferenceNumber_(stats.unassigned))}
             </div>
             <div style="color:var(--text-secondary);font-size:12px;line-height:1.45;margin-top:6px;">
-              Загальна вартість: ${escapeHtml(stats.totalCostDisplay || "0,00")}<br>
+              Загальна ціна: ${escapeHtml(stats.totalUnitPriceDisplay || "0,00")}<br>
               Роки: ${escapeHtml(stats.minYear || "—")} — ${escapeHtml(stats.maxYear || "—")}<br>
-              Типи: ${escapeHtml(renderCarTypeStats_(stats))}<br>
-              Стани: ${escapeHtml(renderCarStatusStats_(stats))}
+              Типи: ${escapeHtml(renderWeaponTypeStats_(stats))}<br>
+              Місця: ${escapeHtml(renderWeaponLocationStats_(stats))}
             </div>
           </div>
 
           <div class="result-item">
-            <label class="result-label" for="carsRegisterSearch">Пошук</label>
+            <label class="result-label" for="weaponsRegisterSearch">Пошук</label>
             <input
-              id="carsRegisterSearch"
+              id="weaponsRegisterSearch" name="weaponsRegisterSearch"
               class="input"
               type="search"
               value="${escapeAttr(query || "")}" 
-              placeholder="ПІБ, авто, номер, шасі або стан"
-              oninput="SidebarApp.filterCarsRegister(this.value)"
+              placeholder="ПІБ, майно, номер, номенклатура або місце"
+              oninput="SidebarApp.filterWeaponsRegister(this.value)"
               style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);"
             />
           </div>
@@ -1374,10 +1521,10 @@
     );
   }
 
-  function filterCarsRegister(query) {
-    renderCarsRegister(STATE.carsRegister || {}, query || "");
+  function filterWeaponsRegister(query) {
+    renderWeaponsRegister(STATE.weaponsRegister || {}, query || "");
     setTimeout(() => {
-      const el = $id("carsRegisterSearch");
+      const el = $id("weaponsRegisterSearch");
       if (!el) return;
       el.focus();
       const end = String(el.value || "").length;
@@ -1477,6 +1624,8 @@
     clearPhoneCache,
     materializeComputedData,
     materializeMonthJournal,
+    setupTemporaryPropertyRegister,
+    refreshTemporaryPropertyRegister,
     runMaterializeComputedData_,
     restartBot,
     setupTrigger,
@@ -1536,8 +1685,12 @@
     submitRequestForm,
     showPhoneDirectory,
     showCarsRegister,
+    showWeaponsRegister,
+    showInventoryReconciliation,
+    InventoryReconciliationModule,
     filterPhoneDirectory,
     filterCarsRegister,
+    filterWeaponsRegister,
     openReferenceLink,
   };
 

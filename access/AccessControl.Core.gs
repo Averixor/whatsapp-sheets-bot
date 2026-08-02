@@ -43,6 +43,8 @@ const LOCKOUT_ESCALATION_MS = Object.freeze([
 const MAX_FAILED_ATTEMPTS_SHEET = 5;
 const MAX_SHEET_ROWS = 1000;
 const ROTATION_PERIOD_DAYS = 30;
+/** Long-lived browser session for seamless Google user-key rotation (days). */
+const BROWSER_SESSION_TTL_DAYS = 30;
 
 // ==================== РОЛІ ТА ПРАВА ====================
 
@@ -123,6 +125,8 @@ const SHEET_HEADERS = Object.freeze([
   "temporary_password_salt",
   "temporary_password_expires_at",
   "temporary_password_used_at",
+  "browser_session_hash",
+  "browser_session_expires_at",
   "approved_by",
   "approved_at",
   "activated_at",
@@ -454,6 +458,34 @@ function getAccessTemporaryPasswordExpiresAt_(hours) {
     ACCESS_TEMP_PASSWORD_TTL_HOURS;
   var date = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
   return formatAccessDateTime_(date);
+}
+
+function getAccessBrowserSessionExpiresAt_(days) {
+  var ttlDays =
+    Number(days || BROWSER_SESSION_TTL_DAYS) || BROWSER_SESSION_TTL_DAYS;
+  var date = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000);
+  return formatAccessDateTime_(date);
+}
+
+function generateAccessBrowserSessionToken_() {
+  var raw =
+    Utilities.getUuid().replace(/-/g, "") +
+    Utilities.getUuid().replace(/-/g, "");
+  return "WASBSESS-" + String(raw || "").toUpperCase().slice(0, 40);
+}
+
+function hashAccessBrowserSessionToken_(token) {
+  var value = String(token || "").trim();
+  if (!value) return "";
+  return hashTextSha256_(["WASB_ACCESS_BROWSER_SESSION_V1", value].join("|"));
+}
+
+function isAccessBrowserSessionExpired_(expiresAtText) {
+  var expiresRaw = String(expiresAtText || "").trim();
+  if (!expiresRaw) return true;
+  var expiresDate = new Date(expiresRaw.replace(" ", "T"));
+  if (isNaN(expiresDate.getTime())) return true;
+  return Date.now() > expiresDate.getTime();
 }
 
 function isAccessTempPasswordPlainLookupEnabled_() {

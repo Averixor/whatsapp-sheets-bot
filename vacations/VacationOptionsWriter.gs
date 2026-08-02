@@ -926,6 +926,56 @@ const VacationOptionsWriter_ = (function () {
     }
   }
 
+  function _sheetCellKey_(value) {
+    if (value instanceof Date && !isNaN(value.getTime())) {
+      return "d:" + value.getTime();
+    }
+    if (typeof value === "boolean") {
+      return value ? "1" : "0";
+    }
+    if (typeof value === "number" && isFinite(value)) {
+      return "n:" + value;
+    }
+    return String(value == null ? "" : value).trim();
+  }
+
+  function _sheetRowsEqual_(left, right) {
+    const a = Array.isArray(left) ? left : [];
+    const b = Array.isArray(right) ? right : [];
+    if (a.length !== b.length) return false;
+    for (let r = 0; r < a.length; r++) {
+      const leftRow = a[r] || [];
+      const rightRow = b[r] || [];
+      if (leftRow.length !== rightRow.length) return false;
+      for (let c = 0; c < leftRow.length; c++) {
+        if (_sheetCellKey_(leftRow[c]) !== _sheetCellKey_(rightRow[c])) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  function _readSheetRowsIfSized_(sheet, rowCount, columnCount) {
+    if (!sheet || rowCount < 1 || columnCount < 1) return null;
+    if (sheet.getLastRow() < rowCount || sheet.getLastColumn() < columnCount) {
+      return null;
+    }
+    try {
+      return sheet.getRange(1, 1, rowCount, columnCount).getValues();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function _monthlyScheduleSheetNames_() {
+    const names = [];
+    for (let month = 1; month <= 12; month++) {
+      names.push((month < 10 ? "0" : "") + month);
+    }
+    return names;
+  }
+
   function _scheduleCellColor_(value) {
     const text = String(value || "").trim();
     if (!text) return "#FFFFFF";
@@ -1000,6 +1050,14 @@ const VacationOptionsWriter_ = (function () {
     calendar.dataStartRow = 3;
     const width = rows[0].length;
     _ensureGridSize_(sheet, rows.length, width);
+
+    const existingRows = _readSheetRowsIfSized_(sheet, rows.length, width);
+    if (opts.skipUnchanged !== false && _sheetRowsEqual_(existingRows, rows)) {
+      calendar.skippedWrite = true;
+      calendar.skipReason = "schedule_unchanged";
+      return calendar;
+    }
+
     return preserveUserConditionalFormatRules_(
       sheet,
       function () {
@@ -1300,27 +1358,38 @@ const VacationOptionsWriter_ = (function () {
     return problems;
   }
 
-  function _writeChecks_(checks) {
+  function _writeChecks_(checks, options) {
+    const opts = options || {};
     const sheet = _ensureSheet_(VACATION_PLANNER_CONFIG.SHEETS.CHECK);
+    const headers = ["Date", "Type", "FML", "Description", "Severity"];
+    const rows = [headers];
+    if (!checks.length) {
+      rows.push(["", "ALL_RULES", "", "Порушень не знайдено", "OK"]);
+    } else {
+      normalizeChecks(checks).forEach(function (item) {
+        rows.push([
+          item.date,
+          item.label,
+          item.fml,
+          item.description,
+          item.severity,
+        ]);
+      });
+    }
+
+    const existingRows = _readSheetRowsIfSized_(
+      sheet,
+      rows.length,
+      headers.length,
+    );
+    if (opts.skipUnchanged !== false && _sheetRowsEqual_(existingRows, rows)) {
+      return { skippedWrite: true, skipReason: "checks_unchanged", rowCount: rows.length };
+    }
+
     return preserveUserConditionalFormatRules_(
       sheet,
       function () {
         sheet.clear();
-        const headers = ["Date", "Type", "FML", "Description", "Severity"];
-        const rows = [headers];
-        if (!checks.length) {
-          rows.push(["", "ALL_RULES", "", "Порушень не знайдено", "OK"]);
-        } else {
-          normalizeChecks(checks).forEach(function (item) {
-            rows.push([
-              item.date,
-              item.label,
-              item.fml,
-              item.description,
-              item.severity,
-            ]);
-          });
-        }
         sheet.getRange(1, 1, rows.length, headers.length).setValues(rows);
         sheet
           .getRange(1, 1, 1, headers.length)
@@ -1347,7 +1416,8 @@ const VacationOptionsWriter_ = (function () {
     return [];
   }
 
-  function _collectMonthlyVacationFacts_() {
+  function _collectMonthlyVacationFacts_(options) {
+    const opts = options || {};
     const ss = _spreadsheet_();
     if (!ss || typeof ss.getSheets !== "function") return [];
     if (typeof detectMonthlyLayoutFromSheet_ !== "function") return [];
@@ -1360,7 +1430,11 @@ const VacationOptionsWriter_ = (function () {
     } catch (_) {}
 
     const facts = [];
-    ss.getSheets().forEach(function (sheet) {
+    const monthSheetNames = _monthlyScheduleSheetNames_();
+    monthSheetNames.forEach(function (sheetName) {
+      const sheet = ss.getSheetByName(sheetName);
+      if (!sheet) return;
+
       let layout = null;
       try {
         layout = detectMonthlyLayoutFromSheet_(sheet);
@@ -1425,13 +1499,13 @@ const VacationOptionsWriter_ = (function () {
     return facts;
   }
 
-  function _loadAudit_() {
+  function _loadAudit_(options) {
     const allVacations = VacationsRepository_.listAll();
     const audit = VacationPlannerService_.buildScheduleAudit(allVacations);
     const consistencyChecks = VacationPlannerService_.buildConsistencyAudit(
       allVacations,
       _collectPersonnelRows_(),
-      _collectMonthlyVacationFacts_(),
+      _collectMonthlyVacationFacts_(options),
       new Date(),
     );
     audit.checks = audit.checks.concat(consistencyChecks);
@@ -1453,24 +1527,31 @@ const VacationOptionsWriter_ = (function () {
   function rebuildVacationSystem(options) {
     const opts = options || {};
     const year = resolveScheduleYear_(opts);
-    const audit = _loadAudit_();
-    const calendar = _writeSchedule_(audit.schedule, { year: year });
-    _writeChecks_(audit.checks);
+    const writeOpts = { skipUnchanged: opts.skipUnchanged !== false };
+    const audit = _loadAudit_(opts);
+    const calendar = _writeSchedule_(audit.schedule, Object.assign({ year: year }, writeOpts));
+    const checksWrite = _writeChecks_(audit.checks, writeOpts);
     const problemSummary = _summarizeAuditProblems_(audit);
+    const affectedSheets = [];
+    if (!calendar.skippedWrite) {
+      affectedSheets.push(VACATION_PLANNER_CONFIG.SHEETS.SCHEDULE);
+    }
+    if (!checksWrite || !checksWrite.skippedWrite) {
+      affectedSheets.push(VACATION_PLANNER_CONFIG.SHEETS.CHECK);
+    }
     return {
       scheduleYear: year,
       scheduleTitle: calendar.shortTitle || calendar.title || "",
       scheduleRows: audit.schedule.length,
       schedulePeople: calendar.personCount,
       scheduleDays: calendar.dateCount,
+      scheduleSkipped: calendar.skippedWrite === true,
+      checksSkipped: !!(checksWrite && checksWrite.skippedWrite),
       checkRows: audit.checks.length,
       errorCount: problemSummary.errorCount,
       warningCount: problemSummary.warningCount,
       problemCount: problemSummary.problemCount,
-      affectedSheets: [
-        VACATION_PLANNER_CONFIG.SHEETS.SCHEDULE,
-        VACATION_PLANNER_CONFIG.SHEETS.CHECK,
-      ],
+      affectedSheets: affectedSheets,
       checks: normalizeProblems(audit.checks, audit.schedule),
       problemSummary: problemSummary,
     };

@@ -126,6 +126,8 @@ function _getAccessHeaderDisplayLabels_() {
     temporary_password_salt: "Temp_salt",
     temporary_password_expires_at: "Temp_expires",
     temporary_password_used_at: "Temp_used",
+    browser_session_hash: "Sess_hash",
+    browser_session_expires_at: "Sess_expires",
     approved_by: "Approved_by",
     approved_at: "Approved_at",
     activated_at: "Activated_at",
@@ -227,6 +229,10 @@ function _getAccessHeaderAliasMap_() {
     temporary_password_expires_at: "temporary_password_expires_at",
     "час використання тимчасового пароля": "temporary_password_used_at",
     temporary_password_used_at: "temporary_password_used_at",
+    "хеш браузерної сесії": "browser_session_hash",
+    browser_session_hash: "browser_session_hash",
+    "термін дії браузерної сесії": "browser_session_expires_at",
+    browser_session_expires_at: "browser_session_expires_at",
     "ким схвалено": "approved_by",
     "хто схвалив": "approved_by",
     хто_схвалив: "approved_by",
@@ -355,48 +361,88 @@ function _getHeaderMap_(sh) {
 
 function _ensureSheetSchema_(sh) {
   if (!sh) return;
+
   _removeAccessObsoleteColumns_(sh);
+
   var expectedHeaders = _getExpectedHeaders_();
   if (!expectedHeaders.length) return;
-  var currentLastColumn = Number(sh.getLastColumn()) || 0;
-  var currentLastRow = Number(sh.getLastRow()) || 0;
-  if (currentLastColumn < expectedHeaders.length) {
-    var missingCols = expectedHeaders.length - currentLastColumn;
-    if (missingCols > 0 && currentLastColumn > 0) {
-      sh.insertColumnsAfter(currentLastColumn, missingCols);
-    }
+
+  // Гарантуємо достатню фізичну кількість колонок.
+  var maxColumns = Number(sh.getMaxColumns()) || 0;
+  if (maxColumns < expectedHeaders.length) {
+    sh.insertColumnsAfter(
+      Math.max(maxColumns, 1),
+      expectedHeaders.length - maxColumns
+    );
   }
 
+  var currentLastColumn = Number(sh.getLastColumn()) || 0;
+  var currentLastRow = Number(sh.getLastRow()) || 0;
+
   var currentHeaders =
-    currentLastRow >= 1
-      ? sh.getRange(1, 1, 1, Math.max(expectedHeaders.length, 1)).getValues()[0]
+    currentLastRow >= 1 && currentLastColumn >= 1
+      ? sh.getRange(1, 1, 1, currentLastColumn).getValues()[0]
       : [];
 
-  var hasAnyHeaders = currentHeaders.some(function (v) {
-    return String(v || "").trim() !== "";
+  var hasAnyHeaders = currentHeaders.some(function (value) {
+    return String(value || "").trim() !== "";
   });
 
+  // Новий або повністю порожній аркуш.
   if (!hasAnyHeaders) {
-    sh.getRange(1, 1, 1, expectedHeaders.length).setValues([expectedHeaders]);
+    sh.getRange(1, 1, 1, expectedHeaders.length).setValues([
+      expectedHeaders,
+    ]);
   } else {
-    var headerMap = _getHeaderMap_(sh);
-    for (var j = 0; j < expectedHeaders.length; j++) {
-      if (!headerMap[expectedHeaders[j]]) {
-        sh.getRange(1, j + 1).setValue(expectedHeaders[j]);
+    /*
+     * Вставляємо кожну відсутню колонку саме у її канонічну позицію.
+     *
+     * Важливо: після кожної вставки карта заголовків перебудовується,
+     * оскільки всі наступні колонки зміщуються вправо.
+     */
+    for (var i = 0; i < expectedHeaders.length; i++) {
+      var expectedHeader = expectedHeaders[i];
+      var targetColumn = i + 1;
+      var headerMap = _getHeaderMap_(sh);
+      var existingColumn = Number(headerMap[expectedHeader]) || 0;
+
+      if (!existingColumn) {
+        sh.insertColumnBefore(targetColumn);
+        sh.getRange(1, targetColumn).setValue(expectedHeader);
+        continue;
       }
+
+      /*
+       * Нічого не перезаписуємо, якщо заголовок уже існує.
+       * Цей bootstrap додає відсутні колонки, але не допускає
+       * перейменування колонок поверх наявних даних.
+       */
     }
   }
 
   sh.setFrozenRows(1);
-  sh.getRange(1, 1, 1, Math.max(expectedHeaders.length, sh.getLastColumn(), 1))
+
+  sh
+    .getRange(
+      1,
+      1,
+      1,
+      Math.max(expectedHeaders.length, sh.getLastColumn(), 1)
+    )
     .setFontWeight("bold")
     .setBackground("#e8eaed");
+
   _applyAccessHeaderDisplayLabels_(sh);
   _applyRoleValidation_(sh);
   _applyEmailValidation_(sh);
   _applyEnabledValidation_(sh);
   _applySelfBindAllowedValidation_(sh);
   _applyRegistrationStatusValidation_(sh);
+
+  _invalidateAccessRepoCachesSafe_({
+    resetSheet: false,
+    resetEntries: true,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -741,6 +787,8 @@ function _rowToEntry_(row, rowNumber, headerMap) {
       read("temporary_password_expires_at") || "",
     ),
     temporaryPasswordUsedAt: String(read("temporary_password_used_at") || ""),
+    browserSessionHash: normalizeStoredHash_(read("browser_session_hash")),
+    browserSessionExpiresAt: String(read("browser_session_expires_at") || ""),
     approvedBy: String(read("approved_by") || "").trim(),
     approvedAt: String(read("approved_at") || ""),
     activatedAt: String(read("activated_at") || ""),
@@ -927,6 +975,14 @@ function _entryToHeaderUpdates_(entry) {
     updates.temporary_password_used_at = e.temporaryPasswordUsedAt;
   if (e.temporary_password_used_at !== undefined)
     updates.temporary_password_used_at = e.temporary_password_used_at;
+  if (e.browserSessionHash !== undefined)
+    updates.browser_session_hash = normalizeStoredHash_(e.browserSessionHash);
+  if (e.browser_session_hash !== undefined)
+    updates.browser_session_hash = normalizeStoredHash_(e.browser_session_hash);
+  if (e.browserSessionExpiresAt !== undefined)
+    updates.browser_session_expires_at = e.browserSessionExpiresAt;
+  if (e.browser_session_expires_at !== undefined)
+    updates.browser_session_expires_at = e.browser_session_expires_at;
   if (e.approvedBy !== undefined) updates.approved_by = e.approvedBy;
   if (e.approved_by !== undefined) updates.approved_by = e.approved_by;
   if (e.approvedAt !== undefined) updates.approved_at = e.approvedAt;
@@ -1066,6 +1122,20 @@ function _updateEntryFields_(sheetRow, updates) {
   if (has("temporary_password_used_at"))
     mapped.temporaryPasswordUsedAt = String(
       updates.temporary_password_used_at || "",
+    );
+  if (has("browser_session_hash"))
+    mapped.browserSessionHash = normalizeStoredHash_(
+      updates.browser_session_hash,
+    );
+  if (has("browserSessionHash"))
+    mapped.browserSessionHash = normalizeStoredHash_(updates.browserSessionHash);
+  if (has("browser_session_expires_at"))
+    mapped.browserSessionExpiresAt = String(
+      updates.browser_session_expires_at || "",
+    );
+  if (has("browserSessionExpiresAt"))
+    mapped.browserSessionExpiresAt = String(
+      updates.browserSessionExpiresAt || "",
     );
   if (has("approved_by")) mapped.approvedBy = String(updates.approved_by || "");
   if (has("approved_at")) mapped.approvedAt = String(updates.approved_at || "");
@@ -1392,6 +1462,7 @@ function apiStage7NormalizeAccessSheetFormatting() {
       "термін дії тимчасового пароля",
     ]),
     col(["temporary_password_used_at", "час використання тимчасового пароля"]),
+    col(["browser_session_expires_at", "термін дії браузерної сесії"]),
     col(["approved_at", "час схвалення"]),
     col(["activated_at", "час активації"]),
   ].filter(Boolean);

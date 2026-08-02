@@ -1,11 +1,24 @@
 /**
- * MonthJournalMaterialize.gs — derived ЖУРНАЛ_MM / ПІДСУМОК_MM from monthly schedule sheets.
+ * MonthJournalMaterialize.gs — derived JOURNAL / SUMMARY from monthly schedule sheets.
+ * One English-named JOURNAL and one SUMMARY hold all months 01–12.
  * PERSONNEL is read-only lookup; daily codes stay on month sheets 01–12.
+ * Active-month update replaces only that month’s slice; other months stay intact.
  */
 
 var MONTH_JOURNAL_UNKNOWN_CODE_LABEL_ = "Невідомий код";
 
+/** English tab names — no month digits / UA prefixes. */
+var MONTH_JOURNAL_SHEET_NAME_ = "JOURNAL";
+var MONTH_JOURNAL_SUMMARY_SHEET_NAME_ = "SUMMARY";
+
+/** Month key column — scopes bootstrap slices and active-month refresh. */
+var MONTH_JOURNAL_MONTH_HEADER_ = "Місяць";
+
+/** Default months processed per all-months GAS call (continuation via nextCursor). */
+var MONTH_JOURNAL_DEFAULT_MONTHS_PER_CALL_ = 3;
+
 var MONTH_JOURNAL_HEADERS_ = [
+  MONTH_JOURNAL_MONTH_HEADER_,
   "Дата",
   "Позивний",
   "ПІБ",
@@ -21,21 +34,25 @@ var MONTH_JOURNAL_HEADERS_ = [
 ];
 
 var MONTH_JOURNAL_SUMMARY_BASE_HEADERS_ = [
+  MONTH_JOURNAL_MONTH_HEADER_,
   "Позивний",
   "ПІБ",
   "Звання",
   "Посада",
 ];
 
+/**
+ * Fixed derived sheet names (month arg kept for call-site compatibility).
+ */
 function monthJournalDerivedSheetNames_(monthSheetName) {
   var month = String(monthSheetName || "").trim();
-  if (!/^\d{2}$/.test(month)) {
+  if (month && !/^\d{2}$/.test(month)) {
     throw new Error("Некоректна назва місячного аркуша: " + month);
   }
   return {
-    month: month,
-    journal: "ЖУРНАЛ_" + month,
-    summary: "ПІДСУМОК_" + month,
+    month: month || "",
+    journal: MONTH_JOURNAL_SHEET_NAME_,
+    summary: MONTH_JOURNAL_SUMMARY_SHEET_NAME_,
   };
 }
 
@@ -44,14 +61,38 @@ function resolveMonthJournalSheetName_(payload) {
   var explicit = String(opts.monthSheet || opts.month || "").trim();
   if (/^\d{2}$/.test(explicit)) return explicit;
 
+  // Canonical "активний місяць" for the sidebar / normal update path.
+  try {
+    if (typeof getBotMonthSheetName_ === "function") {
+      var botMonth = String(getBotMonthSheetName_() || "").trim();
+      if (/^\d{2}$/.test(botMonth)) {
+        var ssBot = getWasbSpreadsheet_();
+        if (ssBot && ssBot.getSheetByName(botMonth)) return botMonth;
+      }
+    }
+  } catch (_) {}
+
+  // Fallback: currently open month tab (editor / ad-hoc).
   try {
     var ss = getWasbSpreadsheet_();
     var active = ss && ss.getActiveSheet ? ss.getActiveSheet() : null;
     var activeName = active ? String(active.getName() || "").trim() : "";
-    if (/^\d{2}$/.test(activeName)) return activeName;
+    if (/^\d{2}$/.test(activeName) && ss.getSheetByName(activeName)) {
+      return activeName;
+    }
   } catch (_) {}
 
   return "";
+}
+
+function listExistingMonthSheetNames_() {
+  var ss = getWasbSpreadsheet_();
+  var names = [];
+  for (var month = 1; month <= 12; month++) {
+    var name = (month < 10 ? "0" : "") + month;
+    if (ss.getSheetByName(name)) names.push(name);
+  }
+  return names;
 }
 
 function _monthJournalHeaderNorm_(value) {
@@ -308,6 +349,7 @@ function _monthJournalCollectRows_(monthSheet) {
       );
 
       rows.push({
+        month: monthSheetName,
         date: _monthJournalFormatDateDisplay_(dateRaw[c], dateDisplay[c]),
         dayNumber: dayNumber,
         callsign: callsign,
@@ -412,6 +454,10 @@ function _monthJournalEnsureSheet_(ss, sheetName, headers) {
   return sheet;
 }
 
+/**
+ * Replace all content (full wipe + write). Used only when headers/layout change
+ * requires a clean slate for the whole sheet — prefer slice replace otherwise.
+ */
 function _monthJournalWriteRows_(sheet, headers, rows) {
   var headerCount = headers.length;
   var existingLastRow = Math.max(Number(sheet.getLastRow()) || 0, 1);
@@ -423,9 +469,82 @@ function _monthJournalWriteRows_(sheet, headers, rows) {
 
   if (!rows.length) return 0;
 
-  var endRow = 1 + rows.length;
-  sheet.getRange(2, 1, endRow, headerCount).setValues(rows);
+  // Sheet.getRange(row, column, numRows, numColumns) — third arg is height, not end row.
+  sheet.getRange(2, 1, rows.length, headerCount).setValues(rows);
   return rows.length;
+}
+
+/**
+ * Keep rows for other months; replace the target month slice; rewrite sheet.
+ * Does not wipe past months during bootstrap chunks or active-month refresh.
+ */
+function _monthJournalReplaceMonthSlice_(sheet, headers, monthKey, monthRows) {
+  var headerCount = headers.length;
+  var month = String(monthKey || "").trim();
+  var monthCol = 0;
+  for (var h = 0; h < headers.length; h++) {
+    if (
+      _monthJournalHeaderNorm_(headers[h]) ===
+      _monthJournalHeaderNorm_(MONTH_JOURNAL_MONTH_HEADER_)
+    ) {
+      monthCol = h;
+      break;
+    }
+  }
+
+  var kept = [];
+  var lastRow = Math.max(Number(sheet.getLastRow()) || 0, 1);
+  var lastCol = Math.max(Number(sheet.getLastColumn()) || 0, headerCount);
+
+  if (lastRow > 1) {
+    var existing = sheet.getRange(2, 1, lastRow - 1, lastCol).getDisplayValues();
+    for (var r = 0; r < existing.length; r++) {
+      var row = existing[r] || [];
+      var rowMonth = String(row[monthCol] || "").trim();
+      if (rowMonth === month) continue;
+
+      var padded = [];
+      for (var c = 0; c < headerCount; c++) {
+        padded.push(row[c] != null ? row[c] : "");
+      }
+      // Skip fully empty residual rows.
+      var hasValue = false;
+      for (var k = 0; k < padded.length; k++) {
+        if (String(padded[k] || "").trim()) {
+          hasValue = true;
+          break;
+        }
+      }
+      if (hasValue) kept.push(padded);
+    }
+  }
+
+  var incoming = Array.isArray(monthRows) ? monthRows : [];
+  var merged = kept.concat(incoming);
+
+  merged.sort(function (a, b) {
+    var ma = String(a[monthCol] || "");
+    var mb = String(b[monthCol] || "");
+    if (ma !== mb) return ma.localeCompare(mb, "uk-UA");
+    var dateA = String(a[1] || "");
+    var dateB = String(b[1] || "");
+    if (dateA !== dateB) return dateA.localeCompare(dateB, "uk-UA");
+    return String(a[2] || "").localeCompare(String(b[2] || ""), "uk-UA");
+  });
+
+  // Ensure header width matches (summary DICT_SUM columns may grow).
+  sheet.getRange(1, 1, 1, headerCount).setValues([headers]);
+
+  var clearLast = Math.max(Number(sheet.getLastRow()) || 0, 1);
+  var clearCols = Math.max(Number(sheet.getLastColumn()) || 0, headerCount);
+  if (clearLast > 1) {
+    sheet.getRange(2, 1, clearLast - 1, clearCols).clearContent();
+  }
+
+  if (!merged.length) return incoming.length;
+
+  sheet.getRange(2, 1, merged.length, headerCount).setValues(merged);
+  return incoming.length;
 }
 
 function materializeMonthJournal_(monthSheetName) {
@@ -459,6 +578,7 @@ function materializeMonthJournal_(monthSheetName) {
 
   var values = journalRows.map(function (entry) {
     return [
+      entry.month || month,
       entry.date,
       entry.callsign,
       entry.fml,
@@ -474,7 +594,12 @@ function materializeMonthJournal_(monthSheetName) {
     ];
   });
 
-  var rowsWritten = _monthJournalWriteRows_(sheet, MONTH_JOURNAL_HEADERS_, values);
+  var rowsWritten = _monthJournalReplaceMonthSlice_(
+    sheet,
+    MONTH_JOURNAL_HEADERS_,
+    month,
+    values,
+  );
 
   return {
     ok: true,
@@ -484,6 +609,32 @@ function materializeMonthJournal_(monthSheetName) {
     journalRows: journalRows,
     dictSumOrderedCodes: collected.dictSumOrderedCodes || [],
   };
+}
+
+function _monthJournalBuildSummaryHeaders_(codeColumns) {
+  return MONTH_JOURNAL_SUMMARY_BASE_HEADERS_.concat(codeColumns || []).concat([
+    "Інше",
+    "Підсумок",
+  ]);
+}
+
+/**
+ * Align kept SUMMARY rows to current header width when DICT_SUM codes change.
+ * Remaps by header name so trailing Інше / Підсумок do not shift.
+ */
+function _monthJournalRemapSummaryRow_(oldHeaders, oldRow, newHeaders) {
+  var byName = {};
+  for (var i = 0; i < oldHeaders.length; i++) {
+    var key = _monthJournalHeaderNorm_(oldHeaders[i]);
+    if (!key) continue;
+    byName[key] = oldRow && oldRow[i] != null ? oldRow[i] : "";
+  }
+  var out = [];
+  for (var j = 0; j < newHeaders.length; j++) {
+    var nk = _monthJournalHeaderNorm_(newHeaders[j]);
+    out.push(Object.prototype.hasOwnProperty.call(byName, nk) ? byName[nk] : "");
+  }
+  return out;
 }
 
 function materializeMonthPersonSummary_(journalRows, monthSheetName) {
@@ -501,10 +652,7 @@ function materializeMonthPersonSummary_(journalRows, monthSheetName) {
   var rows = Array.isArray(journalRows) ? journalRows : [];
   var dictSumLookup = _monthJournalBuildDictSumLookup_();
   var codeColumns = dictSumLookup.orderedCodes.slice();
-  var headers = MONTH_JOURNAL_SUMMARY_BASE_HEADERS_.concat(codeColumns).concat([
-    "Інше",
-    "Короткий підсумок",
-  ]);
+  var headers = _monthJournalBuildSummaryHeaders_(codeColumns);
 
   var byCallsign = {};
   for (var i = 0; i < rows.length; i++) {
@@ -556,6 +704,7 @@ function materializeMonthPersonSummary_(journalRows, monthSheetName) {
 
   var summaryValues = people.map(function (person) {
     var line = [
+      month,
       person.callsign,
       person.fml,
       person.rank,
@@ -575,22 +724,107 @@ function materializeMonthPersonSummary_(journalRows, monthSheetName) {
 
   var ss = getWasbSpreadsheet_();
   var names = monthJournalDerivedSheetNames_(month);
+  var existingSheet = ss.getSheetByName(names.summary);
+  var oldHeaders = [];
+  var existingData = [];
+  if (existingSheet) {
+    var priorLastRow = Math.max(Number(existingSheet.getLastRow()) || 0, 1);
+    var priorLastCol = Math.max(Number(existingSheet.getLastColumn()) || 0, 1);
+    if (priorLastCol >= 1) {
+      oldHeaders =
+        existingSheet.getRange(1, 1, 1, priorLastCol).getDisplayValues()[0] ||
+        [];
+    }
+    if (priorLastRow > 1) {
+      // Typed values — keep numeric counters as numbers (not display strings).
+      existingData = existingSheet
+        .getRange(2, 1, priorLastRow - 1, priorLastCol)
+        .getValues();
+    }
+  }
+
   var sheet = _monthJournalEnsureSheet_(ss, names.summary, headers);
-  var rowsWritten = _monthJournalWriteRows_(sheet, headers, summaryValues);
+  var headerCount = headers.length;
+  var monthCol = 0;
+  var kept = [];
+
+  for (var r = 0; r < existingData.length; r++) {
+    var existingRow = existingData[r] || [];
+    var rowMonth = String(existingRow[monthCol] || "").trim();
+    if (rowMonth === month) continue;
+    var remapped = _monthJournalRemapSummaryRow_(
+      oldHeaders,
+      existingRow,
+      headers,
+    );
+    var hasValue = false;
+    for (var k = 0; k < remapped.length; k++) {
+      if (String(remapped[k] || "").trim()) {
+        hasValue = true;
+        break;
+      }
+    }
+    if (hasValue) kept.push(remapped);
+  }
+
+  var merged = kept.concat(summaryValues);
+  merged.sort(function (a, b) {
+    var ma = String(a[0] || "");
+    var mb = String(b[0] || "");
+    if (ma !== mb) return ma.localeCompare(mb, "uk-UA");
+    return String(a[1] || "").localeCompare(String(b[1] || ""), "uk-UA");
+  });
+
+  sheet.getRange(1, 1, 1, headerCount).setValues([headers]);
+  var clearLast = Math.max(Number(sheet.getLastRow()) || 0, 1);
+  var clearCols = Math.max(Number(sheet.getLastColumn()) || 0, headerCount);
+  if (clearLast > 1) {
+    sheet.getRange(2, 1, clearLast - 1, clearCols).clearContent();
+  }
+  if (merged.length) {
+    sheet.getRange(2, 1, merged.length, headerCount).setValues(merged);
+  }
 
   return {
     ok: true,
     monthSheet: month,
     summarySheet: names.summary,
-    rowsWritten: rowsWritten,
+    rowsWritten: summaryValues.length,
     peopleCount: people.length,
+  };
+}
+
+/**
+ * Client/API-safe bundle summary — never include in-memory journalRows
+ * (hundreds of entries × N months overflows google.script.run → INTERNAL).
+ * Sheet writes remain full; only the HtmlService payload is slim.
+ */
+function slimMonthJournalBundleResult_(result) {
+  if (!result || typeof result !== "object") {
+    return {
+      ok: false,
+      reason: "empty_result",
+      message: "Порожня відповідь materialize",
+    };
+  }
+  return {
+    ok: result.ok !== false,
+    monthSheet: result.monthSheet || "",
+    journalSheet: result.journalSheet || MONTH_JOURNAL_SHEET_NAME_,
+    summarySheet: result.summarySheet || MONTH_JOURNAL_SUMMARY_SHEET_NAME_,
+    journalRowsWritten:
+      Number(result.journalRowsWritten) || Number(result.rowsWritten) || 0,
+    summaryRowsWritten: Number(result.summaryRowsWritten) || 0,
+    peopleCount: Number(result.peopleCount) || 0,
+    reason: result.reason || "",
+    message: result.message || "",
   };
 }
 
 function materializeMonthJournalBundle_(monthSheetName) {
   var journalResult = materializeMonthJournal_(monthSheetName);
   if (!journalResult || journalResult.ok === false) {
-    return journalResult;
+    return slimMonthJournalBundleResult_(journalResult);
   }
 
   var summaryResult = materializeMonthPersonSummary_(
@@ -599,18 +833,19 @@ function materializeMonthJournalBundle_(monthSheetName) {
   );
 
   if (!summaryResult || summaryResult.ok === false) {
-    return {
+    return slimMonthJournalBundleResult_({
       ok: false,
+      monthSheet: journalResult.monthSheet || monthSheetName,
+      journalSheet: journalResult.journalSheet || "",
+      journalRowsWritten: journalResult.rowsWritten || 0,
       reason: (summaryResult && summaryResult.reason) || "summary_failed",
       message:
         (summaryResult && summaryResult.message) ||
         "Не вдалося оновити підсумок по людях",
-      journal: journalResult,
-      summary: summaryResult || null,
-    };
+    });
   }
 
-  return {
+  return slimMonthJournalBundleResult_({
     ok: true,
     monthSheet: journalResult.monthSheet,
     journalSheet: journalResult.journalSheet,
@@ -618,7 +853,91 @@ function materializeMonthJournalBundle_(monthSheetName) {
     journalRowsWritten: journalResult.rowsWritten || 0,
     summaryRowsWritten: summaryResult.rowsWritten || 0,
     peopleCount: summaryResult.peopleCount || 0,
-    journal: journalResult,
-    summary: summaryResult,
+  });
+}
+
+/**
+ * Bootstrap / maintenance: materialize JOURNAL + SUMMARY slices for existing
+ * month tabs 01–12. Chunked via cursor / monthsPerCall so one GAS execution
+ * can finish a batch and the same public API is re-invoked until done.
+ *
+ * Options:
+ *   cursor        — start index into listExistingMonthSheetNames_ (default 0)
+ *   monthsPerCall — max months this call (default MONTH_JOURNAL_DEFAULT_MONTHS_PER_CALL_)
+ *
+ * Returns nextCursor (number) when more months remain; done=true when finished.
+ * Past months already written are never wiped by later chunks.
+ */
+function materializeAllExistingMonthJournals_(options) {
+  var opts = options && typeof options === "object" ? options : {};
+  var months = listExistingMonthSheetNames_();
+  var cursor = Math.max(0, Number(opts.cursor) || 0);
+  if (!Number.isFinite(cursor)) cursor = 0;
+
+  var monthsPerCall = Number(opts.monthsPerCall);
+  if (!Number.isFinite(monthsPerCall) || monthsPerCall < 1) {
+    monthsPerCall = MONTH_JOURNAL_DEFAULT_MONTHS_PER_CALL_;
+  }
+  monthsPerCall = Math.min(12, Math.floor(monthsPerCall));
+
+  var end = Math.min(months.length, cursor + monthsPerCall);
+  var batch = months.slice(cursor, end);
+  var results = [];
+  var journalRowsWritten = 0;
+  var summaryRowsWritten = 0;
+  var names = monthJournalDerivedSheetNames_();
+  var affectedSheets = [names.journal, names.summary];
+
+  for (var i = 0; i < batch.length; i++) {
+    var month = batch[i];
+    try {
+      var result = slimMonthJournalBundleResult_(
+        materializeMonthJournalBundle_(month),
+      );
+      if (!result.monthSheet) result.monthSheet = month;
+      results.push(result);
+      if (result.ok !== false) {
+        journalRowsWritten += Number(result.journalRowsWritten) || 0;
+        summaryRowsWritten += Number(result.summaryRowsWritten) || 0;
+        affectedSheets.push(month);
+      }
+    } catch (err) {
+      results.push(
+        slimMonthJournalBundleResult_({
+          ok: false,
+          monthSheet: month,
+          reason: "exception",
+          message: err && err.message ? String(err.message) : String(err || ""),
+        }),
+      );
+    }
+  }
+
+  var failed = results.filter(function (item) {
+    return !item || item.ok === false;
+  });
+
+  var done = end >= months.length;
+  var nextCursor = done ? null : end;
+
+  return {
+    ok: failed.length === 0,
+    done: done,
+    cursor: cursor,
+    nextCursor: nextCursor,
+    monthsPerCall: monthsPerCall,
+    months: months,
+    batchMonths: batch,
+    monthCount: months.length,
+    processedCount: results.length,
+    failedCount: failed.length,
+    journalRowsWritten: journalRowsWritten,
+    summaryRowsWritten: summaryRowsWritten,
+    journalSheet: names.journal,
+    summarySheet: names.summary,
+    results: results,
+    affectedSheets: affectedSheets.filter(function (name, index, list) {
+      return name && list.indexOf(name) === index;
+    }),
   };
 }
