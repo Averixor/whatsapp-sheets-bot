@@ -33,4 +33,5 @@ alwaysApply: true
 - Зберігати позиційне відображення рядків PERSONNEL без стискання порожніх рядків.
 - Якщо кадрових рядків не вистачає, розширювати їх перед формульним блоком зведення, не перезаписуючи його та залишаючи наявний порожній розділювач.
 - Нові рядки отримують формат, validation, висоту та формулу колонки A з робочого рядка, але не значення графіка.
+- Після expand/shrink і при `createNextMonth` переписувати schedule-bound A1 у формулах (`rewriteMonthlyScheduleFormulasToCodeRange_`), щоб кінці діапазонів збігалися з `getMonthlyCodeRangeA1ForSheet_` (як remap CF). На create — `allowShrink: true` лише для зайвої capacity поза PERSONNEL, без стискання порожніх кадрових слотів.
 - **Ніколи** не використовувати `PASTE_CONDITIONAL_FORMATTING` при expand рядків — на реальних книгах це зносить sheet-level CF (спостерігалось ~13 правил). Замість цього: `extendConditionalFormatRulesThroughRow_`; після `createNextMonth` (callsign + vacation sync) — `replaceConditionalFormatRulesFromSheet_` (+ `_copyMonthSheetDataValidationsFromSource_`).

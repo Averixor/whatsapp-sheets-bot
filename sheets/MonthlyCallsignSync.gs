@@ -147,6 +147,210 @@ function _personnelBuildMonthlyCallsignValues_(personnelSheet) {
   };
 }
 
+function _monthlyCodeBoundsFromSheet_(sheet) {
+  if (!sheet || typeof getMonthlyCodeRangeA1ForSheet_ !== "function") {
+    return null;
+  }
+  var codeRangeA1 = getMonthlyCodeRangeA1ForSheet_(sheet);
+  var codeRef = sheet.getRange(codeRangeA1);
+  return {
+    a1: codeRangeA1,
+    startRow: Number(codeRef.getRow()) || 2,
+    endRow: Number(codeRef.getLastRow()) || 2,
+    startCol: Number(codeRef.getColumn()) || 1,
+    endCol: Number(codeRef.getLastColumn()) || 1,
+  };
+}
+
+function _monthlyFormatA1Cell_(col, row, absCol, absRow) {
+  var letter =
+    typeof _columnNumberToLetter_ === "function"
+      ? _columnNumberToLetter_(col)
+      : String.fromCharCode(64 + Number(col));
+  return (
+    (absCol ? "$" : "") +
+    letter +
+    (absRow ? "$" : "") +
+    String(Number(row) || 1)
+  );
+}
+
+function _monthlyParseFlexibleA1Token_(token) {
+  var match = String(token || "").match(
+    /^(\$?)([A-Za-z]{1,3})(\$?)(\d+)(?::(\$?)([A-Za-z]{1,3})(\$?)(\d+))?$/,
+  );
+  if (!match) return null;
+  var startCol = _columnLetterToNumber_(match[2]);
+  var startRow = Number(match[4]) || 0;
+  var endCol = match[6] ? _columnLetterToNumber_(match[6]) : startCol;
+  var endRow = match[8] ? Number(match[8]) || 0 : startRow;
+  if (startCol < 1 || startRow < 1 || endCol < 1 || endRow < 1) return null;
+  return {
+    startCol: startCol,
+    startRow: startRow,
+    endCol: endCol,
+    endRow: endRow,
+    absStartCol: match[1] === "$",
+    absStartRow: match[3] === "$",
+    absEndCol: match[6] ? match[5] === "$" : match[1] === "$",
+    absEndRow: match[8] ? match[7] === "$" : match[3] === "$",
+    isRange: !!match[6],
+  };
+}
+
+function _monthlyRemapScheduleA1RangeToken_(token, before, after) {
+  if (!before || !after) return token;
+  var parsed = _monthlyParseFlexibleA1Token_(token);
+  if (!parsed) return token;
+
+  var startCol = parsed.startCol;
+  var startRow = parsed.startRow;
+  var endCol = parsed.endCol;
+  var endRow = parsed.endRow;
+  var changed = false;
+
+  // Same spirit as CF schedule remap: edges that matched the old grid follow the new grid.
+  if (
+    endRow === before.endRow &&
+    startRow >= 1 &&
+    startRow <= before.endRow &&
+    (startRow === before.startRow ||
+      (startCol >= before.startCol && startCol <= before.endCol))
+  ) {
+    endRow = after.endRow;
+    if (!parsed.isRange) startRow = after.endRow;
+    changed = true;
+  }
+
+  if (endCol === before.endCol) {
+    if (startCol === before.startCol) {
+      endCol = after.endCol;
+      if (!parsed.isRange) startCol = after.endCol;
+      changed = true;
+    } else if (
+      startRow === endRow &&
+      startCol >= before.startCol &&
+      startCol <= before.endCol
+    ) {
+      // Same-row day span, e.g. H2:AL2 / COUNTIF across the date grid.
+      endCol = after.endCol;
+      changed = true;
+    }
+  }
+
+  if (!changed) return token;
+  if (!parsed.isRange) {
+    return _monthlyFormatA1Cell_(
+      startCol,
+      startRow,
+      parsed.absStartCol,
+      parsed.absStartRow,
+    );
+  }
+  return (
+    _monthlyFormatA1Cell_(
+      startCol,
+      startRow,
+      parsed.absStartCol,
+      parsed.absStartRow,
+    ) +
+    ":" +
+    _monthlyFormatA1Cell_(endCol, endRow, parsed.absEndCol, parsed.absEndRow)
+  );
+}
+
+function _monthlyRemapScheduleFormulaText_(formula, before, after) {
+  var text = String(formula == null ? "" : formula);
+  if (!text || !before || !after) return text;
+  if (
+    before.endRow === after.endRow &&
+    before.endCol === after.endCol &&
+    before.startRow === after.startRow &&
+    before.startCol === after.startCol
+  ) {
+    return text;
+  }
+
+  return text.replace(
+    /(^|[^A-Za-z0-9_])((?:\$?[A-Za-z]{1,3}\$?\d+)(?::\$?[A-Za-z]{1,3}\$?\d+)?)/g,
+    function (full, prefix, token) {
+      if (prefix === "!") return full;
+      return prefix + _monthlyRemapScheduleA1RangeToken_(token, before, after);
+    },
+  );
+}
+
+/**
+ * Rewrite on-sheet formulas whose A1 ranges ended at the previous schedule
+ * bounds so they match the current code grid (row + day-column edges).
+ * Skips sheet-qualified refs (PERSONNEL!, DICT_SUM!).
+ */
+function rewriteMonthlyScheduleFormulasToCodeRange_(sheet, beforeBounds) {
+  if (!sheet || typeof sheet.getRange !== "function") {
+    return { ok: false, rewritten: 0 };
+  }
+  var before = beforeBounds || null;
+  var after = _monthlyCodeBoundsFromSheet_(sheet);
+  if (!before || !after) {
+    return {
+      ok: false,
+      rewritten: 0,
+      before: before,
+      after: after,
+    };
+  }
+  if (
+    before.endRow === after.endRow &&
+    before.endCol === after.endCol &&
+    before.startRow === after.startRow &&
+    before.startCol === after.startCol
+  ) {
+    return { ok: true, rewritten: 0, before: before, after: after };
+  }
+
+  var summaryBlock =
+    typeof findMonthlySummaryBlockLocation_ === "function"
+      ? findMonthlySummaryBlockLocation_(sheet)
+      : null;
+  var lastRow = Math.max(
+    Number(after.endRow) || 1,
+    summaryBlock && summaryBlock.endRow ? Number(summaryBlock.endRow) : 0,
+    Number(sheet.getLastRow()) || 1,
+  );
+  var lastCol = Math.max(
+    Number(after.endCol) || 1,
+    Number(sheet.getLastColumn()) || 1,
+  );
+  var range = sheet.getRange(1, 1, lastRow, lastCol);
+  if (typeof range.getFormulas !== "function" || typeof range.setFormulas !== "function") {
+    return { ok: false, rewritten: 0, before: before, after: after };
+  }
+
+  var formulas = range.getFormulas();
+  var rewritten = 0;
+  for (var r = 0; r < formulas.length; r++) {
+    var row = formulas[r] || [];
+    for (var c = 0; c < row.length; c++) {
+      var current = String(row[c] || "");
+      if (!current) continue;
+      var next = _monthlyRemapScheduleFormulaText_(current, before, after);
+      if (next !== current) {
+        row[c] = next;
+        rewritten++;
+      }
+    }
+  }
+  if (rewritten > 0) {
+    range.setFormulas(formulas);
+  }
+  return {
+    ok: true,
+    rewritten: rewritten,
+    before: before,
+    after: after,
+  };
+}
+
 function _monthlyCopyPersonnelRowTemplate_(
   sheet,
   sourceRow,
@@ -205,7 +409,8 @@ function _monthlyCopyPersonnelRowTemplate_(
   }
 }
 
-function _monthlyEnsurePersonnelCapacity_(monthSheet, requiredRows) {
+function _monthlyEnsurePersonnelCapacity_(monthSheet, requiredRows, options) {
+  var opts = options || {};
   var codeRangeA1 = getMonthlyCodeRangeA1ForSheet_(monthSheet);
   var codeRef = monthSheet.getRange(codeRangeA1);
   var startRow = codeRef.getRow();
@@ -245,6 +450,28 @@ function _monthlyEnsurePersonnelCapacity_(monthSheet, requiredRows) {
     }
   }
 
+  var rowsDeleted = 0;
+  if (
+    opts.allowShrink === true &&
+    requiredEndRow >= startRow &&
+    requiredEndRow < capacityEndRow &&
+    typeof monthSheet.deleteRows === "function"
+  ) {
+    var deleteCount = capacityEndRow - requiredEndRow;
+    monthSheet.deleteRows(requiredEndRow + 1, deleteCount);
+    rowsDeleted = deleteCount;
+    capacityEndRow = requiredEndRow;
+    summaryBlock = findMonthlySummaryBlockLocation_(monthSheet);
+    if (!summaryBlock || summaryBlock.startRow <= capacityEndRow) {
+      throw new Error(
+        'Не вдалося безпечно стиснути зону графіка на аркуші "' +
+          monthSheet.getName() +
+          '".',
+      );
+    }
+    currentDataEndRow = Math.min(currentDataEndRow, capacityEndRow);
+  }
+
   var formatStartRow = currentDataEndRow + 1;
   if (formatStartRow <= requiredEndRow) {
     _monthlyCopyPersonnelRowTemplate_(
@@ -260,13 +487,15 @@ function _monthlyEnsurePersonnelCapacity_(monthSheet, requiredRows) {
     capacityEndRow: capacityEndRow,
     capacityRows: Math.max(capacityEndRow - startRow + 1, 0),
     rowsInserted: rowsInserted,
+    rowsDeleted: rowsDeleted,
     separatorRows: separatorRows,
     summaryStartRow: summaryBlock.startRow,
     codeRangeA1: getMonthlyCodeRangeA1ForSheet_(monthSheet),
   };
 }
 
-function syncMonthlyCallsignsFromPersonnel_(targetSheetOrName) {
+function syncMonthlyCallsignsFromPersonnel_(targetSheetOrName, options) {
+  var opts = options || {};
   var personnelSheet = _personnelResolveSheetForMonthlySync_();
   var monthSheet = _monthlyResolveTargetSheet_(targetSheetOrName);
   var built = _personnelBuildMonthlyCallsignValues_(personnelSheet);
@@ -286,7 +515,12 @@ function syncMonthlyCallsignsFromPersonnel_(targetSheetOrName) {
     };
   }
 
-  var capacity = _monthlyEnsurePersonnelCapacity_(monthSheet, values.length);
+  var beforeBounds = _monthlyCodeBoundsFromSheet_(monthSheet);
+  var capacity = _monthlyEnsurePersonnelCapacity_(
+    monthSheet,
+    values.length,
+    opts,
+  );
   var startRow = capacity.startRow;
   var maxRows = capacity.capacityRows;
   var output = values.slice();
@@ -310,6 +544,18 @@ function syncMonthlyCallsignsFromPersonnel_(targetSheetOrName) {
     targetRange.setValues(output);
   }
 
+  var formulaSync = null;
+  if (
+    opts.skipFormulaRewrite !== true &&
+    beforeBounds &&
+    (Number(capacity.rowsInserted) > 0 || Number(capacity.rowsDeleted) > 0)
+  ) {
+    formulaSync = rewriteMonthlyScheduleFormulasToCodeRange_(
+      monthSheet,
+      beforeBounds,
+    );
+  }
+
   return {
     ok: true,
     sheet: monthSheet.getName(),
@@ -321,9 +567,11 @@ function syncMonthlyCallsignsFromPersonnel_(targetSheetOrName) {
     startRow: startRow,
     capacityRows: maxRows,
     rowsInserted: capacity.rowsInserted,
+    rowsDeleted: capacity.rowsDeleted,
     separatorRows: capacity.separatorRows,
     summaryStartRow: capacity.summaryStartRow,
     codeRangeA1: getMonthlyCodeRangeA1ForSheet_(monthSheet),
+    formulaSync: formulaSync,
     warnings: warnings,
   };
 }

@@ -102,7 +102,20 @@ assert.doesNotMatch(
   /syncAllMonthlyCallsignsFromPersonnel_\(\)/,
   "default personnel materialize must not sync all months",
 );
-assert.match(monthOps, /syncMonthlyCallsignsFromPersonnel_\(newSheet\)/);
+assert.match(
+  syncModule,
+  /function rewriteMonthlyScheduleFormulasToCodeRange_/,
+);
+assert.match(syncModule, /function _monthlyRemapScheduleFormulaText_/);
+assert.match(syncModule, /allowShrink/);
+assert.match(
+  monthOps,
+  /syncMonthlyCallsignsFromPersonnel_\(\s*newSheet,\s*\{[\s\S]*allowShrink:\s*true/,
+);
+assert.match(
+  monthOps,
+  /rewriteMonthlyScheduleFormulasToCodeRange_\(\s*newSheet,\s*sourceFormulaBounds/,
+);
 assert.match(monthOps, /syncVacationsWithMonthlySheet_/);
 assert.match(
   monthOps,
@@ -134,6 +147,14 @@ assert.match(
   legacyMonthOps,
   /replaceConditionalFormatRulesFromSheet_\(src, newSheet\)/,
   "legacy month creation must restore source conditional formatting after sync",
+);
+assert.match(
+  legacyMonthOps,
+  /syncMonthlyCallsignsFromPersonnel_\(\s*newSheet,\s*\{[\s\S]*allowShrink:\s*true/,
+);
+assert.match(
+  legacyMonthOps,
+  /rewriteMonthlyScheduleFormulasToCodeRange_\(\s*newSheet,\s*sourceFormulaBounds/,
 );
 assert.match(
   legacyMonthOps,
@@ -182,6 +203,17 @@ assert.match(
 );
 assert.match(personnelRepo, /фамилия: "LastName"/);
 
+function colLetters(colNumber) {
+  let n = Number(colNumber) || 0;
+  let out = "";
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    out = String.fromCharCode(65 + rem) + out;
+    n = Math.floor((n - 1) / 26);
+  }
+  return out || "A";
+}
+
 function parseA1(value) {
   const match = String(value).match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/i);
   if (!match) throw new Error(`Unsupported test A1 range: ${value}`);
@@ -201,6 +233,7 @@ function parseA1(value) {
 function blankCell() {
   return {
     value: "",
+    formula: "",
     formulaR1C1: "",
     format: "",
     validation: "",
@@ -273,6 +306,35 @@ class FakeRange {
     return this.sheet.cell(this.row, this.col).formulaR1C1;
   }
 
+  getFormulas() {
+    const out = [];
+    for (let rowOffset = 0; rowOffset < this.numRows; rowOffset++) {
+      const row = [];
+      for (let colOffset = 0; colOffset < this.numCols; colOffset++) {
+        row.push(this.sheet.cell(this.row + rowOffset, this.col + colOffset).formula);
+      }
+      out.push(row);
+    }
+    return out;
+  }
+
+  setFormulas(values) {
+    assert.equal(values.length, this.numRows, "setFormulas row count");
+    values.forEach((sourceRow, rowOffset) => {
+      assert.equal(sourceRow.length, this.numCols, "setFormulas column count");
+      sourceRow.forEach((value, colOffset) => {
+        const target = this.sheet.cell(
+          this.row + rowOffset,
+          this.col + colOffset,
+        );
+        target.formula = String(value || "");
+        if (target.formula) target.value = "";
+      });
+    });
+    this.sheet.setFormulasCalls++;
+    return this;
+  }
+
   getDisplayValue() {
     return this.sheet.displayAt(this.row, this.col);
   }
@@ -287,6 +349,7 @@ class FakeRange {
           this.col + colOffset,
         );
         target.value = value;
+        target.formula = "";
         target.formulaR1C1 = "";
       });
     });
@@ -314,6 +377,7 @@ class FakeRange {
         }
         if (pasteType === "PASTE_FORMULA") {
           target.formulaR1C1 = source.formulaR1C1;
+          target.formula = source.formula;
           target.value = "";
         }
       }
@@ -332,7 +396,9 @@ class FakeSheet {
     );
     this.rowHeights = Array(rowCount).fill(21);
     this.insertedRows = 0;
+    this.deletedRows = 0;
     this.setValuesCalls = 0;
+    this.setFormulasCalls = 0;
     this.copyCalls = [];
     this.merges = [];
     this.conditionalRules = [];
@@ -349,7 +415,7 @@ class FakeSheet {
   displayAt(row, col) {
     const cell = this.cell(row, col);
     if (cell.value !== "" && cell.value != null) return String(cell.value);
-    return cell.formulaR1C1 ? "0" : "";
+    return cell.formula || cell.formulaR1C1 ? "0" : "";
   }
 
   getName() {
@@ -360,7 +426,8 @@ class FakeSheet {
     for (let row = this.rows.length; row >= 1; row--) {
       if (
         this.rows[row - 1].some(
-          (cell) => cell.value !== "" || cell.formulaR1C1 !== "",
+          (cell) =>
+            cell.value !== "" || cell.formula !== "" || cell.formulaR1C1 !== "",
         )
       ) {
         return row;
@@ -374,7 +441,9 @@ class FakeSheet {
       if (
         this.rows.some(
           (row) =>
-            row[col - 1].value !== "" || row[col - 1].formulaR1C1 !== "",
+            row[col - 1].value !== "" ||
+            row[col - 1].formula !== "" ||
+            row[col - 1].formulaR1C1 !== "",
         )
       ) {
         return col;
@@ -415,6 +484,35 @@ class FakeSheet {
     };
     this.merges.forEach(shiftRange);
     this.conditionalRules.forEach(shiftRange);
+  }
+
+  deleteRows(startRow, howMany) {
+    this.rows.splice(startRow - 1, howMany);
+    this.rowHeights.splice(startRow - 1, howMany);
+    this.deletedRows += howMany;
+
+    const dropOrShift = (range) => {
+      if (range.endRow < startRow) return range;
+      if (range.startRow >= startRow + howMany) {
+        range.startRow -= howMany;
+        range.endRow -= howMany;
+        return range;
+      }
+      if (range.startRow >= startRow && range.endRow < startRow + howMany) {
+        return null;
+      }
+      if (range.startRow < startRow) {
+        range.endRow = Math.max(startRow - 1, range.endRow - howMany);
+        return range;
+      }
+      range.startRow = startRow;
+      range.endRow -= howMany;
+      return range;
+    };
+    this.merges = this.merges.map(dropOrShift).filter(Boolean);
+    this.conditionalRules = this.conditionalRules
+      .map(dropOrShift)
+      .filter(Boolean);
   }
 
   getConditionalFormatRules() {
@@ -519,12 +617,18 @@ function buildMonthSheet(layout, options = {}) {
     sheet.cell(summaryStart, 2).value = "За_штатом";
     sheet.cell(summaryStart, firstDateCol).value = 60;
     sheet.cell(summaryStart, firstDateCol).formulaR1C1 = "=COUNTA(R2C:R[-2]C)";
+    const firstDateLetter = colLetters(firstDateCol);
+    const lastDateLetter = colLetters(lastDateCol);
+    sheet.cell(summaryStart, firstDateCol).formula =
+      `=COUNTA($${firstDateLetter}$2:$${lastDateLetter}$32)`;
     sheet.cell(summaryStart, 2).format = "summary-label";
     sheet.cell(summaryStart, 2).validation = "summary-validation";
     sheet.cell(summaryStart, 2).conditionalFormat = "summary-conditional";
     sheet.cell(summaryStart + 1, 2).value = "За_списком";
     sheet.cell(summaryStart + 1, firstDateCol).value = 31;
     sheet.cell(summaryStart + 1, firstDateCol).formulaR1C1 = "=COUNTA(R2C2:R[-3]C2)";
+    sheet.cell(summaryStart + 1, firstDateCol).formula =
+      `=$${firstDateLetter}$2:INDEX($${firstDateLetter}$2:$${lastDateLetter}$32, ROWS($${firstDateLetter}$2:$${lastDateLetter}$32), COUNT($${firstDateLetter}$1:$${lastDateLetter}$1))`;
     sheet.cell(summaryStart + 2, 2).value = "В_наявності";
     sheet.merges.push({ startRow: summaryStart, endRow: summaryStart });
     sheet.conditionalRules.push({
@@ -660,6 +764,16 @@ function assertRowTemplateCopied(sheet, row, sourceRow, lastDateCol) {
   assert.equal(month.cell(33, 1).formulaR1C1, "=COUNTA(RC[2]:RC[32])");
   assert.equal(month.valueAt(35, 2), "За_штатом");
   assert.equal(month.cell(35, 3).formulaR1C1, "=COUNTA(R2C:R[-2]C)");
+  assert.equal(
+    month.cell(35, 3).formula,
+    "=COUNTA($C$2:$AG$33)",
+    "absolute summary COUNTIF/COUNTA ranges must grow with the schedule",
+  );
+  assert.match(
+    month.cell(36, 3).formula,
+    /\$C\$2:\$AG\$33/,
+    "INDEX/ROWS schedule spans must remap to the new end row",
+  );
   assert.equal(month.cell(35, 2).format, "summary-label");
   assert.equal(month.cell(35, 2).validation, "summary-validation");
   assert.equal(month.cell(35, 2).conditionalFormat, "summary-conditional");
@@ -673,6 +787,7 @@ function assertRowTemplateCopied(sheet, row, sourceRow, lastDateCol) {
     false,
     "must not paste conditional formatting during capacity expand",
   );
+  assert.ok(result.formulaSync && result.formulaSync.rewritten > 0);
   assert.deepEqual(
     JSON.parse(JSON.stringify(runtime.context.findSummaryBlockLocation_(month))),
     JSON.parse(
@@ -714,6 +829,7 @@ function assertRowTemplateCopied(sheet, row, sourceRow, lastDateCol) {
   assert.equal(month.valueAt(61, 2), "");
   assert.equal(month.valueAt(62, 2), "За_штатом");
   assert.equal(month.cell(62, 3).formulaR1C1, "=COUNTA(R2C:R[-2]C)");
+  assert.equal(month.cell(62, 3).formula, "=COUNTA($C$2:$AG$60)");
   assert.deepEqual(scheduleSnapshot(month, 3), scheduleBefore);
 
   const second = runtime.context.syncMonthlyCallsignsFromPersonnel_(month);
@@ -773,6 +889,44 @@ function assertRowTemplateCopied(sheet, row, sourceRow, lastDateCol) {
     ),
     before,
   );
+}
+
+{
+  const runtime = loadSyncContext();
+  assert.equal(
+    runtime.context._monthlyRemapScheduleFormulaText_(
+      '=BYCOL($C$2:INDEX($C$2:$AG$32, ROWS($C$2:$AG$32), COUNT($C$1:$AG$1)))',
+      { startRow: 2, endRow: 32, startCol: 3, endCol: 33 },
+      { startRow: 2, endRow: 40, startCol: 3, endCol: 34 },
+    ),
+    '=BYCOL($C$2:INDEX($C$2:$AH$40, ROWS($C$2:$AH$40), COUNT($C$1:$AH$1)))',
+  );
+  assert.equal(
+    runtime.context._monthlyRemapScheduleFormulaText_(
+      '=COUNTIF(H2:AL2, "БР")+COUNTIF(PERSONNEL!P2:P31, "<>")',
+      { startRow: 2, endRow: 32, startCol: 8, endCol: 38 },
+      { startRow: 2, endRow: 32, startCol: 8, endCol: 39 },
+    ),
+    '=COUNTIF(H2:AM2, "БР")+COUNTIF(PERSONNEL!P2:P31, "<>")',
+    "must remap same-row day spans but never sheet-qualified refs",
+  );
+}
+
+{
+  const runtime = loadSyncContext();
+  const month = buildMonthSheet("compact", { summaryStart: 40 });
+  // Extra empty capacity rows 33..38 before separator 39 / summary 40.
+  const personnel = buildPersonnel(30);
+  runtime.use(month, personnel);
+  const result = runtime.context.syncMonthlyCallsignsFromPersonnel_(month, {
+    allowShrink: true,
+  });
+  assert.equal(result.rowsDeleted, 8, "create-time shrink drops unused capacity");
+  assert.equal(result.capacityRows, 29);
+  assert.equal(result.summaryStartRow, 32);
+  assert.equal(month.valueAt(32, 2), "За_штатом");
+  assert.ok(result.formulaSync && result.formulaSync.rewritten > 0);
+  assert.equal(month.cell(32, 3).formula, "=COUNTA($C$2:$AG$30)");
 }
 
 console.log("verify-monthly-callsign-sync: OK");
