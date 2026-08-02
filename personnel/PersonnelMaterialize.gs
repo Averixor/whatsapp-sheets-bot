@@ -1,7 +1,7 @@
 /**
  * PersonnelMaterialize.gs — computed PERSONNEL helper columns and derived sheets.
  * Replaces manual ARRAYFORMULA on PERSONNEL (Age, Days_until_birthday).
- * Callsign on PERSONNEL is not materialized; derived sheets (PHONES, BIRTHDAY, active month) use Callsign → Last name via resolvePersonnelDisplayCallsign_.
+ * Callsign on PERSONNEL is not materialized; derived sheets (PHONES, BIRTHDAY, active month) use Callsign → Last name → First name via resolvePersonnelDisplayCallsign_.
  */
 
 var PERSONNEL_MATERIALIZE_MANAGED_ROW_COUNT_ = 31;
@@ -266,7 +266,11 @@ function _personnelMaterializeEffectiveCallsign_(rawRow, col) {
     col.LastName !== undefined && col.LastName >= 0
       ? String(_personnelReadCell_(rawRow, col.LastName) || "").trim()
       : "";
-  return resolvePersonnelDisplayCallsign_(callsignRaw, lastName);
+  var firstName =
+    col.FirstName !== undefined && col.FirstName >= 0
+      ? String(_personnelReadCell_(rawRow, col.FirstName) || "").trim()
+      : "";
+  return resolvePersonnelDisplayCallsign_(callsignRaw, lastName, firstName);
 }
 
 function getPersonnelMaterializeStartRow_() {

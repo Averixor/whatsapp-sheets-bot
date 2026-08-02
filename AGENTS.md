@@ -115,6 +115,7 @@ Domain folders (`reports/`, `vacations/`, `core/`, `ui/`, …) are mechanical mo
 ### PERSONNEL keys (do not regress)
 
 - Monthly schedule row key: **Callsign**; personal fields from `PERSONNEL` by Callsign (fallback **FML**).
+- Display callsign on monthly/PHONES/BIRTHDAY sheets: **Callsign → Last name → First name** (never TEMPLATE). See `.cursor/rules/monthly-callsign-sync.mdc`.
 - **ID Army+** is optional data, not a required system key.
 - **Position** is not a person key.
 - **Status** (UA only in sheet): dropdown — `В наявності`, `У відрядженні`, `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`.

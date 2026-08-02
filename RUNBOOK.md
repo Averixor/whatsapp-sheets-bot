@@ -687,7 +687,7 @@ Contract: `contracts/reference-workbook-layout.contract.json` (headers extracted
 - **07 (compact/current):** **B = Позивний**, dates from **C** (`C2:AG32` code range). **06** remains a compact historical sheet (`C2:AF30`).
 - **02–05 (standard):** A = ТЕЛЕФОН, **B = ПОЗИВНИЙ**, dates from **H**.
 
-**Monthly «Позивні» sync:** `Callsign` from PERSONNEL → monthly callsign column; empty Callsign → `Last name` (row-aligned). See `sheets/MonthlyCallsignSync.gs`.
+**Monthly «Позивні» sync:** `Callsign` from PERSONNEL → monthly callsign column; empty Callsign → `Last name`; empty Last name → `First name` (row-aligned). See `sheets/MonthlyCallsignSync.gs`.
 
 `TEMPLATE` column is supported only in **legacy** workbooks (not in the reference xlsx). Code reads **exclusively by header names** (aliases for UA/EN/split variants).
 

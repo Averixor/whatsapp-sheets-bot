@@ -1,34 +1,54 @@
 #!/usr/bin/env node
 /**
- * Monthly callsign sync — PERSONNEL callsign/last name → monthly «Позивні» column.
+ * Monthly callsign sync — PERSONNEL Callsign → Last name → First name → monthly «Позивні».
  */
 import assert from "node:assert/strict";
 import vm from "node:vm";
 import { repoRoot } from "./lib/load-contract.mjs";
 import { readRepoFileByBasename } from "./lib/gas-files.mjs";
 
-function monthlyCallsignValueFromPersonnelRow(callsignRaw, lastNameRaw) {
+function monthlyCallsignValueFromPersonnelRow(
+  callsignRaw,
+  lastNameRaw,
+  firstNameRaw,
+) {
   const callsign = String(callsignRaw ?? "").trim();
   if (callsign) return callsign;
-  return String(lastNameRaw ?? "").trim();
+  const lastName = String(lastNameRaw ?? "").trim();
+  if (lastName) return lastName;
+  return String(firstNameRaw ?? "").trim();
 }
 
-assert.equal(monthlyCallsignValueFromPersonnelRow("Беркут", "Иванов"), "Беркут");
-assert.equal(monthlyCallsignValueFromPersonnelRow("", "Петренко"), "Петренко");
-assert.equal(monthlyCallsignValueFromPersonnelRow("Сидор", "Сидоренко"), "Сидор");
-assert.equal(monthlyCallsignValueFromPersonnelRow("   ", "Петренко"), "Петренко");
-assert.equal(monthlyCallsignValueFromPersonnelRow("", ""), "");
-assert.equal(monthlyCallsignValueFromPersonnelRow(null, null), "");
+assert.equal(
+  monthlyCallsignValueFromPersonnelRow("Беркут", "Иванов", "Иван"),
+  "Беркут",
+);
+assert.equal(
+  monthlyCallsignValueFromPersonnelRow("", "Петренко", "Іван"),
+  "Петренко",
+);
+assert.equal(
+  monthlyCallsignValueFromPersonnelRow("Сидор", "Сидоренко", "Сидір"),
+  "Сидор",
+);
+assert.equal(
+  monthlyCallsignValueFromPersonnelRow("   ", "Петренко", "Іван"),
+  "Петренко",
+);
+assert.equal(monthlyCallsignValueFromPersonnelRow("", "", "Олена"), "Олена");
+assert.equal(monthlyCallsignValueFromPersonnelRow("", "", ""), "");
+assert.equal(monthlyCallsignValueFromPersonnelRow(null, null, null), "");
 
 const orderInput = [
-  ["A1", "Ln1"],
-  ["", "Ln2"],
-  ["C3", ""],
+  ["A1", "Ln1", "Fn1"],
+  ["", "Ln2", "Fn2"],
+  ["C3", "", "Fn3"],
+  ["", "", "Fn4"],
 ];
-const orderOutput = orderInput.map(([c, l]) =>
-  monthlyCallsignValueFromPersonnelRow(c, l),
+const orderOutput = orderInput.map(([c, l, f]) =>
+  monthlyCallsignValueFromPersonnelRow(c, l, f),
 );
-assert.deepEqual(orderOutput, ["A1", "Ln2", "C3"]);
+assert.deepEqual(orderOutput, ["A1", "Ln2", "C3", "Fn4"]);
 
 const syncModule = readRepoFileByBasename(
   repoRoot,
@@ -232,6 +252,12 @@ assert.match(
   /"\\u043f\\u043e\\u0437\\u044b\\u0432\\u043d\\u043e\\u0439": "Callsign"/,
 );
 assert.match(personnelRepo, /фамилия: "LastName"/);
+assert.match(personnelRepo, /імя: "FirstName"/);
+assert.match(personnelRepo, /имя: "FirstName"/);
+assert.match(
+  personnelRepo,
+  /function resolvePersonnelDisplayCallsign_\(\s*callsignRaw,\s*lastNameRaw,\s*firstNameRaw\s*\)/,
+);
 
 function colLetters(colNumber) {
   let n = Number(colNumber) || 0;
@@ -679,16 +705,19 @@ function buildMonthSheet(layout, options = {}) {
 }
 
 function buildPersonnel(lastRow, rowValues = {}) {
-  const sheet = new FakeSheet("PERSONNEL", Math.max(lastRow + 2, 80), 3);
+  const sheet = new FakeSheet("PERSONNEL", Math.max(lastRow + 2, 80), 4);
   sheet.cell(1, 1).value = "Callsign";
   sheet.cell(1, 2).value = "Last name";
+  sheet.cell(1, 3).value = "First name";
   for (let row = 2; row <= lastRow; row++) {
     const record = rowValues[row] || {
       callsign: `CALL_${row}`,
       lastName: `LAST_${row}`,
+      firstName: `FIRST_${row}`,
     };
     sheet.cell(row, 1).value = record.callsign || "";
     sheet.cell(row, 2).value = record.lastName || "";
+    sheet.cell(row, 3).value = record.firstName || "";
   }
   return sheet;
 }
@@ -732,15 +761,21 @@ function loadSyncContext() {
       for (let row = 2; row <= lastRow; row++) {
         const callsign = String(personnel.displayAt(row, 1) || "").trim();
         const lastName = String(personnel.displayAt(row, 2) || "").trim();
-        const display = monthlyCallsignValueFromPersonnelRow(callsign, lastName);
+        const firstName = String(personnel.displayAt(row, 3) || "").trim();
+        const display = monthlyCallsignValueFromPersonnelRow(
+          callsign,
+          lastName,
+          firstName,
+        );
         if (!display) continue;
-        active.push({ callsign: display, lastName, active: true });
+        active.push({ callsign: display, lastName, firstName, active: true });
       }
       return active;
     },
     _personnelBuildHeaderColIndex_: (headers) => ({
       Callsign: headers.indexOf("Callsign"),
       LastName: headers.indexOf("Last name"),
+      FirstName: headers.indexOf("First name"),
     }),
     resolvePersonnelDisplayCallsign_: monthlyCallsignValueFromPersonnelRow,
     extendConditionalFormatRulesThroughRow_(sheet, templateRow, throughRow) {
