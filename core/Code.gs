@@ -79,8 +79,8 @@ const MONTHLY_CONFIG = {
   SLOT_COL_WIDTH: 30,
   /** Monthly sheet column B (callsign / identity) width in pixels. */
   CALLSIGN_COL_WIDTH: 160,
-  /** Monthly sheet width for columns C..last. */
-  DATA_COL_WIDTH: 110,
+  /** Monthly sheet width for schedule/code day columns (adaptive C..last day). */
+  DATA_COL_WIDTH: 130,
 };
 
 /************ ГРУПИ ТА НАЗВИ ************/
