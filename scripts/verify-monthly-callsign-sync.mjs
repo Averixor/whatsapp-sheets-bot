@@ -70,6 +70,36 @@ assert.doesNotMatch(
   /values\.slice\(0\s*,/,
   "monthly callsigns must never be truncated to the old fixed capacity",
 );
+assert.match(
+  syncModule,
+  /function _monthlyBoundsWithEndRow_/,
+  "capacity end row must force schedule bounds after expand",
+);
+assert.match(
+  syncModule,
+  /activeRowsCount/,
+  "sync must report activeRowsCount for off-by-one regression checks",
+);
+assert.match(
+  syncModule,
+  /personnelLastRow - startRow \+ 1/,
+  "PERSONNEL numRows must be inclusive of the final data row",
+);
+assert.match(
+  sheetSchemas,
+  /_monthlyDataEndRowFromSheet_\(\s*\n\s*sheet,\s*\n\s*30,\s*\n\s*\[2\],\s*\n\s*false,/,
+  "compact schedule end must key off Callsign only (not BR+Callsign)",
+);
+assert.match(
+  monthOps,
+  /callsignSync\.scheduleBounds/,
+  "createNextMonth must remap formulas using capacity end bounds",
+);
+assert.match(
+  monthOps,
+  /callsignSync\.capacityEndRow/,
+  "createNextMonth must keep capacityEndRow when remapping formulas",
+);
 assert.match(sheetSchemas, /function findMonthlySummaryBlockLocation_/);
 assert.match(
   summaryData,
@@ -691,6 +721,23 @@ function loadSyncContext() {
     },
     getWasbSpreadsheet_: () => spreadsheet,
     getPersonnelMaterializeStartRow_: () => 2,
+    getPersonnelActiveRows_: () => {
+      if (!spreadsheet) return [];
+      const personnel =
+        spreadsheet.getSheetByName("PERSONNEL") ||
+        spreadsheet.getSheetByName("Персонал");
+      if (!personnel) return [];
+      const lastRow = personnel.getLastRow();
+      const active = [];
+      for (let row = 2; row <= lastRow; row++) {
+        const callsign = String(personnel.displayAt(row, 1) || "").trim();
+        const lastName = String(personnel.displayAt(row, 2) || "").trim();
+        const display = monthlyCallsignValueFromPersonnelRow(callsign, lastName);
+        if (!display) continue;
+        active.push({ callsign: display, lastName, active: true });
+      }
+      return active;
+    },
     _personnelBuildHeaderColIndex_: (headers) => ({
       Callsign: headers.indexOf("Callsign"),
       LastName: headers.indexOf("Last name"),
@@ -927,6 +974,99 @@ function assertRowTemplateCopied(sheet, row, sourceRow, lastDateCol) {
   assert.equal(month.valueAt(32, 2), "За_штатом");
   assert.ok(result.formulaSync && result.formulaSync.rewritten > 0);
   assert.equal(month.cell(32, 3).formula, "=COUNTA($C$2:$AG$30)");
+}
+
+{
+  // 33 PERSONNEL data rows (sheet rows 2..34). Grid must include the last person
+  // even when compact BR formulas are absent on template rows.
+  const runtime = loadSyncContext();
+  const month = buildMonthSheet("compact", { summaryStart: 35 });
+  for (let row = 2; row <= 32; row++) {
+    month.cell(row, 1).formulaR1C1 = "";
+  }
+  month.cell(33, 2).value = "OLD_33";
+  month.cell(35, 3).formula = "=COUNTA($C$2:$AG$33)";
+  const personnel = buildPersonnel(34, {
+    34: { callsign: "ОСТАННІЙ", lastName: "Коваленко" },
+  });
+  runtime.use(month, personnel);
+
+  const activeRows = runtime.context.getPersonnelActiveRows_();
+  assert.equal(activeRows.length, 33, "fixture must expose 33 active people");
+
+  const result = runtime.context.syncMonthlyCallsignsFromPersonnel_(month, {
+    allowShrink: true,
+  });
+  assert.equal(result.personnelRows, 33, "must read every PERSONNEL data row");
+  assert.equal(
+    result.capacityRows,
+    33,
+    "capacity must expand to every PERSONNEL data row",
+  );
+  assert.equal(
+    result.rowsWritten,
+    result.personnelRows,
+    "sync must write personnelRows callsigns (no off-by-one truncate)",
+  );
+  assert.equal(
+    result.activeRowsCount,
+    activeRows.length,
+    "sync must report activeRows.length for regression guards",
+  );
+  assert.ok(
+    result.personnelRows >= result.activeRowsCount,
+    "positional personnelRows must cover all active people",
+  );
+  assert.equal(month.valueAt(34, 2), "ОСТАННІЙ", "last callsign must be written");
+  assert.equal(result.capacityEndRow, 34);
+  assert.equal(result.codeRangeA1, "C2:AG34");
+  assert.equal(
+    runtime.context._monthlyCodeBoundsFromSheet_(month).endRow,
+    34,
+    "detected schedule bounds must include the last callsign row",
+  );
+  assert.equal(
+    month.cell(result.summaryStartRow, 3).formula,
+    "=COUNTA($C$2:$AG$34)",
+    "summary formulas must grow through the last schedule row",
+  );
+  assert.ok(result.formulaSync && result.formulaSync.rewritten > 0);
+}
+
+{
+  // Create-path style: skipFormulaRewrite during sync, then remap with capacity bounds.
+  const runtime = loadSyncContext();
+  const src = buildMonthSheet("compact", { summaryStart: 34, name: "07" });
+  for (let row = 2; row <= 32; row++) src.cell(row, 1).formulaR1C1 = "";
+  const month = buildMonthSheet("compact", { summaryStart: 34, name: "08" });
+  for (let row = 2; row <= 32; row++) month.cell(row, 1).formulaR1C1 = "";
+  month.cell(34, 3).formula = "=COUNTA($C$2:$AG$32)";
+  const personnel = buildPersonnel(34, {
+    34: { callsign: "ОСТАННІЙ", lastName: "Коваленко" },
+  });
+  runtime.use(month, personnel);
+
+  const sourceBounds = runtime.context._monthlyCodeBoundsFromSheet_(src);
+  assert.equal(sourceBounds.endRow, 32);
+  const syncResult = runtime.context.syncMonthlyCallsignsFromPersonnel_(month, {
+    allowShrink: true,
+    skipFormulaRewrite: true,
+  });
+  const afterBounds = runtime.context._monthlyBoundsWithEndRow_(
+    syncResult.scheduleBounds ||
+      runtime.context._monthlyCodeBoundsFromSheet_(month),
+    syncResult.capacityEndRow,
+  );
+  const formulaSync = runtime.context.rewriteMonthlyScheduleFormulasToCodeRange_(
+    month,
+    sourceBounds,
+    afterBounds,
+  );
+  assert.equal(month.valueAt(34, 2), "ОСТАННІЙ");
+  assert.equal(syncResult.capacityRows, 33);
+  assert.equal(afterBounds.endRow, 34);
+  assert.ok(formulaSync.rewritten > 0);
+  assert.equal(month.cell(syncResult.summaryStartRow, 3).formula, "=COUNTA($C$2:$AG$34)");
 }
 
 console.log("verify-monthly-callsign-sync: OK");

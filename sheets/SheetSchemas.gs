@@ -378,11 +378,14 @@ function detectMonthlyLayoutFromSheet_(sheet) {
   var cIsDate = _looksLikeMonthlyDateHeader_(row1[firstDateCol - 1]);
 
   if (isCallsignB && cIsDate && !isPhoneHeaderA) {
+    // Callsign is the schedule row key. Do not require BR (col A) as well —
+    // newly expanded rows may have callsigns before BR formulas calculate,
+    // and requireAllMarkers would keep codeRange stuck one/more rows short.
     var compactDataEndRow = _monthlyDataEndRowFromSheet_(
       sheet,
       30,
-      [1, 2],
-      true,
+      [2],
+      false,
     );
     var compactLastDateCol = _monthlyLastDateColFromRow_(row1, firstDateCol);
     var compactRangeA1 = _monthlyCodeRangeA1_(

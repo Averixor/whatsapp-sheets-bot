@@ -166,9 +166,10 @@ function createNextMonthSheet() {
     newSheet.getRange(monthGrid.clearRangeA1).clearContent();
 
     applyGlobalSheetStandards_();
+    var callsignSync = null;
     try {
       if (typeof syncMonthlyCallsignsFromPersonnel_ === "function") {
-        syncMonthlyCallsignsFromPersonnel_(newSheet, {
+        callsignSync = syncMonthlyCallsignsFromPersonnel_(newSheet, {
           allowShrink: true,
           skipFormulaRewrite: true,
         });
@@ -178,9 +179,27 @@ function createNextMonthSheet() {
     }
     try {
       if (typeof rewriteMonthlyScheduleFormulasToCodeRange_ === "function") {
+        var afterBounds =
+          callsignSync && callsignSync.scheduleBounds
+            ? callsignSync.scheduleBounds
+            : typeof _monthlyCodeBoundsFromSheet_ === "function"
+              ? _monthlyCodeBoundsFromSheet_(newSheet)
+              : null;
+        if (
+          afterBounds &&
+          callsignSync &&
+          callsignSync.capacityEndRow &&
+          typeof _monthlyBoundsWithEndRow_ === "function"
+        ) {
+          afterBounds = _monthlyBoundsWithEndRow_(
+            afterBounds,
+            callsignSync.capacityEndRow,
+          );
+        }
         rewriteMonthlyScheduleFormulasToCodeRange_(
           newSheet,
           sourceFormulaBounds,
+          afterBounds,
         );
       }
     } catch (formulaSyncErr) {

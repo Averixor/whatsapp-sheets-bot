@@ -119,6 +119,8 @@ function _personnelBuildMonthlyCallsignValues_(personnelSheet) {
     return { values: [], personnelRows: 0, startRow: startRow };
   }
 
+  // Inclusive: header + N people ⇒ lastRow = startRow + N - 1; numRows = N.
+  // Never use lastRow as numRows when startRow > 1 (that skips the final person).
   var personnelRows = personnelLastRow - startRow + 1;
   var callsignCol = colIndex.Callsign + 1;
   var lastNameCol = colIndex.LastName + 1;
@@ -130,6 +132,25 @@ function _personnelBuildMonthlyCallsignValues_(personnelSheet) {
     .getRange(startRow, lastNameCol, personnelRows, 1)
     .getDisplayValues();
 
+  if (
+    !callsignValues ||
+    callsignValues.length < personnelRows ||
+    !lastNameValues ||
+    lastNameValues.length < personnelRows
+  ) {
+    throw new Error(
+      "Не вдалося прочитати всі рядки особового складу для синхронізації позивних (" +
+        "очікувано " +
+        personnelRows +
+        ", прочитано " +
+        Math.min(
+          (callsignValues && callsignValues.length) || 0,
+          (lastNameValues && lastNameValues.length) || 0,
+        ) +
+        ")",
+    );
+  }
+
   var values = [];
   for (var i = 0; i < personnelRows; i++) {
     values.push([
@@ -140,10 +161,21 @@ function _personnelBuildMonthlyCallsignValues_(personnelSheet) {
     ]);
   }
 
+  var activeRowsCount = 0;
+  if (typeof getPersonnelActiveRows_ === "function") {
+    try {
+      activeRowsCount = (getPersonnelActiveRows_() || []).length;
+    } catch (_) {
+      activeRowsCount = 0;
+    }
+  }
+
   return {
     values: values,
     personnelRows: personnelRows,
+    activeRowsCount: activeRowsCount,
     startRow: startRow,
+    personnelLastRow: personnelLastRow,
   };
 }
 
@@ -159,6 +191,32 @@ function _monthlyCodeBoundsFromSheet_(sheet) {
     endRow: Number(codeRef.getLastRow()) || 2,
     startCol: Number(codeRef.getColumn()) || 1,
     endCol: Number(codeRef.getLastColumn()) || 1,
+  };
+}
+
+/**
+ * Force schedule bounds to include capacityEndRow (after personnel expand).
+ * Detection can lag when marker columns are incomplete on brand-new rows.
+ */
+function _monthlyBoundsWithEndRow_(bounds, endRow) {
+  if (!bounds) return null;
+  var nextEnd = Math.max(Number(endRow) || 0, Number(bounds.endRow) || 0);
+  if (nextEnd <= (Number(bounds.endRow) || 0)) {
+    return bounds;
+  }
+  var startCol = Number(bounds.startCol) || 1;
+  var endCol = Number(bounds.endCol) || startCol;
+  var startRow = Number(bounds.startRow) || 2;
+  var a1 =
+    typeof _monthlyCodeRangeA1_ === "function"
+      ? _monthlyCodeRangeA1_(startCol, endCol, nextEnd)
+      : bounds.a1;
+  return {
+    a1: a1,
+    startRow: startRow,
+    endRow: nextEnd,
+    startCol: startCol,
+    endCol: endCol,
   };
 }
 
@@ -285,12 +343,18 @@ function _monthlyRemapScheduleFormulaText_(formula, before, after) {
  * bounds so they match the current code grid (row + day-column edges).
  * Skips sheet-qualified refs (PERSONNEL!, DICT_SUM!).
  */
-function rewriteMonthlyScheduleFormulasToCodeRange_(sheet, beforeBounds) {
+function rewriteMonthlyScheduleFormulasToCodeRange_(
+  sheet,
+  beforeBounds,
+  afterBoundsOverride,
+) {
   if (!sheet || typeof sheet.getRange !== "function") {
     return { ok: false, rewritten: 0 };
   }
   var before = beforeBounds || null;
-  var after = _monthlyCodeBoundsFromSheet_(sheet);
+  var after =
+    afterBoundsOverride ||
+    _monthlyCodeBoundsFromSheet_(sheet);
   if (!before || !after) {
     return {
       ok: false,
@@ -523,12 +587,19 @@ function syncMonthlyCallsignsFromPersonnel_(targetSheetOrName, options) {
   );
   var startRow = capacity.startRow;
   var maxRows = capacity.capacityRows;
+  var capacityEndRow = capacity.capacityEndRow;
   var output = values.slice();
   while (output.length < maxRows) {
     output.push([""]);
   }
 
-  var targetRange = monthSheet.getRange(startRow, callsignCol, output.length, 1);
+  // numRows must equal capacityRows so the final PERSONNEL person is included.
+  var targetRange = monthSheet.getRange(
+    startRow,
+    callsignCol,
+    maxRows,
+    1,
+  );
   var currentValues = targetRange.getDisplayValues();
   var callsignChanged = false;
   for (var v = 0; v < output.length; v++) {
@@ -544,6 +615,12 @@ function syncMonthlyCallsignsFromPersonnel_(targetSheetOrName, options) {
     targetRange.setValues(output);
   }
 
+  var detectedBounds = _monthlyCodeBoundsFromSheet_(monthSheet);
+  var scheduleBounds = _monthlyBoundsWithEndRow_(
+    detectedBounds,
+    capacityEndRow,
+  );
+
   var formulaSync = null;
   if (
     opts.skipFormulaRewrite !== true &&
@@ -553,6 +630,23 @@ function syncMonthlyCallsignsFromPersonnel_(targetSheetOrName, options) {
     formulaSync = rewriteMonthlyScheduleFormulasToCodeRange_(
       monthSheet,
       beforeBounds,
+      scheduleBounds,
+    );
+  }
+
+  var activeRowsCount = Number(built.activeRowsCount) || 0;
+  if (
+    activeRowsCount > 0 &&
+    values.length < activeRowsCount
+  ) {
+    warnings.push(
+      "Лист " +
+        monthSheet.getName() +
+        ": активних у PERSONNEL " +
+        activeRowsCount +
+        ", а для графіка прочитано лише " +
+        values.length +
+        " рядків — можливий збій getLastRow/діапазону.",
     );
   }
 
@@ -563,14 +657,19 @@ function syncMonthlyCallsignsFromPersonnel_(targetSheetOrName, options) {
     rowsWritten: callsignChanged ? values.length : 0,
     skippedWrite: !callsignChanged,
     personnelRows: built.personnelRows,
+    activeRowsCount: activeRowsCount,
     callsignColumn: callsignCol,
     startRow: startRow,
     capacityRows: maxRows,
+    capacityEndRow: capacityEndRow,
     rowsInserted: capacity.rowsInserted,
     rowsDeleted: capacity.rowsDeleted,
     separatorRows: capacity.separatorRows,
     summaryStartRow: capacity.summaryStartRow,
-    codeRangeA1: getMonthlyCodeRangeA1ForSheet_(monthSheet),
+    codeRangeA1:
+      (scheduleBounds && scheduleBounds.a1) ||
+      getMonthlyCodeRangeA1ForSheet_(monthSheet),
+    scheduleBounds: scheduleBounds,
     formulaSync: formulaSync,
     warnings: warnings,
   };
