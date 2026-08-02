@@ -642,8 +642,8 @@ for (const file of contract.monthlyScheduleCopyPaths || []) {
   );
   assert.match(
     source,
-    /_ensureNewMonthSheetKeepsSourceRules_/,
-    `${file} must restore CF/validation from the source month after create`,
+    /replaceConditionalFormatRulesFromSheet_\(\s*src,\s*newSheet,?\s*\)/,
+    `${file} must restore CF from the source month after create/sync`,
   );
   assert.doesNotMatch(
     source,
@@ -654,8 +654,13 @@ for (const file of contract.monthlyScheduleCopyPaths || []) {
 
 assert.match(
   governanceSource,
-  /function copyConditionalFormatRulesFromSheet_/,
-  "governance must expose CF copy helper for month create restore",
+  /function replaceConditionalFormatRulesFromSheet_/,
+  "governance must expose exact CF replace helper for month create restore",
+);
+assert.match(
+  governanceSource,
+  /function _formatRulesMapRangeBetweenMonthlySheets_/,
+  "governance must remap monthly CF ranges onto the target schedule grid",
 );
 assert.match(
   governanceSource,

@@ -103,16 +103,43 @@ assert.doesNotMatch(
   "default personnel materialize must not sync all months",
 );
 assert.match(monthOps, /syncMonthlyCallsignsFromPersonnel_\(newSheet\)/);
-assert.match(monthOps, /_ensureNewMonthSheetKeepsSourceRules_\(src, newSheet\)/);
+assert.match(monthOps, /syncVacationsWithMonthlySheet_/);
+assert.match(
+  monthOps,
+  /replaceConditionalFormatRulesFromSheet_\(\s*src,\s*newSheet,?\s*\)/,
+  "stage-7 month creation must restore source conditional formatting after sync",
+);
+assert.match(
+  monthOps,
+  /conditionalFormatSync:\s*conditionalFormatSync/,
+  "stage-7 month creation must return conditionalFormatSync",
+);
+assert.match(
+  monthOps,
+  /Не вдалося перенести умовне форматування до нового місячного аркуша/,
+  "stage-7 month creation must fail loudly if CF restore fails",
+);
 
-const monthSheets = readRepoFileByBasename(repoRoot, "MonthSheets.gs", {
+const legacyMonthOps = readRepoFileByBasename(repoRoot, "MonthSheets.gs", {
   errorPrefix: "verify-monthly-callsign-sync",
 });
-assert.match(monthSheets, /function _ensureNewMonthSheetKeepsSourceRules_/);
-assert.match(monthSheets, /getConditionalFormatRules\(\)/);
-assert.match(monthSheets, /getDataValidations\(\)/);
-assert.match(monthSheets, /setDataValidations\(/);
-assert.match(monthSheets, /copyConditionalFormatRulesFromSheet_/);
+assert.match(legacyMonthOps, /syncVacationsWithMonthlySheet_/);
+assert.match(
+  legacyMonthOps,
+  /function _copyMonthSheetDataValidationsFromSource_/,
+);
+assert.match(legacyMonthOps, /getDataValidations\(\)/);
+assert.match(legacyMonthOps, /setDataValidations\(/);
+assert.match(
+  legacyMonthOps,
+  /replaceConditionalFormatRulesFromSheet_\(src, newSheet\)/,
+  "legacy month creation must restore source conditional formatting after sync",
+);
+assert.match(
+  legacyMonthOps,
+  /Не вдалося перенести умовне форматування до нового місячного аркуша/,
+  "legacy month creation must fail loudly if CF restore fails",
+);
 
 const formatGovernance = readRepoFileByBasename(
   repoRoot,
@@ -121,7 +148,17 @@ const formatGovernance = readRepoFileByBasename(
 );
 assert.match(
   formatGovernance,
-  /function copyConditionalFormatRulesFromSheet_/,
+  /function replaceConditionalFormatRulesFromSheet_/,
+);
+assert.match(formatGovernance, /sourceSheet\.getConditionalFormatRules\(\)/);
+assert.match(
+  formatGovernance,
+  /targetSheet\.setConditionalFormatRules\(dedupedRules\)/,
+);
+assert.match(
+  formatGovernance,
+  /snapshot\.lastRow === Number\(sourceGrid\.getLastRow\(\)\)/,
+  "copied monthly rules must expand with the target personnel grid",
 );
 assert.match(
   formatGovernance,

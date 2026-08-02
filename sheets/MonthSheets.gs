@@ -97,70 +97,14 @@ function _setMonthDatesRow_(sheet, month, year) {
 }
 
 /**
- * After src.copyTo + post-create mutations, restore conditional formatting and
- * data validations from the source month. Sheet.copyTo already brings them, but
- * row-expand / sync paths can drop CF rules; never paste conditional formatting.
+ * Re-copy data validations from the source month after post-create sync.
+ * Conditional formatting is restored separately via
+ * replaceConditionalFormatRulesFromSheet_ (never CF paste).
  */
-function _ensureNewMonthSheetKeepsSourceRules_(sourceSheet, targetSheet) {
+function _copyMonthSheetDataValidationsFromSource_(sourceSheet, targetSheet) {
   if (!sourceSheet || !targetSheet) {
-    return {
-      ok: false,
-      sourceConditionalFormatCount: 0,
-      targetConditionalFormatCount: 0,
-      conditionalFormatsRestored: false,
-      conditionalFormatsExtended: 0,
-      dataValidationsCopied: false,
-    };
+    return { ok: false, dataValidationsCopied: false };
   }
-
-  var sourceCfCount = 0;
-  var targetCfCountBefore = 0;
-  try {
-    sourceCfCount = (sourceSheet.getConditionalFormatRules() || []).length;
-  } catch (_) {}
-  try {
-    targetCfCountBefore = (targetSheet.getConditionalFormatRules() || []).length;
-  } catch (_) {}
-
-  var cfRestored = false;
-  if (
-    sourceCfCount > 0 &&
-    typeof copyConditionalFormatRulesFromSheet_ === "function"
-  ) {
-    try {
-      copyConditionalFormatRulesFromSheet_(sourceSheet, targetSheet);
-      cfRestored = true;
-    } catch (_) {}
-  }
-
-  var cfExtended = 0;
-  try {
-    var sourceCode = sourceSheet.getRange(
-      getMonthlyCodeRangeA1ForSheet_(sourceSheet),
-    );
-    var targetCode = targetSheet.getRange(
-      getMonthlyCodeRangeA1ForSheet_(targetSheet),
-    );
-    var sourceEndRow = Number(sourceCode.getLastRow()) || 0;
-    var targetEndRow = Number(targetCode.getLastRow()) || 0;
-    if (
-      typeof extendConditionalFormatRulesThroughRow_ === "function" &&
-      sourceEndRow > 0 &&
-      targetEndRow > sourceEndRow
-    ) {
-      var extendResult = extendConditionalFormatRulesThroughRow_(
-        targetSheet,
-        sourceEndRow,
-        targetEndRow,
-      );
-      cfExtended = Number(extendResult && extendResult.extended) || 0;
-    }
-  } catch (_) {}
-
-  var targetCfCount = targetCfCountBefore;
-  try {
-    targetCfCount = (targetSheet.getConditionalFormatRules() || []).length;
-  } catch (_) {}
 
   var validationsCopied = false;
   try {
@@ -182,11 +126,7 @@ function _ensureNewMonthSheetKeepsSourceRules_(sourceSheet, targetSheet) {
   } catch (_) {}
 
   return {
-    ok: true,
-    sourceConditionalFormatCount: sourceCfCount,
-    targetConditionalFormatCount: targetCfCount,
-    conditionalFormatsRestored: cfRestored,
-    conditionalFormatsExtended: cfExtended,
+    ok: validationsCopied,
     dataValidationsCopied: validationsCopied,
   };
 }
@@ -239,11 +179,19 @@ function createNextMonthSheet() {
     } catch (vacationSyncErr) {
       console.error(vacationSyncErr);
     }
+
     try {
-      _ensureNewMonthSheetKeepsSourceRules_(src, newSheet);
-    } catch (rulesErr) {
-      console.error(rulesErr);
+      replaceConditionalFormatRulesFromSheet_(src, newSheet);
+    } catch (formatSyncErr) {
+      console.error(formatSyncErr);
+      throw new Error(
+        "Не вдалося перенести умовне форматування до нового місячного аркуша",
+      );
     }
+    try {
+      _copyMonthSheetDataValidationsFromSource_(src, newSheet);
+    } catch (_) {}
+
     newSheet.activate();
     highlightActiveMonthTab_(nextName);
 
