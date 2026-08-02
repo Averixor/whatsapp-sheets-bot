@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-08-02 — Include last PERSONNEL row in month grid after create/sync
+
+- **Root cause:** after capacity expand, compact schedule detection required BR+Callsign markers, so `codeRange` / formula+CF remap stayed on the old last row (e.g. `C2:AG32`) while the newest callsign was written below the grid.
+- **Fix:** compact data-end keys off Callsign only; sync forces schedule bounds to `capacityEndRow` (`_monthlyBoundsWithEndRow_`); create paths pass those bounds into `rewriteMonthlyScheduleFormulasToCodeRange_`.
+- **Guard:** inclusive PERSONNEL `numRows = lastRow - startRow + 1`, `activeRowsCount` warning if read count lags active rows; verify covers 33-person expand without BR formulas.
+
 ## 2026-08-02 — Resize month schedule formulas on create / capacity change
 
 - After callsign capacity expand/shrink, rewrite schedule-bound A1 formula ranges so they match the current code grid (`rewriteMonthlyScheduleFormulasToCodeRange_`), same spirit as CF schedule remap.
