@@ -96,6 +96,101 @@ function _setMonthDatesRow_(sheet, month, year) {
   };
 }
 
+/**
+ * After src.copyTo + post-create mutations, restore conditional formatting and
+ * data validations from the source month. Sheet.copyTo already brings them, but
+ * row-expand / sync paths can drop CF rules; never paste conditional formatting.
+ */
+function _ensureNewMonthSheetKeepsSourceRules_(sourceSheet, targetSheet) {
+  if (!sourceSheet || !targetSheet) {
+    return {
+      ok: false,
+      sourceConditionalFormatCount: 0,
+      targetConditionalFormatCount: 0,
+      conditionalFormatsRestored: false,
+      conditionalFormatsExtended: 0,
+      dataValidationsCopied: false,
+    };
+  }
+
+  var sourceCfCount = 0;
+  var targetCfCountBefore = 0;
+  try {
+    sourceCfCount = (sourceSheet.getConditionalFormatRules() || []).length;
+  } catch (_) {}
+  try {
+    targetCfCountBefore = (targetSheet.getConditionalFormatRules() || []).length;
+  } catch (_) {}
+
+  var cfRestored = false;
+  if (
+    sourceCfCount > 0 &&
+    typeof copyConditionalFormatRulesFromSheet_ === "function"
+  ) {
+    try {
+      copyConditionalFormatRulesFromSheet_(sourceSheet, targetSheet);
+      cfRestored = true;
+    } catch (_) {}
+  }
+
+  var cfExtended = 0;
+  try {
+    var sourceCode = sourceSheet.getRange(
+      getMonthlyCodeRangeA1ForSheet_(sourceSheet),
+    );
+    var targetCode = targetSheet.getRange(
+      getMonthlyCodeRangeA1ForSheet_(targetSheet),
+    );
+    var sourceEndRow = Number(sourceCode.getLastRow()) || 0;
+    var targetEndRow = Number(targetCode.getLastRow()) || 0;
+    if (
+      typeof extendConditionalFormatRulesThroughRow_ === "function" &&
+      sourceEndRow > 0 &&
+      targetEndRow > sourceEndRow
+    ) {
+      var extendResult = extendConditionalFormatRulesThroughRow_(
+        targetSheet,
+        sourceEndRow,
+        targetEndRow,
+      );
+      cfExtended = Number(extendResult && extendResult.extended) || 0;
+    }
+  } catch (_) {}
+
+  var targetCfCount = targetCfCountBefore;
+  try {
+    targetCfCount = (targetSheet.getConditionalFormatRules() || []).length;
+  } catch (_) {}
+
+  var validationsCopied = false;
+  try {
+    var rows = Math.min(
+      Math.max(Number(sourceSheet.getLastRow()) || 0, 1),
+      Math.max(Number(targetSheet.getLastRow()) || 0, 1),
+    );
+    var cols = Math.min(
+      Math.max(Number(sourceSheet.getLastColumn()) || 0, 1),
+      Math.max(Number(targetSheet.getLastColumn()) || 0, 1),
+    );
+    if (rows > 0 && cols > 0) {
+      var validations = sourceSheet
+        .getRange(1, 1, rows, cols)
+        .getDataValidations();
+      targetSheet.getRange(1, 1, rows, cols).setDataValidations(validations);
+      validationsCopied = true;
+    }
+  } catch (_) {}
+
+  return {
+    ok: true,
+    sourceConditionalFormatCount: sourceCfCount,
+    targetConditionalFormatCount: targetCfCount,
+    conditionalFormatsRestored: cfRestored,
+    conditionalFormatsExtended: cfExtended,
+    dataValidationsCopied: validationsCopied,
+  };
+}
+
 function createNextMonthSheet() {
   const ui = SpreadsheetApp.getUi();
   try {
@@ -143,6 +238,11 @@ function createNextMonthSheet() {
       }
     } catch (vacationSyncErr) {
       console.error(vacationSyncErr);
+    }
+    try {
+      _ensureNewMonthSheetKeepsSourceRules_(src, newSheet);
+    } catch (rulesErr) {
+      console.error(rulesErr);
     }
     newSheet.activate();
     highlightActiveMonthTab_(nextName);

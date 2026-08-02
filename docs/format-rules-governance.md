@@ -44,7 +44,15 @@ run the rebuild, then restore protected rules above exact WASB-managed rules.
 Current protected paths include vacation outputs, `SEND_PANEL`, and the
 detailed-summary output sheet (`DAILY_SUMMARIES`, `reports/Report_DailyDetailed.gs`
 `createDetailedSheet_`). Monthly-sheet creation copies the source sheet
-and does not clear its formatting.
+(`Sheet.copyTo`) and must keep conditional formatting plus data validations.
+
+Post-create mutations (date rewrite, callsign sync capacity growth, vacation
+sync) must not drop those rules. Capacity growth extends CF ranges through
+`extendConditionalFormatRulesThroughRow_` — never via
+`CopyPasteType` conditional-formatting paste, which corrupts sheet-level rule
+lists on real workbooks. After create, `_ensureNewMonthSheetKeepsSourceRules_`
+re-applies source-month CF rules (`copyConditionalFormatRulesFromSheet_`),
+extends ranges onto any taller target grid, and re-copies data validations.
 
 ## Move Policies
 

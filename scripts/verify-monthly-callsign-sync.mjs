@@ -58,9 +58,11 @@ assert.match(syncModule, /skippedWrite/);
 assert.match(syncModule, /insertRowsBefore\(summaryBlock\.startRow, rowsInserted\)/);
 assert.match(syncModule, /SpreadsheetApp\.CopyPasteType\.PASTE_FORMAT/);
 assert.match(syncModule, /SpreadsheetApp\.CopyPasteType\.PASTE_DATA_VALIDATION/);
-assert.match(
+assert.match(syncModule, /extendConditionalFormatRulesThroughRow_/);
+assert.doesNotMatch(
   syncModule,
-  /SpreadsheetApp\.CopyPasteType\.PASTE_CONDITIONAL_FORMATTING/,
+  /CopyPasteType\.PASTE_CONDITIONAL_FORMATTING/,
+  "PASTE_CONDITIONAL_FORMATTING corrupts sheet-level CF rules on real workbooks",
 );
 assert.match(syncModule, /SpreadsheetApp\.CopyPasteType\.PASTE_FORMULA/);
 assert.doesNotMatch(
@@ -101,6 +103,35 @@ assert.doesNotMatch(
   "default personnel materialize must not sync all months",
 );
 assert.match(monthOps, /syncMonthlyCallsignsFromPersonnel_\(newSheet\)/);
+assert.match(monthOps, /_ensureNewMonthSheetKeepsSourceRules_\(src, newSheet\)/);
+
+const monthSheets = readRepoFileByBasename(repoRoot, "MonthSheets.gs", {
+  errorPrefix: "verify-monthly-callsign-sync",
+});
+assert.match(monthSheets, /function _ensureNewMonthSheetKeepsSourceRules_/);
+assert.match(monthSheets, /getConditionalFormatRules\(\)/);
+assert.match(monthSheets, /getDataValidations\(\)/);
+assert.match(monthSheets, /setDataValidations\(/);
+assert.match(monthSheets, /copyConditionalFormatRulesFromSheet_/);
+
+const formatGovernance = readRepoFileByBasename(
+  repoRoot,
+  "ConditionalFormatGovernance.gs",
+  { errorPrefix: "verify-monthly-callsign-sync" },
+);
+assert.match(
+  formatGovernance,
+  /function copyConditionalFormatRulesFromSheet_/,
+);
+assert.match(
+  formatGovernance,
+  /function extendConditionalFormatRulesThroughRow_/,
+);
+assert.doesNotMatch(
+  formatGovernance,
+  /CopyPasteType\.PASTE_CONDITIONAL_FORMATTING/,
+  "governance helpers must not rely on PASTE_CONDITIONAL_FORMATTING",
+);
 
 const personnelRepo = readRepoFileByBasename(
   repoRoot,
@@ -153,16 +184,20 @@ class FakeRange {
     return this.row;
   }
 
-  getColumn() {
-    return this.col;
-  }
-
   getLastRow() {
     return this.row + this.numRows - 1;
   }
 
+  getColumn() {
+    return this.col;
+  }
+
   getLastColumn() {
     return this.col + this.numCols - 1;
+  }
+
+  getA1Notation() {
+    return `R${this.row}C${this.col}:R${this.getLastRow()}C${this.getLastColumn()}`;
   }
 
   getNumRows() {
@@ -173,30 +208,36 @@ class FakeRange {
     return this.numCols;
   }
 
-  getDisplayValue() {
-    return this.sheet.displayAt(this.row, this.col);
-  }
-
   getDisplayValues() {
-    return Array.from({ length: this.numRows }, (_, rowOffset) =>
-      Array.from({ length: this.numCols }, (_, colOffset) =>
-        this.sheet.displayAt(this.row + rowOffset, this.col + colOffset),
-      ),
-    );
+    const out = [];
+    for (let rowOffset = 0; rowOffset < this.numRows; rowOffset++) {
+      const row = [];
+      for (let colOffset = 0; colOffset < this.numCols; colOffset++) {
+        row.push(this.sheet.displayAt(this.row + rowOffset, this.col + colOffset));
+      }
+      out.push(row);
+    }
+    return out;
   }
 
   getValues() {
-    return Array.from({ length: this.numRows }, (_, rowOffset) =>
-      Array.from(
-        { length: this.numCols },
-        (_, colOffset) =>
-          this.sheet.cell(this.row + rowOffset, this.col + colOffset).value,
-      ),
-    );
+    const out = [];
+    for (let rowOffset = 0; rowOffset < this.numRows; rowOffset++) {
+      const row = [];
+      for (let colOffset = 0; colOffset < this.numCols; colOffset++) {
+        row.push(this.sheet.valueAt(this.row + rowOffset, this.col + colOffset));
+      }
+      out.push(row);
+    }
+    return out;
   }
 
   getFormulaR1C1() {
     return this.sheet.cell(this.row, this.col).formulaR1C1;
+  }
+
+  getDisplayValue() {
+    return this.sheet.displayAt(this.row, this.col);
   }
 
   setValues(values) {
@@ -339,6 +380,59 @@ class FakeSheet {
     this.conditionalRules.forEach(shiftRange);
   }
 
+  getConditionalFormatRules() {
+    return this.conditionalRules.map((rule) => ({
+      getRanges: () => [
+        {
+          getRow: () => rule.startRow,
+          getLastRow: () => rule.endRow,
+          getColumn: () => rule.startCol || 1,
+          getLastColumn: () => rule.endCol || this.colCount,
+          getA1Notation: () =>
+            `R${rule.startRow}C${rule.startCol || 1}:R${rule.endRow}C${
+              rule.endCol || this.colCount
+            }`,
+        },
+      ],
+      copy: () => ({
+        setRanges: (ranges) => ({
+          build: () => {
+            const range = ranges[0];
+            return {
+              startRow: range.getRow(),
+              endRow: range.getLastRow(),
+              startCol: range.getColumn(),
+              endCol: range.getLastColumn(),
+            };
+          },
+        }),
+      }),
+    }));
+  }
+
+  setConditionalFormatRules(rules) {
+    this.conditionalRules = (rules || []).map((rule) => {
+      if (rule && typeof rule.getRanges === "function") {
+        const range = rule.getRanges()[0];
+        return {
+          startRow: range.getRow(),
+          endRow: range.getLastRow(),
+          startCol: range.getColumn(),
+          endCol: range.getLastColumn(),
+        };
+      }
+      return rule;
+    });
+  }
+
+  getMaxRows() {
+    return this.rows.length;
+  }
+
+  getMaxColumns() {
+    return this.colCount;
+  }
+
   getRowHeight(row) {
     return this.rowHeights[row - 1];
   }
@@ -397,8 +491,16 @@ function buildMonthSheet(layout, options = {}) {
     sheet.cell(summaryStart + 2, 2).value = "В_наявності";
     sheet.merges.push({ startRow: summaryStart, endRow: summaryStart });
     sheet.conditionalRules.push({
+      startRow: 2,
+      endRow: 32,
+      startCol: firstDateCol,
+      endCol: lastDateCol,
+    });
+    sheet.conditionalRules.push({
       startRow: summaryStart,
       endRow: summaryStart + 2,
+      startCol: 2,
+      endCol: 2,
     });
   }
 
@@ -443,7 +545,6 @@ function loadSyncContext() {
       CopyPasteType: {
         PASTE_FORMAT: "PASTE_FORMAT",
         PASTE_DATA_VALIDATION: "PASTE_DATA_VALIDATION",
-        PASTE_CONDITIONAL_FORMATTING: "PASTE_CONDITIONAL_FORMATTING",
         PASTE_FORMULA: "PASTE_FORMULA",
       },
     },
@@ -454,6 +555,20 @@ function loadSyncContext() {
       LastName: headers.indexOf("Last name"),
     }),
     resolvePersonnelDisplayCallsign_: monthlyCallsignValueFromPersonnelRow,
+    extendConditionalFormatRulesThroughRow_(sheet, templateRow, throughRow) {
+      const fromRow = Number(templateRow) || 0;
+      const toRow = Number(throughRow) || 0;
+      if (!sheet || toRow <= fromRow) return { extended: 0, total: 0 };
+      let extended = 0;
+      sheet.conditionalRules = (sheet.conditionalRules || []).map((rule) => {
+        if (rule.startRow <= fromRow && rule.endRow >= fromRow && rule.endRow < toRow) {
+          extended += 1;
+          return { ...rule, endRow: toRow };
+        }
+        return rule;
+      });
+      return { extended, total: sheet.conditionalRules.length };
+    },
   });
 
   vm.runInContext(sheetSchemas, context, { filename: "SheetSchemas.gs" });
@@ -484,10 +599,6 @@ function assertRowTemplateCopied(sheet, row, sourceRow, lastDateCol) {
       sheet.cell(row, col).validation,
       sheet.cell(sourceRow, col).validation,
     );
-    assert.equal(
-      sheet.cell(row, col).conditionalFormat,
-      sheet.cell(sourceRow, col).conditionalFormat,
-    );
   }
 }
 
@@ -516,7 +627,15 @@ function assertRowTemplateCopied(sheet, row, sourceRow, lastDateCol) {
   assert.equal(month.cell(35, 2).validation, "summary-validation");
   assert.equal(month.cell(35, 2).conditionalFormat, "summary-conditional");
   assert.equal(month.merges[0].startRow, 35);
-  assert.equal(month.conditionalRules[0].startRow, 35);
+  assert.equal(month.conditionalRules.length, 2, "sheet-level CF count must survive expand");
+  assert.equal(month.conditionalRules[0].startRow, 2);
+  assert.equal(month.conditionalRules[0].endRow, 33, "schedule CF must extend onto new row");
+  assert.equal(month.conditionalRules[1].startRow, 35);
+  assert.equal(
+    month.copyCalls.some((call) => call.pasteType === "PASTE_CONDITIONAL_FORMATTING"),
+    false,
+    "must not paste conditional formatting during capacity expand",
+  );
   assert.deepEqual(
     JSON.parse(JSON.stringify(runtime.context.findSummaryBlockLocation_(month))),
     JSON.parse(
