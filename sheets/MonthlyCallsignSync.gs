@@ -169,11 +169,16 @@ function _monthlyCopyPersonnelRowTemplate_(
     SpreadsheetApp.CopyPasteType.PASTE_DATA_VALIDATION,
     false,
   );
-  sourceRange.copyTo(
-    targetRange,
-    SpreadsheetApp.CopyPasteType.PASTE_CONDITIONAL_FORMATTING,
-    false,
-  );
+  // Never paste conditional-formatting via CopyPasteType here: on real Google
+  // Sheets workbooks that path corrupts/drops sheet-level rule lists (observed
+  // loss of ~13 monthly CF rules). Extend existing rule ranges instead.
+  if (typeof extendConditionalFormatRulesThroughRow_ === "function") {
+    extendConditionalFormatRulesThroughRow_(
+      sheet,
+      sourceRow,
+      targetStartRow + rowCount - 1,
+    );
+  }
 
   var rowHeight = Number(sheet.getRowHeight(sourceRow)) || 0;
   if (rowHeight > 0) {

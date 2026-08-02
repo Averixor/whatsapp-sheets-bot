@@ -739,6 +739,102 @@ function preserveUserConditionalFormatRules_(sheet, rebuildFn, options) {
   return result;
 }
 
+/**
+ * Copy every conditional-format rule from sourceSheet onto targetSheet by A1
+ * ranges. Used after monthly sheet copy when post-create mutations drop rules.
+ * Do not use Range.copyTo with the conditional-formatting paste type — it
+ * corrupts sheet-level rule lists on real workbooks.
+ */
+function copyConditionalFormatRulesFromSheet_(sourceSheet, targetSheet) {
+  if (!sourceSheet || !targetSheet) return 0;
+  var sourceRules = sourceSheet.getConditionalFormatRules() || [];
+  var copied = [];
+  for (var i = 0; i < sourceRules.length; i++) {
+    var rule = sourceRules[i];
+    var ranges = rule.getRanges() || [];
+    var targetRanges = [];
+    for (var r = 0; r < ranges.length; r++) {
+      try {
+        targetRanges.push(targetSheet.getRange(ranges[r].getA1Notation()));
+      } catch (_) {}
+    }
+    if (!targetRanges.length) continue;
+    try {
+      copied.push(rule.copy().setRanges(targetRanges).build());
+    } catch (_) {}
+  }
+  targetSheet.setConditionalFormatRules(copied);
+  return copied.length;
+}
+
+/**
+ * Extend CF rules that already cover templateRow so their bottom edge reaches
+ * throughRow. Safe alternative to conditional-formatting paste when capacity
+ * grows via insertRowsBefore.
+ */
+function extendConditionalFormatRulesThroughRow_(sheet, templateRow, throughRow) {
+  var fromRow = Number(templateRow) || 0;
+  var toRow = Number(throughRow) || 0;
+  if (!sheet || toRow <= fromRow) {
+    return { extended: 0, total: 0 };
+  }
+
+  var rules = sheet.getConditionalFormatRules() || [];
+  if (!rules.length) return { extended: 0, total: 0 };
+
+  var extended = 0;
+  var nextRules = [];
+  for (var i = 0; i < rules.length; i++) {
+    var rule = rules[i];
+    var ranges = rule.getRanges() || [];
+    var nextRanges = [];
+    var changed = false;
+    for (var r = 0; r < ranges.length; r++) {
+      var range = ranges[r];
+      var startRow = Number(range.getRow()) || 0;
+      var endRow = Number(range.getLastRow()) || 0;
+      var startCol = Number(range.getColumn()) || 0;
+      var endCol = Number(range.getLastColumn()) || 0;
+      if (
+        startRow &&
+        endRow &&
+        startCol &&
+        endCol &&
+        startRow <= fromRow &&
+        endRow >= fromRow &&
+        endRow < toRow
+      ) {
+        nextRanges.push(
+          sheet.getRange(
+            startRow,
+            startCol,
+            toRow - startRow + 1,
+            endCol - startCol + 1,
+          ),
+        );
+        changed = true;
+      } else {
+        nextRanges.push(range);
+      }
+    }
+    if (changed) {
+      extended++;
+      try {
+        nextRules.push(rule.copy().setRanges(nextRanges).build());
+      } catch (_) {
+        nextRules.push(rule);
+      }
+    } else {
+      nextRules.push(rule);
+    }
+  }
+
+  if (extended > 0) {
+    sheet.setConditionalFormatRules(nextRules);
+  }
+  return { extended: extended, total: nextRules.length };
+}
+
 function _formatRulesApplyRegistryToSheet_(sheet, records) {
   var registryMap = _formatRulesRegistryMap_(records);
   var snapshot = _formatRulesSnapshotSheet_(sheet, registryMap);
