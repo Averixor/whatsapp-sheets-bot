@@ -228,6 +228,14 @@ function createNextMonthSheet() {
       _copyMonthSheetDataValidationsFromSource_(src, newSheet);
     } catch (_) {}
 
+    try {
+      if (typeof applyColumnWidthsStandardsToSheet_ === "function") {
+        applyColumnWidthsStandardsToSheet_(newSheet);
+      }
+    } catch (widthErr) {
+      console.error(widthErr);
+    }
+
     newSheet.activate();
     highlightActiveMonthTab_(nextName);
 
