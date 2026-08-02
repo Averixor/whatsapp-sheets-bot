@@ -654,8 +654,13 @@ for (const file of contract.monthlyScheduleCopyPaths || []) {
 
 assert.match(
   governanceSource,
-  /function copyConditionalFormatRulesFromSheet_/,
-  "governance must expose CF copy helper for month create restore",
+  /function replaceConditionalFormatRulesFromSheet_/,
+  "governance must expose exact CF replace helper for month create restore",
+);
+assert.match(
+  governanceSource,
+  /function _formatRulesMapRangeBetweenMonthlySheets_/,
+  "governance must remap monthly CF ranges onto the target schedule grid",
 );
 assert.match(
   governanceSource,

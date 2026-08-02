@@ -71,18 +71,17 @@ function _stage7CreateNextMonthCore_(payload) {
 
   var formatRulesSync = null;
   try {
-    if (typeof _ensureNewMonthSheetKeepsSourceRules_ === "function") {
-      formatRulesSync = _ensureNewMonthSheetKeepsSourceRules_(src, newSheet);
+    if (typeof _ensureNewMonthSheetKeepsSourceRules_ !== "function") {
+      throw new Error(
+        "Не вдалося перенести умовне форматування до нового місячного аркуша",
+      );
     }
+    formatRulesSync = _ensureNewMonthSheetKeepsSourceRules_(src, newSheet);
   } catch (rulesErr) {
     console.error(rulesErr);
-    formatRulesSync = {
-      ok: false,
-      message:
-        rulesErr && rulesErr.message
-          ? String(rulesErr.message)
-          : String(rulesErr),
-    };
+    throw new Error(
+      "Не вдалося перенести умовне форматування до нового місячного аркуша",
+    );
   }
 
   if (payload.switchToNewMonth !== false) {

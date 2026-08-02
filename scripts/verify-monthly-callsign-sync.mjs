@@ -103,16 +103,32 @@ assert.doesNotMatch(
   "default personnel materialize must not sync all months",
 );
 assert.match(monthOps, /syncMonthlyCallsignsFromPersonnel_\(newSheet\)/);
+assert.match(monthOps, /syncVacationsWithMonthlySheet_/);
 assert.match(monthOps, /_ensureNewMonthSheetKeepsSourceRules_\(src, newSheet\)/);
+assert.match(
+  monthOps,
+  /Не вдалося перенести умовне форматування до нового місячного аркуша/,
+  "stage-7 month creation must fail loudly if CF restore fails",
+);
 
 const monthSheets = readRepoFileByBasename(repoRoot, "MonthSheets.gs", {
   errorPrefix: "verify-monthly-callsign-sync",
 });
 assert.match(monthSheets, /function _ensureNewMonthSheetKeepsSourceRules_/);
+assert.match(monthSheets, /syncVacationsWithMonthlySheet_/);
 assert.match(monthSheets, /getConditionalFormatRules\(\)/);
 assert.match(monthSheets, /getDataValidations\(\)/);
 assert.match(monthSheets, /setDataValidations\(/);
-assert.match(monthSheets, /copyConditionalFormatRulesFromSheet_/);
+assert.match(
+  monthSheets,
+  /replaceConditionalFormatRulesFromSheet_\(\s*sourceSheet,\s*targetSheet,?\s*\)/,
+  "month create must restore CF via exact source clone after callsign+vacation sync",
+);
+assert.match(
+  monthSheets,
+  /Не вдалося перенести умовне форматування до нового місячного аркуша/,
+  "legacy month creation must fail loudly if CF restore fails",
+);
 
 const formatGovernance = readRepoFileByBasename(
   repoRoot,
@@ -121,7 +137,17 @@ const formatGovernance = readRepoFileByBasename(
 );
 assert.match(
   formatGovernance,
-  /function copyConditionalFormatRulesFromSheet_/,
+  /function replaceConditionalFormatRulesFromSheet_/,
+);
+assert.match(formatGovernance, /sourceSheet\.getConditionalFormatRules\(\)/);
+assert.match(
+  formatGovernance,
+  /targetSheet\.setConditionalFormatRules\(dedupedRules\)/,
+);
+assert.match(
+  formatGovernance,
+  /snapshot\.lastRow === Number\(sourceGrid\.getLastRow\(\)\)/,
+  "copied monthly rules must expand with the target personnel grid",
 );
 assert.match(
   formatGovernance,

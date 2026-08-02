@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-08-02 — Exact CF replace after month create syncs
+
+- **Follow-up to #57:** after callsign + vacation sync, restore CF via `replaceConditionalFormatRulesFromSheet_` (exact clone + schedule-bound range remap / dedupe) instead of A1-only copy + separate extend.
+- **Hard fail:** create-next-month paths throw if CF restore fails (no silent drop).
+- **Kept from #57:** no `PASTE_CONDITIONAL_FORMATTING` on row expand; `extendConditionalFormatRulesThroughRow_` for capacity growth; data-validation re-copy after create.
+
 ## 2026-08-02 — Restore month CF + data validation on create
 
 - **Root cause:** monthly callsign row expand used `PASTE_CONDITIONAL_FORMATTING`, which corrupts/drops sheet-level conditional format rules on real workbooks (observed loss of ~13 CF rules + related borders when creating the next month).

@@ -767,6 +767,81 @@ function copyConditionalFormatRulesFromSheet_(sourceSheet, targetSheet) {
   return copied.length;
 }
 
+function _formatRulesMapRangeBetweenMonthlySheets_(
+  sourceSheet,
+  targetSheet,
+  sourceRange,
+) {
+  var snapshot = _formatRulesRangeSnapshot_(sourceRange);
+  var lastRow = snapshot.lastRow;
+  var lastColumn = snapshot.lastColumn;
+
+  try {
+    if (typeof getMonthlyCodeRangeA1ForSheet_ === "function") {
+      var sourceGrid = sourceSheet.getRange(
+        getMonthlyCodeRangeA1ForSheet_(sourceSheet),
+      );
+      var targetGrid = targetSheet.getRange(
+        getMonthlyCodeRangeA1ForSheet_(targetSheet),
+      );
+
+      if (snapshot.lastRow === Number(sourceGrid.getLastRow())) {
+        lastRow = Number(targetGrid.getLastRow()) || lastRow;
+      }
+      if (snapshot.lastColumn === Number(sourceGrid.getLastColumn())) {
+        lastColumn = Number(targetGrid.getLastColumn()) || lastColumn;
+      }
+    }
+  } catch (_) {}
+
+  return targetSheet.getRange(
+    snapshot.row,
+    snapshot.column,
+    Math.max(lastRow - snapshot.row + 1, 1),
+    Math.max(lastColumn - snapshot.column + 1, 1),
+  );
+}
+
+/**
+ * Replaces a newly created monthly sheet's conditional-format rules with an
+ * exact clone of the source month. Ranges ending at the source schedule bounds
+ * are extended to the current target schedule bounds after personnel sync.
+ */
+function replaceConditionalFormatRulesFromSheet_(sourceSheet, targetSheet) {
+  if (
+    !sourceSheet ||
+    !targetSheet ||
+    typeof sourceSheet.getConditionalFormatRules !== "function" ||
+    typeof targetSheet.setConditionalFormatRules !== "function"
+  ) {
+    throw new Error(
+      "Не вдалося отримати місячні аркуші для перенесення умовного форматування",
+    );
+  }
+
+  var sourceRules = sourceSheet.getConditionalFormatRules() || [];
+  var copiedRules = sourceRules.map(function (rule) {
+    var sourceRanges = _formatRulesSafeCall_(rule, "getRanges", []) || [];
+    var targetRanges = sourceRanges.map(function (sourceRange) {
+      return _formatRulesMapRangeBetweenMonthlySheets_(
+        sourceSheet,
+        targetSheet,
+        sourceRange,
+      );
+    });
+    return rule.copy().setRanges(targetRanges).build();
+  });
+
+  var dedupedRules = _formatRulesDedupeRules_(targetSheet, copiedRules);
+  targetSheet.setConditionalFormatRules(dedupedRules);
+
+  return {
+    sourceSheet: String(sourceSheet.getName()),
+    targetSheet: String(targetSheet.getName()),
+    rulesCopied: dedupedRules.length,
+  };
+}
+
 /**
  * Extend CF rules that already cover templateRow so their bottom edge reaches
  * throughRow. Safe alternative to conditional-formatting paste when capacity
