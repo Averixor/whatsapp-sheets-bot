@@ -157,6 +157,10 @@ function createNextMonthSheet() {
     const srcMY = _inferMonthYearFromSheet_(src);
     const targetMonth = nextNum;
     const targetYear = (targetMonth < srcMY.month) ? (srcMY.year + 1) : srcMY.year;
+    const sourceFormulaBounds =
+      typeof _monthlyCodeBoundsFromSheet_ === "function"
+        ? _monthlyCodeBoundsFromSheet_(src)
+        : null;
 
     const monthGrid = _setMonthDatesRow_(newSheet, targetMonth, targetYear);
     newSheet.getRange(monthGrid.clearRangeA1).clearContent();
@@ -164,10 +168,23 @@ function createNextMonthSheet() {
     applyGlobalSheetStandards_();
     try {
       if (typeof syncMonthlyCallsignsFromPersonnel_ === "function") {
-        syncMonthlyCallsignsFromPersonnel_(newSheet);
+        syncMonthlyCallsignsFromPersonnel_(newSheet, {
+          allowShrink: true,
+          skipFormulaRewrite: true,
+        });
       }
     } catch (syncErr) {
       console.error(syncErr);
+    }
+    try {
+      if (typeof rewriteMonthlyScheduleFormulasToCodeRange_ === "function") {
+        rewriteMonthlyScheduleFormulasToCodeRange_(
+          newSheet,
+          sourceFormulaBounds,
+        );
+      }
+    } catch (formulaSyncErr) {
+      console.error(formulaSyncErr);
     }
     try {
       if (typeof syncVacationsWithMonthlySheet_ === "function") {

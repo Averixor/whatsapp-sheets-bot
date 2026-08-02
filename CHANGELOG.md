@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-08-02 — Resize month schedule formulas on create / capacity change
+
+- After callsign capacity expand/shrink, rewrite schedule-bound A1 formula ranges so they match the current code grid (`rewriteMonthlyScheduleFormulasToCodeRange_`), same spirit as CF schedule remap.
+- Both create paths (Stage-7 MonthOps + legacy MonthSheets) pass source-month bounds, allow trailing capacity shrink, then remap formulas before vacation sync / CF restore.
+- Covers lower summary-block spans (`$C$2:$AG$32`, `INDEX`/`ROWS`/`COUNT` day headers) and same-row day COUNTIF ranges; skips `PERSONNEL!` / `DICT_SUM!` refs.
+
 ## 2026-08-02 — Exact CF replace after month create syncs
 
 - **Follow-up to #57:** after callsign + vacation sync, both create paths call `replaceConditionalFormatRulesFromSheet_` (exact clone + schedule-bound range remap / dedupe) instead of A1-only copy + separate extend.

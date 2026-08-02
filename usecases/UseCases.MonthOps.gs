@@ -34,6 +34,10 @@ function _stage7CreateNextMonthCore_(payload) {
   const srcMY = _inferMonthYearFromSheet_(src);
   const targetMonth = nextNum;
   const targetYear = targetMonth < srcMY.month ? srcMY.year + 1 : srcMY.year;
+  const sourceFormulaBounds =
+    typeof _monthlyCodeBoundsFromSheet_ === "function"
+      ? _monthlyCodeBoundsFromSheet_(src)
+      : null;
 
   const monthGrid = _setMonthDatesRow_(newSheet, targetMonth, targetYear);
   newSheet.getRange(monthGrid.clearRangeA1).clearContent();
@@ -44,10 +48,32 @@ function _stage7CreateNextMonthCore_(payload) {
 
   try {
     if (typeof syncMonthlyCallsignsFromPersonnel_ === "function") {
-      syncMonthlyCallsignsFromPersonnel_(newSheet);
+      syncMonthlyCallsignsFromPersonnel_(newSheet, {
+        allowShrink: true,
+        skipFormulaRewrite: true,
+      });
     }
   } catch (syncErr) {
     console.error(syncErr);
+  }
+
+  var formulaSync = null;
+  try {
+    if (typeof rewriteMonthlyScheduleFormulasToCodeRange_ === "function") {
+      formulaSync = rewriteMonthlyScheduleFormulasToCodeRange_(
+        newSheet,
+        sourceFormulaBounds,
+      );
+    }
+  } catch (formulaSyncErr) {
+    console.error(formulaSyncErr);
+    formulaSync = {
+      ok: false,
+      message:
+        formulaSyncErr && formulaSyncErr.message
+          ? String(formulaSyncErr.message)
+          : String(formulaSyncErr),
+    };
   }
 
   var vacationMonthlySync = null;
@@ -104,6 +130,7 @@ function _stage7CreateNextMonthCore_(payload) {
     createdMonth: nextName,
     switched: payload.switchToNewMonth !== false,
     vacationMonthlySync: vacationMonthlySync,
+    formulaSync: formulaSync,
     conditionalFormatSync: conditionalFormatSync,
     dataValidationsSync: dataValidationsSync,
   };
