@@ -195,7 +195,7 @@ function _sheetStandardsGetMonthlyDataColWidth_() {
       if (isFinite(fromMonthly) && fromMonthly > 0) return fromMonthly;
     }
   } catch (e) {}
-  return 110;
+  return 130;
 }
 
 function _sheetStandardsGetMonthlyCallsignColWidth_() {
@@ -249,7 +249,53 @@ function applyColumnWidthsStandardsToSheet_(sheet) {
           _sheetStandardsLog_("Column width apply error on column 2", e);
         }
       }
-      for (var col = 3; col <= maxCols; col++) {
+
+      // Adaptive schedule widths: only day/code columns from the live grid
+      // (getMonthlyCodeRangeA1ForSheet_ / CODE_RANGE_A1). Keep notes beyond
+      // the schedule end untouched (e.g. AH after AG).
+      var scheduleStartCol = 3;
+      var scheduleEndCol = 0;
+      try {
+        var codeRangeA1 =
+          typeof getMonthlyCodeRangeA1ForSheet_ === "function"
+            ? getMonthlyCodeRangeA1ForSheet_(sheet)
+            : _sheetStandardsGetCodeRangeA1_();
+        var codeRef = _sheetStandardsSafeGetRange_(sheet, codeRangeA1);
+        if (codeRef) {
+          scheduleStartCol = Number(codeRef.getColumn()) || scheduleStartCol;
+          scheduleEndCol = Number(codeRef.getLastColumn()) || 0;
+        }
+      } catch (e) {
+        _sheetStandardsLog_("Monthly schedule range resolve error", e);
+      }
+      if (!(scheduleEndCol >= scheduleStartCol)) {
+        try {
+          var fallbackRef = _sheetStandardsSafeGetRange_(
+            sheet,
+            _sheetStandardsGetCodeRangeA1_(),
+          );
+          if (fallbackRef) {
+            scheduleStartCol =
+              Number(fallbackRef.getColumn()) || scheduleStartCol;
+            scheduleEndCol = Number(fallbackRef.getLastColumn()) || 0;
+          }
+        } catch (e2) {}
+      }
+      try {
+        if (typeof findMonthlyNotesCol_ === "function") {
+          var notesCol = Number(findMonthlyNotesCol_(sheet)) || 0;
+          if (notesCol > scheduleStartCol && notesCol <= scheduleEndCol) {
+            scheduleEndCol = notesCol - 1;
+          }
+        }
+      } catch (e3) {}
+
+      scheduleStartCol = Math.max(3, Math.min(scheduleStartCol, maxCols));
+      scheduleEndCol = Math.max(
+        scheduleStartCol - 1,
+        Math.min(scheduleEndCol, maxCols),
+      );
+      for (var col = scheduleStartCol; col <= scheduleEndCol; col++) {
         try {
           sheet.setColumnWidth(col, dataWidth);
         } catch (e) {

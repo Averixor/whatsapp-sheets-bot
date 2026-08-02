@@ -690,6 +690,48 @@ assert.doesNotMatch(
   "weekend date headers must not paint red text",
 );
 
+const codeConfigSource = fs.readFileSync(
+  path.join(repoRoot, "core", "Code.gs"),
+  "utf8",
+);
+assert.match(
+  codeConfigSource,
+  /SLOT_COL_WIDTH:\s*30/,
+  "monthly column A width must be 30",
+);
+assert.match(
+  codeConfigSource,
+  /CALLSIGN_COL_WIDTH:\s*160/,
+  "monthly column B width must be 160",
+);
+assert.match(
+  codeConfigSource,
+  /DATA_COL_WIDTH:\s*130/,
+  "monthly schedule/day column width must be 130",
+);
+
+const sheetStandardsSource = readGasByBasename("SheetStandards.gs");
+assert.match(
+  sheetStandardsSource,
+  /getMonthlyCodeRangeA1ForSheet_/,
+  "monthly column widths must adapt to live schedule/code range",
+);
+assert.match(
+  sheetStandardsSource,
+  /findMonthlyNotesCol_/,
+  "monthly column widths must stop before notes column when present",
+);
+assert.match(
+  monthOpsSource,
+  /applyColumnWidthsStandardsToSheet_\(newSheet\)/,
+  "Stage7 createNextMonth must re-apply column widths after syncs",
+);
+assert.match(
+  readGasByBasename("MonthSheets.gs"),
+  /applyColumnWidthsStandardsToSheet_\(newSheet\)/,
+  "legacy createNextMonthSheet must re-apply column widths after syncs",
+);
+
 console.log(
   `verify-workbook-contract: OK (${sheet.getName()} ${layout.codeRangeA1}, personnel=29)`,
 );

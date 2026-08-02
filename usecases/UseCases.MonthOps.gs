@@ -118,6 +118,14 @@ function _stage7CreateNextMonthCore_(payload) {
     }
   } catch (_) {}
 
+  try {
+    if (typeof applyColumnWidthsStandardsToSheet_ === "function") {
+      applyColumnWidthsStandardsToSheet_(newSheet);
+    }
+  } catch (widthErr) {
+    console.error(widthErr);
+  }
+
   if (payload.switchToNewMonth !== false) {
     setBotMonthSheetName_(nextName);
   } else {
