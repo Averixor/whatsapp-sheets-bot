@@ -642,8 +642,8 @@ for (const file of contract.monthlyScheduleCopyPaths || []) {
   );
   assert.match(
     source,
-    /_ensureNewMonthSheetKeepsSourceRules_/,
-    `${file} must restore CF/validation from the source month after create`,
+    /replaceConditionalFormatRulesFromSheet_\(\s*src,\s*newSheet,?\s*\)/,
+    `${file} must restore CF from the source month after create/sync`,
   );
   assert.doesNotMatch(
     source,

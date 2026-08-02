@@ -104,28 +104,39 @@ assert.doesNotMatch(
 );
 assert.match(monthOps, /syncMonthlyCallsignsFromPersonnel_\(newSheet\)/);
 assert.match(monthOps, /syncVacationsWithMonthlySheet_/);
-assert.match(monthOps, /_ensureNewMonthSheetKeepsSourceRules_\(src, newSheet\)/);
+assert.match(
+  monthOps,
+  /replaceConditionalFormatRulesFromSheet_\(\s*src,\s*newSheet,?\s*\)/,
+  "stage-7 month creation must restore source conditional formatting after sync",
+);
+assert.match(
+  monthOps,
+  /conditionalFormatSync:\s*conditionalFormatSync/,
+  "stage-7 month creation must return conditionalFormatSync",
+);
 assert.match(
   monthOps,
   /Не вдалося перенести умовне форматування до нового місячного аркуша/,
   "stage-7 month creation must fail loudly if CF restore fails",
 );
 
-const monthSheets = readRepoFileByBasename(repoRoot, "MonthSheets.gs", {
+const legacyMonthOps = readRepoFileByBasename(repoRoot, "MonthSheets.gs", {
   errorPrefix: "verify-monthly-callsign-sync",
 });
-assert.match(monthSheets, /function _ensureNewMonthSheetKeepsSourceRules_/);
-assert.match(monthSheets, /syncVacationsWithMonthlySheet_/);
-assert.match(monthSheets, /getConditionalFormatRules\(\)/);
-assert.match(monthSheets, /getDataValidations\(\)/);
-assert.match(monthSheets, /setDataValidations\(/);
+assert.match(legacyMonthOps, /syncVacationsWithMonthlySheet_/);
 assert.match(
-  monthSheets,
-  /replaceConditionalFormatRulesFromSheet_\(\s*sourceSheet,\s*targetSheet,?\s*\)/,
-  "month create must restore CF via exact source clone after callsign+vacation sync",
+  legacyMonthOps,
+  /function _copyMonthSheetDataValidationsFromSource_/,
+);
+assert.match(legacyMonthOps, /getDataValidations\(\)/);
+assert.match(legacyMonthOps, /setDataValidations\(/);
+assert.match(
+  legacyMonthOps,
+  /replaceConditionalFormatRulesFromSheet_\(src, newSheet\)/,
+  "legacy month creation must restore source conditional formatting after sync",
 );
 assert.match(
-  monthSheets,
+  legacyMonthOps,
   /Не вдалося перенести умовне форматування до нового місячного аркуша/,
   "legacy month creation must fail loudly if CF restore fails",
 );

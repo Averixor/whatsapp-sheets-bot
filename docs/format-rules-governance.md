@@ -51,9 +51,10 @@ sync) must not drop those rules. Capacity growth extends CF ranges through
 `extendConditionalFormatRulesThroughRow_` — never via
 `CopyPasteType` conditional-formatting paste, which corrupts sheet-level rule
 lists on real workbooks. After create (callsign + vacation sync),
-`_ensureNewMonthSheetKeepsSourceRules_` replaces the new sheet's CF list with an
-exact clone via `replaceConditionalFormatRulesFromSheet_` (schedule-bound ranges
-remap to the target personnel grid) and re-copies data validations.
+`replaceConditionalFormatRulesFromSheet_` replaces the new sheet's CF list with
+an exact clone of the source month (schedule-bound ranges remap to the target
+personnel grid). Data validations are re-copied via
+`_copyMonthSheetDataValidationsFromSource_`.
 
 ## Move Policies
 

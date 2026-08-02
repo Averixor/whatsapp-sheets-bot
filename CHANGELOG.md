@@ -2,9 +2,9 @@
 
 ## 2026-08-02 — Exact CF replace after month create syncs
 
-- **Follow-up to #57:** after callsign + vacation sync, restore CF via `replaceConditionalFormatRulesFromSheet_` (exact clone + schedule-bound range remap / dedupe) instead of A1-only copy + separate extend.
-- **Hard fail:** create-next-month paths throw if CF restore fails (no silent drop).
-- **Kept from #57:** no `PASTE_CONDITIONAL_FORMATTING` on row expand; `extendConditionalFormatRulesThroughRow_` for capacity growth; data-validation re-copy after create.
+- **Follow-up to #57:** after callsign + vacation sync, both create paths call `replaceConditionalFormatRulesFromSheet_` (exact clone + schedule-bound range remap / dedupe) instead of A1-only copy + separate extend.
+- **Hard fail:** create-next-month paths throw if CF restore fails (no silent drop); Stage-7 returns `conditionalFormatSync`.
+- **Kept from #57:** no `PASTE_CONDITIONAL_FORMATTING` on row expand; `extendConditionalFormatRulesThroughRow_` for capacity growth; data-validation re-copy via `_copyMonthSheetDataValidationsFromSource_`.
 
 ## 2026-08-02 — Restore month CF + data validation on create
 

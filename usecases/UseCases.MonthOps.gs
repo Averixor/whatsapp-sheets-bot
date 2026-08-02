@@ -69,20 +69,28 @@ function _stage7CreateNextMonthCore_(payload) {
     };
   }
 
-  var formatRulesSync = null;
+  var conditionalFormatSync;
   try {
-    if (typeof _ensureNewMonthSheetKeepsSourceRules_ !== "function") {
-      throw new Error(
-        "Не вдалося перенести умовне форматування до нового місячного аркуша",
-      );
-    }
-    formatRulesSync = _ensureNewMonthSheetKeepsSourceRules_(src, newSheet);
-  } catch (rulesErr) {
-    console.error(rulesErr);
+    conditionalFormatSync = replaceConditionalFormatRulesFromSheet_(
+      src,
+      newSheet,
+    );
+  } catch (formatSyncErr) {
+    console.error(formatSyncErr);
     throw new Error(
       "Не вдалося перенести умовне форматування до нового місячного аркуша",
     );
   }
+
+  var dataValidationsSync = null;
+  try {
+    if (typeof _copyMonthSheetDataValidationsFromSource_ === "function") {
+      dataValidationsSync = _copyMonthSheetDataValidationsFromSource_(
+        src,
+        newSheet,
+      );
+    }
+  } catch (_) {}
 
   if (payload.switchToNewMonth !== false) {
     setBotMonthSheetName_(nextName);
@@ -96,7 +104,8 @@ function _stage7CreateNextMonthCore_(payload) {
     createdMonth: nextName,
     switched: payload.switchToNewMonth !== false,
     vacationMonthlySync: vacationMonthlySync,
-    formatRulesSync: formatRulesSync,
+    conditionalFormatSync: conditionalFormatSync,
+    dataValidationsSync: dataValidationsSync,
   };
 }
 
