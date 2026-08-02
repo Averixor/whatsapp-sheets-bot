@@ -393,7 +393,10 @@ function _personnelCanonicalHeaderKey_(rawHeader) {
     фамилия: "LastName",
     "first name": "FirstName",
     firstname: "FirstName",
-    "ім'я": "FirstName",
+    // Apostrophes stripped by _personnelNormalizeHeaderCell_ → "імя" / "имя"
+    імя: "FirstName",
+    имя: "FirstName",
+    name: "FirstName",
     patronymic: "Patronymic",
     "по батькові": "Patronymic",
     birthday: "Birthday",
@@ -625,12 +628,15 @@ function _personnelReadCell_(row, colIndex) {
 }
 
 /**
- * Display callsign for sheets and runtime lookup: Callsign → Last name (same as monthly «Позивні»).
+ * Display callsign for sheets and runtime lookup:
+ * Callsign → Last name → First name (same as monthly «Позивні»).
  */
-function resolvePersonnelDisplayCallsign_(callsignRaw, lastNameRaw) {
+function resolvePersonnelDisplayCallsign_(callsignRaw, lastNameRaw, firstNameRaw) {
   var callsign = String(callsignRaw == null ? "" : callsignRaw).trim();
   if (callsign) return callsign;
-  return String(lastNameRaw == null ? "" : lastNameRaw).trim();
+  var lastName = String(lastNameRaw == null ? "" : lastNameRaw).trim();
+  if (lastName) return lastName;
+  return String(firstNameRaw == null ? "" : firstNameRaw).trim();
 }
 
 function _personnelRowLastName_(row, col) {
@@ -681,7 +687,7 @@ function _personnelRowToRecord_(row, sheetRow, col) {
     }
   }
 
-  callsign = resolvePersonnelDisplayCallsign_(callsign, lastName);
+  callsign = resolvePersonnelDisplayCallsign_(callsign, lastName, firstName);
 
   if (!fml && !callsign) {
     if (unit) return null;

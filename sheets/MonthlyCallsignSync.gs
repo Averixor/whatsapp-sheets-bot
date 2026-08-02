@@ -1,9 +1,18 @@
 /**
- * MonthlyCallsignSync.gs — fill monthly «Позивні» column from PERSONNEL (callsign → last name fallback).
+ * MonthlyCallsignSync.gs — fill monthly «Позивні» column from PERSONNEL
+ * (Callsign → Last name → First name).
  */
 
-function monthlyCallsignValueFromPersonnelRow_(callsignRaw, lastNameRaw) {
-  return resolvePersonnelDisplayCallsign_(callsignRaw, lastNameRaw);
+function monthlyCallsignValueFromPersonnelRow_(
+  callsignRaw,
+  lastNameRaw,
+  firstNameRaw,
+) {
+  return resolvePersonnelDisplayCallsign_(
+    callsignRaw,
+    lastNameRaw,
+    firstNameRaw,
+  );
 }
 
 function _monthlyHeaderIsCallsignColumn_(normalizedHeader) {
@@ -124,6 +133,9 @@ function _personnelBuildMonthlyCallsignValues_(personnelSheet) {
   var personnelRows = personnelLastRow - startRow + 1;
   var callsignCol = colIndex.Callsign + 1;
   var lastNameCol = colIndex.LastName + 1;
+  var hasFirstName =
+    colIndex.FirstName !== undefined && colIndex.FirstName >= 0;
+  var firstNameCol = hasFirstName ? colIndex.FirstName + 1 : 0;
 
   var callsignValues = personnelSheet
     .getRange(startRow, callsignCol, personnelRows, 1)
@@ -131,12 +143,19 @@ function _personnelBuildMonthlyCallsignValues_(personnelSheet) {
   var lastNameValues = personnelSheet
     .getRange(startRow, lastNameCol, personnelRows, 1)
     .getDisplayValues();
+  var firstNameValues = hasFirstName
+    ? personnelSheet
+        .getRange(startRow, firstNameCol, personnelRows, 1)
+        .getDisplayValues()
+    : null;
 
   if (
     !callsignValues ||
     callsignValues.length < personnelRows ||
     !lastNameValues ||
-    lastNameValues.length < personnelRows
+    lastNameValues.length < personnelRows ||
+    (hasFirstName &&
+      (!firstNameValues || firstNameValues.length < personnelRows))
   ) {
     throw new Error(
       "Не вдалося прочитати всі рядки особового складу для синхронізації позивних (" +
@@ -146,6 +165,9 @@ function _personnelBuildMonthlyCallsignValues_(personnelSheet) {
         Math.min(
           (callsignValues && callsignValues.length) || 0,
           (lastNameValues && lastNameValues.length) || 0,
+          hasFirstName
+            ? (firstNameValues && firstNameValues.length) || 0
+            : personnelRows,
         ) +
         ")",
     );
@@ -157,6 +179,7 @@ function _personnelBuildMonthlyCallsignValues_(personnelSheet) {
       monthlyCallsignValueFromPersonnelRow_(
         callsignValues[i][0],
         lastNameValues[i][0],
+        hasFirstName ? firstNameValues[i][0] : "",
       ),
     ]);
   }

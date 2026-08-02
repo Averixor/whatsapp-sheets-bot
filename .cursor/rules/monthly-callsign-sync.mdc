@@ -1,5 +1,5 @@
 ---
-description: Місячний графік — колонка «Позивні» з PERSONNEL (Callsign → Last name)
+description: Місячний графік — колонка «Позивні» з PERSONNEL (Callsign → Last name → First name)
 globs: "**/*.{gs,html,mjs}"
 alwaysApply: true
 ---
@@ -12,11 +12,12 @@ alwaysApply: true
 
 1. Беремо **Callsign** з PERSONNEL.
 2. Якщо Callsign **порожній** (після trim) — підставляємо **Last name** / **Прізвище** з того ж рядка PERSONNEL.
-3. **TEMPLATE не використовується** для відображення.
+3. Якщо Last name теж порожній — підставляємо **First name** / **Ім'я**.
+4. **TEMPLATE не використовується** для відображення.
 
-Функція: `resolvePersonnelDisplayCallsign_` у `personnel/PersonnelRepository.gs` (обгортка на місячних листах: `monthlyCallsignValueFromPersonnelRow_`).
+Функція: `resolvePersonnelDisplayCallsign_(callsign, lastName, firstName)` у `personnel/PersonnelRepository.gs` (обгортка на місячних листах: `monthlyCallsignValueFromPersonnelRow_`).
 
-На PERSONNEL **не** materialize-ити Callsign з інших колонок — derived sheets читають Callsign + Last name при materialize/sync.
+На PERSONNEL **не** materialize-ити Callsign з інших колонок — derived sheets читають Callsign + Last name + First name при materialize/sync.
 
 ## Реалізація
 
@@ -28,7 +29,7 @@ alwaysApply: true
 ## Не регресувати
 
 - Не повертати формулу / materialize **M→L, D→L** на PERSONNEL для Callsign.
-- Не змішувати TEMPLATE у monthly sync замість явного Callsign + Last name fallback.
+- Не змішувати TEMPLATE у monthly sync замість явного Callsign → Last name → First name fallback.
 - Колонку на місячному листі шукати за заголовком (`позивн`, `позывной`, `callsign`), не лише за фіксованою літерою.
 - Зберігати позиційне відображення рядків PERSONNEL без стискання порожніх рядків.
 - Якщо кадрових рядків не вистачає, розширювати їх перед формульним блоком зведення, не перезаписуючи його та залишаючи наявний порожній розділювач.

@@ -241,7 +241,7 @@ function _runPersonnelRepositoryDomainTests_(report) {
 
   _domainPush_(
     report,
-    "personnel.display callsign uses last name fallback",
+    "personnel.display callsign uses last/first name fallback",
     function () {
       var headers = [
         "Last name",
@@ -276,6 +276,37 @@ function _runPersonnelRepositoryDomainTests_(report) {
         record.callsign,
         "Петренко",
         "empty Callsign must use Last name",
+      );
+      var firstOnly = _personnelRowToRecord_(
+        [
+          "",
+          "Олена",
+          "",
+          "17.03.1990",
+          "+380661111111",
+          "",
+          "солдат",
+          "стрілець",
+          "4",
+          "",
+        ],
+        3,
+        col,
+      );
+      _domainAssertEqual_(
+        firstOnly.callsign,
+        "Олена",
+        "empty Callsign+Last name must use First name",
+      );
+      _domainAssertEqual_(
+        _personnelCanonicalHeaderKey_("Ім'я"),
+        "FirstName",
+        "UA First name alias after apostrophe strip",
+      );
+      _domainAssertEqual_(
+        _personnelCanonicalHeaderKey_("Имя"),
+        "FirstName",
+        "RU First name alias",
       );
       return "display-callsign-fallback-ok";
     },
@@ -312,16 +343,25 @@ function _runPersonnelRepositoryDomainTests_(report) {
         "birthday today label",
       );
       _domainAssertEqual_(
-        resolvePersonnelDisplayCallsign_("Alpha", "Beta"),
+        resolvePersonnelDisplayCallsign_("Alpha", "Beta", "Gamma"),
         "Alpha",
         "callsign wins",
       );
       _domainAssertEqual_(
-        resolvePersonnelDisplayCallsign_("", "Петренко"),
+        resolvePersonnelDisplayCallsign_("", "Петренко", "Іван"),
         "Петренко",
         "last name fallback",
       );
-      _domainAssertEqual_(resolvePersonnelDisplayCallsign_("", ""), "", "empty");
+      _domainAssertEqual_(
+        resolvePersonnelDisplayCallsign_("", "", "Олена"),
+        "Олена",
+        "first name fallback",
+      );
+      _domainAssertEqual_(
+        resolvePersonnelDisplayCallsign_("", "", ""),
+        "",
+        "empty",
+      );
       return "materialize-calc-ok";
     },
   );
