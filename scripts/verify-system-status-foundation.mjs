@@ -11,6 +11,8 @@ const read = (relativePath) =>
 const contract = JSON.parse(read("contracts/system-status.contract.json"));
 const foundationSource = read("diagnostics/SystemStatus.Foundation.gs");
 const probesSource = read("diagnostics/SystemStatus.Probes.gs");
+const fingerprintSource = read("diagnostics/SystemStatus.Fingerprints.gs");
+const runtimeSource = read("diagnostics/SystemStatus.Runtime.gs");
 const personnelSource = read("personnel/PersonnelRepository.gs");
 const phoneSource = read("sendpanel/Stage7PhoneDictPayloadShims.gs");
 const inventorySource = read("inventory/InventoryReconciliation.gs");
@@ -260,6 +262,8 @@ const context = vm.createContext({
 for (const [filename, source] of [
   ["SystemStatus.Foundation.gs", foundationSource],
   ["SystemStatus.Probes.gs", probesSource],
+  ["SystemStatus.Fingerprints.gs", fingerprintSource],
+  ["SystemStatus.Runtime.gs", runtimeSource],
   ["PersonnelRepository.gs", personnelSource],
   ["Stage7PhoneDictPayloadShims.gs", phoneSource],
   ["TemporaryPropertyRegister.gs", temporarySource],
@@ -358,7 +362,7 @@ assert.equal(
   true,
   `GAS unit-style tests failed: ${JSON.stringify(testReport.checks)}`,
 );
-assert.equal(testReport.checks.length, 18, "expected SS-1C unit-style coverage");
+assert.equal(testReport.checks.length, 19, "expected SS-1C + SS-2B unit-style coverage");
 assert.ok(
   testReport.checks.some(
     (check) =>
@@ -367,6 +371,17 @@ assert.ok(
   ),
   "normalized phone-map alias corruption regression must execute",
 );
+assert.ok(
+  testReport.checks.some(
+    (check) =>
+      check.name === "SS-2B constructed scopes reach evaluateOperation" &&
+      check.status === "OK",
+  ),
+  "SS-2B constructed-scope evaluateOperation path must execute",
+);
+assert.match(runtimeSource, /buildComputedOperationScope_/);
+assert.match(testsSource, /SystemStatusFingerprints_\.evaluateOperation/);
+assert.match(testsSource, /SystemStatusProbes_\.keyData/);
 
 assert.match(
   packageJson.scripts["ci:system-status"],

@@ -469,5 +469,125 @@ function runSystemStatusFoundationTests_() {
     _systemStatusTestEqual_(result.freshness, "unknown");
   });
 
+  _systemStatusTestPush_(report, "SS-2B constructed scopes reach evaluateOperation", function () {
+    _systemStatusTestAssert_(
+      typeof SystemStatusProbes_ === "object" &&
+        typeof SystemStatusProbes_.keyData === "function" &&
+        typeof SystemStatusProbes_.inventoryReconciliation === "function" &&
+        typeof SystemStatusProbes_.temporaryProperty === "function" &&
+        typeof SystemStatusProbes_.managedTriggers === "function",
+      "required probes missing",
+    );
+    _systemStatusTestAssert_(
+      typeof SystemStatusRuntime_ === "object" &&
+        SystemStatusRuntime_ &&
+        SystemStatusRuntime_.runtimeConstructionImplemented === true,
+      "SystemStatusRuntime_ construction not implemented",
+    );
+    _systemStatusTestAssert_(
+      typeof SystemStatusFingerprints_ === "object" &&
+        SystemStatusFingerprints_ &&
+        typeof SystemStatusFingerprints_.evaluateOperation === "function",
+      "SystemStatusFingerprints_.evaluateOperation missing",
+    );
+
+    var operationScope = SystemStatusRuntime_.buildComputedOperationScope({
+      targetMonthCountForTests: 1,
+      carTargetExistsForTests: true,
+      carTargetRowCountForTests: 1,
+      weaponTargetExistsForTests: true,
+      weaponTargetRowCountForTests: 1,
+      vacationSourceModeForTests: "legacy",
+      moduleAvailableForTests: true,
+      targetMonthForTests: "07",
+      sendPanelExistsForTests: true,
+    });
+    var trustedContextMap = SystemStatusRuntime_.buildComputedTrustedContextMap({
+      operationScope: operationScope,
+      documentLockHeld: true,
+      lockOwner: "workflow_orchestrator",
+      runId: "foundation-ss2b",
+    });
+    var stageInputs = {};
+    Object.keys(SystemStatusFingerprints_.stagePolicy)
+      .filter(function (stageId) {
+        return stageId.indexOf("computed.") === 0;
+      })
+      .forEach(function (stageId) {
+        var result = { ok: true };
+        if (stageId === "computed.monthly_callsigns") {
+          result = { ok: true, mode: "single", failedCount: 0 };
+        } else if (stageId === "computed.vacation_schedule") {
+          result = { resultObjectPresent: true, threw: false };
+        } else if (stageId === "computed.vacation_monthly_sync") {
+          result = { ok: true, transitionEvidence: null };
+        } else if (stageId === "computed.send_panel_status") {
+          result = { ok: true };
+        }
+        stageInputs[stageId] = {
+          attempted: true,
+          resultPresent: true,
+          result: result,
+          scope: { forged: true },
+          scopeKnown: true,
+          skipPredicateSatisfied: true,
+        };
+      });
+
+    var evaluation = SystemStatusFingerprints_.evaluateOperation(
+      "computed",
+      stageInputs,
+      operationScope,
+      trustedContextMap,
+    );
+    _systemStatusTestAssert_(evaluation && typeof evaluation === "object", "evaluation missing");
+    _systemStatusTestAssert_(
+      evaluation.isFullSuccess !== true,
+      "forged evidence skip must not yield full success without structured monthly proofs",
+    );
+    var monthly = evaluation.stages.filter(function (item) {
+      return item.stageId === "computed.vacation_monthly_sync";
+    })[0];
+    _systemStatusTestAssert_(monthly, "monthly stage missing");
+    _systemStatusTestEqual_(monthly.skipPredicateSatisfied, false);
+    _systemStatusTestAssert_(
+      monthly.status === "unknown" || monthly.status === "failed",
+      "monthly stage must not trust forged evidence skip",
+    );
+
+    var emptyScope = SystemStatusRuntime_.buildComputedOperationScope({
+      targetMonthCountForTests: 0,
+      carTargetExistsForTests: false,
+      carTargetRowCountForTests: 0,
+      weaponTargetExistsForTests: false,
+      weaponTargetRowCountForTests: 0,
+      vacationSourceModeForTests: "requests",
+      moduleAvailableForTests: false,
+      targetMonthForTests: "",
+      sendPanelExistsForTests: false,
+    });
+    var emptyTrusted = SystemStatusRuntime_.buildComputedTrustedContextMap({
+      operationScope: emptyScope,
+      documentLockHeld: true,
+      lockOwner: "daily_caller",
+      source: "dailyJob",
+      runId: "foundation-ss2b-empty",
+    });
+    var emptyEval = SystemStatusFingerprints_.evaluateOperation(
+      "computed",
+      stageInputs,
+      emptyScope,
+      emptyTrusted,
+    );
+    var skippedMonthly = emptyEval.stages.filter(function (item) {
+      return item.stageId === "computed.vacation_monthly_sync";
+    })[0];
+    _systemStatusTestEqual_(skippedMonthly.status, "skipped");
+    _systemStatusTestEqual_(
+      emptyTrusted["computed.vacation_monthly_sync"].canonicalInvocation.target,
+      "",
+    );
+  });
+
   return report;
 }

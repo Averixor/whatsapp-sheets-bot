@@ -37,45 +37,83 @@ var UseCasesMaintenance_ = (function () {
         return { payload: info.payload, warnings: [] };
       },
       execute: function (input) {
-        if (typeof materializeAllComputedData_ === "function") {
-          materializeAllComputedData_({ source: "dailyJob" });
-        } else {
-          if (typeof materializePersonnelDerivedSheets_ === "function") {
-            materializePersonnelDerivedSheets_({ source: "dailyJob" });
+        var dailyLock = null;
+        var documentLockHeld = false;
+        try {
+          if (
+            typeof LockService !== "undefined" &&
+            LockService &&
+            typeof LockService.getDocumentLock === "function"
+          ) {
+            dailyLock = LockService.getDocumentLock();
+            dailyLock.waitLock(
+              Math.max(
+                Number(
+                  typeof STAGE7_CONFIG === "object" &&
+                    STAGE7_CONFIG &&
+                    STAGE7_CONFIG.LOCK_TIMEOUT_MS,
+                ) || 30000,
+                1000,
+              ),
+            );
+            documentLockHeld = true;
           }
-          if (typeof materializeVacationComputedColumns_ === "function") {
-            materializeVacationComputedColumns_();
-          }
+        } catch (_) {
+          documentLockHeld = false;
         }
 
-        const targetDate =
-          DateUtils_.parseUaDate(input.dateStr || input.date) || new Date();
-        const vacations = runVacationEngine_(targetDate, input) || {};
-        const birthdays = runBirthdayEngine_(targetDate, input) || {};
-        const emailDigest =
-          typeof sendLeaveBirthdayReminderDigestEmail_ === "function"
-            ? sendLeaveBirthdayReminderDigestEmail_(
-                vacations,
-                birthdays,
-                input,
-              )
-            : null;
-        return {
-          success: true,
-          message: "Перевірку відпусток виконано",
-          result: {
-            date: input.dateStr || input.date,
-            vacations: vacations,
-            birthdays: birthdays,
-            emailDigest: emailDigest,
-          },
-          changes: [],
-          affectedSheets: [getBotMonthSheetName_(), CONFIG.PHONES_SHEET],
-          affectedEntities: [],
-          appliedChangesCount: 0,
-          skippedChangesCount: 0,
-          partial: false,
-        };
+        try {
+          if (typeof materializeAllComputedData_ === "function") {
+            materializeAllComputedData_({
+              source: "dailyJob",
+              writerPath: "daily",
+              documentLockHeld: documentLockHeld,
+              lockOwner: "daily_caller",
+            });
+          } else {
+            if (typeof materializePersonnelDerivedSheets_ === "function") {
+              materializePersonnelDerivedSheets_({ source: "dailyJob" });
+            }
+            if (typeof materializeVacationComputedColumns_ === "function") {
+              materializeVacationComputedColumns_();
+            }
+          }
+
+          const targetDate =
+            DateUtils_.parseUaDate(input.dateStr || input.date) || new Date();
+          const vacations = runVacationEngine_(targetDate, input) || {};
+          const birthdays = runBirthdayEngine_(targetDate, input) || {};
+          const emailDigest =
+            typeof sendLeaveBirthdayReminderDigestEmail_ === "function"
+              ? sendLeaveBirthdayReminderDigestEmail_(
+                  vacations,
+                  birthdays,
+                  input,
+                )
+              : null;
+          return {
+            success: true,
+            message: "Перевірку відпусток виконано",
+            result: {
+              date: input.dateStr || input.date,
+              vacations: vacations,
+              birthdays: birthdays,
+              emailDigest: emailDigest,
+            },
+            changes: [],
+            affectedSheets: [getBotMonthSheetName_(), CONFIG.PHONES_SHEET],
+            affectedEntities: [],
+            appliedChangesCount: 0,
+            skippedChangesCount: 0,
+            partial: false,
+          };
+        } finally {
+          if (dailyLock && documentLockHeld) {
+            try {
+              dailyLock.releaseLock();
+            } catch (_) {}
+          }
+        }
       },
     });
   }
@@ -394,6 +432,9 @@ var UseCasesMaintenance_ = (function () {
                     monthSheet: input && input.monthSheet,
                     includeHistory: input && input.includeHistory,
                     mode: input && input.mode,
+                    writerPath: "public",
+                    documentLockHeld: true,
+                    lockOwner: "workflow_orchestrator",
                   })
                 : { ok: false, reason: "materializeAllComputedData_ missing" };
             var affectedSheets = materializeAllComputedDataAffectedSheets_(
