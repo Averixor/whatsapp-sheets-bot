@@ -75,46 +75,16 @@ const OperationRepository_ = (function() {
 
   function _noteStamp() { return _fmt(_now(), 'yyyy-MM-dd HH:mm:ss'); }
   
-  function _sheetsMaxCellChars_() {
-    return typeof STAGE7_SHEETS_MAX_CELL_CHARS === 'number' &&
-      STAGE7_SHEETS_MAX_CELL_CHARS > 0
-      ? STAGE7_SHEETS_MAX_CELL_CHARS
-      : 50000;
-  }
+  const SHEET_CELL_SAFE_JSON_LIMIT = 49000;
 
   /**
-   * Serialize for a Sheets cell. Never writes more than the Sheets 50k limit.
-   * Logs which OPS target overflowed so maintainers can see why ResultJson was clipped.
+   * Serialize for a Sheets cell. Uses a 49k safety margin below the 50k hard limit.
    */
-  function _safeJson(value, targetLabel) {
-    var limit = _sheetsMaxCellChars_();
-    var raw;
-    try {
-      raw = JSON.stringify(value === undefined ? null : value);
-    } catch (e) {
-      raw = String(value);
-    }
-    if (raw.length > limit) {
-      try {
-        Logger.log(
-          '[OperationRepository] Sheets cell overflow truncated: target=' +
-            String(targetLabel || 'json') +
-            ' originalChars=' +
-            raw.length +
-            ' maxChars=' +
-            limit
-        );
-      } catch (_) {}
-    }
-    if (typeof stage7SafeStringify_ === 'function') {
-      return stage7SafeStringify_(value === undefined ? null : value, limit);
-    }
-    if (typeof stage7ClampCellText_ === 'function') {
-      return stage7ClampCellText_(raw, limit);
-    }
-    return raw.length > limit
-      ? raw.slice(0, Math.max(0, limit - 1)) + '…'
-      : raw;
+  function _safeJson(value) {
+    return stage7SafeStringify_(
+      value === undefined ? null : value,
+      SHEET_CELL_SAFE_JSON_LIMIT,
+    );
   }
   
   function _parseJson(value, fallback) {
@@ -361,12 +331,12 @@ const OperationRepository_ = (function() {
       _appendRow(_sheet(SHEETS.OPS, OPS_HEADERS), [
         startedText, '', operationId, parentOperationId, canonical, rawScenario,
         initiator, runSource, 'STARTED', fingerprint, '', '', '', false, '', 'preflight-started', '', '', '', '', startedText, expiresAt,
-        _safeJson(payload, 'OPS_LOG.PayloadJson'), '', 0
+        _safeJson(payload), '', 0
       ]);
       _appendRow(_sheet(SHEETS.ACTIVE, ACTIVE_HEADERS), [
         operationId, canonical, fingerprint, 'STARTED', startedText, startedText,
         initiator, runSource, expiresAt, String(cfg.lockHolder || ''), parentOperationId, '',
-        _safeJson(payload, 'ACTIVE_OPERATIONS.PayloadJson')
+        _safeJson(payload)
       ]);
     }
 
@@ -539,7 +509,7 @@ const OperationRepository_ = (function() {
       VerificationResult: verificationResult,
       RepairNeeded: repairNeeded,
       ErrorMessage: status === 'FAILED' ? String(cfg.errorMessage || cfg.message || 'Verification failed') : '',
-      ResultJson: _safeJson(cfg.result || null, 'OPS_LOG.ResultJson'),
+      ResultJson: _safeJson(cfg.result || null),
       TimestampFinished: _iso(_now())
     });
   }
@@ -553,7 +523,7 @@ const OperationRepository_ = (function() {
       VerificationResult: cfg.verificationResult || '',
       RepairNeeded: true,
       ErrorMessage: String(cfg.errorMessage || 'Unknown error'),
-      ResultJson: _safeJson(cfg.result || null, 'OPS_LOG.ResultJson'),
+      ResultJson: _safeJson(cfg.result || null),
       TimestampFinished: _iso(_now())
     });
   }
@@ -561,14 +531,8 @@ const OperationRepository_ = (function() {
   function saveCheckpoint(spec) {
     var cfg = spec || {};
     if (!cfg.operationId) throw new Error('Checkpoint requires operationId');
-    var payloadJson = _safeJson(
-      cfg.checkpointPayload || cfg.payload || null,
-      'CHECKPOINTS.CheckpointPayload',
-    );
-    var verificationSnapshot = _safeJson(
-      cfg.verificationSnapshot || null,
-      'CHECKPOINTS.VerificationSnapshot',
-    );
+    var payloadJson = _safeJson(cfg.checkpointPayload || cfg.payload || null);
+    var verificationSnapshot = _safeJson(cfg.verificationSnapshot || null);
     var checkpointTimestamp = _iso(_now());
     _appendRow(_sheet(SHEETS.CHECKPOINTS, CHECKPOINT_HEADERS), [
       cfg.operationId,
