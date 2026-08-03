@@ -1,11 +1,12 @@
 # WASB — повний список файлів репозиторію
 # Порядок: дерево каталогів (depth-first, алфавіт у кожній папці)
 # Виключено: .git/, node_modules/, локальні .clasp*.json (крім *.example.json)
-# Файлів: 304
-# Оновлено: 2026-08-03T22:55:31Z
+# Файлів: 307
+# Оновлено: 2026-08-03T23:21:02Z
 
 .
   .clasp.example.json
+  .clasp.staging.example.json
   .claspignore
   .gitignore
   .htmlvalidate.json
@@ -32,6 +33,7 @@
 
 .github/workflows/
   ci.yml
+  deploy-staging.yml
 
 .vscode/
   settings.json
@@ -209,6 +211,7 @@ scripts/
   verify-client-deps.mjs
   verify-client-includes.mjs
   verify-client-js.mjs
+  verify-deploy-target.mjs
   verify-format-rules-governance.mjs
   verify-html-label-for.mjs
   verify-inventory-reconciliation.mjs

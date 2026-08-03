@@ -1,0 +1,66 @@
+name: WASB Deploy Staging
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wasb-staging-deploy
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  deploy-staging:
+    name: Deploy to staging GAS
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run full CI
+        run: npm run ci
+
+      - name: Configure staging clasp
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON_STAGING: ${{ secrets.CLASP_JSON_STAGING }}
+          EXPECTED_STAGING_SCRIPT_ID: ${{ vars.EXPECTED_STAGING_SCRIPT_ID }}
+        run: |
+          set -euo pipefail
+          umask 077
+
+          test -n "$CLASPRC_JSON"
+          test -n "$CLASP_JSON_STAGING"
+          test -n "$EXPECTED_STAGING_SCRIPT_ID"
+
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          printf '%s' "$CLASP_JSON_STAGING" > .clasp.json
+
+          node scripts/verify-deploy-target.mjs staging
+
+      - name: Show clasp status
+        run: npm run gas:status
+
+      - name: Push staging GAS
+        run: npm run gas:push
+
+      - name: Remove temporary credentials
+        if: always()
+        run: |
+          rm -f "$HOME/.clasprc.json"
+          rm -f .clasp.json
