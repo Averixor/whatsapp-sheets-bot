@@ -18,7 +18,7 @@
     "ci:gas": "node scripts/ci-gas-sanity.mjs && node scripts/verify-clasp-push-patterns.mjs",
     "ci:system-status": "node scripts/verify-system-status-foundation.mjs && node scripts/verify-system-status-fingerprints.mjs",
     "ci:workbook": "node scripts/verify-reference-workbook-layout.mjs && node scripts/verify-reference-repositories.mjs && node scripts/verify-workbook-contract.mjs && node scripts/verify-monthly-callsign-sync.mjs && node scripts/verify-send-panel-bounds.mjs && node scripts/verify-temporary-property-register.mjs",
-    "ci:materialize": "node scripts/verify-materialize-computed-data.mjs && node scripts/verify-month-journal-materialize.mjs && node scripts/verify-age-birthday-countdown.mjs && node scripts/verify-system-status-fingerprints.mjs",
+    "ci:materialize": "node scripts/verify-materialize-computed-data.mjs && node scripts/verify-sheets-cell-char-limit.mjs && node scripts/verify-month-journal-materialize.mjs && node scripts/verify-age-birthday-countdown.mjs && node scripts/verify-system-status-fingerprints.mjs",
     "ci:vacations": "node scripts/verify-vacation-planner.mjs && node scripts/verify-vacation-monthly-sync.mjs",
     "ci:recipients": "node scripts/verify-recipient-contract.mjs",
     "ci:personnel-status": "node scripts/verify-personnel-status-contract.mjs",

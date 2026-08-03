@@ -90,6 +90,49 @@ function materializeAllComputedDataAffectedSheets_(result) {
   });
 }
 
+/**
+ * Keep materialize return payloads small enough for OPS_LOG.ResultJson
+ * (Sheets cell limit 50000). Full problem lists / fingerprint trees stay in
+ * their sheets; the operation log only needs counts and pass/fail.
+ */
+function _compactMaterializeVacationScheduleResult_(block) {
+  if (!block || typeof block !== "object") return block;
+  var out = Object.assign({}, block);
+  if (Array.isArray(out.checks)) {
+    out.checkCount = out.checks.length;
+    delete out.checks;
+  }
+  return out;
+}
+
+function _compactMaterializeSystemStatusEvaluation_(block) {
+  if (!block || typeof block !== "object") return block;
+  var evaluation = block.evaluation && typeof block.evaluation === "object"
+    ? block.evaluation
+    : null;
+  return {
+    ok: block.ok !== false,
+    reason: block.reason ? String(block.reason) : "",
+    evaluationOk: evaluation ? evaluation.ok !== false : null,
+    evaluationStatus: evaluation && evaluation.status != null
+      ? String(evaluation.status)
+      : "",
+  };
+}
+
+function _compactMaterializeVacationMonthlySyncResult_(block) {
+  if (!block || typeof block !== "object") return block;
+  var out = Object.assign({}, block);
+  ["conflicts", "removals", "autoFill", "unresolved", "invalid", "unsupported", "warnings", "groups"].forEach(
+    function (key) {
+      if (!Array.isArray(out[key])) return;
+      out[key + "Count"] = out[key].length;
+      delete out[key];
+    },
+  );
+  return out;
+}
+
 function materializeAllComputedData_(options) {
   var source =
     options && options.source ? String(options.source) : "manual";
@@ -186,10 +229,11 @@ function materializeAllComputedData_(options) {
     typeof SystemStatusRuntime_.evaluateComputedMaterialize === "function"
   ) {
     try {
-      result.systemStatusEvaluation = SystemStatusRuntime_.evaluateComputedMaterialize(
-        result,
-        options || {},
-      );
+      result.systemStatusEvaluation =
+        SystemStatusRuntime_.evaluateComputedMaterialize(
+          result,
+          options || {},
+        );
     } catch (statusError) {
       result.systemStatusEvaluation = {
         ok: false,
@@ -200,6 +244,17 @@ function materializeAllComputedData_(options) {
       };
     }
   }
+
+  // Compact AFTER fingerprint evaluation: OPS_LOG.ResultJson must stay ≤50k chars.
+  result.vacationSchedule = _compactMaterializeVacationScheduleResult_(
+    result.vacationSchedule,
+  );
+  result.vacationMonthlySync = _compactMaterializeVacationMonthlySyncResult_(
+    result.vacationMonthlySync,
+  );
+  result.systemStatusEvaluation = _compactMaterializeSystemStatusEvaluation_(
+    result.systemStatusEvaluation,
+  );
 
   return result;
 }
