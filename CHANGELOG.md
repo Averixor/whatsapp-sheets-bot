@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-08-04 — Staging deploy foundation (manual workflow)
+
+- **CI:** `.github/workflows/deploy-staging.yml` — `workflow_dispatch` only; GitHub Environment `staging`; runs `npm ci` + `npm run ci`, configures clasp from secrets, verifies target, then `gas:status` / `gas:push` (no `--force`, no `clasp deploy` / `clasp run`).
+- **Guard:** `scripts/verify-deploy-target.mjs` + `npm run deploy:verify-target` — compares temporary `.clasp.json` `scriptId` to `EXPECTED_STAGING_SCRIPT_ID`; rejects placeholders; masks IDs in logs; Ukrainian errors.
+- **Template:** `.clasp.staging.example.json` (placeholders only; real IDs live in GitHub Secrets).
+- **Out of scope for this change:** production deploy workflow, remote smoke / `clasp run`, preprod checklist consolidation.
+
 ## 2026-08-04 — Operation ResultJson cell limit
 
 - **Fix:** `stage7SafeStringify_` now keeps the truncation marker inside the requested maximum length instead of producing `maxLen + 1` characters.

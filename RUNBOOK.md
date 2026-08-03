@@ -546,10 +546,75 @@ Local equivalent: **`npm run check`** (alias **`npm run ci`**).
 | `verify-access-autofill-hotfix.mjs`       | ACCESS row autofill hotfix contract                                                    |
 | `verify-access-temp-password-reissue.mjs` | Temporary password reissue flow                                                        |
 | `verify-oauth-scopes.mjs`                 | Manifest scopes vs allowlist (`drive.readonly` for inventory reconciliation)           |
+| `verify-deploy-target.mjs`                | Staging clasp `scriptId` vs `EXPECTED_STAGING_SCRIPT_ID` (manual deploy workflow)      |
 | `verify-project-files-map.mjs`            | `docs/project-files-complete.txt` matches working tree                                 |
 | `verify-jsconfig.mjs`                     | `jsconfig.json` include/exclude globs                                                  |
 
-There is **no** Apps Script deployment in CI (`clasp` is local only). See `.github/workflows/ci.yml`.
+Default PR/CI (`.github/workflows/ci.yml`) still does **not** push Apps Script. Staging push is a **separate manual** workflow — see **§12a**.
+
+---
+
+## 12a. Staging deploy pipeline (foundation)
+
+Intended long-term pipeline:
+
+```text
+Pull Request → npm run ci → merge to main
+  → manual Deploy Staging → staging clasp push
+  → (later) staging smoke / regression
+  → (later) manual Production Environment approval → production push
+  → (later) read-only production health-check
+```
+
+**This repository step** only adds the staging foundation. It does **not** include remote smoke, `clasp run`, or a production deploy workflow.
+
+### Workflow
+
+- File: `.github/workflows/deploy-staging.yml`
+- Trigger: **`workflow_dispatch` only** (Actions → WASB Deploy Staging → Run workflow)
+- Job environment: GitHub Environment **`staging`**
+- Steps: `npm ci` → `npm run ci` → write credentials from secrets → `node scripts/verify-deploy-target.mjs staging` → `npm run gas:status` → `npm run gas:push` → always remove `~/.clasprc.json` and `.clasp.json`
+- Intentionally **absent**: `--force`, `clasp deploy`, `clasp run`, production Script IDs, automatic bootstrap/protections
+
+Local target check (optional):
+
+```bash
+npm run deploy:verify-target -- staging
+# or self-test without secrets:
+node scripts/verify-deploy-target.mjs --self-test
+```
+
+### GitHub Environment `staging` setup (manual)
+
+Create Environment **`staging`** in the GitHub repo settings. Required:
+
+| Kind | Name | Source |
+| ---- | ---- | ------ |
+| **Secret** | `CLASPRC_JSON` | Full contents of local `~/.clasprc.json` (OAuth tokens for clasp) |
+| **Secret** | `CLASP_JSON_STAGING` | Staging `.clasp.json` body (from `.clasp.staging.example.json` filled with real staging IDs) |
+| **Variable** | `EXPECTED_STAGING_SCRIPT_ID` | Same staging Apps Script `scriptId` as in `CLASP_JSON_STAGING` |
+
+Fill secrets from a local machine — **never commit** real `clasprc` / `.clasp.json`:
+
+```bash
+# Secret CLASPRC_JSON — paste output into GitHub Environment secret (do not commit)
+cat ~/.clasprc.json
+
+# Secret CLASP_JSON_STAGING — copy example, fill real staging scriptId / parentId, paste JSON
+cp .clasp.staging.example.json /tmp/clasp.staging.json
+# edit /tmp/clasp.staging.json, then:
+cat /tmp/clasp.staging.json
+```
+
+`EXPECTED_STAGING_SCRIPT_ID` must match the `scriptId` inside `CLASP_JSON_STAGING`. `scripts/verify-deploy-target.mjs` rejects placeholders (`PUT_STAGING_SCRIPT_ID_HERE`, empty, short/fake IDs) and exits non-zero on mismatch without printing full IDs.
+
+### Not in this foundation PR
+
+- `.github/workflows/deploy-production.yml` / Environment `production` gate
+- Remote staging smoke (`apiStage7QuickHealthCheck`, regression, materialize via `clasp run`)
+- `docs/preprod-checklist.md` single-source checklist (later improvement)
+
+Local production push remains: `npm run deploy:prod` (unchanged).
 
 ---
 
@@ -630,12 +695,13 @@ All-months continuation fields live inside the Stage7 envelope (`response.succes
 Then reload the spreadsheet/sidebar and verify a person card, personnel modal,
 SEND_PANEL row, and the expected role.
 
-### Clasp config (one production project)
+### Clasp config (production local + staging CI)
 
 | File | Commit? | Notes |
 | ------ | -------- | ------ |
 | `.clasp.example.json` | yes | Placeholder template — copy to `.clasp.json` locally and fill real IDs only there |
-| `.clasp.json` | **no** | Your production `scriptId` |
+| `.clasp.staging.example.json` | yes | Staging placeholders — real JSON lives in GitHub Secret `CLASP_JSON_STAGING` |
+| `.clasp.json` | **no** | Local production (or staging) `scriptId`; never commit |
 
 Open the bound script: **`npm run gas:open`** (`clasp open-script` in clasp 3.x).
 
