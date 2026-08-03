@@ -23,6 +23,16 @@ const useCases = readRepoFileByBasename(repoRoot, "UseCases.Maintenance.gs", {
 const utils = readRepoFileByBasename(repoRoot, "Utils.gs", {
   errorPrefix: "verify-materialize-computed-data",
 });
+const stage7Config = readRepoFileByBasename(repoRoot, "Stage7Config.gs", {
+  errorPrefix: "verify-materialize-computed-data",
+});
+const operationRepository = readRepoFileByBasename(
+  repoRoot,
+  "OperationRepository.gs",
+  {
+    errorPrefix: "verify-materialize-computed-data",
+  },
+);
 
 assert.match(orchestrator, /function materializeAllComputedData_/);
 assert.match(orchestrator, /materializePersonnelDerivedSheets_/);
@@ -207,5 +217,49 @@ const jsCore = readRepoFileByBasename(repoRoot, "Js.Core.html", {
 });
 assert.match(jsCore, /resolveApiSlowWarnMs_/);
 assert.match(jsCore, /apiStage7MaterializeComputedData:\s*120000/);
+
+const stringifyContext = vm.createContext({
+  console,
+});
+
+vm.runInContext(stage7Config, stringifyContext, {
+  filename: "Stage7Config.gs",
+});
+
+const maxCellText = vm.runInContext(
+  `stage7SafeStringify_({ payload: "x".repeat(60000) }, 50000)`,
+  stringifyContext,
+);
+
+assert.equal(
+  maxCellText.length,
+  50000,
+  "stage7SafeStringify_ must include truncation suffix inside maxLen",
+);
+
+assert.equal(
+  maxCellText.endsWith("…"),
+  true,
+  "truncated value must retain the ellipsis marker",
+);
+
+const oneCharLimit = vm.runInContext(
+  `stage7SafeStringify_({ payload: "xxx" }, 1)`,
+  stringifyContext,
+);
+
+assert.equal(oneCharLimit.length, 1);
+
+assert.match(
+  operationRepository,
+  /SHEET_CELL_SAFE_JSON_LIMIT\s*=\s*49000/,
+  "OperationRepository must keep a safety margin below the Sheets cell limit",
+);
+
+assert.match(
+  operationRepository,
+  /stage7SafeStringify_\([\s\S]*?SHEET_CELL_SAFE_JSON_LIMIT/,
+  "OperationRepository must apply the safe ResultJson cell limit",
+);
 
 console.log("verify-materialize-computed-data: OK");

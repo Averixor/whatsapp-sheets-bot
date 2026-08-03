@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-08-04 — Operation ResultJson cell limit
+
+- **Fix:** `stage7SafeStringify_` now keeps the truncation marker inside the requested maximum length instead of producing `maxLen + 1` characters.
+- **Operations:** `OPS_LOG` / `ACTIVE_OPERATIONS` JSON payloads use a 49,000-character safety limit below the Google Sheets per-cell maximum.
+- **Regression:** materialize CI verifies that oversized operation results cannot exceed the configured cell limit.
+
 ## 2026-08-04 — ACCESS bootstrap in quick health
 
 - **Diagnostics:** `_diagAppendAccessBootstrapChecks_` FAILs when there is no active elevated admin (`admin`/`sysadmin`/`owner`), bootstrap is still allowed (`bootstrapAllowed`), or no elevated admin has `user_key_current_hash`; summary via `getAccessBootstrapHealthSummary_`.

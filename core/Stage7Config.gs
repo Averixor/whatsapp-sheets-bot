@@ -243,16 +243,31 @@ function stage7ClampCellText_(text, maxLen) {
 function stage7SafeStringify_(value, maxLen) {
   const hasExplicitLimit =
     maxLen !== undefined && maxLen !== null && maxLen !== "";
-  const limit = hasExplicitLimit
-    ? Math.max(Number(maxLen) || 0, 0)
-    : 512;
-  var text;
-  try {
-    text = JSON.stringify(value === undefined ? null : value);
-  } catch (e) {
-    text = String(value);
+  const limit = hasExplicitLimit ? Math.max(Number(maxLen) || 0, 0) : 512;
+
+  function truncate_(text) {
+    const safeText = String(text);
+
+    if (!(limit > 0) || safeText.length <= limit) {
+      return safeText;
+    }
+
+    const suffix = "…";
+
+    if (limit <= suffix.length) {
+      return suffix.slice(0, limit);
+    }
+
+    return safeText.slice(0, limit - suffix.length) + suffix;
   }
-  return stage7ClampCellText_(text, limit);
+
+  try {
+    const text = JSON.stringify(value === undefined ? null : value);
+
+    return truncate_(text === undefined ? String(value) : text);
+  } catch (e) {
+    return truncate_(String(value));
+  }
 }
 
 function stage7AsArray_(value) {

@@ -20,7 +20,7 @@ assert.match(stage7Config, /function stage7ClampCellText_/);
 assert.match(stage7Config, /function stage7SafeStringify_/);
 assert.match(
   stage7Config,
-  /limit\s*-\s*(?:ellipsis\.length|STAGE7_SAFE_STRINGIFY_ELLIPSIS\.length)/,
+  /limit\s*-\s*(?:ellipsis\.length|suffix\.length|STAGE7_SAFE_STRINGIFY_ELLIPSIS\.length)/,
 );
 assert.doesNotMatch(
   stage7Config,
@@ -28,9 +28,15 @@ assert.doesNotMatch(
   "must not append ellipsis after a full-limit slice (overflows Sheets)",
 );
 
-assert.match(operationRepo, /Sheets cell overflow truncated/);
-assert.match(operationRepo, /OPS_LOG\.ResultJson/);
-assert.match(operationRepo, /_safeJson\([^,]+,\s*['"]OPS_LOG\.ResultJson['"]/);
+assert.match(
+  operationRepo,
+  /SHEET_CELL_SAFE_JSON_LIMIT\s*=\s*49000/,
+  "OPS JSON must use a safety margin below the Sheets 50k cell limit",
+);
+assert.match(
+  operationRepo,
+  /stage7SafeStringify_\([\s\S]*?SHEET_CELL_SAFE_JSON_LIMIT/,
+);
 
 const context = vm.createContext({
   console,
@@ -54,12 +60,7 @@ const context = vm.createContext({
   JSON,
 });
 
-// Extract only the cell helpers (avoid running full Stage7 config bootstrap).
-const helperSource = [
-  stage7Config.match(/\/\*\* Google Sheets hard limit[\s\S]*?function stage7SafeStringify_[\s\S]*?\n\}/)?.[0],
-].join("\n");
-assert.ok(helperSource && helperSource.includes("stage7SafeStringify_"));
-vm.runInContext(helperSource, context, { filename: "Stage7Config.cell-helpers.gs" });
+vm.runInContext(stage7Config, context, { filename: "Stage7Config.gs" });
 
 const cases = vm.runInContext(
   `
@@ -76,6 +77,7 @@ const cases = vm.runInContext(
       exactLen: exact.length,
       clampedLen: clamped.length,
       defaultLen: stage7SafeStringify_({ a: 1 }).length,
+      oneCharLen: stage7SafeStringify_({ payload: "xxx" }, 1).length,
     };
   })()
   `,
@@ -89,5 +91,6 @@ assert.equal(cases.outEndsWithEllipsis, true);
 assert.ok(cases.exactLen <= cases.limit);
 assert.equal(cases.clampedLen, cases.limit);
 assert.ok(cases.defaultLen > 0);
+assert.equal(cases.oneCharLen, 1);
 
 console.log("verify-sheets-cell-char-limit: OK");
