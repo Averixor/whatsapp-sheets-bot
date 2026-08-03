@@ -477,6 +477,89 @@ function _diagAppendPreprodScriptPropertyChecks_(checks) {
   );
 }
 
+function _diagAppendAccessBootstrapChecks_(checks) {
+  var summary = null;
+
+  try {
+    if (
+      typeof AccessControl_ === "object" &&
+      AccessControl_ &&
+      typeof AccessControl_.getAccessBootstrapHealthSummary === "function"
+    ) {
+      summary = AccessControl_.getAccessBootstrapHealthSummary();
+    } else if (typeof getAccessBootstrapHealthSummary_ === "function") {
+      summary = getAccessBootstrapHealthSummary_();
+    }
+  } catch (e) {
+    _stage7PushCheck_(
+      checks,
+      "ACCESS bootstrap health",
+      "FAIL",
+      e && e.message ? e.message : String(e),
+      "Перевірте аркуш доступу та AccessControl_",
+    );
+    return;
+  }
+
+  if (!summary) {
+    _stage7PushCheck_(
+      checks,
+      "ACCESS bootstrap health",
+      "FAIL",
+      "Зведення стану доступу недоступне",
+      "Перевірте AccessControl_.getAccessBootstrapHealthSummary",
+    );
+    return;
+  }
+
+  var adminOk = !!summary.adminConfigured && summary.elevatedAdminCount > 0;
+  _stage7PushCheck_(
+    checks,
+    "ACCESS active elevated admin",
+    adminOk ? "OK" : "FAIL",
+    adminOk
+      ? "Активний admin/sysadmin/owner налаштований (" +
+          summary.elevatedAdminCount +
+          ")"
+      : "Немає активного рядка з роллю admin, sysadmin або owner",
+    adminOk
+      ? ""
+      : "Додайте enabled=TRUE рядок з роллю owner, admin або sysadmin в ACCESS",
+  );
+
+  var bootstrapClosed = summary.bootstrapAllowed === false;
+  _stage7PushCheck_(
+    checks,
+    "ACCESS bootstrap closed",
+    bootstrapClosed ? "OK" : "FAIL",
+    bootstrapClosed
+      ? "Bootstrap доступу закрито"
+      : "Bootstrap доступу все ще дозволений",
+    bootstrapClosed
+      ? ""
+      : "Налаштуйте активного admin/owner, щоб закрити bootstrap (bootstrapAllowed=false)",
+  );
+
+  var bindOk =
+    adminOk && Number(summary.elevatedAdminsWithCurrentHash || 0) > 0;
+  var bindDetails = bindOk
+    ? "У активного admin/owner заповнено user_key_current_hash (" +
+      summary.elevatedAdminsWithCurrentHash +
+      ")"
+    : adminOk
+      ? "У активного admin/owner не заповнено user_key_current_hash"
+      : "Немає активного admin для перевірки привʼязки ключа";
+  _stage7PushCheck_(
+    checks,
+    "ACCESS admin key bind",
+    bindOk ? "OK" : "FAIL",
+    bindDetails,
+    bindOk
+      ? ""
+      : "Увійдіть як admin/owner у сайдбарі або вставте хеш у user_key_current_hash",
+  );
+}
+
 function _diagBuildReport_(checks, mode, summaryPrefix) {
   var list = Array.isArray(checks) ? checks : [];
   var counts = _diagBuildCounts_(list);
@@ -745,6 +828,7 @@ function _diagBuildStage7CoreChecks_(options) {
   }
 
   _diagAppendPreprodScriptPropertyChecks_(checks);
+  _diagAppendAccessBootstrapChecks_(checks);
 
   return _diagNormalizeReportChecks_({ checks: checks });
 }

@@ -120,6 +120,121 @@ function checkPreprodScriptPropertyDiagnostics_(errors) {
   }
 }
 
+/**
+ * Static governance: quick health must FAIL when ACCESS bootstrap is open,
+ * no elevated admin is configured, or admin/owner lacks user_key_current_hash.
+ */
+function checkAccessBootstrapDiagnostics_(errors) {
+  const diagFile = 'Diagnostics.Stage7.Core.gs';
+  const accessFile = 'AccessControl.PublicApi.gs';
+  let diagText;
+  let accessText;
+
+  try {
+    diagText = read(diagFile);
+  } catch (e) {
+    errors.push(
+      `access bootstrap diagnostics: cannot read ${diagFile}: ${e.message || e}`,
+    );
+    return;
+  }
+
+  try {
+    accessText = read(accessFile);
+  } catch (e) {
+    errors.push(
+      `access bootstrap diagnostics: cannot read ${accessFile}: ${e.message || e}`,
+    );
+    return;
+  }
+
+  if (!/function\s+getAccessBootstrapHealthSummary_\s*\(/.test(accessText)) {
+    errors.push(
+      'access bootstrap diagnostics: getAccessBootstrapHealthSummary_ not found',
+    );
+  }
+  if (!/getAccessBootstrapHealthSummary:\s*getAccessBootstrapHealthSummary_/.test(accessText)) {
+    errors.push(
+      'access bootstrap diagnostics: AccessControl_ export missing getAccessBootstrapHealthSummary',
+    );
+  }
+
+  if (!/function\s+_diagAppendAccessBootstrapChecks_\s*\(/.test(diagText)) {
+    errors.push(
+      'access bootstrap diagnostics: _diagAppendAccessBootstrapChecks_ not found',
+    );
+    return;
+  }
+
+  if (
+    !/_diagAppendPreprodScriptPropertyChecks_\s*\(\s*checks\s*\)\s*;\s*_diagAppendAccessBootstrapChecks_\s*\(\s*checks\s*\)/.test(
+      diagText,
+    )
+  ) {
+    errors.push(
+      'access bootstrap diagnostics: runQuickDiagnostics_ must call _diagAppendAccessBootstrapChecks_ after preprod script-property checks',
+    );
+  }
+
+  const start = diagText.search(
+    /function\s+_diagAppendAccessBootstrapChecks_\s*\(/,
+  );
+  const body = diagText.slice(start, start + 4500);
+
+  const requiredChecks = [
+    'ACCESS active elevated admin',
+    'ACCESS bootstrap closed',
+    'ACCESS admin key bind',
+  ];
+  for (const name of requiredChecks) {
+    if (!body.includes(name)) {
+      errors.push(`access bootstrap diagnostics: missing check "${name}"`);
+    }
+  }
+
+  if (!/adminOk\s*\?\s*["']OK["']\s*:\s*["']FAIL["']/.test(body)) {
+    errors.push(
+      'access bootstrap diagnostics: missing elevated admin must produce FAIL',
+    );
+  }
+  if (!/bootstrapClosed\s*\?\s*["']OK["']\s*:\s*["']FAIL["']/.test(body)) {
+    errors.push(
+      'access bootstrap diagnostics: open bootstrap must produce FAIL',
+    );
+  }
+  if (!/bindOk\s*\?\s*["']OK["']\s*:\s*["']FAIL["']/.test(body)) {
+    errors.push(
+      'access bootstrap diagnostics: missing admin key bind must produce FAIL',
+    );
+  }
+
+  if (!body.includes('bootstrapAllowed')) {
+    errors.push(
+      'access bootstrap diagnostics: bootstrapAllowed policy field not referenced',
+    );
+  }
+  if (!body.includes('user_key_current_hash')) {
+    errors.push(
+      'access bootstrap diagnostics: user_key_current_hash bind check missing',
+    );
+  }
+
+  const uaMessageSnippets = [
+    'Активний admin/sysadmin/owner налаштований',
+    'Немає активного рядка з роллю admin, sysadmin або owner',
+    'Bootstrap доступу закрито',
+    'Bootstrap доступу все ще дозволений',
+    'user_key_current_hash',
+  ];
+  for (const snippet of uaMessageSnippets) {
+    if (!body.includes(snippet)) {
+      errors.push(
+        `access bootstrap diagnostics: Ukrainian user-facing message missing: ${snippet}`,
+      );
+    }
+  }
+}
+
 function main() {
   const errors = [];
   const warnings = [];
@@ -150,6 +265,7 @@ function main() {
   }
 
   checkPreprodScriptPropertyDiagnostics_(errors);
+  checkAccessBootstrapDiagnostics_(errors);
 
   warnings.forEach((w) => console.warn(`verify-bridge-flags: WARN — ${w}`));
 
@@ -168,6 +284,7 @@ function main() {
   const flagCount = Object.keys(registry.flags || {}).length;
   console.log(`  flags: ${flagCount}`);
   console.log('  preprod script-property diagnostics: covered');
+  console.log('  access bootstrap diagnostics: covered');
 }
 
 main();

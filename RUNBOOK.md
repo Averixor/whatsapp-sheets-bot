@@ -731,16 +731,19 @@ Canonical resolver (**`DataAccess.gs`**):
 | **`WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`**     | Emergency email bridge during migration only. Keep disabled (`false` / unset) in normal operation.                                                                                          |
 | **`WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP`** | Legacy plaintext temp-password column lookup during migration only. Keep disabled in normal operation; run `apiStage7NormalizeAccessSheetFormatting()` to clear `temporary_password_plain`. |
 
-**Quick health / preprod diagnostics** (`apiStage7QuickHealthCheck()`, `runQuickDiagnostics_` → `_diagAppendPreprodScriptPropertyChecks_`):
+**Quick health / preprod diagnostics** (`apiStage7QuickHealthCheck()`, `runQuickDiagnostics_` → `_diagAppendPreprodScriptPropertyChecks_` + `_diagAppendAccessBootstrapChecks_`):
 
-| Property | Result if bad |
+| Check | Result if bad |
 | -------- | ------------- |
 | **`WASB_SPREADSHEET_ID`** empty | **FAIL** |
 | **`WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`** = `true` | **FAIL** |
 | **`WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP`** = `true` | **FAIL** |
 | **`WASB_OWNER_EMAIL`** missing / invalid | **WARN** |
+| No enabled `admin` / `sysadmin` / `owner` row | **FAIL** |
+| `bootstrapAllowed === true` (ACCESS not configured) | **FAIL** |
+| No elevated admin with `user_key_current_hash` | **FAIL** |
 
-Local CI (`scripts/verify-bridge-flags.mjs`) asserts these checks stay wired in diagnostics source. ACCESS bootstrap / role state remains a manual pre-prod checklist item (GitHub Actions Step Summary).
+Local CI (`scripts/verify-bridge-flags.mjs`) asserts these checks stay wired in diagnostics source. ACCESS bootstrap / admin bind is also covered by `apiStage7QuickHealthCheck()` (same criteria as the GitHub Actions pre-prod checklist Step Summary).
 
 If **`WASB_SPREADSHEET_ID`** is unset, the code falls back to **`SpreadsheetApp.getActiveSpreadsheet()`** when the script is bound and a spreadsheet context exists.
 
