@@ -214,19 +214,45 @@ function stage7UniqueId_(prefix) {
   ].join("_");
 }
 
+/** Google Sheets hard limit for a single cell value (characters). */
+var STAGE7_SHEETS_MAX_CELL_CHARS = 50000;
+var STAGE7_SAFE_STRINGIFY_ELLIPSIS = "…";
+
+/**
+ * Clamp plain text so the result never exceeds maxLen characters.
+ * Reserves room for the ellipsis marker when truncating.
+ */
+function stage7ClampCellText_(text, maxLen) {
+  var raw = text === null || text === undefined ? "" : String(text);
+  var limit =
+    maxLen === undefined || maxLen === null || maxLen === ""
+      ? STAGE7_SHEETS_MAX_CELL_CHARS
+      : Math.max(Number(maxLen) || 0, 0);
+  if (!(limit > 0) || raw.length <= limit) return raw;
+  var ellipsis = STAGE7_SAFE_STRINGIFY_ELLIPSIS;
+  var keep = Math.max(0, limit - ellipsis.length);
+  return raw.slice(0, keep) + ellipsis;
+}
+
+/**
+ * JSON.stringify with a hard character cap.
+ * Important: the returned string length must never exceed maxLen — appending
+ * an ellipsis after slice(0, maxLen) used to produce maxLen+1 and trip the
+ * Sheets "50000 characters per cell" write error (OPS_LOG ResultJson etc.).
+ */
 function stage7SafeStringify_(value, maxLen) {
   const hasExplicitLimit =
     maxLen !== undefined && maxLen !== null && maxLen !== "";
-  const limit = hasExplicitLimit ? Math.max(Number(maxLen) || 0, 0) : 512;
+  const limit = hasExplicitLimit
+    ? Math.max(Number(maxLen) || 0, 0)
+    : 512;
+  var text;
   try {
-    const text = JSON.stringify(value === undefined ? null : value);
-    return limit > 0 && text.length > limit ? text.slice(0, limit) + "…" : text;
+    text = JSON.stringify(value === undefined ? null : value);
   } catch (e) {
-    const fallback = String(value);
-    return limit > 0 && fallback.length > limit
-      ? fallback.slice(0, limit) + "…"
-      : fallback;
+    text = String(value);
   }
+  return stage7ClampCellText_(text, limit);
 }
 
 function stage7AsArray_(value) {

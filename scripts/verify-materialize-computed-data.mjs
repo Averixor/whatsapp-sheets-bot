@@ -33,6 +33,14 @@ assert.match(orchestrator, /vacationSchedule/);
 assert.match(orchestrator, /materializeVacationMonthlyScheduleSync_/);
 assert.match(orchestrator, /vacationMonthlySync/);
 assert.match(orchestrator, /ensureSendPanelStatusFormula_/);
+assert.match(orchestrator, /_compactMaterializeVacationScheduleResult_/);
+assert.match(orchestrator, /_compactMaterializeVacationMonthlySyncResult_/);
+assert.match(orchestrator, /_compactMaterializeSystemStatusEvaluation_/);
+assert.match(
+  orchestrator,
+  /evaluateComputedMaterialize[\s\S]*_compactMaterializeVacationScheduleResult_/,
+  "fingerprint evaluation must run before OPS_LOG payload compaction",
+);
 assert.match(
   readRepoFileByBasename(repoRoot, "PersonnelMaterialize.gs", {
     errorPrefix: "verify-materialize-computed-data",
@@ -113,6 +121,11 @@ const materializeContext = vm.createContext({
           "VACATION_CHECK",
           "VACATION_CHECK",
         ],
+        checks: Array.from({ length: 20 }, (_, i) => ({
+          rule: "MAX_CONCURRENT",
+          description: "x".repeat(200),
+          index: i,
+        })),
       };
     },
   },
@@ -135,6 +148,16 @@ const materializeResult = vm.runInContext(
   materializeContext,
 );
 assert.equal(materializeResult.ok, true);
+assert.equal(
+  materializeResult.vacationSchedule.checkCount,
+  20,
+  "vacationSchedule checks must be compacted to checkCount for OPS_LOG",
+);
+assert.equal(
+  materializeResult.vacationSchedule.checks,
+  undefined,
+  "full vacationSchedule.checks must not remain in materialize result",
+);
 const affectedSheets = Array.from(
   vm.runInContext(
     "materializeAllComputedDataAffectedSheets_(materializeAllComputedData_({ source: 'ci' }))",
