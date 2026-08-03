@@ -94,7 +94,7 @@ function stage7TestRunnerBuildMaintenanceTasks_(taskFn, optArgFn) {
     ),
     taskFn(
       "stage7-quick-diagnostics",
-      "Stage7 diagnostics: runQuickDiagnostics_ (incl. preprod Script Properties)",
+      "Stage7 diagnostics: runQuickDiagnostics_ (incl. preprod Script Properties + ACCESS bootstrap)",
       "diagnostics",
       "fast",
       "critical",

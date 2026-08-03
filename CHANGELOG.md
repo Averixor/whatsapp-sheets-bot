@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-08-04 — ACCESS bootstrap in quick health
+
+- **Diagnostics:** `_diagAppendAccessBootstrapChecks_` FAILs when there is no active elevated admin (`admin`/`sysadmin`/`owner`), bootstrap is still allowed (`bootstrapAllowed`), or no elevated admin has `user_key_current_hash`; summary via `getAccessBootstrapHealthSummary_`.
+- **CI:** `verify-bridge-flags.mjs` asserts ACCESS bootstrap checks, FAIL semantics, and Ukrainian messages stay wired in diagnostics.
+- **Docs / tests:** RUNBOOK §15 documents the checks; Stage7 maintenance runner labels quick diagnostics as covering ACCESS bootstrap.
+
 ## 2026-08-04 — Preprod Script Properties in quick health
 
 - **Diagnostics:** `_diagAppendPreprodScriptPropertyChecks_` now FAILs on missing `WASB_SPREADSHEET_ID`, enabled `WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`, or enabled `WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP`; `WASB_OWNER_EMAIL` remains WARN when unset.

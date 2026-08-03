@@ -686,6 +686,46 @@ function getReadinessStatus() {
   };
 }
 
+/**
+ * Зведення стану bootstrap ACCESS для Stage7 quick health.
+ * elevated = enabled рядок з роллю admin / sysadmin / owner.
+ */
+function getAccessBootstrapHealthSummary_() {
+  var policy =
+    typeof _getAccessPolicy_ === "function"
+      ? _getAccessPolicy_()
+      : {
+          accessSheetPresent: false,
+          adminConfigured: false,
+          bootstrapAllowed: true,
+        };
+  var entries =
+    typeof _readSheetEntries_ === "function" ? _readSheetEntries_() : [];
+  var elevatedRoles = { admin: true, sysadmin: true, owner: true };
+  var elevatedCount = 0;
+  var withCurrentHash = 0;
+  var withoutCurrentHash = 0;
+  var i;
+  var entry;
+
+  for (i = 0; i < entries.length; i++) {
+    entry = entries[i];
+    if (!entry || !entry.enabled || !elevatedRoles[entry.role]) continue;
+    elevatedCount += 1;
+    if (entry.userKeyCurrentHash) withCurrentHash += 1;
+    else withoutCurrentHash += 1;
+  }
+
+  return {
+    accessSheetPresent: !!policy.accessSheetPresent,
+    adminConfigured: !!policy.adminConfigured,
+    bootstrapAllowed: !!policy.bootstrapAllowed,
+    elevatedAdminCount: elevatedCount,
+    elevatedAdminsWithCurrentHash: withCurrentHash,
+    elevatedAdminsWithoutCurrentHash: withoutCurrentHash,
+  };
+}
+
 // ==================== UI ТАБЛИЦІ ACCESS ====================
 
 function bootstrapSheet() {
@@ -1084,6 +1124,7 @@ var AccessControl_ = Object.freeze({
   validateAccessSheet: validateAccessSheet,
   runAccessDiagnostics: runAccessDiagnostics,
   getReadinessStatus: getReadinessStatus,
+  getAccessBootstrapHealthSummary: getAccessBootstrapHealthSummary_,
 
   getAccessRowByEmail: getAccessRowByEmail,
   listAdminEmails: listAdminEmails,

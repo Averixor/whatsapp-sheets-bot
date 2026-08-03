@@ -57,6 +57,7 @@ jobs:
           - [ ] `apiStage7DebugAccess()`: `bootstrapAllowed=false`
           - [ ] `apiStage7DebugAccess()`: `adminConfigured=true`
           - [ ] owner/admin залогінився; у рядку заповнений `user_key_current_hash`
+          - [ ] `apiStage7QuickHealthCheck()` — FAIL якщо bootstrap відкритий / немає elevated admin / немає `user_key_current_hash` у admin
 
           ### Захисти та Script Properties
           - [ ] `apiStage7ApplyProtections({ dryRun: true })` — переглянути звіт
