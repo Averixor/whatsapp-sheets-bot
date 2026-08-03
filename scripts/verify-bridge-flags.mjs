@@ -42,6 +42,84 @@ function checkSunset(flagName, meta, sourcePresent) {
   return warnings;
 }
 
+/**
+ * Static governance: quick/preprod health must FAIL when dangerous Script
+ * Properties are enabled or WASB_SPREADSHEET_ID is missing.
+ */
+function checkPreprodScriptPropertyDiagnostics_(errors) {
+  const diagFile = 'Diagnostics.Stage7.Core.gs';
+  let text;
+  try {
+    text = read(diagFile);
+  } catch (e) {
+    errors.push(`preprod diagnostics: cannot read ${diagFile}: ${e.message || e}`);
+    return;
+  }
+
+  if (!/function\s+_diagAppendPreprodScriptPropertyChecks_\s*\(/.test(text)) {
+    errors.push(
+      'preprod diagnostics: _diagAppendPreprodScriptPropertyChecks_ not found',
+    );
+    return;
+  }
+
+  const start = text.search(
+    /function\s+_diagAppendPreprodScriptPropertyChecks_\s*\(/,
+  );
+  // Slice a bounded window after the function declaration (avoids nested-brace parsing).
+  const body = text.slice(start, start + 4500);
+
+  const dangerousFlags = [
+    'WASB_ACCESS_MIGRATION_EMAIL_BRIDGE',
+    'WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP',
+  ];
+  for (const flag of dangerousFlags) {
+    if (!body.includes(flag)) {
+      errors.push(`preprod diagnostics: ${flag} not present in diagnostics code`);
+    }
+  }
+
+  if (!/migrationBridgeEnabled\s*\?\s*["']FAIL["']/.test(body)) {
+    errors.push(
+      'preprod diagnostics: WASB_ACCESS_MIGRATION_EMAIL_BRIDGE true → FAIL missing',
+    );
+  }
+  if (!/plainLookupEnabled\s*\?\s*["']FAIL["']/.test(body)) {
+    errors.push(
+      'preprod diagnostics: WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP true → FAIL missing',
+    );
+  }
+
+  if (!body.includes('WASB_SPREADSHEET_ID')) {
+    errors.push('preprod diagnostics: WASB_SPREADSHEET_ID check missing');
+  } else if (!/spreadsheetId\s*\?\s*["']OK["']\s*:\s*["']FAIL["']/.test(body)) {
+    errors.push(
+      'preprod diagnostics: missing WASB_SPREADSHEET_ID must produce FAIL',
+    );
+  }
+
+  const uaMessageSnippets = [
+    'Ідентифікатор робочої таблиці задано',
+    'WASB_SPREADSHEET_ID не задано',
+    'Аварійний email bridge',
+    'Legacy-пошук тимчасового пароля',
+    'Задайте WASB_OWNER_EMAIL у властивостях сценарію',
+  ];
+  for (const snippet of uaMessageSnippets) {
+    if (!body.includes(snippet)) {
+      errors.push(
+        `preprod diagnostics: Ukrainian user-facing message missing: ${snippet}`,
+      );
+    }
+  }
+
+  if (/Script properties\s*→\s*WASB_OWNER_EMAIL/.test(body)) {
+    errors.push(
+      'preprod diagnostics: owner email hint must stay Ukrainian (not English Script properties → …)',
+    );
+  }
+}
+
 function main() {
   const errors = [];
   const warnings = [];
@@ -71,6 +149,8 @@ function main() {
     warnings.push(...checkSunset(flagName, meta, true));
   }
 
+  checkPreprodScriptPropertyDiagnostics_(errors);
+
   warnings.forEach((w) => console.warn(`verify-bridge-flags: WARN — ${w}`));
 
   if (errors.length) {
@@ -87,6 +167,7 @@ function main() {
   console.log('verify-bridge-flags: OK');
   const flagCount = Object.keys(registry.flags || {}).length;
   console.log(`  flags: ${flagCount}`);
+  console.log('  preprod script-property diagnostics: covered');
 }
 
 main();

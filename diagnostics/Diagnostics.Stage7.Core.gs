@@ -397,6 +397,65 @@ function _diagBuildCounts_(checks) {
 }
 
 function _diagAppendPreprodScriptPropertyChecks_(checks) {
+  var props = null;
+
+  try {
+    props = PropertiesService.getScriptProperties();
+  } catch (_) {}
+
+  function readProperty_(name) {
+    if (!props || typeof props.getProperty !== "function") return "";
+    return String(props.getProperty(name) || "").trim();
+  }
+
+  function isEnabled_(name) {
+    return readProperty_(name).toLowerCase() === "true";
+  }
+
+  var spreadsheetId = readProperty_("WASB_SPREADSHEET_ID");
+  var migrationBridgeEnabled = isEnabled_(
+    "WASB_ACCESS_MIGRATION_EMAIL_BRIDGE",
+  );
+  var plainLookupEnabled = isEnabled_(
+    "WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP",
+  );
+
+  _stage7PushCheck_(
+    checks,
+    "Pre-prod WASB_SPREADSHEET_ID",
+    spreadsheetId ? "OK" : "FAIL",
+    spreadsheetId
+      ? "Ідентифікатор робочої таблиці задано"
+      : "WASB_SPREADSHEET_ID не задано",
+    spreadsheetId
+      ? ""
+      : "Задайте WASB_SPREADSHEET_ID у властивостях сценарію",
+  );
+
+  _stage7PushCheck_(
+    checks,
+    "Pre-prod migration email bridge",
+    migrationBridgeEnabled ? "FAIL" : "OK",
+    migrationBridgeEnabled
+      ? "Аварійний email bridge увімкнено"
+      : "Аварійний email bridge вимкнено",
+    migrationBridgeEnabled
+      ? "Вимкніть WASB_ACCESS_MIGRATION_EMAIL_BRIDGE після завершення міграції"
+      : "",
+  );
+
+  _stage7PushCheck_(
+    checks,
+    "Pre-prod legacy password lookup",
+    plainLookupEnabled ? "FAIL" : "OK",
+    plainLookupEnabled
+      ? "Legacy-пошук тимчасового пароля відкритим текстом увімкнено"
+      : "Legacy-пошук тимчасового пароля вимкнено",
+    plainLookupEnabled
+      ? "Вимкніть WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP"
+      : "",
+  );
+
   var ownerDiag =
     typeof getWasbOwnerEmailDiagnostics_ === "function"
       ? getWasbOwnerEmailDiagnostics_()
@@ -414,7 +473,7 @@ function _diagAppendPreprodScriptPropertyChecks_(checks) {
       : ownerDiag.warning || "WASB_OWNER_EMAIL не заданий",
     ownerDiag.ownerEmailConfigured
       ? ""
-      : "Script properties → WASB_OWNER_EMAIL=owner@example.com",
+      : "Задайте WASB_OWNER_EMAIL у властивостях сценарію",
   );
 }
 

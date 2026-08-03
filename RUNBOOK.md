@@ -731,6 +731,17 @@ Canonical resolver (**`DataAccess.gs`**):
 | **`WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`**     | Emergency email bridge during migration only. Keep disabled (`false` / unset) in normal operation.                                                                                          |
 | **`WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP`** | Legacy plaintext temp-password column lookup during migration only. Keep disabled in normal operation; run `apiStage7NormalizeAccessSheetFormatting()` to clear `temporary_password_plain`. |
 
+**Quick health / preprod diagnostics** (`apiStage7QuickHealthCheck()`, `runQuickDiagnostics_` → `_diagAppendPreprodScriptPropertyChecks_`):
+
+| Property | Result if bad |
+| -------- | ------------- |
+| **`WASB_SPREADSHEET_ID`** empty | **FAIL** |
+| **`WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`** = `true` | **FAIL** |
+| **`WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP`** = `true` | **FAIL** |
+| **`WASB_OWNER_EMAIL`** missing / invalid | **WARN** |
+
+Local CI (`scripts/verify-bridge-flags.mjs`) asserts these checks stay wired in diagnostics source. ACCESS bootstrap / role state remains a manual pre-prod checklist item (GitHub Actions Step Summary).
+
 If **`WASB_SPREADSHEET_ID`** is unset, the code falls back to **`SpreadsheetApp.getActiveSpreadsheet()`** when the script is bound and a spreadsheet context exists.
 
 Headless executions (scheduled triggers without an open UI) **require** `WASB_SPREADSHEET_ID`, or they fail with a clear error.
