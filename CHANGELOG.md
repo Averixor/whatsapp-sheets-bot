@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-08-04 — Preprod Script Properties in quick health
+
+- **Diagnostics:** `_diagAppendPreprodScriptPropertyChecks_` now FAILs on missing `WASB_SPREADSHEET_ID`, enabled `WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`, or enabled `WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP`; `WASB_OWNER_EMAIL` remains WARN when unset.
+- **CI:** `verify-bridge-flags.mjs` asserts both dangerous flags, FAIL semantics, spreadsheet-id check, and Ukrainian user-facing messages stay in diagnostics source.
+- **Docs / tests:** RUNBOOK §15 documents the checks; Stage7 maintenance runner labels quick diagnostics as covering preprod Script Properties.
+
 ## 2026-08-02 — Include last PERSONNEL row in month grid after create/sync
 
 - **Root cause:** after capacity expand, compact schedule detection required BR+Callsign markers, so `codeRange` / formula+CF remap stayed on the old last row (e.g. `C2:AG32`) while the newest callsign was written below the grid.
