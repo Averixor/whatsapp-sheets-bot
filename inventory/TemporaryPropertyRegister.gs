@@ -490,6 +490,17 @@ const TemporaryPropertyRegister_ = (function () {
     else cell.clearDataValidations();
   }
 
+  function clearComponentInputValidations_(sheet, row) {
+    sheet
+      .getRange(
+        row,
+        COL.CATEGORY,
+        1,
+        COL.MODEL - COL.CATEGORY + 1,
+      )
+      .clearDataValidations();
+  }
+
   function applyValidations_(sheet) {
     const catalog = readCatalog_();
     const rowCount = DEFAULTS.MAX_VALIDATION_ROWS - DEFAULTS.FIRST_DATA_ROW + 1;
@@ -504,8 +515,15 @@ const TemporaryPropertyRegister_ = (function () {
 
     const last = Math.max(sheet.getLastRow(), DEFAULTS.FIRST_DATA_ROW);
     for (let row = DEFAULTS.FIRST_DATA_ROW; row <= last; row++) {
-      const rowType = text_(sheet.getRange(row, COL.ROW_TYPE).getDisplayValue());
-      if (rowType === ROW_TYPE.COMPONENT) continue;
+      const rowType = text_(
+        sheet.getRange(row, COL.ROW_TYPE).getDisplayValue(),
+      );
+
+      if (rowType === ROW_TYPE.COMPONENT) {
+        clearComponentInputValidations_(sheet, row);
+        continue;
+      }
+
       applyModelValidationForRow_(sheet, row, catalog);
     }
   }
@@ -698,6 +716,7 @@ const TemporaryPropertyRegister_ = (function () {
         component.code,
         true,
       ];
+      clearComponentInputValidations_(sheet, target.rowNumber);
       setRowValues_(sheet, target.rowNumber, rowValues);
       sheet.getRange(target.rowNumber, COL.ISSUED_DATE).setNumberFormat("dd.MM.yy");
       sheet.getRange(target.rowNumber, COL.RETURNED_DATE).setNumberFormat("dd.MM.yy");
