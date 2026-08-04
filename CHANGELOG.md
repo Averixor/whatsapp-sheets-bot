@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-08-04 — Temporary property component row validation
+
+- **Root cause:** `syncComponents_()` wrote technical category `Комплектуючі` into column C while `applyValidations_()` had applied a strict PROPERTY_CATALOG dropdown on C (and model on D), so Sheets rejected the write (e.g. C3).
+- **Fix:** clear category/model data validations on COMPONENT rows before write and again in `applyValidations_`; do not add `Комплектуючі` to the user dropdown.
+- **CI:** `verify-temporary-property-register.mjs` asserts clear-before-write and COMPONENT skip/clear behavior.
+
 ## 2026-08-04 — Staging deploy foundation (manual workflow)
 
 - **CI:** `.github/workflows/deploy-staging.yml` — `workflow_dispatch` only; GitHub Environment `staging`; runs `npm ci` + `npm run ci`, configures clasp from secrets, verifies target, then `gas:status` / `gas:push` (no `--force`, no `clasp deploy` / `clasp run`).

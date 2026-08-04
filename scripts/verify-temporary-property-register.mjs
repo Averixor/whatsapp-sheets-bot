@@ -122,6 +122,22 @@ assert.match(source, /withEventSpreadsheet_/);
 assert.match(source, /e\.source/);
 assert.match(source, /function apiRefreshTemporaryPropertyRegister\(\)/);
 
+assert.match(
+  source,
+  /function clearComponentInputValidations_\(sheet, row\)/,
+  "має бути clearComponentInputValidations_ для рядків комплектуючих",
+);
+assert.match(
+  source,
+  /clearComponentInputValidations_\(sheet, target\.rowNumber\);\s*setRowValues_\(sheet, target\.rowNumber, rowValues\);/,
+  "syncComponents_ має знімати валідацію C:D перед записом комплектуючих",
+);
+assert.match(
+  source,
+  /if \(rowType === ROW_TYPE\.COMPONENT\) \{\s*clearComponentInputValidations_\(sheet, row\);\s*continue;\s*\}/,
+  "applyValidations_ має пропускати/очищати валідацію для COMPONENT",
+);
+
 const maintenanceApi = readRepoFileByBasename(repoRoot, "Stage7MaintenanceApi.gs", {
   errorPrefix: "verify-temporary-property-register",
 });
