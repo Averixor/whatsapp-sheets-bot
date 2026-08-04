@@ -17,7 +17,16 @@ jobs:
   deploy-staging:
     name: Deploy to staging GAS
     runs-on: ubuntu-latest
+    # Static Environment name so Actions can resolve env-scoped secrets/vars.
     environment: staging
+    # Bind Environment `staging` secret/var here (not repository-level).
+    # Step-scoped re-binding of the same keys often triggers IDE false positives
+    # ("Context access might be invalid") when the Actions extension cannot list
+    # environment secrets; job-level env keeps access clear and functionally identical.
+    env:
+      CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+      CLASP_JSON_STAGING: ${{ secrets.CLASP_JSON_STAGING }}
+      EXPECTED_STAGING_SCRIPT_ID: ${{ vars.EXPECTED_STAGING_SCRIPT_ID }}
 
     steps:
       - name: Checkout repository
@@ -36,22 +45,14 @@ jobs:
         run: npm run ci
 
       - name: Configure staging clasp
-        env:
-          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
-          CLASP_JSON_STAGING: ${{ secrets.CLASP_JSON_STAGING }}
-          EXPECTED_STAGING_SCRIPT_ID: ${{ vars.EXPECTED_STAGING_SCRIPT_ID }}
         run: |
           set -euo pipefail
           umask 077
-
-          test -n "$CLASPRC_JSON"
-          test -n "$CLASP_JSON_STAGING"
-          test -n "$EXPECTED_STAGING_SCRIPT_ID"
-
-          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
-          printf '%s' "$CLASP_JSON_STAGING" > .clasp.json
-
-          node scripts/verify-deploy-target.mjs staging
+          test -n "${EXPECTED_STAGING_SCRIPT_ID}"
+          # Write secrets via Node (not shell printf) and JSON.parse both files
+          # before clasp. Errors name CLASPRC_JSON vs CLASP_JSON_STAGING +
+          # line/position only — never dump secret bodies.
+          node scripts/verify-deploy-target.mjs configure-staging
 
       - name: Show clasp status
         run: npm run gas:status

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-08-04 — Staging clasp JSON validation before gas:status
+
+- **CI / workflow:** `deploy-staging.yml` writes `CLASPRC_JSON` / `CLASP_JSON_STAGING` via `node scripts/verify-deploy-target.mjs configure-staging` (Node `fs`, not shell `printf`), then `JSON.parse`s both files and checks staging `scriptId` **before** `gas:status`.
+- **Errors:** Ukrainian messages name which secret/file failed (`CLASPRC_JSON` vs `CLASP_JSON_STAGING`) and include parse line/position only — no secret bodies or tokens in logs.
+- **Docs:** RUNBOOK §12a — how to paste Environment secrets (raw JSON, no extra quotes / smart quotes / double-encoding); large parse positions usually mean malformed clasprc.
+- **Guard:** `npm run ci:deploy-target` (`--self-test`) included in `npm run ci`.
+
 ## 2026-08-04 — Staging deploy foundation (manual workflow)
 
 - **CI:** `.github/workflows/deploy-staging.yml` — `workflow_dispatch` only; GitHub Environment `staging`; runs `npm ci` + `npm run ci`, configures clasp from secrets, verifies target, then `gas:status` / `gas:push` (no `--force`, no `clasp deploy` / `clasp run`).
