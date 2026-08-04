@@ -43,15 +43,11 @@ jobs:
         run: |
           set -euo pipefail
           umask 077
-
-          test -n "$CLASPRC_JSON"
-          test -n "$CLASP_JSON_STAGING"
-          test -n "$EXPECTED_STAGING_SCRIPT_ID"
-
-          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
-          printf '%s' "$CLASP_JSON_STAGING" > .clasp.json
-
-          node scripts/verify-deploy-target.mjs staging
+          test -n "${EXPECTED_STAGING_SCRIPT_ID}"
+          # Write secrets via Node (not shell printf) and JSON.parse both files
+          # before clasp. Errors name CLASPRC_JSON vs CLASP_JSON_STAGING +
+          # line/position only — never dump secret bodies.
+          node scripts/verify-deploy-target.mjs configure-staging
 
       - name: Show clasp status
         run: npm run gas:status

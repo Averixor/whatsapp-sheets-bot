@@ -546,7 +546,7 @@ Local equivalent: **`npm run check`** (alias **`npm run ci`**).
 | `verify-access-autofill-hotfix.mjs`       | ACCESS row autofill hotfix contract                                                    |
 | `verify-access-temp-password-reissue.mjs` | Temporary password reissue flow                                                        |
 | `verify-oauth-scopes.mjs`                 | Manifest scopes vs allowlist (`drive.readonly` for inventory reconciliation)           |
-| `verify-deploy-target.mjs`                | Staging clasp `scriptId` vs `EXPECTED_STAGING_SCRIPT_ID` (manual deploy workflow)      |
+| `verify-deploy-target.mjs`                | Staging clasp secrets JSON + `scriptId` vs `EXPECTED_STAGING_SCRIPT_ID` (`configure-staging` / `staging`; `--self-test` in CI) |
 | `verify-project-files-map.mjs`            | `docs/project-files-complete.txt` matches working tree                                 |
 | `verify-jsconfig.mjs`                     | `jsconfig.json` include/exclude globs                                                  |
 
@@ -573,15 +573,17 @@ Pull Request → npm run ci → merge to main
 - File: `.github/workflows/deploy-staging.yml`
 - Trigger: **`workflow_dispatch` only** (Actions → WASB Deploy Staging → Run workflow)
 - Job environment: GitHub Environment **`staging`**
-- Steps: `npm ci` → `npm run ci` → write credentials from secrets → `node scripts/verify-deploy-target.mjs staging` → `npm run gas:status` → `npm run gas:push` → always remove `~/.clasprc.json` and `.clasp.json`
+- Steps: `npm ci` → `npm run ci` → `node scripts/verify-deploy-target.mjs configure-staging` (writes secrets via Node, `JSON.parse` both files, checks `scriptId`) → `npm run gas:status` → `npm run gas:push` → always remove `~/.clasprc.json` and `.clasp.json`
 - Intentionally **absent**: `--force`, `clasp deploy`, `clasp run`, production Script IDs, automatic bootstrap/protections
 
 Local target check (optional):
 
 ```bash
 npm run deploy:verify-target -- staging
-# or self-test without secrets:
-node scripts/verify-deploy-target.mjs --self-test
+# write+validate like CI (needs env secrets set):
+npm run deploy:verify-target -- configure-staging
+# or self-test without secrets (also part of npm run ci):
+npm run ci:deploy-target
 ```
 
 ### GitHub Environment `staging` setup (manual)
@@ -593,6 +595,27 @@ Create Environment **`staging`** in the GitHub repo settings. Required:
 | **Secret** | `CLASPRC_JSON` | Full contents of local `~/.clasprc.json` (OAuth tokens for clasp) |
 | **Secret** | `CLASP_JSON_STAGING` | Staging `.clasp.json` body (from `.clasp.staging.example.json` filled with real staging IDs) |
 | **Variable** | `EXPECTED_STAGING_SCRIPT_ID` | Same staging Apps Script `scriptId` as in `CLASP_JSON_STAGING` |
+
+#### How to store secrets correctly
+
+GitHub Secret value must be **exact JSON file contents** — not a shell-quoted string, not markdown, not double-encoded.
+
+| Do | Do not |
+| -- | ------ |
+| Paste raw file body (pretty-printed **or** single-line minified — both OK if valid JSON) | Wrap the whole JSON in extra `"..."` in the GitHub UI |
+| Copy from `cat ~/.clasprc.json` / validated staging `.clasp.json` | Use Word/smart quotes (`“` `”`) instead of ASCII `"` |
+| Re-save after `clasp login` if tokens rotated | Append trailing prose, YAML fences, or a second JSON object |
+| Prefer UTF-8 without BOM | Paste PowerShell `ConvertTo-Json` double-encoded strings without unwrapping |
+
+Validate locally **before** pasting (these only print OK / parse error — they do not print tokens):
+
+```bash
+# CLASPRC_JSON candidate
+node -e "JSON.parse(require('fs').readFileSync(require('os').homedir()+'/.clasprc.json','utf8')); console.log('clasprc: OK')"
+
+# CLASP_JSON_STAGING candidate (path to your staging file)
+node -e "JSON.parse(require('fs').readFileSync('/tmp/clasp.staging.json','utf8')); console.log('clasp: OK')"
+```
 
 Fill secrets from a local machine — **never commit** real `clasprc` / `.clasp.json`:
 
@@ -606,7 +629,9 @@ cp .clasp.staging.example.json /tmp/clasp.staging.json
 cat /tmp/clasp.staging.json
 ```
 
-`EXPECTED_STAGING_SCRIPT_ID` must match the `scriptId` inside `CLASP_JSON_STAGING`. `scripts/verify-deploy-target.mjs` rejects placeholders (`PUT_STAGING_SCRIPT_ID_HERE`, empty, short/fake IDs) and exits non-zero on mismatch without printing full IDs.
+`EXPECTED_STAGING_SCRIPT_ID` must match the `scriptId` inside `CLASP_JSON_STAGING`. `scripts/verify-deploy-target.mjs` rejects placeholders (`PUT_STAGING_SCRIPT_ID_HERE`, empty, short/fake IDs), validates both JSON files before `clasp status`, and exits non-zero on mismatch **without printing full IDs or secret bodies**. Errors name **which** input failed (`CLASPRC_JSON` / `~/.clasprc.json` vs `CLASP_JSON_STAGING` / `.clasp.json`) and include parse line/position only.
+
+**Diagnosing `Expected ',' or '}' … position N (line L)` on staging deploy:** a large position (e.g. ~1800+) almost always means malformed **`CLASPRC_JSON`** (OAuth file is kilobytes). Staging `.clasp.json` is typically a few hundred bytes — if parse fails there, the message will say `CLASP_JSON_STAGING`. Local gitignored `.clasp.json` is **not** used by GHA; only the Environment secret is. Re-open the secret, replace with freshly validated `cat ~/.clasprc.json` output, and re-run the workflow.
 
 ### Not in this foundation PR
 
