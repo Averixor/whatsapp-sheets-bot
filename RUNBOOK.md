@@ -524,7 +524,7 @@ Local equivalent: **`npm run check`** (alias **`npm run ci`**).
 | `verify-send-panel-bounds.mjs`            | SEND_PANEL row bounds contract                                                         |
 | `verify-temporary-property-register.mjs`  | Temporary-property register headers, catalog/kits, status math (`ci:workbook`)         |
 | `verify-materialize-computed-data.mjs`    | PERSONNEL materialize / computed columns API contract                                  |
-| `verify-month-journal-materialize.mjs`    | Unified `JOURNAL` / `SUMMARY` wiring, chunked bootstrap, API, access, sidebar |
+| `verify-month-journal-materialize.mjs`    | Unified `JOURNAL` / `SUMMARY` wiring, chunked bootstrap, API, access, sidebar          |
 | `verify-age-birthday-countdown.mjs`       | Birthday `DD.MM.YYYY р. н.`, Age `N р.`, countdown UA labels                           |
 | `verify-vacation-planner.mjs`             | Vacation planner rules, calendar, repository contracts                                 |
 | `verify-vacation-monthly-sync.mjs`        | One-way vacation → monthly sheet sync (auto-fill, conflicts, removals)                 |
@@ -546,7 +546,7 @@ Local equivalent: **`npm run check`** (alias **`npm run ci`**).
 | `verify-access-autofill-hotfix.mjs`       | ACCESS row autofill hotfix contract                                                    |
 | `verify-access-temp-password-reissue.mjs` | Temporary password reissue flow                                                        |
 | `verify-oauth-scopes.mjs`                 | Manifest scopes vs allowlist (`drive.readonly` for inventory reconciliation)           |
-| `verify-deploy-target.mjs`                | Staging clasp secrets JSON + `scriptId` vs `EXPECTED_STAGING_SCRIPT_ID` (`configure-staging` / `staging`; `--self-test` in CI) |
+| `verify-deploy-target.mjs`                | Staging clasp JSON + `scriptId` vs `EXPECTED_STAGING_SCRIPT_ID` (`configure-staging`)  |
 | `verify-project-files-map.mjs`            | `docs/project-files-complete.txt` matches working tree                                 |
 | `verify-jsconfig.mjs`                     | `jsconfig.json` include/exclude globs                                                  |
 
