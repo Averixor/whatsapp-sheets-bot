@@ -304,8 +304,8 @@ function loadWorkbookFunctions() {
     getWasbSpreadsheet_: () => null,
     FULL_NAMES: {
       ОС: "Особовий склад",
-      Black: "Екіпаж Чорний",
-      Roland: "Екіпаж Роланд",
+      "Black Hawk": "Екіпаж Black Hawk",
+      Гектор: "Екіпаж Гектор",
       БР: "Бойове розпорядження",
       Евак: "Медевак",
       "1РБпАК": "Охорона позиції 1 роти БпАК",
@@ -337,8 +337,8 @@ function loadWorkbookFunctions() {
     },
     SUMMARY_GROUPS: {
       Резерв: ["Резерв"],
-      Black: ["Black"],
-      Roland: ["Roland"],
+      "Black Hawk": ["Black Hawk"],
+      Гектор: ["Гектор"],
       БР: ["БР"],
       КП: ["КП"],
       Відрядження: ["Відрядження", "Відряд"],
@@ -557,8 +557,8 @@ const actualDictSumTruth = Array.from(dictSumRules, (rule) => [
   String(rule.label),
 ]);
 const expectedDictSumTruth = [
-  ["Black", 10, "Екіпаж Чорний"],
-  ["Roland", 15, "Екіпаж Роланд"],
+  ["Black Hawk", 10, "Екіпаж Black Hawk"],
+  ["Гектор", 15, "Екіпаж Гектор"],
   ["БР", 20, "Бойове розпорядження"],
   ["Евак", 25, "Медевак"],
   ["1РБпАК", 30, "Охорона позиції 1 роти БпАК"],

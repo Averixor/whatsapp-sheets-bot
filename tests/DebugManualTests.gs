@@ -17,14 +17,14 @@ function debugFindPhoneContractManual() {
     byFml: { "Петренко Іван Іванович": "+380661111111" },
     byNorm: { "петренко іван іванович": "+380661111111" },
     byRole: { ГРАФ: "+380662222222" },
-    byCallsign: { РОЛАНД: "+380663333333" },
+    byCallsign: { Гектор: "+380663333333" },
     items: [],
   };
 
   var result = {
     byFml: findPhone_({ fml: "Петренко Іван Іванович" }, { index: index }),
     byRole: findPhone_({ role: "ГРАФ" }, { index: index }),
-    byCallsign: findPhone_({ callsign: "роланд" }, { index: index }),
+    byCallsign: findPhone_({ callsign: "Гектор" }, { index: index }),
   };
 
   Logger.log(JSON.stringify(result, null, 2));

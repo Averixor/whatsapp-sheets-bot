@@ -518,8 +518,8 @@ function generateMonthlyReportHTML_(personnel, statusSummary, sheetName) {
     .st-Відпус, .st-Відпустка { background:#a855f7; color:white; }
     .st-Евак, .st-Медевак { background:#ef4444; color:white; }
     .st-КП { background:#64748b; color:white; }
-    .st-Black { background:#1e2937; color:white; }
-    .st-Роланд { background:#f97316; color:white; }
+    .st-BlackHawk { background:#1e2937; color:white; }
+    .st-Гектор { background:#f97316; color:white; }
     .st-default { background:#e2e8f0; color:#0f172a; }
 
     .heatmap { text-align: center; font-size: 12px; min-width: 38px; }
@@ -609,13 +609,13 @@ function generateMonthlyReportHTML_(personnel, statusSummary, sheetName) {
   html += `
     <div class="legend">
       <strong>Легенда:</strong>
-      <div class="legend-item"><span class="status st-БР">БР</span> — Бойове розпорядження</div>
-      <div class="legend-item"><span class="status st-Резерв">Резерв</span> — Резерв</div>
-      <div class="legend-item"><span class="status st-Відпус">Відпус</span> — Відпустка</div>
-      <div class="legend-item"><span class="status st-Евак">Евак</span> — Медевак</div>
-      <div class="legend-item"><span class="status st-КП">КП</span> — Командний пункт</div>
-      <div class="legend-item"><span class="status st-Black">Black</span> — Екіпаж Чорний</div>
-      <div class="legend-item"><span class="status st-Роланд">Роланд</span> — Екіпаж Роланд</div>
+      <div class="legend-item"><span class="status st-${toCssToken("БР")}">БР</span> — Бойове розпорядження</div>
+      <div class="legend-item"><span class="status st-${toCssToken("Резерв")}">Резерв</span> — Резерв</div>
+      <div class="legend-item"><span class="status st-${toCssToken("Відпус")}">Відпус</span> — Відпустка</div>
+      <div class="legend-item"><span class="status st-${toCssToken("Евак")}">Евак</span> — Медевак</div>
+      <div class="legend-item"><span class="status st-${toCssToken("КП")}">КП</span> — Командний пункт</div>
+      <div class="legend-item"><span class="status st-${toCssToken("Black Hawk")}">Black Hawk</span> — Екіпаж Black Hawk</div>
+      <div class="legend-item"><span class="status st-${toCssToken("Гектор")}">Гектор</span> — Екіпаж Гектор</div>
     </div>
 `;
 

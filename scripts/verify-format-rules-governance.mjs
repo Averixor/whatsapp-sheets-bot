@@ -106,7 +106,7 @@ const baseRecord = {
   Range: "C2:AG33",
   RuleType: "CONDITIONAL_FORMAT",
   ConditionType: "TEXT_EQUAL_TO",
-  ConditionValue: "Black",
+  ConditionValue: "Black Hawk",
   Formula: "",
   Background: "#000000",
   FontColor: "#ffffff",
@@ -195,7 +195,7 @@ assert.deepEqual(
   [10],
   "numeric criteria must remain numeric",
 );
-const unknownRule = fakeRule("Black");
+const unknownRule = fakeRule("Black Hawk");
 const serialized = serialize(fakeSheet, unknownRule, 1);
 assert.equal(
   classify(fakeSheet, unknownRule, { serialized, registryMap: {} }).detectedAs,
@@ -438,7 +438,7 @@ const exported = exportAdopted();
 assert.equal(guardedRole, "sysadmin");
 assert.equal(exported.rules.length, 1, "adopted permanent rule must export");
 assert.equal(exported.rules[0].sheet, "06");
-assert.equal(exported.rules[0].condition.value, "Black");
+assert.equal(exported.rules[0].condition.value, "Black Hawk");
 
 const setPreserved = vm.runInContext("_formatRulesSetPreservedRules_", context);
 const manualRule = fakeRule("MANUAL");

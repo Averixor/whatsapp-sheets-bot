@@ -103,8 +103,8 @@ function readDictSum_() {
 
 function getDefaultDictSumRules_() {
   const entries = [
-    { code: "Black", order: 10 },
-    { code: "Roland", order: 15 },
+    { code: "Black Hawk", order: 10 },
+    { code: "Гектор", order: 15 },
     { code: "БР", order: 20 },
     { code: "Евак", order: 25 },
     { code: "1РБпАК", order: 30 },

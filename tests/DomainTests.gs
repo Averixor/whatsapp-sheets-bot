@@ -211,7 +211,7 @@ function _runPersonnelRepositoryDomainTests_(report) {
           "Петренко Іван",
           "17.03.1990",
           "+380661111111",
-          "Роланд",
+          "Гектор",
           "солдат",
           "стрілець",
           "4",
@@ -222,7 +222,7 @@ function _runPersonnelRepositoryDomainTests_(report) {
       );
       _domainAssertEqual_(record.id, "", "ID must remain optional");
       _domainAssertEqual_(record.fml, "Петренко Іван", "FML mapping");
-      _domainAssertEqual_(record.callsign, "Роланд", "Callsign mapping");
+      _domainAssertEqual_(record.callsign, "Гектор", "Callsign mapping");
       _domainAssertEqual_(record.title, "солдат", "Rank fallback to title");
       _domainAssertEqual_(record.rank, "солдат", "Rank mirror");
       _domainAssertEqual_(record.position, "стрілець", "Position mapping");
@@ -633,7 +633,7 @@ function runStage6ADomainTests_(options) {
       byFml: { "Петренко Іван Іванович": "+380661111111" },
       byNorm: { "петренко іван іванович": "+380661111111" },
       byRole: { ГРАФ: "+380662222222" },
-      byCallsign: { РОЛАНД: "+380663333333" },
+      byCallsign: { Гектор: "+380663333333" },
       items: [],
     };
     const byFml = findPhone_(
@@ -641,7 +641,7 @@ function runStage6ADomainTests_(options) {
       { index: index },
     );
     const byRole = findPhone_({ role: "ГРАФ" }, { index: index });
-    const byCallsign = findPhone_({ callsign: "роланд" }, { index: index });
+    const byCallsign = findPhone_({ callsign: "Гектор" }, { index: index });
     _domainAssert_(
       byFml === "+380661111111",
       "findPhone_() не знайшов телефон по fml",
@@ -961,7 +961,7 @@ function runStage6ADomainTests_(options) {
     function () {
       const sheet = makeDomainFakeSheet_([
         ["БР", "Callsign", "01.06", "02.06", ""],
-        ["5", "Роланд", "БР", "КП", ""],
+        ["5", "Гектор", "БР", "КП", ""],
         ["3", "Сокіл", "КП", "", ""],
         ["", "", "", "", ""],
       ]);
@@ -1005,7 +1005,7 @@ function runStage6ADomainTests_(options) {
         ],
         [
           "+380661111111",
-          "Роланд",
+          "Гектор",
           "Стрілець",
           "1",
           "с-т",
