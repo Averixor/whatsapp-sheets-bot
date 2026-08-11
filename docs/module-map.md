@@ -19,8 +19,8 @@ Practical index: **where to look** and **what CI proves it**. Structural rules: 
 | Use cases | `usecases/` | `UseCases*.gs` | `npm run ci`, `npm run ci:workbook` | Application facade and domain use-case modules. |
 | UI server helpers | `ui-server/` | `SidebarServer.gs`, dialogs, `HtmlUtils.gs` | `npm run ci:client` | HtmlService server-side host/helpers. |
 | Security/audit | `security/` | `AuditTrail.gs`, `SecurityRedaction.gs` | `npm run ci` | Audit and redaction utilities. |
-| Operations | `operations/` | `Actions.gs`, triggers, reconciliation, project requests | `npm run ci` | Operational workflows outside one domain. |
-| UI (HTML/JS) | `ui/` | `Sidebar.html`, `JavaScript.html`, `Js.*.html`, `Styles*.html` | `npm run ci:client`, `verify-user-facing-copy.mjs` | Phases 1–4 complete (#34); `include()` resolves legacy basenames. |
+| Operations | `operations/` | `Actions.gs`, triggers, reconciliation, project requests, `ExternalSpreadsheetMigration.gs` | `npm run ci`, `npm run ci:workbook` (`verify-external-spreadsheets.mjs`) | External workbook cutover (preview/apply/finalize) plus Sidebar panel `ui/Js.ExternalMigration.html`. |
+| UI (HTML/JS) | `ui/` | `Sidebar.html`, `JavaScript.html`, `Js.*.html`, `Styles*.html` | `npm run ci:client`, `verify-user-facing-copy.mjs` | Phases 1–4 complete (#34); `include()` resolves legacy basenames. Sysadmin panel «Міграція зовнішніх таблиць». |
 
 ## Root stays non-runtime only
 

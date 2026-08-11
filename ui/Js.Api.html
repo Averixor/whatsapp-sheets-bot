@@ -447,6 +447,28 @@
       adaptStage4UtilityResponse(
         await Api.run("apiStage7RefreshTemporaryPropertyRegister"),
       ),
+    getExternalSpreadsheetMigrationStatus: async () =>
+      adaptStage4UtilityResponse(
+        await Api.run("apiGetExternalSpreadsheetMigrationStatus"),
+      ),
+    getExternalStorageMode: async () =>
+      adaptStage4UtilityResponse(await Api.run("apiGetExternalStorageMode")),
+    beginExternalSpreadsheetMigration: async () =>
+      adaptStage4UtilityResponse(
+        await Api.run("apiBeginExternalSpreadsheetMigration"),
+      ),
+    previewExternalSpreadsheetMigration: async () =>
+      adaptStage4UtilityResponse(
+        await Api.run("apiPreviewExternalSpreadsheetMigration"),
+      ),
+    applyExternalSpreadsheetMigration: async () =>
+      adaptStage4UtilityResponse(
+        await Api.run("apiApplyExternalSpreadsheetMigration"),
+      ),
+    finalizeExternalSpreadsheetMigration: async () =>
+      adaptStage4UtilityResponse(
+        await Api.run("apiFinalizeExternalSpreadsheetMigration"),
+      ),
     restartBot: async () =>
       adaptStage4UtilityResponse(await Api.run("apiStage7RestartBot")),
     setupVacationTriggers: async () =>

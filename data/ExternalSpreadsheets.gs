@@ -398,6 +398,59 @@ function setExternalStorageMode_(mode, options) {
   return report;
 }
 
+function getExternalLogicalDisplayName_(name) {
+  var text = _externalTrimName_(name);
+  var archive = text.match(/^(OPS_LOG|CHECKPOINTS)_(\d{4})_(\d{2})$/);
+  if (archive) {
+    var kind =
+      archive[1] === "CHECKPOINTS" ? "контрольних точок" : "журналу операцій";
+    return "Архів " + kind + " " + archive[2] + "-" + archive[3];
+  }
+  var labels = {
+    "Дані": "Дані",
+    "Заявки": "Заявки",
+    "Проєкти": "Проєкти",
+    PROPERTY_KITS: "Комплекти майна",
+    PROPERTY_CATALOG: "Каталог майна",
+    INVENTORY_RECONCILIATION_FILES: "Індекс звірки",
+    TEST_RESULTS: "Результати перевірок",
+    VACATION_CHECK: "Перевірка відпусток",
+    FORMAT_RULES_REGISTRY: "Реєстр правил формату",
+    CHECKPOINTS: "Контрольні точки",
+    TEMPLATES: "Шаблони",
+    ACTIVE_OPERATIONS: "Активні операції",
+    JOB_RUNTIME_LOG: "Журнал завдань",
+    OPS_LOG: "Журнал операцій",
+    ALERTS_LOG: "Журнал сповіщень",
+    AUDIT_LOG: "Журнал аудиту",
+    LOG: "Журнал подій",
+  };
+  return labels[text] || "Службовий аркуш";
+}
+
+function _auditExternalMigrationEvent_(scenario, payload) {
+  if (
+    typeof Stage7AuditTrail_ !== "object" ||
+    !Stage7AuditTrail_ ||
+    typeof Stage7AuditTrail_.record !== "function"
+  ) {
+    return false;
+  }
+  try {
+    Stage7AuditTrail_.record({
+      scenario: String(scenario || "external-migration"),
+      level: "INFO",
+      status: "applied",
+      message: "Міграція зовнішніх таблиць",
+      payload: payload && typeof payload === "object" ? payload : {},
+      dryRun: false,
+    });
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 function beginExternalSpreadsheetMigration_() {
   var mode = getExternalStorageMode_();
   if (mode === "migration") {
@@ -420,7 +473,46 @@ function beginExternalSpreadsheetMigration_() {
   report.ok = true;
   report.skipped = false;
   report.reason = "started";
+  _auditExternalMigrationEvent_("external-migration-begin", {
+    mode: report.mode,
+  });
   return report;
+}
+
+function getExternalSpreadsheetMigrationStatus_() {
+  var described = describeExternalStorageMode_();
+  var receipt =
+    described.receipt && typeof described.receipt === "object"
+      ? described.receipt
+      : {};
+  var parityStatus = "absent";
+  if (receipt.status === "PASS") parityStatus = "PASS";
+  else if (receipt.checkedAt && receipt.status === "FAIL") parityStatus = "FAIL";
+  var mode = described.mode || "legacy";
+  var blurb =
+    mode === "external"
+      ? "Production працює із зовнішніми Spreadsheet."
+      : mode === "migration"
+        ? "Production ще працює з основною книгою. Дозволено перевірку та копіювання."
+        : "Production працює з локальними аркушами основної книги.";
+  var resources = EXTERNAL_SPREADSHEET_ENTRIES_.map(function (entry) {
+    return {
+      name: entry.logicalName,
+      displayName: getExternalLogicalDisplayName_(entry.logicalName),
+    };
+  });
+  return {
+    ok: true,
+    mode: mode,
+    registryCount: EXTERNAL_SPREADSHEET_ENTRIES_.length,
+    parityStatus: parityStatus,
+    checkedAt: String(receipt.checkedAt || ""),
+    mainWorkbookLabel: "основна книга",
+    blurb: blurb,
+    resources: resources,
+    cutoverInProgress: !!described.cutoverInProgress,
+    recommendedNext: described.recommendedNext || "",
+  };
 }
 
 function getExternalMigrationSourceSpreadsheetId_() {

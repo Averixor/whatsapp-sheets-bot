@@ -502,11 +502,34 @@ assert.equal(
   1,
 );
 const accessApi = loadContract("access-api.contract.json");
+const publicNames = new Set(accessApi.publicEndpoints || []);
+const excludedNames = new Set(
+  (accessApi.excludedEntrypoints || []).map((item) => item.name),
+);
+const sidebarApis = [
+  "apiGetExternalSpreadsheetMigrationStatus",
+  "apiGetExternalStorageMode",
+  "apiBeginExternalSpreadsheetMigration",
+  "apiPreviewExternalSpreadsheetMigration",
+  "apiApplyExternalSpreadsheetMigration",
+  "apiFinalizeExternalSpreadsheetMigration",
+];
+for (const name of sidebarApis) {
+  assert.ok(publicNames.has(name), name + " must be public");
+  assert.ok(!excludedNames.has(name), name + " must not be excluded");
+  assert.ok(apiSource.includes("function " + name), name + " must exist");
+  assert.ok(
+    apiSource.includes('_stage7AssertRole_("sysadmin"'),
+    "external migration APIs must stay sysadmin-guarded",
+  );
+}
 assert.ok(
-  (accessApi.excludedEntrypoints || []).some(
-    (item) => item.name === "apiBeginExternalSpreadsheetMigration",
-  ),
-  "apiBeginExternalSpreadsheetMigration must be excluded",
+  excludedNames.has("apiSetExternalStorageMode"),
+  "apiSetExternalStorageMode must stay excluded",
+);
+assert.ok(
+  !publicNames.has("apiSetExternalStorageMode"),
+  "apiSetExternalStorageMode must not be public",
 );
 
 setRawMode(null);
@@ -689,5 +712,96 @@ assert.deepEqual(
   [],
   "production must not open externalized sheets via the main workbook",
 );
+
+const statusStart = registrySource.indexOf(
+  "function getExternalSpreadsheetMigrationStatus_",
+);
+assert.ok(statusStart > 0, "status helper must exist");
+const statusNext = registrySource.indexOf("\nfunction ", statusStart + 10);
+const statusFn = registrySource.slice(statusStart, statusNext);
+assert.ok(
+  !statusFn.includes("previewExternalSpreadsheetMigration_"),
+  "status must not call preview (preview writes a receipt)",
+);
+
+setRawMode("migration");
+const status = context.getExternalSpreadsheetMigrationStatus_();
+assert.equal(status.ok, true);
+assert.equal(status.mode, "migration");
+assert.equal(status.registryCount, 17);
+assert.equal(status.mainWorkbookLabel, "основна книга");
+assert.equal(typeof status.checkedAt, "string");
+assert.ok(Array.isArray(status.resources));
+assert.equal(status.resources.length, 17);
+const statusJson = JSON.stringify(status);
+JSON.parse(statusJson);
+assert.ok(
+  !statusJson.includes(contract.mainWorkbookId),
+  "status DTO must not expose the main workbook id",
+);
+for (const id of ids) {
+  assert.ok(!statusJson.includes(id), "status DTO must not expose spreadsheet ids");
+}
+
+const previewDtoSource = context.previewExternalSpreadsheetMigration_();
+const dto = context.toExternalMigrationPreviewDto_(previewDtoSource);
+assert.equal(typeof dto.checkedAt, "string");
+assert.ok(dto.totals && typeof dto.totals === "object");
+assert.ok(Array.isArray(dto.resources));
+assert.equal(dto.resources.length, 17);
+const logRow = dto.resources.find((row) => row.name === "LOG");
+assert.ok(logRow, "preview DTO must include the events sheet");
+assert.equal(logRow.displayName, "Журнал подій");
+const dtoJson = JSON.stringify(dto);
+const parsedDto = JSON.parse(dtoJson);
+assert.equal(parsedDto.resources[0].displayName, dto.resources[0].displayName);
+assert.ok(!dtoJson.includes("[object Sheet]"));
+assert.ok(!dtoJson.includes("[object Object]Date"));
+
+auditRecords.length = 0;
+setRawMode(null);
+context.beginExternalSpreadsheetMigration_();
+assert.equal(
+  auditRecords.some((row) => row.scenario === "external-migration-begin"),
+  true,
+  "begin must write one audit record after success",
+);
+
+const uiHtmlFiles = walkRepoFiles(repoRoot, [".html"]).filter((rel) =>
+  rel.startsWith("ui/"),
+);
+for (const rel of uiHtmlFiles) {
+  const text = readFileSync(path.join(repoRoot, rel), "utf8");
+  assert.ok(
+    !text.includes("confirmParity"),
+    rel + " must not mention confirmParity",
+  );
+}
+const sidebar = readFileSync(path.join(repoRoot, "ui/Sidebar.html"), "utf8");
+assert.ok(sidebar.includes("Міграція зовнішніх таблиць"));
+assert.ok(sidebar.includes("externalMigration"));
+assert.ok(/data-role-min="sysadmin"[\s\S]{0,200}externalMigration/.test(sidebar) || /externalMigration[\s\S]{0,200}data-role-min="sysadmin"/.test(sidebar) || sidebar.includes('handleMenuAction(\'externalMigration\')'));
+const guards = readFileSync(
+  path.join(repoRoot, "ui/Js.Security.Guards.html"),
+  "utf8",
+);
+assert.match(guards, /externalMigration:\s*"sysadmin"/);
+const clientMod = readFileSync(
+  path.join(repoRoot, "ui/Js.ExternalMigration.html"),
+  "utf8",
+);
+assert.ok(clientMod.includes("MaintenanceApi.getExternalSpreadsheetMigrationStatus"));
+assert.ok(clientMod.includes("MaintenanceApi.beginExternalSpreadsheetMigration"));
+assert.ok(clientMod.includes("MaintenanceApi.previewExternalSpreadsheetMigration"));
+assert.ok(clientMod.includes("MaintenanceApi.applyExternalSpreadsheetMigration"));
+assert.ok(clientMod.includes("MaintenanceApi.finalizeExternalSpreadsheetMigration"));
+assert.ok(!clientMod.includes("apiSetExternalStorageMode"));
+const apiJs = readFileSync(path.join(repoRoot, "ui/Js.Api.html"), "utf8");
+assert.ok(apiJs.includes('Api.run("apiGetExternalSpreadsheetMigrationStatus")'));
+assert.ok(apiJs.includes('Api.run("apiBeginExternalSpreadsheetMigration")'));
+assert.ok(apiJs.includes('Api.run("apiPreviewExternalSpreadsheetMigration")'));
+assert.ok(apiJs.includes('Api.run("apiApplyExternalSpreadsheetMigration")'));
+assert.ok(apiJs.includes('Api.run("apiFinalizeExternalSpreadsheetMigration")'));
+assert.ok(!apiJs.includes("apiSetExternalStorageMode"));
 
 console.log("verify-external-spreadsheets: OK");

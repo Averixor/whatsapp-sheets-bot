@@ -396,7 +396,7 @@ function applyExternalSpreadsheetMigration_() {
   if (!preview.ok) {
     preview.applied = false;
     preview.message =
-      "Apply зупинено через conflict. Виправте вручну й повторіть preview.";
+      "Копіювання зупинено через розбіжність. Виправте вручну й повторіть перевірку.";
     preview.storageMode = modeBefore;
     preview.storageModeAfter =
       typeof getExternalStorageMode_ === "function"
@@ -453,6 +453,12 @@ function applyExternalSpreadsheetMigration_() {
     typeof getExternalStorageMode_ === "function"
       ? getExternalStorageMode_()
       : modeBefore;
+  if (typeof _auditExternalMigrationEvent_ === "function") {
+    _auditExternalMigrationEvent_("external-migration-apply", {
+      copyCount: Number(preview.copyCount || 0),
+      alreadyMigrated: Number(preview.alreadyMigrated || 0),
+    });
+  }
   return preview;
 }
 
@@ -466,7 +472,7 @@ function _finalizeExternalSpreadsheetMigrationBody_() {
       ok: true,
       skipped: true,
       reason: "already_external",
-      message: "Режим уже external — повторний finalizer пропущено",
+      message: "Міграцію вже завершено.",
       storageMode: mode,
       storageModeAfter: mode,
       applied: false,
@@ -477,7 +483,7 @@ function _finalizeExternalSpreadsheetMigrationBody_() {
       ok: false,
       skipped: true,
       reason: "mode_not_migration",
-      message: "Finalizer дозволений лише з режиму migration",
+      message: "Завершення дозволене лише під час міграції.",
       storageMode: mode,
       storageModeAfter: mode,
       applied: false,
@@ -495,7 +501,7 @@ function _finalizeExternalSpreadsheetMigrationBody_() {
         reason: "apply_failed",
         message:
           (applied && applied.message) ||
-          "Finalizer зупинено: apply не завершився",
+          "Завершення зупинено: копіювання не завершилося",
         storageMode: mode,
         storageModeAfter: getExternalStorageMode_(),
         applied: false,
@@ -526,7 +532,7 @@ function _finalizeExternalSpreadsheetMigrationBody_() {
         ok: false,
         skipped: false,
         reason: "parity_mismatch",
-        message: "Fresh parity не PASS — режим лишається migration",
+        message: "Перевірка не збіглася — режим лишається міграцією.",
         storageMode: mode,
         storageModeAfter: getExternalStorageMode_(),
         applied: true,
@@ -537,11 +543,16 @@ function _finalizeExternalSpreadsheetMigrationBody_() {
       };
     }
     setExternalStorageMode_("external", { fromFinalizer: true });
+    if (typeof _auditExternalMigrationEvent_ === "function") {
+      _auditExternalMigrationEvent_("external-migration-finalize", {
+        reason: "cutover",
+      });
+    }
     return {
       ok: true,
       skipped: false,
       reason: "cutover",
-      message: "Cutover виконано: режим external",
+      message: "Перехід виконано. Production працює із зовнішніми таблицями.",
       storageMode: mode,
       storageModeAfter: getExternalStorageMode_(),
       applied: true,
@@ -553,6 +564,114 @@ function _finalizeExternalSpreadsheetMigrationBody_() {
       setExternalCutoverInProgress_(false);
     }
   }
+}
+
+function _extMigActionStatus_(action, conflict) {
+  if (conflict || action === "conflict") return "CONFLICT";
+  if (action === "already_migrated") return "PASS";
+  if (action === "copy") return "COPY";
+  if (
+    action === "missing_source" ||
+    action === "target_inaccessible" ||
+    action === "skip"
+  ) {
+    return action === "skip" ? "COPY" : "ERROR";
+  }
+  return "ERROR";
+}
+
+function _extMigTargetState_(row) {
+  if (!row) return "unknown";
+  if (row.conflict) return "conflict";
+  if (!row.targetOpened) return "inaccessible";
+  if (row.targetWasPlaceholder) return "placeholder";
+  if (row.action === "already_migrated") return "matches";
+  if (row.action === "copy") return "empty_or_copy";
+  if (!row.sourceFound) return "missing_source";
+  return String(row.action || "unknown");
+}
+
+function toExternalMigrationPreviewDto_(report) {
+  var src = report && typeof report === "object" ? report : {};
+  var tables = Array.isArray(src.tables) ? src.tables : [];
+  var resources = tables.map(function (row) {
+    var parity = row.parity || {};
+    var status = _extMigActionStatus_(row.action, row.conflict);
+    return {
+      name: String(row.logicalName || ""),
+      displayName:
+        typeof getExternalLogicalDisplayName_ === "function"
+          ? getExternalLogicalDisplayName_(row.logicalName)
+          : String(row.logicalName || ""),
+      status: status,
+      action: String(row.action || ""),
+      message: String(row.message || ""),
+      sourceRows: Number(parity.sourceRows || 0),
+      targetRows: Number(parity.targetRows || 0),
+      targetState: _extMigTargetState_(row),
+    };
+  });
+  var archives = [];
+  tables.forEach(function (row) {
+    (row.archives || []).forEach(function (item) {
+      var status = _extMigActionStatus_(item.action, item.action === "conflict");
+      archives.push({
+        owner: String(row.logicalName || ""),
+        name: String(item.name || ""),
+        displayName:
+          typeof getExternalLogicalDisplayName_ === "function"
+            ? getExternalLogicalDisplayName_(item.name)
+            : String(item.name || ""),
+        status: status,
+        action: String(item.action || ""),
+        message:
+          status === "CONFLICT"
+            ? "Архів не збігається з джерелом"
+            : String(item.action || ""),
+        sourceRows: Number(item.sourceRows || 0),
+        targetRows: Number(item.targetRows || 0),
+      });
+    });
+  });
+  var pass = resources.filter(function (item) {
+    return item.status === "PASS";
+  }).length;
+  var conflicts =
+    Number(src.conflictCount || 0) ||
+    resources.filter(function (item) {
+      return item.status === "CONFLICT";
+    }).length +
+      archives.filter(function (item) {
+        return item.status === "CONFLICT";
+      }).length;
+  var errors = resources.filter(function (item) {
+    return item.status === "ERROR";
+  }).length;
+  var receipt = src.receipt && typeof src.receipt === "object" ? src.receipt : {};
+  var parityStatus =
+    receipt.status === "PASS" || src.parity === "pass" ? "PASS" : "FAIL";
+  return {
+    ok: src.ok !== false && conflicts === 0 && errors === 0,
+    mode: String(src.storageModeAfter || src.storageMode || ""),
+    parityStatus: parityStatus,
+    totals: {
+      resources: resources.length,
+      pass: pass,
+      conflicts: conflicts,
+      errors: errors,
+      copy: Number(src.copyCount || 0),
+      alreadyMigrated: Number(src.alreadyMigrated || 0),
+    },
+    resources: resources,
+    archives: archives,
+    message: String(src.message || ""),
+    storageMode: String(src.storageMode || ""),
+    storageModeAfter: String(src.storageModeAfter || ""),
+    applied: src.applied === true,
+    skipped: src.skipped === true,
+    reason: String(src.reason || ""),
+    checkedAt: String(receipt.checkedAt || ""),
+  };
 }
 
 function finalizeExternalSpreadsheetMigration_() {

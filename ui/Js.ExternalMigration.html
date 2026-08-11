@@ -1,0 +1,423 @@
+<script>
+  // Js.ExternalMigration — панель міграції зовнішніх таблиць для sysadmin.
+
+  var ExternalMigrationModule = (function () {
+    const state = {
+      status: null,
+      preview: null,
+      previewPass: false,
+      busy: false,
+      error: "",
+      details: "",
+    };
+
+    function esc_(value) {
+      return typeof escapeHtml === "function"
+        ? escapeHtml(value == null ? "" : String(value))
+        : String(value == null ? "" : value);
+    }
+
+    function modeLabel_(mode) {
+      if (mode === "migration") return "Міграція";
+      if (mode === "external") return "Зовнішні таблиці";
+      return "Локальні аркуші";
+    }
+
+    function parityLabel_(status) {
+      if (status === "PASS") return "Збіг";
+      if (status === "FAIL") return "Розбіжність";
+      return "Ще не перевіряли";
+    }
+
+    function rowStatusLabel_(status) {
+      if (status === "PASS") return "Збіг";
+      if (status === "COPY") return "Потрібна копія";
+      if (status === "CONFLICT") return "Розбіжність";
+      return "Помилка";
+    }
+
+    function unwrap_(result) {
+      if (!result || typeof result !== "object") return {};
+      if (result.data && typeof result.data === "object") {
+        return Object.assign({}, result, result.data);
+      }
+      return result;
+    }
+
+    function canBegin_(mode) {
+      return mode === "legacy" && !state.busy;
+    }
+
+    function canPreview_(mode) {
+      return mode === "migration" && !state.busy;
+    }
+
+    function canApply_(mode) {
+      return mode === "migration" && state.previewPass && !state.busy;
+    }
+
+    function canFinalize_(mode) {
+      return mode === "migration" && !state.busy;
+    }
+
+    function btn_(id, label, enabled, extraClass) {
+      return (
+        '<button type="button" class="btn ' +
+        (extraClass || "btn-secondary") +
+        ' ext-mig-btn" data-ext-mig="' +
+        esc_(id) +
+        '"' +
+        (enabled ? "" : " disabled") +
+        ">" +
+        esc_(label) +
+        "</button>"
+      );
+    }
+
+    function renderTable_(items) {
+      const rows = Array.isArray(items) ? items : [];
+      if (!rows.length) {
+        return "";
+      }
+      const body = rows
+        .map(function (row) {
+          return (
+            "<tr>" +
+            "<td>" +
+            esc_(row.displayName || "") +
+            "</td>" +
+            "<td>" +
+            esc_(rowStatusLabel_(row.status)) +
+            "</td>" +
+            "<td>" +
+            esc_(row.message || "") +
+            "</td>" +
+            "<td>" +
+            esc_(String(row.sourceRows || 0)) +
+            " / " +
+            esc_(String(row.targetRows || 0)) +
+            "</td>" +
+            "</tr>"
+          );
+        })
+        .join("");
+      return (
+        '<div class="ext-mig-table-wrap"><table class="ext-mig-table">' +
+        "<thead><tr><th>Аркуш</th><th>Стан</th><th>Повідомлення</th><th>Рядки</th></tr></thead>" +
+        "<tbody>" +
+        body +
+        "</tbody></table></div>"
+      );
+    }
+
+    function render_() {
+      const status = state.status || {};
+      const mode = String(status.mode || "legacy");
+      const preview = state.preview;
+      const busyText = state.busy
+        ? '<div class="ext-mig-busy">Виконується…</div>'
+        : "";
+      const errorBlock = state.error
+        ? '<div class="ext-mig-error">' + esc_(state.error) + "</div>"
+        : "";
+      const doneNote =
+        mode === "external"
+          ? '<p class="ext-mig-note">Міграцію завершено. Production працює із зовнішніми таблицями.</p>'
+          : mode === "migration"
+            ? '<p class="ext-mig-note">Міграція вже розпочата.</p>'
+            : "";
+      const totals = preview && preview.totals ? preview.totals : null;
+      const totalsHtml = totals
+        ? '<p class="ext-mig-totals">' +
+          esc_(
+            "Перевірено: " +
+              String(totals.resources || 0) +
+              ". Збіг: " +
+              String(totals.pass || 0) +
+              ". Копія: " +
+              String(totals.copy || 0) +
+              ". Розбіжності: " +
+              String(totals.conflicts || 0) +
+              ". Помилки: " +
+              String(totals.errors || 0),
+          ) +
+          "</p>"
+        : "";
+      const details =
+        state.details
+          ? '<details class="ext-mig-details"><summary>Технічні деталі</summary><pre>' +
+            esc_(state.details) +
+            "</pre></details>"
+          : "";
+
+      setHtml(
+        "resultContent",
+        '<div class="ext-mig-panel">' +
+          '<div class="ext-mig-card">' +
+          '<div class="ext-mig-eyebrow">Системні дії</div>' +
+          "<h3>Міграція зовнішніх таблиць</h3>" +
+          "<p>" +
+          esc_(status.blurb || "Завантаження статусу…") +
+          "</p>" +
+          '<dl class="ext-mig-meta">' +
+          "<div><dt>Режим</dt><dd>" +
+          esc_(modeLabel_(mode)) +
+          "</dd></div>" +
+          "<div><dt>Джерело</dt><dd>" +
+          esc_(status.mainWorkbookLabel || "основна книга") +
+          "</dd></div>" +
+          "<div><dt>Аркушів</dt><dd>" +
+          esc_(String(status.registryCount || 0)) +
+          "</dd></div>" +
+          "<div><dt>Перевірка</dt><dd>" +
+          esc_(parityLabel_(status.parityStatus)) +
+          "</dd></div>" +
+          "</dl>" +
+          doneNote +
+          busyText +
+          errorBlock +
+          '<div class="ext-mig-actions">' +
+          btn_("refresh", "Оновити", !state.busy) +
+          btn_("begin", "Почати міграцію", canBegin_(mode), "btn-primary") +
+          btn_("preview", "Перевірити", canPreview_(mode)) +
+          btn_("apply", "Скопіювати", canApply_(mode)) +
+          btn_("finalize", "Завершити", canFinalize_(mode)) +
+          "</div>" +
+          totalsHtml +
+          renderTable_(preview && preview.resources) +
+          renderTable_(preview && preview.archives) +
+          details +
+          "</div></div>",
+      );
+
+      const root = document.getElementById("resultContent");
+      if (!root) return;
+      Array.prototype.forEach.call(
+        root.querySelectorAll("[data-ext-mig]"),
+        function (button) {
+          button.addEventListener("click", function () {
+            const action = button.getAttribute("data-ext-mig");
+            if (action === "refresh") refresh_();
+            else if (action === "begin") begin_();
+            else if (action === "preview") preview_();
+            else if (action === "apply") apply_();
+            else if (action === "finalize") finalize_();
+          });
+        },
+      );
+    }
+
+    async function withBusy_(fn) {
+      if (state.busy) return;
+      state.busy = true;
+      state.error = "";
+      render_();
+      if (typeof showLoading === "function") showLoading();
+      try {
+        await fn();
+      } catch (error) {
+        state.error =
+          typeof normalizeError === "function"
+            ? normalizeError(error)
+            : String((error && error.message) || error || "Помилка");
+        if (typeof showToast === "function") {
+          showToast("✕ " + state.error);
+        }
+      } finally {
+        state.busy = false;
+        if (typeof hideLoading === "function") hideLoading();
+        render_();
+      }
+    }
+
+    function rememberDetails_(payload) {
+      try {
+        state.details = JSON.stringify(payload || {}, null, 2);
+      } catch (_) {
+        state.details = "";
+      }
+    }
+
+    async function refresh_() {
+      await withBusy_(async function () {
+        const result = unwrap_(
+          await MaintenanceApi.getExternalSpreadsheetMigrationStatus(),
+        );
+        if (result.success === false) {
+          throw new Error(result.message || result.error || "Не вдалося прочитати статус");
+        }
+        state.status = result;
+        if (String(result.mode || "") !== "migration") {
+          state.previewPass = false;
+        }
+      });
+    }
+
+    async function begin_() {
+      await withBusy_(async function () {
+        const result = unwrap_(
+          await MaintenanceApi.beginExternalSpreadsheetMigration(),
+        );
+        if (result.success === false) {
+          throw new Error(result.message || result.error || "Не вдалося почати міграцію");
+        }
+        state.previewPass = false;
+        state.preview = null;
+        const status = unwrap_(
+          await MaintenanceApi.getExternalSpreadsheetMigrationStatus(),
+        );
+        state.status = status;
+        if (typeof logToConsole === "function") {
+          logToConsole(result.message || "Режим міграції увімкнено", "success");
+        }
+      });
+    }
+
+    async function preview_() {
+      await withBusy_(async function () {
+        const result = unwrap_(
+          await MaintenanceApi.previewExternalSpreadsheetMigration(),
+        );
+        if (result.success === false && !result.resources) {
+          throw new Error(result.message || result.error || "Перевірка не вдалася");
+        }
+        state.preview = result;
+        const totals = result.totals || {};
+        state.previewPass =
+          result.ok !== false &&
+          result.parityStatus === "PASS" &&
+          Number(totals.conflicts || 0) === 0 &&
+          Number(totals.errors || 0) === 0;
+        rememberDetails_({
+          parityStatus: result.parityStatus,
+          totals: totals,
+          checkedAt: result.checkedAt,
+        });
+        const status = unwrap_(
+          await MaintenanceApi.getExternalSpreadsheetMigrationStatus(),
+        );
+        state.status = status;
+        if (typeof logToConsole === "function") {
+          logToConsole(
+            result.message ||
+              (state.previewPass
+                ? "Перевірка збіглася"
+                : "Перевірка виявила розбіжності"),
+            state.previewPass ? "success" : "warning",
+          );
+        }
+      });
+    }
+
+    async function apply_() {
+      const confirmed =
+        typeof showConfirmModal === "function"
+          ? await showConfirmModal({
+              danger: true,
+              title: "Скопіювати службові аркуші?",
+              message:
+                "Буде скопійовано 17 службових аркушів у зовнішні таблиці. Production лишається в режимі міграції. Локальні аркуші не видаляються.",
+              confirmLabel: "Скопіювати",
+            })
+          : false;
+      if (!confirmed) return;
+      await withBusy_(async function () {
+        const result = unwrap_(
+          await MaintenanceApi.applyExternalSpreadsheetMigration(),
+        );
+        if (result.success === false) {
+          state.preview = result.resources ? result : state.preview;
+          rememberDetails_({
+            parityStatus: result.parityStatus,
+            totals: result.totals,
+            reason: result.reason,
+          });
+          throw new Error(result.message || result.error || "Копіювання зупинено");
+        }
+        state.preview = result;
+        const totals = result.totals || {};
+        state.previewPass =
+          result.ok !== false &&
+          result.parityStatus === "PASS" &&
+          Number(totals.conflicts || 0) === 0;
+        rememberDetails_({
+          parityStatus: result.parityStatus,
+          totals: totals,
+          applied: result.applied,
+        });
+        const status = unwrap_(
+          await MaintenanceApi.getExternalSpreadsheetMigrationStatus(),
+        );
+        state.status = status;
+        if (typeof logToConsole === "function") {
+          logToConsole(result.message || "Копіювання виконано", "success");
+        }
+      });
+    }
+
+    async function finalize_() {
+      const confirmed =
+        typeof showConfirmModal === "function"
+          ? await showConfirmModal({
+              danger: true,
+              title: "Завершити міграцію?",
+              message:
+                "Буде виконано фінальну синхронізацію та свіжу перевірку. Перехід на зовнішні таблиці відбудеться лише після повного збігу. Обходу перевірки немає.",
+              confirmLabel: "Завершити",
+            })
+          : false;
+      if (!confirmed) return;
+      await withBusy_(async function () {
+        const result = unwrap_(
+          await MaintenanceApi.finalizeExternalSpreadsheetMigration(),
+        );
+        if (result.success === false) {
+          state.preview = result.resources ? result : state.preview;
+          state.previewPass = false;
+          rememberDetails_({
+            parityStatus: result.parityStatus,
+            totals: result.totals,
+            reason: result.reason,
+          });
+          throw new Error(result.message || result.error || "Завершення зупинено");
+        }
+        state.preview = result.resources ? result : state.preview;
+        state.previewPass = false;
+        const status = unwrap_(
+          await MaintenanceApi.getExternalSpreadsheetMigrationStatus(),
+        );
+        state.status = status;
+        if (typeof logToConsole === "function") {
+          logToConsole(
+            result.message || "Міграцію завершено",
+            "success",
+          );
+        }
+      });
+    }
+
+    async function open() {
+      showStandardResult("Міграція зовнішніх таблиць");
+      setHtml(
+        "resultContent",
+        '<div class="ext-mig-panel"><div class="ext-mig-card"><div class="ext-mig-muted">Завантажую статус…</div></div></div>',
+      );
+      state.preview = null;
+      state.previewPass = false;
+      state.error = "";
+      state.details = "";
+      await refresh_();
+    }
+
+    return Object.freeze({
+      open: open,
+      refresh: refresh_,
+      render: render_,
+      state: state,
+    });
+  })();
+
+  function showExternalMigration() {
+    return ExternalMigrationModule.open();
+  }
+</script>

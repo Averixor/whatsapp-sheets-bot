@@ -26,6 +26,7 @@
       "id": "features",
       "files": [
         "Js.Vacations.Module",
+        "Js.ExternalMigration",
         "Js.Diagnostics",
         "Js.Security.Boot",
         "Js.Security.Util",
@@ -149,7 +150,8 @@
     "$id",
     "showProgressBar",
     "hideProgressBar",
-    "syncConsoleOverlayState_"
+    "syncConsoleOverlayState_",
+    "showConfirmModal"
   ],
   "builtins": [
     "undefined",

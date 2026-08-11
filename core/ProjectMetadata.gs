@@ -125,6 +125,12 @@ const PROJECT_STAGE7_CANONICAL_API_MAP_ = Object.freeze({
     "apiScanManualFormatRules",
     "apiApplyFormatRulesRegistry",
     "apiExportAdoptedFormatRules",
+    "apiGetExternalSpreadsheetMigrationStatus",
+    "apiGetExternalStorageMode",
+    "apiBeginExternalSpreadsheetMigration",
+    "apiPreviewExternalSpreadsheetMigration",
+    "apiApplyExternalSpreadsheetMigration",
+    "apiFinalizeExternalSpreadsheetMigration",
   ]),
 
   compatibility: Object.freeze(["apiLoadCalendarDay"]),
@@ -460,6 +466,30 @@ const PROJECT_STAGE7_ACCESS_API_ROLE_POLICY_ = Object.freeze({
     guestAllowed: false,
     minRole: "viewer",
   }),
+  apiGetExternalSpreadsheetMigrationStatus: Object.freeze({
+    guestAllowed: false,
+    minRole: "sysadmin",
+  }),
+  apiGetExternalStorageMode: Object.freeze({
+    guestAllowed: false,
+    minRole: "sysadmin",
+  }),
+  apiBeginExternalSpreadsheetMigration: Object.freeze({
+    guestAllowed: false,
+    minRole: "sysadmin",
+  }),
+  apiPreviewExternalSpreadsheetMigration: Object.freeze({
+    guestAllowed: false,
+    minRole: "sysadmin",
+  }),
+  apiApplyExternalSpreadsheetMigration: Object.freeze({
+    guestAllowed: false,
+    minRole: "sysadmin",
+  }),
+  apiFinalizeExternalSpreadsheetMigration: Object.freeze({
+    guestAllowed: false,
+    minRole: "sysadmin",
+  }),
 });
 
 const PROJECT_STAGE7_PUBLIC_API_MAP_ = Object.freeze({
@@ -602,6 +632,15 @@ const PROJECT_STAGE7_CLIENT_ROUTING_GROUPS_ = Object.freeze({
     applyProtections: "apiStage7ApplyProtections",
     bootstrapAccessSheet: "apiStage7BootstrapAccessSheet",
     bootstrapRuntimeAndAlertsSheets: "apiStage7BootstrapRuntimeAndAlertsSheets",
+    getExternalSpreadsheetMigrationStatus:
+      "apiGetExternalSpreadsheetMigrationStatus",
+    getExternalStorageMode: "apiGetExternalStorageMode",
+    beginExternalSpreadsheetMigration: "apiBeginExternalSpreadsheetMigration",
+    previewExternalSpreadsheetMigration:
+      "apiPreviewExternalSpreadsheetMigration",
+    applyExternalSpreadsheetMigration: "apiApplyExternalSpreadsheetMigration",
+    finalizeExternalSpreadsheetMigration:
+      "apiFinalizeExternalSpreadsheetMigration",
   }),
 
   compatibility: Object.freeze({
@@ -814,6 +853,48 @@ const PROJECT_CLIENT_ROUTING_POLICY_ = Object.freeze({
     status: "compatibility-alias",
     uiAllowed: false,
   }),
+  apiGetExternalSpreadsheetMigrationStatus: Object.freeze({
+    client: "MaintenanceApi.getExternalSpreadsheetMigrationStatus",
+    server: "apiGetExternalSpreadsheetMigrationStatus",
+    useCase: "getExternalSpreadsheetMigrationStatus_",
+    status: "canonical",
+    uiAllowed: true,
+  }),
+  apiGetExternalStorageMode: Object.freeze({
+    client: "MaintenanceApi.getExternalStorageMode",
+    server: "apiGetExternalStorageMode",
+    useCase: "describeExternalStorageMode_",
+    status: "canonical",
+    uiAllowed: true,
+  }),
+  apiBeginExternalSpreadsheetMigration: Object.freeze({
+    client: "MaintenanceApi.beginExternalSpreadsheetMigration",
+    server: "apiBeginExternalSpreadsheetMigration",
+    useCase: "beginExternalSpreadsheetMigration_",
+    status: "canonical",
+    uiAllowed: true,
+  }),
+  apiPreviewExternalSpreadsheetMigration: Object.freeze({
+    client: "MaintenanceApi.previewExternalSpreadsheetMigration",
+    server: "apiPreviewExternalSpreadsheetMigration",
+    useCase: "previewExternalSpreadsheetMigration_",
+    status: "canonical",
+    uiAllowed: true,
+  }),
+  apiApplyExternalSpreadsheetMigration: Object.freeze({
+    client: "MaintenanceApi.applyExternalSpreadsheetMigration",
+    server: "apiApplyExternalSpreadsheetMigration",
+    useCase: "applyExternalSpreadsheetMigration_",
+    status: "canonical",
+    uiAllowed: true,
+  }),
+  apiFinalizeExternalSpreadsheetMigration: Object.freeze({
+    client: "MaintenanceApi.finalizeExternalSpreadsheetMigration",
+    server: "apiFinalizeExternalSpreadsheetMigration",
+    useCase: "finalizeExternalSpreadsheetMigration_",
+    status: "canonical",
+    uiAllowed: true,
+  }),
 });
 
 const PROJECT_CLIENT_RUNTIME_POLICY_ = Object.freeze({
@@ -840,6 +921,7 @@ const PROJECT_CLIENT_RUNTIME_POLICY_ = Object.freeze({
     "Js.Vacations.Module.html",
     "Js.VacationSync.html",
     "Js.InventoryReconciliation.html",
+    "Js.ExternalMigration.html",
     "Js.Diagnostics.html",
     "Js.Security.Boot.html",
     "Js.Security.Util.html",
@@ -958,6 +1040,7 @@ const PROJECT_BUNDLE_FILE_INDEX_ = Object.freeze([
   "sheets/SheetStandards.gs",
   "ui/Sidebar.html",
   "ui/Js.InventoryReconciliation.html",
+  "ui/Js.ExternalMigration.html",
   "ui-server/SidebarServer.gs",
   "smoke/SmokeTests.gs",
   "smoke/SmokeTests.Helpers.gs",

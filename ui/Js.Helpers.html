@@ -894,6 +894,7 @@
       carsRegister: "Автотехніка",
       weaponsRegister: "Озброєння",
       inventoryReconciliation: "Звірка",
+      externalMigration: "Міграція зовнішніх таблиць",
       requests: "Заявки",
     };
 
@@ -1012,6 +1013,10 @@
           navigateTo("inventoryReconciliation", () =>
             showInventoryReconciliation(),
           );
+          break;
+
+        case "externalMigration":
+          navigateTo("externalMigration", () => showExternalMigration());
           break;
 
         case "vacationReminder": {
