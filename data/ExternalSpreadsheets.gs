@@ -398,6 +398,31 @@ function setExternalStorageMode_(mode, options) {
   return report;
 }
 
+function beginExternalSpreadsheetMigration_() {
+  var mode = getExternalStorageMode_();
+  if (mode === "migration") {
+    var already = describeExternalStorageMode_();
+    already.ok = true;
+    already.skipped = true;
+    already.reason = "already_migration";
+    return already;
+  }
+  if (mode === "external") {
+    var blocked = describeExternalStorageMode_();
+    blocked.ok = false;
+    blocked.skipped = true;
+    blocked.reason = "already_external";
+    blocked.message =
+      "Режим уже external. Назад у migration цей helper не переводить.";
+    return blocked;
+  }
+  var report = setExternalStorageMode_("migration");
+  report.ok = true;
+  report.skipped = false;
+  report.reason = "started";
+  return report;
+}
+
 function getExternalMigrationSourceSpreadsheetId_() {
   return WASB_MAIN_WORKBOOK_ID_;
 }

@@ -1543,6 +1543,31 @@ function apiGetExternalStorageMode() {
 }
 
 /**
+ * No-arg GAS Editor helper: legacy → migration.
+ * Does not enable external. Sysadmin only.
+ */
+function apiBeginExternalSpreadsheetMigration() {
+  _stage7AssertRole_("sysadmin", "begin external spreadsheet migration");
+  var report =
+    typeof beginExternalSpreadsheetMigration_ === "function"
+      ? beginExternalSpreadsheetMigration_()
+      : { ok: false, mode: "legacy", message: "storage mode helper unavailable" };
+  var ok = report.ok !== false;
+  return _stage7BuildMaintenanceResponse_(
+    ok,
+    ok
+      ? report.skipped
+        ? "Режим міграції вже увімкнено"
+        : "Режим зовнішнього зберігання: migration"
+      : report.message || "Не можна почати міграцію з поточного режиму",
+    report,
+    "beginExternalSpreadsheetMigration",
+    [],
+    { dryRun: false, uiAllowed: false },
+  );
+}
+
+/**
  * Set WASB_EXTERNAL_STORAGE_MODE to legacy|migration|external.
  * external without parity PASS is refused unless confirmParity:true.
  */

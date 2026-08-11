@@ -327,6 +327,10 @@
       "reason": "GAS-editor sysadmin write of WASB_EXTERNAL_STORAGE_MODE; not client-reachable"
     },
     {
+      "name": "apiBeginExternalSpreadsheetMigration",
+      "reason": "GAS-editor sysadmin no-arg helper to set migration mode; not client-reachable"
+    },
+    {
       "name": "apiFinalizeExternalSpreadsheetMigration",
       "reason": "GAS-editor sysadmin locked cutover to external storage; not client-reachable"
     }

@@ -491,6 +491,39 @@ assert.equal(
 assert.ok(apiSource.includes("function apiGetExternalStorageMode"));
 assert.ok(apiSource.includes("function apiSetExternalStorageMode"));
 assert.ok(apiSource.includes("function apiFinalizeExternalSpreadsheetMigration"));
+assert.ok(apiSource.includes("function apiBeginExternalSpreadsheetMigration"));
+assert.ok(
+  !/function\s+api\w*EnableExternal/.test(apiSource) &&
+    !/function\s+apiBeginExternalStorageExternal/.test(apiSource),
+  "must not add a no-arg wrapper that enables external",
+);
+assert.equal(
+  (apiSource.match(/function apiBeginExternalSpreadsheetMigration/g) || []).length,
+  1,
+);
+const accessApi = loadContract("access-api.contract.json");
+assert.ok(
+  (accessApi.excludedEntrypoints || []).some(
+    (item) => item.name === "apiBeginExternalSpreadsheetMigration",
+  ),
+  "apiBeginExternalSpreadsheetMigration must be excluded",
+);
+
+setRawMode(null);
+const began = context.beginExternalSpreadsheetMigration_();
+assert.equal(began.ok, true);
+assert.equal(began.reason, "started");
+assert.equal(context.getExternalStorageMode_(), "migration");
+const beganAgain = context.beginExternalSpreadsheetMigration_();
+assert.equal(beganAgain.ok, true);
+assert.equal(beganAgain.skipped, true);
+assert.equal(beganAgain.reason, "already_migration");
+assert.equal(context.getExternalStorageMode_(), "migration");
+context.setExternalStorageMode_("external", { fromFinalizer: true });
+const beganFromExternal = context.beginExternalSpreadsheetMigration_();
+assert.equal(beganFromExternal.ok, false);
+assert.equal(beganFromExternal.reason, "already_external");
+assert.equal(context.getExternalStorageMode_(), "external");
 
 function enableExternalForTests() {
   context.setExternalStorageMode_("external", { fromFinalizer: true });
