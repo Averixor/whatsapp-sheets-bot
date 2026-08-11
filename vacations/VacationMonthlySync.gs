@@ -84,7 +84,8 @@ var VacationMonthlySync_ = (function () {
   }
 
   function _dayOrdinal_(date) {
-    return Math.floor(date.getTime() / 86400000);
+    if (!(date instanceof Date) || isNaN(date.getTime())) return NaN;
+    return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000;
   }
 
   function _monthBounds_(sheet) {
@@ -485,8 +486,6 @@ var VacationMonthlySync_ = (function () {
 
   function _isActiveVacation_(vacation) {
     if (!vacation) return false;
-    if (vacation.active === false || vacation.isActive === false) return false;
-    if (vacation.operationalActive === false) return false;
     if (vacation.factExpected === false) return false;
     return true;
   }

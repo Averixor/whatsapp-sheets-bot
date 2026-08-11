@@ -502,7 +502,7 @@ const VacationsRepository_ = (function () {
         active: active,
         isActive: active,
         operationalActive: active,
-        factExpected: active,
+        factExpected: true,
         reminderEligible: active,
         notify: item.notify,
         days: item.daysLeft,

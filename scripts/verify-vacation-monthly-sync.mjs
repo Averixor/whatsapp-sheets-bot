@@ -143,19 +143,48 @@ class FakeRange {
 }
 
 class FakeSheet {
-  constructor({ name = "07", allowed = ["БР", "Відпус", "КП"], codes = [] } = {}) {
+  constructor({
+    name = "07",
+    month = 7,
+    year = 2026,
+    headerDates,
+    allowed = ["БР", "Відпус", "КП"],
+    codes = [],
+    people,
+  } = {}) {
     this.name = name;
-    this.values = [
-      ["FML", "Callsign", date(2026, 7, 10), date(2026, 7, 11), date(2026, 7, 12)],
-      ["Сова Повне Ім'я", "СОВА", codes[0] || "", codes[1] || "", codes[2] || ""],
-      ["Гугл Повне Ім'я", "ГУГЛ", "", "", ""],
-      ["Резерв Повне Ім'я", "РЕЗЕРВ", "", "", ""],
+    this.month = month;
+    this.year = year;
+    const dates = headerDates || [
+      date(2026, 7, 10),
+      date(2026, 7, 11),
+      date(2026, 7, 12),
     ];
-    this.notes = Array.from({ length: 4 }, () => Array(5).fill(""));
-    this.backgrounds = Array.from({ length: 4 }, () => Array(5).fill("#ffffff"));
-    this.validations = Array.from({ length: 4 }, () => Array(5).fill(null));
-    for (let r = 1; r < 4; r++) {
-      for (let c = 2; c < 5; c++) {
+    const roster = people || [
+      ["Сова Повне Ім'я", "СОВА"],
+      ["Гугл Повне Ім'я", "ГУГЛ"],
+      ["Резерв Повне Ім'я", "РЕЗЕРВ"],
+    ];
+    this.values = [
+      ["FML", "Callsign"].concat(dates),
+      ...roster.map((person, index) => {
+        const rowCodes = index === 0 ? codes : [];
+        return [person[0], person[1]].concat(
+          dates.map((_, col) => rowCodes[col] || ""),
+        );
+      }),
+    ];
+    const width = this.values[0].length;
+    const height = this.values.length;
+    this.notes = Array.from({ length: height }, () => Array(width).fill(""));
+    this.backgrounds = Array.from({ length: height }, () =>
+      Array(width).fill("#ffffff"),
+    );
+    this.validations = Array.from({ length: height }, () =>
+      Array(width).fill(null),
+    );
+    for (let r = 1; r < height; r++) {
+      for (let c = 2; c < width; c++) {
         this.validations[r][c] = new FakeValidation(allowed);
       }
     }
@@ -166,11 +195,11 @@ class FakeSheet {
   }
 
   getLastColumn() {
-    return 5;
+    return this.values[0].length;
   }
 
   getLastRow() {
-    return 4;
+    return this.values.length;
   }
 
   getRange(a1OrRow, col, numRows, numCols) {
@@ -256,7 +285,9 @@ const context = vm.createContext({
     return callback();
   },
   getMonthlyCodeRangeA1ForSheet_() {
-    return "C2:E4";
+    if (!activeSheet) return "C2:E4";
+    const lastCol = columnNumberToLetter(activeSheet.getLastColumn());
+    return "C2:" + lastCol + String(activeSheet.getLastRow());
   },
   getMonthlyCallsignColForSheet_() {
     return 2;
@@ -265,7 +296,10 @@ const context = vm.createContext({
     return 1;
   },
   _inferMonthYearFromSheet_() {
-    return { month: 7, year: 2026 };
+    return {
+      month: (activeSheet && activeSheet.month) || 7,
+      year: (activeSheet && activeSheet.year) || 2026,
+    };
   },
   _columnNumberToLetter_: columnNumberToLetter,
   _normCallsignKey_(value) {
@@ -284,12 +318,21 @@ const context = vm.createContext({
       const key = String(callsign || "").toUpperCase();
       if (key === "СОВА") return { callsign: "СОВА", fml: "Сова Повне Ім'я" };
       if (key === "ГУГЛ") return { callsign: "ГУГЛ", fml: "Гугл Повне Ім'я" };
+      if (key === "ПАНАСЕЙКО") {
+        return { callsign: "ПАНАСЕЙКО", fml: "Панасейко Денис Ігорович" };
+      }
       return null;
     },
     getByFml(fml) {
-      const key = String(fml || "").toUpperCase();
+      const key = String(fml || "")
+        .trim()
+        .replace(/\s+/g, " ")
+        .toUpperCase();
       if (key === "СОВА ПОВНЕ ІМ'Я") return { callsign: "СОВА", fml: "Сова Повне Ім'я" };
       if (key === "ГУГЛ ПОВНЕ ІМ'Я") return { callsign: "ГУГЛ", fml: "Гугл Повне Ім'я" };
+      if (key === "ПАНАСЕЙКО ДЕНИС ІГОРОВИЧ") {
+        return { callsign: "ПАНАСЕЙКО", fml: "Панасейко Денис Ігорович" };
+      }
       return null;
     },
   },
@@ -319,11 +362,30 @@ function vacation(overrides = {}) {
   );
 }
 
-function reset({ allowed, codes, rows } = {}) {
+function reset({ rows, ...sheetOpts } = {}) {
   documentProps.clear();
-  activeSheet = new FakeSheet({ allowed, codes });
+  activeSheet = new FakeSheet(sheetOpts);
   vacationRows = rows || [vacation()];
   return activeSheet;
+}
+
+function augustDays(startDay, endDay) {
+  const dates = [];
+  for (let day = startDay; day <= endDay; day++) {
+    dates.push(date(2026, 8, day));
+  }
+  return dates;
+}
+
+function resetAugust({ rows, startDay = 1, endDay = 4, ...sheetOpts } = {}) {
+  return reset({
+    name: "08",
+    month: 8,
+    year: 2026,
+    headerDates: augustDays(startDay, endDay),
+    rows,
+    ...sheetOpts,
+  });
 }
 
 let sheet = reset();
@@ -390,5 +452,148 @@ sheet = reset({
 });
 result = context.VacationMonthlySync_.sync({ sheet, source: "test" });
 assert.equal(result.stats.invalid, 1, "invalid date ranges must be reported");
+
+const panaseyko = vacation({
+  id: "VAC-PAN",
+  personKey: "ПАНАСЕЙКО",
+  fml: "Панасейко Денис Ігорович",
+  startDate: date(2026, 7, 20),
+  endDate: date(2026, 8, 3),
+});
+sheet = resetAugust({
+  people: [
+    ["Панасейко Денис Ігорович", "ПАНАСЕЙКО"],
+    ["Гугл Повне Ім'я", "ГУГЛ"],
+    ["Резерв Повне Ім'я", "РЕЗЕРВ"],
+  ],
+  rows: [panaseyko],
+});
+result = context.VacationMonthlySync_.sync({ sheet, source: "test" });
+assert.equal(result.autoFillApplied, 3, "20.07–03.08 must fill 01–03.08 inclusive");
+assert.deepEqual(
+  sheet.getRange("C2:F2").getValues()[0],
+  ["Відпус", "Відпус", "Відпус", ""],
+  "01–03.08 must be vacation; 04.08 must stay outside this record",
+);
+assert.equal(result.stats.removals, 0, "initial cross-month fill must not generate clear");
+
+vacationRows = [
+  vacation({
+    ...panaseyko,
+    active: false,
+    isActive: false,
+    operationalActive: false,
+    factExpected: true,
+  }),
+];
+result = context.VacationMonthlySync_.sync({ sheet, source: "test" });
+assert.equal(
+  result.stats.removals,
+  0,
+  "ended vacation still in VACATION must not clear 01–03.08",
+);
+assert.equal(result.autoFillApplied, 0, "ended-but-present vacation must stay idempotent");
+assert.deepEqual(
+  sheet.getRange("C2:F2").getValues()[0],
+  ["Відпус", "Відпус", "Відпус", ""],
+  "01–03.08 must remain Відпустка after Active becomes false on 04.08",
+);
+
+sheet = resetAugust({
+  rows: [vacation({ startDate: date(2026, 7, 31), endDate: date(2026, 8, 1) })],
+});
+result = context.VacationMonthlySync_.sync({ sheet, source: "test" });
+assert.deepEqual(
+  sheet.getRange("C2:F2").getValues()[0],
+  ["Відпус", "", "", ""],
+  "A) 31.07–01.08 must mark 01.08 only",
+);
+
+sheet = resetAugust({
+  rows: [vacation({ startDate: date(2026, 8, 1), endDate: date(2026, 8, 1) })],
+});
+result = context.VacationMonthlySync_.sync({ sheet, source: "test" });
+assert.deepEqual(
+  sheet.getRange("C2:F2").getValues()[0],
+  ["Відпус", "", "", ""],
+  "B) single-day 01.08–01.08 must mark 01.08",
+);
+
+sheet = resetAugust({
+  rows: [vacation({ startDate: date(2026, 7, 31), endDate: date(2026, 7, 31) })],
+});
+result = context.VacationMonthlySync_.sync({ sheet, source: "test" });
+assert.equal(result.autoFillApplied, 0, "C) 31.07–31.07 must not touch August");
+assert.deepEqual(
+  sheet.getRange("C2:F2").getValues()[0],
+  ["", "", "", ""],
+  "C) August cells must stay empty for a July-only vacation",
+);
+
+sheet = reset({
+  name: "08",
+  month: 8,
+  year: 2026,
+  headerDates: [date(2026, 8, 30), date(2026, 8, 31)],
+  rows: [vacation({ startDate: date(2026, 8, 31), endDate: date(2026, 9, 2) })],
+});
+result = context.VacationMonthlySync_.sync({ sheet, source: "test" });
+assert.deepEqual(
+  sheet.getRange("C2:D2").getValues()[0],
+  ["", "Відпус"],
+  "D) 31.08–02.09 must mark 31.08 on the August sheet",
+);
+
+sheet = reset({
+  name: "09",
+  month: 9,
+  year: 2026,
+  headerDates: [date(2026, 9, 1), date(2026, 9, 2)],
+  rows: [vacation({ startDate: date(2026, 8, 31), endDate: date(2026, 9, 2) })],
+});
+result = context.VacationMonthlySync_.sync({ sheet, source: "test" });
+assert.deepEqual(
+  sheet.getRange("C2:D2").getValues()[0],
+  ["Відпус", "Відпус"],
+  "D) 31.08–02.09 must mark 01.09 and 02.09 on the September sheet",
+);
+
+sheet = resetAugust({
+  rows: [vacation({ startDate: date(2026, 8, 1), endDate: date(2026, 8, 31) })],
+});
+result = context.VacationMonthlySync_.sync({ sheet, source: "test" });
+assert.deepEqual(
+  sheet.getRange("C2:F2").getValues()[0],
+  ["Відпус", "Відпус", "Відпус", "Відпус"],
+  "E) 01.08–31.08 must cover every August day in the test range",
+);
+
+sheet = resetAugust({
+  rows: [vacation({ startDate: date(2026, 7, 20), endDate: date(2026, 9, 10) })],
+});
+result = context.VacationMonthlySync_.sync({ sheet, source: "test" });
+assert.deepEqual(
+  sheet.getRange("C2:F2").getValues()[0],
+  ["Відпус", "Відпус", "Відпус", "Відпус"],
+  "F) 20.07–10.09 must cover every August day in the test range",
+);
+
+sheet = resetAugust({
+  rows: [
+    vacation({
+      startDate: date(2026, 7, 20),
+      endDate: date(2026, 8, 3),
+      factExpected: false,
+      active: true,
+      operationalActive: true,
+    }),
+  ],
+});
+result = context.VacationMonthlySync_.sync({ sheet, source: "test" });
+assert.equal(
+  result.autoFillApplied,
+  0,
+  "Approved/non-fact requests must not write monthly vacation codes",
+);
 
 console.log("verify-vacation-monthly-sync: OK");
