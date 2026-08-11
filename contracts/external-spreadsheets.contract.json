@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "mainWorkbookId": "1v8ixM67nG_Bfy5NzcDZbmSjwVOYbkN02ibfP6YqI384",
+  "mainWorkbookName": "Книга Взводу Охорони",
+  "mustStayInMain": [
+    "PERSONNEL",
+    "VACATIONS",
+    "DICT",
+    "DICT_SUM",
+    "08",
+    "ACCESS",
+    "SEND_PANEL",
+    "PHONES",
+    "CAR",
+    "WEAPON",
+    "INVENTORY_RECONCILIATION",
+    "Property_issued_for_temporary_u",
+    "VACATION_SCHEDULE",
+    "JOURNAL",
+    "SUMMARY"
+  ],
+  "archiveOwnerPrefixes": {
+    "OPS_LOG_": "OPS_LOG",
+    "CHECKPOINTS_": "CHECKPOINTS"
+  },
+  "sheets": [
+    {
+      "logicalName": "Дані",
+      "spreadsheetId": "1uIsBM_QUye9id1xdOHgNHzkuNA2zwW7ItAUG-WwsCxA",
+      "sheetName": "Дані"
+    },
+    {
+      "logicalName": "Заявки",
+      "spreadsheetId": "1jvcZ9hJi29IhMlRaDFlCJYlP5c5nntNPfKrqxZKhIcE",
+      "sheetName": "Заявки"
+    },
+    {
+      "logicalName": "Проєкти",
+      "spreadsheetId": "1S9k6ZX3AjwqpevYYkuqGX3TE61dXpwKSA8UAyHi59sg",
+      "sheetName": "Проєкти"
+    },
+    {
+      "logicalName": "PROPERTY_KITS",
+      "spreadsheetId": "1G2N3fgomqA8M3Q80piT-f_ExJ5yE4olKFAQ7l3KQJnI",
+      "sheetName": "PROPERTY_KITS"
+    },
+    {
+      "logicalName": "PROPERTY_CATALOG",
+      "spreadsheetId": "1q0DYvbqsMU3E4mhD_c3PT7RqLBBQjSQZieVXavn7IeM",
+      "sheetName": "PROPERTY_CATALOG"
+    },
+    {
+      "logicalName": "INVENTORY_RECONCILIATION_FILES",
+      "spreadsheetId": "1P2obXP897U3TsroJVQZc4C6boArSRDrs8Y6K7F6Oqp4",
+      "sheetName": "INVENTORY_RECONCILIATION_FILES"
+    },
+    {
+      "logicalName": "TEST_RESULTS",
+      "spreadsheetId": "1nluY0JR9R-WgZnEUr4YDNWc9FE6CQC2MPrgaIt_dt8o",
+      "sheetName": "TEST_RESULTS"
+    },
+    {
+      "logicalName": "VACATION_CHECK",
+      "spreadsheetId": "18oU3-PYS_za92knw7WSsaxkiH70TxnhDZXu1WcTNvBc",
+      "sheetName": "VACATION_CHECK"
+    },
+    {
+      "logicalName": "FORMAT_RULES_REGISTRY",
+      "spreadsheetId": "1JCw8mYJruxE3rDWet2hiqJyxwB6CziZyccRgDviHGCk",
+      "sheetName": "FORMAT_RULES_REGISTRY"
+    },
+    {
+      "logicalName": "CHECKPOINTS",
+      "spreadsheetId": "1_8RmgNu0lTcI0B0APyLhp8Bd0Wl2BbuBpQyVLCgXAz8",
+      "sheetName": "CHECKPOINTS"
+    },
+    {
+      "logicalName": "TEMPLATES",
+      "spreadsheetId": "12NWIol2YGyP265r530T8yoWcyw58cSemNgv7UM20uHU",
+      "sheetName": "TEMPLATES"
+    },
+    {
+      "logicalName": "ACTIVE_OPERATIONS",
+      "spreadsheetId": "1auukT5WkAPi0QxNZ94aeuS0aKsA8yZ5syU0jhH4enos",
+      "sheetName": "ACTIVE_OPERATIONS"
+    },
+    {
+      "logicalName": "JOB_RUNTIME_LOG",
+      "spreadsheetId": "11Ib5FMQK_VPNJK2fZ2kDDS6M_iy4LwFWhMqNp_n6Goo",
+      "sheetName": "JOB_RUNTIME_LOG"
+    },
+    {
+      "logicalName": "OPS_LOG",
+      "spreadsheetId": "1j4E6oEbEIM5_gGbqUKReAMbYUzenxiXKFuhWG2tLDZ0",
+      "sheetName": "OPS_LOG"
+    },
+    {
+      "logicalName": "ALERTS_LOG",
+      "spreadsheetId": "1H13KhegBo16j7B--PuMFs7sB-VFUZvoechqEAhkI1cM",
+      "sheetName": "ALERTS_LOG"
+    },
+    {
+      "logicalName": "AUDIT_LOG",
+      "spreadsheetId": "1i0kyTjaxWqPXyGKhD_B3ZKFUFFZ7IljOBg5O_Sjzc8Y",
+      "sheetName": "AUDIT_LOG"
+    },
+    {
+      "logicalName": "LOG",
+      "spreadsheetId": "1TkCeVhanEXSWFyizsCaNxCnKQDKbPPYEAuXd0kIyQ6A",
+      "sheetName": "LOG"
+    }
+  ]
+}

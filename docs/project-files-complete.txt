@@ -1,8 +1,8 @@
 # WASB — повний список файлів репозиторію
 # Порядок: дерево каталогів (depth-first, алфавіт у кожній папці)
 # Виключено: .git/, node_modules/, локальні .clasp*.json (крім *.example.json)
-# Файлів: 307
-# Оновлено: 2026-08-03T23:21:02Z
+# Файлів: 311
+# Оновлено: 2026-08-11T05:35:41Z
 
 .
   .clasp.example.json
@@ -65,6 +65,7 @@ contracts/
   client-layers.contract.json
   envelope-migration.contract.json
   envelope.contract.json
+  external-spreadsheets.contract.json
   facade.contract.json
   manual-format-rules.contract.json
   month-journal.contract.json
@@ -101,6 +102,7 @@ data/
   DataAccess.gs
   DictionaryRepository.gs
   DictMaterialize.gs
+  ExternalSpreadsheets.gs
   LogsRepository.gs
   OperationRepository.gs
 
@@ -156,6 +158,7 @@ maintenance/
 
 operations/
   Actions.gs
+  ExternalSpreadsheetMigration.gs
   LeaveBirthdayReminderMail.gs
   MaterializeComputedData.gs
   ProjectRequests.gs
@@ -212,6 +215,7 @@ scripts/
   verify-client-includes.mjs
   verify-client-js.mjs
   verify-deploy-target.mjs
+  verify-external-spreadsheets.mjs
   verify-format-rules-governance.mjs
   verify-html-label-for.mjs
   verify-inventory-reconciliation.mjs

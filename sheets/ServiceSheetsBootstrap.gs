@@ -144,6 +144,9 @@ function _ssbGetOrCreateSheetByName_(sheetName) {
     throw new Error('Sheet name is required');
   }
 
+  if (typeof ensureLogicalSheet_ === "function") {
+    return ensureLogicalSheet_(normalizedName);
+  }
   var sheet = ss.getSheetByName(normalizedName);
   if (sheet) return sheet;
 

@@ -279,6 +279,13 @@ const TemporaryPropertyRegister_ = (function () {
   }
 
   function getOrCreateSheet_(name) {
+    if (
+      typeof isExternalLogicalSheet_ === "function" &&
+      isExternalLogicalSheet_(name) &&
+      typeof ensureLogicalSheet_ === "function"
+    ) {
+      return ensureLogicalSheet_(name);
+    }
     const ss = spreadsheet_();
     return ss.getSheetByName(name) || ss.insertSheet(name);
   }
@@ -337,6 +344,17 @@ const TemporaryPropertyRegister_ = (function () {
   }
 
   function seedReferenceSheet_(sheet, headers, rows, widths) {
+    const name = sheet && typeof sheet.getName === "function" ? sheet.getName() : "";
+    const run = function () {
+      return seedReferenceSheetUnlocked_(sheet, headers, rows, widths);
+    };
+    if (typeof withExternalLogicalMutation_ === "function") {
+      return withExternalLogicalMutation_(name, run);
+    }
+    return run();
+  }
+
+  function seedReferenceSheetUnlocked_(sheet, headers, rows, widths) {
     ensureColumns_(sheet, headers.length);
     ensureRows_(sheet, Math.max(rows.length + 1, 100));
     sheet.getDataRange().clearContent().clearDataValidations();
@@ -363,7 +381,10 @@ const TemporaryPropertyRegister_ = (function () {
 
   function readCatalog_() {
     const cfg = config_();
-    const sheet = spreadsheet_().getSheetByName(cfg.catalogSheetName);
+    const sheet =
+      typeof getLogicalSheet_ === "function"
+        ? getLogicalSheet_(cfg.catalogSheetName, false)
+        : spreadsheet_().getSheetByName(cfg.catalogSheetName);
     const rows = sheet && sheet.getLastRow() >= 2
       ? sheet.getRange(2, 1, sheet.getLastRow() - 1, CATALOG_HEADERS.length).getDisplayValues()
       : DEFAULT_CATALOG;
@@ -407,7 +428,10 @@ const TemporaryPropertyRegister_ = (function () {
 
   function readKits_() {
     const cfg = config_();
-    const sheet = spreadsheet_().getSheetByName(cfg.kitsSheetName);
+    const sheet =
+      typeof getLogicalSheet_ === "function"
+        ? getLogicalSheet_(cfg.kitsSheetName, false)
+        : spreadsheet_().getSheetByName(cfg.kitsSheetName);
     const rows = sheet && sheet.getLastRow() >= 2
       ? sheet.getRange(2, 1, sheet.getLastRow() - 1, KIT_HEADERS.length).getDisplayValues()
       : DEFAULT_KITS;

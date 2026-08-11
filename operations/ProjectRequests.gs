@@ -63,8 +63,14 @@ const ProjectRequests_ = (function () {
   }
 
   function ensureProjectsSheet_(ss) {
-    let sh = ss.getSheetByName(PROJECTS_SHEET_NAME);
-    if (!sh) sh = ss.insertSheet(PROJECTS_SHEET_NAME);
+    let sh =
+      typeof ensureLogicalSheet_ === "function"
+        ? ensureLogicalSheet_(PROJECTS_SHEET_NAME)
+        : null;
+    if (!sh) {
+      sh = ss.getSheetByName(PROJECTS_SHEET_NAME);
+      if (!sh) sh = ss.insertSheet(PROJECTS_SHEET_NAME);
+    }
 
     if (sh.getLastRow() < 1) {
       const colCount = 4;
@@ -97,7 +103,10 @@ const ProjectRequests_ = (function () {
   }
 
   function readProjects_(ss) {
-    const sh = ss.getSheetByName(PROJECTS_SHEET_NAME);
+    const sh =
+      typeof getLogicalSheet_ === "function"
+        ? getLogicalSheet_(PROJECTS_SHEET_NAME, false)
+        : ss.getSheetByName(PROJECTS_SHEET_NAME);
     if (!sh) return [];
     const lastRow = sh.getLastRow();
     const lastCol = sh.getLastColumn();
@@ -161,8 +170,14 @@ const ProjectRequests_ = (function () {
   }
 
   function ensureRequestsSheet_(ss) {
-    let sh = ss.getSheetByName(REQUESTS_SHEET_NAME);
-    if (!sh) sh = ss.insertSheet(REQUESTS_SHEET_NAME);
+    let sh =
+      typeof ensureLogicalSheet_ === "function"
+        ? ensureLogicalSheet_(REQUESTS_SHEET_NAME)
+        : null;
+    if (!sh) {
+      sh = ss.getSheetByName(REQUESTS_SHEET_NAME);
+      if (!sh) sh = ss.insertSheet(REQUESTS_SHEET_NAME);
+    }
 
     if (sh.getLastRow() < 1) {
       const colCount = 8;
@@ -276,7 +291,9 @@ const ProjectRequests_ = (function () {
 function apiGetActiveProjects() {
   try {
     const ss = getWasbSpreadsheet_();
-    const wasMissing = !ss.getSheetByName("Проєкти");
+    const wasMissing = !(typeof getLogicalSheet_ === "function"
+      ? getLogicalSheet_("Проєкти", false)
+      : ss.getSheetByName("Проєкти"));
     const projects = ProjectRequests_.readProjects_(ss);
     return okResponse_(
       { projects, projectsSheetMissing: wasMissing },
@@ -327,45 +344,54 @@ function apiSubmitRequest(payload) {
       );
     }
 
-    const ss = getWasbSpreadsheet_();
-    const sheet = ss.getSheetByName("Заявки");
-    if (!sheet) {
-      throw new Error(
-        'Аркуш "Заявки" відсутній. Попросіть адміністратора виконати repair.',
-      );
-    }
+    const write = function () {
+      const ss = getWasbSpreadsheet_();
+      const sheet =
+        typeof getLogicalSheet_ === "function"
+          ? getLogicalSheet_("Заявки", false)
+          : ss.getSheetByName("Заявки");
+      if (!sheet) {
+        throw new Error(
+          'Аркуш "Заявки" відсутній. Попросіть адміністратора виконати repair.',
+        );
+      }
 
-    const dedupeKey = ProjectRequests_.computeDedupeKey_(
-      userEmail,
-      projectId,
-      title,
-      details,
-    );
-    const dup = ProjectRequests_.findDuplicate_(sheet, dedupeKey);
-    if (dup) {
-      return warnResponse_(
-        { duplicate: true, rowNumber: dup.rowNumber },
-        "⚠ Така заявка вже існує (дубль).",
+      const dedupeKey = ProjectRequests_.computeDedupeKey_(
+        userEmail,
+        projectId,
+        title,
+        details,
+      );
+      const dup = ProjectRequests_.findDuplicate_(sheet, dedupeKey);
+      if (dup) {
+        return warnResponse_(
+          { duplicate: true, rowNumber: dup.rowNumber },
+          "⚠ Така заявка вже існує (дубль).",
+          { function: "apiSubmitRequest", durationMs: Date.now() - started },
+        );
+      }
+
+      sheet.appendRow([
+        new Date(),
+        userEmail,
+        projectId,
+        projectName || projectId,
+        title,
+        details,
+        dedupeKey,
+        "new",
+      ]);
+
+      return okResponse_(
+        { saved: true, duplicate: false, payloadBytes: size.bytes },
+        "✓ Заявку збережено",
         { function: "apiSubmitRequest", durationMs: Date.now() - started },
       );
+    };
+    if (typeof withExternalLogicalMutation_ === "function") {
+      return withExternalLogicalMutation_("Заявки", write);
     }
-
-    sheet.appendRow([
-      new Date(),
-      userEmail,
-      projectId,
-      projectName || projectId,
-      title,
-      details,
-      dedupeKey,
-      "new",
-    ]);
-
-    return okResponse_(
-      { saved: true, duplicate: false, payloadBytes: size.bytes },
-      "✓ Заявку збережено",
-      { function: "apiSubmitRequest", durationMs: Date.now() - started },
-    );
+    return write();
   } catch (e) {
     return errorResponse_(e, "✕ Не вдалося зберегти заявку", {
       function: "apiSubmitRequest",

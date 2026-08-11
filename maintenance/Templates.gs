@@ -88,8 +88,10 @@ function _loadTemplatesMap_() {
     } catch (e) {}
   }
 
-  const ss = getWasbSpreadsheet_();
-  const sh = ss.getSheetByName(TEMPLATES_SHEET_NAME);
+  const sh =
+    typeof getLogicalSheet_ === "function"
+      ? getLogicalSheet_(TEMPLATES_SHEET_NAME, false)
+      : getWasbSpreadsheet_().getSheetByName(TEMPLATES_SHEET_NAME);
   if (!sh) return {};
 
   const lastRow = sh.getLastRow();

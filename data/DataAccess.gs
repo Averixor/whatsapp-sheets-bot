@@ -39,20 +39,24 @@ function getWasbOwnerEmailDiagnostics_() {
   };
 }
 
+var _wasbSpreadsheetCache_ = null;
+
 function getWasbSpreadsheet_() {
+  if (_wasbSpreadsheetCache_) return _wasbSpreadsheetCache_;
   var id = getWasbSpreadsheetId_();
+  var ss = null;
   if (id) {
-    return SpreadsheetApp.openById(id);
+    ss = SpreadsheetApp.openById(id);
+  } else {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
   }
-
-  var active = SpreadsheetApp.getActiveSpreadsheet();
-  if (active) {
-    return active;
+  if (!ss) {
+    throw new Error(
+      "WASB_SPREADSHEET_ID не задано в Script Properties і активна таблиця недоступна.",
+    );
   }
-
-  throw new Error(
-    "WASB_SPREADSHEET_ID не задано в Script Properties і активна таблиця недоступна.",
-  );
+  _wasbSpreadsheetCache_ = ss;
+  return ss;
 }
 
 /**
@@ -66,6 +70,9 @@ const DataAccess_ = (function () {
 
   function getSheet(schemaKey, explicitSheetName, required) {
     const name = SheetSchemas_.resolveSheetName(schemaKey, explicitSheetName);
+    if (typeof getLogicalSheet_ === "function") {
+      return getLogicalSheet_(name, required !== false);
+    }
     const sheet = getSpreadsheet().getSheetByName(name);
     if (!sheet && required !== false) {
       throw new Error(`Аркуш "${name}" (${schemaKey}) не знайдено`);
@@ -74,8 +81,11 @@ const DataAccess_ = (function () {
   }
 
   function ensureSheet(schemaKey, explicitSheetName) {
-    const ss = getSpreadsheet();
     const name = SheetSchemas_.resolveSheetName(schemaKey, explicitSheetName);
+    if (typeof ensureLogicalSheet_ === "function") {
+      return ensureLogicalSheet_(name);
+    }
+    const ss = getSpreadsheet();
     let sheet = ss.getSheetByName(name);
     if (!sheet) sheet = ss.insertSheet(name);
     return sheet;
@@ -162,6 +172,17 @@ const DataAccess_ = (function () {
 
   function updateRowFields(schemaKey, rowNumber, valuesByField, options) {
     const opts = options || {};
+    const logicalName = SheetSchemas_.resolveSheetName(schemaKey, opts.sheetName);
+    const run = function () {
+      return updateRowFieldsUnlocked_(schemaKey, rowNumber, valuesByField, opts);
+    };
+    if (typeof withExternalLogicalMutation_ === "function") {
+      return withExternalLogicalMutation_(logicalName, run);
+    }
+    return run();
+  }
+
+  function updateRowFieldsUnlocked_(schemaKey, rowNumber, valuesByField, opts) {
     const schema = SheetSchemas_.get(schemaKey);
     const sheet = getSheet(schemaKey, opts.sheetName, true);
     const fields = Object.keys(valuesByField || {});
@@ -195,7 +216,17 @@ const DataAccess_ = (function () {
     const opts = options || {};
     const list = Array.isArray(items) ? items : [];
     if (!list.length) return 0;
+    const logicalName = SheetSchemas_.resolveSheetName(schemaKey, opts.sheetName);
+    const run = function () {
+      return appendObjectsUnlocked_(schemaKey, list, opts);
+    };
+    if (typeof withExternalLogicalMutation_ === "function") {
+      return withExternalLogicalMutation_(logicalName, run);
+    }
+    return run();
+  }
 
+  function appendObjectsUnlocked_(schemaKey, list, opts) {
     const schema = SheetSchemas_.get(schemaKey);
     const sheet = ensureSheet(schemaKey, opts.sheetName);
     const width = getMaxSchemaColumn(schema);

@@ -9,7 +9,10 @@ function runStage3HealthCheck_(options) {
     const schema = schemas[key];
     const sheetName =
       schema.key === "MONTHLY" ? getBotMonthSheetName_() : schema.name;
-    const sheet = ss.getSheetByName(sheetName);
+    const sheet =
+      typeof getLogicalSheet_ === "function"
+        ? getLogicalSheet_(sheetName, false)
+        : ss.getSheetByName(sheetName);
 
     if (schema.key === "MONTHLY") {
       _stage7PushCheck_(
@@ -51,7 +54,10 @@ function runStage3HealthCheck_(options) {
   ].forEach(function (key) {
     try {
       const schema = SheetSchemas_.get(key);
-      const sheet = ss.getSheetByName(schema.name);
+      const sheet =
+        typeof getLogicalSheet_ === "function"
+          ? getLogicalSheet_(schema.name, false)
+          : ss.getSheetByName(schema.name);
       if (!sheet) return;
       const result = validateSheetHeadersBySchema_(sheet, schema);
       _stage7PushCheck_(

@@ -145,8 +145,10 @@ const Stage7AuditTrail_ = (function () {
 
   function _getOrCreateSheet_() {
     const cfg = _getSheetConfig_();
+    if (typeof ensureLogicalSheet_ === "function") {
+      return ensureLogicalSheet_(cfg.sheetName);
+    }
     const ss = _getSpreadsheet_();
-
     let sh = ss.getSheetByName(cfg.sheetName);
     if (!sh) {
       sh = ss.insertSheet(cfg.sheetName);
@@ -280,19 +282,25 @@ const Stage7AuditTrail_ = (function () {
       };
     }
 
-    return _withDocumentLock_(function () {
-      const sh = _ensureSheet_();
-      const targetRow = Math.max(sh.getLastRow() + 1, _getSheetConfig_().headerRow + 1);
-      sh.getRange(targetRow, 1, rows.length, rows[0].length).setValues(rows);
+    const write = function () {
+      return _withDocumentLock_(function () {
+        const sh = _ensureSheet_();
+        const targetRow = Math.max(sh.getLastRow() + 1, _getSheetConfig_().headerRow + 1);
+        sh.getRange(targetRow, 1, rows.length, rows[0].length).setValues(rows);
 
-      return {
-        success: true,
-        written: rows.length,
-        sheet: sh.getName(),
-        fromRow: targetRow,
-        toRow: targetRow + rows.length - 1
-      };
-    });
+        return {
+          success: true,
+          written: rows.length,
+          sheet: sh.getName(),
+          fromRow: targetRow,
+          toRow: targetRow + rows.length - 1
+        };
+      });
+    };
+    if (typeof withExternalLogicalMutation_ === "function") {
+      return withExternalLogicalMutation_(_getSheetConfig_().sheetName, write);
+    }
+    return write();
   }
 
   function ensureSheet() {
@@ -417,6 +425,9 @@ function ensureAuditTrailSheet_() {
   const result = Stage7AuditTrail_.ensureSheet();
   if (!result.success) {
     throw new Error(result.error);
+  }
+  if (typeof getLogicalSheet_ === "function") {
+    return getLogicalSheet_(result.sheet, true);
   }
   return getWasbSpreadsheet_().getSheetByName(result.sheet);
 }

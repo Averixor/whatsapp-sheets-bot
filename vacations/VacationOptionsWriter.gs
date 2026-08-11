@@ -122,6 +122,9 @@ const VacationOptionsWriter_ = (function () {
   }
 
   function _ensureSheet_(name) {
+    if (typeof ensureLogicalSheet_ === "function") {
+      return ensureLogicalSheet_(name);
+    }
     const ss = _spreadsheet_();
     return ss.getSheetByName(name) || ss.insertSheet(name);
   }
@@ -1214,9 +1217,10 @@ const VacationOptionsWriter_ = (function () {
   }
 
   function _readCachedChecks_() {
-    const sheet = _spreadsheet_().getSheetByName(
-      VACATION_PLANNER_CONFIG.SHEETS.CHECK,
-    );
+    const sheet =
+      typeof getLogicalSheet_ === "function"
+        ? getLogicalSheet_(VACATION_PLANNER_CONFIG.SHEETS.CHECK, false)
+        : _spreadsheet_().getSheetByName(VACATION_PLANNER_CONFIG.SHEETS.CHECK);
     if (!sheet || sheet.getLastRow() < 2) return [];
 
     const lastRow = sheet.getLastRow();
@@ -1359,6 +1363,19 @@ const VacationOptionsWriter_ = (function () {
   }
 
   function _writeChecks_(checks, options) {
+    const run = function () {
+      return _writeChecksUnlocked_(checks, options);
+    };
+    if (typeof withExternalLogicalMutation_ === "function") {
+      return withExternalLogicalMutation_(
+        VACATION_PLANNER_CONFIG.SHEETS.CHECK,
+        run,
+      );
+    }
+    return run();
+  }
+
+  function _writeChecksUnlocked_(checks, options) {
     const opts = options || {};
     const sheet = _ensureSheet_(VACATION_PLANNER_CONFIG.SHEETS.CHECK);
     const headers = ["Date", "Type", "FML", "Description", "Severity"];
@@ -1575,9 +1592,10 @@ const VacationOptionsWriter_ = (function () {
 
   function highlightVacationProblems() {
     const result = checkVacationScheduleOnly();
-    const sheet = _spreadsheet_().getSheetByName(
-      VACATION_PLANNER_CONFIG.SHEETS.CHECK,
-    );
+    const sheet =
+      typeof getLogicalSheet_ === "function"
+        ? getLogicalSheet_(VACATION_PLANNER_CONFIG.SHEETS.CHECK, false)
+        : _spreadsheet_().getSheetByName(VACATION_PLANNER_CONFIG.SHEETS.CHECK);
     if (!sheet || sheet.getLastRow() < 2) return result;
 
     const lastRow = sheet.getLastRow();

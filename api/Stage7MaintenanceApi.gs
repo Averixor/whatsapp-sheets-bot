@@ -1464,3 +1464,152 @@ function apiStage7ReissueOwnerTemporaryPasswordManual() {
   );
   return result;
 }
+
+/**
+ * Dry-run copy plan for the 17 external service spreadsheets.
+ * Not wired to the sidebar (uiAllowed: false); GAS editor / sysadmin only.
+ */
+function apiPreviewExternalSpreadsheetMigration() {
+  _stage7AssertRole_("sysadmin", "preview external spreadsheet migration");
+  var report =
+    typeof previewExternalSpreadsheetMigration_ === "function"
+      ? previewExternalSpreadsheetMigration_()
+      : { ok: false, message: "migration module unavailable" };
+  return _stage7BuildMaintenanceResponse_(
+    report.ok !== false,
+    report.ok === false
+      ? report.message || "Preview завершено з конфліктами"
+      : "Preview міграції зовнішніх таблиць",
+    report,
+    "previewExternalSpreadsheetMigration",
+    [],
+    {
+      dryRun: true,
+      uiAllowed: false,
+      affectedSheets: (report.tables || []).map(function (row) {
+        return row.logicalName;
+      }),
+    },
+  );
+}
+
+/**
+ * Apply idempotent copy of 17 service sheets into dedicated Spreadsheets.
+ * Does not delete source tabs. Stops on destination conflicts.
+ * Not wired to the sidebar (uiAllowed: false); GAS editor / sysadmin only.
+ */
+function apiApplyExternalSpreadsheetMigration() {
+  _stage7AssertRole_("sysadmin", "apply external spreadsheet migration");
+  var report =
+    typeof applyExternalSpreadsheetMigration_ === "function"
+      ? applyExternalSpreadsheetMigration_()
+      : { ok: false, applied: false, message: "migration module unavailable" };
+  var ok = report.ok !== false && report.applied !== false;
+  return _stage7BuildMaintenanceResponse_(
+    ok,
+    ok
+      ? "Міграцію зовнішніх таблиць виконано"
+      : report.message || "Apply міграції зупинено",
+    report,
+    "applyExternalSpreadsheetMigration",
+    [],
+    {
+      dryRun: false,
+      uiAllowed: false,
+      affectedSheets: (report.tables || []).map(function (row) {
+        return row.logicalName;
+      }),
+    },
+  );
+}
+
+/**
+ * Read WASB_EXTERNAL_STORAGE_MODE. Sysadmin / GAS editor only.
+ */
+function apiGetExternalStorageMode() {
+  _stage7AssertRole_("sysadmin", "read external storage mode");
+  var report =
+    typeof describeExternalStorageMode_ === "function"
+      ? describeExternalStorageMode_()
+      : { mode: "legacy", recommendedExternal: false };
+  return _stage7BuildMaintenanceResponse_(
+    true,
+    "Режим зовнішнього зберігання: " + report.mode,
+    report,
+    "getExternalStorageMode",
+    [],
+    { dryRun: true, uiAllowed: false },
+  );
+}
+
+/**
+ * Set WASB_EXTERNAL_STORAGE_MODE to legacy|migration|external.
+ * external without parity PASS is refused unless confirmParity:true.
+ */
+function apiSetExternalStorageMode(payload) {
+  _stage7AssertRole_("sysadmin", "set external storage mode");
+  var opts = payload && typeof payload === "object" ? payload : {};
+  try {
+    var report = setExternalStorageMode_(opts.mode, {
+      confirmParity: opts.confirmParity === true,
+    });
+    var warnings = report.emergencyOverride
+      ? [
+          report.warning ||
+            "Аварійний override: режим external без фінальної перевірки parity.",
+        ]
+      : [];
+    return _stage7BuildMaintenanceResponse_(
+      true,
+      "Режим зовнішнього зберігання: " + report.mode,
+      report,
+      "setExternalStorageMode",
+      warnings,
+      { dryRun: false, uiAllowed: false },
+    );
+  } catch (error) {
+    var message = error && error.message ? String(error.message) : String(error);
+    var current =
+      typeof describeExternalStorageMode_ === "function"
+        ? describeExternalStorageMode_()
+        : { mode: "legacy", recommendedExternal: false };
+    current.rejected = true;
+    current.recommendedExternal = false;
+    return _stage7BuildMaintenanceResponse_(
+      false,
+      message,
+      current,
+      "setExternalStorageMode",
+      [],
+      { dryRun: true, uiAllowed: false },
+    );
+  }
+}
+
+/**
+ * Locked cutover: apply + fresh parity + mode=external. Sysadmin / GAS editor only.
+ */
+function apiFinalizeExternalSpreadsheetMigration() {
+  _stage7AssertRole_("sysadmin", "finalize external spreadsheet migration");
+  var report =
+    typeof finalizeExternalSpreadsheetMigration_ === "function"
+      ? finalizeExternalSpreadsheetMigration_()
+      : { ok: false, message: "finalizer unavailable" };
+  var ok = report.ok !== false;
+  return _stage7BuildMaintenanceResponse_(
+    ok,
+    ok
+      ? report.message || "Cutover зовнішнього зберігання виконано"
+      : report.message || "Cutover зупинено",
+    report,
+    "finalizeExternalSpreadsheetMigration",
+    [],
+    {
+      dryRun: false,
+      uiAllowed: false,
+      affectedSheets: (report.tables || []).map(function (row) {
+        return row.logicalName;
+      }),
+    },
+  );
+}

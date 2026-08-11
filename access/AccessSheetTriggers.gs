@@ -308,16 +308,24 @@ function getProtectedSheetsInfo() {
 
   const missingSheets = [];
   for (let i = 0; i < protectedSheets.length; i++) {
-    let found = false;
-    for (let j = 0; j < existingSheetNames.length; j++) {
-      if (existingSheetNames[j] === protectedSheets[i]) {
-        found = true;
-        break;
+    var protectedName = protectedSheets[i];
+    var found = false;
+    if (typeof getLogicalSheet_ === "function") {
+      try {
+        found = !!getLogicalSheet_(protectedName, false);
+      } catch (_) {
+        found = false;
+      }
+    } else {
+      for (let j = 0; j < existingSheetNames.length; j++) {
+        if (existingSheetNames[j] === protectedName) {
+          found = true;
+          break;
+        }
       }
     }
-    
     if (!found) {
-      missingSheets.push(protectedSheets[i]);
+      missingSheets.push(protectedName);
     }
   }
 

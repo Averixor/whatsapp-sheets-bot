@@ -258,6 +258,9 @@ function rangesIntersect_(r1, r2) {
 }
 
 function ensureSheet_(name) {
+  if (typeof ensureLogicalSheet_ === "function") {
+    return ensureLogicalSheet_(name);
+  }
   const ss = getWasbSpreadsheet_();
   let sh = ss.getSheetByName(name);
   if (!sh) sh = ss.insertSheet(name);
@@ -299,7 +302,12 @@ function cacheKeyDictSum_() {
   return `DICT_SUM_${getWasbSpreadsheet_().getId()}`;
 }
 function cacheKeyTemplates_() {
-  return `TEMPLATES_${getWasbSpreadsheet_().getId()}`;
+  var id =
+    typeof getExternalSpreadsheetId_ === "function"
+      ? getExternalSpreadsheetId_("TEMPLATES")
+      : "";
+  if (!id) id = getWasbSpreadsheet_().getId();
+  return `TEMPLATES_${id}`;
 }
 
 function _safeLoadPhonesMap_() {
@@ -372,7 +380,10 @@ function waClearCache() {
 }
 
 function _clearSheetDataPreserveHeaders_(sheetName, headerRows, ensureFn) {
-  const sh = getWasbSpreadsheet_().getSheetByName(sheetName);
+  const sh =
+    typeof getLogicalSheet_ === "function"
+      ? getLogicalSheet_(sheetName, false)
+      : getWasbSpreadsheet_().getSheetByName(sheetName);
   if (!sh) {
     return { sheet: sheetName, cleared: false, exists: false, rowsCleared: 0 };
   }

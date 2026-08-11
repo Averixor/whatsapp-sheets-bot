@@ -65,6 +65,13 @@ const OperationRepository_ = (function() {
 
   function _ss() { return getWasbSpreadsheet_(); }
 
+  function _ssForName(name) {
+    if (typeof getLogicalSpreadsheet_ === "function") {
+      return getLogicalSpreadsheet_(name);
+    }
+    return _ss();
+  }
+
   function _tz() { return (typeof getTimeZone_ === 'function' ? getTimeZone_() : Session.getScriptTimeZone()) || Session.getScriptTimeZone(); }
 
   function _now() { return new Date(); }
@@ -104,10 +111,16 @@ const OperationRepository_ = (function() {
   }
 
   function _sheet(name, headers) {
-    var ss = _ss();
-    var sh = ss.getSheetByName(name);
+    var sh =
+      typeof ensureLogicalSheet_ === "function"
+        ? ensureLogicalSheet_(name)
+        : null;
     if (!sh) {
-      sh = ss.insertSheet(name);
+      var ss = _ssForName(name);
+      sh = ss.getSheetByName(name);
+      if (!sh) sh = ss.insertSheet(name);
+    }
+    if (sh.getLastRow() === 0) {
       sh.getRange(1, 1, 1, headers.length).setValues([headers.slice()]);
       sh.setFrozenRows(1);
     }
@@ -164,7 +177,18 @@ const OperationRepository_ = (function() {
   }
 
   function _appendRow(sheet, row) {
-    sheet.getRange(sheet.getLastRow() + 1, 1, 1, row.length).setValues([row]);
+    var name = sheet && typeof sheet.getName === "function" ? sheet.getName() : "";
+    var write = function () {
+      var sh = sheet;
+      if (name && typeof getLogicalSheet_ === "function") {
+        sh = getLogicalSheet_(name, true) || sheet;
+      }
+      sh.getRange(sh.getLastRow() + 1, 1, 1, row.length).setValues([row]);
+    };
+    if (typeof withExternalLogicalMutation_ === "function") {
+      return withExternalLogicalMutation_(name, write);
+    }
+    return write();
   }
 
   function _rand4() {

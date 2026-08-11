@@ -53,16 +53,21 @@ const AlertsRepository_ = (function () {
   }
 
   function _getSheet_() {
-    const ss = getWasbSpreadsheet_();
     const name = _getSheetName_();
-    let sh = ss.getSheetByName(name);
-
+    let sh =
+      typeof ensureLogicalSheet_ === "function"
+        ? ensureLogicalSheet_(name)
+        : null;
     if (!sh) {
-      sh = ss.insertSheet(name);
-      Logger.log('[AlertsRepository] Sheet created: ' + name);
-      _ensureSchema_(sh);
-      _schemaChecked = true;
-      return sh;
+      const ss = getWasbSpreadsheet_();
+      sh = ss.getSheetByName(name);
+      if (!sh) {
+        sh = ss.insertSheet(name);
+        Logger.log('[AlertsRepository] Sheet created: ' + name);
+        _ensureSchema_(sh);
+        _schemaChecked = true;
+        return sh;
+      }
     }
 
     if (!_schemaChecked) {
@@ -275,6 +280,16 @@ const AlertsRepository_ = (function () {
       return { success: false, error: 'Record is empty' };
     }
 
+    const run = function () {
+      return appendAlertUnlocked_(record);
+    };
+    if (typeof withExternalLogicalMutation_ === "function") {
+      return withExternalLogicalMutation_(_getSheetName_(), run);
+    }
+    return run();
+  }
+
+  function appendAlertUnlocked_(record) {
     try {
       const sh = _getSheet_();
       const item = _validateRecord_(record);
@@ -299,6 +314,16 @@ const AlertsRepository_ = (function () {
       return { success: false, error: 'Records array is empty' };
     }
 
+    const run = function () {
+      return appendAlertsBatchUnlocked_(records);
+    };
+    if (typeof withExternalLogicalMutation_ === "function") {
+      return withExternalLogicalMutation_(_getSheetName_(), run);
+    }
+    return run();
+  }
+
+  function appendAlertsBatchUnlocked_(records) {
     try {
       const sh = _getSheet_();
       const rows = [];

@@ -422,7 +422,10 @@ function applySpreadsheetProtections_(options) {
 
     let sheet = null;
     try {
-      sheet = ss.getSheetByName(sheetName);
+      sheet =
+        typeof getLogicalSheet_ === "function"
+          ? getLogicalSheet_(sheetName, false)
+          : ss.getSheetByName(sheetName);
     } catch (error) {
       summary.warnings.push(
         "Не вдалося отримати лист " +

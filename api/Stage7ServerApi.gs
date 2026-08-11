@@ -244,7 +244,16 @@ function apiStage7BootstrapSidebar() {
         CONFIG.CAR_SHEET || "CAR",
         CONFIG.WEAPON_SHEET || "WEAPON",
       ].map(function (name) {
-        return { name: name, exists: !!ss.getSheetByName(name) };
+        var exists = false;
+        try {
+          exists =
+            typeof getLogicalSheet_ === "function"
+              ? !!getLogicalSheet_(name, false)
+              : !!ss.getSheetByName(name);
+        } catch (_) {
+          exists = false;
+        }
+        return { name: name, exists: exists };
       }),
     },
     warnings,

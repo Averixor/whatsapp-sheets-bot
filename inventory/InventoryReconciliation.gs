@@ -394,10 +394,16 @@ const InventoryReconciliation_ = (function () {
   }
 
   function ensureIndexSheet_() {
-    const ss = spreadsheet_();
     const name = config_().indexSheetName;
-    let indexSheet = ss.getSheetByName(name);
-    if (!indexSheet) indexSheet = ss.insertSheet(name);
+    let indexSheet =
+      typeof ensureLogicalSheet_ === "function"
+        ? ensureLogicalSheet_(name)
+        : null;
+    if (!indexSheet) {
+      const ss = spreadsheet_();
+      indexSheet = ss.getSheetByName(name);
+      if (!indexSheet) indexSheet = ss.insertSheet(name);
+    }
 
     const currentHeaders = indexSheet.getRange(1, 1, 1, INDEX_HEADERS.length).getValues()[0];
     const headerMismatch = INDEX_HEADERS.some(function (header, index) {
@@ -503,6 +509,16 @@ const InventoryReconciliation_ = (function () {
   }
 
   function writeIndex_(layout, selected) {
+    const run = function () {
+      return writeIndexUnlocked_(layout, selected);
+    };
+    if (typeof withExternalLogicalMutation_ === "function") {
+      return withExternalLogicalMutation_(config_().indexSheetName, run);
+    }
+    return run();
+  }
+
+  function writeIndexUnlocked_(layout, selected) {
     const indexSheet = ensureIndexSheet_();
     const now = new Date();
     const rows = [];
@@ -542,7 +558,10 @@ const InventoryReconciliation_ = (function () {
   }
 
   function indexMap_() {
-    const indexSheet = spreadsheet_().getSheetByName(config_().indexSheetName);
+    const indexSheet =
+      typeof getLogicalSheet_ === "function"
+        ? getLogicalSheet_(config_().indexSheetName, false)
+        : spreadsheet_().getSheetByName(config_().indexSheetName);
     if (!indexSheet || indexSheet.getLastRow() < 2) return {};
     const values = indexSheet
       .getRange(2, 1, indexSheet.getLastRow() - 1, INDEX_HEADERS.length)
@@ -569,7 +588,10 @@ const InventoryReconciliation_ = (function () {
   }
 
   function lastIndexSync_() {
-    const indexSheet = spreadsheet_().getSheetByName(config_().indexSheetName);
+    const indexSheet =
+      typeof getLogicalSheet_ === "function"
+        ? getLogicalSheet_(config_().indexSheetName, false)
+        : spreadsheet_().getSheetByName(config_().indexSheetName);
     if (!indexSheet || indexSheet.getLastRow() < 2) {
       return { value: null, timestamp: 0, iso: "" };
     }
@@ -745,7 +767,10 @@ const InventoryReconciliation_ = (function () {
     const ss = spreadsheet_();
     const folderId = getFolderId_();
     const workingSheet = ss.getSheetByName(cfg.sheetName);
-    const indexSheet = ss.getSheetByName(cfg.indexSheetName);
+    const indexSheet =
+      typeof getLogicalSheet_ === "function"
+        ? getLogicalSheet_(cfg.indexSheetName, false)
+        : ss.getSheetByName(cfg.indexSheetName);
     const syncState = autoSyncState_();
 
     if (!workingSheet) {

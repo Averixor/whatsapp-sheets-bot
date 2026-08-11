@@ -182,10 +182,17 @@ function _formatRulesApplyRegistryValidation_(sheet) {
 }
 
 function ensureFormatRulesRegistrySheet_() {
-  var ss = _formatRulesSpreadsheet_();
-  var sheet = ss.getSheetByName(FORMAT_RULES_REGISTRY_SHEET_);
+  var sheet =
+    typeof getLogicalSheet_ === "function"
+      ? getLogicalSheet_(FORMAT_RULES_REGISTRY_SHEET_, false)
+      : _formatRulesSpreadsheet_().getSheetByName(FORMAT_RULES_REGISTRY_SHEET_);
   var created = !sheet;
-  if (!sheet) sheet = ss.insertSheet(FORMAT_RULES_REGISTRY_SHEET_);
+  if (!sheet) {
+    sheet =
+      typeof ensureLogicalSheet_ === "function"
+        ? ensureLogicalSheet_(FORMAT_RULES_REGISTRY_SHEET_)
+        : _formatRulesSpreadsheet_().insertSheet(FORMAT_RULES_REGISTRY_SHEET_);
+  }
 
   _formatRulesEnsureGridSize_(
     sheet,
@@ -377,6 +384,16 @@ function _formatRulesNewRegistryRecord_(record, now) {
 }
 
 function _formatRulesWriteRegistryRecords_(records) {
+  var run = function () {
+    return _formatRulesWriteRegistryRecordsUnlocked_(records);
+  };
+  if (typeof withExternalLogicalMutation_ === "function") {
+    return withExternalLogicalMutation_(FORMAT_RULES_REGISTRY_SHEET_, run);
+  }
+  return run();
+}
+
+function _formatRulesWriteRegistryRecordsUnlocked_(records) {
   var sheet = ensureFormatRulesRegistrySheet_().sheet;
   var list = (Array.isArray(records) ? records : [])
     .slice()

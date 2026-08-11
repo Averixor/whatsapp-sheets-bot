@@ -71,6 +71,9 @@ function stage7TestRunnerAttachSheet_(ctx) {
   }
 
   ctx.getOrCreateSheet_ = function(sheetName) {
+    if (typeof ensureLogicalSheet_ === "function") {
+      return ensureLogicalSheet_(sheetName);
+    }
     var ss = getWasbSpreadsheet_();
     var sheet = ss.getSheetByName(sheetName);
     if (!sheet) sheet = ss.insertSheet(sheetName);

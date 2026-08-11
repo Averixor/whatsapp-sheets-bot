@@ -144,7 +144,16 @@ function healthCheck() {
       "TEMPLATES",
     ].filter(Boolean);
 
-    const missing = required.filter((name) => !sheets.includes(name));
+    const missing = required.filter(function (name) {
+      if (typeof getLogicalSheet_ === "function") {
+        try {
+          return !getLogicalSheet_(name, false);
+        } catch (_) {
+          return true;
+        }
+      }
+      return sheets.indexOf(name) === -1;
+    });
     const missingLabels = missing.map(_userFacingSheetLabel_);
 
     return {
@@ -161,7 +170,10 @@ function healthCheck() {
     const sheetName =
       (typeof CONFIG === "object" && CONFIG.INVENTORY_RECONCILIATION_FILES_SHEET) ||
       "INVENTORY_RECONCILIATION_FILES";
-    let sheet = getWasbSpreadsheet_().getSheetByName(sheetName);
+    let sheet =
+      typeof getLogicalSheet_ === "function"
+        ? getLogicalSheet_(sheetName, false)
+        : getWasbSpreadsheet_().getSheetByName(sheetName);
     let healError = "";
     if (
       !sheet &&
@@ -171,7 +183,10 @@ function healthCheck() {
     ) {
       try {
         InventoryReconciliation_.ensureIndexSheet();
-        sheet = getWasbSpreadsheet_().getSheetByName(sheetName);
+        sheet =
+          typeof getLogicalSheet_ === "function"
+            ? getLogicalSheet_(sheetName, false)
+            : getWasbSpreadsheet_().getSheetByName(sheetName);
       } catch (error) {
         healError = error && error.message ? error.message : String(error || "");
       }

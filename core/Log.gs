@@ -1,10 +1,13 @@
 /************ LOG WRITER ************/
 function _ensureLogSheet_() {
-  const ss = getWasbSpreadsheet_();
-  let sh = ss.getSheetByName(CONFIG.LOG_SHEET);
-
+  let sh =
+    typeof ensureLogicalSheet_ === "function"
+      ? ensureLogicalSheet_(CONFIG.LOG_SHEET)
+      : null;
   if (!sh) {
-    sh = ss.insertSheet(CONFIG.LOG_SHEET);
+    const ss = getWasbSpreadsheet_();
+    sh = ss.getSheetByName(CONFIG.LOG_SHEET);
+    if (!sh) sh = ss.insertSheet(CONFIG.LOG_SHEET);
   }
 
   const headers = [
@@ -38,6 +41,16 @@ function writeLogsBatch_(items) {
     return { success: true, count: 0, message: 'Немає логів для запису' };
   }
 
+  const run = function () {
+    return writeLogsBatchUnlocked_(items);
+  };
+  if (typeof withExternalLogicalMutation_ === "function") {
+    return withExternalLogicalMutation_(CONFIG.LOG_SHEET, run);
+  }
+  return run();
+}
+
+function writeLogsBatchUnlocked_(items) {
   const sh = _ensureLogSheet_();
 
   const rows = items.map(item => {

@@ -61,7 +61,10 @@ const MonthlyReport_ = (function () {
   }
 
   function getSheetRequired_(ss, name) {
-    const sheet = ss.getSheetByName(name);
+    const sheet =
+      typeof getLogicalSheet_ === "function"
+        ? getLogicalSheet_(name, false)
+        : ss.getSheetByName(name);
     if (!sheet) throw new Error(`Аркуш "${name}" не знайдено`);
     return sheet;
   }
@@ -71,8 +74,24 @@ const MonthlyReport_ = (function () {
    * заморожений рядок 1, базове оформлення.
    */
   function ensureDataSheet_(ss) {
-    let sh = ss.getSheetByName(DATA_SHEET_NAME);
-    if (!sh) sh = ss.insertSheet(DATA_SHEET_NAME);
+    const run = function () {
+      return ensureDataSheetUnlocked_(ss);
+    };
+    if (typeof withExternalLogicalMutation_ === "function") {
+      return withExternalLogicalMutation_(DATA_SHEET_NAME, run);
+    }
+    return run();
+  }
+
+  function ensureDataSheetUnlocked_(ss) {
+    let sh =
+      typeof ensureLogicalSheet_ === "function"
+        ? ensureLogicalSheet_(DATA_SHEET_NAME)
+        : null;
+    if (!sh) {
+      sh = ss.getSheetByName(DATA_SHEET_NAME);
+      if (!sh) sh = ss.insertSheet(DATA_SHEET_NAME);
+    }
 
     if (sh.getLastRow() < 1) {
       const hdr = [
@@ -190,7 +209,10 @@ const MonthlyReport_ = (function () {
     let emails = [];
 
     try {
-      const sh = ss.getSheetByName(PROJECTS_SHEET_NAME);
+      const sh =
+        typeof getLogicalSheet_ === "function"
+          ? getLogicalSheet_(PROJECTS_SHEET_NAME, false)
+          : ss.getSheetByName(PROJECTS_SHEET_NAME);
       if (!sh) throw new Error("missing");
 
       const lastRow = sh.getLastRow();
@@ -718,7 +740,10 @@ function sendMonthlyReport(monthYearOrSheetName) {
     MonthlyReport_._logInfo("start", `monthYear=${parsed.monthYear}`);
 
     MonthlyReport_.ensureDataSheet_(ss);
-    const dataSheet = ss.getSheetByName(MonthlyReport_.DATA_SHEET_NAME);
+    const dataSheet =
+      typeof getLogicalSheet_ === "function"
+        ? getLogicalSheet_(MonthlyReport_.DATA_SHEET_NAME, false)
+        : ss.getSheetByName(MonthlyReport_.DATA_SHEET_NAME);
     MonthlyReport_._logInfo("read", MonthlyReport_.DATA_SHEET_NAME);
     const { headers, rows } = MonthlyReport_.readMonthlyRows_(
       dataSheet,

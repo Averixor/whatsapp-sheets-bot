@@ -80,10 +80,15 @@ const JobRuntimeRepository_ = (function() {
   }
 
   function _sheet() {
-    const ss = getWasbSpreadsheet_();
-    let sh = ss.getSheetByName(_sheetName());
+    const name = _sheetName();
+    let sh =
+      typeof ensureLogicalSheet_ === "function"
+        ? ensureLogicalSheet_(name)
+        : null;
     if (!sh) {
-      sh = ss.insertSheet(_sheetName());
+      const ss = getWasbSpreadsheet_();
+      sh = ss.getSheetByName(name);
+      if (!sh) sh = ss.insertSheet(name);
     }
     _ensureHeader(sh);
     return sh;
@@ -188,9 +193,16 @@ const JobRuntimeRepository_ = (function() {
     props.setProperty(lastKey, JSON.stringify(item));
 
     try {
-      const sh = _sheet();
-      sh.appendRow(_recordToRow(item));
-      _trimLogSheet(sh);
+      const write = function () {
+        const sh = _sheet();
+        sh.appendRow(_recordToRow(item));
+        _trimLogSheet(sh);
+      };
+      if (typeof withExternalLogicalMutation_ === "function") {
+        withExternalLogicalMutation_(_sheetName(), write);
+      } else {
+        write();
+      }
     } catch (_) {
     }
 

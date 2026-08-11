@@ -475,6 +475,22 @@ function _diagAppendPreprodScriptPropertyChecks_(checks) {
       ? ""
       : "Задайте WASB_OWNER_EMAIL у властивостях сценарію",
   );
+
+  var storageMode =
+    typeof getExternalStorageMode_ === "function"
+      ? getExternalStorageMode_()
+      : "legacy";
+  _stage7PushCheck_(
+    checks,
+    "Pre-prod external storage mode",
+    "OK",
+    storageMode === "external"
+      ? "Зовнішнє зберігання увімкнено"
+      : storageMode === "migration"
+        ? "Режим міграції: робочі дані лишаються в основній книзі"
+        : "Режим legacy: робочі дані в основній книзі",
+    "",
+  );
 }
 
 function _diagAppendAccessBootstrapChecks_(checks) {
@@ -592,8 +608,10 @@ function _diagBuildReport_(checks, mode, summaryPrefix) {
 
 function _diagServiceSheetCheck_(checks, name) {
   try {
-    var ss = getWasbSpreadsheet_();
-    var sh = ss.getSheetByName(name);
+    var sh =
+      typeof getLogicalSheet_ === "function"
+        ? getLogicalSheet_(name, false)
+        : getWasbSpreadsheet_().getSheetByName(name);
     _stage7PushCheck_(
       checks,
       "Service sheet " + name,

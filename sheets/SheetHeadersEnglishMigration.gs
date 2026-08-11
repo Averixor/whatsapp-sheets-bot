@@ -125,7 +125,10 @@ function wasbNormalizeAllSheetHeadersToEnglish() {
       (CONFIG && CONFIG.SEND_PANEL_HEADER_ROW) || 2,
     ],
   ].forEach(function (x) {
-    var sh = ss.getSheetByName(x[1]);
+    var sh =
+      typeof getLogicalSheet_ === "function"
+        ? getLogicalSheet_(x[1], false)
+        : ss.getSheetByName(x[1]);
     if (sh)
       run(x[1], function () {
         return setHeaders(sh, x[2], schemaHeaders(x[0]));
@@ -263,7 +266,10 @@ function wasbNormalizeAllSheetHeadersToEnglish() {
     DAILY_SUMMARIES: ["Date", "Group", "Surname", "Code"],
   };
   Object.keys(fixed).forEach(function (n) {
-    var sh = ss.getSheetByName(n);
+    var sh =
+      typeof getLogicalSheet_ === "function"
+        ? getLogicalSheet_(n, false)
+        : ss.getSheetByName(n);
     if (sh)
       run(n, function () {
         return setHeaders(sh, 1, fixed[n]);

@@ -230,7 +230,10 @@ function _cleanupSheetByAge_(sheetName, headerRow, retentionDays) {
 
   var sh = null;
   try {
-    sh = ss.getSheetByName(normalizedSheetName);
+    sh =
+      typeof getLogicalSheet_ === "function"
+        ? getLogicalSheet_(normalizedSheetName, false)
+        : ss.getSheetByName(normalizedSheetName);
   } catch (e2) {
     result.error = e2 && e2.message ? e2.message : String(e2);
     _retLog_('Не вдалося отримати аркуш ' + normalizedSheetName, e2);

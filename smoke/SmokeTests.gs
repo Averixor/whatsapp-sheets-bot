@@ -46,6 +46,13 @@ function runSmokeTests(options) {
     ].filter(Boolean);
 
     const missing = required.filter(function (name) {
+      if (typeof getLogicalSheet_ === "function") {
+        try {
+          return !getLogicalSheet_(name, false);
+        } catch (_) {
+          return true;
+        }
+      }
       return !ss.getSheetByName(name);
     });
 
@@ -70,6 +77,13 @@ function runSmokeTests(options) {
       }
       var optional = ["Дані", "Проєкти", "Заявки"];
       var missing = optional.filter(function (name) {
+        if (typeof getLogicalSheet_ === "function") {
+          try {
+            return !getLogicalSheet_(name, false);
+          } catch (_) {
+            return true;
+          }
+        }
         return !ss.getSheetByName(name);
       });
       _smokeAssert_(

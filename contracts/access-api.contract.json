@@ -309,6 +309,26 @@
     {
       "name": "apiRefreshTemporaryPropertyRegister",
       "reason": "GAS-editor refresh alias; sidebar uses apiStage7RefreshTemporaryPropertyRegister"
+    },
+    {
+      "name": "apiPreviewExternalSpreadsheetMigration",
+      "reason": "GAS-editor sysadmin dry-run for external workbook migration; not client-reachable"
+    },
+    {
+      "name": "apiApplyExternalSpreadsheetMigration",
+      "reason": "GAS-editor sysadmin apply for external workbook migration; not client-reachable"
+    },
+    {
+      "name": "apiGetExternalStorageMode",
+      "reason": "GAS-editor sysadmin read of WASB_EXTERNAL_STORAGE_MODE; not client-reachable"
+    },
+    {
+      "name": "apiSetExternalStorageMode",
+      "reason": "GAS-editor sysadmin write of WASB_EXTERNAL_STORAGE_MODE; not client-reachable"
+    },
+    {
+      "name": "apiFinalizeExternalSpreadsheetMigration",
+      "reason": "GAS-editor sysadmin locked cutover to external storage; not client-reachable"
     }
   ],
   "deprecatedEndpoints": [

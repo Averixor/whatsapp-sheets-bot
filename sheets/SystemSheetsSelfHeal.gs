@@ -827,12 +827,17 @@ function ensureSystemSheetByName_(sheetName) {
     };
   }
 
-  var ss = _sshGetSpreadsheet_();
-  var sheet = ss.getSheetByName(record.name);
+  var sheet =
+    typeof getLogicalSheet_ === "function"
+      ? getLogicalSheet_(record.name, false)
+      : _sshGetSpreadsheet_().getSheetByName(record.name);
   var created = !sheet;
 
   if (!sheet) {
-    sheet = ss.insertSheet(record.name);
+    sheet =
+      typeof ensureLogicalSheet_ === "function"
+        ? ensureLogicalSheet_(record.name)
+        : _sshGetSpreadsheet_().insertSheet(record.name);
   }
 
   var spec = _resolveSheetSpec_(record);

@@ -432,7 +432,10 @@ function stage7TestRunnerAttachReporting_(ctx) {
       var ss = getWasbSpreadsheet_();
       if (!ss) return;
 
-      var sheet = ss.getSheetByName("TEST_RESULTS");
+      var sheet =
+        typeof getLogicalSheet_ === "function"
+          ? getLogicalSheet_("TEST_RESULTS", false)
+          : ss.getSheetByName("TEST_RESULTS");
       if (!sheet) return;
 
       var lastRow = sheet.getLastRow();
@@ -486,7 +489,19 @@ function stage7TestRunnerAttachReporting_(ctx) {
       });
 
       if (changed) {
-        range.setValues(values);
+        var write = function () {
+          var live =
+            typeof getLogicalSheet_ === "function"
+              ? getLogicalSheet_("TEST_RESULTS", false)
+              : sheet;
+          if (!live) return;
+          live.getRange(startRow, 1, rowCount, lastCol).setValues(values);
+        };
+        if (typeof withExternalLogicalMutation_ === "function") {
+          withExternalLogicalMutation_("TEST_RESULTS", write);
+        } else {
+          range.setValues(values);
+        }
       }
     } catch (err) {}
   };
