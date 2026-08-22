@@ -17,8 +17,9 @@ const contract = JSON.parse(fs.readFileSync(contractPath, "utf8"));
 
 const personnelHeaders = contract.sheets.PERSONNEL;
 assert.ok(personnelHeaders, "PERSONNEL headers missing in contract");
-assert.equal(personnelHeaders.L, "Email");
-assert.equal(personnelHeaders.M, "Callsign");
+assert.equal(personnelHeaders.L, "RNTRC");
+assert.equal(personnelHeaders.M, "Email");
+assert.equal(personnelHeaders.N, "Callsign");
 assert.ok(
   !Object.values(personnelHeaders).includes("TEMPLATE"),
   "reference PERSONNEL must not use TEMPLATE column",
@@ -36,6 +37,7 @@ const expectedPersonnelCanonical = {
   "Days until birthday": "Days_until_birthday",
   Phone: "Phone",
   "Phone 2": "2_Phone",
+  RNTRC: "RNTRC",
   Email: "Email",
   Callsign: "Callsign",
   Rank: "Rank",
@@ -59,6 +61,7 @@ for (const [header, expected] of Object.entries(expectedPersonnelCanonical)) {
 }
 
 const built = ctx._personnelBuildHeaderColIndex_(Object.values(personnelHeaders));
+assert.ok(built.RNTRC >= 0, "RNTRC column index");
 assert.ok(built.Email >= 0, "Email column index");
 assert.ok(built.Callsign >= 0, "Callsign column index");
 assert.ok(built.LastName >= 0, "Last name column index");
@@ -92,8 +95,9 @@ assert.doesNotMatch(
   /Callsign carrier: `TEMPLATE`/,
   "RUNBOOK must not claim TEMPLATE is reference callsign carrier",
 );
-assert.match(runbook, /\| L \| Email \|/);
-assert.match(runbook, /\| \*\*M\*\* \| \*\*Callsign\*\*/);
+assert.match(runbook, /\| L \| RNTRC \|/);
+assert.match(runbook, /\| M \| Email \|/);
+assert.match(runbook, /\| \*\*N\*\* \| \*\*Callsign\*\*/);
 assert.match(runbook, /reference-workbook-layout\.contract\.json/);
 
 const agents = fs.readFileSync(path.join(repoRoot, "AGENTS.md"), "utf8");
@@ -104,8 +108,8 @@ assert.doesNotMatch(
 );
 assert.match(
   agents,
-  /`Callsign` in column M/,
-  "AGENTS.md must document Callsign in reference column M",
+  /`Callsign` in column N/,
+  "AGENTS.md must document Callsign in reference column N",
 );
 assert.doesNotMatch(
   agents,
@@ -114,8 +118,8 @@ assert.doesNotMatch(
 );
 assert.match(
   agents,
-  /reference column \*\*Q\*\*/,
-  "AGENTS.md must document Status self-heal in reference column Q",
+  /reference column \*\*R\*\*/,
+  "AGENTS.md must document Status self-heal in reference column R",
 );
 
 const personnelStatusContract = JSON.parse(
@@ -127,7 +131,7 @@ const personnelStatusContract = JSON.parse(
 const statusColLetter = Object.entries(personnelHeaders).find(
   ([, header]) => header === "Status",
 )?.[0];
-assert.equal(statusColLetter, "Q", "PERSONNEL Status must be column Q");
+assert.equal(statusColLetter, "R", "PERSONNEL Status must be column R");
 assert.equal(
   personnelStatusContract.referenceStatusColumn,
   statusColLetter.charCodeAt(0) - 64,

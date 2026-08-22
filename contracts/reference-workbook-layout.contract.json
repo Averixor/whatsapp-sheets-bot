@@ -1,7 +1,7 @@
 {
   "sourceFile": "Книга Взводу Охорони(42).xlsx",
   "notes": {
-    "personnelCallsign": "Column M Callsign holds working callsign values (e.g. ГРАФ); column L is Email; no TEMPLATE column in reference file.",
+    "personnelCallsign": "Column N Callsign holds working callsign values (e.g. ГРАФ); column L is RNTRC; column M is Email; no TEMPLATE column in reference file.",
     "month06": "Compact layout: A=BR formula, B=Позивний, dates from C.",
     "monthStandard": "Sheets 02-05: A=ТЕЛЕФОН, B=ПОЗИВНИЙ, dates from H.",
     "phoneDirectory": "PHONE_DIRECTORY is a sectioned reference: column A holds section titles or phone numbers, column B holds contact name/description.",
@@ -23,12 +23,13 @@
       "I": "Days until birthday",
       "J": "Phone",
       "K": "Phone 2",
-      "L": "Email",
-      "M": "Callsign",
-      "N": "Rank",
-      "O": "Position",
-      "P": "OSH 4",
-      "Q": "Status"
+      "L": "RNTRC",
+      "M": "Email",
+      "N": "Callsign",
+      "O": "Rank",
+      "P": "Position",
+      "Q": "OSH 4",
+      "R": "Status"
     },
     "PHONES": {
       "A": "Callsign",

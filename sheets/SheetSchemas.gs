@@ -721,6 +721,7 @@ function _ssBuildPersonnelSchema_() {
       "Unit",
       "2_Phone",
       "Email",
+      "RNTRC",
       "Title",
       "Rank",
       "TEMPLATE",
@@ -740,6 +741,7 @@ function _ssBuildPersonnelSchema_() {
       "Days_until_birthday",
       "Phone",
       "2_Phone",
+      "RNTRC",
       "Email",
       "Callsign",
       "Rank",
@@ -748,7 +750,7 @@ function _ssBuildPersonnelSchema_() {
       "Status",
     ],
     notes:
-      "Єдине джерело даних людини. Еталон «Книга Взводу Охорони»: Cells/ID v/s/ID Army+ + split names + Email + Callsign (M) + Rank + OSH 4 + Status — contracts/reference-workbook-layout.contract.json. Місячний графік: Callsign. Status dropdown (9 UA): В наявності … СЗЧ.",
+      "Єдине джерело даних людини. Еталон «Книга Взводу Охорони»: Cells/ID v/s/ID Army+ + split names + RNTRC + Email + Callsign (N) + Rank + OSH 4 + Status — contracts/reference-workbook-layout.contract.json. Місячний графік: Callsign. Status dropdown (9 UA): В наявності … СЗЧ.",
   });
 }
 

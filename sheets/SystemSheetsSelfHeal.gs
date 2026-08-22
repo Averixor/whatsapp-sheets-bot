@@ -124,6 +124,7 @@ function _sshDisplayHeaderForCanonical_(header) {
     Days_until_birthday: "Days until birthday",
     "2_Phone": "Phone 2",
     OSH_4: "OSH 4",
+    RNTRC: "RNTRC",
   };
   return labels[text] || text;
 }
@@ -415,6 +416,7 @@ function _sshBuildRegistry_() {
         "Days until birthday",
         "Phone",
         "Phone 2",
+        "RNTRC",
         "Email",
         "Callsign",
         "Rank",

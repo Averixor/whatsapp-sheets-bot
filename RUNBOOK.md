@@ -296,7 +296,7 @@ guest / login fail
 
 **Перевірити:**
 
-- рядок у PERSONNEL (Email у колонці L, Callsign у колонці M, Status українською);
+- рядок у PERSONNEL (RNTRC у колонці L, Email у колонці M, Callsign у колонці N, Status українською);
 - телефон / `2_Phone`;
 - після змін даних або deploy — **`apiStage7ClearPhoneCache()`**.
 
@@ -750,13 +750,13 @@ Run from the Apps Script editor when relevant after a deploy or config change:
 
 ### Final header row (row 1)
 
-Logical (canonical): `Cells | ID_VS | ID | LastName | FirstName | Patronymic | Birthday | Age | Days_until_birthday | Phone | 2_Phone | Email | Callsign | Rank | Position | OSH_4 | Status`
+Logical (canonical): `Cells | ID_VS | ID | LastName | FirstName | Patronymic | Birthday | Age | Days_until_birthday | Phone | 2_Phone | RNTRC | Email | Callsign | Rank | Position | OSH_4 | Status`
 
 **Reference workbook "Книга Взводу Охорони" physical layout (supported):**
 
 Contract: `contracts/reference-workbook-layout.contract.json` (headers extracted from the reference xlsx).
 
-**PERSONNEL (row 1, columns A–Q):**
+**PERSONNEL (row 1, columns A–R):**
 
 | Col | Header | Role |
 | --- | --- | --- |
@@ -766,12 +766,13 @@ Contract: `contracts/reference-workbook-layout.contract.json` (headers extracted
 | D–F | Last name / First name / Patronymic | Code synthesizes `FML` |
 | G–I | Birthday / Age / Days until birthday | Materialized display: **Birthday** `DD.MM.YYYY р. н.` (space before suffix; legacy `… р.` normalizes on read); **Age** `N р.` (e.g. `25 р.`); **Days until birthday** — UA countdown (`N м.`, `N д.`, `N м. N д.`, or `Сьогодні`; space before abbreviation; `personnel/PersonnelMaterialize.gs`) |
 | J–K | Phone / Phone 2 | Phones |
-| L | Email | Optional contact email |
-| **M** | **Callsign** | **Working callsign** (e.g. `ГРАФ`) — schedule key |
-| N | Rank | Rank (instead of Title) |
-| O | Position | Position |
-| P | OSH 4 | OSH_4 (space ok) |
-| Q | Status | UA dropdown (9 values) |
+| L | RNTRC | Optional tax ID (РНОКПП) |
+| M | Email | Optional contact email |
+| **N** | **Callsign** | **Working callsign** (e.g. `ГРАФ`) — schedule key |
+| O | Rank | Rank (instead of Title) |
+| P | Position | Position |
+| Q | OSH 4 | OSH_4 (space ok) |
+| R | Status | UA dropdown (9 values) |
 
 **Monthly sheets:**
 
@@ -794,7 +795,7 @@ Required (logical): `FML` (or split name parts), `Birthday`, `Phone`, `Callsign`
 
 **Dropdown order (9 values):** `В наявності` → `У відрядженні` → `Вибув` → `Відпустка` → `Лікарняний` → `Тимчасовий` → `Гусачівка` → `БЗВП` → `СЗЧ`. Legacy labels (`Дієвий`, `Відрядження`, `Active`, EN) normalize on read.
 
-**Data validation (dropdown):** apply to the **whole** Status column from row 2, e.g. `PERSONNEL!Q2:Q`, not a single cell like `P10`. After deploy, run **`applyPersonnelStatusColumnValidation()`** in the Apps Script editor, **`ensurePersonnelStatusColumn()`** for header + dropdown self-heal, or **`ensureSystemSheetByName_('PERSONNEL')`** / bootstrap self-heal to apply the list automatically.
+**Data validation (dropdown):** apply to the **whole** Status column from row 2, e.g. `PERSONNEL!R2:R`, not a single cell like `P10`. After deploy, run **`applyPersonnelStatusColumnValidation()`** in the Apps Script editor, **`ensurePersonnelStatusColumn()`** for header + dropdown self-heal, or **`ensureSystemSheetByName_('PERSONNEL')`** / bootstrap self-heal to apply the list automatically.
 
 **`ID`** (Армія+) may stay empty or temporary; it is not required for cards, schedule, phones, or birthdays.
 

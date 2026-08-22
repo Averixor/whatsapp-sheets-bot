@@ -185,12 +185,12 @@ Notes:
 ## PERSONNEL model
 
 - Monthly sheets store **Callsign + schedule**; `PERSONNEL` stores person fields.
-- `Callsign` is the schedule/lookup key (reference xlsx: column **M** on PERSONNEL, values like `ГРАФ`). `FML` is the fallback display identity (synthesized from `Last name` + `First name` + `Patronymic`). `TEMPLATE` is legacy-only (not in the reference workbook).
+- `Callsign` is the schedule/lookup key (reference xlsx: column **N** on PERSONNEL, values like `ГРАФ`). `FML` is the fallback display identity (synthesized from `Last name` + `First name` + `Patronymic`). `TEMPLATE` is legacy-only (not in the reference workbook).
 - `ID` is optional Армія+ data; `Position` is not a person key.
 - Active UA statuses (dropdown, 9 values): `В наявності`, `У відрядженні`,
   `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`.
   Runtime-active (schedule, phones, cards): all except **`Вибув`** and **`СЗЧ`**.
-  Empty status defaults to **`В наявності`**. If the `Status` header is missing, runtime self-heal seeds it in the reference column (**Q**) or appends a safe new column before validation. Legacy labels (`Дієвий`, `Active`, `Відрядження`, EN) map on read only — see `personnel/PersonnelRepository.gs`.
+  Empty status defaults to **`В наявності`**. If the `Status` header is missing, runtime self-heal seeds it in the reference column (**R**) or appends a safe new column before validation. Legacy labels (`Дієвий`, `Active`, `Відрядження`, EN) map on read only — see `personnel/PersonnelRepository.gs`.
 - Runtime reads by header names and supports documented aliases (split names, `ID v/s`, OSH 4, legacy TEMPLATE, etc.). After edits,
   run `apiStage7ClearPhoneCache()`.
 

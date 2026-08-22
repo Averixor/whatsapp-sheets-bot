@@ -283,20 +283,6 @@ function setParity(value) {
   }
 }
 
-function assertProductionOnMain(label) {
-  names.forEach((logicalName) => {
-    assert.equal(
-      context.getLogicalSpreadsheet_(logicalName).getId(),
-      mainId,
-      `${label}: ${logicalName} production must stay on main`,
-    );
-    assert.equal(
-      context.getLogicalSheet_(logicalName, true).getName(),
-      logicalName,
-    );
-  });
-}
-
 function assertProductionOnRegistry(label) {
   contract.sheets.forEach((row) => {
     assert.equal(
@@ -328,20 +314,21 @@ assert.equal(context.isExternalLogicalSheet_("DICT_SUM"), false);
 assert.equal(context.isExternalLogicalSheet_("08"), false);
 assert.equal(context.getExternalSpreadsheetId_("PERSONNEL"), "");
 
-// 1. absent → legacy
+// 1. absent → legacy flag; dedicated sheets still use registry IDs
 setRawMode(null);
 assert.equal(context.getExternalStorageMode_(), "legacy");
 assert.equal(context.usesExternalProductionRouting_(), false);
-assertProductionOnMain("1 absent");
+assertProductionOnRegistry("1 absent");
+assert.equal(context.getLogicalSpreadsheet_("PERSONNEL").getId(), mainId);
 
-// 2–3. legacy / migration production → main
+// 2–3. legacy / migration cutover flag stays off; create/read still not on main
 setRawMode("legacy");
 assert.equal(context.getExternalStorageMode_(), "legacy");
-assertProductionOnMain("2 legacy");
+assertProductionOnRegistry("2 legacy");
 setRawMode("migration");
 assert.equal(context.getExternalStorageMode_(), "migration");
 assert.equal(context.usesExternalProductionRouting_(), false);
-assertProductionOnMain("3 migration");
+assertProductionOnRegistry("3 migration");
 
 // 4–5. migration preview/apply source=main, target=external
 assert.equal(context.getExternalMigrationSourceSpreadsheetId_(), mainId);
@@ -378,7 +365,7 @@ assertProductionOnRegistry("6 external");
 setRawMode("bogus");
 assert.equal(context.getExternalStorageMode_(), "legacy");
 assert.equal(context.usesExternalProductionRouting_(), false);
-assertProductionOnMain("7 invalid");
+assertProductionOnRegistry("7 invalid");
 setRawMode("");
 assert.equal(context.getExternalStorageMode_(), "legacy");
 setRawMode("EXTERNAL");
@@ -435,11 +422,11 @@ const opsId = contract.sheets.find((row) => row.logicalName === "OPS_LOG").sprea
 const cpId = contract.sheets.find((row) => row.logicalName === "CHECKPOINTS")
   .spreadsheetId;
 setRawMode("legacy");
-assert.equal(context.getLogicalSpreadsheet_("OPS_LOG_2026_07").getId(), mainId);
-assert.equal(context.getLogicalSpreadsheet_("CHECKPOINTS_2026_08").getId(), mainId);
+assert.equal(context.getLogicalSpreadsheet_("OPS_LOG_2026_07").getId(), opsId);
+assert.equal(context.getLogicalSpreadsheet_("CHECKPOINTS_2026_08").getId(), cpId);
 setRawMode("migration");
-assert.equal(context.getLogicalSpreadsheet_("OPS_LOG_2026_07").getId(), mainId);
-assert.equal(context.getLogicalSpreadsheet_("CHECKPOINTS_2026_08").getId(), mainId);
+assert.equal(context.getLogicalSpreadsheet_("OPS_LOG_2026_07").getId(), opsId);
+assert.equal(context.getLogicalSpreadsheet_("CHECKPOINTS_2026_08").getId(), cpId);
 context.setExternalStorageMode_("external", { fromFinalizer: true });
 assert.equal(context.getLogicalSpreadsheet_("OPS_LOG_2026_07").getId(), opsId);
 assert.equal(context.getLogicalSpreadsheet_("CHECKPOINTS_2026_08").getId(), cpId);
@@ -448,19 +435,25 @@ assert.equal(context.getLogicalSpreadsheet_("CHECKPOINTS_2026_08").getId(), cpId
 ["PROPERTY_CATALOG", "PROPERTY_KITS"].forEach((logicalName) => {
   assert.equal(context.isExternalLogicalSheet_(logicalName), true);
   setRawMode("legacy");
-  assert.equal(context.getLogicalSpreadsheet_(logicalName).getId(), mainId);
+  assert.notEqual(context.getLogicalSpreadsheet_(logicalName).getId(), mainId);
   assert.equal(context.getLogicalSheet_(logicalName, true).getName(), logicalName);
   setRawMode("migration");
-  assert.equal(context.getLogicalSpreadsheet_(logicalName).getId(), mainId);
+  assert.notEqual(context.getLogicalSpreadsheet_(logicalName).getId(), mainId);
 });
 
 // 13. FORMAT_RULES routing as 12; PERSONNEL always main
 assert.equal(context.isExternalLogicalSheet_("FORMAT_RULES_REGISTRY"), true);
 setRawMode("legacy");
-assert.equal(context.getLogicalSpreadsheet_("FORMAT_RULES_REGISTRY").getId(), mainId);
+assert.notEqual(
+  context.getLogicalSpreadsheet_("FORMAT_RULES_REGISTRY").getId(),
+  mainId,
+);
 assert.equal(context.getLogicalSpreadsheet_("PERSONNEL").getId(), mainId);
 setRawMode("migration");
-assert.equal(context.getLogicalSpreadsheet_("FORMAT_RULES_REGISTRY").getId(), mainId);
+assert.notEqual(
+  context.getLogicalSpreadsheet_("FORMAT_RULES_REGISTRY").getId(),
+  mainId,
+);
 assert.equal(context.getLogicalSpreadsheet_("PERSONNEL").getId(), mainId);
 context.setExternalStorageMode_("external", { fromFinalizer: true });
 assert.equal(
@@ -472,6 +465,24 @@ assert.equal(context.getLogicalSpreadsheet_("PERSONNEL").getId(), mainId);
 assert.notEqual(
   context.getExternalSpreadsheetId_("FORMAT_RULES_REGISTRY"),
   mainId,
+);
+
+setRawMode("legacy");
+context.invalidateExternalStorageRuntimeCache_();
+const logSpreadsheetId = contract.sheets.find(
+  (row) => row.logicalName === "LOG",
+).spreadsheetId;
+const mainSheetCount = spreadsheetStore[mainId].getSheets().length;
+const logSs = spreadsheetStore[logSpreadsheetId];
+logSs.deleteSheet(logSs.getSheetByName("LOG"));
+context.invalidateExternalStorageRuntimeCache_();
+const ensuredLog = context.ensureLogicalSheet_("LOG");
+assert.equal(ensuredLog.getName(), "LOG");
+assert.ok(logSs.getSheetByName("LOG"), "ensure must create LOG on the dedicated spreadsheet");
+assert.equal(
+  spreadsheetStore[mainId].getSheets().length,
+  mainSheetCount,
+  "ensure must not insert LOG into the main workbook",
 );
 
 assert.throws(

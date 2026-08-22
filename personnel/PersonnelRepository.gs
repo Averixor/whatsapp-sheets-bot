@@ -22,7 +22,7 @@ var PERSONNEL_SHEET_NAME =
 /** Sheet must have these header columns (ID and computed birthday helpers are optional). */
 /** Canonical (logical) header order. Physical layout in reference workbook "Книга Взводу Охорони" (see contracts/reference-workbook-layout.contract.json):
  *  A Cells (ignored), B ID v/s, C ID Army+, D–F Last/First/Patronymic (code synthesizes FML), G–I birthday helpers,
- *  J–K phones, L Email, M Callsign (working values, e.g. ГРАФ), N Rank, O Position, P OSH 4, Q Status.
+ *  J–K phones, L RNTRC, M Email, N Callsign (working values, e.g. ГРАФ), O Rank, P Position, Q OSH 4, R Status.
  *  TEMPLATE is supported only as a legacy alternate layout — not present in the reference xlsx.
  *  Reading is header-name based with aliases (see _personnelCanonicalHeaderKey_).
  */
@@ -38,6 +38,7 @@ var PERSONNEL_CANONICAL_HEADER_ORDER_ = [
   "Days_until_birthday",
   "Phone",
   "2_Phone",
+  "RNTRC",
   "Email",
   "Callsign",
   "Rank",
@@ -69,6 +70,7 @@ var PERSONNEL_OPTIONAL_HEADER_KEYS = [
   "Rank",
   "TEMPLATE",
   "Email",
+  "RNTRC",
   "LastName",
   "FirstName",
   "Patronymic",
@@ -413,6 +415,10 @@ function _personnelCanonicalHeaderKey_(rawHeader) {
     "2 phone": "2_Phone",
     "phone 2": "2_Phone",
     "телефон 2": "2_Phone",
+    rntrc: "RNTRC",
+    рнокпп: "RNTRC",
+    inn: "RNTRC",
+    іпн: "RNTRC",
     callsign: "Callsign",
     позивний: "Callsign",
     "\u043f\u043e\u0437\u044b\u0432\u043d\u043e\u0439": "Callsign",
@@ -458,7 +464,7 @@ function _personnelGetSheet_(mustExist) {
         PERSONNEL_REQUIRED_HEADER_KEYS.concat(
           PERSONNEL_OPTIONAL_HEADER_KEYS,
         ).join(", ") +
-        " (еталон «Книга Взводу Охорони»: Last/First/Patronymic + Email + Callsign у колонці M; TEMPLATE — лише legacy)",
+        " (еталон «Книга Взводу Охорони»: Last/First/Patronymic + RNTRC + Email + Callsign у колонці N; TEMPLATE — лише legacy)",
     );
   }
   return sh || null;
@@ -519,8 +525,8 @@ function _personnelBuildHeaderColIndex_(headersRow) {
   return col;
 }
 
-/** Reference workbook column Q (1-based). */
-var PERSONNEL_REFERENCE_STATUS_COL_ = 17;
+/** Reference workbook column R (1-based). */
+var PERSONNEL_REFERENCE_STATUS_COL_ = 18;
 
 function _personnelFindStatusColumnIndex_(headersRow) {
   var headers = headersRow || [];
@@ -533,7 +539,7 @@ function _personnelFindStatusColumnIndex_(headersRow) {
 }
 
 /**
- * Creates missing Status header on PERSONNEL (column Q in reference layout, or next free column).
+ * Creates missing Status header on PERSONNEL (column R in reference layout, or next free column).
  * Does not overwrite unrelated headers. Empty data cells stay empty (= В наявності on read).
  */
 function ensurePersonnelStatusColumnHeader_(sheet) {
@@ -671,7 +677,7 @@ function _personnelRowToRecord_(row, sheetRow, col) {
   var statusCanonical = getPersonnelStatusCanonical_(status);
   var active = isPersonnelStatusActive_(status);
 
-  // Reference workbook layout: split name parts; Callsign column M holds working values.
+  // Reference workbook layout: split name parts; Callsign column N holds working values.
   if (!fml) {
     var ln = lastName;
     var fn = firstName;
@@ -708,6 +714,7 @@ function _personnelRowToRecord_(row, sheetRow, col) {
     phone: String(_personnelReadCell_(row, col.Phone) || "").trim(),
     phone2: String(_personnelReadCell_(row, col["2_Phone"]) || "").trim(),
     email: String(col.Email >= 0 ? _personnelReadCell_(row, col.Email) || "" : "").trim(),
+    rntrc: String(col.RNTRC >= 0 ? _personnelReadCell_(row, col.RNTRC) || "" : "").trim(),
     callsign: callsign,
     template:
       col.TEMPLATE >= 0
@@ -743,6 +750,7 @@ function _personnelRowToRecord_(row, sheetRow, col) {
   record.Phone = record.phone;
   record["2_Phone"] = record.phone2;
   record.Email = record.email;
+  record.RNTRC = record.rntrc;
   record.Callsign = record.callsign;
   record.Title = record.title;
   record.Position = record.position;

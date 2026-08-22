@@ -497,12 +497,13 @@ const VacationOptionsWriter_ = (function () {
     for (let i = 0; i < values.length; i++) {
       if (
         _fmlKey_(values[i][0]) === targetKey &&
-        _isTrue_(values[i][4]) &&
         _rowMatchesOption_(values[i], option)
       ) {
-        targetRow = i + startRow;
-        existingTravel = String(values[i][7] || "").trim();
-        break;
+        if (_isTrue_(values[i][4]) || !targetRow) {
+          targetRow = i + startRow;
+          existingTravel = String(values[i][7] || "").trim();
+          if (_isTrue_(values[i][4])) break;
+        }
       }
     }
     if (!targetRow) {
@@ -551,7 +552,7 @@ const VacationOptionsWriter_ = (function () {
       true,
       true,
       Number(option.days) || 0,
-      option.travel || existingTravel,
+      _hasOwn_(option, "travel") ? option.travel : existingTravel,
       "OK",
     ];
     sheet.getRange(targetRow, startCol, 1, width).setValues([rowData]);

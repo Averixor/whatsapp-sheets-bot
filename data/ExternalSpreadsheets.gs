@@ -1,11 +1,12 @@
 /**
  * ExternalSpreadsheets.gs — canonical router for service workbooks.
  *
- * Seventeen logical sheets may live in dedicated Spreadsheets. Production
- * routing is gated by Script Property WASB_EXTERNAL_STORAGE_MODE:
- *   legacy (default) / migration → read/write still use the main workbook
- *   external → read/write use the registry openById targets
- * Unknown or missing mode fails closed to legacy — never auto-external.
+ * Seventeen logical sheets live in dedicated Spreadsheets. Read, write and
+ * create always use the registry openById targets — never insert those tabs
+ * into the main workbook (self-heal / bootstrap included).
+ * WASB_EXTERNAL_STORAGE_MODE still gates migration cutover UI/finalizer:
+ *   legacy (default) / migration / external
+ * Unknown or missing mode fails closed to legacy for the cutover flag only.
  * IDs are not duplicated in business modules. Objects are cached for one
  * execution only — never CacheService / PropertiesService.
  */
@@ -551,7 +552,7 @@ function _openSpreadsheetByIdCached_(spreadsheetId) {
 function getLogicalSpreadsheet_(name) {
   var text = _externalTrimName_(name);
   var entry = getExternalSpreadsheetEntry_(text);
-  if (!entry || !usesExternalProductionRouting_()) return getWasbSpreadsheet_();
+  if (!entry) return getWasbSpreadsheet_();
   return _openSpreadsheetByIdCached_(entry.spreadsheetId);
 }
 
@@ -581,7 +582,7 @@ function getLogicalSheet_(name, required) {
     if (cached || required === false) return cached || null;
   }
   var entry = getExternalSpreadsheetEntry_(text);
-  var useExternal = !!(entry && usesExternalProductionRouting_());
+  var useExternal = !!entry;
   var sheet = null;
   if (useExternal) {
     var ss = _openSpreadsheetByIdCached_(entry.spreadsheetId);
@@ -616,7 +617,7 @@ function ensureLogicalSheet_(name) {
         : entry.sheetName
       : text;
     if (
-      usesExternalProductionRouting_() &&
+      entry &&
       existing.getName() !== canonical &&
       _externalPlaceholderSheetName_(existing.getName())
     ) {
@@ -626,7 +627,7 @@ function ensureLogicalSheet_(name) {
     return existing;
   }
   var owner = getExternalSpreadsheetEntry_(text);
-  var useExternal = !!(owner && usesExternalProductionRouting_());
+  var useExternal = !!owner;
   var ss = useExternal
     ? _openSpreadsheetByIdCached_(owner.spreadsheetId)
     : getWasbSpreadsheet_();
