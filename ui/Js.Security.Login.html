@@ -302,6 +302,11 @@
       return;
     }
 
+    if (access.loginDisabled) {
+      showToast("Вхід за логіном і паролем вимкнено");
+      return;
+    }
+
     if (!access.selfBindRequired && !access.canSelfBind) {
       showToast("Вхід уже підтверджено");
       return;

@@ -76,6 +76,10 @@
           raw.migrationModeEnabled !== undefined
             ? !!raw.migrationModeEnabled
             : !!policy.migrationModeEnabled,
+        loginDisabled:
+          raw.loginDisabled !== undefined
+            ? !!raw.loginDisabled
+            : !!(policy.loginDisabled || login.disabled),
         userKeyModeEnabled:
           raw.strictUserKeyMode !== undefined
             ? !!raw.strictUserKeyMode
@@ -104,13 +108,17 @@
           login.supportCallsign || raw.supportCallsign || "ШАХТАР",
         ),
         selfBindRequired:
-          login.selfBindRequired !== undefined
-            ? !!login.selfBindRequired
-            : keyAvailable && !registered,
+          !!(raw.loginDisabled || policy.loginDisabled || login.disabled)
+            ? false
+            : login.selfBindRequired !== undefined
+              ? !!login.selfBindRequired
+              : keyAvailable && !registered,
         canSelfBind:
-          login.canSelfBind !== undefined
-            ? !!login.canSelfBind
-            : keyAvailable && !registered,
+          !!(raw.loginDisabled || policy.loginDisabled || login.disabled)
+            ? false
+            : login.canSelfBind !== undefined
+              ? !!login.canSelfBind
+              : keyAvailable && !registered,
         loginLockout: {
           locked: !!(login.lockout || raw.loginLockout || {}).locked,
           remainingMinutes: safeNumber_(

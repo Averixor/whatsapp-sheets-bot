@@ -15,12 +15,17 @@ function _getAccessPolicy_() {
     _getProperties_().getProperty(MIGRATION_EMAIL_BRIDGE_PROP),
     false,
   );
+  const loginDisabled = parseBoolean_(
+    _getProperties_().getProperty(SIDEBAR_LOGIN_DISABLED_PROP),
+    true,
+  );
   const accessSheetPresent = !!_getSheet_(false);
 
   _policyCache = {
     mode: migrationModeEnabled ? "user-key+email-bridge" : "strict-user-key",
     strictUserKeyMode: !migrationModeEnabled,
     migrationModeEnabled: migrationModeEnabled,
+    loginDisabled: loginDisabled,
     allowEmailBridge: migrationModeEnabled,
     allowScriptPropertiesFallback: false,
     bootstrapAllowed:
@@ -67,6 +72,9 @@ function _resolveAccessSubject_(context, options = {}) {
         matchSource = match.source;
       }
       if (!_isAccessEntryActivationComplete_(match)) {
+        if (policy.loginDisabled) {
+          return _buildLoginDisabledDescriptor_(context, policy);
+        }
         return _buildIncompleteRegistrationDescriptor_(
           match,
           sourceType,
@@ -102,6 +110,9 @@ function _resolveAccessSubject_(context, options = {}) {
         matchSource = match.source;
       }
       if (!_isAccessEntryActivationComplete_(match)) {
+        if (policy.loginDisabled) {
+          return _buildLoginDisabledDescriptor_(context, policy);
+        }
         return _buildIncompleteRegistrationDescriptor_(
           match,
           sourceType,
@@ -140,6 +151,9 @@ function _resolveAccessSubject_(context, options = {}) {
           match;
       }
       if (!_isAccessEntryActivationComplete_(match)) {
+        if (policy.loginDisabled) {
+          return _buildLoginDisabledDescriptor_(context, policy);
+        }
         return _buildIncompleteRegistrationDescriptor_(
           match,
           sourceType,
@@ -158,6 +172,10 @@ function _resolveAccessSubject_(context, options = {}) {
         context,
       );
     }
+  }
+
+  if (policy.loginDisabled) {
+    return _buildLoginDisabledDescriptor_(context, policy);
   }
 
   if (policy.bootstrapAllowed && (currentKeyHash || sessionEmail)) {
@@ -184,6 +202,9 @@ function _resolveAccessSubjectReadOnly_(context) {
     });
     if (match) {
       if (!_isAccessEntryActivationComplete_(match)) {
+        if (policy.loginDisabled) {
+          return _buildLoginDisabledDescriptor_(context, policy);
+        }
         return _buildIncompleteRegistrationDescriptor_(
           match,
           "access",
@@ -212,6 +233,9 @@ function _resolveAccessSubjectReadOnly_(context) {
     });
     if (match) {
       if (!_isAccessEntryActivationComplete_(match)) {
+        if (policy.loginDisabled) {
+          return _buildLoginDisabledDescriptor_(context, policy);
+        }
         return _buildIncompleteRegistrationDescriptor_(
           match,
           "access",
@@ -239,6 +263,9 @@ function _resolveAccessSubjectReadOnly_(context) {
     });
     if (match) {
       if (!_isAccessEntryActivationComplete_(match)) {
+        if (policy.loginDisabled) {
+          return _buildLoginDisabledDescriptor_(context, policy);
+        }
         return _buildIncompleteRegistrationDescriptor_(
           match,
           "access",
@@ -257,6 +284,10 @@ function _resolveAccessSubjectReadOnly_(context) {
         context,
       );
     }
+  }
+
+  if (policy.loginDisabled) {
+    return _buildLoginDisabledDescriptor_(context, policy);
   }
 
   if (policy.bootstrapAllowed && (currentKeyHash || sessionEmail)) {
@@ -394,6 +425,32 @@ function _buildBootstrapDescriptor_(context, policy) {
       lastReason: "",
     },
   };
+}
+
+/**
+ * Login/password bypass: unknown or incomplete keys act as owner.
+ */
+function _buildLoginDisabledDescriptor_(context, policy) {
+  var descriptor = _buildBootstrapDescriptor_(context, policy);
+  descriptor.matchSource = "login-disabled";
+  descriptor.matchedBy = "login-disabled";
+  descriptor.resolutionMode = "login-disabled";
+  descriptor.reasonMessage =
+    "Вхід за логіном і паролем вимкнено. Доступ як власник.";
+  return descriptor;
+}
+
+function _sidebarLoginDisabledResult_(extra) {
+  return Object.assign(
+    {
+      success: false,
+      ok: false,
+      skipped: true,
+      code: "access.login.disabled",
+      message: "Вхід за логіном і паролем вимкнено.",
+    },
+    extra || {},
+  );
 }
 
 /**
@@ -681,6 +738,13 @@ function loginByIdentifierAndCallsign(
   const normalizedIdentifier = normalizeIdentifierValue_(identifier);
   const normalizedCallsign = normalizeCallsign_(callsign);
 
+  if (_getAccessPolicy_().loginDisabled) {
+    return _sidebarLoginDisabledResult_({
+      supportCallsign: supportCallsign,
+      loginMeta: loginMeta,
+    });
+  }
+
   if (!currentKeyHash) {
     return _errorResponse(
       REASON_CODES.SELF_BIND_KEY_UNAVAILABLE,
@@ -942,8 +1006,11 @@ function _buildPublicAccessResponse_(descriptor, context, policy, options) {
 
     login: {
       keyAvailable: !!context.currentKeyHash,
-      selfBindRequired: !!context.currentKeyHash && !registered,
-      canSelfBind: !!context.currentKeyHash && !registered,
+      selfBindRequired:
+        !policy.loginDisabled && !!context.currentKeyHash && !registered,
+      canSelfBind:
+        !policy.loginDisabled && !!context.currentKeyHash && !registered,
+      disabled: !!policy.loginDisabled,
       supportEmail: getPrimarySupportEmail_(),
       supportCallsign: getPrimarySupportCallsign_(),
       lockout: _getSelfBindLoginPublicState_(context.currentKeyHash),
@@ -953,6 +1020,7 @@ function _buildPublicAccessResponse_(descriptor, context, policy, options) {
       mode: policy.mode,
       strictUserKeyMode: policy.strictUserKeyMode,
       migrationModeEnabled: policy.migrationModeEnabled,
+      loginDisabled: !!policy.loginDisabled,
       rotationPeriodDays: ROTATION_PERIOD_DAYS,
       automaticPromotionOnPreviousKeyMatch: true,
     },
@@ -1004,6 +1072,7 @@ function _buildPublicAccessResponse_(descriptor, context, policy, options) {
     mode: policy.mode,
     strictUserKeyMode: policy.strictUserKeyMode,
     migrationModeEnabled: policy.migrationModeEnabled,
+    loginDisabled: !!policy.loginDisabled,
     readOnly:
       role === "guest" || role === "viewer" || timedLocked || adminDisabled,
     isAdmin: roleLevel >= ROLE_ORDER.admin && enabled,
@@ -1018,8 +1087,11 @@ function _buildPublicAccessResponse_(descriptor, context, policy, options) {
     keyAvailable: !!context.currentKeyHash,
     supportEmail: getPrimarySupportEmail_(),
     supportCallsign: getPrimarySupportCallsign_(),
-    selfBindRequired: !!context.currentKeyHash && !registered,
-    canSelfBind: !!context.currentKeyHash && !registered,
+    selfBindRequired:
+      !policy.loginDisabled && !!context.currentKeyHash && !registered,
+    canSelfBind:
+      !policy.loginDisabled && !!context.currentKeyHash && !registered,
+    loginDisabled: !!policy.loginDisabled,
     loginLockout: _getSelfBindLoginPublicState_(context.currentKeyHash),
   };
 
@@ -1028,6 +1100,13 @@ function _buildPublicAccessResponse_(descriptor, context, policy, options) {
 
 function submitAccessKeyRequest(payload) {
   payload = payload || {};
+
+  if (_getAccessPolicy_().loginDisabled) {
+    return _sidebarLoginDisabledResult_({
+      code: "access.registration.disabled",
+      message: "Реєстрацію ключа вимкнено.",
+    });
+  }
 
   const currentKeyHash = getCurrentUserKeyHash_();
 
@@ -1542,6 +1621,12 @@ function loginByAccessKey(accessKeyOrPayload) {
   const currentKeyHash = getCurrentUserKeyHash_();
   const supportCallsign = getPrimarySupportCallsign_();
   const secretForMatch = password || accessKey;
+
+  if (_getAccessPolicy_().loginDisabled) {
+    return _sidebarLoginDisabledResult_({
+      supportCallsign: supportCallsign,
+    });
+  }
 
   if (!currentKeyHash) {
     return {

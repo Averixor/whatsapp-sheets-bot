@@ -435,6 +435,7 @@ function runAccessDiagnostics() {
       bootstrapAllowed: policy.bootstrapAllowed,
       adminConfigured: policy.adminConfigured,
       accessSheetPresent: policy.accessSheetPresent,
+      loginDisabled: !!policy.loginDisabled,
     },
 
     runtime: {
@@ -1208,6 +1209,8 @@ function testDiagnostics() {
       !!(diag.policy && diag.policy.strictUserKeyMode) +
       "; migrationModeEnabled=" +
       !!(diag.policy && diag.policy.migrationModeEnabled) +
+      "; loginDisabled=" +
+      !!(diag.policy && diag.policy.loginDisabled) +
       "; bootstrapAllowed=" +
       !!(diag.policy && diag.policy.bootstrapAllowed) +
       "; adminConfigured=" +

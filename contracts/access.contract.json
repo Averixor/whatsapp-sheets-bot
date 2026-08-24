@@ -28,6 +28,7 @@
       "keyAvailable": "boolean",
       "selfBindRequired": "boolean",
       "canSelfBind": "boolean",
+      "disabled": "boolean",
       "supportEmail": "string",
       "supportCallsign": "string"
     },
@@ -35,6 +36,7 @@
       "mode": "string",
       "strictUserKeyMode": "boolean",
       "migrationModeEnabled": "boolean",
+      "loginDisabled": "boolean",
       "rotationPeriodDays": "number"
     },
     "audit": {

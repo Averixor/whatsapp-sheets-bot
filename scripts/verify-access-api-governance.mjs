@@ -353,6 +353,19 @@ function main() {
 
   // Separate test-project manifest checks were removed.
 
+  const coreText = read('AccessControl.Core.gs');
+  if (!coreText.includes('WASB_DISABLE_SIDEBAR_LOGIN')) {
+    errors.push(
+      'AccessControl.Core.gs must define WASB_DISABLE_SIDEBAR_LOGIN',
+    );
+  }
+  const resolverText = read('AccessControl.AuthResolver.gs');
+  if (!resolverText.includes('_buildLoginDisabledDescriptor_')) {
+    errors.push(
+      'AccessControl.AuthResolver.gs must implement login-disabled bypass',
+    );
+  }
+
   if (errors.length) {
     console.error('verify-access-api-governance: FAIL');
     errors.forEach((error) => console.error(`  - ${error}`));
