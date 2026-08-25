@@ -330,7 +330,7 @@ Month-journal materialization is separate from `apiStage7MaterializeComputedData
 - active update: replaces only that month’s rows; other months stay intact
 - bootstrap: `apiStage7MaterializeAllMonthJournals({ cursor?, monthsPerCall? })` — chunked (default 3 months/call); **не підключено до UI** (`uiAllowed: false`); **призначено для GAS editor** (public `api*` + maintainer). Continuation fields live inside the Stage7 envelope (`response.data.result.done` / `nextCursor` / `batchMonths` / `cursor`), not top-level — re-invoke with `{ nextCursor }` until `done`
 - maintenance API (active/requested month slice): `apiStage7MaterializeMonthJournal()`
-- UI action: sidebar button **Оновити журнал місяця** (active bot month only)
+- UI actions: sidebar button **Оновити журнал місяця** targets the settled active month explicitly; **Перемістити бота** switches first and then refreshes the selected month slice.
 - legacy `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` tabs are superseded and not deleted automatically
 
 ## 7.4 Inventory reconciliation

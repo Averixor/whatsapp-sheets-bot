@@ -583,6 +583,8 @@ const WorkflowOrchestrator_ = (function() {
           message: response.message,
           error: null,
           context: context
+        }, {
+          documentLockHeld: !!lock
         });
 
         Stage7AuditTrail_.writeCompactLegacyLog({
@@ -690,6 +692,8 @@ const WorkflowOrchestrator_ = (function() {
           message: '',
           error: response.error,
           context: context
+        }, {
+          documentLockHeld: !!lock
         });
 
         Stage7AuditTrail_.writeCompactLegacyLog({

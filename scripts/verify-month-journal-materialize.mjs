@@ -42,6 +42,12 @@ const apiClient = readRepoFileByBasename(repoRoot, "Js.Api.html", {
 const resultsUi = readRepoFileByBasename(repoRoot, "Js.Render.Results.html", {
   errorPrefix: "verify-month-journal-materialize",
 });
+const monthOps = readRepoFileByBasename(repoRoot, "UseCases.MonthOps.gs", {
+  errorPrefix: "verify-month-journal-materialize",
+});
+const serverApi = readRepoFileByBasename(repoRoot, "Stage7ServerApi.gs", {
+  errorPrefix: "verify-month-journal-materialize",
+});
 
 assert.match(journal, /function materializeMonthJournal_/);
 assert.match(journal, /function materializeMonthPersonSummary_/);
@@ -230,6 +236,37 @@ assert.match(
 assert.match(
   apiClient,
   new RegExp(escapeRegExp(contract.sidebar.action)),
+);
+
+const switchUseCase = monthOps.match(
+  /function switchBotToMonth\([\s\S]*?\n\s*function createNextMonth\(/,
+)?.[0];
+assert.ok(switchUseCase, "switchBotToMonth use case must be present");
+assert.ok(
+  switchUseCase.indexOf("setBotMonthSheetName_(input.month)") <
+    switchUseCase.indexOf("materializeMonthJournalBundle_(input.month)"),
+  "active month must be switched before its JOURNAL/SUMMARY slice is refreshed",
+);
+assert.match(switchUseCase, /refresh:\s*\["panel"\]/);
+assert.doesNotMatch(
+  switchUseCase.match(/sync:\s*function[\s\S]*?\n\s*\},\n\s*\}\);/)?.[0] || "",
+  /monthsList/,
+  "month switch must not reload an unchanged months list",
+);
+assert.match(
+  apiClient,
+  /apiStage7SwitchBotToMonth[\s\S]{0,160}refreshJournal:\s*true/,
+);
+assert.match(
+  serverApi,
+  /function apiStage7SwitchBotToMonth\([\s\S]{0,400}typeof monthSheetName === "object"/,
+);
+assert.match(resultsUi, /monthSwitcherLoadPromise_/);
+assert.match(resultsUi, /monthSwitchInProgress_/);
+assert.match(
+  resultsUi,
+  /materializeMonthJournal\(\{[\s\S]{0,120}monthSheet:/,
+  "manual journal refresh must target the settled UI month explicitly",
 );
 
 console.log(

@@ -291,7 +291,19 @@ var SystemStatusRuntime_ = (function () {
 
     inputs["computed.vacation_computed"] = _blockResult_(safe.vacations, false);
 
-    if (safe.vacationSchedule && typeof safe.vacationSchedule === "object") {
+    if (
+      safe.vacationSchedule &&
+      safe.vacationSchedule.skipped === true
+    ) {
+      inputs["computed.vacation_schedule"] = {
+        attempted: false,
+        resultPresent: false,
+        result: safe.vacationSchedule,
+      };
+    } else if (
+      safe.vacationSchedule &&
+      typeof safe.vacationSchedule === "object"
+    ) {
       inputs["computed.vacation_schedule"] = {
         attempted: true,
         resultPresent: true,

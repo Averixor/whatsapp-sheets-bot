@@ -432,6 +432,7 @@ var UseCasesMaintenance_ = (function () {
                     monthSheet: input && input.monthSheet,
                     includeHistory: input && input.includeHistory,
                     mode: input && input.mode,
+                    stages: input && input.stages,
                     writerPath: "public",
                     documentLockHeld: true,
                     lockOwner: "workflow_orchestrator",

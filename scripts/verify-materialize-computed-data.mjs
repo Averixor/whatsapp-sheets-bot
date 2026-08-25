@@ -33,6 +33,14 @@ const operationRepository = readRepoFileByBasename(
     errorPrefix: "verify-materialize-computed-data",
   },
 );
+const workflowOrchestrator = readRepoFileByBasename(
+  repoRoot,
+  "WorkflowOrchestrator.gs",
+  { errorPrefix: "verify-materialize-computed-data" },
+);
+const auditTrail = readRepoFileByBasename(repoRoot, "AuditTrail.gs", {
+  errorPrefix: "verify-materialize-computed-data",
+});
 
 assert.match(orchestrator, /function materializeAllComputedData_/);
 assert.match(orchestrator, /materializePersonnelDerivedSheets_/);
@@ -46,6 +54,9 @@ assert.match(orchestrator, /ensureSendPanelStatusFormula_/);
 assert.match(orchestrator, /_compactMaterializeVacationScheduleResult_/);
 assert.match(orchestrator, /_compactMaterializeVacationMonthlySyncResult_/);
 assert.match(orchestrator, /_compactMaterializeSystemStatusEvaluation_/);
+assert.match(orchestrator, /MATERIALIZE_COMPUTED_STAGE_NAMES_/);
+assert.match(orchestrator, /_materializeComputedRunStage_/);
+assert.match(orchestrator, /timings\.totalMs/);
 assert.match(
   orchestrator,
   /evaluateComputedMaterialize[\s\S]*_compactMaterializeVacationScheduleResult_/,
@@ -72,8 +83,98 @@ assert.match(
 
 assert.match(maintenanceApi, /function apiStage7MaterializeComputedData/);
 assert.match(maintenanceApi, /monthlySyncMode/);
+assert.match(maintenanceApi, /stages:\s*Array\.isArray\(opts\.stages\)/);
 assert.match(useCases, /monthlySyncMode: input && input.monthlySyncMode/);
+assert.match(useCases, /stages: input && input\.stages/);
 assert.match(maintenanceApi, /materializeComputedData/);
+
+assert.match(
+  auditTrail,
+  /if \(opts\.documentLockHeld === true\) \{\s*return fn\(\);\s*\}/,
+  "audit writes must reuse a document lock already held by the workflow",
+);
+assert.match(
+  workflowOrchestrator,
+  /Stage7AuditTrail_\.record\([\s\S]*?documentLockHeld:\s*!!lock/,
+  "workflow audit must declare its already-held document lock",
+);
+
+{
+  let lockWaitCalls = 0;
+  let lastRow = 0;
+  const writes = [];
+  const fakeRange = {
+    getValues() {
+      return [[]];
+    },
+    setValues(rows) {
+      writes.push(rows);
+      lastRow = Math.max(lastRow, 1);
+      return this;
+    },
+    setFontWeight() {
+      return this;
+    },
+    setBackground() {
+      return this;
+    },
+  };
+  const fakeSheet = {
+    getName() {
+      return "AUDIT_LOG";
+    },
+    getLastRow() {
+      return lastRow;
+    },
+    getLastColumn() {
+      return 0;
+    },
+    getRange() {
+      return fakeRange;
+    },
+    getFrozenRows() {
+      return 0;
+    },
+    setFrozenRows() {},
+  };
+  const auditContext = vm.createContext({
+    console,
+    Logger: { log() {} },
+    ensureLogicalSheet_() {
+      return fakeSheet;
+    },
+    stage7AsArray_(value) {
+      if (value == null || value === "") return [];
+      return Array.isArray(value) ? value.slice() : [value];
+    },
+    stage7SafeStringify_(value) {
+      return JSON.stringify(value == null ? null : value);
+    },
+    LockService: {
+      getDocumentLock() {
+        return {
+          waitLock() {
+            lockWaitCalls++;
+          },
+          releaseLock() {},
+        };
+      },
+    },
+  });
+  vm.runInContext(auditTrail, auditContext, { filename: "AuditTrail.gs" });
+  const reusedLockResult = vm.runInContext(
+    "Stage7AuditTrail_.record({ scenario: 'ci' }, { documentLockHeld: true })",
+    auditContext,
+  );
+  assert.equal(reusedLockResult.success, true);
+  assert.equal(lockWaitCalls, 0, "already-held audit lock must not be reacquired");
+  vm.runInContext(
+    "Stage7AuditTrail_.record({ scenario: 'standalone' })",
+    auditContext,
+  );
+  assert.equal(lockWaitCalls, 1, "standalone audit writes must still acquire the lock");
+  assert.ok(writes.length >= 2);
+}
 
 assert.match(useCases, /idempotency: type !== "materializeComputedData"/);
 assert.match(useCases, /case "materializeComputedData"/);
@@ -158,6 +259,17 @@ const materializeResult = vm.runInContext(
   materializeContext,
 );
 assert.equal(materializeResult.ok, true);
+assert.ok(materializeResult.timings.totalMs >= 0);
+assert.ok(materializeResult.timings.stages.personnel.durationMs >= 0);
+assert.ok(materializeResult.timings.stages.vacationSchedule.durationMs >= 0);
+assert.deepEqual(Array.from(materializeResult.timings.selected), [
+  "personnel",
+  "vacationComputed",
+  "vacationSchedule",
+  "vacationMonthlySync",
+  "sendPanel",
+  "systemStatus",
+]);
 assert.equal(
   materializeResult.vacationSchedule.checkCount,
   20,
@@ -190,6 +302,20 @@ assert.deepEqual(
   "materialize affected sheets must include VACATION_CHECK once",
 );
 
+const selectedStageResult = vm.runInContext(
+  "materializeAllComputedData_({ source: 'ci', stages: ['personnel', 'sendPanel'] })",
+  materializeContext,
+);
+assert.equal(selectedStageResult.ok, true);
+assert.equal(selectedStageResult.vacations.skipped, true);
+assert.equal(selectedStageResult.vacationSchedule.skipped, true);
+assert.equal(selectedStageResult.vacationMonthlySync.skipped, true);
+assert.equal(selectedStageResult.systemStatusEvaluation.skipped, true);
+assert.deepEqual(Array.from(selectedStageResult.timings.selected), [
+  "personnel",
+  "sendPanel",
+]);
+
 materializeContext.VacationOptionsWriter_ = {
   rebuildVacationSystem() {
     throw new Error("schedule rebuild failed");
@@ -217,6 +343,12 @@ const jsCore = readRepoFileByBasename(repoRoot, "Js.Core.html", {
 });
 assert.match(jsCore, /resolveApiSlowWarnMs_/);
 assert.match(jsCore, /apiStage7MaterializeComputedData:\s*120000/);
+
+const resultsUi = readRepoFileByBasename(repoRoot, "Js.Render.Results.html", {
+  errorPrefix: "verify-materialize-computed-data",
+});
+assert.match(resultsUi, /function logMaterializeComputedTimings_/);
+assert.match(resultsUi, /Етапи оновлення:/);
 
 const stringifyContext = vm.createContext({
   console,

@@ -70,8 +70,13 @@ function main() {
     new vm.Script(source, { filename: 'wasb-sidebar-client.js' });
     assert.match(
       source,
-      /async function showMonthSwitcher\(\)[\s\S]{0,500}const data = await Stage7Api\.getMonths\(\)/,
-      'month switcher must refresh months from server whenever it opens',
+      /async function showMonthSwitcher\(\)[\s\S]{0,500}const data = await loadMonthsForSwitcherOnce_\(\)/,
+      'month switcher must coalesce overlapping server refreshes',
+    );
+    assert.match(
+      source,
+      /function loadMonthsForSwitcherOnce_\(\)[\s\S]{0,500}monthSwitcherLoadPromise_[\s\S]{0,500}Stage7Api\.getMonths\(\)/,
+      'month switcher dedupe must still refresh months from the server',
     );
     assert.doesNotMatch(
       source,

@@ -202,11 +202,59 @@ var UseCasesMonthOps_ = (function () {
           const sh = ss.getSheetByName(input.month);
           if (sh) sh.activate();
         } catch (_) {}
+
+        var journalRequested = input.refreshJournal === true;
+        var journal = null;
+        var journalWarnings = [];
+        if (journalRequested) {
+          try {
+            journal =
+              typeof materializeMonthJournalBundle_ === "function"
+                ? materializeMonthJournalBundle_(input.month)
+                : {
+                    ok: false,
+                    monthSheet: input.month,
+                    reason: "materialize_unavailable",
+                    message: "Модуль оновлення журналу недоступний",
+                  };
+          } catch (journalError) {
+            journal = {
+              ok: false,
+              monthSheet: input.month,
+              reason: "materialize_failed",
+              message:
+                journalError && journalError.message
+                  ? String(journalError.message)
+                  : String(journalError),
+            };
+          }
+          if (!journal || journal.ok === false) {
+            journalWarnings.push(
+              (journal && (journal.message || journal.reason)) ||
+                "Не вдалося оновити журнал після перемикання місяця",
+            );
+          }
+        }
+        var journalOk =
+          !journalRequested || !!(journal && journal.ok !== false);
+        var journalNames =
+          journalRequested &&
+          typeof monthJournalDerivedSheetNames_ === "function"
+            ? monthJournalDerivedSheetNames_(input.month)
+            : null;
+        var affectedSheets = [input.month];
+        if (journalRequested && journalOk && journalNames) {
+          affectedSheets.push(journalNames.journal, journalNames.summary);
+        }
         return {
           success: true,
-          message: "Активний місяць перемкнуто",
+          message:
+            journalRequested && journalOk
+              ? "Активний місяць перемкнуто, журнал оновлено"
+              : "Активний місяць перемкнуто",
           result: {
             month: input.month,
+            journal: journal,
           },
           changes: [
             {
@@ -214,16 +262,17 @@ var UseCasesMonthOps_ = (function () {
               month: input.month,
             },
           ],
-          affectedSheets: [input.month],
+          affectedSheets: affectedSheets.filter(Boolean),
           affectedEntities: [],
-          appliedChangesCount: 1,
+          appliedChangesCount: 1 + (journalRequested && journalOk ? 1 : 0),
           skippedChangesCount: 0,
-          partial: false,
+          partial: journalRequested && !journalOk,
+          warnings: journalWarnings,
         };
       },
       sync: function (input) {
         return {
-          refresh: ["monthsList", "currentMonth", "panel"],
+          refresh: ["panel"],
           invalidateCaches: ["sidebar", "summary", "sendPanel"],
           currentMonth: input.month,
         };

@@ -263,7 +263,14 @@ const Stage7AuditTrail_ = (function () {
     return rows;
   }
 
-  function _withDocumentLock_(fn) {
+  function _withDocumentLock_(fn, options) {
+    const opts = options || {};
+    // WorkflowOrchestrator_ keeps the document lock for the whole write
+    // workflow. Re-acquiring that same lock here is non-reentrant and used to
+    // add a silent 30-second timeout to every audited write operation.
+    if (opts.documentLockHeld === true) {
+      return fn();
+    }
     const lock = LockService.getDocumentLock();
     lock.waitLock(LOCK_TIMEOUT_MS);
     try {
@@ -273,7 +280,7 @@ const Stage7AuditTrail_ = (function () {
     }
   }
 
-  function _appendRows_(rows) {
+  function _appendRows_(rows, options) {
     if (!rows || !rows.length) {
       return {
         success: true,
@@ -295,7 +302,7 @@ const Stage7AuditTrail_ = (function () {
           fromRow: targetRow,
           toRow: targetRow + rows.length - 1
         };
-      });
+      }, options);
     };
     if (typeof withExternalLogicalMutation_ === "function") {
       return withExternalLogicalMutation_(_getSheetConfig_().sheetName, write);
@@ -303,11 +310,11 @@ const Stage7AuditTrail_ = (function () {
     return write();
   }
 
-  function ensureSheet() {
+  function ensureSheet(options) {
     try {
       const sh = _withDocumentLock_(function () {
         return _ensureSheet_();
-      });
+      }, options);
 
       return {
         success: true,
@@ -326,7 +333,7 @@ const Stage7AuditTrail_ = (function () {
     }
   }
 
-  function record(entry) {
+  function record(entry, options) {
     if (!entry) {
       return {
         success: false,
@@ -336,7 +343,7 @@ const Stage7AuditTrail_ = (function () {
     }
 
     try {
-      return _appendRows_([_rowFromEntry_(entry)]);
+      return _appendRows_([_rowFromEntry_(entry)], options);
     } catch (e) {
       const errMsg = e && e.message ? e.message : String(e);
       Logger.log('[Stage7AuditTrail] record error: ' + errMsg);
@@ -348,10 +355,10 @@ const Stage7AuditTrail_ = (function () {
     }
   }
 
-  function recordBatch(entries) {
+  function recordBatch(entries, options) {
     try {
       const rows = _rowsFromEntries_(entries);
-      return _appendRows_(rows);
+      return _appendRows_(rows, options);
     } catch (e) {
       const errMsg = e && e.message ? e.message : String(e);
       Logger.log('[Stage7AuditTrail] recordBatch error: ' + errMsg);

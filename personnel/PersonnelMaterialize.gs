@@ -1138,9 +1138,12 @@ function materializeWeaponOwnersFromPersonnel_(personnelRows) {
 }
 
 function materializeAssignmentIdentitySheetsFromPersonnel_(built) {
+  var startedAtMs = new Date().getTime();
   var rows = _personnelAssignmentSyncRows_(built);
   var car = null;
   var weapon = null;
+  var timings = {};
+  var stageStartedAtMs = new Date().getTime();
   try {
     car = materializeCarOwnersFromPersonnel_(rows);
   } catch (carErr) {
@@ -1149,6 +1152,11 @@ function materializeAssignmentIdentitySheetsFromPersonnel_(built) {
       error: carErr && carErr.message ? carErr.message : String(carErr),
     };
   }
+  timings.car = {
+    durationMs: Math.max(new Date().getTime() - stageStartedAtMs, 0),
+    ok: !!(car && car.ok !== false),
+  };
+  stageStartedAtMs = new Date().getTime();
   try {
     weapon = materializeWeaponOwnersFromPersonnel_(rows);
   } catch (weaponErr) {
@@ -1157,14 +1165,44 @@ function materializeAssignmentIdentitySheetsFromPersonnel_(built) {
       error: weaponErr && weaponErr.message ? weaponErr.message : String(weaponErr),
     };
   }
+  timings.weapon = {
+    durationMs: Math.max(new Date().getTime() - stageStartedAtMs, 0),
+    ok: !!(weapon && weapon.ok !== false),
+  };
+  timings.totalMs = Math.max(new Date().getTime() - startedAtMs, 0);
   return {
     ok: !!(car && car.ok !== false && weapon && weapon.ok !== false),
     car: car,
     weapon: weapon,
+    timings: timings,
   };
 }
 
+function _personnelMaterializeTimedCall_(timings, stageName, callback) {
+  var startedAtMs = new Date().getTime();
+  try {
+    var value = callback();
+    timings[stageName] = {
+      durationMs: Math.max(new Date().getTime() - startedAtMs, 0),
+      ok: !(value && value.ok === false),
+    };
+    if (value && value.timings && typeof value.timings === "object") {
+      timings[stageName].details = value.timings;
+    }
+    return value;
+  } catch (error) {
+    timings[stageName] = {
+      durationMs: Math.max(new Date().getTime() - startedAtMs, 0),
+      ok: false,
+      error: error && error.message ? String(error.message) : String(error),
+    };
+    throw error;
+  }
+}
+
 function materializePersonnelDerivedSheets_(options) {
+  var startedAtMs = new Date().getTime();
+  var timings = {};
   var personnelSheet = _personnelGetSheet_(false);
   if (!personnelSheet) {
     return {
@@ -1173,45 +1211,79 @@ function materializePersonnelDerivedSheets_(options) {
       personnel: null,
       phones: null,
       birthday: null,
+      timings: {
+        totalMs: Math.max(new Date().getTime() - startedAtMs, 0),
+      },
     };
   }
 
   if (typeof ensurePersonnelStatusColumn_ === "function") {
-    ensurePersonnelStatusColumn_(personnelSheet);
+    _personnelMaterializeTimedCall_(timings, "ensureStatus", function () {
+      return ensurePersonnelStatusColumn_(personnelSheet);
+    });
   }
 
   var built;
   try {
-    built = _personnelMaterializeBuildSourceRows_(personnelSheet);
+    built = _personnelMaterializeTimedCall_(timings, "sourceRows", function () {
+      return _personnelMaterializeBuildSourceRows_(personnelSheet);
+    });
   } catch (e) {
+    timings.totalMs = Math.max(new Date().getTime() - startedAtMs, 0);
     return {
       ok: false,
       reason: e && e.message ? e.message : String(e),
       personnel: null,
       phones: null,
       birthday: null,
+      timings: timings,
     };
   }
 
-  var personnelResult = materializePersonnelHelperColumns_(personnelSheet, built);
-  var phonesResult = materializePhonesSheet_(null, built.rows, options || {});
-  var birthdayResult = materializeBirthdayHelperSheet_(null, built.rows, options || {});
+  var personnelResult = _personnelMaterializeTimedCall_(
+    timings,
+    "helpers",
+    function () {
+      return materializePersonnelHelperColumns_(personnelSheet, built);
+    },
+  );
+  var phonesResult = _personnelMaterializeTimedCall_(
+    timings,
+    "phones",
+    function () {
+      return materializePhonesSheet_(null, built.rows, options || {});
+    },
+  );
+  var birthdayResult = _personnelMaterializeTimedCall_(
+    timings,
+    "birthday",
+    function () {
+      return materializeBirthdayHelperSheet_(null, built.rows, options || {});
+    },
+  );
 
   var monthlySync = null;
   try {
-    if (typeof syncMonthlyCallsignsForPersonnelUpdate_ === "function") {
-      monthlySync = syncMonthlyCallsignsForPersonnelUpdate_(options || {});
-    } else if (typeof syncActiveMonthlyCallsignsFromPersonnel_ === "function") {
-      monthlySync = syncActiveMonthlyCallsignsFromPersonnel_();
-    } else if (typeof syncMonthlyCallsignsFromPersonnel_ === "function") {
-      monthlySync = syncMonthlyCallsignsFromPersonnel_();
-    } else {
-      monthlySync = {
-        ok: false,
-        error:
-          "Синхронізація позивних на місячний графік недоступна — оновіть скрипт проєкту",
-      };
-    }
+    monthlySync = _personnelMaterializeTimedCall_(
+      timings,
+      "monthlyCallsigns",
+      function () {
+        if (typeof syncMonthlyCallsignsForPersonnelUpdate_ === "function") {
+          return syncMonthlyCallsignsForPersonnelUpdate_(options || {});
+        }
+        if (typeof syncActiveMonthlyCallsignsFromPersonnel_ === "function") {
+          return syncActiveMonthlyCallsignsFromPersonnel_();
+        }
+        if (typeof syncMonthlyCallsignsFromPersonnel_ === "function") {
+          return syncMonthlyCallsignsFromPersonnel_();
+        }
+        return {
+          ok: false,
+          error:
+            "Синхронізація позивних на місячний графік недоступна — оновіть скрипт проєкту",
+        };
+      },
+    );
   } catch (syncErr) {
     monthlySync = {
       ok: false,
@@ -1221,7 +1293,13 @@ function materializePersonnelDerivedSheets_(options) {
 
   var equipmentAssignments = null;
   try {
-    equipmentAssignments = materializeAssignmentIdentitySheetsFromPersonnel_(built);
+    equipmentAssignments = _personnelMaterializeTimedCall_(
+      timings,
+      "assignments",
+      function () {
+        return materializeAssignmentIdentitySheetsFromPersonnel_(built);
+      },
+    );
   } catch (equipmentErr) {
     equipmentAssignments = {
       ok: false,
@@ -1230,8 +1308,13 @@ function materializePersonnelDerivedSheets_(options) {
   }
 
   if (typeof invalidatePersonnelCache_ === "function") {
-    invalidatePersonnelCache_();
+    _personnelMaterializeTimedCall_(timings, "cacheInvalidation", function () {
+      invalidatePersonnelCache_();
+      return { ok: true };
+    });
   }
+
+  timings.totalMs = Math.max(new Date().getTime() - startedAtMs, 0);
 
   return {
     ok: !!(personnelResult && personnelResult.ok),
@@ -1242,5 +1325,6 @@ function materializePersonnelDerivedSheets_(options) {
     rowsWritten: built.rows.length,
     monthlyCallsigns: monthlySync,
     assignmentIdentity: equipmentAssignments,
+    timings: timings,
   };
 }

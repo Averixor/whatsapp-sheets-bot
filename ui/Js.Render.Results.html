@@ -4,9 +4,22 @@
   // MONTH SWITCHER
   // =========================
 
+  let monthSwitcherLoadPromise_ = null;
+  let monthSwitchInProgress_ = false;
+
+  function loadMonthsForSwitcherOnce_() {
+    if (monthSwitcherLoadPromise_) return monthSwitcherLoadPromise_;
+    monthSwitcherLoadPromise_ = Promise.resolve()
+      .then(() => Stage7Api.getMonths())
+      .finally(() => {
+        monthSwitcherLoadPromise_ = null;
+      });
+    return monthSwitcherLoadPromise_;
+  }
+
   async function showMonthSwitcher() {
     try {
-      const data = await Stage7Api.getMonths();
+      const data = await loadMonthsForSwitcherOnce_();
 
       if (data?.success && Array.isArray(data.months)) {
         STATE.monthsList = data.months;
@@ -57,7 +70,7 @@
         </label>
 
         <div class="month-switcher-actions">
-          <button type="button" class="result-link" onclick="SidebarApp.switchToSelectedMonth()">Перемкнути</button>
+          <button id="monthSwitchSubmit" type="button" class="result-link" onclick="SidebarApp.switchToSelectedMonth()">Перемкнути й оновити журнал</button>
           <button type="button" class="result-link result-link--secondary" onclick="SidebarApp.goBack()">Скасувати</button>
         </div>
       </div>
@@ -67,7 +80,12 @@
 
   async function switchToSelectedMonth() {
     const select = $id("monthSelect");
-    if (!select) return;
+    if (!select || monthSwitchInProgress_) return;
+
+    monthSwitchInProgress_ = true;
+    select.disabled = true;
+    const submit = $id("monthSwitchSubmit");
+    if (submit) submit.disabled = true;
 
     try {
       const result = await ActionDispatcher.run("switchBotToMonth", () =>
@@ -78,6 +96,18 @@
         STATE.currentMonth = switchedMonth;
         updateMonthBadge(STATE.currentMonth);
         logToConsole(`✓ Перемкнено на ${STATE.currentMonth}`, "success");
+        const journal = result?.data?.journal || null;
+        if (journal?.ok !== false && journal?.monthSheet) {
+          logToConsole(
+            `✓ Журнал місяця ${journal.monthSheet} оновлено після перемикання`,
+            "success",
+          );
+        } else if (journal?.ok === false) {
+          logToConsole(
+            `⚠ Місяць перемкнено, але журнал не оновлено: ${journal.message || journal.reason || "невідома помилка"}`,
+            "warn",
+          );
+        }
         goBack();
       } else {
         displayInResult("error", {
@@ -86,6 +116,10 @@
       }
     } catch (error) {
       handleError(error);
+    } finally {
+      monthSwitchInProgress_ = false;
+      if (select) select.disabled = false;
+      if (submit) submit.disabled = false;
     }
   }
 
@@ -242,12 +276,21 @@
 
   async function runMaterializeComputedData_() {
     assertAdminAction_("materializeComputedData");
+    if (monthSwitchInProgress_) {
+      showToast("Дочекайтеся завершення перемикання місяця");
+      return;
+    }
     logToConsole("Оновлення обчислюваних даних...", "info");
+
+    const targetMonth = String(STATE.currentMonth || "").trim();
 
     try {
       const result = await ActionDispatcher.run(
         "materializeComputedData",
-        () => MaintenanceApi.materializeComputedData(),
+        () =>
+          MaintenanceApi.materializeComputedData({
+            monthSheet: /^\d{2}$/.test(targetMonth) ? targetMonth : "",
+          }),
       );
       if (!result?.success) {
         showToast("" + (result?.error || result?.message || "Помилка"));
@@ -324,6 +367,8 @@
           "success",
         );
       }
+
+      logMaterializeComputedTimings_(result);
 
       showToast("Обчислювані дані оновлено");
       showStandardResult("Обчислювані дані");
@@ -419,6 +464,43 @@
     }
   }
 
+  function logMaterializeComputedTimings_(result) {
+    const timings =
+      result?.timings ||
+      result?.data?.result?.timings ||
+      result?.data?.timings ||
+      null;
+    const stages = timings?.stages || {};
+    if (!timings || !stages || typeof logToConsole !== "function") return;
+
+    const rows = [];
+    const append = (label, timing) => {
+      if (!timing || timing.skipped === true) return;
+      const ms = Number(timing.durationMs);
+      if (!Number.isFinite(ms) || ms < 0) return;
+      rows.push(`${label} ${(ms / 1000).toFixed(1)} с`);
+    };
+
+    append("особовий склад", stages.personnel);
+    const personnelDetails = stages.personnel?.details || {};
+    const assignmentDetails = personnelDetails.assignments?.details || {};
+    append("авто", assignmentDetails.car);
+    append("озброєння", assignmentDetails.weapon);
+    append("обчислення відпусток", stages.vacationComputed);
+    append("графік відпусток", stages.vacationSchedule);
+    append("відпустки в місяці", stages.vacationMonthlySync);
+    append("панель надсилання", stages.sendPanel);
+    append("статус системи", stages.systemStatus);
+
+    const totalMs = Number(timings.totalMs);
+    if (Number.isFinite(totalMs) && totalMs >= 0) {
+      rows.push(`разом ${(totalMs / 1000).toFixed(1)} с`);
+    }
+    if (rows.length) {
+      logToConsole(`⏱ Етапи оновлення: ${rows.join("; ")}`, "info");
+    }
+  }
+
   async function materializeComputedData() {
     assertAdminAction_("materializeComputedData");
     renderMaterializeComputedDataConfirm_();
@@ -426,12 +508,21 @@
 
   async function materializeMonthJournal() {
     assertAdminAction_("materializeMonthJournal");
+    if (monthSwitchInProgress_) {
+      showToast("Дочекайтеся завершення перемикання місяця");
+      return;
+    }
     logToConsole("Оновлення журналу місяця...", "info");
+
+    const targetMonth = String(STATE.currentMonth || "").trim();
 
     try {
       const result = await ActionDispatcher.run(
         "materializeMonthJournal",
-        () => MaintenanceApi.materializeMonthJournal({}),
+        () =>
+          MaintenanceApi.materializeMonthJournal({
+            monthSheet: /^\d{2}$/.test(targetMonth) ? targetMonth : "",
+          }),
       );
 
       const payload = result?.data?.result || result?.data || result || {};

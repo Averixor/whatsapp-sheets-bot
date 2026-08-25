@@ -573,7 +573,11 @@ function apiStage7GetSendPanelData() {
 
 function apiStage7SwitchBotToMonth(monthSheetName) {
   _stage7AssertRole_("maintainer", "switch bot month");
-  return Stage7UseCases_.switchBotToMonth({ month: monthSheetName || "" });
+  var payload =
+    monthSheetName && typeof monthSheetName === "object"
+      ? Object.assign({}, monthSheetName)
+      : { month: monthSheetName || "" };
+  return Stage7UseCases_.switchBotToMonth(payload);
 }
 
 function apiGenerateSendPanelForDate(options) {

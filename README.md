@@ -226,6 +226,8 @@ Turn it back off immediately after the needed keys are registered.
 - `apiStage7BootstrapAccessSheet()` — `ACCESS` bootstrap
 - `apiStage7MaterializeComputedData()` — helper columns, PHONES/BIRTHDAY/VACATIONS/panel materialize, status validation, monthly callsign sync
 - `apiStage7MaterializeMonthJournal()` — refresh active/requested month’s slice in `JOURNAL` / `SUMMARY` (sidebar: **Оновити журнал місяця**)
+- Sidebar **Перемістити бота** switches the active month first and then refreshes that exact month slice in `JOURNAL` / `SUMMARY`; it does not reload the unchanged month list.
+- `apiStage7MaterializeComputedData({ stages: [...] })` can run selected stages (`personnel`, `vacationComputed`, `vacationSchedule`, `vacationMonthlySync`, `sendPanel`, `systemStatus`; `vacations` selects all vacation stages). Omit `stages` for the full refresh. The response and Sidebar execution log include per-stage `durationMs` timings.
 - `apiStage7MaterializeAllMonthJournals({ nextCursor?, monthsPerCall? })` — chunked bootstrap of all existing `01`–`12` into `JOURNAL` / `SUMMARY` (**не підключено до UI**, `uiAllowed: false`; **призначено для GAS editor**; public `api*` + maintainer). Continuation: `response.data.result.nextCursor` until `response.data.result.done`
 
 ## Non-goals for this bundle

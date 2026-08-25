@@ -157,6 +157,16 @@ assert.match(
   /function rewriteMonthlyScheduleFormulasToCodeRange_/,
 );
 assert.match(syncModule, /function _monthlyRemapScheduleFormulaText_/);
+assert.match(
+  syncModule,
+  /\.setFormula\(formulaUpdates\[u\]\.formula\)/,
+  "formula remap must write only changed formula cells",
+);
+assert.doesNotMatch(
+  syncModule,
+  /range\.setFormulas\(formulas\)/,
+  "mixed-range setFormulas wipes callsigns/dates on createNextMonth",
+);
 assert.match(syncModule, /allowShrink/);
 assert.match(
   monthOps,
@@ -374,6 +384,14 @@ class FakeRange {
     return out;
   }
 
+  setFormula(formula) {
+    const target = this.sheet.cell(this.row, this.col);
+    target.formula = String(formula || "");
+    if (target.formula) target.value = "";
+    this.sheet.setFormulaCalls++;
+    return this;
+  }
+
   setFormulas(values) {
     assert.equal(values.length, this.numRows, "setFormulas row count");
     values.forEach((sourceRow, rowOffset) => {
@@ -384,7 +402,9 @@ class FakeRange {
           this.col + colOffset,
         );
         target.formula = String(value || "");
-        if (target.formula) target.value = "";
+        target.formulaR1C1 = "";
+        // Apps Script Range.setFormulas("") clears values, not only formulas.
+        target.value = "";
       });
     });
     this.sheet.setFormulasCalls++;
@@ -455,6 +475,7 @@ class FakeSheet {
     this.deletedRows = 0;
     this.setValuesCalls = 0;
     this.setFormulasCalls = 0;
+    this.setFormulaCalls = 0;
     this.copyCalls = [];
     this.merges = [];
     this.conditionalRules = [];
@@ -1098,10 +1119,59 @@ function assertRowTemplateCopied(sheet, row, sourceRow, lastDateCol) {
     afterBounds,
   );
   assert.equal(month.valueAt(34, 2), "ОСТАННІЙ");
+  assert.equal(month.valueAt(1, 3), "01.07.2026", "date headers must survive formula remap");
+  assert.equal(month.valueAt(1, 2), "Позивний");
+  assert.equal(month.setFormulasCalls, 0, "must not setFormulas on the mixed grid");
+  assert.ok(month.setFormulaCalls > 0);
   assert.equal(syncResult.capacityRows, 33);
   assert.equal(afterBounds.endRow, 34);
   assert.ok(formulaSync.rewritten > 0);
   assert.equal(month.cell(syncResult.summaryStartRow, 3).formula, "=COUNTA($C$2:$AG$34)");
+}
+
+{
+  // Apps Script Range.setFormulas("") on mixed cells clears VALUES, not only formulas.
+  const sheet = buildMonthSheet("compact");
+  assert.equal(sheet.valueAt(2, 2), "OLD_2");
+  const mixed = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn());
+  mixed.setFormulas(mixed.getFormulas());
+  assert.equal(sheet.valueAt(2, 2), "", "setFormulas on mixed grid wipes callsigns");
+  assert.equal(sheet.valueAt(1, 3), "", "setFormulas on mixed grid wipes dates");
+}
+
+{
+  // createNextMonth 31→30 days (e.g. 08→09): column shrink remaps formulas
+  // without touching callsigns/dates. Same personnel row count, no expand/shrink.
+  const runtime = loadSyncContext();
+  const src = buildMonthSheet("compact", { summaryStart: 34, name: "08" });
+  const month = buildMonthSheet("compact", { summaryStart: 34, name: "09" });
+  for (let col = 3; col <= 32; col++) {
+    month.cell(1, col).value = `${String(col - 2).padStart(2, "0")}.09.2026`;
+  }
+  month.cell(1, 33).value = "";
+  for (let row = 2; row <= 32; row++) {
+    month.cell(row, 3).value = "";
+  }
+  month.cell(34, 3).formula = "=COUNTA($C$2:$AG$32)";
+  runtime.use(month, buildPersonnel(32));
+
+  const sourceBounds = runtime.context._monthlyCodeBoundsFromSheet_(src);
+  assert.equal(sourceBounds.endCol, 33);
+  const afterBounds = runtime.context._monthlyCodeBoundsFromSheet_(month);
+  assert.equal(afterBounds.endCol, 32, "September date grid must be 30 days");
+  const formulaSync = runtime.context.rewriteMonthlyScheduleFormulasToCodeRange_(
+    month,
+    sourceBounds,
+    afterBounds,
+  );
+  assert.ok(formulaSync.rewritten > 0);
+  assert.equal(month.setFormulasCalls, 0);
+  assert.equal(month.valueAt(2, 2), "OLD_2", "copied callsigns must survive 31→30 remap");
+  assert.equal(month.valueAt(32, 2), "OLD_32");
+  assert.equal(month.valueAt(1, 2), "Позивний");
+  assert.equal(month.valueAt(1, 3), "01.09.2026");
+  assert.equal(month.valueAt(1, 32), "30.09.2026");
+  assert.equal(month.cell(34, 3).formula, "=COUNTA($C$2:$AF$32)");
 }
 
 console.log("verify-monthly-callsign-sync: OK");

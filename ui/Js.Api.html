@@ -373,7 +373,10 @@
     },
 
     async switchMonth(month) {
-      const response = await Api.run("apiStage7SwitchBotToMonth", month || "");
+      const response = await Api.run("apiStage7SwitchBotToMonth", {
+        month: month || "",
+        refreshJournal: true,
+      });
       const result = unwrapStage4Result(response) || {};
       const meta = unwrapStage4Meta(response);
       const resolvedMonth =
@@ -431,9 +434,9 @@
       adaptStage4UtilityResponse(await Api.run("apiStage7ClearLog")),
     clearPhoneCache: async () =>
       adaptStage4UtilityResponse(await Api.run("apiStage7ClearPhoneCache")),
-    materializeComputedData: async () =>
+    materializeComputedData: async (payload = {}) =>
       adaptStage4UtilityResponse(
-        await Api.run("apiStage7MaterializeComputedData"),
+        await Api.run("apiStage7MaterializeComputedData", payload || {}),
       ),
     materializeMonthJournal: async (payload = {}) =>
       adaptStage4UtilityResponse(

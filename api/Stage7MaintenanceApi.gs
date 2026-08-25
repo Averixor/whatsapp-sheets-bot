@@ -421,6 +421,7 @@ function apiStage7MaterializeComputedData(payload) {
     monthSheet: opts.monthSheet,
     includeHistory: opts.includeHistory,
     mode: opts.mode,
+    stages: Array.isArray(opts.stages) ? opts.stages.slice() : null,
   });
 }
 

@@ -409,12 +409,13 @@ function rewriteMonthlyScheduleFormulasToCodeRange_(
     Number(sheet.getLastColumn()) || 1,
   );
   var range = sheet.getRange(1, 1, lastRow, lastCol);
-  if (typeof range.getFormulas !== "function" || typeof range.setFormulas !== "function") {
+  if (typeof range.getFormulas !== "function") {
     return { ok: false, rewritten: 0, before: before, after: after };
   }
 
   var formulas = range.getFormulas();
   var rewritten = 0;
+  var formulaUpdates = [];
   for (var r = 0; r < formulas.length; r++) {
     var row = formulas[r] || [];
     for (var c = 0; c < row.length; c++) {
@@ -422,13 +423,21 @@ function rewriteMonthlyScheduleFormulasToCodeRange_(
       if (!current) continue;
       var next = _monthlyRemapScheduleFormulaText_(current, before, after);
       if (next !== current) {
-        row[c] = next;
+        formulaUpdates.push({
+          row: r + 1,
+          col: c + 1,
+          formula: next,
+        });
         rewritten++;
       }
     }
   }
-  if (rewritten > 0) {
-    range.setFormulas(formulas);
+  // Never range.setFormulas() on the mixed grid: empty formula slots wipe
+  // values (callsigns, dates) — new months looked blank after create.
+  for (var u = 0; u < formulaUpdates.length; u++) {
+    sheet
+      .getRange(formulaUpdates[u].row, formulaUpdates[u].col)
+      .setFormula(formulaUpdates[u].formula);
   }
   return {
     ok: true,
