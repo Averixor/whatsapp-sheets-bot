@@ -23,7 +23,7 @@ const LOCKOUT_PROP_PREFIX = "WASB_ACCESS_LOCKOUT_V1__";
 const MIGRATION_EMAIL_BRIDGE_PROP = "WASB_ACCESS_MIGRATION_EMAIL_BRIDGE";
 const ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP_PROP =
   "WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP";
-/** When true, sidebar does not require login/password; unknown keys get owner. */
+/** Legacy prop name kept for diagnostics/CI; registration UI is permanently removed. */
 const SIDEBAR_LOGIN_DISABLED_PROP = "WASB_DISABLE_SIDEBAR_LOGIN";
 const SELF_BIND_LOGIN_PROP_PREFIX = "WASB_ACCESS_SELF_BIND_LOGIN_V1__";
 

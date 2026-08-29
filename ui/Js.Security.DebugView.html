@@ -79,7 +79,7 @@
             <button class="btn btn-primary" type="button" onclick="SidebarApp.copyResultText('${escapeJsString(reportText)}')">Копіювати звіт</button>
             <button class="btn" type="button" onclick="copyAccessDebugFullReport()">Копіювати все</button>
             <button class="btn" type="button" onclick="copyAccessDebugTechDetails()">Копіювати тех. деталі</button>
-            ${access.selfBindRequired && access.canSelfBind ? '<button class="btn" type="button" onclick="openAccessLoginFlow(&quot;login&quot;)">Увійти</button> <button type="button" class="btn btn-primary" style="min-width:auto; padding:6px 10px;" onclick="openAccessLoginFlow(&quot;request&quot;)">Отримати ключ доступу</button>' : ""}
+            ${""}
             ${showHashButtons ? '<button class="btn" type="button" id="accessDebugToggleHashBtn" onclick="toggleAccessDebugHash()">Показати повний hash</button>' : ""}
             ${showHashButtons ? '<button class="btn" type="button" id="accessDebugCopyHashBtn" onclick="copyAccessDebugHash()">Копіювати повний hash</button>' : ""}
           </div>
@@ -126,13 +126,12 @@
             </div>
 
             <div style="padding:10px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-glass);">
-              <div style="font-size:0.78rem; color:var(--text-secondary);">Як працює вхід тепер</div>
+              <div style="font-size:0.78rem; color:var(--text-secondary);">Як працює доступ</div>
               <div style="margin-top:6px; line-height:1.55;">
-                <div>1. Система сама визначає поточний ключ користувача.</div>
-                <div>2. Якщо ключ ще не прив’язано, користувач натискає <b>Отримати ключ доступу</b> і заповнює анкету.</div>
-                <div>3. Роль на клієнті не вибирається і не показується — її визначає сервер за списком доступу.</div>
-                <div>4. Після перевірки адміністратор підтверджує заявку і користувач отримує ключ.</div>
-                <div>5. Після отримання ключа користувач вводить ключ, логін і пароль для завершення реєстрації.</div>
+                <div>1. Система визначає поточний ключ користувача Google.</div>
+                <div>2. Доступ є лише якщо цей ключ уже записаний у списку доступу з роллю.</div>
+                <div>3. Нові користувачі не реєструються з панелі — запис додає адміністратор.</div>
+                <div>4. Невідомий ключ не отримує службових прав.</div>
               </div>
             </div>
 
