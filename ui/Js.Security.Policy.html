@@ -47,11 +47,17 @@
       "is-safe-mode",
     );
     banner.classList.add("is-" + String(access.role || "guest").toLowerCase());
-    if (!access.knownUser) banner.classList.add("is-safe-mode");
+    if (!access.knownUser && access.source !== "spreadsheet-sharing") {
+      banner.classList.add("is-safe-mode");
+    }
 
     const roleLabel = getAccessRoleLabel_(access.role);
     const parts = ["<span>Режим доступу: " + escapeHtml(roleLabel) + "</span>"];
-    if (access.loginLockout && access.loginLockout.locked) {
+    if (access.source === "spreadsheet-sharing") {
+      parts.push(
+        '<span class="status-badge__meta">Вхід/реєстрацію вимкнено</span>',
+      );
+    } else if (access.loginLockout && access.loginLockout.locked) {
       parts.push(
         '<span class="status-badge__meta">Вхід заблоковано на ' +
           escapeHtml(String(access.loginLockout.remainingMinutes || 0)) +
@@ -60,6 +66,10 @@
     } else if (access.selfBindRequired && access.canSelfBind) {
       parts.push(
         '<button type="button" class="btn" style="min-width:auto; padding:6px 10px;" onclick="openAccessLoginFlow(&quot;login&quot;)">Увійти</button> <button type="button" class="btn btn-primary" style="min-width:auto; padding:6px 10px;" onclick="openAccessLoginFlow(&quot;request&quot;)">Отримати ключ доступу</button>',
+      );
+    } else if (!access.registered && access.keyAvailable) {
+      parts.push(
+        '<span class="status-badge__meta">Немає доступу — зверніться до адміністратора</span>',
       );
     } else if (!access.keyAvailable && !access.registered) {
       parts.push(

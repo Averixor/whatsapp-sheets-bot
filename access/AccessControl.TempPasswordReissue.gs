@@ -254,6 +254,18 @@ function _verifyAccessTempPasswordReissueWrite_(before, after, expected) {
 }
 
 function reissueAccessTemporaryPassword_(payload) {
+  return {
+    ok: false,
+    success: false,
+    skipped: true,
+    code: "access.registration.removed",
+    message: "Тимчасові паролі та їх перевипуск у WASB вимкнено.",
+    matchedRowNumber: 0,
+    rowsUpdated: 0,
+    updatedColumns: [],
+  };
+
+  // Unreachable legacy body kept out of execution path.
   const input = payload && typeof payload === "object" ? payload : {};
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);

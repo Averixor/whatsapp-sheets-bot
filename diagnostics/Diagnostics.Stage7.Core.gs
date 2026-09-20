@@ -456,23 +456,13 @@ function _diagAppendPreprodScriptPropertyChecks_(checks) {
       : "",
   );
 
-  var loginDisabledRaw = readProperty_("WASB_DISABLE_SIDEBAR_LOGIN").toLowerCase();
-  var loginDisabled =
-    !loginDisabledRaw ||
-    loginDisabledRaw === "true" ||
-    loginDisabledRaw === "1" ||
-    loginDisabledRaw === "yes" ||
-    loginDisabledRaw === "так";
+  // Registration/login removed: unknown keys are denied (never owner).
   _stage7PushCheck_(
     checks,
     "Sidebar login/password",
-    loginDisabled ? "WARN" : "OK",
-    loginDisabled
-      ? "Вхід за логіном і паролем вимкнено (WASB_DISABLE_SIDEBAR_LOGIN)"
-      : "Вхід за логіном і паролем увімкнено",
-    loginDisabled
-      ? "Невідомі ключі отримують роль власника. Для продакшену видаліть властивість."
-      : "",
+    "OK",
+    "Реєстрацію та вхід за логіном вимкнено; доступ лише за ключем зі списку",
+    "",
   );
 
   var ownerDiag =

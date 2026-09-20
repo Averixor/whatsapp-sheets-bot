@@ -15,26 +15,25 @@ function _getAccessPolicy_() {
     _getProperties_().getProperty(MIGRATION_EMAIL_BRIDGE_PROP),
     false,
   );
-  const loginDisabled = parseBoolean_(
-    _getProperties_().getProperty(SIDEBAR_LOGIN_DISABLED_PROP),
-    true,
-  );
+  // Registration/login permanently removed. ACCESS rows may still refine role by key;
+  // unknown keys are NOT sent through registration — spreadsheet sharing is the gate.
+  const loginDisabled = true;
   const accessSheetPresent = !!_getSheet_(false);
 
   _policyCache = {
-    mode: migrationModeEnabled ? "user-key+email-bridge" : "strict-user-key",
-    strictUserKeyMode: !migrationModeEnabled,
+    mode: "spreadsheet-sharing",
+    strictUserKeyMode: false,
     migrationModeEnabled: migrationModeEnabled,
     loginDisabled: loginDisabled,
-    allowEmailBridge: migrationModeEnabled,
+    allowEmailBridge: false,
     allowScriptPropertiesFallback: false,
-    bootstrapAllowed:
-      !hasAdminConfigured && (accessSheetPresent ? entries.length === 0 : true),
+    bootstrapAllowed: false,
     adminConfigured: hasAdminConfigured,
     accessSheetPresent: accessSheetPresent,
     registeredKeysCount: entries.filter(function (e) {
       return e.userKeyCurrentHash || e.userKeyPrevHash;
     }).length,
+    registrationRemoved: true,
   };
 
   return Object.assign({}, _policyCache);
@@ -72,17 +71,7 @@ function _resolveAccessSubject_(context, options = {}) {
         matchSource = match.source;
       }
       if (!_isAccessEntryActivationComplete_(match)) {
-        if (policy.loginDisabled) {
-          return _buildLoginDisabledDescriptor_(context, policy);
-        }
-        return _buildIncompleteRegistrationDescriptor_(
-          match,
-          sourceType,
-          matchedBy,
-          matchSource,
-          policy,
-          context,
-        );
+        return _buildSpreadsheetSharingDescriptor_(context, policy);
       }
       return _buildDescriptorFromMatch_(
         match,
@@ -110,17 +99,7 @@ function _resolveAccessSubject_(context, options = {}) {
         matchSource = match.source;
       }
       if (!_isAccessEntryActivationComplete_(match)) {
-        if (policy.loginDisabled) {
-          return _buildLoginDisabledDescriptor_(context, policy);
-        }
-        return _buildIncompleteRegistrationDescriptor_(
-          match,
-          sourceType,
-          matchedBy,
-          matchSource,
-          policy,
-          context,
-        );
+        return _buildSpreadsheetSharingDescriptor_(context, policy);
       }
       return _buildDescriptorFromMatch_(
         match,
@@ -151,17 +130,7 @@ function _resolveAccessSubject_(context, options = {}) {
           match;
       }
       if (!_isAccessEntryActivationComplete_(match)) {
-        if (policy.loginDisabled) {
-          return _buildLoginDisabledDescriptor_(context, policy);
-        }
-        return _buildIncompleteRegistrationDescriptor_(
-          match,
-          sourceType,
-          matchedBy,
-          matchSource,
-          policy,
-          context,
-        );
+        return _buildSpreadsheetSharingDescriptor_(context, policy);
       }
       return _buildDescriptorFromMatch_(
         match,
@@ -174,15 +143,12 @@ function _resolveAccessSubject_(context, options = {}) {
     }
   }
 
-  if (policy.loginDisabled) {
-    return _buildLoginDisabledDescriptor_(context, policy);
-  }
-
   if (policy.bootstrapAllowed && (currentKeyHash || sessionEmail)) {
     return _buildBootstrapDescriptor_(context, policy);
   }
 
-  return _buildUnknownDescriptor_(context, policy);
+  // No login/registration: editors of the spreadsheet get working access.
+  return _buildSpreadsheetSharingDescriptor_(context, policy);
 }
 
 /**
@@ -202,17 +168,7 @@ function _resolveAccessSubjectReadOnly_(context) {
     });
     if (match) {
       if (!_isAccessEntryActivationComplete_(match)) {
-        if (policy.loginDisabled) {
-          return _buildLoginDisabledDescriptor_(context, policy);
-        }
-        return _buildIncompleteRegistrationDescriptor_(
-          match,
-          "access",
-          "user_key_current_hash",
-          match.source,
-          policy,
-          context,
-        );
+        return _buildSpreadsheetSharingDescriptor_(context, policy);
       }
       return _buildDescriptorFromMatch_(
         match,
@@ -233,17 +189,7 @@ function _resolveAccessSubjectReadOnly_(context) {
     });
     if (match) {
       if (!_isAccessEntryActivationComplete_(match)) {
-        if (policy.loginDisabled) {
-          return _buildLoginDisabledDescriptor_(context, policy);
-        }
-        return _buildIncompleteRegistrationDescriptor_(
-          match,
-          "access",
-          "user_key_prev_hash",
-          match.source,
-          policy,
-          context,
-        );
+        return _buildSpreadsheetSharingDescriptor_(context, policy);
       }
       return _buildDescriptorFromMatch_(
         match,
@@ -263,17 +209,7 @@ function _resolveAccessSubjectReadOnly_(context) {
     });
     if (match) {
       if (!_isAccessEntryActivationComplete_(match)) {
-        if (policy.loginDisabled) {
-          return _buildLoginDisabledDescriptor_(context, policy);
-        }
-        return _buildIncompleteRegistrationDescriptor_(
-          match,
-          "access",
-          "email-bridge",
-          match.source,
-          policy,
-          context,
-        );
+        return _buildSpreadsheetSharingDescriptor_(context, policy);
       }
       return _buildDescriptorFromMatch_(
         match,
@@ -286,25 +222,32 @@ function _resolveAccessSubjectReadOnly_(context) {
     }
   }
 
-  if (policy.loginDisabled) {
-    return _buildLoginDisabledDescriptor_(context, policy);
-  }
-
   if (policy.bootstrapAllowed && (currentKeyHash || sessionEmail)) {
     return _buildBootstrapDescriptor_(context, policy);
   }
 
-  return _buildUnknownDescriptor_(context, policy);
+  return _buildSpreadsheetSharingDescriptor_(context, policy);
 }
 
 function _isAccessEntryActivationComplete_(entry) {
   if (!entry) return false;
   if (entry.enabled !== true) return false;
-  if (String(entry.registrationStatus || "").toLowerCase() !== "active")
-    return false;
+  // Key allowlist only — no password / registration_status required.
   if (!String(entry.userKeyCurrentHash || "").trim()) return false;
-  if (!String(entry.passwordHash || "").trim()) return false;
   return true;
+}
+
+function _accessRegistrationRemovedResult_(extra) {
+  return Object.assign(
+    {
+      success: false,
+      ok: false,
+      skipped: true,
+      code: "access.registration.removed",
+      message: "Реєстрацію та вхід за логіном у WASB вимкнено.",
+    },
+    extra || {},
+  );
 }
 
 function _buildIncompleteRegistrationDescriptor_(
@@ -335,7 +278,7 @@ function _buildIncompleteRegistrationDescriptor_(
     resolutionMode: policy.mode,
     reasonCode: "access.registration.incomplete",
     reasonMessage:
-      "Реєстрацію не завершено. Потрібні активний статус, ключ доступу та пароль.",
+      "Запис у списку доступу неактивний або без привʼязаного ключа.",
     lockoutState: _getPublicLockoutState_(
       entry,
       context.sessionEmail,
@@ -428,28 +371,53 @@ function _buildBootstrapDescriptor_(context, policy) {
 }
 
 /**
- * Login/password bypass: unknown or incomplete keys act as owner.
+ * Working access without login/registration: Google Spreadsheet sharing is the gate.
+ */
+function _buildSpreadsheetSharingDescriptor_(context, policy) {
+  return {
+    matchFound: true,
+    sourceType: "spreadsheet",
+    matchSource: "spreadsheet-sharing",
+    matchedBy: "spreadsheet-sharing",
+    entry: null,
+    role: "owner",
+    roleLevel: ROLE_ORDER.owner,
+    enabled: true,
+    timedLocked: false,
+    adminDisabled: false,
+    registered: true,
+    knownUser: true,
+    resolutionMode: "spreadsheet-sharing",
+    reasonCode: REASON_CODES.OK,
+    reasonMessage: "Вхід і реєстрацію вимкнено. Доступ через права Google-таблиці.",
+    lockoutState: {
+      locked: false,
+      disabledByAdmin: false,
+      remainingMs: 0,
+      remainingMinutes: 0,
+      nextEscalationLevel: 0,
+      lastAppliedLevel: 0,
+      lastReason: "",
+    },
+  };
+}
+
+/**
+ * Legacy helper: registration/login removed — same as spreadsheet sharing.
  */
 function _buildLoginDisabledDescriptor_(context, policy) {
-  var descriptor = _buildBootstrapDescriptor_(context, policy);
-  descriptor.matchSource = "login-disabled";
-  descriptor.matchedBy = "login-disabled";
-  descriptor.resolutionMode = "login-disabled";
-  descriptor.reasonMessage =
-    "Вхід за логіном і паролем вимкнено. Доступ як власник.";
-  return descriptor;
+  return _buildSpreadsheetSharingDescriptor_(context, policy);
 }
 
 function _sidebarLoginDisabledResult_(extra) {
-  return Object.assign(
-    {
-      success: false,
-      ok: false,
-      skipped: true,
-      code: "access.login.disabled",
-      message: "Вхід за логіном і паролем вимкнено.",
-    },
-    extra || {},
+  return _accessRegistrationRemovedResult_(
+    Object.assign(
+      {
+        code: "access.login.disabled",
+        message: "Вхід за логіном і паролем вимкнено.",
+      },
+      extra || {},
+    ),
   );
 }
 
@@ -633,22 +601,7 @@ function _enrichEntry(entry, source, matchedBy) {
  * Отримує список доступних позивних для самостійного входу
  */
 function listBindableCallsigns() {
-  const entries = _readSheetEntries_();
-  return entries
-    .filter(function (entry) {
-      return (
-        entry.enabled &&
-        entry.selfBindAllowed &&
-        !!normalizeCallsign_(entry.personCallsign)
-      );
-    })
-    .map(function (entry) {
-      return normalizeCallsign_(entry.personCallsign);
-    })
-    .filter(function (value, index, arr) {
-      return arr.indexOf(value) === index;
-    })
-    .sort();
+  return [];
 }
 
 // ==================== HELPER-ФУНКЦІЇ ====================
@@ -718,238 +671,12 @@ function loginByIdentifierAndCallsign(
   callsignMaybe,
   loginMetaMaybe,
 ) {
-  const payload =
-    identifierOrPayload &&
-    typeof identifierOrPayload === "object" &&
-    !Array.isArray(identifierOrPayload)
-      ? Object.assign({}, identifierOrPayload)
-      : {
-          identifier: identifierOrPayload,
-          callsign: callsignMaybe,
-          loginMeta: loginMetaMaybe,
-        };
-
-  const currentKeyHash = getCurrentUserKeyHash_();
-  const supportCallsign = getPrimarySupportCallsign_();
-  const identifier = String(payload.identifier || "").trim();
-  const callsign = String(payload.callsign || "").trim();
-  const loginMeta = _normalizeLoginMeta_(payload.loginMeta || {});
-  const identifierType = detectIdentifierType_(identifier);
-  const normalizedIdentifier = normalizeIdentifierValue_(identifier);
-  const normalizedCallsign = normalizeCallsign_(callsign);
-
-  if (_getAccessPolicy_().loginDisabled) {
-    return _sidebarLoginDisabledResult_({
-      supportCallsign: supportCallsign,
-      loginMeta: loginMeta,
-    });
-  }
-
-  if (!currentKeyHash) {
-    return _errorResponse(
-      REASON_CODES.SELF_BIND_KEY_UNAVAILABLE,
-      "Не вдалося визначити ключ користувача. Оновіть панель і спробуйте ще раз.",
-      supportCallsign,
-      loginMeta,
-    );
-  }
-
-  const loginState = _getSelfBindLoginPublicState_(currentKeyHash);
-  if (loginState.locked) {
-    return _errorResponse(
-      REASON_CODES.SELF_BIND_LOGIN_BLOCKED,
-      "Ваш вхід тимчасово заблоковано на " +
-        loginState.remainingMinutes +
-        " хв. " +
-        getSelfBindHelpText_() +
-        ".",
-      supportCallsign,
-      loginMeta,
-      { loginLockout: loginState },
-    );
-  }
-
-  if (!normalizedIdentifier || !identifierType) {
-    return _errorResponse(
-      REASON_CODES.SELF_BIND_IDENTIFIER_REQUIRED,
-      "Введіть email або телефон.",
-      supportCallsign,
-      loginMeta,
-    );
-  }
-
-  if (!normalizedCallsign) {
-    return _errorResponse(
-      REASON_CODES.SELF_BIND_CALLSIGN_NOT_FOUND,
-      "Введіть свій позивний.",
-      supportCallsign,
-      loginMeta,
-    );
-  }
-
-  const lock = LockService.getScriptLock();
-  lock.waitLock(5000);
-  try {
-    const alreadyBound = _findByUserKey_(currentKeyHash, {
-      includeLocked: true,
-      includeDisabled: true,
-      matchPrev: true,
-    });
-    const matchedEntries = _findEntriesByIdentifier_(
-      identifierType,
-      normalizedIdentifier,
-      { includeLocked: true, includeDisabled: true },
-    );
-    const matchedEntry =
-      matchedEntries.find(function (entry) {
-        return normalizeCallsign_(entry.personCallsign) === normalizedCallsign;
-      }) || null;
-
-    if (alreadyBound) {
-      const currentCallsign = normalizeCallsign_(alreadyBound.personCallsign);
-      const identifierMatches =
-        identifierType === "email"
-          ? normalizeEmail_(alreadyBound.email) === normalizedIdentifier
-          : normalizePhone_(alreadyBound.phone) === normalizedIdentifier;
-
-      if (currentCallsign === normalizedCallsign && identifierMatches) {
-        _clearSelfBindLoginState_(currentKeyHash);
-        _applySuccessfulAuth_(alreadyBound, currentKeyHash);
-        return _successResponse(
-          "Вхід підтверджено для позивного " + currentCallsign + ".",
-          supportCallsign,
-          loginMeta,
-        );
-      }
-    }
-
-    if (!matchedEntries.length) {
-      const failure = _registerSelfBindFailure_(currentKeyHash, {
-        identifierType: identifierType,
-        identifierValue: normalizedIdentifier,
-        callsign: normalizedCallsign,
-        reasonCode: REASON_CODES.SELF_BIND_IDENTIFIER_NOT_FOUND,
-        reasonMessage:
-          "Не знайдено жодного доступного запису для вказаного ідентифікатора.",
-        loginMeta: loginMeta,
-      });
-
-      const finalCode = failure.blocked
-        ? REASON_CODES.SELF_BIND_LOGIN_BLOCKED
-        : REASON_CODES.SELF_BIND_IDENTIFIER_NOT_FOUND;
-      return _errorResponse(
-        finalCode,
-        _failureMessageForSelfBind_(
-          REASON_CODES.SELF_BIND_IDENTIFIER_NOT_FOUND,
-          failure,
-        ),
-        supportCallsign,
-        loginMeta,
-        { loginLockout: failure },
-      );
-    }
-
-    if (!matchedEntry) {
-      const failure = _registerSelfBindFailure_(currentKeyHash, {
-        identifierType: identifierType,
-        identifierValue: normalizedIdentifier,
-        callsign: normalizedCallsign,
-        reasonCode: REASON_CODES.SELF_BIND_IDENTIFIER_MISMATCH,
-        reasonMessage: "Позивний не збігається з указаним email або телефоном.",
-        loginMeta: loginMeta,
-      });
-
-      const finalCode = failure.blocked
-        ? REASON_CODES.SELF_BIND_LOGIN_BLOCKED
-        : REASON_CODES.SELF_BIND_IDENTIFIER_MISMATCH;
-      return _errorResponse(
-        finalCode,
-        _failureMessageForSelfBind_(
-          REASON_CODES.SELF_BIND_IDENTIFIER_MISMATCH,
-          failure,
-        ),
-        supportCallsign,
-        loginMeta,
-        { loginLockout: failure },
-      );
-    }
-
-    if (!matchedEntry.enabled || _isAdminDisabled_(matchedEntry)) {
-      return _errorResponse(
-        REASON_CODES.SELF_BIND_CALLSIGN_DISABLED,
-        "Цей позивний тимчасово вимкнено. " + getSelfBindHelpText_() + ".",
-        supportCallsign,
-        loginMeta,
-      );
-    }
-
-    if (!matchedEntry.selfBindAllowed) {
-      return _errorResponse(
-        REASON_CODES.SELF_BIND_CALLSIGN_NOT_ALLOWED,
-        "Для цього позивного самостійний вхід вимкнено. " +
-          getSelfBindHelpText_() +
-          ".",
-        supportCallsign,
-        loginMeta,
-      );
-    }
-
-    if (_isTimedLocked_(matchedEntry)) {
-      return _errorResponse(
-        REASON_CODES.DENIED_TIMED_LOCKOUT,
-        "Цей позивний тимчасово заблоковано. " + getSelfBindHelpText_() + ".",
-        supportCallsign,
-        loginMeta,
-      );
-    }
-
-    const occupantHash = normalizeStoredHash_(matchedEntry.userKeyCurrentHash);
-    const shouldRotateCurrentKey =
-      occupantHash && occupantHash !== currentKeyHash;
-
-    /*
-     * user_key_current_hash не є постійною особою користувача.
-     * Браузер, профіль або сесія можуть змінити ключ.
-     *
-     * Якщо matchedEntry вже знайдено за стабільною звʼязкою:
-     *   email/phone + person_callsign
-     * то новий currentKeyHash приймаємо, а старий current переносимо у prev.
-     *
-     * Раніше тут був SELF_BIND_CALLSIGN_OCCUPIED, через що власника могло
-     * викинути з системи після зміни браузерного ключа.
-     */
-    const nowText = _nowText_();
-    const updates = {
-      user_key_current_hash: currentKeyHash,
-      last_seen_at: nowText,
-      failed_attempts: 0,
-      locked_until_ms: 0,
-    };
-
-    if (shouldRotateCurrentKey) {
-      updates.user_key_prev_hash = occupantHash;
-      updates.last_rotated_at = _nowText_("long");
-    } else if (!matchedEntry.lastRotatedAt) {
-      updates.last_rotated_at = _nowText_("long");
-    }
-    _updateEntryFields_(matchedEntry.sheetRow, updates);
-    _clearSelfBindLoginState_(currentKeyHash);
-
-    return _successResponse(
-      "Вхід підтверджено для позивного " + normalizedCallsign + ".",
-      supportCallsign,
-      loginMeta,
-    );
-  } finally {
-    lock.releaseLock();
-  }
+  return _accessRegistrationRemovedResult_({
+    code: "access.self_bind.removed",
+    message: "Самостійну привʼязку вимкнено.",
+  });
 }
 
-// ==================== ПУБЛІЧНА ВІДПОВІДЬ (RESPONSE BUILDER) ====================
-
-/**
- * Стан ротації ключа
- */
 function _rotationState_(source, keyAvailable, registered) {
   if (source === "ACCESS-user-key-rotated") return "rotated-and-promoted";
   if (source === "ACCESS-user-key-current") return "current-key-active";
@@ -1006,11 +733,9 @@ function _buildPublicAccessResponse_(descriptor, context, policy, options) {
 
     login: {
       keyAvailable: !!context.currentKeyHash,
-      selfBindRequired:
-        !policy.loginDisabled && !!context.currentKeyHash && !registered,
-      canSelfBind:
-        !policy.loginDisabled && !!context.currentKeyHash && !registered,
-      disabled: !!policy.loginDisabled,
+      selfBindRequired: false,
+      canSelfBind: false,
+      disabled: true,
       supportEmail: getPrimarySupportEmail_(),
       supportCallsign: getPrimarySupportCallsign_(),
       lockout: _getSelfBindLoginPublicState_(context.currentKeyHash),
@@ -1020,7 +745,7 @@ function _buildPublicAccessResponse_(descriptor, context, policy, options) {
       mode: policy.mode,
       strictUserKeyMode: policy.strictUserKeyMode,
       migrationModeEnabled: policy.migrationModeEnabled,
-      loginDisabled: !!policy.loginDisabled,
+      loginDisabled: true,
       rotationPeriodDays: ROTATION_PERIOD_DAYS,
       automaticPromotionOnPreviousKeyMatch: true,
     },
@@ -1072,7 +797,7 @@ function _buildPublicAccessResponse_(descriptor, context, policy, options) {
     mode: policy.mode,
     strictUserKeyMode: policy.strictUserKeyMode,
     migrationModeEnabled: policy.migrationModeEnabled,
-    loginDisabled: !!policy.loginDisabled,
+    loginDisabled: true,
     readOnly:
       role === "guest" || role === "viewer" || timedLocked || adminDisabled,
     isAdmin: roleLevel >= ROLE_ORDER.admin && enabled,
@@ -1087,11 +812,9 @@ function _buildPublicAccessResponse_(descriptor, context, policy, options) {
     keyAvailable: !!context.currentKeyHash,
     supportEmail: getPrimarySupportEmail_(),
     supportCallsign: getPrimarySupportCallsign_(),
-    selfBindRequired:
-      !policy.loginDisabled && !!context.currentKeyHash && !registered,
-    canSelfBind:
-      !policy.loginDisabled && !!context.currentKeyHash && !registered,
-    loginDisabled: !!policy.loginDisabled,
+    selfBindRequired: false,
+    canSelfBind: false,
+    loginDisabled: true,
     loginLockout: _getSelfBindLoginPublicState_(context.currentKeyHash),
   };
 
@@ -1099,311 +822,10 @@ function _buildPublicAccessResponse_(descriptor, context, policy, options) {
 }
 
 function submitAccessKeyRequest(payload) {
-  payload = payload || {};
-
-  if (_getAccessPolicy_().loginDisabled) {
-    return _sidebarLoginDisabledResult_({
-      code: "access.registration.disabled",
-      message: "Реєстрацію ключа вимкнено.",
-    });
-  }
-
-  const currentKeyHash = getCurrentUserKeyHash_();
-
-  const email = normalizeEmail_(payload.email || "");
-  const phone = normalizePhone_(payload.phone || "");
-  const callsign = normalizeCallsign_(
-    payload.callsign || payload.personCallsign || payload.person_callsign || "",
-  );
-
-  const surname = normalizeHumanName_(payload.surname || "");
-  const firstName = normalizeHumanName_(
-    payload.firstName || payload.first_name || "",
-  );
-  const patronymic = normalizeHumanName_(
-    payload.patronymic || payload.middleName || payload.middle_name || "",
-  );
-
-  const telegramUsername = String(
-    payload.telegramUsername ||
-      payload.telegram_username ||
-      payload.telegram ||
-      "",
-  ).trim();
-
-  let preferredContact = String(
-    payload.preferredContact ||
-      payload.preferred_contact ||
-      (phone ? "whatsapp" : "email"),
-  )
-    .trim()
-    .toLowerCase();
-
-  if (!preferredContact) {
-    preferredContact = phone ? "whatsapp" : "email";
-  }
-
-  if (preferredContact === "whatsapp" && !phone && email) {
-    preferredContact = "email";
-  }
-
-  if (preferredContact === "email" && !email && phone) {
-    preferredContact = "whatsapp";
-  }
-
-  const login = String(payload.login || email || phone || "").trim();
-
-  const hasContactIdentity = !!(email || phone);
-  const hasNameIdentity = !!(surname && firstName);
-  const hasCallsignIdentity = !!callsign;
-  const hasPersonIdentity = hasCallsignIdentity || hasNameIdentity;
-
-  if (!currentKeyHash) {
-    return {
-      success: false,
-      code: REASON_CODES.SELF_BIND_KEY_UNAVAILABLE,
-      message:
-        "Не вдалося визначити ключ користувача. Оновіть панель і спробуйте ще раз.",
-    };
-  }
-
-  if (!hasContactIdentity) {
-    return {
-      success: false,
-      code: REASON_CODES.SELF_BIND_IDENTIFIER_REQUIRED,
-      message: "Вкажіть телефон або email.",
-    };
-  }
-
-  if (!hasPersonIdentity) {
-    return {
-      success: false,
-      code: "access.registration.person_identity_required",
-      message: "Вкажіть позивний або прізвище та імʼя.",
-    };
-  }
-
-  if (preferredContact === "telegram" && !telegramUsername) {
-    return {
-      success: false,
-      code: "access.registration.telegram_required",
-      message: "Для Telegram вкажіть username.",
-    };
-  }
-
-  const lock = LockService.getScriptLock();
-  lock.waitLock(5000);
-
-  try {
-    const entries = _readSheetEntries_();
-    let existing = null;
-
-    for (let i = 0; i < entries.length; i++) {
-      const entry = entries[i];
-
-      if (
-        entry.requestUserKeyHash &&
-        entry.requestUserKeyHash === currentKeyHash
-      ) {
-        existing = entry;
-        break;
-      }
-
-      if (
-        entry.userKeyCurrentHash &&
-        entry.userKeyCurrentHash === currentKeyHash
-      ) {
-        existing = entry;
-        break;
-      }
-
-      const sameEmail = email && normalizeEmail_(entry.email) === email;
-      const samePhone = phone && normalizePhone_(entry.phone) === phone;
-      const sameContact = !!(sameEmail || samePhone);
-
-      const sameCallsign =
-        callsign && normalizeCallsign_(entry.personCallsign) === callsign;
-
-      const entrySurname = normalizeHumanName_(entry.surname || "");
-      const entryFirstName = normalizeHumanName_(
-        entry.firstName || entry.first_name || "",
-      );
-      const sameName =
-        surname &&
-        firstName &&
-        entrySurname === surname &&
-        entryFirstName === firstName;
-
-      if (sameContact && (sameCallsign || sameName)) {
-        existing = entry;
-        break;
-      }
-    }
-
-    if (
-      existing &&
-      String(existing.registrationStatus || "").toLowerCase() === "active"
-    ) {
-      return {
-        success: false,
-        code: "access.registration.already_active",
-        message: "Цей користувач уже активований у системі.",
-      };
-    }
-
-    const nowText = _nowText_("long");
-    const temporaryPasswordPlain = generateAccessTemporaryPassword_(
-      currentKeyHash +
-        "|" +
-        email +
-        "|" +
-        phone +
-        "|" +
-        callsign +
-        "|" +
-        surname +
-        "|" +
-        firstName,
-    );
-    const temporaryPasswordSalt = generateAccessSalt_();
-    const temporaryPasswordHash = hashAccessPasswordWithSalt_(
-      temporaryPasswordPlain,
-      temporaryPasswordSalt,
-    );
-    const temporaryPasswordExpiresAt = getAccessTemporaryPasswordExpiresAt_(
-      ACCESS_TEMP_PASSWORD_TTL_HOURS,
-    );
-
-    const displayName =
-      [surname, firstName, patronymic].filter(Boolean).join(" ") ||
-      callsign ||
-      login;
-
-    /*
-     * ВАЖЛИВО:
-     * Заявка автоматично заповнює дані користувача.
-     * Адміністратор руками ставить тільки:
-     * - role
-     * - enabled
-     *
-     * Тому при повторній заявці не затираємо вже проставлені role/enabled/note/selfBindAllowed.
-     */
-    const keepRole = existing && existing.role ? existing.role : "";
-    const keepEnabled = existing && existing.enabled === true;
-    const keepNote = existing && existing.note ? existing.note : "";
-    const keepSelfBindAllowed = existing && existing.selfBindAllowed === true;
-
-    const baseUpdates = {
-      email: email,
-      phone: phone,
-      login: login,
-
-      role: keepRole,
-      enabled: keepEnabled,
-      note: keepNote,
-
-      displayName: displayName,
-      personCallsign: callsign,
-
-      selfBindAllowed: keepSelfBindAllowed,
-
-      user_key_current_hash: currentKeyHash,
-      request_user_key_hash: currentKeyHash,
-
-      registration_status: "pending_review",
-      preferred_contact: preferredContact,
-
-      surname: surname,
-      first_name: firstName,
-      patronymic: patronymic,
-
-      request_created_at: nowText,
-
-      temporary_password_plain: "",
-      temporary_password_hash: temporaryPasswordHash,
-      temporary_password_salt: temporaryPasswordSalt,
-      temporary_password_expires_at: temporaryPasswordExpiresAt,
-      temporary_password_used_at: "",
-
-      approved_by: "",
-      approved_at: "",
-      activated_at: "",
-
-      telegram_username: telegramUsername,
-
-      failed_attempts: 0,
-      locked_until_ms: 0,
-    };
-
-    let savedEntry = null;
-    try {
-      savedEntry =
-        existing && existing.sheetRow
-          ? _updateEntryFields_(existing.sheetRow, baseUpdates)
-          : _appendEntryByHeaderMap_(baseUpdates);
-    } catch (writeError) {
-      if (
-        typeof isSpreadsheetProtectionWriteError_ === "function" &&
-        isSpreadsheetProtectionWriteError_(writeError)
-      ) {
-        return {
-          success: false,
-          code: "access.registration.access_sheet_protected",
-          message:
-            "Не вдалося зберегти заявку: список доступу захищено від запису для цього користувача. Адміністратор має увімкнути для нього режим «лише попередження» (не блокувати) або повторно застосувати захист службових листів.",
-        };
-      }
-      throw writeError;
-    }
-
-    const details = {
-      reasonCode: "access.registration.requested",
-      reasonMessage: "Користувач подав заявку на отримання ключа доступу.",
-      email: email,
-      phone: phone,
-      login: login,
-      enteredCallsign: callsign,
-      surname: surname,
-      firstName: firstName,
-      patronymic: patronymic,
-      displayName: displayName,
-      preferredContact: preferredContact,
-      telegramUsername: telegramUsername,
-      contactValue:
-        preferredContact === "telegram"
-          ? telegramUsername
-          : preferredContact === "email"
-            ? email
-            : phone,
-      currentKeyHashMasked: maskSensitiveValue_(currentKeyHash),
-      registrationStatus: "pending_review",
-      requestCreatedAt: nowText,
-      temporaryPasswordGenerated: true,
-      temporaryPasswordExpiresAt: temporaryPasswordExpiresAt,
-      accessSheetRow:
-        savedEntry && savedEntry.sheetRow ? savedEntry.sheetRow : "",
-    };
-
-    if (typeof stage7ReportAccessViolation === "function") {
-      stage7ReportAccessViolation("accessKeyRequested", details);
-    }
-
-    return {
-      success: true,
-      code: "access.registration.requested",
-      message:
-        "Заявку надіслано. Збережіть тимчасовий код доступу — він показується один раз.",
-      currentKeyHashMasked: maskSensitiveValue_(currentKeyHash),
-      registrationStatus: "pending_review",
-      accessSheetRow:
-        savedEntry && savedEntry.sheetRow ? savedEntry.sheetRow : "",
-      temporaryPassword: temporaryPasswordPlain,
-      temporaryPasswordShowOnce: true,
-      temporaryPasswordExpiresAt: temporaryPasswordExpiresAt,
-    };
-  } finally {
-    lock.releaseLock();
-  }
+  return _accessRegistrationRemovedResult_({
+    code: "access.registration.removed",
+    message: "Реєстрацію ключа вимкнено.",
+  });
 }
 
 function _findAccessEntryByPasswordSecret_(entries, secret) {
@@ -1601,225 +1023,10 @@ function _bindAccessEntryToCurrentKey_(entry, currentKeyHash, options) {
  * Вхід за вже виданим ключем доступу (тимчасовий WASB-код або пароль активного запису).
  */
 function loginByAccessKey(accessKeyOrPayload) {
-  const payload =
-    accessKeyOrPayload &&
-    typeof accessKeyOrPayload === "object" &&
-    !Array.isArray(accessKeyOrPayload)
-      ? Object.assign({}, accessKeyOrPayload)
-      : { accessKey: accessKeyOrPayload };
-  const login = String(payload.login || payload.username || "").trim();
-  const password = String(payload.password || payload.pass || "").trim();
-  const accessKey = String(
-    payload.accessKey ||
-      payload.key ||
-      payload.temporaryPassword ||
-      (!payload.accessKey && !payload.key && !payload.temporaryPassword
-        ? password
-        : "") ||
-      "",
-  ).trim();
-  const currentKeyHash = getCurrentUserKeyHash_();
-  const supportCallsign = getPrimarySupportCallsign_();
-  const secretForMatch = password || accessKey;
-
-  if (_getAccessPolicy_().loginDisabled) {
-    return _sidebarLoginDisabledResult_({
-      supportCallsign: supportCallsign,
-    });
-  }
-
-  if (!currentKeyHash) {
-    return {
-      success: false,
-      ok: false,
-      code: REASON_CODES.SELF_BIND_KEY_UNAVAILABLE,
-      message:
-        "Не вдалося визначити ключ користувача. Оновіть панель і спробуйте ще раз.",
-    };
-  }
-  if (!accessKey && !password) {
-    return {
-      success: false,
-      ok: false,
-      code: "access.login.key_required",
-      message: "Введіть ключ доступу або пароль.",
-    };
-  }
-
-  const loginState = _getSelfBindLoginPublicState_(currentKeyHash);
-  if (loginState.locked) {
-    return {
-      success: false,
-      ok: false,
-      code: REASON_CODES.SELF_BIND_LOGIN_BLOCKED,
-      message:
-        "Ваш вхід тимчасово заблоковано на " +
-        loginState.remainingMinutes +
-        " хв. " +
-        getSelfBindHelpText_() +
-        ".",
-      loginLockout: loginState,
-    };
-  }
-
-  const lock = LockService.getScriptLock();
-  lock.waitLock(5000);
-  try {
-    const entries = _readSheetEntries_();
-    let entry = null;
-    let matchType = "";
-
-    if (login) {
-      const credentialEntry = _findAccessEntryByCredentials_(
-        entries,
-        login,
-        secretForMatch,
-      );
-      if (credentialEntry) {
-        entry = credentialEntry;
-        matchType = "credentials";
-      } else if (/^WASB-/i.test(secretForMatch)) {
-        const recoveryEntry = _findAccessEntryByLoginAndTemporaryPassword_(
-          entries,
-          login,
-          secretForMatch,
-        );
-        if (recoveryEntry) {
-          entry = recoveryEntry;
-          matchType = "temporary_password_recovery";
-        }
-      }
-    } else {
-      const tempEntry = _findAccessEntryByTemporaryPassword_(entries, accessKey);
-      if (tempEntry && _isTemporaryAccessKeyUsable_(tempEntry)) {
-        entry = tempEntry;
-        matchType = "temporary_password";
-      }
-      if (!entry) {
-        const passwordEntry = _findAccessEntryByPasswordSecret_(
-          entries,
-          accessKey,
-        );
-        if (passwordEntry) {
-          entry = passwordEntry;
-          matchType = "password";
-        }
-      }
-    }
-
-    if (!entry) {
-      const isCredentialAttempt = !!login;
-      const failure = _registerSelfBindFailure_(currentKeyHash, {
-        identifierType: isCredentialAttempt ? "login" : "access_key",
-        identifierValue: isCredentialAttempt ? login : "",
-        callsign: "",
-        reasonCode: isCredentialAttempt
-          ? "access.login.credentials_invalid"
-          : "access.login.key_invalid",
-        reasonMessage: isCredentialAttempt
-          ? "Логін або пароль не підтверджено."
-          : "Ключ доступу не підтверджено.",
-        loginMeta: {},
-      });
-      const finalCode = failure.blocked
-        ? REASON_CODES.SELF_BIND_LOGIN_BLOCKED
-        : isCredentialAttempt
-          ? "access.login.credentials_invalid"
-          : "access.login.key_invalid";
-      return {
-        success: false,
-        ok: false,
-        code: finalCode,
-        message: failure.blocked
-          ? "Ваш вхід тимчасово заблоковано на " +
-            failure.remainingMinutes +
-            " хв. " +
-            getSelfBindHelpText_() +
-            "."
-          : isCredentialAttempt
-            ? "Логін або пароль не підтверджено."
-            : "Ключ доступу не підтверджено.",
-        loginLockout: failure.blocked ? failure : loginState,
-      };
-    }
-
-    if (_isTimedLocked_(entry)) {
-      return {
-        success: false,
-        ok: false,
-        code: REASON_CODES.DENIED_TIMED_LOCKOUT,
-        message:
-          "Доступ тимчасово заблоковано. " + getSelfBindHelpText_() + ".",
-      };
-    }
-
-    const status = String(entry.registrationStatus || "")
-      .trim()
-      .toLowerCase();
-    const hasCredentials = !!(
-      String(entry.login || "").trim() && String(entry.passwordHash || "").trim()
-    );
-    const isRecoveryRebind =
-      (matchType === "temporary_password" ||
-        matchType === "temporary_password_recovery") &&
-      status === "active" &&
-      hasCredentials;
-
-    let savedEntry = _bindAccessEntryToCurrentKey_(entry, currentKeyHash, {
-      consumeTemporaryPassword:
-        matchType === "temporary_password" ||
-        matchType === "temporary_password_recovery",
-      matchedBy: isRecoveryRebind
-        ? "temporary-password-recovery"
-        : matchType === "credentials"
-          ? "login-password-rebind"
-          : matchType,
-    });
-    _clearSelfBindLoginState_(currentKeyHash);
-    savedEntry = _applySuccessfulAuth_(savedEntry, currentKeyHash) || savedEntry;
-
-    const sessionIssue = _issueBrowserSessionForEntry_(savedEntry);
-    savedEntry = sessionIssue.entry || savedEntry;
-
-    const complete = _isAccessEntryActivationComplete_(savedEntry);
-    const descriptor = describe({ includeSensitiveDebug: false });
-    if (!complete && !isRecoveryRebind) {
-      return {
-        success: true,
-        ok: true,
-        code: "access.login.registration_required",
-        message:
-          matchType === "temporary_password" ||
-          matchType === "temporary_password_recovery"
-            ? "Ключ підтверджено. Завершіть реєстрацію: створіть логін і пароль."
-            : "Ключ підтверджено, але реєстрацію ще не завершено.",
-        descriptor: descriptor,
-        registrationRequired: true,
-        supportCallsign: supportCallsign,
-        browserSessionToken: sessionIssue.browserSessionToken || "",
-        browserSessionExpiresAt: sessionIssue.browserSessionExpiresAt || "",
-      };
-    }
-
-    return {
-      success: true,
-      ok: true,
-      code: REASON_CODES.OK,
-      message: isRecoveryRebind
-        ? "Доступ відновлено. Новий ключ привʼязано до наявного облікового запису."
-        : matchType === "credentials"
-          ? "Вхід за логіном виконано."
-          : "Вхід виконано.",
-      descriptor: descriptor,
-      supportCallsign: supportCallsign,
-      keyRebound: true,
-      recoveryRebind: !!isRecoveryRebind,
-      browserSessionToken: sessionIssue.browserSessionToken || "",
-      browserSessionExpiresAt: sessionIssue.browserSessionExpiresAt || "",
-    };
-  } finally {
-    lock.releaseLock();
-  }
+  return _accessRegistrationRemovedResult_({
+    code: "access.login.removed",
+    message: "Вхід за логіном і паролем вимкнено.",
+  });
 }
 
 /**
@@ -1827,99 +1034,10 @@ function loginByAccessKey(accessKeyOrPayload) {
  * previously issued long-lived browser session token.
  */
 function resumeBrowserSession(payload) {
-  payload = payload || {};
-  const sessionToken = String(
-    payload.browserSessionToken ||
-      payload.sessionToken ||
-      payload.token ||
-      "",
-  ).trim();
-  const currentKeyHash = getCurrentUserKeyHash_();
-  const supportCallsign = getPrimarySupportCallsign_();
-
-  if (!currentKeyHash) {
-    return {
-      success: false,
-      ok: false,
-      code: REASON_CODES.SELF_BIND_KEY_UNAVAILABLE,
-      message:
-        "Не вдалося визначити ключ користувача. Оновіть панель і спробуйте ще раз.",
-    };
-  }
-  if (!sessionToken) {
-    return {
-      success: false,
-      ok: false,
-      code: "access.session.token_required",
-      message: "Сесію браузера не знайдено. Увійдіть знову.",
-    };
-  }
-
-  const lock = LockService.getScriptLock();
-  lock.waitLock(5000);
-  try {
-    const entries = _readSheetEntries_();
-    const byCurrent = _findByUserKey_(currentKeyHash, {
-      includeLocked: true,
-      includeDisabled: true,
-    });
-    if (byCurrent && _isAccessEntryActivationComplete_(byCurrent)) {
-      const refreshed = _issueBrowserSessionForEntry_(byCurrent);
-      return {
-        success: true,
-        ok: true,
-        code: REASON_CODES.OK,
-        message: "Сесію підтверджено.",
-        descriptor: describe({ includeSensitiveDebug: false }),
-        supportCallsign: supportCallsign,
-        browserSessionToken: refreshed.browserSessionToken || sessionToken,
-        browserSessionExpiresAt: refreshed.browserSessionExpiresAt || "",
-        alreadyBound: true,
-      };
-    }
-
-    const entry = _findAccessEntryByBrowserSession_(entries, sessionToken);
-    if (!entry) {
-      return {
-        success: false,
-        ok: false,
-        code: "access.session.invalid",
-        message:
-          "Збережену сесію не підтверджено. Увійдіть за логіном або одноразовим кодом.",
-      };
-    }
-    if (_isTimedLocked_(entry) || _isAdminDisabled_(entry)) {
-      return {
-        success: false,
-        ok: false,
-        code: REASON_CODES.DENIED_TIMED_LOCKOUT,
-        message:
-          "Доступ тимчасово заблоковано. " + getSelfBindHelpText_() + ".",
-      };
-    }
-
-    let savedEntry = _bindAccessEntryToCurrentKey_(entry, currentKeyHash, {
-      matchedBy: "browser-session-rebind",
-    });
-    _clearSelfBindLoginState_(currentKeyHash);
-    savedEntry = _applySuccessfulAuth_(savedEntry, currentKeyHash) || savedEntry;
-    const sessionIssue = _issueBrowserSessionForEntry_(savedEntry);
-
-    return {
-      success: true,
-      ok: true,
-      code: REASON_CODES.OK,
-      message: "Ключ доступу оновлено за збереженою сесією.",
-      descriptor: describe({ includeSensitiveDebug: false }),
-      supportCallsign: supportCallsign,
-      keyRebound: true,
-      sessionRebound: true,
-      browserSessionToken: sessionIssue.browserSessionToken || "",
-      browserSessionExpiresAt: sessionIssue.browserSessionExpiresAt || "",
-    };
-  } finally {
-    lock.releaseLock();
-  }
+  return _accessRegistrationRemovedResult_({
+    code: "access.session.removed",
+    message: "Відновлення сесії через логін вимкнено.",
+  });
 }
 
 function _findAccessEntryByTemporaryPassword_(entries, temporaryPassword) {
@@ -1953,244 +1071,8 @@ function _findAccessEntryByTemporaryPassword_(entries, temporaryPassword) {
 }
 
 function registerAccessWithTemporaryPassword(payload) {
-  payload = payload || {};
-  const currentKeyHash = getCurrentUserKeyHash_();
-  const temporaryPassword = String(
-    payload.temporaryPassword || payload.accessKey || payload.key || "",
-  ).trim();
-  const login = String(payload.login || "").trim();
-  const password = String(payload.password || "").trim();
-  const passwordRepeat = String(
-    payload.passwordRepeat || payload.password_repeat || "",
-  ).trim();
-  if (!currentKeyHash)
-    return {
-      success: false,
-      code: REASON_CODES.SELF_BIND_KEY_UNAVAILABLE,
-      message:
-        "Не вдалося визначити ключ користувача. Оновіть панель і спробуйте ще раз.",
-    };
-  if (!temporaryPassword)
-    return {
-      success: false,
-      code: "access.registration.temp_password_required",
-      message: "Введіть тимчасовий код доступу.",
-    };
-  if (!login)
-    return {
-      success: false,
-      code: "access.registration.login_required",
-      message: "Введіть логін.",
-    };
-  if (!password || password.length < 8)
-    return {
-      success: false,
-      code: "access.registration.password_too_short",
-      message: "Пароль має містити мінімум 8 символів.",
-    };
-  if (password !== passwordRepeat)
-    return {
-      success: false,
-      code: "access.registration.password_mismatch",
-      message: "Паролі не збігаються.",
-    };
-  const lock = LockService.getScriptLock();
-  lock.waitLock(5000);
-
-  try {
-    const entries = _readSheetEntries_();
-    let entry = null;
-    for (let i = 0; i < entries.length; i++) {
-      const item = entries[i];
-      if (
-        item.requestUserKeyHash &&
-        item.requestUserKeyHash === currentKeyHash
-      ) {
-        entry = item;
-        break;
-      }
-      if (
-        item.userKeyCurrentHash &&
-        item.userKeyCurrentHash === currentKeyHash
-      ) {
-        entry = item;
-        break;
-      }
-    }
-    if (!entry) {
-      entry = _findAccessEntryByTemporaryPassword_(entries, temporaryPassword);
-    }
-    if (!entry)
-      return {
-        success: false,
-        code: "access.registration.request_not_found",
-        message:
-          "Заявку для цього пристрою не знайдено. Спочатку подайте заявку на доступ.",
-      };
-    const status = String(entry.registrationStatus || "")
-      .trim()
-      .toLowerCase();
-    const hasCredentials = !!(
-      String(entry.login || "").trim() &&
-      String(entry.passwordHash || "").trim()
-    );
-    if (status === "active" && hasCredentials) {
-      if (
-        entry.temporaryPasswordHash &&
-        entry.temporaryPasswordSalt &&
-        !entry.temporaryPasswordUsedAt &&
-        _isTemporaryAccessKeyUsable_(entry, { allowActiveRecovery: true })
-      ) {
-        const recoveryHash = hashAccessPasswordWithSalt_(
-          temporaryPassword,
-          entry.temporaryPasswordSalt,
-        );
-        if (recoveryHash === entry.temporaryPasswordHash) {
-          let rebound = _bindAccessEntryToCurrentKey_(entry, currentKeyHash, {
-            consumeTemporaryPassword: true,
-            matchedBy: "temporary-password-recovery-register",
-          });
-          _clearSelfBindLoginState_(currentKeyHash);
-          rebound = _applySuccessfulAuth_(rebound, currentKeyHash) || rebound;
-          const sessionIssue = _issueBrowserSessionForEntry_(rebound);
-          return {
-            success: true,
-            ok: true,
-            code: REASON_CODES.OK,
-            message:
-              "Доступ відновлено. Новий ключ привʼязано до наявного облікового запису.",
-            descriptor: describe({ includeSensitiveDebug: false }),
-            accessSheetRow:
-              sessionIssue.entry && sessionIssue.entry.sheetRow
-                ? sessionIssue.entry.sheetRow
-                : entry.sheetRow,
-            keyRebound: true,
-            recoveryRebind: true,
-            browserSessionToken: sessionIssue.browserSessionToken || "",
-            browserSessionExpiresAt: sessionIssue.browserSessionExpiresAt || "",
-          };
-        }
-      }
-      return {
-        success: false,
-        code: "access.registration.already_active",
-        message:
-          "Доступ уже активовано. Увійдіть за логіном і паролем або одноразовим кодом відновлення.",
-      };
-    }
-    if (
-      status !== "approved" &&
-      status !== "key_sent" &&
-      !(status === "active" && !hasCredentials)
-    )
-      return {
-        success: false,
-        code: "access.registration.not_approved",
-        message:
-          "Заявку ще не підтверджено адміністратором. Очікуйте підтвердження.",
-      };
-    if (entry.enabled !== true)
-      return {
-        success: false,
-        code: "access.registration.disabled",
-        message: "Доступ ще не увімкнено адміністратором.",
-      };
-    if (!entry.temporaryPasswordHash || !entry.temporaryPasswordSalt)
-      return {
-        success: false,
-        code: "access.registration.temp_password_missing",
-        message:
-          "Тимчасовий код для цієї заявки не знайдено. Зверніться до адміністратора.",
-      };
-    if (entry.temporaryPasswordUsedAt)
-      return {
-        success: false,
-        code: "access.registration.temp_password_used",
-        message: "Тимчасовий код уже використано.",
-      };
-    if (entry.temporaryPasswordExpiresAt) {
-      const expiresRaw = String(entry.temporaryPasswordExpiresAt || "").trim();
-      const expiresDate = new Date(expiresRaw.replace(" ", "T"));
-      if (!isNaN(expiresDate.getTime()) && Date.now() > expiresDate.getTime())
-        return {
-          success: false,
-          code: "access.registration.temp_password_expired",
-          message:
-            "Термін дії тимчасового коду минув. Попросіть адміністратора видати новий код.",
-        };
-    }
-    const enteredHash = hashAccessPasswordWithSalt_(
-      temporaryPassword,
-      entry.temporaryPasswordSalt,
-    );
-    if (enteredHash !== entry.temporaryPasswordHash) {
-      _applyFailedAuthCore_(
-        entry,
-        "access.registration.temp_password_invalid",
-        "Невірний тимчасовий код доступу.",
-      );
-      return {
-        success: false,
-        code: "access.registration.temp_password_invalid",
-        message: "Невірний тимчасовий код доступу.",
-      };
-    }
-    const passwordSalt = generateAccessSalt_();
-    const passwordHash = hashAccessPasswordWithSalt_(password, passwordSalt);
-    const nowText = _nowText_("long");
-    let savedEntry = null;
-    try {
-      savedEntry = _updateEntryFields_(entry.sheetRow, {
-        user_key_current_hash:
-          currentKeyHash ||
-          entry.userKeyCurrentHash ||
-          entry.requestUserKeyHash ||
-          "",
-        request_user_key_hash:
-          currentKeyHash ||
-          entry.requestUserKeyHash ||
-          entry.userKeyCurrentHash ||
-          "",
-        login: login,
-        password_hash: passwordHash,
-        password_salt: passwordSalt,
-        registration_status: "active",
-        last_seen_at: nowText,
-        last_rotated_at: nowText,
-        activated_at: nowText,
-        temporary_password_plain: "",
-        temporary_password_used_at: nowText,
-        failed_attempts: 0,
-        locked_until_ms: 0,
-      });
-    } catch (writeError) {
-      if (
-        typeof isSpreadsheetProtectionWriteError_ === "function" &&
-        isSpreadsheetProtectionWriteError_(writeError)
-      ) {
-        return {
-          success: false,
-          code: "access.registration.access_sheet_protected",
-          message:
-            "Не вдалося активувати доступ: список доступу захищено від запису для цього користувача. Попросіть адміністратора увімкнути режим «лише попередження».",
-        };
-      }
-      throw writeError;
-    }
-    const sessionIssue = _issueBrowserSessionForEntry_(savedEntry || entry);
-    return {
-      success: true,
-      code: "access.registration.active",
-      message: "Доступ активовано. Оновіть панель.",
-      descriptor: describe({ includeSensitiveDebug: false }),
-      accessSheetRow:
-        (sessionIssue.entry && sessionIssue.entry.sheetRow) ||
-        (savedEntry && savedEntry.sheetRow) ||
-        entry.sheetRow,
-      browserSessionToken: sessionIssue.browserSessionToken || "",
-      browserSessionExpiresAt: sessionIssue.browserSessionExpiresAt || "",
-    };
-  } finally {
-    lock.releaseLock();
-  }
+  return _accessRegistrationRemovedResult_({
+    code: "access.registration.removed",
+    message: "Реєстрацію з тимчасовим паролем вимкнено.",
+  });
 }

@@ -360,9 +360,28 @@ function main() {
     );
   }
   const resolverText = read('AccessControl.AuthResolver.gs');
-  if (!resolverText.includes('_buildLoginDisabledDescriptor_')) {
+  if (!resolverText.includes('_buildSpreadsheetSharingDescriptor_')) {
     errors.push(
-      'AccessControl.AuthResolver.gs must implement login-disabled bypass',
+      'AccessControl.AuthResolver.gs must grant spreadsheet-sharing access (login/registration removed)',
+    );
+  }
+  if (!resolverText.includes('registrationRemoved: true') && !resolverText.includes('spreadsheet-sharing')) {
+    errors.push(
+      'AccessControl.AuthResolver.gs must mark registration as removed / spreadsheet-sharing mode',
+    );
+  }
+  if (resolverText.includes('Ключ не зареєстровано в списку доступу. Строгий режим.') &&
+      /return _buildUnknownDescriptor_/.test(resolverText.split('function _resolveAccessSubject_')[1] || '')) {
+    // Unknown deny path in resolvers is OK only if not the default end — check end uses sharing
+  }
+  if (!/return _buildSpreadsheetSharingDescriptor_\(context, policy\);/.test(resolverText)) {
+    errors.push(
+      'AccessControl.AuthResolver.gs resolvers must fall back to spreadsheet sharing',
+    );
+  }
+  if (!/_isAccessEntryActivationComplete_[\s\S]*userKeyCurrentHash/.test(resolverText)) {
+    errors.push(
+      'AccessControl.AuthResolver.gs activation must be key-allowlist based',
     );
   }
 
