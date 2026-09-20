@@ -33,7 +33,6 @@ Follow these commit message conventions based on 1 analyzed commits.
 
 ### Prefixes Used
 
-- `fix`
 
 ### Message Guidelines
 
