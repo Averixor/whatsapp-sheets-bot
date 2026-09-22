@@ -1,7 +1,7 @@
 # WASB — повний список файлів репозиторію
 # Порядок: дерево каталогів (depth-first, алфавіт у кожній папці)
 # Виключено: .git/, node_modules/, локальні .clasp*.json (крім *.example.json)
-# Файлів: 325
+# Файлів: 324
 # Оновлено: 2026-09-22T17:14:16Z
 
 .
@@ -62,7 +62,6 @@
   deploy-staging.yml
 
 .vscode/
-  extensions.json
   settings.json
 
 access/
