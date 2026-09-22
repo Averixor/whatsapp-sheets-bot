@@ -1,8 +1,8 @@
 # WASB — повний список файлів репозиторію
 # Порядок: дерево каталогів (depth-first, алфавіт у кожній папці)
 # Виключено: .git/, node_modules/, локальні .clasp*.json (крім *.example.json)
-# Файлів: 312
-# Оновлено: 2026-08-11T06:32:50Z
+# Файлів: 325
+# Оновлено: 2026-09-22T17:14:16Z
 
 .
   .clasp.example.json
@@ -25,6 +25,31 @@
   SECURITY.md
   WASB_RELEASE_AUDIT.md
 
+.agents/skills/whatsapp-sheets-bot/
+  SKILL.md
+
+.agents/skills/whatsapp-sheets-bot/agents/
+  openai.yaml
+
+.claude/
+  ecc-tools.json
+  identity.json
+
+.claude/homunculus/instincts/inherited/
+  whatsapp-sheets-bot-instincts.yaml
+
+.claude/skills/whatsapp-sheets-bot/
+  SKILL.md
+
+.codex/
+  AGENTS.md
+  config.toml
+
+.codex/agents/
+  docs-researcher.toml
+  explorer.toml
+  reviewer.toml
+
 .cursor/rules/
   git-safety.mdc
   monthly-callsign-sync.mdc
@@ -33,9 +58,11 @@
 
 .github/workflows/
   ci.yml
+  codeql.yml
   deploy-staging.yml
 
 .vscode/
+  extensions.json
   settings.json
 
 access/
