@@ -701,7 +701,7 @@ Production deployment never opens Execution API to other users:
 npm run deploy:prod
 ```
 
-This runs `npm run ci` and `npx clasp push`. Production uses
+This runs `npm run ci` and `npm run gas:push` (via `scripts/ops-gas.mjs`). Production uses
 `appsscript.json` with `executionApi.access = MYSELF`.
 
 Immediately after push, run in the production GAS editor:

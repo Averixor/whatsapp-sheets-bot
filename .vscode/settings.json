@@ -1,8 +1,8 @@
 {
+  "debug.javascript.autoAttachFilter": "disabled",
   "html.validate.scripts": false,
   "html.validate.styles": false,
-  "javascript.validate.enable": false,
-  "typescript.validate.enable": false,
+  "js/ts.validate.enabled": false,
   "files.associations": {
     "Js.*.html": "html",
     "Styles_*.html": "css"

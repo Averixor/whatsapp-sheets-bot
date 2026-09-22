@@ -23,13 +23,14 @@ Individual subscripts: `npm run ci:gas`, `npm run ci:client`, `npm run ci:copy`,
 | -------- | ------------- |
 | `npm run check` / `check:all` | Full local CI (= `npm run ci`) |
 | `npm run c` | Refresh file map + full CI |
-| `npm run deploy:prod` | Full CI + `npx clasp push` (production) |
-| `npm run push:remote` | `git push` + `clasp push` — **no CI**; tree must be committed |
-| `npm run gas` | Node version check + `clasp push` only — **not** full CI |
+| `npm run deploy:prod` | Full CI + `npm run gas:push` (production) |
+| `npm run push:remote` | `git push` + `gas:push` — **no CI**; tree must be committed |
+| `npm run gas` / `npm run gas -- push` | Node version check + `clasp push` only — **not** full CI |
+| `npm run gas -- status` | Same as `gas:status` (via `ops-gas.mjs`) |
 | `npm run gh -- "msg"` | Commit (if dirty) + `git push` |
 | `npm run ship` / `go -- "msg"` | `c` + `gas` + `gh` — map, CI, GAS push, GitHub |
-| `npm run gas:open` | Open GAS editor (`npx clasp open-script`, clasp 3.x) |
-| `npm run gas:push` / `gas:status` | Production clasp helpers |
+| `npm run gas:open` | Open GAS editor (`ops-gas.mjs` → `clasp open-script`) |
+| `npm run gas:push` / `gas:status` / `gas:pull` | Production clasp helpers (strip Cursor debugger env) |
 
 ### Node.js version
 
@@ -176,6 +177,6 @@ Domain folders (`reports/`, `vacations/`, `core/`, `ui/`, …) are mechanical mo
 ### Key gotchas
 
 - The `&&` chain in `npm run ci` may fail under restricted `cmd.exe` on Windows; use individual `node scripts/...` commands as fallback.
-- `npx clasp push` / `npm run gas push` requires prior `clasp login` and a `.clasp.json` (not committed to the repo for security). Prefer `npx clasp` over a global `clasp` so the version matches `package-lock.json` (`@google/clasp@3.3.0`).
+- `npx clasp push` / `npm run gas:push` requires prior `clasp login` and a `.clasp.json` (not committed to the repo for security). Prefer `npx clasp` over a global `clasp` so the version matches `package-lock.json` (`@google/clasp@3.3.0`).
 - **Do not run** `npm audit fix --force` — it toggles `@google/clasp` between 2.x and 3.x without fixing transitive `uuid` advisories and can introduce a **high** clasp CVE on older versions.
 - Script properties (`WASB_SPREADSHEET_ID`, `WASB_OWNER_EMAIL`) must be set in GAS Project Settings for headless/trigger execution.

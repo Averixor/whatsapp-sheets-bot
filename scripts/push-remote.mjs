@@ -47,6 +47,7 @@ if (process.argv.includes("--help") || process.argv.includes("-h")) {
   npm run push:remote    GitHub + GAS (без повторного CI)
 
   Потрібно: закомічені зміни, .clasp.json, clasp login.
+  GAS push іде через npm run gas:push (ops-gas.mjs).
   Після deploy у GAS: apiStage7ClearPhoneCache()
 `);
   process.exit(0);
@@ -87,7 +88,7 @@ if (!existsSync(claspProd)) {
   process.exit(1);
 }
 
-run("clasp push (production)", "npx", ["clasp", "push"]);
+run("clasp push (production)", "npm", ["run", "gas:push"]);
 
 console.log("\n=== push:remote complete ===");
 console.log("GitHub: pushed");
