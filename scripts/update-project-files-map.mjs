@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
  * Regenerate docs/project-files-complete.txt — depth-first repository file map.
- * Excludes .git/, node_modules/, and local clasp binding files (gitignored secrets).
+ * Excludes .git/, node_modules/, gitignored paths, and local clasp binding files.
  */
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { repoRoot } from './lib/load-contract.mjs';
@@ -27,7 +28,32 @@ function labelDir(relDir) {
   return relDir.split(path.sep).join('/') + '/';
 }
 
-function walkDir(absDir, relDir, sections) {
+function toPosixRel(relPath) {
+  return String(relPath || '')
+    .split(path.sep)
+    .join('/');
+}
+
+/** Paths ignored by git (so local IDE/clasp files do not pollute CI map checks). */
+function loadGitIgnoredRelPaths() {
+  try {
+    const out = execFileSync(
+      'git',
+      ['ls-files', '-z', '-o', '-i', '--exclude-standard'],
+      { cwd: repoRoot, encoding: 'buffer' },
+    );
+    return new Set(
+      String(out)
+        .split('\0')
+        .filter(Boolean)
+        .map((p) => toPosixRel(p)),
+    );
+  } catch {
+    return new Set();
+  }
+}
+
+function walkDir(absDir, relDir, sections, ignoredRelPaths) {
   const entries = fs.readdirSync(absDir).filter((name) => !SKIP_DIRS.has(name));
   entries.sort((a, b) => a.localeCompare(b, 'en'));
 
@@ -39,6 +65,8 @@ function walkDir(absDir, relDir, sections) {
     if (st.isDirectory()) dirs.push(name);
     else if (st.isFile()) {
       if (relDir === '' && SKIP_ROOT_FILES.has(name)) continue;
+      const relPosix = toPosixRel(relDir ? path.join(relDir, name) : name);
+      if (ignoredRelPaths.has(relPosix)) continue;
       files.push(name);
     }
   }
@@ -54,13 +82,14 @@ function walkDir(absDir, relDir, sections) {
       path.join(absDir, dir),
       relDir ? path.join(relDir, dir) : dir,
       sections,
+      ignoredRelPaths,
     );
   }
 }
 
 export function generateProjectFilesMapText() {
   const sections = [];
-  walkDir(repoRoot, '', sections);
+  walkDir(repoRoot, '', sections, loadGitIgnoredRelPaths());
 
   let fileCount = 0;
   for (const section of sections) {
