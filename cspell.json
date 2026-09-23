@@ -10,6 +10,7 @@
       "dictionaries": ["uk-ua"]
     }
   ],
+
   "words": [
     "автозачистка",
     "автоперевірка",
@@ -99,6 +100,11 @@
     "callsign",
     "Callsign",
     "callsigns",
+    "Callsigns",
+    "батч",
+    "батчі",
+    "cutover",
+    "finalizer",
     "Fml",
     "Fmls",
     "clasp",
@@ -183,6 +189,7 @@
     "CHUIKA",
     "MASSIT"
   ],
+
   "ignorePaths": [
     "node_modules/**",
     ".git/**",

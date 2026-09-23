@@ -12,6 +12,7 @@ _audit-out.txt
 # VS Code / AI local settings
 .vscode/*
 !.vscode/settings.json
+!.vscode/launch.json
 .aider*
 # Local Google Apps Script / clasp mapping (scriptId, spreadsheet parentId)
 .clasp.json

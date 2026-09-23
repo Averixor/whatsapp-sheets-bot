@@ -3,9 +3,8 @@
   "version": "7",
   "private": true,
   "description": "WhatsApp-Sheets-Bot Google Apps Script project",
-  "engines": {
-    "node": ">=24"
-  },
+  "engines": {"node": ">=24"},
+
   "scripts": {
     "check": "npm run ci",
     "check:all": "npm run ci",
@@ -42,6 +41,7 @@
     "ship": "node scripts/ops-ship.mjs",
     "go": "npm run ship --"
   },
+
   "devDependencies": {
     "@cspell/dict-uk-ua": "^4.0.6",
     "@google/clasp": "^3.3.0",
