@@ -905,8 +905,7 @@ function runBirthdayEngine_(targetDate, options) {
     result.commanderRecipient = commanderRecipient
       ? {
           role: commanderRecipient.role || commanderRecipient.callsign || "",
-          callsign:
-            commanderRecipient.callsign || commanderRecipient.role || "",
+          callsign: commanderRecipient.callsign || commanderRecipient.role || "",
           source: commanderRecipient.source || "",
         }
       : null;
