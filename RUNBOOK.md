@@ -573,8 +573,9 @@ Pull Request → npm run ci → merge to main
 - File: `.github/workflows/deploy-staging.yml`
 - Trigger: **`workflow_dispatch` only** (Actions → WASB Deploy Staging → Run workflow)
 - Job environment: GitHub Environment **`staging`**
-- Steps: `npm ci` → `npm run ci` → `node scripts/verify-deploy-target.mjs configure-staging` (writes secrets via Node, `JSON.parse` both files, checks `scriptId`) → `npm run gas:status` → `npm run gas:push` → always remove `~/.clasprc.json` and `.clasp.json`
-- Intentionally **absent**: `--force`, `clasp deploy`, `clasp run`, production Script IDs, automatic bootstrap/protections
+- Steps: report ref/SHA → `npm ci` → `npm run ci` → `node scripts/verify-deploy-target.mjs configure-staging` (step-scoped secrets; `JSON.parse` both files; checks staging `scriptId` and **staging ≠ production**) → `npm run gas:status` → `npm run gas:push` → always remove `~/.clasprc.json` and `.clasp.json`
+- Branch policy: **any ref** selectable via `workflow_dispatch` (feature/PR dry-run allowed); job log prints `GITHUB_REF` / `GITHUB_SHA`. Not restricted to `main`.
+- Intentionally **absent**: `--force`, `clasp deploy`, `clasp run`, automatic bootstrap/protections, job-wide secret env
 
 Local target check (optional):
 
@@ -595,6 +596,7 @@ Create Environment **`staging`** in the GitHub repo settings. Required:
 | **Secret** | `CLASPRC_JSON` | Full contents of local `~/.clasprc.json` (OAuth tokens for clasp) |
 | **Secret** | `CLASP_JSON_STAGING` | Staging `.clasp.json` body (from `.clasp.staging.example.json` filled with real staging IDs) |
 | **Variable** | `EXPECTED_STAGING_SCRIPT_ID` | Same staging Apps Script `scriptId` as in `CLASP_JSON_STAGING` |
+| **Variable** | `EXPECTED_PRODUCTION_SCRIPT_ID` | Production Apps Script `scriptId` (must differ; absence blocks deploy) |
 
 #### How to store secrets correctly
 
@@ -629,7 +631,7 @@ cp .clasp.staging.example.json /tmp/clasp.staging.json
 cat /tmp/clasp.staging.json
 ```
 
-`EXPECTED_STAGING_SCRIPT_ID` must match the `scriptId` inside `CLASP_JSON_STAGING`. `scripts/verify-deploy-target.mjs` rejects placeholders (`PUT_STAGING_SCRIPT_ID_HERE`, empty, short/fake IDs), validates both JSON files before `clasp status`, and exits non-zero on mismatch **without printing full IDs or secret bodies**. Errors name **which** input failed (`CLASPRC_JSON` / `~/.clasprc.json` vs `CLASP_JSON_STAGING` / `.clasp.json`) and include parse line/position only.
+`EXPECTED_STAGING_SCRIPT_ID` must match the `scriptId` inside `CLASP_JSON_STAGING`. `EXPECTED_PRODUCTION_SCRIPT_ID` is required and must **not** equal the staging ID (guards against both Environment values pointing at production). `scripts/verify-deploy-target.mjs` rejects placeholders (`PUT_STAGING_SCRIPT_ID_HERE`, empty, short/fake IDs), validates both JSON files **before** writing credentials / `clasp status`, and exits non-zero on mismatch **without printing full IDs or secret bodies**. Errors name **which** input failed (`CLASPRC_JSON` / `~/.clasprc.json` vs `CLASP_JSON_STAGING` / `.clasp.json`) and include parse line/position only.
 
 **Diagnosing `Expected ',' or '}' … position N (line L)` on staging deploy:** a large position (e.g. ~1800+) almost always means malformed **`CLASPRC_JSON`** (OAuth file is kilobytes). Staging `.clasp.json` is typically a few hundred bytes — if parse fails there, the message will say `CLASP_JSON_STAGING`. Local gitignored `.clasp.json` is **not** used by GHA; only the Environment secret is. Re-open the secret, replace with freshly validated `cat ~/.clasprc.json` output, and re-run the workflow.
 

@@ -1,15 +1,18 @@
 #!/usr/bin/env node
 /**
- * Guard clasp push target: .clasp.json scriptId must match expected staging ID.
+ * Guard clasp push target: .clasp.json scriptId must match expected staging ID
+ * and must not equal expected production ID.
  * Also validates ~/.clasprc.json and .clasp.json as JSON before clasp runs.
  * Does not print full Script IDs, tokens, or secret bodies. Ukrainian user-facing errors.
  *
  * Usage (CI — write secrets from env, then verify):
- *   CLASPRC_JSON=… CLASP_JSON_STAGING=… EXPECTED_STAGING_SCRIPT_ID=… \
+ *   CLASPRC_JSON=… CLASP_JSON_STAGING=… \
+ *   EXPECTED_STAGING_SCRIPT_ID=… EXPECTED_PRODUCTION_SCRIPT_ID=… \
  *     node scripts/verify-deploy-target.mjs configure-staging
  *
  * Usage (CI — files already on disk):
- *   EXPECTED_STAGING_SCRIPT_ID=<id> node scripts/verify-deploy-target.mjs staging
+ *   EXPECTED_STAGING_SCRIPT_ID=<id> EXPECTED_PRODUCTION_SCRIPT_ID=<id> \
+ *     node scripts/verify-deploy-target.mjs staging
  *
  * Self-test (no env required):
  *   node scripts/verify-deploy-target.mjs --self-test
@@ -175,9 +178,91 @@ function writeSecretFile(filePath, text) {
   fs.writeFileSync(filePath, text, { encoding: 'utf8', mode: 0o600 });
 }
 
+function scriptIdFromClaspValue(value) {
+  return value && value.scriptId != null ? String(value.scriptId).trim() : '';
+}
+
+/**
+ * Require distinct staging vs production expected IDs (Environment variables).
+ * Absence of production ID blocks deploy so both cannot silently point at prod.
+ */
+function requireDistinctExpectedIds() {
+  const stagingExpected = String(process.env.EXPECTED_STAGING_SCRIPT_ID || '').trim();
+  const productionExpected = String(
+    process.env.EXPECTED_PRODUCTION_SCRIPT_ID || '',
+  ).trim();
+
+  if (!stagingExpected) {
+    fail(
+      'не задано EXPECTED_STAGING_SCRIPT_ID для staging-середовища',
+      'EXPECTED_STAGING_SCRIPT_ID empty',
+    );
+  }
+  if (!productionExpected) {
+    fail(
+      'не задано EXPECTED_PRODUCTION_SCRIPT_ID — без нього не можна підтвердити, що staging не є production',
+      'EXPECTED_PRODUCTION_SCRIPT_ID empty',
+    );
+  }
+  if (isPlaceholderOrFake(stagingExpected)) {
+    fail(
+      'EXPECTED_STAGING_SCRIPT_ID містить placeholder або недійсне значення',
+      'expected staging id rejected',
+    );
+  }
+  if (isPlaceholderOrFake(productionExpected)) {
+    fail(
+      'EXPECTED_PRODUCTION_SCRIPT_ID містить placeholder або недійсне значення',
+      'expected production id rejected',
+    );
+  }
+  if (stagingExpected === productionExpected) {
+    fail(
+      'EXPECTED_STAGING_SCRIPT_ID збігається з EXPECTED_PRODUCTION_SCRIPT_ID — staging-розгортання заблоковано',
+      'staging expected id equals production expected id',
+    );
+  }
+  return { stagingExpected, productionExpected };
+}
+
+function assertClaspIsNotProduction(actual, productionExpected) {
+  if (actual === productionExpected) {
+    fail(
+      'цільовий .clasp.json вказує на production scriptId — staging-розгортання заблоковано',
+      `clasp scriptId matches production ${maskId(productionExpected)}`,
+    );
+  }
+}
+
+function assertClaspMatchesStaging(actual, stagingExpected) {
+  if (isPlaceholderOrFake(actual)) {
+    fail(
+      'scriptId у .clasp.json є placeholder або недійсним значенням',
+      'clasp scriptId rejected',
+    );
+  }
+  if (actual !== stagingExpected) {
+    fail(
+      'цільовий Apps Script не відповідає staging-середовищу',
+      `mismatch (clasp ${maskId(actual)} vs expected ${maskId(stagingExpected)}; target=staging)`,
+    );
+  }
+}
+
+/**
+ * Validate target IDs before any credential write / clasp invoke.
+ * @param {string} actualScriptId
+ */
+function assertSafeStagingTarget(actualScriptId) {
+  const { stagingExpected, productionExpected } = requireDistinctExpectedIds();
+  assertClaspIsNotProduction(actualScriptId, productionExpected);
+  assertClaspMatchesStaging(actualScriptId, stagingExpected);
+  return { stagingExpected, productionExpected };
+}
+
 /**
  * Write CLASPRC_JSON / CLASP_JSON_STAGING from env via Node (safer than shell printf
- * for multiline / special characters), validate JSON, then verify staging target.
+ * for multiline / special characters), validate JSON + staging≠production, then verify.
  */
 function configureStagingFromEnv(cwd) {
   const clasprcRaw = process.env.CLASPRC_JSON;
@@ -202,51 +287,31 @@ function configureStagingFromEnv(cwd) {
     claspRaw,
   );
 
+  const actual = scriptIdFromClaspValue(claspParsed.value);
+  if (!actual) {
+    fail('у .clasp.json відсутній scriptId', 'scriptId empty');
+  }
+
+  // Block before writing credentials if staging/production IDs are wrong.
+  assertSafeStagingTarget(actual);
+
   writeSecretFile(clasprcPath(), clasprcParsed.text);
   writeSecretFile(path.join(cwd, '.clasp.json'), claspParsed.text);
 
   console.log(
-    `${SCRIPT_NAME}: OK (wrote ~/.clasprc.json and .clasp.json from env; JSON validated)`,
+    `${SCRIPT_NAME}: OK (wrote ~/.clasprc.json and .clasp.json from env; JSON validated; staging≠production)`,
   );
   verifyStagingTarget(cwd);
 }
 
 function verifyStagingTarget(cwd) {
-  const target = 'staging';
   const claspPath = path.join(cwd, '.clasp.json');
-  const expected = String(process.env.EXPECTED_STAGING_SCRIPT_ID || '').trim();
-
-  if (!expected) {
-    fail(
-      'не задано EXPECTED_STAGING_SCRIPT_ID для staging-середовища',
-      'EXPECTED_STAGING_SCRIPT_ID empty',
-    );
-  }
-  if (isPlaceholderOrFake(expected)) {
-    fail(
-      'EXPECTED_STAGING_SCRIPT_ID містить placeholder або недійсне значення',
-      'expected id rejected',
-    );
-  }
-
   validateClasprcOnDisk(cwd);
-
   const actual = readClaspScriptId(claspPath);
-  if (isPlaceholderOrFake(actual)) {
-    fail(
-      'scriptId у .clasp.json є placeholder або недійсним значенням',
-      'clasp scriptId rejected',
-    );
-  }
-
-  if (actual !== expected) {
-    fail(
-      'цільовий Apps Script не відповідає staging-середовищу',
-      `mismatch (clasp ${maskId(actual)} vs expected ${maskId(expected)}; target=${target})`,
-    );
-  }
-
-  console.log(`${SCRIPT_NAME}: OK (target=${target}, scriptId ${maskId(actual)})`);
+  assertSafeStagingTarget(actual);
+  console.log(
+    `${SCRIPT_NAME}: OK (target=staging, scriptId ${maskId(actual)}; staging≠production)`,
+  );
 }
 
 function runSelfTest() {
@@ -254,6 +319,7 @@ function runSelfTest() {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'wasb-verify-deploy-target-'));
   const goodId = 'a1b2c3d4e5f678901234567890abcdef01234567';
   const otherId = 'f0e1d2c3b4a5968778695a4b3c2d1e0f98765432';
+  const prodId = '0123456789abcdef0123456789abcdef01234567';
   const homeDir = path.join(tmpRoot, 'home');
   fs.mkdirSync(homeDir, { recursive: true });
 
@@ -272,6 +338,14 @@ function runSelfTest() {
 
   function writeValidClasprc(dir) {
     writeClasprc(dir, JSON.stringify({ token: { type: 'authorized_user', access_token: 'x' } }));
+  }
+
+  function stagingEnv(extra) {
+    return {
+      EXPECTED_STAGING_SCRIPT_ID: goodId,
+      EXPECTED_PRODUCTION_SCRIPT_ID: prodId,
+      ...extra,
+    };
   }
 
   function runCase(label, dir, env, args, expectCode) {
@@ -299,6 +373,11 @@ function runSelfTest() {
       );
       assert.doesNotMatch(
         result.stderr || '',
+        new RegExp(prodId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+        `${label}: must not print full production scriptId`,
+      );
+      assert.doesNotMatch(
+        result.stderr || '',
         /access_token|refresh_token|ya29\./i,
         `${label}: must not print token material`,
       );
@@ -311,25 +390,76 @@ function runSelfTest() {
 
     const matchDir = path.join(tmpRoot, 'match');
     writeClasp(matchDir, goodId);
-    runCase('match', matchDir, { EXPECTED_STAGING_SCRIPT_ID: goodId }, ['staging'], 0);
+    runCase('match', matchDir, stagingEnv(), ['staging'], 0);
 
     const mismatchDir = path.join(tmpRoot, 'mismatch');
     writeClasp(mismatchDir, otherId);
-    runCase('mismatch', mismatchDir, { EXPECTED_STAGING_SCRIPT_ID: goodId }, ['staging'], 1);
+    runCase('mismatch', mismatchDir, stagingEnv(), ['staging'], 1);
 
     const placeholderDir = path.join(tmpRoot, 'placeholder');
     writeClasp(placeholderDir, 'PUT_STAGING_SCRIPT_ID_HERE');
+    runCase('placeholder', placeholderDir, stagingEnv(), ['staging'], 1);
+
+    const missingEnvDir = path.join(tmpRoot, 'missing-env');
+    writeClasp(missingEnvDir, goodId);
     runCase(
-      'placeholder',
-      placeholderDir,
-      { EXPECTED_STAGING_SCRIPT_ID: goodId },
+      'missing-staging-env',
+      missingEnvDir,
+      stagingEnv({ EXPECTED_STAGING_SCRIPT_ID: '' }),
       ['staging'],
       1,
     );
 
-    const missingEnvDir = path.join(tmpRoot, 'missing-env');
-    writeClasp(missingEnvDir, goodId);
-    runCase('missing-env', missingEnvDir, { EXPECTED_STAGING_SCRIPT_ID: '' }, ['staging'], 1);
+    const missingProdDir = path.join(tmpRoot, 'missing-prod');
+    writeClasp(missingProdDir, goodId);
+    const missingProd = runCase(
+      'missing-production-env',
+      missingProdDir,
+      {
+        EXPECTED_STAGING_SCRIPT_ID: goodId,
+        EXPECTED_PRODUCTION_SCRIPT_ID: '',
+      },
+      ['staging'],
+      1,
+    );
+    assert.match(
+      missingProd.stderr || '',
+      /EXPECTED_PRODUCTION_SCRIPT_ID/,
+      'missing-production-env: must name production var',
+    );
+
+    const sameIdsDir = path.join(tmpRoot, 'same-ids');
+    writeClasp(sameIdsDir, goodId);
+    const sameIds = runCase(
+      'staging-eq-production-expected',
+      sameIdsDir,
+      {
+        EXPECTED_STAGING_SCRIPT_ID: goodId,
+        EXPECTED_PRODUCTION_SCRIPT_ID: goodId,
+      },
+      ['staging'],
+      1,
+    );
+    assert.match(
+      sameIds.stderr || '',
+      /збігається|production/i,
+      'staging-eq-production-expected: must explain collision',
+    );
+
+    const claspIsProdDir = path.join(tmpRoot, 'clasp-is-prod');
+    writeClasp(claspIsProdDir, prodId);
+    const claspIsProd = runCase(
+      'clasp-points-at-production',
+      claspIsProdDir,
+      stagingEnv(),
+      ['staging'],
+      1,
+    );
+    assert.match(
+      claspIsProd.stderr || '',
+      /production/i,
+      'clasp-points-at-production: must block production target',
+    );
 
     const badClaspDir = path.join(tmpRoot, 'bad-clasp');
     fs.mkdirSync(badClaspDir, { recursive: true });
@@ -341,7 +471,7 @@ function runSelfTest() {
     const badClasp = runCase(
       'bad-clasp-json',
       badClaspDir,
-      { EXPECTED_STAGING_SCRIPT_ID: goodId },
+      stagingEnv(),
       ['staging'],
       1,
     );
@@ -360,7 +490,7 @@ function runSelfTest() {
     const badClasprc = runCase(
       'bad-clasprc-json',
       badClasprcDir,
-      { EXPECTED_STAGING_SCRIPT_ID: goodId },
+      stagingEnv(),
       ['staging'],
       1,
     );
@@ -384,13 +514,42 @@ function runSelfTest() {
         HOME: configureHome,
         CLASPRC_JSON: goodClasprc,
         CLASP_JSON_STAGING: goodClasp,
-        EXPECTED_STAGING_SCRIPT_ID: goodId,
+        ...stagingEnv(),
       },
       ['configure-staging'],
       0,
     );
     assert.ok(fs.existsSync(path.join(configureHome, '.clasprc.json')));
     assert.ok(fs.existsSync(path.join(configureDir, '.clasp.json')));
+
+    const blockedHome = path.join(tmpRoot, 'blocked-home');
+    fs.mkdirSync(blockedHome, { recursive: true });
+    const blockedDir = path.join(tmpRoot, 'blocked-configure');
+    fs.mkdirSync(blockedDir, { recursive: true });
+    const blocked = runCase(
+      'configure-staging-eq-production',
+      blockedDir,
+      {
+        HOME: blockedHome,
+        CLASPRC_JSON: goodClasprc,
+        CLASP_JSON_STAGING: goodClasp,
+        EXPECTED_STAGING_SCRIPT_ID: goodId,
+        EXPECTED_PRODUCTION_SCRIPT_ID: goodId,
+      },
+      ['configure-staging'],
+      1,
+    );
+    assert.match(blocked.stderr || '', /збігається|production/i);
+    assert.equal(
+      fs.existsSync(path.join(blockedHome, '.clasprc.json')),
+      false,
+      'configure must not write credentials when staging==production',
+    );
+    assert.equal(
+      fs.existsSync(path.join(blockedDir, '.clasp.json')),
+      false,
+      'configure must not write .clasp.json when staging==production',
+    );
 
     const badSecretDir = path.join(tmpRoot, 'bad-secret');
     fs.mkdirSync(badSecretDir, { recursive: true });
@@ -401,7 +560,7 @@ function runSelfTest() {
         HOME: path.join(tmpRoot, 'bad-secret-home'),
         CLASPRC_JSON: '{"token": true\n"oops": 1}',
         CLASP_JSON_STAGING: goodClasp,
-        EXPECTED_STAGING_SCRIPT_ID: goodId,
+        ...stagingEnv(),
       },
       ['configure-staging'],
       1,
@@ -429,7 +588,7 @@ function runSelfTest() {
         HOME: unwrapHome,
         CLASPRC_JSON: doubleEncoded,
         CLASP_JSON_STAGING: goodClasp,
-        EXPECTED_STAGING_SCRIPT_ID: goodId,
+        ...stagingEnv(),
       },
       ['configure-staging'],
       0,

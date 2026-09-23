@@ -24,11 +24,11 @@ Individual subscripts: `npm run ci:gas`, `npm run ci:client`, `npm run ci:copy`,
 | `npm run check` / `check:all` | Full local CI (= `npm run ci`) |
 | `npm run c` | Refresh file map + full CI |
 | `npm run deploy:prod` | Full CI + `npm run gas:push` (production) |
-| `npm run push:remote` | `git push` + `gas:push` — **no CI**; tree must be committed |
+| `npm run push:remote` | `git push` only; add `-- --with-gas` on `main` for production `gas:push` |
 | `npm run gas` / `npm run gas -- push` | Node version check + `clasp push` only — **not** full CI |
 | `npm run gas -- status` | Same as `gas:status` (via `ops-gas.mjs`) |
-| `npm run gh -- "msg"` | Commit (if dirty) + `git push` |
-| `npm run ship` / `go -- "msg"` | `c` + `gas` + `gh` — map, CI, GAS push, GitHub |
+| `npm run gh -- "msg"` | Commit **staged-only** + `git push` (never `git add -A`) |
+| `npm run ship` / `go -- "msg"` | Preflight → `ci` + staged `gh`; optional `--deploy-gas` on `main` (checked before CI). Refresh map separately via `map:project-files` then `git add`. |
 | `npm run gas:open` | Open GAS editor (`ops-gas.mjs` → `clasp open-script`) |
 | `npm run gas:push` / `gas:status` / `gas:pull` | Production clasp helpers (strip Cursor debugger env) |
 
@@ -69,7 +69,7 @@ apiStage7MaterializeAllMonthJournals({ nextCursor: 3 }) # continuation via respo
 apiStage7ClearPhoneCache()          # run in the production GAS editor after deploy
 ```
 
-Or: `npm run push:remote` after commit (git + clasp, no second CI run).
+Or: `npm run push:remote -- --with-gas` after commit on `main` (git + clasp, no second CI run).
 
 **If `clasp push` fails:**
 

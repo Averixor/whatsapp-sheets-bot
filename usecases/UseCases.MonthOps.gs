@@ -47,53 +47,104 @@ function _stage7CreateNextMonthCore_(payload) {
   } catch (_) {}
 
   var callsignSync = null;
-  try {
-    if (typeof syncMonthlyCallsignsFromPersonnel_ === "function") {
+  if (typeof syncMonthlyCallsignsFromPersonnel_ !== "function") {
+    callsignSync = {
+      ok: false,
+      message: "syncMonthlyCallsignsFromPersonnel_ недоступна",
+    };
+  } else {
+    try {
       callsignSync = syncMonthlyCallsignsFromPersonnel_(newSheet, {
         allowShrink: true,
         skipFormulaRewrite: true,
       });
+      if (!callsignSync || callsignSync.ok === false) {
+        callsignSync = {
+          ok: false,
+          message:
+            (callsignSync && callsignSync.message) ||
+            "помилка синхронізації позивних",
+          capacityEndRow: callsignSync && callsignSync.capacityEndRow,
+          scheduleBounds: callsignSync && callsignSync.scheduleBounds,
+        };
+      }
+    } catch (syncErr) {
+      console.error(syncErr);
+      callsignSync = {
+        ok: false,
+        message:
+          syncErr && syncErr.message
+            ? String(syncErr.message)
+            : String(syncErr),
+      };
     }
-  } catch (syncErr) {
-    console.error(syncErr);
   }
 
   var formulaSync = null;
-  try {
-    if (typeof rewriteMonthlyScheduleFormulasToCodeRange_ === "function") {
-      var afterBounds =
-        callsignSync && callsignSync.scheduleBounds
-          ? callsignSync.scheduleBounds
-          : typeof _monthlyCodeBoundsFromSheet_ === "function"
-            ? _monthlyCodeBoundsFromSheet_(newSheet)
-            : null;
-      if (
-        afterBounds &&
-        callsignSync &&
-        callsignSync.capacityEndRow &&
-        typeof _monthlyBoundsWithEndRow_ === "function"
-      ) {
-        afterBounds = _monthlyBoundsWithEndRow_(
+  if (callsignSync && callsignSync.ok !== false) {
+    try {
+      if (typeof rewriteMonthlyScheduleFormulasToCodeRange_ !== "function") {
+        formulaSync = {
+          ok: false,
+          message: "rewriteMonthlyScheduleFormulasToCodeRange_ недоступна",
+        };
+      } else {
+        var afterBounds =
+          callsignSync && callsignSync.scheduleBounds
+            ? callsignSync.scheduleBounds
+            : typeof _monthlyCodeBoundsFromSheet_ === "function"
+              ? _monthlyCodeBoundsFromSheet_(newSheet)
+              : null;
+        if (
+          afterBounds &&
+          callsignSync &&
+          callsignSync.capacityEndRow &&
+          typeof _monthlyBoundsWithEndRow_ === "function"
+        ) {
+          afterBounds = _monthlyBoundsWithEndRow_(
+            afterBounds,
+            callsignSync.capacityEndRow,
+          );
+        }
+        formulaSync = rewriteMonthlyScheduleFormulasToCodeRange_(
+          newSheet,
+          sourceFormulaBounds,
           afterBounds,
-          callsignSync.capacityEndRow,
         );
+        if (!formulaSync || formulaSync.ok === false) {
+          formulaSync = {
+            ok: false,
+            message:
+              (formulaSync && formulaSync.message) ||
+              "помилка переписування формул",
+            before: formulaSync && formulaSync.before,
+            after: formulaSync && formulaSync.after,
+          };
+        }
       }
-      formulaSync = rewriteMonthlyScheduleFormulasToCodeRange_(
-        newSheet,
-        sourceFormulaBounds,
-        afterBounds,
-      );
+    } catch (formulaSyncErr) {
+      console.error(formulaSyncErr);
+      formulaSync = {
+        ok: false,
+        message:
+          formulaSyncErr && formulaSyncErr.message
+            ? String(formulaSyncErr.message)
+            : String(formulaSyncErr),
+      };
     }
-  } catch (formulaSyncErr) {
-    console.error(formulaSyncErr);
+  } else {
     formulaSync = {
       ok: false,
-      message:
-        formulaSyncErr && formulaSyncErr.message
-          ? String(formulaSyncErr.message)
-          : String(formulaSyncErr),
+      message: "пропущено через помилку синхронізації позивних",
     };
   }
+
+  _assertCreateNextMonthSyncSucceeded_({
+    sheet: newSheet,
+    intendedName: nextName,
+    callsignSync: callsignSync,
+    formulaSync: formulaSync,
+  });
 
   var vacationMonthlySync = null;
   try {
@@ -122,6 +173,9 @@ function _stage7CreateNextMonthCore_(payload) {
     );
   } catch (formatSyncErr) {
     console.error(formatSyncErr);
+    try {
+      _markIncompleteMonthSheet_(newSheet, nextName);
+    } catch (_) {}
     throw new Error(
       "Не вдалося перенести умовне форматування до нового місячного аркуша",
     );
@@ -145,6 +199,7 @@ function _stage7CreateNextMonthCore_(payload) {
     console.error(widthErr);
   }
 
+  // Only after callsign + formula sync succeeded (assert above).
   if (payload.switchToNewMonth !== false) {
     setBotMonthSheetName_(nextName);
   } else {

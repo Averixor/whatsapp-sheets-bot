@@ -24,10 +24,10 @@ Run individual npm scripts only when diagnosing a specific failed check.
 | `npm run check` | Full local CI |
 | `npm run c` | Refresh `docs/project-files-complete.txt` + full CI |
 | `npm run deploy:prod` | Full CI + production `clasp push` |
-| `npm run push:remote` | `git push` + `clasp push` — **no CI**; commit first |
+| `npm run push:remote` | `git push` only; `-- --with-gas` on `main` for clasp — **no CI**; commit first |
 | `npm run gas` | Node version gate + `clasp push` only — **not** full CI |
-| `npm run gh -- "msg"` | Commit (if needed) + push to GitHub |
-| `npm run ship -- "msg"` | `c` + `gas` + `gh` |
+| `npm run gh -- "msg"` | Commit **staged-only** + push to GitHub (never `git add -A`) |
+| `npm run ship -- "msg"` | Preflight → `ci` + `gh`; optional `--deploy-gas` on `main` (before CI). Prepare map with `map:project-files` + `git add` first. |
 | `npm run gas:open` | Open GAS editor (`clasp open-script`) |
 | `npm run gas:status` | List files tracked for clasp push |
 
@@ -48,7 +48,7 @@ npm run gas:push
 
 Confirm **Tracked files** includes all domain `**/*.gs` (including `tests/Stage7TestRunner*.gs`), `ui/**/*.html`, and excludes `node_modules/`, `*.md`. See [`docs/module-map.md`](./docs/module-map.md) and [ADR-003](docs/adr/003-working-domain-layout.md).
 
-Or run `npm run deploy:prod` for CI + production push, or `npm run push:remote` after commit for git + clasp without re-running CI. Production keeps `executionApi.access = MYSELF`.
+Or run `npm run deploy:prod` for CI + production clasp, or `npm run push:remote -- --with-gas` on `main` after commit for git + clasp without re-running CI. Production keeps `executionApi.access = MYSELF`.
 
 ### Script Properties (spreadsheet binding)
 

@@ -786,3 +786,115 @@ function syncAllMonthlyCallsignsFromPersonnel_() {
     warnings: warnings,
   };
 }
+
+/**
+ * Rename a partially created month tab so it is not treated as a finished month.
+ * @returns {string} new sheet name
+ */
+function _markIncompleteMonthSheet_(sheet, intendedName) {
+  if (!sheet || typeof sheet.setName !== "function") {
+    throw new Error("_markIncompleteMonthSheet_: sheet is required");
+  }
+  var base = String(intendedName || sheet.getName() || "XX").trim() || "XX";
+  base = base.replace(/_НЕЗАВЕРШЕНО(_\d+)*$/u, "");
+  var stamp = "";
+  try {
+    stamp = Utilities.formatDate(
+      new Date(),
+      Session.getScriptTimeZone(),
+      "HHmmss",
+    );
+  } catch (_) {
+    stamp = String(Date.now()).slice(-6);
+  }
+  var ss = typeof sheet.getParent === "function" ? sheet.getParent() : null;
+  var candidate = base + "_НЕЗАВЕРШЕНО_" + stamp;
+  var n = 0;
+  while (
+    ss &&
+    typeof ss.getSheetByName === "function" &&
+    ss.getSheetByName(candidate) &&
+    n < 20
+  ) {
+    n++;
+    candidate = base + "_НЕЗАВЕРШЕНО_" + stamp + "_" + n;
+  }
+  sheet.setName(candidate);
+  return candidate;
+}
+
+/**
+ * Fail createNextMonth when callsign or formula sync did not succeed.
+ * Marks the partial sheet incomplete and throws — caller must not switch active month.
+ */
+function _assertCreateNextMonthSyncSucceeded_(opts) {
+  opts = opts || {};
+  var newSheet = opts.sheet;
+  var intendedName = String(opts.intendedName || "").trim();
+  var callsignSync = opts.callsignSync;
+  var formulaSync = opts.formulaSync;
+  var problems = [];
+
+  if (!callsignSync) {
+    problems.push("синхронізація позивних не виконана");
+  } else if (callsignSync.ok === false) {
+    problems.push(
+      callsignSync.message
+        ? String(callsignSync.message)
+        : "помилка синхронізації позивних",
+    );
+  }
+
+  if (!formulaSync) {
+    problems.push("переписування формул не виконане");
+  } else if (formulaSync.ok === false) {
+    problems.push(
+      formulaSync.message
+        ? String(formulaSync.message)
+        : "помилка переписування формул",
+    );
+  }
+
+  var capacityEnd =
+    callsignSync && callsignSync.capacityEndRow
+      ? Number(callsignSync.capacityEndRow) || 0
+      : 0;
+  var formulaEnd = 0;
+  if (formulaSync && formulaSync.after && formulaSync.after.endRow) {
+    formulaEnd = Number(formulaSync.after.endRow) || 0;
+  } else if (
+    callsignSync &&
+    callsignSync.scheduleBounds &&
+    callsignSync.scheduleBounds.endRow
+  ) {
+    formulaEnd = Number(callsignSync.scheduleBounds.endRow) || 0;
+  }
+  if (capacityEnd > 0 && formulaEnd > 0 && capacityEnd > formulaEnd) {
+    problems.push(
+      "останній рядок PERSONNEL (" +
+        capacityEnd +
+        ") поза діапазоном формул зведення (кінець " +
+        formulaEnd +
+        ")",
+    );
+  }
+
+  if (!problems.length) {
+    return { ok: true };
+  }
+
+  if (newSheet && intendedName && typeof _markIncompleteMonthSheet_ === "function") {
+    try {
+      _markIncompleteMonthSheet_(newSheet, intendedName);
+    } catch (markErr) {
+      console.error(markErr);
+    }
+  }
+
+  throw new Error(
+    'Створення місяця "' +
+      (intendedName || "?") +
+      '" незавершене: ' +
+      problems.join("; "),
+  );
+}

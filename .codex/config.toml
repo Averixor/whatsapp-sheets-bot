@@ -8,6 +8,7 @@ web_search = "live"
 [mcp_servers.github]
 command = "npx"
 args = ["-y", "@modelcontextprotocol/server-github"]
+env_vars = ["GITHUB_PERSONAL_ACCESS_TOKEN"]
 
 [mcp_servers.context7]
 command = "npx"
@@ -32,8 +33,7 @@ args = ["-y", "@modelcontextprotocol/server-sequential-thinking"]
 multi_agent = true
 
 [agents]
-max_threads = 6
-max_depth = 1
+max_concurrent_threads_per_session = 6
 
 [agents.explorer]
 description = "Read-only codebase explorer for gathering evidence before changes are proposed."

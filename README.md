@@ -38,7 +38,7 @@ This repository is packaged for Google Apps Script through `clasp`:
 npm ci
 npm run check              # all local verify scripts (alias: npm run ci)
 git add -A && git commit -m "fix: …"
-npm run push:remote        # GitHub + production clasp push (no second CI run)
+npm run push:remote        # git push only (no CI); add -- --with-gas on main for clasp
 apiStage7MaterializeComputedData()  # after PERSONNEL / PHONES / VACATIONS / birthday / Status changes
 apiStage7MaterializeMonthJournal({ monthSheet: "07" })  # active month slice in JOURNAL/SUMMARY; sidebar: Оновити журнал місяця
 apiStage7MaterializeAllMonthJournals()                  # bootstrap all 01–12 (uiAllowed: false; GAS editor)
@@ -51,7 +51,7 @@ apiStage7ClearPhoneCache()          # run in the production GAS editor after dep
 | Command | Use when |
 | -------- | -------- |
 | `npm run deploy:prod` | Full CI + clasp push in one step (no git push) |
-| `npm run ship -- "msg"` | Map refresh + CI + clasp push + commit + GitHub |
+| `npm run ship -- "msg"` | Preflight → CI + staged commit + GitHub; `--deploy-gas` on main for clasp. Map: run `map:project-files` and stage first if needed. |
 | `npm run gas:open` | Open the bound GAS project in the browser |
 
 Use Node.js 24 (`.nvmrc`). `npm run deploy:prod` runs local CI and pushes the

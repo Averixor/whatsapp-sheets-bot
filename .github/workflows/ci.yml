@@ -38,7 +38,7 @@ jobs:
         run: npm run ci
 
   preprod-checklist:
-    name: WASB pre-prod checklist (manual)
+    name: Publish manual release checklist
     runs-on: ubuntu-latest
     needs: ci
 

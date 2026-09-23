@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Користувацькі тексти (UI copy)
 
-Повна політика: [`docs/user-facing-copy.md`](../docs/user-facing-copy.md).
+Повна політика: [`docs/user-facing-copy.md`](../../docs/user-facing-copy.md).
 
 ## Правило
 
@@ -31,3 +31,4 @@ alwaysApply: false
 2. Помилки — людською мовою; `String(error)` з GAS — обгортати, не показувати сирим.
 3. Перейменування **вкладок** таблиці — окрема задача: формули, `CONFIG`, CI, RUNBOOK.
 4. Після змін UI-текстів: `npm run ci` (у т.ч. `verify-user-facing-copy.mjs`; allowlist — `scripts/allowed-user-facing-technical-strings.json`).
+5. Не вважати успішний `verify-user-facing-copy.mjs` вичерпною перевіркою всіх повідомлень інтерфейсу. Окремо перевіряти текстові вузли HTML, динамічно сформовані повідомлення, результати GAS API та обробку помилок. Технічні значення залишати в діагностичних логах, а оператору показувати зрозуміле українське повідомлення.

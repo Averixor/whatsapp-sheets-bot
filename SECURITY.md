@@ -304,3 +304,15 @@ Before calling security “good enough”, confirm:
 - privileged routes reject insufficient roles on the server
 - service sheets exist and protections are applied
 - quick health and diagnostics do not report security drift
+
+## 15. Automated scanning boundaries
+
+Do not conflate:
+
+1. local / GitHub **CI** success,
+2. **CodeQL** success,
+3. review of Google Apps Script **`.gs`** security.
+
+CodeQL currently targets Actions workflows plus the JavaScript/TypeScript
+extractor (`.mjs`, `.html`). Coverage of `.gs` is an open follow-up:
+[`docs/codeql-coverage.md`](./docs/codeql-coverage.md).

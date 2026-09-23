@@ -20,7 +20,7 @@ function monthlyCallsignValueFromPersonnelRow(
 }
 
 assert.equal(
-  monthlyCallsignValueFromPersonnelRow("Беркут", "Иванов", "Иван"),
+  monthlyCallsignValueFromPersonnelRow("Беркут", "Іванов", "Іван"),
   "Беркут",
 );
 assert.equal(
@@ -192,6 +192,41 @@ assert.match(
   /Не вдалося перенести умовне форматування до нового місячного аркуша/,
   "stage-7 month creation must fail loudly if CF restore fails",
 );
+assert.match(
+  syncModule,
+  /function _assertCreateNextMonthSyncSucceeded_/,
+  "createNextMonth must share a hard sync success gate",
+);
+assert.match(
+  syncModule,
+  /function _markIncompleteMonthSheet_/,
+  "partial month sheets must be rename-marked incomplete",
+);
+assert.match(
+  syncModule,
+  /_НЕЗАВЕРШЕНО_/,
+  "incomplete month marker suffix must be explicit",
+);
+assert.match(
+  monthOps,
+  /_assertCreateNextMonthSyncSucceeded_/,
+  "stage-7 createNextMonth must assert callsign+formula sync",
+);
+assert.match(
+  monthOps,
+  /callsignSync\s*=\s*\{\s*ok:\s*false/,
+  "callsign sync errors must be recorded, not swallowed",
+);
+assert.match(
+  monthOps,
+  /_assertCreateNextMonthSyncSucceeded_[\s\S]*setBotMonthSheetName_/,
+  "must not switch active month before callsign/formula sync assert",
+);
+assert.match(
+  syncModule,
+  /останній рядок PERSONNEL/,
+  "assert must fail when capacityEndRow is beyond formula range",
+);
 
 const legacyMonthOps = readRepoFileByBasename(repoRoot, "MonthSheets.gs", {
   errorPrefix: "verify-monthly-callsign-sync",
@@ -220,6 +255,21 @@ assert.match(
   legacyMonthOps,
   /Не вдалося перенести умовне форматування до нового місячного аркуша/,
   "legacy month creation must fail loudly if CF restore fails",
+);
+assert.match(
+  legacyMonthOps,
+  /_assertCreateNextMonthSyncSucceeded_/,
+  "legacy createNextMonthSheet must assert callsign+formula sync",
+);
+assert.match(
+  legacyMonthOps,
+  /_assertCreateNextMonthSyncSucceeded_[\s\S]*newSheet\.activate\(/,
+  "legacy create must not activate before callsign/formula sync assert",
+);
+assert.match(
+  legacyMonthOps,
+  /callsignSync\s*=\s*\{\s*ok:\s*false/,
+  "legacy callsign sync errors must be recorded, not swallowed",
 );
 
 const formatGovernance = readRepoFileByBasename(
@@ -497,6 +547,15 @@ class FakeSheet {
 
   getName() {
     return this.name;
+  }
+
+  setName(name) {
+    this.name = String(name || "");
+    return this;
+  }
+
+  getParent() {
+    return this.parent || null;
   }
 
   getLastRow() {
@@ -822,15 +881,25 @@ function loadSyncContext() {
   return {
     context,
     use(monthSheet, personnelSheet) {
-      spreadsheet = {
+      const sheetsByName = Object.create(null);
+      sheetsByName[monthSheet.getName()] = monthSheet;
+      sheetsByName.PERSONNEL = personnelSheet;
+      sheetsByName["Персонал"] = personnelSheet;
+      const ss = {
         getSheetByName(name) {
-          if (name === monthSheet.getName()) return monthSheet;
-          if (name === "PERSONNEL" || name === "Персонал") {
-            return personnelSheet;
-          }
-          return null;
+          return sheetsByName[name] || null;
         },
       };
+      monthSheet.parent = ss;
+      personnelSheet.parent = ss;
+      const monthSetName = monthSheet.setName.bind(monthSheet);
+      monthSheet.setName = function (name) {
+        delete sheetsByName[monthSheet.getName()];
+        monthSetName(name);
+        sheetsByName[monthSheet.getName()] = monthSheet;
+        return monthSheet;
+      };
+      spreadsheet = ss;
     },
   };
 }
@@ -1172,6 +1241,85 @@ function assertRowTemplateCopied(sheet, row, sourceRow, lastDateCol) {
   assert.equal(month.valueAt(1, 3), "01.09.2026");
   assert.equal(month.valueAt(1, 32), "30.09.2026");
   assert.equal(month.cell(34, 3).formula, "=COUNTA($C$2:$AF$32)");
+}
+
+{
+  // Hard gate: createNextMonth must not treat failed callsign/formula sync as success.
+  const runtime = loadSyncContext();
+  const month = buildMonthSheet("compact", { name: "08" });
+  runtime.use(month, buildPersonnel(32));
+
+  assert.throws(
+    () =>
+      runtime.context._assertCreateNextMonthSyncSucceeded_({
+        sheet: month,
+        intendedName: "08",
+        callsignSync: { ok: false, message: "тест помилки позивних" },
+        formulaSync: { ok: true, after: { endRow: 32 } },
+      }),
+    /незавершене.*позивн/i,
+  );
+  assert.match(
+    month.getName(),
+    /^08_НЕЗАВЕРШЕНО_/,
+    "failed create must rename the partial month sheet",
+  );
+
+  const monthOk = buildMonthSheet("compact", { name: "09" });
+  runtime.use(monthOk, buildPersonnel(32));
+  assert.doesNotThrow(() =>
+    runtime.context._assertCreateNextMonthSyncSucceeded_({
+      sheet: monthOk,
+      intendedName: "09",
+      callsignSync: { ok: true, capacityEndRow: 32 },
+      formulaSync: { ok: true, after: { endRow: 32 } },
+    }),
+  );
+  assert.equal(monthOk.getName(), "09");
+
+  const monthRange = buildMonthSheet("compact", { name: "10" });
+  runtime.use(monthRange, buildPersonnel(32));
+  assert.throws(
+    () =>
+      runtime.context._assertCreateNextMonthSyncSucceeded_({
+        sheet: monthRange,
+        intendedName: "10",
+        callsignSync: { ok: true, capacityEndRow: 40 },
+        formulaSync: { ok: true, after: { endRow: 32 } },
+      }),
+    /поза діапазоном формул/,
+  );
+  assert.match(monthRange.getName(), /^10_НЕЗАВЕРШЕНО_/);
+}
+
+{
+  // Fully empty trailing PERSONNEL slots are invisible to getLastRow().
+  // Keep this regression visible: if empty slots must transfer, bounds cannot
+  // be built from getLastRow() alone.
+  const runtime = loadSyncContext();
+  const month = buildMonthSheet("compact", { summaryStart: 36 });
+  const personnel = buildPersonnel(33);
+  personnel.cell(34, 1).value = "";
+  personnel.cell(34, 2).value = "";
+  personnel.cell(34, 3).value = "";
+  personnel.cell(35, 1).value = "";
+  assert.equal(personnel.getLastRow(), 33, "fixture: trailing empties do not extend getLastRow");
+  runtime.use(month, personnel);
+  const result = runtime.context.syncMonthlyCallsignsFromPersonnel_(month, {
+    allowShrink: true,
+  });
+  assert.equal(result.personnelRows, 32, "rows 2..33 inclusive");
+  assert.equal(
+    result.capacityEndRow,
+    33,
+    "current getLastRow() bounds stop before fully empty trailing slots",
+  );
+  assert.ok(
+    result.formulaSync &&
+      result.formulaSync.after &&
+      result.capacityEndRow <= result.formulaSync.after.endRow,
+    "after expand/shrink last PERSONNEL row must sit inside formula range",
+  );
 }
 
 console.log("verify-monthly-callsign-sync: OK");

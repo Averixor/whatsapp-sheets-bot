@@ -37,3 +37,8 @@ alwaysApply: true
 - Після expand/shrink і при `createNextMonth` переписувати schedule-bound A1 у формулах (`rewriteMonthlyScheduleFormulasToCodeRange_`), з **примусовим** `capacityEndRow` (`_monthlyBoundsWithEndRow_`), щоб останній позивний не лишався поза сіткою. Compact data-end — лише Callsign (не BR+Callsign). На create — `allowShrink: true` лише для зайвої capacity поза PERSONNEL, без стискання порожніх кадрових слотів.
 - PERSONNEL → місяць: `numRows = lastRow - startRow + 1` (inclusive); sync пише `personnelRows` / покриває `activeRowsCount` без truncate.
 - **Ніколи** не використовувати `PASTE_CONDITIONAL_FORMATTING` при expand рядків — на реальних книгах це зносить sheet-level CF (спостерігалось ~13 правил). Замість цього: `extendConditionalFormatRulesThroughRow_`; після `createNextMonth` (callsign + vacation sync) — `replaceConditionalFormatRulesFromSheet_` (+ `_copyMonthSheetDataValidationsFromSource_`).
+- Створення нового місяця вважається успішним лише після перевірки результатів синхронізації позивних і переписування формул (`_assertCreateNextMonthSyncSucceeded_`).
+- Помилки `callsignSync` або `formulaSync` не можна приховувати через `console.error` з подальшим повідомленням про успішне створення місяця.
+- У разі помилки **не** перемикати активний місяць. Частково створений аркуш явно позначити як незавершений (перейменування з суфіксом `_НЕЗАВЕРШЕНО_…`).
+- CI має перевіряти, що після expand/shrink останній рядок PERSONNEL входить у фактичний діапазон формул зведення (`capacityEndRow` ≤ `formulaSync.after.endRow` / schedule bounds).
+- Окремо тестувати повністю порожні останні кадрові слоти PERSONNEL: `getLastRow()` їх не бачить — якщо слоти теж треба переносити на місяць, межі не можна будувати лише з `getLastRow()`.

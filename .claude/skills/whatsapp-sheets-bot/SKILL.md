@@ -1,114 +1,295 @@
 ---
 name: whatsapp-sheets-bot-conventions
-description: Development conventions and patterns for whatsapp-sheets-bot. TypeScript project with conventional commits.
+description: Development conventions and patterns for whatsapp-sheets-bot (GAS V8 + Sheets, Node CI/tooling). Prefer AGENTS.md and .cursor/rules over generic framework habits.
 ---
 
 # Whatsapp Sheets Bot Conventions
 
-> Generated from [Averixor/whatsapp-sheets-bot](https://github.com/Averixor/whatsapp-sheets-bot) on 2026-08-29
-
 ## Overview
 
-This skill teaches Claude the development patterns and conventions used in whatsapp-sheets-bot.
+WASB is a Google Apps Script V8 project bound to Google Sheets.
+
+The repository combines:
+
+- Google Apps Script runtime code in `.gs`
+- HtmlService client code in `.html`
+- Node.js tooling and CI in `.mjs`
+- JSON contracts in `contracts/`
+- runtime tests in `tests/` and `smoke/`
+- repository rules and operational documentation
+
+Do not treat WASB as a TypeScript, npm application, or conventional bundled frontend project.
+
+When generated guidance conflicts with `AGENTS.md`, `.cursor/rules/*`, `contracts/*`, `docs/module-map.md`, current code, or CI — curated repository rules and contracts take precedence.
 
 ## Tech Stack
 
-- **Primary Language**: TypeScript
-- **Architecture**: hybrid module organization
-- **Test Location**: separate
+- **Runtime**: Google Apps Script V8
+- **Primary runtime files**: `.gs`
+- **Client**: HtmlService HTML / JavaScript
+- **Local tooling**: Node.js 24+ / `.mjs`
+- **Deployment**: `clasp`
+- **Data store**: Google Sheets
+- **Contracts**: JSON files in `contracts/`
+- **CI**: Node-based static, contract, regression, and governance checks
 
 ## When to Use This Skill
 
-Activate this skill when:
-- Making changes to this repository
-- Adding new features following established patterns
-- Writing tests that match project conventions
-- Creating commits with proper message format
+Use this skill when:
+
+- modifying WASB runtime code
+- adding or changing CI checks
+- creating GAS APIs or use cases
+- changing Sheets schemas or materialization
+- changing sidebar/client code
+- adding tests or smoke checks
+- creating commits
+- working with `clasp` or repository automation
+
+## Repository Architecture
+
+WASB uses domain-oriented folders rather than a traditional `src/` tree.
+
+Important areas include:
+
+- `core/`
+- `api/`
+- `access/`
+- `personnel/`
+- `sheets/`
+- `reports/`
+- `vacations/`
+- `sendpanel/`
+- `inventory/`
+- `diagnostics/`
+- `maintenance/`
+- `usecases/`
+- `ui/`
+- `tests/`
+- `smoke/`
+- `scripts/`
+- `contracts/`
+
+Before introducing a new abstraction, inspect neighboring files and `docs/module-map.md`.
+
+## Google Apps Script Runtime
+
+`.gs` files execute in the shared Google Apps Script global namespace.
+
+Do not introduce ESM `import` / `export` syntax into `.gs` runtime files.
+
+Prefer existing project conventions:
+
+```javascript
+function exampleAction_(input) {
+  // private/internal helper
+}
+
+function apiExampleAction(input) {
+  // public API entrypoint
+}
+```
+
+Private/internal helpers commonly use a trailing underscore.
+
+Public API governance must follow the existing repository contracts and CI checks.
+
+## Node Tooling
+
+Node tooling lives mainly under `scripts/`.
+
+Use ESM for `.mjs`.
+
+Use Node built-in module specifiers:
+
+```javascript
+import fs from "node:fs";
+import path from "node:path";
+```
+
+For repository-owned modules, use relative imports:
+
+```javascript
+import { loadContract, repoRoot } from "./lib/load-contract.mjs";
+```
+
+Reusable Node helpers should normally use named exports.
+
+Do not apply Node import/export conventions to GAS `.gs` files.
+
+## File Naming
+
+Follow the convention of the subsystem.
+
+### GAS runtime
+
+Usually PascalCase or dotted PascalCase:
+
+- `PersonnelRepository.gs`
+- `AccessControl.Core.gs`
+- `Diagnostics.Health.gs`
+- `UseCases.MonthOps.gs`
+
+### Node tooling
+
+Use kebab-case:
+
+- `verify-monthly-callsign-sync.mjs`
+- `verify-user-facing-copy.mjs`
+- `ops-gas.mjs`
+
+### Client modules
+
+Follow the existing UI conventions:
+
+- `Js.Security.Exports.html`
+- `Js.Vacations.Render.Problems.html`
+- `Styles_*.html`
+
+### Contracts
+
+Use established kebab-case contract names:
+
+- `personnel-status.contract.json`
+- `reference-workbook-layout.contract.json`
+
+Do not impose one filename convention across the entire repository.
+
+## Testing and Verification
+
+Testing is split by execution environment.
+
+### GAS runtime tests
+
+Use: `tests/*.gs`
+
+### Runtime smoke tests
+
+Use: `smoke/*.gs`
+
+### Local static / contract / regression checks
+
+Use the existing patterns:
+
+- `scripts/verify-*.mjs`
+- `scripts/audit-*.mjs`
+
+### Contracts
+
+Expected invariants and schemas belong in: `contracts/*.json`
+
+Do not create `__tests__/` unless the repository architecture is deliberately changed.
+
+After relevant changes, run the focused check first and then:
+
+```bash
+npm run ci
+```
+
+For changes that affect the project file map:
+
+```bash
+npm run c
+```
 
 ## Commit Conventions
 
-Follow these commit message conventions based on 1 analyzed commits.
+Use Conventional Commit-style subjects.
 
-### Commit Style: Conventional Commits
+Common prefixes include:
 
-### Prefixes Used
+- `fix:` — behavior or runtime correction
+- `chore:` — tooling, CI, configuration, maintenance
+- `docs:` — documentation-only change
+- `refactor:` — structural change without intended behavior change
+- `test:` — test or verification-only change
+- `feat:` — new user-visible or runtime capability
 
-- `fix`
-
-### Message Guidelines
-
-- Average message length: ~42 characters
-- Keep first line concise and descriptive
-- Use imperative mood ("Add feature" not "Added feature")
-
-
-*Commit message example*
+Examples:
 
 ```text
-fix: remove sidebar login and registration
+fix: harden birthday engine
+chore: integrate CSpell into CI
+docs: clarify personnel data rules
 ```
 
-## Architecture
+Keep one logical task per commit.
 
-### Project Structure: Single Package
+Do not force every commit to use `fix:`.
 
-This project uses **hybrid** module organization.
+## Git Safety
 
-### Guidelines
+Follow `.cursor/rules/git-safety.mdc`.
 
-- This project uses a hybrid organization
-- Follow existing patterns when adding new code
+Important principles:
 
-## Code Style
+- inspect branch and working tree before mutating Git state
+- do not mix unrelated changes in one commit
+- do not use mass staging when unrelated changes exist
+- isolate overlapping tasks in separate worktrees
+- do not automatically rebase published/shared branches
+- do not deploy production GAS as an implicit side effect of ordinary Git synchronization
+- production deployment requires an explicit action
 
-### Language: TypeScript
+Repository automation must obey the same rules.
 
-### Naming Conventions
+## PERSONNEL Identity
 
-| Element | Convention |
-|---------|------------|
-| Files | PascalCase |
-| Functions | camelCase |
-| Classes | PascalCase |
-| Constants | SCREAMING_SNAKE_CASE |
+Follow `.cursor/rules/personnel-data-keys.mdc`.
 
-### Import Style: Relative Imports
+Important invariants:
 
-### Export Style: Named Exports
+- Callsign is the practical primary key for monthly schedule lookup
+- FML is the fallback person lookup
+- ID Армія+ is optional data, not a stable system key
+- Position is not a person key
+- PERSONNEL is read by headers, not hard-coded physical column letters
+- duplicate active Callsign values are a critical data condition
 
+## Monthly Callsign Rule
 
-*Preferred import style*
+Follow `.cursor/rules/monthly-callsign-sync.mdc`.
 
-```typescript
-// Use relative imports
-import { Button } from '../components/Button'
-import { useAuth } from './hooks/useAuth'
-```
+Display callsign resolution is:
 
-*Preferred export style*
+**Callsign → Last name → First name**
 
-```typescript
-// Use named exports
-export function calculateTotal() { ... }
-export const TAX_RATE = 0.1
-export interface Order { ... }
-```
+Do not use TEMPLATE as a display fallback.
 
-## Best Practices
+Preserve PERSONNEL row position when synchronizing monthly sheets.
 
-Based on analysis of the codebase, follow these practices:
+Do not collapse empty personnel slots.
 
-### Do
+Do not use `PASTE_CONDITIONAL_FORMATTING` while expanding monthly personnel rows.
 
-- Use conventional commit format (feat:, fix:, etc.)
-- Use PascalCase for file names
-- Prefer named exports
+## User-facing Copy
 
-### Don't
+Follow `.cursor/rules/user-facing-copy.mdc` and `docs/user-facing-copy.md`.
 
-- Don't write vague commit messages
-- Don't deviate from established patterns without discussion
+User-visible text must be Ukrainian and understandable without internal system knowledge.
 
----
+Do not expose raw internal names such as:
 
-*This skill was auto-generated by [ECC Tools](https://ecc.tools). Review and customize as needed for your team.*
+- `SEND_PANEL`
+- `PERSONNEL`
+- `DICT_SUM`
+- `CONFIG`
+- `LOGS`
+
+Technical identifiers remain valid in code, tests, logs, contracts, and developer documentation.
+
+## Deployment
+
+Production GAS uses `clasp`.
+
+Use repository commands rather than ad-hoc `clasp` calls when possible.
+
+Production `.clasp.json` is local and must not be committed.
+
+The repository rejects placeholder production bindings.
+
+Do not assume a successful local CI replaces runtime smoke testing in the live Google Apps Script environment.
+
+## Core Principle
+
+Prefer existing repository contracts, CI gates, domain rules, and neighboring implementation patterns over generic framework conventions.

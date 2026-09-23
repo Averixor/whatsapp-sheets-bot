@@ -167,44 +167,105 @@ function createNextMonthSheet() {
 
     applyGlobalSheetStandards_();
     var callsignSync = null;
-    try {
-      if (typeof syncMonthlyCallsignsFromPersonnel_ === "function") {
+    if (typeof syncMonthlyCallsignsFromPersonnel_ !== "function") {
+      callsignSync = {
+        ok: false,
+        message: "syncMonthlyCallsignsFromPersonnel_ недоступна",
+      };
+    } else {
+      try {
         callsignSync = syncMonthlyCallsignsFromPersonnel_(newSheet, {
           allowShrink: true,
           skipFormulaRewrite: true,
         });
-      }
-    } catch (syncErr) {
-      console.error(syncErr);
-    }
-    try {
-      if (typeof rewriteMonthlyScheduleFormulasToCodeRange_ === "function") {
-        var afterBounds =
-          callsignSync && callsignSync.scheduleBounds
-            ? callsignSync.scheduleBounds
-            : typeof _monthlyCodeBoundsFromSheet_ === "function"
-              ? _monthlyCodeBoundsFromSheet_(newSheet)
-              : null;
-        if (
-          afterBounds &&
-          callsignSync &&
-          callsignSync.capacityEndRow &&
-          typeof _monthlyBoundsWithEndRow_ === "function"
-        ) {
-          afterBounds = _monthlyBoundsWithEndRow_(
-            afterBounds,
-            callsignSync.capacityEndRow,
-          );
+        if (!callsignSync || callsignSync.ok === false) {
+          callsignSync = {
+            ok: false,
+            message:
+              (callsignSync && callsignSync.message) ||
+              "помилка синхронізації позивних",
+            capacityEndRow: callsignSync && callsignSync.capacityEndRow,
+            scheduleBounds: callsignSync && callsignSync.scheduleBounds,
+          };
         }
-        rewriteMonthlyScheduleFormulasToCodeRange_(
-          newSheet,
-          sourceFormulaBounds,
-          afterBounds,
-        );
+      } catch (syncErr) {
+        console.error(syncErr);
+        callsignSync = {
+          ok: false,
+          message:
+            syncErr && syncErr.message
+              ? String(syncErr.message)
+              : String(syncErr),
+        };
       }
-    } catch (formulaSyncErr) {
-      console.error(formulaSyncErr);
     }
+
+    var formulaSync = null;
+    if (callsignSync && callsignSync.ok !== false) {
+      try {
+        if (typeof rewriteMonthlyScheduleFormulasToCodeRange_ !== "function") {
+          formulaSync = {
+            ok: false,
+            message: "rewriteMonthlyScheduleFormulasToCodeRange_ недоступна",
+          };
+        } else {
+          var afterBounds =
+            callsignSync && callsignSync.scheduleBounds
+              ? callsignSync.scheduleBounds
+              : typeof _monthlyCodeBoundsFromSheet_ === "function"
+                ? _monthlyCodeBoundsFromSheet_(newSheet)
+                : null;
+          if (
+            afterBounds &&
+            callsignSync &&
+            callsignSync.capacityEndRow &&
+            typeof _monthlyBoundsWithEndRow_ === "function"
+          ) {
+            afterBounds = _monthlyBoundsWithEndRow_(
+              afterBounds,
+              callsignSync.capacityEndRow,
+            );
+          }
+          formulaSync = rewriteMonthlyScheduleFormulasToCodeRange_(
+            newSheet,
+            sourceFormulaBounds,
+            afterBounds,
+          );
+          if (!formulaSync || formulaSync.ok === false) {
+            formulaSync = {
+              ok: false,
+              message:
+                (formulaSync && formulaSync.message) ||
+                "помилка переписування формул",
+              before: formulaSync && formulaSync.before,
+              after: formulaSync && formulaSync.after,
+            };
+          }
+        }
+      } catch (formulaSyncErr) {
+        console.error(formulaSyncErr);
+        formulaSync = {
+          ok: false,
+          message:
+            formulaSyncErr && formulaSyncErr.message
+              ? String(formulaSyncErr.message)
+              : String(formulaSyncErr),
+        };
+      }
+    } else {
+      formulaSync = {
+        ok: false,
+        message: "пропущено через помилку синхронізації позивних",
+      };
+    }
+
+    _assertCreateNextMonthSyncSucceeded_({
+      sheet: newSheet,
+      intendedName: nextName,
+      callsignSync: callsignSync,
+      formulaSync: formulaSync,
+    });
+
     try {
       if (typeof syncVacationsWithMonthlySheet_ === "function") {
         syncVacationsWithMonthlySheet_({
@@ -220,6 +281,9 @@ function createNextMonthSheet() {
       replaceConditionalFormatRulesFromSheet_(src, newSheet);
     } catch (formatSyncErr) {
       console.error(formatSyncErr);
+      try {
+        _markIncompleteMonthSheet_(newSheet, nextName);
+      } catch (_) {}
       throw new Error(
         "Не вдалося перенести умовне форматування до нового місячного аркуша",
       );

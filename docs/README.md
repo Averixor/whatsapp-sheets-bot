@@ -27,6 +27,7 @@ snapshots to the repository.
 | [daily-summary-architecture.md](./daily-summary-architecture.md)       | Short/detailed day summary modules, formula block, UI flow                                                                |
 | [format-rules-governance.md](./format-rules-governance.md)             | Manual conditional-format registry and rebuild protection                                                                 |
 | [user-facing-copy.md](./user-facing-copy.md)                           | UX copy: UA UI text, no technical names in user-facing strings; enforced by `verify-user-facing-copy.mjs`                 |
+| [codeql-coverage.md](./codeql-coverage.md)                             | CodeQL vs CI vs `.gs` security: open follow-up to verify/expand Apps Script coverage                                      |
 | [branch-archive.md](./branch-archive.md)                               | Archived former working branches (`archive/*` tags)                                                                       |
 | [project-files-complete.txt](./project-files-complete.txt)             | Canonical depth-first file tree (governance map); excludes local `.clasp*.json`; refresh with `npm run map:project-files` |
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-23 — Staging deploy target hardening
+
+- **Guard:** `verify-deploy-target.mjs` requires `EXPECTED_PRODUCTION_SCRIPT_ID`, blocks when it equals staging or when `.clasp.json` points at production, and does so **before** writing credentials.
+- **Workflow:** `deploy-staging.yml` scopes `CLASPRC_JSON` / `CLASP_JSON_STAGING` to the configure step only; reports deploy `ref`/`SHA`; allows any `workflow_dispatch` branch (not main-only).
+- **Docs:** RUNBOOK §12a — Environment variable `EXPECTED_PRODUCTION_SCRIPT_ID`.
+
 ## 2026-08-04 — Temporary property component row validation
 
 - **Root cause:** `syncComponents_()` wrote technical category `Комплектуючі` into column C while `applyValidations_()` had applied a strict PROPERTY_CATALOG dropdown on C (and model on D), so Sheets rejected the write (e.g. C3).

@@ -1,5 +1,12 @@
 name: WASB Deploy Staging
 
+# Policy:
+# - Any branch may be selected via workflow_dispatch (feature / PR dry-run OK).
+# - Deployed commit SHA is reported in the job log (not main-only).
+# - Staging scriptId must match EXPECTED_STAGING_SCRIPT_ID and must NOT equal
+#   EXPECTED_PRODUCTION_SCRIPT_ID (both required Environment variables).
+# - CLASPRC_JSON / CLASP_JSON_STAGING are step-scoped only (configure step).
+
 on:
   workflow_dispatch:
 
@@ -17,20 +24,19 @@ jobs:
   deploy-staging:
     name: Deploy to staging GAS
     runs-on: ubuntu-latest
-    # Static Environment name so Actions can resolve env-scoped secrets/vars.
     environment: staging
-    # Bind Environment `staging` secret/var here (not repository-level).
-    # Step-scoped re-binding of the same keys often triggers IDE false positives
-    # ("Context access might be invalid") when the Actions extension cannot list
-    # environment secrets; job-level env keeps access clear and functionally identical.
-    env:
-      CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
-      CLASP_JSON_STAGING: ${{ secrets.CLASP_JSON_STAGING }}
-      EXPECTED_STAGING_SCRIPT_ID: ${{ vars.EXPECTED_STAGING_SCRIPT_ID }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Report deployment commit
+        run: |
+          set -euo pipefail
+          echo "ref=${GITHUB_REF}"
+          echo "sha=${GITHUB_SHA}"
+          echo "short=$(git rev-parse --short HEAD)"
+          echo "subject=$(git log -1 --pretty=%s)"
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
@@ -45,13 +51,18 @@ jobs:
         run: npm run ci
 
       - name: Configure staging clasp
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CLASP_JSON_STAGING: ${{ secrets.CLASP_JSON_STAGING }}
+          EXPECTED_STAGING_SCRIPT_ID: ${{ vars.EXPECTED_STAGING_SCRIPT_ID }}
+          EXPECTED_PRODUCTION_SCRIPT_ID: ${{ vars.EXPECTED_PRODUCTION_SCRIPT_ID }}
         run: |
           set -euo pipefail
           umask 077
           test -n "${EXPECTED_STAGING_SCRIPT_ID}"
+          test -n "${EXPECTED_PRODUCTION_SCRIPT_ID}"
           # Write secrets via Node (not shell printf) and JSON.parse both files
-          # before clasp. Errors name CLASPRC_JSON vs CLASP_JSON_STAGING +
-          # line/position only — never dump secret bodies.
+          # before clasp. Rejects staging==production. Never dumps secret bodies.
           node scripts/verify-deploy-target.mjs configure-staging
 
       - name: Show clasp status

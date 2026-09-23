@@ -1,127 +1,101 @@
-# Instincts generated from https://github.com/Averixor/whatsapp-sheets-bot
-# Generated: 2026-08-29T18:55:42.364Z
-# Version: 2.0
-# NOTE: This file supplements (does not replace) any existing curated instincts.
-# High-confidence manually curated instincts should be preserved alongside these.
+# WASB curated instincts (replaces auto-generated 2026-08-29 sample).
+# Precedence when this file conflicts with AGENTS.md, .cursor/rules/*,
+# contracts/*, docs/module-map.md, current code, or CI: curated repo rules win.
+# Treat any remaining generated evidence as non-authoritative.
+#
+# Each instinct is one YAML document. Action text lives in a literal block
+# scalar so editors and parsers do not treat markdown as free-floating YAML.
 
 ---
-id: whatsapp-sheets-bot-commit-conventional
+id: wasb-commit-conventional
 trigger: "when writing a commit message"
-confidence: 0.85
+confidence: 1.0
 domain: git
-source: repo-analysis
-source_repo: https://github.com/Averixor/whatsapp-sheets-bot
+source: curated
+title: WASB Commit Convention
+action: |
+  Use Conventional Commit-style subjects.
+
+  Choose the prefix according to the change, for example:
+
+  - fix: — runtime or behavior correction
+  - chore: — tooling, CI, repository maintenance
+  - docs: — documentation-only change
+  - refactor: — structural change without intended behavior change
+  - test: — test or verification-only change
+  - feat: — new user-visible or runtime capability
+
+  Keep one logical task per commit.
+
+  Do not force every commit to use fix:.
 ---
-
-# Whatsapp Sheets Bot Commit Conventional
-
-## Action
-
-Use conventional commit format with prefixes: fix
-
-## Evidence
-
-- 1 commits analyzed
-- Detected conventional commit pattern
-- Examples: fix: remove sidebar login and registration
-
----
-id: whatsapp-sheets-bot-commit-length
-trigger: "when writing a commit message"
-confidence: 0.6
-domain: git
-source: repo-analysis
-source_repo: https://github.com/Averixor/whatsapp-sheets-bot
----
-
-# Whatsapp Sheets Bot Commit Length
-
-## Action
-
-Keep commit messages concise (~42 characters)
-
-## Evidence
-
-- Average commit message length: 42 chars
-- Based on 1 commits
-
----
-id: whatsapp-sheets-bot-naming-files
+id: wasb-file-naming
 trigger: "when creating a new file"
-confidence: 0.8
+confidence: 1.0
 domain: code-style
-source: repo-analysis
-source_repo: https://github.com/Averixor/whatsapp-sheets-bot
+source: curated
+title: WASB File Naming
+action: |
+  Follow the convention of the target subsystem instead of applying one
+  repository-wide filename style.
+
+  - GAS runtime .gs: usually PascalCase or dotted PascalCase,
+    e.g. PersonnelRepository.gs, AccessControl.Core.gs
+  - Node tooling .mjs: kebab-case,
+    e.g. verify-monthly-callsign-sync.mjs, ops-gas.mjs
+  - Client HTML modules: existing Js.*.html, Styles*.html conventions
+  - Contracts: kebab-case .contract.json
+
+  Prefer the naming pattern already used by neighboring files.
 ---
-
-# Whatsapp Sheets Bot Naming Files
-
-## Action
-
-Use PascalCase naming convention
-
-## Evidence
-
-- Analyzed file naming patterns in repository
-- Dominant pattern: PascalCase
-
----
-id: whatsapp-sheets-bot-import-relative
-trigger: "when importing modules"
-confidence: 0.75
+id: wasb-node-imports
+trigger: "when importing modules in Node tooling"
+confidence: 1.0
 domain: code-style
-source: repo-analysis
-source_repo: https://github.com/Averixor/whatsapp-sheets-bot
+source: curated
+title: WASB Node Imports
+action: |
+  For repository-owned Node .mjs modules, use relative ESM imports.
+
+  Example:
+
+    import { loadContract } from "./lib/load-contract.mjs";
+
+  Use node: specifiers for Node built-ins.
+
+  Do not apply this rule to Google Apps Script .gs files: GAS runtime files
+  share the Apps Script global namespace and do not use ESM imports.
 ---
-
-# Whatsapp Sheets Bot Import Relative
-
-## Action
-
-Use relative imports for project files
-
-## Evidence
-
-- Import analysis shows relative import pattern
-- Example: import { x } from '../lib/x'
-
----
-id: whatsapp-sheets-bot-export-style
-trigger: "when exporting from a module"
-confidence: 0.7
+id: wasb-node-export-style
+trigger: "when exporting from a Node module"
+confidence: 1.0
 domain: code-style
-source: repo-analysis
-source_repo: https://github.com/Averixor/whatsapp-sheets-bot
+source: curated
+title: WASB Node Export Style
+action: |
+  Prefer named exports in reusable Node .mjs helpers.
+
+  Do not translate this rule to GAS .gs runtime files or browser HTML modules.
+
+  - GAS exposes global functions/objects through the Apps Script runtime.
+  - Client modules may expose approved bindings through window.*.
 ---
-
-# Whatsapp Sheets Bot Export Style
-
-## Action
-
-Prefer named exports
-
-## Evidence
-
-- Export pattern analysis
-- Dominant style: named
-
----
-id: whatsapp-sheets-bot-test-separate
-trigger: "when writing tests"
-confidence: 0.8
+id: wasb-test-verification-layout
+trigger: "when writing tests or verification checks"
+confidence: 1.0
 domain: testing
-source: repo-analysis
-source_repo: https://github.com/Averixor/whatsapp-sheets-bot
----
+source: curated
+title: WASB Test and Verification Layout
+action: |
+  Place verification according to its execution environment.
 
-# Whatsapp Sheets Bot Test Separate
+  - GAS runtime/domain tests: tests/*.gs
+  - Production/runtime smoke tests: smoke/*.gs
+  - Local static, contract and regression checks: scripts/verify-*.mjs,
+    scripts/audit-*.mjs or the established neighboring pattern
+  - Contracts and expected invariants: contracts/*.json
 
-## Action
+  Do not create __tests__/ or mirror the runtime source tree unless a
+  separate project decision establishes that convention.
 
-Place tests in the tests/ or __tests__/ directory, mirroring src structure
-
-## Evidence
-
-- Separate test directory pattern detected
-- Tests live in dedicated test folders
-
+  After changes, run the relevant focused check and then npm run ci.
