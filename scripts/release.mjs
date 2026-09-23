@@ -1,22 +1,55 @@
 #!/usr/bin/env node
-import { spawnSync } from 'node:child_process';
+/**
+ * Same orchestration as ship: CI + staged commit/push; GAS only with --deploy-gas.
+ * Does not run map:project-files — stage the map yourself first if needed.
+ *
+ *   npm run release -- "fix: message"
+ *   npm run release -- "fix: message" --deploy-gas
+ *
+ * See .cursor/rules/git-safety.mdc §13.
+ */
+import {
+  assertMainForGasDeploy,
+  assertShipReleasePreflight,
+  assertTreeStillSafeForGh,
+  capture,
+  currentBranch,
+  parseMessageAndFlags,
+  run,
+} from './lib/git-ops-guards.mjs';
 
-function run(cmd, args = []) {
-  console.log(`\n$ ${cmd} ${args.join(' ')}`);
-  const r = spawnSync(cmd, args, { stdio: 'inherit', shell: false });
-  if (r.status !== 0) process.exit(r.status ?? 1);
+const { message, flags, unknownFlags } = parseMessageAndFlags(
+  process.argv.slice(2),
+  ['--deploy-gas'],
+);
+
+const branch = currentBranch();
+const porcelainBefore = capture('git', ['status', '--porcelain']);
+
+assertShipReleasePreflight({
+  message,
+  flags,
+  unknownFlags,
+  porcelain: porcelainBefore,
+  branch,
+  deployGasFlag: '--deploy-gas',
+});
+
+run('npm', ['run', 'ci']);
+
+assertTreeStillSafeForGh(capture('git', ['status', '--porcelain']));
+
+run('npm', ['run', 'gh', '--', message]);
+
+if (flags.has('--deploy-gas')) {
+  assertMainForGasDeploy(currentBranch(), '--deploy-gas');
+  console.log('\nRelease: deploying to production GAS (main + --deploy-gas)…');
+  run('npm', ['run', 'gas:push']);
+  console.log('Production GAS (обов’язково): apiStage7ClearPhoneCache()');
+} else {
+  console.log(
+    '\nRelease: GitHub sync done. GAS deploy skipped (pass --deploy-gas on main if needed).',
+  );
 }
-
-const msg = process.argv.slice(2).join(' ').trim();
-
-if (!msg || msg === 'fix:') {
-  console.error('\nERROR: commit message is required.');
-  console.error('Example: npm run release -- "fix: update project"');
-  process.exit(1);
-}
-
-run('npm', ['run', 'c']);
-run('npm', ['run', 'gas']);
-run('npm', ['run', 'gh', '--', msg]);
 
 console.log('\nRelease: completed');

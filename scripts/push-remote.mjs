@@ -1,96 +1,112 @@
 #!/usr/bin/env node
 /**
- * Push committed code to GitHub and production Google Apps Script.
+ * Push committed code to GitHub. Production GAS only with --with-gas on main.
  *
  * Run checks first:
  *   npm run check
  *
- * Then deploy:
- *   npm run push:remote
+ * Then:
+ *   npm run push:remote              # git push only
+ *   npm run push:remote -- --with-gas  # git push + gas:push (main only)
  *
- * Requires: git remote origin, .clasp.json, clasp login.
+ * All flags/branch/clasp preconditions are checked BEFORE git push.
+ * See .cursor/rules/git-safety.mdc §13.
  */
 
-import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import { resolve, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { existsSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import {
+  assertMainForGasDeploy,
+  assertNoUnknownFlags,
+  capture,
+  parseMessageAndFlags,
+  run,
+} from './lib/git-ops-guards.mjs';
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-function run(label, cmd, args) {
+const { flags, unknownFlags } = parseMessageAndFlags(process.argv.slice(2), [
+  '--with-gas',
+  '--help',
+  '-h',
+]);
+const withGas = flags.has('--with-gas');
+
+function runLabel(label, cmd, args) {
   console.log(`\n=== ${label} ===`);
-  const result = spawnSync(cmd, args, { stdio: "inherit", cwd: root, env: process.env });
-  if (result.status !== 0) {
-    console.error(`\n✗ Failed: ${cmd} ${args.join(" ")}`);
-    process.exit(result.status ?? 1);
-  }
+  run(cmd, args, root);
 }
 
-function capture(cmd, args) {
-  const result = spawnSync(cmd, args, {
-    cwd: root,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  if (result.status !== 0) {
-    const err = (result.stderr || result.stdout || "").trim();
-    throw new Error(`${cmd} ${args.join(" ")} failed${err ? `: ${err}` : ""}`);
-  }
-  return String(result.stdout || "").trim();
-}
+if (flags.has('--help') || flags.has('-h')) {
+  console.log(`WASB push:remote — git push; optional production clasp
 
-if (process.argv.includes("--help") || process.argv.includes("-h")) {
-  console.log(`WASB push:remote — git push + clasp push (production)
+  npm run check                        усі локальні перевірки
+  npm run push:remote                  лише git push (без GAS)
+  npm run push:remote -- --with-gas    git push + gas:push (лише main)
 
-  npm run check          усі локальні перевірки
-  npm run push:remote    GitHub + GAS (без повторного CI)
-
-  Потрібно: закомічені зміни, .clasp.json, clasp login.
+  Потрібно: закомічені зміни, .clasp.json + clasp login для --with-gas.
   GAS push іде через npm run gas:push (ops-gas.mjs).
   Після deploy у GAS: apiStage7ClearPhoneCache()
 `);
   process.exit(0);
 }
 
-console.log("WASB push:remote");
-console.log(`Root: ${root}`);
+assertNoUnknownFlags(unknownFlags);
 
-const dirty = capture("git", ["status", "--porcelain"]);
+console.log('WASB push:remote');
+console.log(`Root: ${root}`);
+console.log(`with-gas: ${withGas ? 'yes' : 'no'}`);
+
+const dirty = capture('git', ['status', '--porcelain'], root);
 if (dirty) {
   console.error(
-    "\n✗ Є незакомічені зміни. Спочатку commit, потім push:\n" +
-      '  git add -A && git commit -m "опис змін"\n' +
-      "  npm run push:remote\n" +
-      "\nАбо повний pipeline з commit: npm run release -- \"опис змін\"",
+    '\n✗ Є незакомічені зміни. Спочатку точково stage + commit:\n' +
+      '  git add path/to/file1 path/to/file2\n' +
+      '  git commit -m "опис змін"\n' +
+      '  npm run push:remote\n' +
+      '\nАбо: npm run ship -- "опис змін"  (CI + staged commit + push; GAS лише з --deploy-gas)',
   );
   process.exit(1);
 }
 
 let branch;
 try {
-  branch = capture("git", ["branch", "--show-current"]);
+  branch = capture('git', ['branch', '--show-current'], root);
 } catch (err) {
   console.error(`\n✗ ${err.message}`);
   process.exit(1);
 }
 
 if (!branch) {
-  console.error("\n✗ Не вдалося визначити поточну git-гілку.");
+  console.error('\n✗ Не вдалося визначити поточну git-гілку.');
   process.exit(1);
 }
 
-run(`Git push (origin ${branch})`, "git", ["push", "-u", "origin", branch]);
-
-const claspProd = resolve(root, ".clasp.json");
-if (!existsSync(claspProd)) {
-  console.error("\n✗ Немає .clasp.json — clasp login і прив’яжіть production project.");
-  process.exit(1);
+// All GAS gates before any remote mutation.
+if (withGas) {
+  assertMainForGasDeploy(branch, '--with-gas');
+  const claspProd = resolve(root, '.clasp.json');
+  if (!existsSync(claspProd)) {
+    console.error(
+      '\n✗ Немає .clasp.json — clasp login і прив’яжіть production project.',
+    );
+    process.exit(1);
+  }
 }
 
-run("clasp push (production)", "npm", ["run", "gas:push"]);
+runLabel(`Git push (origin ${branch})`, 'git', ['push', '-u', 'origin', branch]);
 
-console.log("\n=== push:remote complete ===");
-console.log("GitHub: pushed");
-console.log("GAS: clasp push done");
-console.log("Production GAS (обов’язково): apiStage7ClearPhoneCache()");
+if (!withGas) {
+  console.log('\n=== push:remote complete (git only) ===');
+  console.log('GitHub: pushed');
+  console.log('GAS: skipped — pass --with-gas on main for production clasp push');
+  process.exit(0);
+}
+
+runLabel('clasp push (production)', 'npm', ['run', 'gas:push']);
+
+console.log('\n=== push:remote complete ===');
+console.log('GitHub: pushed');
+console.log('GAS: clasp push done');
+console.log('Production GAS (обов’язково): apiStage7ClearPhoneCache()');

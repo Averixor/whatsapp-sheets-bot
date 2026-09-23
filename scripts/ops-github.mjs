@@ -1,39 +1,49 @@
 #!/usr/bin/env node
-import { spawnSync, execSync } from 'node:child_process';
+/**
+ * Commit staged-only changes (never git add -A) and push to origin.
+ *
+ *   npm run gh -- "fix: message"
+ *
+ * Requires: files already staged; no unstaged/untracked leftovers.
+ * See .cursor/rules/git-safety.mdc §5 / §13.
+ */
+import {
+  assertNoUnknownFlags,
+  assertSafeToCommitStagedOnly,
+  capture,
+  parseMessageAndFlags,
+  run,
+} from './lib/git-ops-guards.mjs';
 
-function run(cmd, args = []) {
-  console.log(`\n$ ${cmd} ${args.join(' ')}`);
-  const r = spawnSync(cmd, args, { stdio: 'inherit', shell: false });
-  if (r.status !== 0) process.exit(r.status ?? 1);
-}
-
-function out(cmd) {
-  return execSync(cmd, { encoding: 'utf8' }).trim();
-}
-
-const msg = process.argv.slice(2).join(' ').trim();
+const { message: msg, unknownFlags } = parseMessageAndFlags(
+  process.argv.slice(2),
+  [],
+);
+assertNoUnknownFlags(unknownFlags);
 
 run('git', ['status', '--short']);
 
-const changed = out('git status --short');
+const porcelain = capture('git', ['status', '--porcelain']);
+const staged = assertSafeToCommitStagedOnly(porcelain);
 
-if (changed) {
+if (staged.length) {
   if (!msg || msg === 'fix:') {
     console.error('\nERROR: commit message is required.');
     console.error('Example: npm run gh -- "fix: update ops scripts"');
+    console.error('Stage files first: git add path/to/file1 path/to/file2');
     process.exit(1);
   }
-
-  run('git', ['add', '-A']);
   run('git', ['commit', '-m', msg]);
 } else {
-  console.log('\nGit: no changes to commit.');
+  console.log(
+    '\nGit: nothing staged to commit (working tree clean or already committed).',
+  );
 }
 
-const branch = out('git rev-parse --abbrev-ref HEAD');
+const branch = capture('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
 
 try {
-  out('git rev-parse --abbrev-ref --symbolic-full-name @{u}');
+  capture('git', ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}']);
   run('git', ['push']);
 } catch {
   run('git', ['push', '-u', 'origin', branch]);
