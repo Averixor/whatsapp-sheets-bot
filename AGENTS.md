@@ -15,7 +15,7 @@ npm run ci
 
 This runs all static analysis scripts (GAS sanity, clasp patterns, language/copy guards, workbook and domain contracts, function graph audit, client verification, XSS audit, envelope compat, usecase facade, snapshot governance, bridge flags, access API governance, OAuth scopes, jsconfig verification). All checks are Node.js-based and do not require any Google credentials or network access.
 
-Individual subscripts: `npm run ci:gas`, `npm run ci:client`, `npm run ci:copy`, `npm run ci:language`, `npm run ci:workbook`, `npm run ci:materialize`, `npm run ci:vacations`, `npm run ci:recipients`, `npm run ci:personnel-status`, `npm run ci:format-rules`, `npm run ci:access-autofill`, `npm run audit:functions`.
+Individual subscripts: `npm run ci:gas`, `npm run ci:client`, `npm run ci:copy`, `npm run ci:language`, `npm run ci:spelling`, `npm run ci:workbook`, `npm run ci:materialize`, `npm run ci:vacations`, `npm run ci:recipients`, `npm run ci:personnel-status`, `npm run ci:format-rules`, `npm run ci:access-autofill`, `npm run audit:functions`.
 
 ### Terminal deploy commands
 
@@ -172,7 +172,7 @@ Domain folders (`reports/`, `vacations/`, `core/`, `ui/`, …) are mechanical mo
 
 - Sidebar, menus, dialogs, health UI: **Ukrainian only**, no technical sheet keys (`SEND_PANEL`, `PERSONNEL`, …) in strings users see.
 - Physical tab names in `CONFIG` / `SheetSchemas_` may stay technical until a dedicated sheet-rename migration.
-- Policy: [`docs/user-facing-copy.md`](./docs/user-facing-copy.md). CI: `verify-no-russian-text.mjs`, `verify-user-facing-copy.mjs` (`npm run ci:language`, `npm run ci:copy`).
+- Policy: [`docs/user-facing-copy.md`](./docs/user-facing-copy.md). CI: `verify-no-russian-text.mjs`, `verify-user-facing-copy.mjs`, `cspell` (`npm run ci:language`, `npm run ci:copy`, `npm run ci:spelling`).
 
 ### Key gotchas
 

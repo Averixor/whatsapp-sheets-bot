@@ -3,16 +3,18 @@
   "version": "7",
   "private": true,
   "description": "WhatsApp-Sheets-Bot Google Apps Script project",
-  "engines": {"node": ">=24"},
-
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "check": "npm run ci",
     "check:all": "npm run ci",
     "push:remote": "node scripts/push-remote.mjs",
     "precheck": "node scripts/verify-node-version.mjs",
-    "ci": "npm run precheck && npm run ci:gas && npm run ci:system-status && npm run ci:language && npm run ci:copy && npm run ci:workbook && npm run ci:materialize && npm run ci:vacations && npm run ci:recipients && npm run ci:personnel-status && node scripts/verify-format-rules-governance.mjs && node scripts/audit-function-graph.mjs && npm run ci:client && node scripts/verify-usecase-facade.mjs && node scripts/verify-snapshot-governance.mjs && node scripts/verify-bridge-flags.mjs && node scripts/verify-access-api-governance.mjs && node scripts/verify-access-policy-checks.mjs && npm run ci:access-autofill && node scripts/verify-access-temp-password-reissue.mjs && node scripts/verify-access-key-rebind.mjs && node scripts/verify-oauth-scopes.mjs && npm run ci:deploy-target && node scripts/verify-project-files-map.mjs && node scripts/verify-jsconfig.mjs",
+    "ci": "npm run precheck && npm run ci:gas && npm run ci:system-status && npm run ci:language && npm run ci:copy && npm run ci:spelling && npm run ci:workbook && npm run ci:materialize && npm run ci:vacations && npm run ci:recipients && npm run ci:personnel-status && node scripts/verify-format-rules-governance.mjs && node scripts/audit-function-graph.mjs && npm run ci:client && node scripts/verify-usecase-facade.mjs && node scripts/verify-snapshot-governance.mjs && node scripts/verify-bridge-flags.mjs && node scripts/verify-access-api-governance.mjs && node scripts/verify-access-policy-checks.mjs && npm run ci:access-autofill && node scripts/verify-access-temp-password-reissue.mjs && node scripts/verify-access-key-rebind.mjs && node scripts/verify-oauth-scopes.mjs && npm run ci:deploy-target && node scripts/verify-project-files-map.mjs && node scripts/verify-jsconfig.mjs",
     "ci:language": "node scripts/verify-no-russian-text.mjs",
     "ci:copy": "node scripts/verify-user-facing-copy.mjs",
+    "ci:spelling": "cspell lint --no-progress \"**/*.{gs,html,md}\"",
     "ci:client": "node scripts/verify-client-includes.mjs && node scripts/verify-html-label-for.mjs && node scripts/verify-client-js.mjs && node scripts/verify-client-deps.mjs && node scripts/audit-client-xss.mjs && node scripts/audit-envelope-compat.mjs",
     "ci:gas": "node scripts/ci-gas-sanity.mjs && node scripts/verify-clasp-push-patterns.mjs",
     "ci:system-status": "node scripts/verify-system-status-foundation.mjs && node scripts/verify-system-status-fingerprints.mjs",
@@ -41,11 +43,11 @@
     "ship": "node scripts/ops-ship.mjs",
     "go": "npm run ship --"
   },
-
   "devDependencies": {
     "@cspell/dict-uk-ua": "^4.0.6",
     "@google/clasp": "^3.3.0",
     "@types/google-apps-script": "^2.0.11",
+    "cspell": "^10.3.3",
     "uuid": "^14.0.1"
   }
 }
