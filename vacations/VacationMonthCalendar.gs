@@ -335,6 +335,7 @@ const VacationMonthCalendar_ = (function () {
       },
     );
   }
+  
   function _daysBetweenIso_(leftIso, rightIso) {
     const left = _parseDate_(leftIso);
     const right = _parseDate_(rightIso);
