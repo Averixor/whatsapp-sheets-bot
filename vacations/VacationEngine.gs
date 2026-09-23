@@ -897,21 +897,24 @@ function runBirthdayEngine_(targetDate, options) {
 
   try {
     const items = _veProfilesList_();
+
     const commanderRecipient = _veCommanderRecipient_(options);
     const commanderPhone =
       commanderRecipient && commanderRecipient.phone
-        ? commanderRecipient.phone
+        ? String(commanderRecipient.phone).trim()
         : "";
+
     result.commanderRecipient = commanderRecipient
       ? {
           role: commanderRecipient.role || commanderRecipient.callsign || "",
-          callsign: commanderRecipient.callsign || commanderRecipient.role || "",
+          callsign:
+            commanderRecipient.callsign || commanderRecipient.role || "",
           source: commanderRecipient.source || "",
         }
       : null;
 
     const parsedTarget =
-      targetDate instanceof Date
+      targetDate instanceof Date && !isNaN(targetDate.getTime())
         ? new Date(targetDate)
         : _veParseDate_(targetDate);
 
@@ -928,48 +931,91 @@ function runBirthdayEngine_(targetDate, options) {
       const birth = _veParseBirthdayParts_(item.birthday);
 
       if (!birth) {
-        result.debug.push(`${item.fml || "UNKNOWN"}: birthday_parse_failed`);
+        result.debug.push(
+          `${item.fml || "UNKNOWN"}: birthday_parse_failed`,
+        );
         continue;
       }
 
+      let birthdayYear = today.getFullYear();
+
       let nextBirthday = new Date(
-        today.getFullYear(),
+        birthdayYear,
         birth.month - 1,
         birth.day,
         12,
         0,
         0,
+        0,
       );
+
+      /*
+       * JavaScript нормалізує неіснуючі дати.
+       * Наприклад, 31.02 стане датою у березні.
+       *
+       * 29.02 обробляємо окремо: у невисокосний рік
+       * залишаємо поточну поведінку — 01.03.
+       */
+      const isLeapBirthday = birth.month === 2 && birth.day === 29;
+
+      if (
+        !isLeapBirthday &&
+        (nextBirthday.getMonth() !== birth.month - 1 ||
+          nextBirthday.getDate() !== birth.day)
+      ) {
+        result.debug.push(`${item.fml}: invalid_birthday`);
+        continue;
+      }
+
+      if (nextBirthday.getTime() < today.getTime()) {
+        birthdayYear += 1;
+
+        nextBirthday = new Date(
+          birthdayYear,
+          birth.month - 1,
+          birth.day,
+          12,
+          0,
+          0,
+          0,
+        );
+
+        if (
+          !isLeapBirthday &&
+          (nextBirthday.getMonth() !== birth.month - 1 ||
+            nextBirthday.getDate() !== birth.day)
+        ) {
+          result.debug.push(`${item.fml}: invalid_birthday`);
+          continue;
+        }
+      }
 
       if (isNaN(nextBirthday.getTime())) {
         result.debug.push(`${item.fml}: invalid_next_birthday`);
         continue;
       }
 
-      if (nextBirthday.getTime() < today.getTime()) {
-        nextBirthday = new Date(
-          today.getFullYear() + 1,
-          birth.month - 1,
-          birth.day,
-          12,
-          0,
-          0,
-        );
-      }
-
       const daysUntil = Math.round(
         (nextBirthday.getTime() - today.getTime()) / 86400000,
       );
 
-      if ([3, 2, 1, 0].indexOf(daysUntil) === -1) {
+      if (BIRTHDAY_ENGINE_CONFIG.COMMANDER_DAYS.indexOf(daysUntil) === -1) {
         result.debug.push(`${item.fml}: ${daysUntil}`);
         continue;
       }
 
       const callsign =
-        String(item.role || "").trim() || String(item.fml).split(" ")[0];
+        String(item.role || "").trim() ||
+        String(item.fml || "")
+          .split(" ")[0]
+          .trim();
+
       const name = callsign || item.fml;
-      const age = birth.year ? nextBirthday.getFullYear() - birth.year : null;
+
+      const age =
+        birth.year && Number.isFinite(Number(birth.year))
+          ? nextBirthday.getFullYear() - Number(birth.year)
+          : null;
 
       const baseData = {
         fml: item.fml,
@@ -998,7 +1044,9 @@ function runBirthdayEngine_(targetDate, options) {
           message: message,
           link: _veWaLink_(commanderPhone, message),
           recipientRole:
-            (result.commanderRecipient && result.commanderRecipient.role) || "",
+            (result.commanderRecipient &&
+              result.commanderRecipient.role) ||
+            "",
           id: `birthday_commander_${_veNormId_(item.fml)}_${daysUntil}`,
         });
       }
@@ -1033,7 +1081,11 @@ function runBirthdayEngine_(targetDate, options) {
     });
   } catch (e) {
     console.error("runBirthdayEngine_ error:", e);
-    result.error = e && e.message ? e.message : String(e);
+
+    result.error =
+      e && e.message
+        ? e.message
+        : String(e);
   }
 
   return result;
