@@ -49,7 +49,7 @@ Current workbook/runtime additions guarded by contracts and CI:
 - `contracts/system-status.contract.json` + `contracts/system-status-fingerprints.contract.json` + `scripts/verify-system-status-*.mjs` for system-status foundation/fingerprints (this branch; not yet a public Stage7 UI)
 
 **Reference data table:** Code and docs are kept in sync with the provided
-"Книга Взводу Охорони.xlsx" (PERSONNEL: split names + **`RNTRC` column L** + **`Email` column M** + **`Callsign` column N**; month **06** compact B=Позивний;
+"Книга Взводу Охорони — робоча.xlsx" (PERSONNEL: split names + **`RNTRC` column L** + **`Email` column M** + **`Callsign` column N**; month **06** compact B=Позивний;
 monthly schedule key: **Callsign** — the xlsx may label the column Позивний/ПОЗИВНИЙ). See RUNBOOK §14 and recent CHANGELOG.
 
 Do not treat any static release-audit markdown as current readiness truth.
