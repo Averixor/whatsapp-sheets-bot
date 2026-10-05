@@ -185,20 +185,15 @@ function formatAgeCell_(value) {
   return clean + " р.";
 }
 
-function formatBirthdayCountdownDisplay_(months, days) {
-  months = Number(months) || 0;
-  days = Number(days) || 0;
+function formatBirthdayCountdownDaysDisplay_(totalDays) {
+  var days = Number(totalDays);
+  if (!isFinite(days) || days < 0) days = 0;
+  days = Math.round(days);
 
-  if (months === 0 && days === 0) {
+  if (days === 0) {
     return "Сьогодні";
   }
-  if (months === 0) {
-    return days + " д.";
-  }
-  if (days === 0) {
-    return months + " м.";
-  }
-  return months + " м. " + days + " д.";
+  return days + " дн.";
 }
 
 function calculateBirthdayCountdownUa_(birthdayValue, todayValue) {
@@ -225,24 +220,12 @@ function calculateBirthdayCountdownUa_(birthdayValue, todayValue) {
   }
   if (!nextBirthday) return "";
 
-  var months = nextBirthday.getMonth() - today.getMonth();
-  var days = nextBirthday.getDate() - today.getDate();
+  var MS_PER_DAY = 24 * 60 * 60 * 1000;
+  var totalDays = Math.round(
+    (nextBirthday.getTime() - today.getTime()) / MS_PER_DAY,
+  );
 
-  if (days < 0) {
-    var daysInPreviousMonth = new Date(
-      nextBirthday.getFullYear(),
-      nextBirthday.getMonth(),
-      0,
-    ).getDate();
-    days += daysInPreviousMonth;
-    months -= 1;
-  }
-
-  if (months < 0) {
-    months += 12;
-  }
-
-  return formatBirthdayCountdownDisplay_(months, days);
+  return formatBirthdayCountdownDaysDisplay_(totalDays);
 }
 
 function _personnelMaterializeResolveBirthdayInput_(rawValue, displayValue) {
