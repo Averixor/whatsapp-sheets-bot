@@ -525,7 +525,7 @@ Local equivalent: **`npm run check`** (alias **`npm run ci`**).
 | `verify-temporary-property-register.mjs`  | Temporary-property register headers, catalog/kits, status math (`ci:workbook`)         |
 | `verify-materialize-computed-data.mjs`    | PERSONNEL materialize / computed columns API contract                                  |
 | `verify-month-journal-materialize.mjs`    | Unified `JOURNAL` / `SUMMARY` wiring, chunked bootstrap, API, access, sidebar          |
-| `verify-age-birthday-countdown.mjs`       | Birthday `DD.MM.YYYY р. н.`, Age `N р.`, countdown UA labels                           |
+| `verify-age-birthday-countdown.mjs`       | Birthday `DD.MM.YYYY р.н.`, Age `N р.`, countdown UA labels                           |
 | `verify-vacation-planner.mjs`             | Vacation planner rules, calendar, repository contracts                                 |
 | `verify-vacation-monthly-sync.mjs`        | One-way vacation → monthly sheet sync (auto-fill, conflicts, removals)                 |
 | `verify-recipient-contract.mjs`           | Recipient routing and dark-select UI contract                                          |
@@ -766,7 +766,7 @@ Contract: `contracts/reference-workbook-layout.contract.json` (headers extracted
 | B | ID v/s | Optional internal id (`ID_VS`) |
 | C | ID Army+ | Армія+ (optional data) |
 | D–F | Last name / First name / Patronymic | Code synthesizes `FML` |
-| G–I | Birthday / Age / Days until birthday | Materialized display: **Birthday** `DD.MM.YYYY р. н.` (space before suffix; legacy `… р.` normalizes on read); **Age** `N р.` (e.g. `25 р.`); **Days until birthday** — UA countdown (`N м.`, `N д.`, `N м. N д.`, or `Сьогодні`; space before abbreviation; `personnel/PersonnelMaterialize.gs`) |
+| G–I | Birthday / Age / Days until birthday | Materialized display: **Birthday** `DD.MM.YYYY р.н.` (space before suffix; legacy `… р.` normalizes on read); **Age** `N р.` (e.g. `25 р.`); **Days until birthday** — UA countdown (`N м.`, `N д.`, `N м. N д.`, or `Сьогодні`; space before abbreviation; `personnel/PersonnelMaterialize.gs`) |
 | J–K | Phone / Phone 2 | Phones |
 | L | RNTRC | Optional tax ID (РНОКПП) |
 | M | Email | Optional contact email |

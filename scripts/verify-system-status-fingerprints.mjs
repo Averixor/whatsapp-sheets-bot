@@ -325,7 +325,7 @@ assert.ok(
 assert.match(personnelSource, /text\.replace\(\/\\s\*р\\\.\?\\s\*н\\\.\?\\s\*\$\/i/);
 assert.match(
   personnelSource,
-  /return day \+ "\." \+ month \+ "\." \+ year \+ " р\. н\."/,
+  /return day \+ "\." \+ month \+ "\." \+ year \+ " р\.н\."/,
   "Birthday fingerprint canonicalizer must track the real materializer output shape",
 );
 
@@ -359,7 +359,7 @@ const directBirthdayProof = JSON.parse(vm.runInContext(`JSON.stringify((function
     semantic(new Date(1990, 1, 3)),
     semantic("1990-02-03"),
     semantic("03.02.1990"),
-    semantic("03.02.1990 р. н."),
+    semantic("03.02.1990 р.н."),
   ];
   var evidence = function (prior, expected, post) {
     return {
@@ -391,7 +391,7 @@ const directBirthdayProof = JSON.parse(vm.runInContext(`JSON.stringify((function
     ),
     wrongDayDecision: SystemStatusFingerprints_.evaluateTransitionEvidence(
       "computed.personnel_helpers",
-      evidence(values[0], semantic("04.02.1990"), semantic("04.02.1990 р. н.")),
+      evidence(values[0], semantic("04.02.1990"), semantic("04.02.1990 р.н.")),
     ),
     forgedImpossibleDecision: SystemStatusFingerprints_.evaluateTransitionEvidence(
       "computed.personnel_helpers",

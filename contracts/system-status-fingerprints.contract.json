@@ -213,7 +213,7 @@
           "duplicates": "preserve",
           "ignored": ["Birthday raw/display handled by personnelBirthdayPrior semantic transition", "Position", "Status", "TEMPLATE", "formatting", "columns not named above", "empty trailing managed rows after the last semantic row"]
         },
-        {"kind": "mutable_target_prior_state", "fields": ["physical rowKey", "Birthday parsed semantic day"], "normalizers": ["normalizeBirthdayText_/parseBirthdayValue_ equivalent birthday_day: Date, ISO YMD, bare UA DMY, DD.MM.YYYY р. н.; typed valid day passes Gregorian calendar validation"], "rowOrder": "semantic", "duplicates": "reject", "reorderPolicy": "reject", "invariant": "prior semantic day equals expected semantic day equals post semantic day; representation-only rewrite"},
+        {"kind": "mutable_target_prior_state", "fields": ["physical rowKey", "Birthday parsed semantic day"], "normalizers": ["normalizeBirthdayText_/parseBirthdayValue_ equivalent birthday_day: Date, ISO YMD, bare UA DMY, DD.MM.YYYY р.н.; typed valid day passes Gregorian calendar validation"], "rowOrder": "semantic", "duplicates": "reject", "reorderPolicy": "reject", "invariant": "prior semantic day equals expected semantic day equals post semantic day; representation-only rewrite"},
         {
           "kind": "clock",
           "fields": ["clockDay", "timezone"],
