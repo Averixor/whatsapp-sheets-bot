@@ -331,7 +331,7 @@ function _runPersonnelRepositoryDomainTests_(report) {
       _domainAssertEqual_(formatAgeCell_(25), "25 р.", "age display format");
       _domainAssertEqual_(
         calculateBirthdayCountdownUa_("20.09.2000", today),
-        "3 м.",
+        "92 дн.",
         "birthday countdown format",
       );
       _domainAssertEqual_(

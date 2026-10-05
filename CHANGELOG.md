@@ -5,6 +5,12 @@
 
 # Changelog
 
+## 2026-10-06 — Days until birthday as total days
+
+- **Display:** PERSONNEL / BIRTHDAY `Days until birthday` now shows total days to next birthday as `N дн.` (or `Сьогодні`), instead of `N м.` / `N д.` / `N м. N д.`.
+- **CI:** `verify-age-birthday-countdown.mjs` and `DomainTests.gs` assert the days-only canon.
+
+
 ## 2026-09-23 — Staging deploy target hardening
 
 - **Guard:** `verify-deploy-target.mjs` requires `EXPECTED_PRODUCTION_SCRIPT_ID`, blocks when it equals staging or when `.clasp.json` points at production, and does so **before** writing credentials.
