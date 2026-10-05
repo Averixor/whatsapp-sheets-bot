@@ -325,7 +325,7 @@ function _runPersonnelRepositoryDomainTests_(report) {
       _domainAssertEqual_(calcAge_("", today), "", "empty birthday");
       _domainAssertEqual_(
         formatBirthdayCell_("20.09.2000"),
-        "20.09.2000 р. н.",
+        "20.09.2000 р.н.",
         "birthday display format",
       );
       _domainAssertEqual_(formatAgeCell_(25), "25 р.", "age display format");

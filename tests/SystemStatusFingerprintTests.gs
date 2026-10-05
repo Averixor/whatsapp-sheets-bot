@@ -1506,7 +1506,7 @@ function runSystemStatusFingerprintTests_() {
       semantic(new Date(1990, 1, 3)),
       semantic("1990-02-03"),
       semantic("03.02.1990"),
-      semantic("03.02.1990 р. н."),
+      semantic("03.02.1990 р.н."),
     ].forEach(function (value) {
       _systemStatusFingerprintEqual_(value.state, "valid");
       _systemStatusFingerprintEqual_(value.day, "1990-02-03");
@@ -1552,12 +1552,12 @@ function runSystemStatusFingerprintTests_() {
       "Valid leap day was rejected",
     );
     evidence.transition.expectedRows[0].birthdaySemantic = semantic("04.02.1990");
-    evidence.transition.postRows[0].birthdaySemantic = semantic("04.02.1990 р. н.");
+    evidence.transition.postRows[0].birthdaySemantic = semantic("04.02.1990 р.н.");
     var coordinated = SystemStatusFingerprints_.evaluateTransitionEvidence("computed.personnel_helpers", evidence);
     _systemStatusFingerprintEqual_(coordinated.status, "failed");
     _systemStatusFingerprintAssert_(coordinated.reasonCodes.indexOf("birthday_semantic_changed") !== -1);
     evidence.transition.expectedRows[0].birthdaySemantic = semantic("03.02.1990");
-    evidence.transition.postRows[0].birthdaySemantic = semantic("03.02.1990 р. н.");
+    evidence.transition.postRows[0].birthdaySemantic = semantic("03.02.1990 р.н.");
     evidence.transition.postRows[0].birthdaySemantic = semantic("04.02.1990");
     _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.personnel_helpers", evidence).status, "failed");
     evidence.transition.postRows[0].birthdaySemantic = "";
@@ -1619,7 +1619,7 @@ function runSystemStatusFingerprintTests_() {
     _systemStatusFingerprintAssert_(invalidDecision.reasonCodes.indexOf("birthday_semantic_invalid") !== -1);
     _systemStatusFingerprintEqual_(
       SystemStatusFingerprints_.evaluateTransitionEvidence(
-        "computed.personnel_helpers", evidence(blank, semantic("03.02.1990"), semantic("03.02.1990 р. н.")),
+        "computed.personnel_helpers", evidence(blank, semantic("03.02.1990"), semantic("03.02.1990 р.н.")),
       ).reasonCodes[0],
       "birthday_semantic_changed",
       "blank-to-date transition did not fail closed",
