@@ -927,6 +927,13 @@ function _ssBuildCarSchema_() {
           "Втрачена",
         ]),
       }),
+      callsignAlt: _ssFreeze_({
+        col: 8,
+        type: "string",
+        required: false,
+        allowBlank: true,
+        label: "Callsign",
+      }),
     }),
     headerAliases: _ssFreeze_({
       owner: ["Callsign", "Позивний", "FML", "Full name", "П.І.Б", "ПІБ", "Owner"],
@@ -936,6 +943,7 @@ function _ssBuildCarSchema_() {
       year: ["Year of manufacture", "Рік випуску", "Рік", "Year"],
       cost: ["Value", "Вартість", "Cost"],
       status: ["Condition", "Стан", "Статус", "Status"],
+      callsignAlt: ["Callsign", "Позивний"],
     }),
     keyFields: ["militaryNumber", "chassisNumber"],
     requiredFields: ["assetName"],
@@ -946,6 +954,7 @@ function _ssBuildCarSchema_() {
       "year",
       "cost",
       "status",
+      "callsignAlt",
     ],
     searchableFields: [
       "owner",
@@ -953,9 +962,10 @@ function _ssBuildCarSchema_() {
       "militaryNumber",
       "chassisNumber",
       "status",
+      "callsignAlt",
     ],
     notes:
-      "Реєстр автотехніки з реальної книги: Callsign, майно, військовий номер, шасі, рік, вартість і стан. Legacy FML у колонці A читається лише як сумісність.",
+      "Реєстр автотехніки з реальної книги: Callsign, майно, військовий номер, шасі, рік, вартість і стан; H=Callsign для legacy A=FML. Legacy FML у колонці A читається лише як сумісність.",
   });
 }
 
@@ -985,21 +995,24 @@ function _ssBuildWeaponSchema_() {
       assignmentDate1: _ssFreeze_({ col: 11, type: "date|string", required: false, allowBlank: true, label: "Date of assignment" }),
       location1: _ssFreeze_({ col: 12, type: "string", required: false, allowBlank: true, label: "Location" }),
 
-      assetName2: _ssFreeze_({ col: 13, type: "string", required: false, allowBlank: true, label: "Name of military property" }),
-      year2: _ssFreeze_({ col: 14, type: "number|string", required: false, allowBlank: true, label: "Year of manufacture" }),
-      nomenclatureCode2: _ssFreeze_({ col: 15, type: "string", required: false, allowBlank: true, label: "Nomenclature code" }),
-      serialNumber2: _ssFreeze_({ col: 16, type: "string", required: false, allowBlank: true, label: "Serial number" }),
-      unitPrice2: _ssFreeze_({ col: 17, type: "number|string", required: false, allowBlank: true, label: "Unit price" }),
-      assignmentDate2: _ssFreeze_({ col: 18, type: "date|string", required: false, allowBlank: true, label: "Date of assignment" }),
-      location2: _ssFreeze_({ col: 19, type: "string", required: false, allowBlank: true, label: "Location" }),
+      separator1: _ssFreeze_({ col: 13, type: "string", required: false, allowBlank: true, label: "" }),
 
-      separator: _ssFreeze_({ col: 20, type: "string", required: false, allowBlank: true, label: "" }),
-      assetName3: _ssFreeze_({ col: 21, type: "string", required: false, allowBlank: true, label: "Name of military property" }),
-      year3: _ssFreeze_({ col: 22, type: "number|string", required: false, allowBlank: true, label: "Year of manufacture" }),
-      nomenclatureCode3: _ssFreeze_({ col: 23, type: "string", required: false, allowBlank: true, label: "Nomenclature code" }),
-      serialNumber3: _ssFreeze_({ col: 24, type: "string", required: false, allowBlank: true, label: "Serial number" }),
-      unitPrice3: _ssFreeze_({ col: 25, type: "number|string", required: false, allowBlank: true, label: "Unit price" }),
-      location3: _ssFreeze_({ col: 26, type: "string", required: false, allowBlank: true, label: "Location" }),
+      assetName2: _ssFreeze_({ col: 14, type: "string", required: false, allowBlank: true, label: "Name of military property" }),
+      year2: _ssFreeze_({ col: 15, type: "number|string", required: false, allowBlank: true, label: "Year of manufacture" }),
+      nomenclatureCode2: _ssFreeze_({ col: 16, type: "string", required: false, allowBlank: true, label: "Nomenclature code" }),
+      serialNumber2: _ssFreeze_({ col: 17, type: "string", required: false, allowBlank: true, label: "Serial number" }),
+      unitPrice2: _ssFreeze_({ col: 18, type: "number|string", required: false, allowBlank: true, label: "Unit price" }),
+      assignmentDate2: _ssFreeze_({ col: 19, type: "date|string", required: false, allowBlank: true, label: "Date of assignment" }),
+      location2: _ssFreeze_({ col: 20, type: "string", required: false, allowBlank: true, label: "Location" }),
+
+      separator2: _ssFreeze_({ col: 21, type: "string", required: false, allowBlank: true, label: "" }),
+
+      assetName3: _ssFreeze_({ col: 22, type: "string", required: false, allowBlank: true, label: "Name of military property" }),
+      year3: _ssFreeze_({ col: 23, type: "number|string", required: false, allowBlank: true, label: "Year of manufacture" }),
+      nomenclatureCode3: _ssFreeze_({ col: 24, type: "string", required: false, allowBlank: true, label: "Nomenclature code" }),
+      serialNumber3: _ssFreeze_({ col: 25, type: "string", required: false, allowBlank: true, label: "Serial number" }),
+      unitPrice3: _ssFreeze_({ col: 26, type: "number|string", required: false, allowBlank: true, label: "Unit price" }),
+      callsign: _ssFreeze_({ col: 27, type: "string", required: false, allowBlank: true, label: "Callsign" }),
     }),
     headerAliases: _ssFreeze_({
       lastName: ["Last name", "Surname", "Прізвище", "Фамилия"],
@@ -1014,6 +1027,7 @@ function _ssBuildWeaponSchema_() {
       unitPrice: ["Unit price", "Ціна за одиницю"],
       assignmentDate: ["Date of assignment", "Дата закріплення", "Дата закриплення"],
       location: ["Location", "Місцезнаходження"],
+      callsign: ["Callsign", "Позивний", "Location"],
     }),
     keyFields: ["lastName", "firstName", "patronymic", "serialNumber1", "serialNumber2", "serialNumber3"],
     requiredFields: [],
@@ -1031,13 +1045,14 @@ function _ssBuildWeaponSchema_() {
       "serialNumber3",
       "location1",
       "location2",
-      "location3",
+      "callsign",
     ],
     searchableFields: [
       "lastName",
       "firstName",
       "patronymic",
       "phone",
+      "callsign",
       "assetName1",
       "assetName2",
       "assetName3",
@@ -1049,10 +1064,9 @@ function _ssBuildWeaponSchema_() {
       "nomenclatureCode3",
       "location1",
       "location2",
-      "location3",
     ],
     notes:
-      "Реєстр WEAPON з реальної книги: особа в A:E і три блоки військового майна F:L, M:S, U:Z.",
+      "Реєстр WEAPON з реальної книги: особа в A:E; блоки майна F:L, N:T, V:Z (порожні роздільники M і U); позивний у AA.",
   });
 }
 

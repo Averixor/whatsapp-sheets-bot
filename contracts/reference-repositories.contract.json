@@ -233,6 +233,7 @@
         "Unit price",
         "Date of assignment",
         "Location",
+        "",
         "Name of military property",
         "Year of manufacture",
         "Nomenclature code",
@@ -246,7 +247,7 @@
         "Nomenclature code",
         "Serial number",
         "Unit price",
-        "Location"
+        "Callsign"
       ],
       "fixtureRows": [
         [
@@ -262,6 +263,7 @@
           "Unit price",
           "Date of assignment",
           "Location",
+          "",
           "Name of military property",
           "Year of manufacture",
           "Nomenclature code",
@@ -275,7 +277,7 @@
           "Nomenclature code",
           "Serial number",
           "Unit price",
-          "Location"
+          "Callsign"
         ],
         [
           "Іваненко",
@@ -290,6 +292,7 @@
           "12000,50",
           "01.07.2026",
           "Зброярня",
+          "",
           "Магазин",
           "1988",
           "2001",
@@ -303,7 +306,7 @@
           "3002",
           "SN987",
           "2500",
-          "Сейф №1"
+          "ІВАН"
         ],
         [
           "Петренко",
@@ -318,6 +321,7 @@
           "11000",
           "02.07.2026",
           "Кімната зброї",
+          "",
           "Пістолет",
           "2019",
           "5000",
@@ -331,7 +335,7 @@
           "",
           "",
           "",
-          ""
+          "ПЕТРО"
         ],
         [
           "",
@@ -346,6 +350,7 @@
           "45000",
           "",
           "Склад",
+          "",
           "",
           "",
           "",

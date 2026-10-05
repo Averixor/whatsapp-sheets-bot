@@ -76,10 +76,23 @@ assert.equal(contract.sheets.CAR.A, "Callsign");
 assert.equal(contract.sheets.CAR.B, "Name of military property");
 assert.equal(contract.sheets.CAR.F, "Value");
 assert.equal(contract.sheets.CAR.G, "Condition");
+assert.equal(contract.sheets.CAR.H, "Callsign");
 assert.equal(contract.sheets.WEAPON.A, "Last name");
 assert.equal(contract.sheets.WEAPON.F, "Name of military property");
 assert.equal(contract.sheets.WEAPON.K, "Date of assignment");
-assert.equal(contract.sheets.WEAPON.U, "Name of military property");
+assert.equal(contract.sheets.WEAPON.M, "");
+assert.equal(contract.sheets.WEAPON.N, "Name of military property");
+assert.equal(contract.sheets.WEAPON.U, "");
+assert.equal(contract.sheets.WEAPON.V, "Name of military property");
+assert.equal(contract.sheets.WEAPON.AA, "Callsign");
+assert.equal(contract.sheets.DICT_SUM.A, "Code");
+assert.equal(contract.sheets.DICT_SUM.C, "Order");
+assert.ok(!Object.prototype.hasOwnProperty.call(contract.sheets.DICT_SUM, "F"));
+assert.match(
+  String(contract.sourceFile || ""),
+  /Книга Взводу Охорони/,
+  "sourceFile must name the reference workbook",
+);
 
 const sheetSchemas = readRepoFileByBasename(repoRoot, "SheetSchemas.gs", {
   errorPrefix: "verify-reference-workbook-layout",

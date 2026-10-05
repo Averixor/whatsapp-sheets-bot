@@ -647,13 +647,21 @@ const ReferenceSheetsRepository_ = (function () {
 
   function readWeaponBlock_(row, block, person, rowNumber) {
     const base = block.base;
+    const hasAssignmentDate = block.hasAssignmentDate === true;
+    const hasLocation = block.hasLocation !== false;
     const assetName = clean_(row[base]);
     const year = normalizeYear_(row[base + 1]);
     const nomenclatureCode = clean_(row[base + 2]);
     const serialNumber = clean_(row[base + 3]);
     const unitPriceDisplay = clean_(row[base + 4]);
-    const assignmentDateDisplay = block.hasAssignmentDate ? clean_(row[base + 5]) : "";
-    const location = block.hasAssignmentDate ? clean_(row[base + 6]) : clean_(row[base + 5]);
+    let assignmentDateDisplay = "";
+    let location = "";
+    if (hasAssignmentDate) {
+      assignmentDateDisplay = clean_(row[base + 5]);
+      location = hasLocation ? clean_(row[base + 6]) : "";
+    } else if (hasLocation) {
+      location = clean_(row[base + 5]);
+    }
 
     if (!assetName && !year && !nomenclatureCode && !serialNumber && !unitPriceDisplay && !assignmentDateDisplay && !location) {
       return null;
@@ -744,10 +752,11 @@ const ReferenceSheetsRepository_ = (function () {
     const values = sheet
       .getRange(2, 1, sheet.getLastRow() - 1, Math.max(sheet.getLastColumn(), 27))
       .getDisplayValues();
+    // Еталонна книга: F:L | (порожня M) | N:T | (порожня U) | V:Z | AA=Callsign.
     const blocks = [
-      { index: 1, base: 5, hasAssignmentDate: true, label: "Майно 1" },
-      { index: 2, base: 12, hasAssignmentDate: true, label: "Майно 2" },
-      { index: 3, base: 20, hasAssignmentDate: false, label: "Майно 3" },
+      { index: 1, base: 5, hasAssignmentDate: true, hasLocation: true, label: "Майно 1" },
+      { index: 2, base: 13, hasAssignmentDate: true, hasLocation: true, label: "Майно 2" },
+      { index: 3, base: 21, hasAssignmentDate: false, hasLocation: false, label: "Майно 3" },
     ];
     const personKeys = {};
     let totalUnitPrice = 0;
@@ -779,14 +788,17 @@ const ReferenceSheetsRepository_ = (function () {
       const hasPerson = !!(person.fullName || person.rank || person.phone);
       const hasAnyAsset = blocks.some(function (block) {
         const base = block.base;
+        const hasAssignmentDate = block.hasAssignmentDate === true;
+        const hasLocation = block.hasLocation !== false;
         return !!(
           clean_(row[base]) ||
           clean_(row[base + 1]) ||
           clean_(row[base + 2]) ||
           clean_(row[base + 3]) ||
           clean_(row[base + 4]) ||
-          clean_(row[base + 5]) ||
-          (block.hasAssignmentDate && clean_(row[base + 6]))
+          (hasAssignmentDate && clean_(row[base + 5])) ||
+          (hasAssignmentDate && hasLocation && clean_(row[base + 6])) ||
+          (!hasAssignmentDate && hasLocation && clean_(row[base + 5]))
         );
       });
       if (!hasPerson && !hasAnyAsset) return;

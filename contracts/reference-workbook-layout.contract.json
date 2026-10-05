@@ -1,13 +1,14 @@
 {
-  "sourceFile": "Книга Взводу Охорони(42).xlsx",
+  "sourceFile": "Книга Взводу Охорони — робоча.xlsx",
   "notes": {
     "personnelCallsign": "Column N Callsign holds working callsign values (e.g. ГРАФ); column L is RNTRC; column M is Email; no TEMPLATE column in reference file.",
     "month06": "Compact layout: A=BR formula, B=Позивний, dates from C.",
     "monthStandard": "Sheets 02-05: A=ТЕЛЕФОН, B=ПОЗИВНИЙ, dates from H.",
-    "phoneDirectory": "PHONE_DIRECTORY is a sectioned reference: column A holds section titles or phone numbers, column B holds contact name/description.",
-    "car": "CAR is an optional vehicle register from the real workbook: A=Callsign, B=Name of military property, C=Military registration number, D=Chassis number, E=Year of manufacture, F=Value, G=Condition. Legacy A=FML is read only for compatibility.",
+    "phoneDirectory": "PHONE_DIRECTORY is a sectioned reference without a required header row: column A holds section titles (often merged A:B) or phone numbers, column B holds contact name/description. Optional English headers Phone / Section + Name / Note are still accepted by the parser.",
+    "car": "CAR is an optional vehicle register from the real workbook: A=Callsign, B=Name of military property, C=Military registration number, D=Chassis number, E=Year of manufacture, F=Value, G=Condition, H=Callsign (legacy when A=FML). Legacy A=FML is read only for compatibility.",
     "month07": "Compact layout: B=Позивний, dates from C, notes in AH.",
-    "weapon": "WEAPON is a person-bound military property register: A:E person identity, blocks F:L, M:S, U:Z hold military property records.",
+    "weapon": "WEAPON is a person-bound military property register: A:E person identity; property blocks F:L, N:T, V:Z with empty separator columns M and U; AA holds Callsign (row-1 label may still say Location in some exports).",
+    "dictSum": "DICT_SUM in the working book has Code / Type of service / Order only (no Резерв column).",
     "temporaryProperty": "Property_issued_for_temporary_u is the temporary issue/return register. PROPERTY_CATALOG drives dependent dropdowns and units; PROPERTY_KITS defines automatic component rows."
   },
   "sheets": {
@@ -51,8 +52,7 @@
     "DICT_SUM": {
       "A": "Code",
       "B": "Type of service",
-      "C": "Order",
-      "F": "Резерв"
+      "C": "Order"
     },
     "06": {
       "B": "Позивний",
@@ -146,7 +146,8 @@
       "D": "Chassis number",
       "E": "Year of manufacture",
       "F": "Value",
-      "G": "Condition"
+      "G": "Condition",
+      "H": "Callsign"
     },
     "WEAPON": {
       "A": "Last name",
@@ -161,20 +162,21 @@
       "J": "Unit price",
       "K": "Date of assignment",
       "L": "Location",
-      "M": "Name of military property",
-      "N": "Year of manufacture",
-      "O": "Nomenclature code",
-      "P": "Serial number",
-      "Q": "Unit price",
-      "R": "Date of assignment",
-      "S": "Location",
-      "T": "",
-      "U": "Name of military property",
-      "V": "Year of manufacture",
-      "W": "Nomenclature code",
-      "X": "Serial number",
-      "Y": "Unit price",
-      "Z": "Location"
+      "M": "",
+      "N": "Name of military property",
+      "O": "Year of manufacture",
+      "P": "Nomenclature code",
+      "Q": "Serial number",
+      "R": "Unit price",
+      "S": "Date of assignment",
+      "T": "Location",
+      "U": "",
+      "V": "Name of military property",
+      "W": "Year of manufacture",
+      "X": "Nomenclature code",
+      "Y": "Serial number",
+      "Z": "Unit price",
+      "AA": "Callsign"
     },
     "07": {
       "B": "Позивний",
