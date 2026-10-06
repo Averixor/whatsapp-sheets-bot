@@ -693,10 +693,24 @@ for (const [api, role] of Object.entries(contract.apis)) {
 
 const packageJson = JSON.parse(read("package.json"));
 assert.ok(
-  String(packageJson.scripts.ci || "").includes(
+  String(packageJson.scripts["ci:format-rules"] || "").includes(
     "scripts/verify-format-rules-governance.mjs",
   ),
-  "main CI must run format-rules governance verifier",
+  "ci:format-rules must run format-rules governance verifier",
+);
+assert.ok(
+  String(packageJson.scripts["ci:domain"] || "").includes("ci:format-rules"),
+  "ci:domain must invoke ci:format-rules",
+);
+assert.ok(
+  String(packageJson.scripts["ci:chain"] || "").includes("ci:domain") ||
+    String(packageJson.scripts.ci || "").includes("ci:domain"),
+  "main CI chain must include ci:domain phase",
+);
+assert.ok(
+  String(packageJson.scripts.ci || "").includes("ci:chain") ||
+    String(packageJson.scripts.ci || "").includes("ci:domain"),
+  "main CI must reach domain phase (directly or via ci:chain)",
 );
 assert.ok(
   fs.existsSync(path.join(repoRoot, "docs/format-rules-governance.md")),

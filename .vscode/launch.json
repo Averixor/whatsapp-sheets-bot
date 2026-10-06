@@ -2,46 +2,46 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "type": "node-terminal",
+      "type": "node",
       "request": "launch",
-      "name": "Run Script: gas:status",
-      "command": "npm run gas:status",
-      "cwd": "${workspaceFolder}"
+      "name": "NPM: check",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "check"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "autoAttachChildProcesses": false,
+      "env": {
+        "NODE_OPTIONS": "",
+        "VSCODE_INSPECTOR_OPTIONS": ""
+      }
     },
     {
-      "type": "node-terminal",
+      "type": "node",
       "request": "launch",
-      "name": "Run Script: gas status",
-      "command": "npm run gas -- status",
-      "cwd": "${workspaceFolder}"
+      "name": "NPM: gas:status",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "gas:status"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "autoAttachChildProcesses": false,
+      "env": {
+        "NODE_OPTIONS": "",
+        "VSCODE_INSPECTOR_OPTIONS": ""
+      }
     },
     {
-      "type": "node-terminal",
+      "type": "node",
       "request": "launch",
-      "name": "Run Script: gas:push",
-      "command": "npm run gas:push",
-      "cwd": "${workspaceFolder}"
-    },
-    {
-      "type": "node-terminal",
-      "request": "launch",
-      "name": "Run Script: gas:pull",
-      "command": "npm run gas:pull",
-      "cwd": "${workspaceFolder}"
-    },
-    {
-      "type": "node-terminal",
-      "request": "launch",
-      "name": "Run Script: gas:open",
-      "command": "npm run gas:open",
-      "cwd": "${workspaceFolder}"
-    },
-    {
-      "type": "node-terminal",
-      "request": "launch",
-      "name": "Run Script: ci",
-      "command": "npm run ci",
-      "cwd": "${workspaceFolder}"
+      "name": "NPM: gas:push",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "gas:push"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "autoAttachChildProcesses": false,
+      "env": {
+        "NODE_OPTIONS": "",
+        "VSCODE_INSPECTOR_OPTIONS": ""
+      }
     }
   ]
 }

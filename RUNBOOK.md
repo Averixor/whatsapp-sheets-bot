@@ -596,7 +596,7 @@ Create Environment **`staging`** in the GitHub repo settings. Required:
 | **Secret** | `CLASPRC_JSON` | Full contents of local `~/.clasprc.json` (OAuth tokens for clasp) |
 | **Secret** | `CLASP_JSON_STAGING` | Staging `.clasp.json` body (from `.clasp.staging.example.json` filled with real staging IDs) |
 | **Variable** | `EXPECTED_STAGING_SCRIPT_ID` | Same staging Apps Script `scriptId` as in `CLASP_JSON_STAGING` |
-| **Variable** | `EXPECTED_PRODUCTION_SCRIPT_ID` | Production Apps Script `scriptId` (must differ; absence blocks deploy) |
+| **Secret** | `EXPECTED_PRODUCTION_SCRIPT_ID` | Production Apps Script `scriptId` (must differ from staging; absence blocks deploy). Kept as a **secret** (not a variable) so the GitHub Actions editor can resolve it with the other Environment secrets. Placeholder `PUT_PRODUCTION_SCRIPT_ID_HERE` is rejected by `verify-deploy-target` until replaced with the real production ID. |
 
 #### How to store secrets correctly
 
@@ -631,7 +631,7 @@ cp .clasp.staging.example.json /tmp/clasp.staging.json
 cat /tmp/clasp.staging.json
 ```
 
-`EXPECTED_STAGING_SCRIPT_ID` must match the `scriptId` inside `CLASP_JSON_STAGING`. `EXPECTED_PRODUCTION_SCRIPT_ID` is required and must **not** equal the staging ID (guards against both Environment values pointing at production). `scripts/verify-deploy-target.mjs` rejects placeholders (`PUT_STAGING_SCRIPT_ID_HERE`, empty, short/fake IDs), validates both JSON files **before** writing credentials / `clasp status`, and exits non-zero on mismatch **without printing full IDs or secret bodies**. Errors name **which** input failed (`CLASPRC_JSON` / `~/.clasprc.json` vs `CLASP_JSON_STAGING` / `.clasp.json`) and include parse line/position only.
+`EXPECTED_STAGING_SCRIPT_ID` must match the `scriptId` inside `CLASP_JSON_STAGING`. Secret `EXPECTED_PRODUCTION_SCRIPT_ID` is required and must **not** equal the staging ID (guards against staging credentials pointing at production). `scripts/verify-deploy-target.mjs` rejects placeholders (`PUT_STAGING_SCRIPT_ID_HERE`, `PUT_PRODUCTION_SCRIPT_ID_HERE`, empty, short/fake IDs), validates both JSON files **before** writing credentials / `clasp status`, and exits non-zero on mismatch **without printing full IDs or secret bodies**. Errors name **which** input failed (`CLASPRC_JSON` / `~/.clasprc.json` vs `CLASP_JSON_STAGING` / `.clasp.json`) and include parse line/position only.
 
 **Diagnosing `Expected ',' or '}' … position N (line L)` on staging deploy:** a large position (e.g. ~1800+) almost always means malformed **`CLASPRC_JSON`** (OAuth file is kilobytes). Staging `.clasp.json` is typically a few hundred bytes — if parse fails there, the message will say `CLASP_JSON_STAGING`. Local gitignored `.clasp.json` is **not** used by GHA; only the Environment secret is. Re-open the secret, replace with freshly validated `cat ~/.clasprc.json` output, and re-run the workflow.
 

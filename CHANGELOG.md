@@ -10,6 +10,15 @@
 - **Display:** PERSONNEL / BIRTHDAY `Days until birthday` now shows total days to next birthday as `N дн.` (or `Сьогодні`), instead of `N м.` / `N д.` / `N м. N д.`.
 - **CI:** `verify-age-birthday-countdown.mjs` and `DomainTests.gs` assert the days-only canon.
 
+## 2026-10-05 — package.json CI phases and clean-env gas wrapper
+
+- **Semver / meta:** `version` → `7.0.0`; `license: UNLICENSED`; `engines.npm >=10`.
+- **CI:** grouped phases `ci:static` / `ci:domain` / `ci:security` / `ci:deploy` / `ci:repo`; named scripts for format-rules, function-graph, project-files map.
+- **GAS:** `gas*` scripts use cross-platform `scripts/run-with-clean-env.mjs` instead of Unix-only `env -u`.
+- **CI:** `npm run ci` / `check` also go through clean-env (`ci` → `ci:chain`) so Cursor auto-attach does not print «Debugger attached» on every verify.
+- **npm:** `.npmrc` `script-shell=./scripts/npm-script-shell.mjs` strips js-debug `NODE_OPTIONS` for all `npm run` children (fixes spam on `ci:language` etc.).
+- **Aliases:** `check:all` → `check`; `release:check` → `check`; `go` → same entry as `ship` (args via `npm run go -- …`).
+- **Deps:** removed unused `uuid` from `devDependencies`.
 
 ## 2026-09-23 — Staging deploy target hardening
 

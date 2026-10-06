@@ -1,75 +1,124 @@
 ---
-description: PERSONNEL keys — Callsign/FML, optional ID Армія+, Status UA
+description: Ключі PERSONNEL — Callsign/FML як ключі, ID Армія+ опційно, Status українською
 globs: "**/*.{gs,html,md,mjs}"
 alwaysApply: true
 ---
 
 # PERSONNEL — ключі та ідентифікація
 
-## Семантика колонок
+## 1. Семантика колонок
 
-| Колонка | Роль |
+| Runtime-поле | Заголовок в аркуші | Роль |
+| --- | --- | --- |
+| — | `Cells` | службова, ignore |
+| — | `ID v/s` | службова, ignore |
+| `id` | `ID` / `ID Army+` | ID Армія+. **Додаткове поле**, не стабільний технічний ключ |
+| `fml` | `FML` — або синтез `Last name + First name + Patronymic`, якщо прямої FML-колонки немає | Людина (ПІБ). Практичний ключ разом з `callsign` |
+| — | `Last name` / `First name` / `Patronymic` | Складові для синтезу `fml` |
+| — | `Birthday` / `Age` / `Days_until_birthday` (аліаси з пробілами теж) | Обчислювані birthday-хелпери |
+| `phone` | `Phone` | основний телефон |
+| `phone2` | `2_Phone` / `Phone 2` | другий телефон |
+| `rntrc` | `RNTRC` (L) | РНТРЦ |
+| `email` | `Email` (M) | Читається для експорту / повідомлень. **Не** частина runtime-ключа особи |
+| `callsign` | `Callsign` (N) | **Основний ключ** місячного графіка й lookup у PERSONNEL. У еталоні — колонка N, значення на кшталт `ГРАФ` |
+| `rank` / `title` | `Rank` (еталон, O); legacy-заголовок `Title` теж читається | Звання. **Не** ключ людини. Runtime зливає `Title`∥`Rank` в `rank`/`title` |
+| `position` | `Position` | Посада / місце в структурі. **Не** ключ людини |
+| `osh4` | `OSH 4` (Q, з пробілом) | ОШ 4. Runtime-алиас `osh4`; шукати заголовок **`OSH 4`**, не `OSH_4` |
+| `unit` | `Unit` | Підрозділ (опційно) |
+| `status` | `Status` (R) | Лише **українські** значення в аркуші |
 
-|--------|------|
-| **ID** | ID Армія+ — **додаткове поле**, не стабільний технічний ключ. |
-| **FML** | Людина (ПІБ). Практичний ключ разом із Callsign. (Синтезується з Last name + First name + Patronymic якщо немає FML колонки.) |
-| **Callsign** | Робочий позивний. **Основний ключ для місячного графіка** і lookup у PERSONNEL. У еталоні «Книга Взводу Охорони» — колонка **N** (`Callsign`, значення на кшталт `ГРАФ`). Колонка **L** — `RNTRC`, колонка **M** — `Email`. |
-| **Position** | Посада / місце в структурі — **не ключ людини**. |
-| **Status** | Лише **українські** значення в аркуші (не змішувати з EN). |
-| **Unit** | Підрозділ (опційно). |
+**Runtime-назви** (`id`, `fml`, `rank`, `osh4`, `phone2`, …) — внутрішні алиаси коду. Читання PERSONNEL — **виключно за заголовками аркуша** (з аліасами в `_personnelCanonicalHeaderKey_`), ніколи за літерами колонок і ніколи «навпаки» з runtime-алиасів у клітинки.
 
-Логічний фінальний рядок заголовків: `ID | FML | Birthday | Age | Days_until_birthday | Phone | 2_Phone | RNTRC | Callsign | Title | Position | OSH_4 | Unit | Status`
+Логічний контракт заголовків (канон коду):
 
-Фізична структура в еталонній таблиці «Книга Взводу Охорони.xlsx» (PERSONNEL, A–R): `Cells` (ignore), `ID v/s`, `ID`, `Last name`, `First name`, `Patronymic`, birthday helpers, phones, **`RNTRC` (L)**, **`Email` (M)**, **`Callsign` (N)**, `Rank`, `Position`, `OSH 4` (Q), `Status` (R). Контракт: `contracts/reference-workbook-layout.contract.json`. `TEMPLATE` — лише legacy (у еталоні немає). Код читає **виключно за назвами заголовків**.
+`ID | FML | Birthday | Age | Days_until_birthday | Phone | 2_Phone | RNTRC | Callsign | Rank | Position | OSH 4 | Unit | Status`
 
-## Status (українською в таблиці)
+`Email` у цей логічний рядок **не** входить (є у фізичному еталоні, не є ключем особи).
 
-Dropdown (9 значень, порядок як у книзі):
+Фізична структура еталона «Книга Взводу Охорони.xlsx» → PERSONNEL (A–R), див. `contracts/reference-workbook-layout.contract.json`:
+
+`Cells | ID v/s | ID Army+ | Last name | First name | Patronymic | Birthday | Age | Days until birthday | Phone | Phone 2 | RNTRC (L) | Email (M) | Callsign (N) | Rank (O) | Position | OSH 4 (Q) | Status (R)`
+
+`TEMPLATE` — лише legacy-layout; у еталоні відсутній.
+
+## 2. Status
+
+Dropdown, **9 значень**, порядок як у книзі:
 
 `В наявності`, `У відрядженні`, `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`
 
-| В аркуші                                                               | Runtime  | Примітка                                                                 |
-| ---------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------ |
-| **В наявності** (або порожньо)                                         | active   | default для порожньої клітинки                                           |
-| **У відрядженні**                                                      | active   |                                                                          |
-| **Відпустка**, **Лікарняний**, **Тимчасовий**, **Гусачівка**, **БЗВП** | active   |                                                                          |
-| **Вибув**, **СЗЧ**                                                     | inactive | виключені з **активних** вибірок (`getPersonnelActiveRows_`, телефони тощо); **не** означає автоматичного видалення/стискання рядка на місячному аркуші |
-
-Legacy при читанні (не писати в нові рядки):
-
-- `Active` / `Дієвий` / typo `Діевий` → `В наявності`
-- `Temp` → `Тимчасовий`
-- `Відрядження` / `Відряджений` / `Відкомандирований` / `Detached` → `У відрядженні`
-- `Removed` / `Transferred` / `Переведений` → `Вибув`
+| Значення в аркуші | Runtime-група | Примітка |
+| --- | --- | --- |
+| **В наявності** (або порожньо) | active | default для порожньої клітинки |
+| **У відрядженні** | active | — |
+| **Відпустка** | active | — |
+| **Лікарняний** | active | — |
+| **Тимчасовий** | active | — |
+| **Гусачівка** | active | — |
+| **БЗВП** | active | — |
+| **Вибув** | inactive | виключений з активних вибірок; **не** тягне видалення чи стискання рядка на місячному аркуші |
+| **СЗЧ** | inactive | те саме |
 
 ```javascript
-PERSONNEL_ACTIVE_STATUSES_; // 7 значень, без Вибув та СЗЧ
+PERSONNEL_ACTIVE_STATUSES_;   // 7 значень, без «Вибув» та «СЗЧ»
 PERSONNEL_INACTIVE_STATUSES_; // ['Вибув', 'СЗЧ']
 ```
 
-## Правила для коду
+### 2.1 Legacy-форми при читанні
+
+Приймаються `normalizePersonnelStatus_` **лише на вході**. У нові рядки писати не можна — тільки канонічні 9 значень dropdown.
+
+| Legacy-форма | Канон |
+| --- | --- |
+| `Active`, `Дієвий`, `Діевий` (typo) та близькі | `В наявності` |
+| `Temp`, `Temporary` | `Тимчасовий` |
+| `Відрядження`, `Відряджений`, `Відкомандирований`, `Відкомандерований` (typo), `Detached` | `У відрядженні` |
+| `Removed`, `Transferred`, `Переведений` | `Вибув` |
+
+Повний словник — `PERSONNEL_STATUS_LEGACY_TO_UA_` у `PersonnelRepository.gs` / `contracts/personnel-status.contract.json`.
+
+Невідомі форми **не** підганяються до «найближчого» канону: `normalizePersonnelStatus_` повертає сирий текст як є. Такі значення не потрапляють у `PERSONNEL_ACTIVE_STATUSES_` → для `isPersonnelStatusActive_` вони неактивні. У dropdown з `setAllowInvalid(false)` їх не повинно з’являтися в нових рядках.
+
+## 3. Правила для коду
 
 1. **Не вимагати ID** для карток, графіка, телефонів, ДН, «Особового складу».
 2. **Не використовувати Position як ключ** людини.
-3. **Місячні листи**: Callsign + графік; персональні дані з PERSONNEL по Callsign → fallback FML.
-4. **Дубль Callsign серед active** (`duplicateActiveCallsigns` > 0) — System Status **critical**. Не виправляти дублікати автоматично; не підміняти позивні значеннями Position або ID.
-5. Читання PERSONNEL — **тільки за назвами заголовків** (літери колонок еталона — у контракті, не як runtime-ключ).
-6. Після `clasp push` / змін PERSONNEL: **`apiStage7ClearPhoneCache()`**.
+3. **Місячні аркуші:** Callsign + графік; персональні дані з PERSONNEL по Callsign → fallback FML.
+4. Читання PERSONNEL — **тільки за заголовками** аркуша. Літери колонок еталона — у контракті, не як runtime-ключ.
+5. **`Title` vs `Rank`:** еталон — `Rank`; `Title` — legacy-заголовок. Не вимагати обидва; не плутати з Position.
+6. **`OSH 4`:** заголовок з пробілом; runtime `osh4`. Не шукати `OSH_4` як ім’я колонки в аркуші.
+7. Після кожного production deploy (`clasp push`) — **обов’язково** `apiStage7ClearPhoneCache()`. Після змін PERSONNEL, що впливають на телефони / позивні / статус (зокрема `Phone`, `2_Phone` / `Phone 2`, `Status`, `Callsign`), і після `apiStage7MaterializeComputedData()` — також очищати кеш. Materialize derived-колонок — окремо (`apiStage7MaterializeComputedData()`).
+8. Дублікати Callsign серед активних — див. §5.
 
-### Збереження кадрових позицій
+## 4. Збереження кадрових позицій
 
-Синхронізація PERSONNEL → місячні аркуші зберігає позиції вихідних рядків. Неактивний Status не повинен автоматично призводити до стискання або зміщення кадрових рядків. Фільтрація активного особового складу (`getPersonnelActiveRows_`) і позиційне перенесення кадрових рядків (`MonthlyCallsignSync.gs`) — різні операції.
+Синхронізація PERSONNEL → місячні аркуші зберігає позиції вихідних рядків. Неактивний Status **не** повинен автоматично стискати або зміщувати кадрові рядки.
 
-### Контроль дублікатів
+Фільтрація активного особового складу (`getPersonnelActiveRows_`) і позиційне перенесення кадрових рядків (`MonthlyCallsignSync.gs`) — **різні** операції. Не змішувати їх в одному проході.
 
-Наявність однакових Callsign серед активних записів PERSONNEL повинна встановлювати критичний стан System Status (`critical` / `duplicateActiveCallsigns`). Не виправляти дублікати автоматично, не підміняти позивні значеннями Position або ID.
+## 5. Контроль дублікатів Callsign
 
-### Узгодженість структури
+Однакові Callsign серед **активних** записів PERSONNEL → критичний System Status:
 
-Фізичні позиції колонок визначає `contracts/reference-workbook-layout.contract.json`, а правила статусів — `contracts/personnel-status.contract.json`. Runtime використовує пошук за заголовками, а не жорстко закріплені літери колонок.
+| Поле | Значення |
+| --- | --- |
+| лічильник | `duplicateActiveCallsigns` |
+| рівень | `critical` |
+| підрахунок | `getPersonnelReadOnlyStatus_()` у `personnel/PersonnelRepository.gs` |
+| споживання | `diagnostics/SystemStatus.Probes.gs` (+ метрика в `SystemStatus.Foundation.gs`) |
 
-## Референс
+Дублікати **не** виправляти автоматично. Не підміняти позивні значеннями Position або ID.
 
-- `personnel/PersonnelRepository.gs` — `normalizePersonnelStatus_`, `getPersonnelActiveRows_`, `applyPersonnelStatusColumnValidation_`
+## 6. Узгодженість структури
+
+- Фізичні позиції колонок → `contracts/reference-workbook-layout.contract.json`
+- Правила статусів → `contracts/personnel-status.contract.json`
+- Runtime → пошук за заголовками, без жорстко закріплених літер колонок
+
+## 7. Референс
+
+- `personnel/PersonnelRepository.gs` — `normalizePersonnelStatus_`, `getPersonnelActiveRows_`, `getPersonnelReadOnlyStatus_`, `applyPersonnelStatusColumnValidation_`
 - `sheets/MonthlyCallsignSync.gs` — позиційна синхронізація Callsign на місячні аркуші
-- `contracts/reference-workbook-layout.contract.json`, `contracts/personnel-status.contract.json`
+- `diagnostics/SystemStatus.Probes.gs` — critical при `duplicateActiveCallsigns > 0`
+- `contracts/reference-workbook-layout.contract.json`
+- `contracts/personnel-status.contract.json`

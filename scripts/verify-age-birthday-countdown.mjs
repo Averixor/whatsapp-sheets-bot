@@ -49,13 +49,13 @@ assert.equal(formatBirthdayCell_("31.02.2026"), "");
 assert.equal(formatBirthdayCell_("20.09.2000"), "20.09.2000 р.н.");
 assert.equal(formatBirthdayCell_("20.09.2000 р."), "20.09.2000 р.н.");
 assert.equal(formatBirthdayCell_("20.09.2000 р.н."), "20.09.2000 р.н.");
-assert.equal(formatBirthdayCell_("20.09.2000 р. р."), "20.09.2000 р.н.");
+assert.equal(formatBirthdayCell_("20.09.2000 р.р."), "20.09.2000 р.н.");
 
 assert.equal(formatAgeCell_(""), "");
 assert.equal(formatAgeCell_(null), "");
 assert.equal(formatAgeCell_(25), "25 р.");
 assert.equal(formatAgeCell_("25 р."), "25 р.");
-assert.equal(formatAgeCell_("25 р. р."), "25 р.");
+assert.equal(formatAgeCell_("25 р.р."), "25 р.");
 
 assert.equal(calculateBirthdayCountdownUa_("", TODAY), "");
 assert.equal(calculateBirthdayCountdownUa_("not-a-date", TODAY), "");

@@ -9,14 +9,15 @@ _person_card_compact_report.txt
 *.tmp
 *.bak
 _audit-out.txt
-# VS Code / AI local settings
+# VS Code / Cursor — спільні workspace-файли в репо; локальний шум ігноруємо
 .vscode/*
 !.vscode/settings.json
 !.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
 .aider*
 # Local Google Apps Script / clasp mapping (scriptId, spreadsheet parentId)
 .clasp.json
 .clasp.*.json
 !.clasp.example.json
 !.clasp.staging.example.json
-.npmrc
