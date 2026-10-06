@@ -21,7 +21,7 @@ Individual subscripts: `npm run ci:gas`, `npm run ci:client`, `npm run ci:copy`,
 
 | Command | What it does |
 | -------- | ------------- |
-| `npm run check` / `check:all` | Full local CI (= `npm run ci`) |
+| `npm run check` / `check:all` / `ci` | Full local CI (`ci` → clean-env → `ci:chain`; no Debugger attached spam) |
 | `npm run c` | Refresh file map + full CI |
 | `npm run deploy:prod` | Full CI + `npm run gas:push` (production) |
 | `npm run push:remote` | `git push` only; add `-- --with-gas` on `main` for production `gas:push` |
@@ -30,11 +30,11 @@ Individual subscripts: `npm run ci:gas`, `npm run ci:client`, `npm run ci:copy`,
 | `npm run gh -- "msg"` | Commit **staged-only** + `git push` (never `git add -A`) |
 | `npm run ship` / `go -- "msg"` | Preflight → `ci` + staged `gh`; optional `--deploy-gas` on `main` (checked before CI). Refresh map separately via `map:project-files` then `git add`. |
 | `npm run gas:open` | Open GAS editor (`ops-gas.mjs` → `clasp open-script`) |
-| `npm run gas:push` / `gas:status` / `gas:pull` | Production clasp helpers (strip Cursor debugger env) |
+| `npm run gas:push` / `gas:status` / `gas:pull` | Production clasp helpers via `scripts/run-with-clean-env.mjs` (strips Cursor debugger env) |
 
 ### Node.js version
 
-CI and local dev recommend **Node.js 24** (`.github/workflows/ci.yml`, `.nvmrc`). `package.json` `engines.node` is **`>=24`** with no upper cap — Node 25, 26, … pass `npm run precheck` unless you add an explicit `<` / `<=` in engines. `npm run ci` runs precheck first (`scripts/verify-node-version.mjs`).
+CI and local dev recommend **Node.js 24** (`.github/workflows/ci.yml`, `.nvmrc`). `package.json` `engines` is **`node >=24`**, **`npm >=10`** — Node 25, 26, … pass `npm run precheck` unless you add an explicit `<` / `<=` in `engines.node`. `npm run ci` runs precheck first (`scripts/verify-node-version.mjs`).
 
 ```bash
 nvm use    # reads .nvmrc (24)

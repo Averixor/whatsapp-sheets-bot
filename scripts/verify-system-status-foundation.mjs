@@ -388,7 +388,10 @@ assert.match(
   /^node scripts\/verify-system-status-foundation\.mjs(?:\s+&&\s+|$)/,
   "package script must expose the SS-1 focused verifier",
 );
-assert.match(packageJson.scripts.ci, /npm run ci:system-status/);
+assert.match(packageJson.scripts.ci, /run-with-clean-env\.mjs/);
+assert.match(packageJson.scripts.ci, /npm run ci:chain/);
+assert.match(packageJson.scripts["ci:chain"], /npm run ci:domain/);
+assert.match(packageJson.scripts["ci:domain"], /npm run ci:system-status/);
 assert.doesNotMatch(foundationSource + probesSource, /apiStage7GetSystemStatus/);
 
 console.log(

@@ -13,7 +13,20 @@
   "[css]": {
     "editor.formatOnSave": false
   },
-  "cSpell.words": [
-    "неіснуючі"
-  ]
+  "cSpell.enabled": true,
+  "cSpell.import": ["${workspaceFolder}/cspell.json"],
+  "terminal.integrated.env.linux": {
+    "PATH": "${env:HOME}/.nvm/versions/node/v24.21.0/bin:${env:PATH}",
+    "NODE_OPTIONS": "",
+    "VSCODE_INSPECTOR_OPTIONS": ""
+  },
+  "terminal.integrated.automationProfile.linux": {
+    "path": "/usr/bin/bash",
+    "args": ["-l"],
+    "env": {
+      "PATH": "${env:HOME}/.nvm/versions/node/v24.21.0/bin:${env:PATH}",
+      "NODE_OPTIONS": "",
+      "VSCODE_INSPECTOR_OPTIONS": ""
+    }
+  }
 }
