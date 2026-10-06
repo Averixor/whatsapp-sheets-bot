@@ -2,7 +2,7 @@
 # Порядок: дерево каталогів (depth-first, алфавіт у кожній папці)
 # Виключено: .git/, node_modules/, локальні .clasp*.json (крім *.example.json)
 # Файлів: 331
-# Оновлено: 2026-10-05T22:29:59Z
+# Оновлено: 2026-10-06T00:29:05Z
 
 .
   .clasp.example.json
@@ -50,8 +50,10 @@
   explorer.toml
   reviewer.toml
 
+.cursor/plans/
+  push_birthday_pr_67b7a2de.plan.md
+
 .cursor/rules/
-  git-safety.mdc
   monthly-callsign-sync.mdc
   personnel-data-keys.mdc
   user-facing-copy.mdc
