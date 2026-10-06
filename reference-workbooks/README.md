@@ -6,7 +6,7 @@ Place local copies here when comparing against production sheets:
 
 | File | Purpose |
 | ---- | ------- |
-| `Книга Взводу Охорони*.xlsx` | Main squad workbook; source for PERSONNEL / month sheet layout (see RUNBOOK §14) |
+| `Книга Взводу Охорони — робоча.xlsx` | Main squad workbook (current reference); source for PERSONNEL / month / WEAPON / CAR layout (see RUNBOOK §14) |
 | `oblik_maina_profesiinyi_dyzain(1).xlsx` | Temporary property register design reference only — live data stays in the bound Google Sheet |
 
 Do not commit production snapshots without an explicit release decision. See [`docs/README.md`](../docs/README.md).

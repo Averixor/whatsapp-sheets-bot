@@ -319,7 +319,7 @@ Sidebar maintainers can open three optional reference repositories:
 
 - `PHONE_DIRECTORY` — sectioned service phones with WhatsApp links (`apiStage7GetPhoneDirectory`)
 - `CAR` — vehicle register with owner/search/stats (`apiStage7GetCarsRegister`)
-- `WEAPON` — person-bound military property register (`apiStage7GetWeaponsRegister`)
+- `WEAPON` — person-bound military property register: blocks F:L, N:T, V:Z; Callsign in AA (`apiStage7GetWeaponsRegister`)
 
 These reads are owned by `ReferenceSheetsRepository_` in `data/DictionaryRepository.gs`. Header/workbook expectations are guarded by `contracts/reference-workbook-layout.contract.json` and parser semantics by `scripts/verify-reference-repositories.mjs`.
 
