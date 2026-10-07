@@ -652,16 +652,8 @@ const VacationMonthCalendar_ = (function () {
   };
 })();
 
-function getVacationMonthCalendarFromSidebar(formData) {
-  return VacationMonthCalendar_.getVacationMonthCalendar_(formData || {});
-}
-
 function getVacationMonthCalendar_(options) {
   return VacationMonthCalendar_.getVacationMonthCalendar_(options || {});
-}
-
-function getVacationCalendarDayDetailsFromSidebar(formData) {
-  return VacationMonthCalendar_.getVacationCalendarDayDetails_(formData || {});
 }
 
 function getVacationCalendarDayDetails_(options) {

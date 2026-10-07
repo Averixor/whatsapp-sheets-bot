@@ -14,7 +14,7 @@
     "check:all": "npm run check",
     "ci": "node scripts/run-with-clean-env.mjs -- npm run ci:chain",
     "ci:chain": "npm run precheck && npm run ci:gas && npm run ci:static && npm run ci:domain && npm run ci:client && npm run ci:security && npm run ci:deploy && npm run ci:repo",
-    "ci:gas": "node scripts/ci-gas-sanity.mjs && node scripts/verify-clasp-push-patterns.mjs",
+    "ci:gas": "node scripts/ci-gas-sanity.mjs && node scripts/verify-clasp-push-patterns.mjs && node scripts/verify-stage7-test-discovery.mjs",
     "ci:static": "npm run ci:language && npm run ci:copy && npm run ci:spelling",
     "ci:language": "node scripts/verify-no-russian-text.mjs",
     "ci:copy": "node scripts/verify-user-facing-copy.mjs",

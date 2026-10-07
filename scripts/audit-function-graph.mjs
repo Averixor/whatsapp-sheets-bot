@@ -139,9 +139,12 @@ const gsFiles = walk(repoRoot, [".gs"]);
 const htmlFiles = walk(repoRoot, [".html"]);
 
 const defNames = new Set();
+const defsByName = new Map();
 for (const file of gsFiles) {
   for (const d of topLevelGsDefs(file, fs.readFileSync(file, "utf8"))) {
     defNames.add(d.name);
+    if (!defsByName.has(d.name)) defsByName.set(d.name, []);
+    defsByName.get(d.name).push(d);
   }
 }
 
@@ -199,6 +202,22 @@ if (missing.length) {
   }
 } else {
   console.log("MISSING: none");
+}
+
+const duplicates = [...defsByName.entries()]
+  .filter(([, defs]) => defs.length > 1)
+  .sort((a, b) => a[0].localeCompare(b[0]));
+
+if (duplicates.length) {
+  exitCode = 1;
+  console.error("\nDUPLICATE (top-level function declared more than once):");
+  for (const [name, defs] of duplicates) {
+    console.error(
+      `  ${name} <- ${defs.map((d) => `${rel(d.file)}:${d.line}`).join(", ")}`,
+    );
+  }
+} else {
+  console.log("DUPLICATE: none");
 }
 
 process.exit(exitCode);
