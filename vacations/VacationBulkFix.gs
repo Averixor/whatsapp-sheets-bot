@@ -489,18 +489,6 @@ const VacationBulkFix_ = (function () {
   };
 })();
 
-function buildVacationBulkFixPlanFromSidebar(formData) {
-  return VacationBulkFix_.buildVacationBulkFixPlan_(formData || {});
-}
-
-function applyVacationBulkFixPlanFromSidebar(formData) {
-  const plan =
-    formData && formData.plan && typeof formData.plan === "object"
-      ? formData.plan
-      : formData || {};
-  return VacationBulkFix_.applyVacationBulkFixPlan_(plan);
-}
-
 function buildVacationBulkFixPlan_(options) {
   return VacationBulkFix_.buildVacationBulkFixPlan_(options || {});
 }

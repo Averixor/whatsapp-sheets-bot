@@ -2844,11 +2844,28 @@ assert.match(reminderMailSource, /input\.trigger === true \|\| input\.isSystemTr
 
 const bulkFixSource = readRepo("VacationBulkFix.gs");
 const monthCalendarSource = readRepo("VacationMonthCalendar.gs");
-assert.match(bulkFixSource, /function buildVacationBulkFixPlanFromSidebar/);
-assert.match(bulkFixSource, /function applyVacationBulkFixPlanFromSidebar/);
+assert.doesNotMatch(
+  bulkFixSource,
+  /function buildVacationBulkFixPlanFromSidebar/,
+  "bulk-fix sidebar entry must stay only on VacationSidebarService",
+);
+assert.doesNotMatch(
+  bulkFixSource,
+  /function applyVacationBulkFixPlanFromSidebar/,
+  "bulk-fix apply entry must stay only on VacationSidebarService",
+);
 assert.match(bulkFixSource, /function validateVacationBulkFixPlan_/);
 assert.match(bulkFixSource, /vacation\.bulk_plan\.stale/);
-assert.match(monthCalendarSource, /function getVacationCalendarDayDetailsFromSidebar/);
+assert.doesNotMatch(
+  monthCalendarSource,
+  /function getVacationMonthCalendarFromSidebar/,
+  "month calendar sidebar entry must stay only on VacationSidebarService",
+);
+assert.doesNotMatch(
+  monthCalendarSource,
+  /function getVacationCalendarDayDetailsFromSidebar/,
+  "calendar day sidebar entry must stay only on VacationSidebarService",
+);
 assert.match(monthCalendarSource, /loadLevel/);
 assert.match(monthCalendarSource, /isoDate/);
 assert.match(monthCalendarSource, /problemsCount/);

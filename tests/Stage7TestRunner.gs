@@ -25,10 +25,10 @@ var Stage7TestRunner = (function () {
   }
 
   function runAllProjectTests(options) {
-    return runSuite_(
-      "all",
-      Object.assign({}, options || {}, { includeDiscovery: true }),
-    );
+    var raw = Object.assign({}, options || {});
+    if (raw.discover !== false) raw.discover = true;
+    raw.includeDiscovery = true;
+    return runSuite_("all", raw);
   }
 
   /**
@@ -36,7 +36,10 @@ var Stage7TestRunner = (function () {
    * This is the safe path for sidebar/UI: several short GAS executions instead of one execution that hits the 6-minute limit.
    */
   function runProjectTestChunk(options) {
-    var rawOptions = options || {};
+    var rawOptions = Object.assign({}, options || {});
+    if (rawOptions.includeDiscovery !== false && rawOptions.discover !== false) {
+      rawOptions.discover = true;
+    }
     var opts = normalizeOptions_(
       Object.assign({}, rawOptions, {
         includeDiscovery: rawOptions.includeDiscovery !== false,
@@ -374,7 +377,7 @@ var Stage7TestRunner = (function () {
       if (!shouldDiscoverFunction_(name, globalObject[name])) return;
       seen[name] = true;
       tasks.push({
-        id: "discovered-" + slugify_(name),
+        id: "discovered-" + ctx.slugify_(name),
         name: "Discovered test runner: " + name,
         group: "discovered",
         level: "full",
@@ -634,6 +637,7 @@ var Stage7TestRunner = (function () {
       failFast: options.failFast === true,
       dryRun: options.dryRun !== false,
       includeDiscovery: options.includeDiscovery !== false,
+      discover: options.discover === true,
       sheetName: options.sheetName || DEFAULT_RESULT_SHEET_NAME,
     };
   }

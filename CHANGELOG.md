@@ -1,14 +1,20 @@
-## 2026-10-05 — Align reference layout with working workbook
-
-- **Contract:** existing `reference-workbook-layout.contract.json` / `reference-repositories.contract.json` updated from `Книга Взводу Охорони — робоча.xlsx` (WEAPON separators M/U, Callsign AA; CAR H; DICT_SUM without Резерв).
-- **Code:** `ReferenceSheetsRepository_.readWeaponsRegister` block offsets F:L / N:T / V:Z; `SheetSchemas` weapon/car fields match the working book.
-
 # Changelog
+
+## 2026-10-07 — Test discovery flag and single vacation sidebar entrypoints
+
+- **Tests:** `Stage7TestRunner` keeps `discover` through option normalization. Project-wide runs turn discovery on unless `discover: false`. A safe discovered test is included; operational names stay excluded.
+- **Vacations:** `buildVacationBulkFixPlanFromSidebar`, `applyVacationBulkFixPlanFromSidebar`, `getVacationMonthCalendarFromSidebar`, and `getVacationCalendarDayDetailsFromSidebar` are declared only in `VacationSidebarService.gs`, so the access check cannot be replaced by a later duplicate.
+- **CI:** `verify-stage7-test-discovery.mjs`; function-graph audit fails on duplicate top-level GAS functions.
 
 ## 2026-10-06 — Days until birthday as total days
 
 - **Display:** PERSONNEL / BIRTHDAY `Days until birthday` now shows total days to next birthday as `N дн.` (or `Сьогодні`), instead of `N м.` / `N д.` / `N м. N д.`.
 - **CI:** `verify-age-birthday-countdown.mjs` and `DomainTests.gs` assert the days-only canon.
+
+## 2026-10-05 — Align reference layout with working workbook
+
+- **Contract:** existing `reference-workbook-layout.contract.json` / `reference-repositories.contract.json` updated from `Книга Взводу Охорони — робоча.xlsx` (WEAPON separators M/U, Callsign AA; CAR H; DICT_SUM without Резерв).
+- **Code:** `ReferenceSheetsRepository_.readWeaponsRegister` block offsets F:L / N:T / V:Z; `SheetSchemas` weapon/car fields match the working book.
 
 ## 2026-10-05 — package.json CI phases and clean-env gas wrapper
 
