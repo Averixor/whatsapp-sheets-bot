@@ -5,13 +5,15 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { buildApiFunctionIndex } from './lib/gas-files.mjs';
+import { buildApiFunctionIndex, readRepoFileByBasename } from './lib/gas-files.mjs';
 import { loadContract, repoRoot } from './lib/load-contract.mjs';
 
 const contract = loadContract('access-api.contract.json');
 
 function read(rel) {
-  return fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+  return readRepoFileByBasename(repoRoot, rel, {
+    errorPrefix: 'verify-access-api-governance',
+  });
 }
 
 function unique(values) {
@@ -349,20 +351,38 @@ function main() {
     );
   }
 
-  const smokeManifest = JSON.parse(read(contract.smokeManifestFile));
-  const smokeAccess =
-    smokeManifest.executionApi && smokeManifest.executionApi.access;
-  if (smokeAccess !== contract.smokeExecutionApiAccess) {
+  // Separate test-project manifest checks were removed.
+
+  const coreText = read('AccessControl.Core.gs');
+  if (!coreText.includes('WASB_DISABLE_SIDEBAR_LOGIN')) {
     errors.push(
-      `${contract.smokeManifestFile} executionApi.access must be ${contract.smokeExecutionApiAccess}; found ${smokeAccess || '<missing>'}`,
+      'AccessControl.Core.gs must define WASB_DISABLE_SIDEBAR_LOGIN',
     );
   }
-
-  const productionClaspIgnore = read(contract.productionClaspIgnoreFile);
-  for (const file of contract.smokeOnlyFiles || []) {
-    if (!productionClaspIgnore.split(/\r?\n/).includes(file)) {
-      errors.push(`${file} must be excluded by ${contract.productionClaspIgnoreFile}`);
-    }
+  const resolverText = read('AccessControl.AuthResolver.gs');
+  if (!resolverText.includes('_buildSpreadsheetSharingDescriptor_')) {
+    errors.push(
+      'AccessControl.AuthResolver.gs must grant spreadsheet-sharing access (login/registration removed)',
+    );
+  }
+  if (!resolverText.includes('registrationRemoved: true') && !resolverText.includes('spreadsheet-sharing')) {
+    errors.push(
+      'AccessControl.AuthResolver.gs must mark registration as removed / spreadsheet-sharing mode',
+    );
+  }
+  if (resolverText.includes('Ключ не зареєстровано в списку доступу. Строгий режим.') &&
+      /return _buildUnknownDescriptor_/.test(resolverText.split('function _resolveAccessSubject_')[1] || '')) {
+    // Unknown deny path in resolvers is OK only if not the default end — check end uses sharing
+  }
+  if (!/return _buildSpreadsheetSharingDescriptor_\(context, policy\);/.test(resolverText)) {
+    errors.push(
+      'AccessControl.AuthResolver.gs resolvers must fall back to spreadsheet sharing',
+    );
+  }
+  if (!/_isAccessEntryActivationComplete_[\s\S]*userKeyCurrentHash/.test(resolverText)) {
+    errors.push(
+      'AccessControl.AuthResolver.gs activation must be key-allowlist based',
+    );
   }
 
   if (errors.length) {

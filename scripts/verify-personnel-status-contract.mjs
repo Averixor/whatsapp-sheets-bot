@@ -7,12 +7,37 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { loadContract, repoRoot } from "./lib/load-contract.mjs";
+import { readRepoFileByBasename } from "./lib/gas-files.mjs";
 
 const contract = loadContract("personnel-status.contract.json");
-const source = fs.readFileSync(
-  path.join(repoRoot, "PersonnelRepository.gs"),
-  "utf8",
+const layoutContract = loadContract("reference-workbook-layout.contract.json");
+const personnelHeaders = layoutContract.sheets?.PERSONNEL || {};
+const statusColLetter = Object.entries(personnelHeaders).find(
+  ([, header]) => header === "Status",
+)?.[0];
+assert.equal(
+  statusColLetter,
+  "R",
+  "reference-workbook-layout PERSONNEL Status must be column R",
 );
+const statusColIndex = statusColLetter.charCodeAt(0) - 64;
+assert.equal(
+  contract.referenceStatusColumn,
+  statusColIndex,
+  "personnel-status.referenceStatusColumn must match reference-workbook-layout Status column",
+);
+assert.equal(
+  contract.selfHeal?.preferColumn,
+  statusColIndex,
+  "personnel-status.selfHeal.preferColumn must match reference-workbook-layout Status column",
+);
+
+const source = readRepoFileByBasename(repoRoot, "PersonnelRepository.gs", {
+  errorPrefix: "verify-personnel-status-contract",
+});
+const selfHealSource = readRepoFileByBasename(repoRoot, "SystemSheetsSelfHeal.gs", {
+  errorPrefix: "verify-personnel-status-contract",
+});
 
 const IN_TRIP_UNICODE = contract.inTripStatusUnicode || "";
 const IN_TRIP_CANON = IN_TRIP_UNICODE ? JSON.parse(`"${IN_TRIP_UNICODE}"`) : "";
@@ -191,6 +216,25 @@ assert.equal(
   true,
   "in-trip status is active",
 );
+
+assert.match(source, /function ensurePersonnelStatusColumnHeader_/);
+assert.match(source, /function ensurePersonnelStatusColumn_/);
+assert.match(source, /ensurePersonnelStatusColumnHeader_\(sh\)/);
+assert.match(
+  source,
+  new RegExp(
+    `var PERSONNEL_REFERENCE_STATUS_COL_\\s*=\\s*${contract.referenceStatusColumn};`,
+  ),
+);
+
+(contract.selfHeal?.validationAppliedBy || []).forEach((symbol) => {
+  assert.match(
+    source + "\n" + selfHealSource,
+    new RegExp(symbol.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+  );
+});
+assert.match(selfHealSource, /function _applyPersonnelStatusValidation_/);
+assert.match(selfHealSource, /applyPersonnelStatusColumnValidation_\(sheet\)/);
 
 console.log(
   `verify-personnel-status-contract: OK (dropdown=${runtime.dropdown.length}, inTrip=unicode-constant)`,

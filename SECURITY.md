@@ -102,6 +102,11 @@ Role order:
 - repair actions
 - cache/system maintenance
 
+Policy checks (`access/AccessPolicyChecks.gs` → `runAccessPolicyChecks()`) require
+these **UA maintenance action keys** on the sysadmin role policy:
+`відновлення`, `захист аркушів`, `тригери` (see `POLICY_CHECKS_CONFIG_.REQUIRED_MAINTENANCE_ACTIONS`;
+EN aliases map on read via `MAINTENANCE_ACTION_ALIASES`).
+
 ### owner
 
 - full access
@@ -148,10 +153,7 @@ Access API surface is governed by `contracts/access-api.contract.json` and `npm 
 ### Execution API separation
 
 - production `appsscript.json` is fixed to `executionApi.access = MYSELF`
-- `GasRuntimeSmoke.gs` is excluded from production `clasp push`
-- remote smoke uses a separate non-production Apps Script project,
-  `.clasp.smoke.json`, and `appsscript.smoke.json`
-- never point `.clasp.smoke.json` at the production script or spreadsheet
+- production `clasp push` uses `.claspignore` and `appsscript.json` with `executionApi.access = MYSELF`
 
 The access governance contract verifies the production manifest, every public
 `api*` entrypoint, explicit non-public exclusions, role policy, guard markers,
@@ -237,12 +239,13 @@ Canonical allowlist: `contracts/oauth-scopes.contract.json` (CI: `verify-oauth-s
 | ----- | ------- |
 | `spreadsheets` | SpreadsheetApp |
 | `drive.file` | Container spreadsheet (per-file Drive) |
+| `drive.readonly` | Read-only Drive folder traversal for inventory reconciliation documents |
 | `script.container.ui` | HtmlService sidebar/dialogs |
 | `script.send_mail` | MailApp security notifications |
 | `userinfo.email` | Session user email for ACCESS/audit |
 | `script.scriptapp` | Triggers, properties, locks |
 
-Removed after codebase audit (2026-05-29): full `drive`, `documents` — no `DriveApp` / `DocumentApp` usage. Never re-add `script.external_request` without explicit review.
+Removed after codebase audit (2026-05-29): full `drive`, `documents` — no full Drive write or `DocumentApp` usage. `drive.readonly` was added for inventory reconciliation (`DriveApp` folder scan). Never re-add `script.external_request` without explicit review.
 
 ## 10. Alerts, audit, and notifications
 
@@ -301,3 +304,15 @@ Before calling security “good enough”, confirm:
 - privileged routes reject insufficient roles on the server
 - service sheets exist and protections are applied
 - quick health and diagnostics do not report security drift
+
+## 15. Automated scanning boundaries
+
+Do not conflate:
+
+1. local / GitHub **CI** success,
+2. **CodeQL** success,
+3. review of Google Apps Script **`.gs`** security.
+
+CodeQL currently targets Actions workflows plus the JavaScript/TypeScript
+extractor (`.mjs`, `.html`). Coverage of `.gs` is an open follow-up:
+[`docs/codeql-coverage.md`](./docs/codeql-coverage.md).

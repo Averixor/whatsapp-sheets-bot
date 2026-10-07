@@ -6,16 +6,14 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
-import { findFileByBasename } from "./lib/gas-files.mjs";
+import { readRepoFileByBasename } from "./lib/gas-files.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 
-function readGasByBasename(basename) {
-  const rel = findFileByBasename(repoRoot, basename, [".gs"]);
-  if (!rel) {
-    throw new Error(`verify-workbook-contract: missing GAS file: ${basename}`);
-  }
-  return fs.readFileSync(path.join(repoRoot, rel), "utf8");
+function readGasByBasename(fileName) {
+  return readRepoFileByBasename(repoRoot, fileName, {
+    errorPrefix: "verify-workbook-contract",
+  });
 }
 
 function columnNumberToLetter(value) {
@@ -27,6 +25,15 @@ function columnNumberToLetter(value) {
     n = Math.floor((n - 1) / 26);
   }
   return out;
+}
+
+function formatSheetDisplayValue_(value) {
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    const day = String(value.getDate()).padStart(2, "0");
+    const month = String(value.getMonth() + 1).padStart(2, "0");
+    return `${day}.${month}.${value.getFullYear()}`;
+  }
+  return String(value ?? "");
 }
 
 function parseA1(value) {
@@ -74,6 +81,10 @@ class FakeRange {
     return this.numCols;
   }
 
+  getLastRow() {
+    return this.row + this.numRows - 1;
+  }
+
   getValue() {
     return this.sheet.valueAt(this.row, this.col);
   }
@@ -83,11 +94,21 @@ class FakeRange {
   }
 
   getDisplayValues() {
+    function display(value) {
+      if (
+        value &&
+        typeof value.getTime === "function" &&
+        !Number.isNaN(value.getTime())
+      ) {
+        return `${String(value.getDate()).padStart(2, "0")}.${String(
+          value.getMonth() + 1,
+        ).padStart(2, "0")}.${value.getFullYear()}`;
+      }
+      return String(value ?? "");
+    }
     return Array.from({ length: this.numRows }, (_, rowOffset) =>
       Array.from({ length: this.numCols }, (_, colOffset) =>
-        String(
-          this.sheet.valueAt(this.row + rowOffset, this.col + colOffset) ?? "",
-        ),
+        display(this.sheet.valueAt(this.row + rowOffset, this.col + colOffset)),
       ),
     );
   }
@@ -95,12 +116,55 @@ class FakeRange {
   getValues() {
     return this.getDisplayValues();
   }
+
+  setValues(values) {
+    values.forEach((sourceRow, rowOffset) => {
+      sourceRow.forEach((value, colOffset) => {
+        this.sheet.setValue(this.row + rowOffset, this.col + colOffset, value);
+      });
+    });
+    return this;
+  }
+
+  clearContent() {
+    for (let rowOffset = 0; rowOffset < this.numRows; rowOffset++) {
+      for (let colOffset = 0; colOffset < this.numCols; colOffset++) {
+        this.sheet.setValue(this.row + rowOffset, this.col + colOffset, "");
+      }
+    }
+    return this;
+  }
+
+  setBackground(color) {
+    for (let rowOffset = 0; rowOffset < this.numRows; rowOffset++) {
+      for (let colOffset = 0; colOffset < this.numCols; colOffset++) {
+        this.sheet.setBackground(this.row + rowOffset, this.col + colOffset, color);
+      }
+    }
+    return this;
+  }
+
+  setFontColor(color) {
+    for (let rowOffset = 0; rowOffset < this.numRows; rowOffset++) {
+      for (let colOffset = 0; colOffset < this.numCols; colOffset++) {
+        this.sheet.setFontColor(this.row + rowOffset, this.col + colOffset, color);
+      }
+    }
+    return this;
+  }
+
+  getFormula() {
+    return this.sheet.formulaAt(this.row, this.col);
+  }
 }
 
 class FakeSheet {
   constructor(name, rows) {
     this.name = name;
     this.rows = rows;
+    this.formulas = {};
+    this.backgrounds = {};
+    this.fontColors = {};
   }
 
   getName() {
@@ -115,8 +179,55 @@ class FakeSheet {
     return Math.max(0, ...this.rows.map((row) => row.length - 1));
   }
 
+  getMaxColumns() {
+    return Math.max(0, ...this.rows.map((row) => row.length - 1));
+  }
+
+  insertColumnsAfter(afterPosition, howMany) {
+    for (const row of this.rows) {
+      const insertAt = Number(afterPosition) + 1;
+      row.splice(insertAt, 0, ...Array(Number(howMany) || 0).fill(""));
+    }
+  }
+
   valueAt(row, col) {
     return (this.rows[row] || [])[col];
+  }
+
+  formulaAt(row, col) {
+    return this.formulas[`${row}:${col}`] || "";
+  }
+
+  setFormula(row, col, formula) {
+    this.formulas[`${row}:${col}`] = formula;
+  }
+
+  setValue(row, col, value) {
+    while (this.rows.length <= row) {
+      this.rows.push([]);
+    }
+    const rowRef = this.rows[row];
+    while (rowRef.length <= col) {
+      rowRef.push("");
+    }
+    rowRef[col] = value;
+    delete this.formulas[`${row}:${col}`];
+  }
+
+  setBackground(row, col, color) {
+    this.backgrounds[`${row}:${col}`] = color;
+  }
+
+  backgroundAt(row, col) {
+    return this.backgrounds[`${row}:${col}`];
+  }
+
+  setFontColor(row, col, color) {
+    this.fontColors[`${row}:${col}`] = color;
+  }
+
+  fontColorAt(row, col) {
+    return this.fontColors[`${row}:${col}`];
   }
 
   getRange(rowOrA1, col, numRows, numCols) {
@@ -193,28 +304,49 @@ function loadWorkbookFunctions() {
     getWasbSpreadsheet_: () => null,
     FULL_NAMES: {
       ОС: "Особовий склад",
-      Black: "Екіпаж Чорний",
-      Roland: "Екіпаж Роланд",
+      "Black Hawk": "Екіпаж Black Hawk",
+      Гектор: "Екіпаж Гектор",
       БР: "Бойове розпорядження",
+      Евак: "Медевак",
+      "1РБпАК": "Охорона позиції 1 роти БпАК",
+      "2РБпАК": "Охорона позиції 2 роти БпАК",
+      "1РУБпАК": "Охорона позиції 1 роти УБпАК",
+      "2РУБпАК": "Охорона позиції 2 роти УБпАК",
       КП: "Командний пункт",
-      Відряд: "У відрядженні",
-      Відпус: "У відпустці",
       Резерв: "Резерв",
-      DC: "Drone Camp",
+      "*ВЗ": "Відряджений/-і до взводу зв′язку",
+      "*ВМЗ": "Відряджений/-і до взводу МЗ",
+      "*1РБпАК": "Відряджений/-і до 1 роти БпАК",
+      "*2РБпАК": "Відряджений/-і до 2 роти БпАК",
+      "*1РУБпАК": "Відряджений/-і до 1 роти УБпАК",
+      "*2РУБпАК": "Відряджений/-і до 2 роти УБпАК",
+      Відрядження: "У відрядженні",
+      Відпустка: "Відпустка",
+      Лікарняний: "Ушпитален/Лікарняний",
+      "ППД Київ": "ППД Київ",
+      Гусачівка: "Гусачівка",
+      Відряд: "У відрядженні",
+      Відпус: "Відпустка",
+      Лікарн: "Ушпитален/Лікарняний",
+      "Drone Camp": ["Drone Camp"],
+      БЗВП: "Базова військова підготовка",
+      СЗЧ: "Самовільне залишення частини",
       Київ: "ППД Київ",
+      Гусачі: "Гусачівка",
       Вибув: "Вибув",
-      "2УРБпАК": "Охорона позиції 2 роти УБпАК",
     },
     SUMMARY_GROUPS: {
       Резерв: ["Резерв"],
-      Black: ["Black"],
-      Roland: ["Roland"],
+      "Black Hawk": ["Black Hawk"],
+      Гектор: ["Гектор"],
       БР: ["БР"],
       КП: ["КП"],
-      Відряд: ["Відряд"],
-      Відпус: ["Відпус"],
-      DC: ["DC"],
-      Київ: ["Київ"],
+      Відрядження: ["Відрядження", "Відряд"],
+      Відпустка: ["Відпустка", "Відпус"],
+      Лікарняний: ["Лікарняний", "Лікарн"],
+      "Drone Camp": ["Drone Camp"],
+      "ППД Київ": ["ППД Київ", "Київ"],
+      Гусачівка: ["Гусачівка", "Гусачі"],
       Вибув: ["Вибув"],
     },
   });
@@ -222,6 +354,7 @@ function loadWorkbookFunctions() {
   for (const file of [
     "SummaryDictSumShim.gs",
     "SheetSchemas.gs",
+    "MonthSheets.gs",
     "Report_SummaryData.gs",
     "Report_DailySimple.gs",
     "Report_DailyDetailed.gs",
@@ -241,6 +374,54 @@ const layout = context.detectMonthlyLayoutFromSheet_(sheet);
 
 assert.equal(layout.layout, "compact");
 assert.equal(layout.codeRangeA1, "C2:AF30");
+
+const julySheetFromJune = buildCompactJuneSheet({ includeSummaryBlock: false });
+const julyGrid = context._setMonthDatesRow_(julySheetFromJune, 7, 2026);
+const julyLayout = context.detectMonthlyLayoutFromSheet_(julySheetFromJune);
+assert.equal(julyGrid.daysInMonth, 31);
+assert.equal(julyGrid.clearRangeA1, "C2:AG30");
+assert.equal(julyLayout.codeRangeA1, "C2:AG30");
+assert.equal(julySheetFromJune.valueAt(1, 33).getDate(), 31);
+assert.equal(julySheetFromJune.valueAt(1, 33).getMonth(), 6);
+assert.equal(julySheetFromJune.backgroundAt(1, 6), "#f4cccc");
+assert.equal(julySheetFromJune.fontColorAt(1, 6), "#000000");
+assert.equal(julySheetFromJune.backgroundAt(1, 8), null);
+assert.equal(julySheetFromJune.fontColorAt(1, 8), "#000000");
+
+julySheetFromJune.setBackground(1, 9, "#f4cccc");
+julySheetFromJune.setFontColor(1, 9, "#cc0000");
+julySheetFromJune.setBackground(1, 33, "#f4cccc");
+julySheetFromJune.setFontColor(1, 33, "#cc0000");
+const aprilGrid = context._setMonthDatesRow_(julySheetFromJune, 4, 2026);
+assert.equal(aprilGrid.daysInMonth, 30);
+assert.equal(
+  aprilGrid.clearRangeA1,
+  "C2:AG30",
+  "shorter target month must still clear stale copied day columns",
+);
+assert.equal(julySheetFromJune.valueAt(1, 33), "");
+assert.equal(julySheetFromJune.backgroundAt(1, 6), "#f4cccc");
+assert.equal(julySheetFromJune.fontColorAt(1, 6), "#000000");
+assert.equal(julySheetFromJune.backgroundAt(1, 9), null);
+assert.equal(julySheetFromJune.fontColorAt(1, 9), "#000000");
+assert.equal(julySheetFromJune.backgroundAt(1, 33), null);
+assert.equal(julySheetFromJune.fontColorAt(1, 33), "#000000");
+
+const juneWeekendCarryover = buildCompactJuneSheet({ includeSummaryBlock: false });
+// June 2026: col 8 = day 6 (Sat), col 9 = day 7 (Sun)
+juneWeekendCarryover.setBackground(1, 8, "#f4cccc");
+juneWeekendCarryover.setFontColor(1, 8, "#cc0000");
+juneWeekendCarryover.setBackground(1, 9, "#f4cccc");
+juneWeekendCarryover.setFontColor(1, 9, "#cc0000");
+context._setMonthDatesRow_(juneWeekendCarryover, 7, 2026);
+// July 2026: col 8 = day 6 (Mon), col 9 = day 7 (Tue) — must not inherit June weekend paint
+assert.equal(juneWeekendCarryover.backgroundAt(1, 8), null);
+assert.equal(juneWeekendCarryover.fontColorAt(1, 8), "#000000");
+assert.equal(juneWeekendCarryover.backgroundAt(1, 9), null);
+assert.equal(juneWeekendCarryover.fontColorAt(1, 9), "#000000");
+assert.equal(juneWeekendCarryover.backgroundAt(1, 6), "#f4cccc", "July Sat day 4");
+assert.equal(juneWeekendCarryover.backgroundAt(1, 11), null, "July Thu day 9");
+
 assert.equal(
   context.countMonthlyScheduleRowsForColumn_(sheet, 16),
   29,
@@ -358,7 +539,7 @@ assert.ok(people.some((p) => p.code === "Відряд"));
 const detailed = context.formatDetailedSummary_("14.06.2026", people);
 assert.match(detailed, /\*Бойове розпорядження\* — 2/);
 assert.match(detailed, /\*Командний пункт\* — 1/);
-assert.match(detailed, /\*У відпустці\* — 1/);
+assert.match(detailed, /\*Відпустка\* — 1/);
 assert.match(detailed, /\*У відрядженні\* — 1/);
 assert.ok(
   detailed.indexOf("Бойове розпорядження") < detailed.indexOf("Командний пункт"),
@@ -370,20 +551,186 @@ context.getPersonnelMapByCallsignAll_ = originalPersonnelMap;
 context.resolveSummaryPersonFml_ = originalResolveFml;
 
 const dictSumRules = context.getDefaultDictSumRules_();
-const dictSumCodes = dictSumRules.map((rule) => rule.code);
-assert.ok(dictSumCodes.includes("DC"), "DICT_SUM defaults must include DC");
-assert.ok(dictSumCodes.includes("Київ"), "DICT_SUM defaults must include Київ");
-assert.ok(
-  dictSumCodes.includes("Вибув"),
-  "DICT_SUM defaults must include Вибув",
+const actualDictSumTruth = Array.from(dictSumRules, (rule) => [
+  String(rule.code),
+  Number(rule.order),
+  String(rule.label),
+]);
+const expectedDictSumTruth = [
+  ["Black Hawk", 10, "Екіпаж Black Hawk"],
+  ["Гектор", 15, "Екіпаж Гектор"],
+  ["БР", 20, "Бойове розпорядження"],
+  ["Евак", 25, "Медевак"],
+  ["1РБпАК", 30, "Охорона позиції 1 роти БпАК"],
+  ["2РБпАК", 35, "Охорона позиції 2 роти БпАК"],
+  ["1РУБпАК", 40, "Охорона позиції 1 роти УБпАК"],
+  ["2РУБпАК", 100, "Охорона позиції 2 роти УБпАК"],
+  ["КП", 105, "Командний пункт"],
+  ["Резерв", 140, "Резерв"],
+  ["*ВЗ", 145, "Відряджений/-і до взводу зв′язку"],
+  ["*ВМЗ", 150, "Відряджений/-і до взводу МЗ"],
+  ["*1РБпАК", 155, "Відряджений/-і до 1 роти БпАК"],
+  ["*2РБпАК", 160, "Відряджений/-і до 2 роти БпАК"],
+  ["*1РУБпАК", 165, "Відряджений/-і до 1 роти УБпАК"],
+  ["*2РУБпАК", 200, "Відряджений/-і до 2 роти УБпАК"],
+  ["Відрядження", 205, "У відрядженні"],
+  ["Відпустка", 210, "Відпустка"],
+  ["Лікарняний", 215, "Ушпитален/Лікарняний"],
+  ["ППД Київ", 220, "ППД Київ"],
+  ["Гусачівка", 225, "Гусачівка"],
+  ["Drone Camp", 230, "Drone Camp"],
+  ["БЗВП", 245, "Базова військова підготовка"],
+  ["СЗЧ", 300, "Самовільне залишення частини"],
+  ["Вибув", 333, "Вибув"],
+];
+assert.deepEqual(
+  actualDictSumTruth,
+  expectedDictSumTruth,
+  "DICT_SUM defaults must match the canonical code/service/order table",
 );
-assert.ok(
-  dictSumCodes.indexOf("Black") < dictSumCodes.indexOf("Roland"),
-  "Black must sort before Roland",
+assert.equal(
+  context.SUMMARY_GROUPS["Відпустка"].includes("Відпус"),
+  true,
+  "legacy vacation code must map to canonical Відпустка group",
 );
-assert.equal(dictSumRules.find((rule) => rule.code === "Black").order, 10);
-assert.equal(dictSumRules.find((rule) => rule.code === "2УРБпАК").order, 100);
-assert.equal(dictSumRules.find((rule) => rule.code === "Вибув").order, 333);
+assert.equal(
+  context.SUMMARY_GROUPS["Гусачівка"].includes("Гусачі"),
+  true,
+  "legacy Гусачі code must map to canonical Гусачівка group",
+);
+
+const dictMaterializeHolder = { dictSheet: null, dictSumSheet: null };
+const dictMaterializeContext = vm.createContext({
+  console,
+  CONFIG: {
+    DICT_SHEET: "DICT",
+    DICT_SUM_SHEET: "DICT_SUM",
+  },
+  CacheService: {
+    getScriptCache() {
+      return { remove() {} };
+    },
+  },
+  cacheKeyDict_: () => "DICT_TEST",
+  DataAccess_: {
+    getSheet(schemaKey) {
+      if (schemaKey === "dict") return dictMaterializeHolder.dictSheet;
+      if (schemaKey === "dictSum") return dictMaterializeHolder.dictSumSheet;
+      return null;
+    },
+  },
+});
+vm.runInContext(readGasByBasename("DictMaterialize.gs"), dictMaterializeContext, {
+  filename: "DictMaterialize.gs",
+});
+
+const dictSumSheet = new FakeSheet("DICT_SUM", [
+  [],
+  ["", "Код", "Назва", "Порядок"],
+  ["", "БР", "Бойове розпорядження", "20"],
+  ["", "КП", "Командний пункт", "105"],
+]);
+const dictSheet = new FakeSheet("DICT", [
+  [],
+  ["", "Код", "Вид служби", "Місце", "Завдання"],
+  ["", "STALE_A", "STALE_B", "Kyiv", "Task 1"],
+  ["", "TAIL_A", "TAIL_B", "Lviv", "Task 2"],
+  ["", "TAIL2_A", "TAIL2_B", "", ""],
+]);
+dictSheet.setFormula(1, 1, "=ARRAYFORMULA(DICT_SUM!A1:A)");
+dictSheet.setFormula(1, 2, "=ARRAYFORMULA(DICT_SUM!B1:B)");
+
+dictMaterializeHolder.dictSheet = dictSheet;
+dictMaterializeHolder.dictSumSheet = dictSumSheet;
+
+const dictMaterializeResult =
+  dictMaterializeContext.materializeDictFromDictSum_();
+assert.equal(dictMaterializeResult.ok, true);
+assert.equal(dictMaterializeResult.rowsWritten, 3);
+
+assert.equal(dictSheet.valueAt(1, 1), "Код");
+assert.equal(dictSheet.valueAt(1, 2), "Назва");
+assert.equal(dictSheet.valueAt(2, 1), "БР");
+assert.equal(dictSheet.valueAt(2, 2), "Бойове розпорядження");
+assert.equal(dictSheet.valueAt(3, 1), "КП");
+assert.equal(dictSheet.valueAt(3, 2), "Командний пункт");
+assert.equal(dictSheet.valueAt(4, 1), "");
+assert.equal(dictSheet.valueAt(4, 2), "");
+assert.equal(dictSheet.formulaAt(1, 1), "");
+assert.equal(dictSheet.formulaAt(1, 2), "");
+assert.equal(dictSheet.valueAt(2, 3), "Kyiv", "DICT place column must stay intact");
+assert.equal(dictSheet.valueAt(2, 4), "Task 1", "DICT tasks column must stay intact");
+
+const mirrored = dictMaterializeContext.readDictSumMirrorValues_(dictSumSheet);
+assert.deepEqual(mirrored, [
+  ["Код", "Назва"],
+  ["БР", "Бойове розпорядження"],
+  ["КП", "Командний пункт"],
+]);
+
+const monthOpsSource = readGasByBasename("UseCases.MonthOps.gs");
+assert.match(
+  monthOpsSource,
+  /scenario:\s*"switchBotToMonth"[\s\S]*idempotency:\s*false/,
+  "switchBotToMonth must not suppress repeat switches via idempotency",
+);
+assert.match(
+  monthOpsSource,
+  /setBotMonthSheetName_\(input\.month\);[\s\S]*\.activate\(\)/,
+  "switchBotToMonth must activate the target month sheet tab",
+);
+assert.match(
+  readGasByBasename("MonthSheets.gs"),
+  /_resetMonthDateHeaderStyle_[\s\S]*setBackground\(null\)[\s\S]*setFontColor\("#000000"\)/,
+  "month date header reset must clear background and force black text",
+);
+assert.doesNotMatch(
+  readGasByBasename("MonthSheets.gs"),
+  /weekendFont|setFontColor\(['"]#cc0000['"]\)/,
+  "weekend date headers must not paint red text",
+);
+
+const codeConfigSource = fs.readFileSync(
+  path.join(repoRoot, "core", "Code.gs"),
+  "utf8",
+);
+assert.match(
+  codeConfigSource,
+  /SLOT_COL_WIDTH:\s*30/,
+  "monthly column A width must be 30",
+);
+assert.match(
+  codeConfigSource,
+  /CALLSIGN_COL_WIDTH:\s*160/,
+  "monthly column B width must be 160",
+);
+assert.match(
+  codeConfigSource,
+  /DATA_COL_WIDTH:\s*130/,
+  "monthly schedule/day column width must be 130",
+);
+
+const sheetStandardsSource = readGasByBasename("SheetStandards.gs");
+assert.match(
+  sheetStandardsSource,
+  /getMonthlyCodeRangeA1ForSheet_/,
+  "monthly column widths must adapt to live schedule/code range",
+);
+assert.match(
+  sheetStandardsSource,
+  /findMonthlyNotesCol_/,
+  "monthly column widths must stop before notes column when present",
+);
+assert.match(
+  monthOpsSource,
+  /applyColumnWidthsStandardsToSheet_\(newSheet\)/,
+  "Stage7 createNextMonth must re-apply column widths after syncs",
+);
+assert.match(
+  readGasByBasename("MonthSheets.gs"),
+  /applyColumnWidthsStandardsToSheet_\(newSheet\)/,
+  "legacy createNextMonthSheet must re-apply column widths after syncs",
+);
 
 console.log(
   `verify-workbook-contract: OK (${sheet.getName()} ${layout.codeRangeA1}, personnel=29)`,

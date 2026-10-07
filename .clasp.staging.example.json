@@ -1,0 +1,5 @@
+{
+  "scriptId": "PUT_STAGING_SCRIPT_ID_HERE",
+  "rootDir": ".",
+  "parentId": ["PUT_STAGING_SPREADSHEET_ID_HERE"]
+}

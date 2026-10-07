@@ -1,10 +1,10 @@
 # WASB — Google Apps Script bundle
 
-WASB is a spreadsheet-bound Google Apps Script bundle for personnel tracking, daily summaries, person cards, calendar views, send-panel workflows, and operational maintenance inside a single Google Sheets project.
+WASB is a spreadsheet-bound Google Apps Script bundle for personnel tracking, daily summaries, person cards, calendar views, send-panel workflows, reference directories, derived month journals, and operational maintenance inside a single Google Sheets project.
 
 This repository is packaged for Google Apps Script through `clasp`:
 
-- runtime files stay in the repository root (`.gs`, `.html`, `appsscript.json`)
+- runtime files live in purpose-named folders (`api/`, `core/`, `sheets/`, `reports/`, `vacations/`, `ui/`, etc.); the repository root is for manifests and tooling config
 - operational documentation stays in Git and is excluded from `clasp push`
 
 ## Active release baseline
@@ -13,8 +13,8 @@ This repository is packaged for Google Apps Script through `clasp`:
 - **Release label:** Stage 7 — Maintenance & repository hygiene
 - **Identity model:** strict user-key access based on `Session.getTemporaryActiveUserKey()`
 - **Current access flow:** automatic key recognition first, self-bind login by **email/phone + callsign** only when the current key is not registered
-- **Runtime style:** modular HtmlService sidebar (`Sidebar.html` → `JavaScript.html` → `Js.*` chain)
-- **Packaging policy:** Markdown is excluded from `clasp push`; root docs are the operational source of truth
+- **Runtime style:** modular HtmlService sidebar (`ui/Sidebar.html` → `ui/JavaScript.html` → `ui/Js.*` chain)
+- **Packaging policy:** Markdown is excluded from `clasp push`; Git docs are the operational source of truth; nested `.gs` deploy via `!**/*.gs` in `.claspignore` (see [`docs/module-map.md`](./docs/module-map.md))
 
 ## What is active in this release
 
@@ -24,38 +24,47 @@ This repository is packaged for Google Apps Script through `clasp`:
 - viewer hardening: viewer may see the personnel list, but may open only their own card and cannot open the detailed summary
 - role-separated maintenance access: maintainer, admin, sysadmin, and owner have different server-side permissions
 - lightweight sidebar bootstrap and read-only access descriptor support for faster UI startup
+- derived month journal sheets: unified `JOURNAL` + `SUMMARY` (all months `01`–`12`, keyed by column **Місяць**)
+- optional sidebar reference sheets: `PHONE_DIRECTORY` (service phones), `CAR` (vehicle register), and `WEAPON` (weapons/property register)
+- inventory reconciliation sidebar (**Звірка**): month checkboxes on `INVENTORY_RECONCILIATION`, Drive document links, auto-sync index
+- temporary-property register: dependent category/model dropdowns, automatic units and kit components, returns, balances, fuel details, and person-card integration
+- vacation monthly sync: approved/applied vacations → month sheet `Відпус` (`vacations/VacationMonthlySync.gs`; conflicts in **Конфлікти з відпустками**)
 
 ## Maintainer workflow
 
+**Typical two-step flow (one production GAS project):**
+
 ```bash
 npm ci
-npm run ci
-npx clasp status
-npx clasp push
-apiStage7ClearPhoneCache() # run in the production GAS editor
+npm run check              # all local verify scripts (alias: npm run ci)
+git add -A && git commit -m "fix: …"
+npm run push:remote        # git push only (no CI); add -- --with-gas on main for clasp
+apiStage7MaterializeComputedData()  # after PERSONNEL / PHONES / VACATIONS / birthday / Status changes
+apiStage7MaterializeMonthJournal({ monthSheet: "07" })  # active month slice in JOURNAL/SUMMARY; sidebar: Оновити журнал місяця
+apiStage7MaterializeAllMonthJournals()                  # bootstrap all 01–12 (uiAllowed: false; GAS editor)
+apiStage7MaterializeAllMonthJournals({ nextCursor: 3 }) # continuation; fields in response.data.result
+apiStage7ClearPhoneCache()          # run in the production GAS editor after deploy
 ```
+
+**Alternatives:**
+
+| Command | Use when |
+| -------- | -------- |
+| `npm run deploy:prod` | Full CI + clasp push in one step (no git push) |
+| `npm run ship -- "msg"` | Preflight → CI + staged commit + GitHub; `--deploy-gas` on main for clasp. Map: run `map:project-files` and stage first if needed. |
+| `npm run gas:open` | Open the bound GAS project in the browser |
 
 Use Node.js 24 (`.nvmrc`). `npm run deploy:prod` runs local CI and pushes the
 production project with `executionApi.access = MYSELF`.
 
-Remote smoke is deliberately separate from production:
-
-```bash
-cp .clasp.smoke.example.json .clasp.smoke.json
-npm run deploy:smoke
-```
-
-The smoke config must target a separate non-production Apps Script project and
-test spreadsheet. It stages `appsscript.smoke.json` (`executionApi: ANYONE`) in
-`/tmp/wasb-smoke-bundle`; production never receives that manifest or
-`GasRuntimeSmoke.gs`.
+**Clasp config (local, not in git):** copy `.clasp.example.json` → `.clasp.json` once.
 
 - **Script properties** (Apps Script → Project settings → Script properties):
   - **`WASB_SPREADSHEET_ID`** — headless/triggers (see `RUNBOOK.md` §15)
   - **`WASB_OWNER_EMAIL`** — security mail with full user key for owner
   - **`WASB_ACCESS_MIGRATION_EMAIL_BRIDGE`** — off in normal operation
   - **`WASB_ACCESS_TEMP_PASSWORD_PLAIN_LOOKUP`** — legacy plaintext temp-password lookup during migration only; off in normal operation
-- After every production deploy and after **PERSONNEL**, **PHONES**, or birthday changes: run **`apiStage7ClearPhoneCache()`** in the GAS editor, then reload the sidebar.
+- After every production deploy and after **PERSONNEL**, **PHONES**, **VACATIONS**, birthday, or `Status` changes: run **`apiStage7MaterializeComputedData()`** when derived columns may be stale. If you changed a month sheet and need refreshed fact/history views, run **`apiStage7MaterializeMonthJournal({ monthSheet: "MM" })`** (sidebar updates only the active bot month’s slice inside `JOURNAL` / `SUMMARY`; past months stay intact). First-run bootstrap of every existing `01`–`12`: **`apiStage7MaterializeAllMonthJournals()`** — **не підключено до UI** (`uiAllowed: false`); **призначено для запуску з GAS editor** (public `api*` + maintainer; could be called via `google.script.run` if wired manually). Continuation fields are inside the Stage7 envelope (`response.data.result.done` / `nextCursor` / `batchMonths` / `cursor`), not top-level — loop with `{ nextCursor: N }` until `done` (default 3 months per call). Legacy `ЖУРНАЛ_MM` / `ПІДСУМОК_MM` tabs are superseded and left alone. Then run **`apiStage7ClearPhoneCache()`** and reload the sidebar.
 
 Full workflow, release checklist, and post-deploy checks: **`CONTRIBUTING.md`** and **`RUNBOOK.md`**.
 
@@ -63,16 +72,19 @@ Full workflow, release checklist, and post-deploy checks: **`CONTRIBUTING.md`** 
 
 The repository runs a lightweight CI workflow on **`push`** and **`pull_request`** to **`main`**, and **`workflow_dispatch`**.
 
-It runs 18 checks via `npm run ci`, including:
+It runs the full **`npm run ci`** suite (**35** Node verify/audit scripts after `npm run precheck` — see `package.json` and **RUNBOOK.md** §12), including:
 
-- GAS source sanity, workbook + recipient + personnel-status contracts, function graph audit
-- Client includes / JS / layer deps, XSS, envelope compat
-- UseCase facade, snapshot governance, bridge flags, access API governance, OAuth scopes, jsconfig
+- GAS sanity, clasp push patterns, **Ukrainian/Russian language** (`verify-no-russian-text.mjs`), **user-facing copy** (`verify-user-facing-copy.mjs`)
+- Reference workbook layout, reference repositories, workbook contract, monthly callsign sync, send-panel bounds, temporary-property register, materialize / month-journal / age-birthday countdown
+- Vacation planner, recipient, personnel-status, format-rules contracts
+- Function graph audit; client includes, HTML labels, JS parse, layer deps, XSS, envelope compat
+- UseCase facade, snapshot governance, bridge flags, access API governance, access policy checks, access hotfixes
+- OAuth scopes, project-files map, jsconfig
 
-See [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) (Node 24, `actions/checkout@v5`, `actions/setup-node@v5`).
+See [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) (CI pins Node 24; `engines.node` is `>=24`, `actions/checkout@v5`, `actions/setup-node@v5`).
 
 The workflow does not deploy to Apps Script. Deployment remains local via
-**`npx clasp push`** or `npm run deploy:prod`.
+**`npm run push:remote`**, **`npm run deploy:prod`**, or **`npm run gas:push`**.
 
 ## Documentation map
 
@@ -88,15 +100,21 @@ The workflow does not deploy to Apps Script. Deployment remains local via
 
 **Also in Git (maintainers; not uploaded to GAS editor):**
 
-| File                                   | Purpose                                  |
-| -------------------------------------- | ---------------------------------------- |
+| File | Purpose |
+| --- | --- |
 | [`CONTRIBUTING.md`](./CONTRIBUTING.md) | Local workflow, CI, clasp, commit policy |
-| [`AGENTS.md`](./AGENTS.md)             | Cursor / cloud agent instructions        |
-| [`docs/README.md`](./docs/README.md)   | Documentation index and ownership rules  |
+| [`AGENTS.md`](./AGENTS.md) | Cursor / cloud agent instructions |
+| [`docs/README.md`](./docs/README.md) | Documentation index and ownership rules |
 | [`docs/developer-guide.md`](./docs/developer-guide.md) | First-week maintainer map: layers, safe zones |
-| [`docs/adr/README.md`](./docs/adr/README.md) | ADR index (structural vs functional changes) |
+| [`docs/module-map.md`](./docs/module-map.md) | Domain folders: where GAS modules live, which CI guards them |
+| [`docs/adr/002-domain-folder-map.md`](./docs/adr/002-domain-folder-map.md) | Phased folder moves (ADR-002) |
 | [`docs/daily-summary-architecture.md`](./docs/daily-summary-architecture.md) | Short/detailed day summary: formula block, modules, sidebar flow |
-| [`docs/vacation-planner.md`](./docs/vacation-planner.md) | Vacation planner, rules (3/4/5 load), mini-calendar UX |
+| [`docs/vacation-planner.md`](./docs/vacation-planner.md) | Vacation planner, concurrent rules, mini-calendar UX |
+| [`docs/inventory-reconciliation.md`](./docs/inventory-reconciliation.md) | Inventory month tracking, Drive folder scan, sidebar **Звірка** |
+| [`docs/temporary-property-register.md`](./docs/temporary-property-register.md) | Temporary issue/return register, catalog, kits, migration |
+| [`docs/user-facing-copy.md`](./docs/user-facing-copy.md) | UX copy policy; enforced by `verify-user-facing-copy.mjs` |
+| [`docs/format-rules-governance.md`](./docs/format-rules-governance.md) | Manual conditional-format registry |
+| [`docs/adr/003-working-domain-layout.md`](./docs/adr/003-working-domain-layout.md) | Working domain folder layout (post-#34) |
 
 Contracts and snapshots are machine-readable governance artifacts under
 `contracts/` and `scripts/snapshots/`. Do not commit one-off audits, production
@@ -106,30 +124,32 @@ workbook exports, personal data, or local workbook paths.
 
 ```text
 .
-├── *.gs / *.html / appsscript.json   # GAS runtime files
-├── README.md                         # ops docs (see Documentation map)
-├── ARCHITECTURE.md
-├── RUNBOOK.md
-├── SECURITY.md
-├── CHANGELOG.md
-├── docs/README.md                    # documentation index (Git only)
-├── contracts/                        # machine-readable policy/contracts
-├── scripts/                          # local CI and governance checks
-└── no _extras/ in compact GAS release ZIP
+├── appsscript.json                   # GAS manifest (repo root only)
+├── core/ api/ data/ sheets/ usecases/ ui-server/   # server runtime
+├── reports/ vacations/ sendpanel/ access/ personnel/ inventory/
+├── ui/                               # all .html (Sidebar, JavaScript, Js.*, Styles*)
+├── tests/                            # Stage7TestRunner + domain/manual tests (deployed)
+├── docs/ contracts/ scripts/         # Git-only tooling and documentation
+└── README.md RUNBOOK.md ARCHITECTURE.md …
 ```
+
+Runtime layout is documented in [`docs/module-map.md`](docs/module-map.md) and
+[ADR-003](docs/adr/003-working-domain-layout.md). After PR #34 there are **0**
+runtime `.gs` at repo root; all `.html` live in `ui/`.
 
 ## Quick import checklist
 
 1. Open the spreadsheet-bound Apps Script project.
-2. Upload all root `.gs`, `.html`, and `appsscript.json` files.
-3. Import only the root runtime files shipped in this ZIP; no `_extras/` files are required for GAS.
+2. Deploy with **`clasp push`** from this repository (nested `!**/*.gs` and `!**/*.html` from all domain folders per `.claspignore`), or upload the same tree in the GAS editor.
+3. Import only GAS runtime files from this repository; there is no `_extras/` folder in the compact bundle.
 4. Run `apiStage7BootstrapRuntimeAndAlertsSheets()` once.
-5. Run `apiStage7BootstrapAccessSheet()` once.
-6. Fill the `ACCESS` sheet.
-7. Run `apiStage7ApplyProtections({ dryRun: true })` and review the report.
-8. Run `apiStage7ApplyProtections({ dryRun: false })` after `ACCESS` is correct.
-9. Run `apiStage7QuickHealthCheck()`.
-10. Verify the `🧑‍💻` sidebar block for each role you actually use.
+5. Run `apiSetupTemporaryPropertyRegister()` once to create or migrate the temporary-property register.
+6. Run `apiStage7BootstrapAccessSheet()` once.
+7. Fill the `ACCESS` sheet.
+8. Run `apiStage7ApplyProtections({ dryRun: true })` and review the report.
+9. Run `apiStage7ApplyProtections({ dryRun: false })` after `ACCESS` is correct.
+10. Run `apiStage7QuickHealthCheck()`.
+11. Verify the `🧑‍💻` sidebar block for each role you actually use.
 
 Після першого відкриття сайдбару (або явного виклику **`apiStage7BootstrapSidebar()`**) за потреби створюються порожні optional аркуші **`Дані`**, **`Проєкти`**, **`Заявки`** із заголовками й одним шаблонним рядком; якщо аркуш уже має дані, вміст не перезаписується. Див. **`RUNBOOK.md`** §20.
 
@@ -165,14 +185,13 @@ Notes:
 ## PERSONNEL model
 
 - Monthly sheets store **Callsign + schedule**; `PERSONNEL` stores person fields.
-- `Callsign` is the schedule/lookup key. `FML` is the fallback display identity (synthesized from `Last name` + `First name` + `Patronymic` when the reference workbook "Книга Взводу Охорони.xlsx" layout is used; `TEMPLATE` column supplies the callsign value).
+- `Callsign` is the schedule/lookup key (reference xlsx: column **N** on PERSONNEL, values like `ГРАФ`). `FML` is the fallback display identity (synthesized from `Last name` + `First name` + `Patronymic`). `TEMPLATE` is legacy-only (not in the reference workbook).
 - `ID` is optional Армія+ data; `Position` is not a person key.
 - Active UA statuses (dropdown, 9 values): `В наявності`, `У відрядженні`,
   `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`.
   Runtime-active (schedule, phones, cards): all except **`Вибув`** and **`СЗЧ`**.
-  Empty status defaults to **`В наявності`**. Legacy labels (`Дієвий`, `Active`,
-  `Відрядження`, EN) map on read only — see `PersonnelRepository.gs`.
-- Runtime reads by header names and supports documented aliases (split names, TEMPLATE, OSH 4, etc.). After edits,
+  Empty status defaults to **`В наявності`**. If the `Status` header is missing, runtime self-heal seeds it in the reference column (**R**) or appends a safe new column before validation. Legacy labels (`Дієвий`, `Active`, `Відрядження`, EN) map on read only — see `personnel/PersonnelRepository.gs`.
+- Runtime reads by header names and supports documented aliases (split names, `ID v/s`, OSH 4, legacy TEMPLATE, etc.). After edits,
   run `apiStage7ClearPhoneCache()`.
 
 ## Identity and login in one minute
@@ -203,8 +222,13 @@ Turn it back off immediately after the needed keys are registered.
 - `apiRunStage7RegressionTests()` — regression suite entrypoint
 - `apiStage7ApplyProtections()` — spreadsheet protections
 - `apiStage7BootstrapSidebar()` — sidebar bootstrap + optional business sheets
-- `apiStage7BootstrapRuntimeAndAlertsSheets()` — service sheet bootstrap (`ServiceSheetsBootstrap.gs`)
+- `apiStage7BootstrapRuntimeAndAlertsSheets()` — service sheet bootstrap (`sheets/ServiceSheetsBootstrap.gs`)
 - `apiStage7BootstrapAccessSheet()` — `ACCESS` bootstrap
+- `apiStage7MaterializeComputedData()` — helper columns, PHONES/BIRTHDAY/VACATIONS/panel materialize, status validation, monthly callsign sync
+- `apiStage7MaterializeMonthJournal()` — refresh active/requested month’s slice in `JOURNAL` / `SUMMARY` (sidebar: **Оновити журнал місяця**)
+- Sidebar **Перемістити бота** switches the active month first and then refreshes that exact month slice in `JOURNAL` / `SUMMARY`; it does not reload the unchanged month list.
+- `apiStage7MaterializeComputedData({ stages: [...] })` can run selected stages (`personnel`, `vacationComputed`, `vacationSchedule`, `vacationMonthlySync`, `sendPanel`, `systemStatus`; `vacations` selects all vacation stages). Omit `stages` for the full refresh. The response and Sidebar execution log include per-stage `durationMs` timings.
+- `apiStage7MaterializeAllMonthJournals({ nextCursor?, monthsPerCall? })` — chunked bootstrap of all existing `01`–`12` into `JOURNAL` / `SUMMARY` (**не підключено до UI**, `uiAllowed: false`; **призначено для GAS editor**; public `api*` + maintainer). Continuation: `response.data.result.nextCursor` until `response.data.result.done`
 
 ## Non-goals for this bundle
 

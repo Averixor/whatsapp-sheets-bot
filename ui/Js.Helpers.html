@@ -1,0 +1,1196 @@
+<script>
+  // @ts-nocheck
+  // Js.Helpers — active Stage 7.1 runtime fragment.
+
+  // =========================
+  // CONSOLE
+  // =========================
+
+  var CONSOLE_MAX_BUFFER = 500;
+  var CONSOLE_FILTER_KEY = "wasb.consoleFilter";
+  var CONSOLE_MODE_KEY = "wasb.consoleMode";
+  var CONSOLE_MODES = ["collapsed", "third", "full"];
+
+  function normalizeConsoleMode_(mode) {
+    const value = String(mode || "").toLowerCase();
+    if (CONSOLE_MODES.indexOf(value) !== -1) return value;
+    return "collapsed";
+  }
+
+  function readConsoleMode_() {
+    try {
+      const stored = localStorage.getItem(CONSOLE_MODE_KEY);
+      if (stored) return normalizeConsoleMode_(stored);
+      if (localStorage.getItem("consoleOpen") === "true") return "third";
+    } catch (_) {}
+    return "collapsed";
+  }
+
+  function getConsoleMode_() {
+    return normalizeConsoleMode_(STATE.consoleMode || readConsoleMode_());
+  }
+
+  function isConsoleExpanded_() {
+    return getConsoleMode_() !== "collapsed";
+  }
+
+  function ensureConsoleBuffer_() {
+    if (!window.__wasbConsoleBuffer__) window.__wasbConsoleBuffer__ = [];
+    if (typeof window.__wasbConsoleUnread !== "number") {
+      window.__wasbConsoleUnread = 0;
+    }
+    if (typeof window.__wasbConsolePaused !== "boolean") {
+      window.__wasbConsolePaused = false;
+    }
+  }
+
+  function formatLogArgsPreview_(args) {
+    if (!args || !args.length) return "";
+    try {
+      const safe =
+        typeof window.redactSensitiveForLog_ === "function"
+          ? window.redactSensitiveForLog_(
+              args.length === 1 ? args[0] : args,
+            )
+          : args.length === 1
+            ? args[0]
+            : args;
+      const preview = JSON.stringify(safe);
+      if (!preview || preview === "{}" || preview === "[]") return "";
+      return preview.length > 140 ? preview.slice(0, 137) + "…" : preview;
+    } catch (_) {
+      return args.length + " арг.";
+    }
+  }
+
+  function formatApiResultSummary_(result) {
+    if (!result || result.success === false) {
+      return String(result?.message || result?.error || "помилка").slice(0, 100);
+    }
+    const msg = String(result.message || "").trim();
+    if (msg) return msg.length > 80 ? msg.slice(0, 77) + "…" : msg;
+    return "";
+  }
+
+  var WASB_BROWSER_SESSION_KEY_ = "wasb.access.browserSession";
+  var __wasbBrowserSessionToken__ = "";
+
+  function purgeLegacyWasbBrowserSessionStorage_() {
+    try {
+      localStorage.removeItem(WASB_BROWSER_SESSION_KEY_);
+    } catch (_) {}
+  }
+
+  purgeLegacyWasbBrowserSessionStorage_();
+
+  function saveWasbBrowserSession_(token) {
+    const value = String(token || "").trim();
+    if (!value) return;
+    __wasbBrowserSessionToken__ = value;
+  }
+
+  function readWasbBrowserSession_() {
+    return String(__wasbBrowserSessionToken__ || "").trim();
+  }
+
+  function clearWasbBrowserSession_() {
+    __wasbBrowserSessionToken__ = "";
+  }
+
+  function captureBrowserSessionFromResult_(result) {
+    if (!result) return;
+    const token =
+      result.browserSessionToken ||
+      (result.data && result.data.browserSessionToken) ||
+      "";
+    if (token) saveWasbBrowserSession_(token);
+  }
+
+  window.formatLogArgsPreview_ = formatLogArgsPreview_;
+  window.formatApiResultSummary_ = formatApiResultSummary_;
+  window.saveWasbBrowserSession_ = saveWasbBrowserSession_;
+  window.readWasbBrowserSession_ = readWasbBrowserSession_;
+  window.clearWasbBrowserSession_ = clearWasbBrowserSession_;
+  window.captureBrowserSessionFromResult_ = captureBrowserSessionFromResult_;
+
+  function normalizeConsoleLogType_(type) {
+    const value = String(type || "info").toLowerCase();
+    if (value === "warn") return "warning";
+    if (value === "err") return "error";
+    return value || "info";
+  }
+
+  function isConsoleAlertLogType_(type) {
+    const value = normalizeConsoleLogType_(type);
+    return value === "error" || value === "warning";
+  }
+
+  function bumpConsoleAlertBadge_(type) {
+    if (!isConsoleAlertLogType_(type) || isConsoleExpanded_()) return;
+    window.__wasbConsoleUnread = Number(window.__wasbConsoleUnread || 0) + 1;
+    updateConsoleFabBadge_();
+  }
+
+  function updateConsoleFabBadge_() {
+    const badge = $id("consoleFabBadge");
+    if (!badge) return;
+    const unread = Number(window.__wasbConsoleUnread || 0);
+    if (unread > 0) {
+      badge.textContent = unread > 99 ? "99+" : String(unread);
+      badge.classList.remove("wasb-is-hidden");
+    } else {
+      badge.classList.add("wasb-is-hidden");
+    }
+  }
+
+  function isPersonnelModalOpen_() {
+    const modal = $id("personnelModal");
+    return !!(modal && modal.classList.contains("open") && !modal.hidden);
+  }
+
+  function syncConsoleOverlayState_() {
+    const wrapper = $id("consoleWrapper");
+    const overlay = $id("loadingOverlay");
+    if (!wrapper) return;
+    const mode = getConsoleMode_();
+    const isOpen = mode !== "collapsed";
+    const isLoading =
+      overlay &&
+      !overlay.classList.contains("wasb-is-hidden") &&
+      getComputedStyle(overlay).display !== "none";
+    const needsOverlay = !!(isOpen && (isLoading || isPersonnelModalOpen_()));
+    wrapper.classList.toggle("console--overlay", needsOverlay);
+    wrapper.classList.toggle("console--elevated", isOpen);
+    wrapper.classList.toggle("console-mode-third", mode === "third");
+    wrapper.classList.toggle("console-mode-full", mode === "full");
+    syncSidebarConsoleLayout_(mode);
+  }
+
+  function syncSidebarConsoleLayout_(mode) {
+    const normalized = normalizeConsoleMode_(
+      mode != null ? mode : getConsoleMode_(),
+    );
+    const container = document.querySelector(".sidebar-container");
+    if (container) {
+      container.classList.remove(
+        "console-mode-collapsed",
+        "console-mode-third",
+        "console-mode-full",
+        "console-panel-open",
+      );
+      container.classList.add("console-mode-" + normalized);
+    }
+    const details = $id("healthActionsDetails");
+    if (details && normalized !== "collapsed") {
+      details.open = false;
+    }
+    updateConsoleSizeButtons_(normalized);
+  }
+
+  function updateConsoleSizeButtons_(mode) {
+    const normalized = normalizeConsoleMode_(mode);
+    document.querySelectorAll("[data-console-size]").forEach(function (btn) {
+      btn.classList.toggle(
+        "active",
+        btn.getAttribute("data-console-size") === normalized,
+      );
+    });
+  }
+
+  function updateConsoleModeUi_(mode) {
+    const normalized = normalizeConsoleMode_(mode);
+    const consoleSection = $id("consoleSection");
+    const fab = $id("consoleFab");
+    const expanded = normalized !== "collapsed";
+
+    consoleSection?.classList.remove("console-section--third", "console-section--full");
+    if (normalized === "third") {
+      consoleSection?.classList.add("console-section--third");
+    } else if (normalized === "full") {
+      consoleSection?.classList.add("console-section--full");
+    }
+
+    fab?.classList.toggle("open", expanded);
+    fab?.classList.toggle("console-fab--third", normalized === "third");
+    fab?.classList.toggle("console-fab--full", normalized === "full");
+
+    if (fab) {
+      fab.setAttribute("aria-expanded", expanded ? "true" : "false");
+      fab.title =
+        normalized === "collapsed"
+          ? "Розгорнути консоль на ⅓ екрана"
+          : normalized === "third"
+            ? "Розгорнути консоль на весь екран"
+            : "Згорнути консоль";
+    }
+  }
+
+  function setConsoleMode(mode, options) {
+    const opts = options || {};
+    const normalized = normalizeConsoleMode_(mode);
+    STATE.consoleMode = normalized;
+    updateConsoleModeUi_(normalized);
+    if (normalized !== "collapsed") {
+      window.__wasbConsoleUnread = 0;
+      updateConsoleFabBadge_();
+      if (opts.scrollToBottom !== false) {
+        window.__wasbConsolePaused = false;
+        const consoleEl = $id("consoleOutput");
+        if (consoleEl) {
+          consoleEl.classList.remove("console-paused");
+          consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+      }
+    }
+    if (opts.persist !== false) {
+      try {
+        localStorage.setItem(CONSOLE_MODE_KEY, normalized);
+        localStorage.removeItem("consoleOpen");
+      } catch (_) {}
+    }
+    syncConsoleOverlayState_();
+    return normalized;
+  }
+
+  function cycleConsoleMode() {
+    const current = getConsoleMode_();
+    const idx = CONSOLE_MODES.indexOf(current);
+    const next = CONSOLE_MODES[(idx + 1) % CONSOLE_MODES.length];
+    return setConsoleMode(next);
+  }
+
+  window.setConsoleMode = setConsoleMode;
+  window.cycleConsoleMode = cycleConsoleMode;
+  window.getConsoleMode_ = getConsoleMode_;
+  window.syncSidebarConsoleLayout_ = syncSidebarConsoleLayout_;
+
+  function inferConsoleLogChannel_(type, message, channelHint) {
+    const msg = String(message == null ? "" : message);
+    const logType = normalizeConsoleLogType_(type);
+    if (channelHint === "dev") return "dev";
+    if (
+      logType === "server" ||
+      msg.indexOf("→ Сервер:") === 0 ||
+      msg.indexOf("✓ Сервер:") === 0 ||
+      msg.indexOf("✕ Сервер:") === 0 ||
+      (logType === "warning" && msg.indexOf("⚠ ") === 0 && /[A-Za-z0-9_]+:/.test(msg))
+    ) {
+      return "server";
+    }
+    if (
+      logType === "action" ||
+      msg.indexOf("▶ Дія:") === 0 ||
+      msg.indexOf("■ Дія:") === 0 ||
+      msg.indexOf("➡️ Виконання:") === 0
+    ) {
+      return "action";
+    }
+    if (
+      logType === "debug" ||
+      msg.indexOf("· ") === 0
+    ) {
+      return "dev";
+    }
+    return "ui";
+  }
+
+  function installWasbNativeConsoleBridge_() {
+    if (typeof window.__wasbInstallNativeConsoleBridge__ === "function") {
+      window.__wasbInstallNativeConsoleBridge__();
+    }
+  }
+
+  function matchesConsoleFilter_(filter, type, message, channel) {
+    const active = String(filter || "all");
+    const normalizedType = normalizeConsoleLogType_(type);
+    const resolvedChannel =
+      String(channel || "") ||
+      inferConsoleLogChannel_(type, message);
+    if (active === "all") return true;
+    if (active === "warning") {
+      return normalizedType === "warning";
+    }
+    if (active === "error") {
+      return normalizedType === "error";
+    }
+    if (active === "server") return resolvedChannel === "server";
+    if (active === "action") return resolvedChannel === "action";
+    return true;
+  }
+
+  function applyConsoleFilter_() {
+    const filter = String(STATE.consoleFilter || "all");
+    const output = $id("consoleOutput");
+    if (!output) return;
+    output.querySelectorAll(".log-entry").forEach((el) => {
+      const type = el.getAttribute("data-log-type") || "info";
+      const channel = el.getAttribute("data-log-channel") || "";
+      const message = el.getAttribute("data-log-message") || "";
+      const show = matchesConsoleFilter_(filter, type, message, channel);
+      el.classList.toggle("log-hidden", !show);
+    });
+    updateConsoleFilterHint_();
+  }
+
+  function updateConsoleFilterHint_() {
+    const title = $id("consoleSectionTitle");
+    if (!title) return;
+    const label = title.querySelector(".console-title__label");
+    if (!label) return;
+    const filter = String(STATE.consoleFilter || "all");
+    const filterLabels = {
+      all: "Лог виконання",
+      action: "Лог виконання · дії",
+      warning: "Лог виконання · попередження",
+      error: "Лог виконання · помилки",
+      server: "Лог виконання · сервер",
+    };
+    label.textContent = filterLabels[filter] || "Лог виконання · фільтр";
+  }
+
+  function setConsoleFilter(filter) {
+    STATE.consoleFilter = filter || "all";
+    try {
+      localStorage.setItem(CONSOLE_FILTER_KEY, STATE.consoleFilter);
+    } catch (_) {}
+    document.querySelectorAll("[data-console-filter]").forEach((btn) => {
+      btn.classList.toggle(
+        "active",
+        btn.getAttribute("data-console-filter") === STATE.consoleFilter,
+      );
+    });
+    applyConsoleFilter_();
+  }
+
+  function renderConsoleEntry_(entry) {
+    const consoleEl = $id("consoleOutput");
+    if (!consoleEl || !entry) return;
+
+    const timestamp = new Date(entry.ts || Date.now()).toLocaleTimeString(
+      "uk-UA",
+      {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      },
+    );
+
+    const type = normalizeConsoleLogType_(entry.type || "info");
+    const channel =
+      entry.channel ||
+      inferConsoleLogChannel_(type, entry.message, entry.channel);
+    const logEntry = document.createElement("div");
+    logEntry.className = "log-entry log-" + type;
+    if (channel === "dev") {
+      logEntry.classList.add("log-dev");
+    }
+    logEntry.setAttribute("data-log-type", type);
+    logEntry.setAttribute("data-log-channel", channel);
+    logEntry.setAttribute("data-log-message", String(entry.message || ""));
+    logEntry.innerHTML =
+      '<span class="log-time">[' +
+      escapeHtml(timestamp) +
+      "]</span> " +
+      escapeHtml(entry.message);
+
+    consoleEl.appendChild(logEntry);
+    applyConsoleFilter_();
+
+    bumpConsoleAlertBadge_(type);
+
+    if (!window.__wasbConsolePaused) {
+      consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+  }
+
+  function logToConsole(message, type = "info", meta) {
+    if (typeof window.__wasbPushConsoleLog__ === "function") {
+      window.__wasbPushConsoleLog__(message, type, meta);
+      return;
+    }
+    renderConsoleEntry_({
+      message: String(message == null ? "" : message),
+      type: type || "info",
+      channel: meta && meta.channel,
+      ts: Date.now(),
+    });
+  }
+
+  function bindConsoleScrollPause_() {
+    const consoleEl = $id("consoleOutput");
+    if (!consoleEl || consoleEl.__wasbScrollBound) return;
+    consoleEl.__wasbScrollBound = true;
+    consoleEl.addEventListener("scroll", function () {
+      const nearBottom =
+        consoleEl.scrollHeight - consoleEl.scrollTop - consoleEl.clientHeight <
+        28;
+      window.__wasbConsolePaused = !nearBottom;
+      consoleEl.classList.toggle("console-paused", window.__wasbConsolePaused);
+    });
+  }
+
+  function flushConsoleBuffer_() {
+    ensureConsoleBuffer_();
+    (window.__wasbConsoleBuffer__ || []).forEach(function (entry) {
+      renderConsoleEntry_(entry);
+    });
+  }
+
+  function initConsoleUi_() {
+    if (STATE.consoleInitialized) return;
+    ensureConsoleBuffer_();
+    installWasbNativeConsoleBridge_();
+    window.__wasbConsoleRenderEntry__ = renderConsoleEntry_;
+
+    try {
+      STATE.consoleFilter = localStorage.getItem(CONSOLE_FILTER_KEY) || "all";
+    } catch (_) {
+      STATE.consoleFilter = "all";
+    }
+
+    const consoleOpen = readConsoleMode_();
+    setConsoleMode(consoleOpen, { persist: false, scrollToBottom: false });
+
+    document.querySelectorAll("[data-console-size]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        setConsoleMode(btn.getAttribute("data-console-size"));
+      });
+    });
+
+    document.querySelectorAll("[data-console-filter]").forEach((btn) => {
+      btn.addEventListener("click", function () {
+        setConsoleFilter(btn.getAttribute("data-console-filter"));
+      });
+      btn.classList.toggle(
+        "active",
+        btn.getAttribute("data-console-filter") === STATE.consoleFilter,
+      );
+    });
+
+    bindConsoleScrollPause_();
+    flushConsoleBuffer_();
+
+    if (!(window.__wasbConsoleBuffer__ || []).length) {
+      logToConsole("Консоль готова до роботи", "info");
+    }
+
+    syncConsoleOverlayState_();
+    updateConsoleFilterHint_();
+    STATE.consoleInitialized = true;
+    STATE.consoleSessionStartedAt = Date.now();
+  }
+
+  window.syncConsoleOverlayState_ = syncConsoleOverlayState_;
+
+  function toggleConsole(forceMode) {
+    if (typeof forceMode === "boolean") {
+      return setConsoleMode(forceMode ? "third" : "collapsed");
+    }
+    if (typeof forceMode === "string") {
+      return setConsoleMode(forceMode);
+    }
+    return cycleConsoleMode();
+  }
+
+  function clearConsole() {
+    const consoleEl = $id("consoleOutput");
+    if (consoleEl) consoleEl.innerHTML = "";
+    window.__wasbConsoleBuffer__ = [];
+    window.__wasbConsoleUnread = 0;
+    updateConsoleFabBadge_();
+    logToConsole("🧹 Консоль очищено", "info");
+  }
+
+  function scrollConsole(direction) {
+    const consoleEl = $id("consoleOutput");
+    if (!consoleEl) return;
+    consoleEl.scrollTop = direction === "top" ? 0 : consoleEl.scrollHeight;
+    if (direction === "bottom") {
+      window.__wasbConsolePaused = false;
+      consoleEl.classList.remove("console-paused");
+    }
+  }
+
+  // =========================
+  // PROGRESS
+  // =========================
+
+  function showProgressBar(total, current) {
+    let progressEl = $id("sendingProgress");
+
+    if (!progressEl) {
+      const resultContent = $id("resultContent");
+      if (!resultContent) return;
+
+      resultContent.insertAdjacentHTML(
+        "afterbegin",
+        `
+        <div class="result-item" id="sendingProgress">
+          <div class="result-label">📤 Прогрес відправки</div>
+          <div class="progress-bar">
+            <div id="progressFill" class="progress-fill"></div>
+          </div>
+          <div id="progressText" class="progress-text">0/${total}</div>
+        </div>
+      `,
+      );
+    }
+
+    const fill = $id("progressFill");
+    const text = $id("progressText");
+
+    if (fill && text) {
+      const percent = total ? Math.round((current / total) * 100) : 0;
+      fill.style.width = percent + "%";
+      text.textContent = `${current}/${total}`;
+    }
+  }
+
+  function hideProgressBar() {
+    $id("sendingProgress")?.remove();
+  }
+
+  function applyCommanderRecipientFromBootstrap_(boot) {
+    var payload = boot || {};
+    var recipients = Array.isArray(payload.commanderRecipients)
+      ? payload.commanderRecipients.slice()
+      : [];
+    var defaultRole = String(payload.commanderRole || "").trim();
+
+    if (defaultRole && recipients.indexOf(defaultRole) === -1) {
+      recipients.unshift(defaultRole);
+    }
+
+    STATE.commanderRecipients = recipients;
+
+    var stored = "";
+    try {
+      stored = String(localStorage.getItem("wasb.commanderRole") || "").trim();
+    } catch (_) {}
+
+    var pick = stored;
+    if (!pick || recipients.indexOf(pick) === -1) {
+      pick = defaultRole || recipients[0] || "";
+    }
+
+    if (pick) {
+      STATE.commanderRole = pick;
+      try {
+        localStorage.setItem("wasb.commanderRole", pick);
+      } catch (_) {}
+    }
+  }
+
+  function ensureCommanderRecipientFallback_() {
+    var fallback = String(STATE.commanderRole || "").trim() || "ГРАФ";
+    if (
+      !Array.isArray(STATE.commanderRecipients) ||
+      !STATE.commanderRecipients.length
+    ) {
+      STATE.commanderRecipients = [fallback];
+    }
+    if (!STATE.commanderRole) {
+      STATE.commanderRole = fallback;
+      try {
+        localStorage.setItem("wasb.commanderRole", fallback);
+      } catch (_) {}
+    }
+  }
+
+  // =========================
+  // INIT
+  // =========================
+
+  async function initSidebar() {
+    initConsoleUi_();
+    startSidebarBootTimeout(SIDEBAR_BOOT_TIMEOUT_MS);
+    showLoading("Завантаження...");
+    hidePersonCard();
+
+    try {
+
+      let boot = null;
+      try {
+        logToConsole("⟳ bootstrapSidebar…", "info", { channel: "ui" });
+        boot = await withPromiseTimeout_(
+          Stage7Api.bootstrapSidebar(),
+          90000,
+          "bootstrapSidebar",
+        );
+        if (boot?.success) {
+          logToConsole("✓ bootstrapSidebar", "success", { channel: "ui" });
+        }
+      } catch (bootErr) {
+        logToConsole(`⚠ bootstrapSidebar: ${normalizeError(bootErr)}`, "warning", {
+          channel: "server",
+        });
+      }
+
+      if (boot?.success) {
+        STATE.access = normalizeAccessForUi_(boot.access || {});
+        if (STATE.accessDebug) STATE.accessDebug.hashVisible = false;
+        applyAccessPolicyUI();
+
+        if (Array.isArray(boot.months)) STATE.monthsList = boot.months;
+        if (boot.current) {
+          STATE.currentMonth = boot.current;
+          updateMonthBadge(STATE.currentMonth);
+        }
+        if (Array.isArray(boot.personnelCallsigns)) {
+          applyPersonnelCallsignsFromServer_(boot.personnelCallsigns);
+        }
+        applyCommanderRecipientFromBootstrap_(boot);
+        stopSidebarBootTimeout();
+      } else {
+        try {
+          await withPromiseTimeout_(
+            loadAccessDescriptor(),
+            SIDEBAR_API_TIMEOUT_MS,
+            "loadAccessDescriptor",
+          );
+          stopSidebarBootTimeout();
+        } catch (accessErr) {
+          logToConsole(
+            `⚠ loadAccessDescriptor: ${normalizeError(accessErr)}`,
+            "warn",
+          );
+          STATE.access = normalizeAccessForUi_({
+            role: "guest",
+            isAdmin: false,
+            knownUser: false,
+            reasonString: normalizeError(accessErr),
+          });
+          if (typeof applyAccessPolicyUI === "function") applyAccessPolicyUI();
+        }
+
+        try {
+          const data = await withPromiseTimeout_(
+            Stage7Api.getMonths(),
+            SIDEBAR_API_TIMEOUT_MS,
+            "getMonths",
+          );
+
+          if (data?.months) STATE.monthsList = data.months;
+
+          if (data?.current) {
+            STATE.currentMonth = data.current;
+            updateMonthBadge(STATE.currentMonth);
+          }
+        } catch (monthsErr) {
+          logToConsole(`⚠ getMonths: ${normalizeError(monthsErr)}`, "warn");
+        }
+      }
+
+      ensureCommanderRecipientFallback_();
+
+      try {
+        const launchResult = await withPromiseTimeout_(
+          runServerMethod_(
+            "getSidebarLaunchSection",
+            [],
+            "initSidebar.launchSection",
+          ),
+          SIDEBAR_API_TIMEOUT_MS,
+          "getSidebarLaunchSection",
+        );
+        const launchSection =
+          typeof launchResult === "string"
+            ? launchResult
+            : typeof launchResult?.data === "string"
+              ? launchResult.data
+              : "";
+        if (
+          launchSection === "vacations" &&
+          typeof showVacationsModule === "function"
+        ) {
+          await showVacationsModule();
+        }
+      } catch (launchErr) {
+        logToConsole(
+          `⚠ getSidebarLaunchSection: ${normalizeError(launchErr)}`,
+          "warn",
+        );
+      }
+
+      logToConsole("✓ Панель готова до роботи", "success");
+    } catch (error) {
+      showFatalSidebarError(error);
+      try {
+        STATE.access =
+          typeof normalizeAccessForUi_ === "function"
+            ? normalizeAccessForUi_({
+                role: "guest",
+                isAdmin: false,
+                knownUser: false,
+                reasonString: normalizeError(error),
+              })
+            : {
+                role: "guest",
+                isAdmin: false,
+                knownUser: false,
+                reasonString: normalizeError(error),
+              };
+        if (typeof applyAccessPolicyUI === "function") applyAccessPolicyUI();
+      } catch (_) {}
+    } finally {
+      stopSidebarBootTimeout();
+      hideLoading();
+      finalizeSidebarMonthStatus_();
+    }
+  }
+
+  function finalizeSidebarMonthStatus_() {
+    const statusEl =
+      typeof $id === "function"
+        ? $id("botMonthStatus")
+        : document.getElementById("botMonthStatus");
+    if (!statusEl) return;
+    const textEl = statusEl.querySelector(".status-text");
+    const stillLoading =
+      textEl && /завантаженн/i.test(String(textEl.textContent || "").trim());
+    if (!stillLoading) return;
+
+    const m = String(STATE.currentMonth || "").trim();
+    if (m && typeof updateMonthBadge === "function") {
+      updateMonthBadge(m);
+      return;
+    }
+    if (
+      Array.isArray(STATE.monthsList) &&
+      STATE.monthsList.length &&
+      typeof updateMonthBadge === "function"
+    ) {
+      updateMonthBadge(STATE.monthsList[0]);
+      return;
+    }
+    statusEl.innerHTML =
+      '<span class="status-dot"></span><span class="status-text">Місяць не визначено</span>';
+  }
+
+  function formatOperationDate(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "—";
+    const parsed = new Date(raw);
+    if (!Number.isFinite(parsed.getTime())) return raw;
+    return parsed.toLocaleString("uk-UA", {
+      weekday: "short",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  }
+
+  function translateLifecycleScenario(value) {
+    const raw = String(value || "").trim();
+    const map = {
+      restart_bot: "перезапуск бота",
+      reconciliation: "звірка",
+      mark_sent: "позначення як відправлено",
+      mark_unsent: "зняття позначки відправлення",
+      repair: "виправлення",
+      create_next_month: "створення наступного місяця",
+      panel_regenerate: "перегенерація панелі",
+      panel_rebuild: "перебудова панелі",
+      panel_sync: "синхронізація панелі",
+    };
+    return map[raw] || raw;
+  }
+
+  function translateLifecycleStatus(value) {
+    const raw = String(value || "").trim();
+    const map = {
+      STARTED: "РОЗПОЧАТО",
+      NEEDS_REPAIR: "ПОТРЕБУЄ ВИПРАВЛЕННЯ",
+      COMMITTED: "ЗАВЕРШЕНО",
+      FAILED: "ПОМИЛКА",
+      FAILED_STALE: "ПОМИЛКА (зависла операція)",
+      ABANDONED: "ПЕРЕРВАНО",
+      CANCELLED: "СКАСОВАНО",
+    };
+    return map[raw] || raw;
+  }
+
+  function translateLifecycleText(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    const directMap = {
+      "context is not defined": "Помилка: context не визначено",
+      "Repair failed": "Виправлення завершилося з помилкою",
+      "Repair repository недоступний": "Сховище виправлення недоступне",
+      "Repair завершився з помилкою": "Виправлення завершилося з помилкою",
+      "Repair виконано": "Виправлення виконано",
+    };
+    if (directMap[raw]) return directMap[raw];
+    return raw
+      .replace(/^Repair failed$/i, "Виправлення завершилося з помилкою")
+      .replace(/^Repair completed$/i, "Виправлення виконано")
+      .replace(/^Repair /i, "Виправлення ")
+      .replace(/^Pending Repairs$/i, "Операції, що потребують виправлення")
+      .replace(/FAILED_STALE/g, "Помилка (зависла операція)")
+      .replace(/FAILED/g, "Помилка")
+      .replace(/COMMITTED/g, "Завершено")
+      .replace(/STARTED/g, "Розпочато")
+      .replace(/NEEDS_REPAIR/g, "Потребує виправлення")
+      .replace(/ABANDONED/g, "Перервано")
+      .replace(/CANCELLED/g, "Скасовано");
+  }
+
+  function copyConsole() {
+    const output = $id("consoleOutput");
+    const month = STATE.currentMonth || "—";
+    const dateText = new Date().toLocaleString("uk-UA");
+    const entries = output
+      ? Array.from(output.querySelectorAll(".log-entry:not(.log-hidden)"))
+      : [];
+    const body = entries
+      .map((el) => (el.innerText || "").trim())
+      .filter(Boolean)
+      .join("\n");
+    const sessionMs = STATE.consoleSessionStartedAt
+      ? Date.now() - STATE.consoleSessionStartedAt
+      : 0;
+    const text = [
+      "Журнал виконання WASB",
+      "=================",
+      "Час: " + dateText,
+      "Активний місяць: " + month,
+      "Записів: " + entries.length,
+      sessionMs > 0
+        ? "Тривалість сесії: " + Math.round(sessionMs / 1000) + " с"
+        : "",
+      "",
+      body || "Лог порожній",
+    ]
+      .filter(Boolean)
+      .join("\n");
+    copyResultText(text);
+  }
+
+  function getActionName(action) {
+    const names = {
+      generatePanel: "Створення панелі",
+      sendUnsent: "Панель відправки",
+      daySummary: "Зведення дня",
+      detailedDay: "Детальне зведення",
+      createNextMonth: "Створення місяця",
+      switchMonth: "Перемикання місяця",
+      clearCache: "Очищення кешу",
+      clearLog: "Очищення логів",
+      restartBot: "Перезапуск бота",
+      applyProtections: "Захист службових листів",
+      previewProtections: "Перегляд захисту листів",
+      bootstrapRuntime: "Створення службових листів",
+      bootstrapAccess: "Ініціалізація листа доступу",
+      runRegressionTests: "Регресійні тести",
+      pendingRepairs: "Операції, що потребують виправлення",
+      vacationReminder: "Нагадування про відпустки",
+      vacations: "Відпустки",
+      birthdayCheck: "Дні Народження",
+      debugAccess: "Перевірка доступу",
+      phoneDirectory: "Службові телефони",
+      carsRegister: "Автотехніка",
+      weaponsRegister: "Озброєння",
+      inventoryReconciliation: "Звірка",
+      externalMigration: "Міграція зовнішніх таблиць",
+      requests: "Заявки",
+    };
+
+    return names[action] || action;
+  }
+
+  function handleError(error) {
+    const message = normalizeError(error);
+
+    hideLoading();
+    hideProgressBar();
+    stopSending();
+
+    logToConsole(`✕ Помилка: ${message}`, "error");
+    displayInResult("error", { error: message });
+  }
+
+  async function handleMenuAction(action) {
+    logToConsole(`➡️ Виконання: ${getActionName(action)}`, "info", {
+      channel: "action",
+    });
+
+    try {
+      if (!(await assertActionAccess_(action))) return;
+      switch (action) {
+        case "generatePanel": {
+          primeWhatsAppSenderTab();
+          const result = await ActionDispatcher.run("generatePanel", () =>
+            Stage7Api.generatePanelForDate({ date: _todayStr_() }),
+          );
+          navigateTo("generatePanel", () => displayPanelResult(result));
+          break;
+        }
+
+        case "sendUnsent": {
+          let panelRows = Array.isArray(STATE.currentPanelData)
+            ? STATE.currentPanelData
+            : [];
+          if (!panelRows.length) {
+            try {
+              panelRows = await ensurePanelDataLoadedFromServer({
+                silent: false,
+                preserveNonEmpty: false,
+                retries: 2,
+                retryDelayMs: 450,
+                reason: "sendUnsent.open",
+              });
+            } catch (error) {
+              logToConsole(
+                `✕ Не вдалося оновити панель надсилання: ${normalizeError(error)}`,
+                "error",
+              );
+              navigateTo("sendPanel", () => showSendPanel());
+              return;
+            }
+          }
+          if (!Array.isArray(panelRows) || panelRows.length === 0) {
+            logToConsole(
+              "⚠ Панель надсилання порожня навіть після оновлення",
+              "warning",
+            );
+          }
+          navigateTo("sendPanel", () => showSendPanel());
+          break;
+        }
+
+        case "daySummary":
+          navigateTo("daySummary", () => showCalendar(action));
+          break;
+
+        case "detailedDay":
+          navigateTo("detailedDay", () => showCalendar(action));
+          break;
+
+        case "createNextMonth": {
+          const result = await ActionDispatcher.run("createNextMonth", () =>
+            Stage7Api.createNextMonth({ switchToNewMonth: true }),
+          );
+          if (result?.success) {
+            logToConsole(`✓ ${result.message}`, "success");
+            const openedConflicts =
+              typeof maybeOpenVacationMonthlySyncConflicts_ === "function" &&
+              maybeOpenVacationMonthlySyncConflicts_(result);
+            if (!openedConflicts) {
+              navigateTo("createNextMonth", () => {
+                displayInResult("createMonth", result);
+              });
+            }
+          } else {
+            navigateTo("createNextMonth", () => {
+              displayInResult("error", {
+                error: result?.error || "Невідома помилка",
+              });
+            });
+          }
+          break;
+        }
+
+        case "vacations":
+          navigateTo("vacations", () => showVacationsModule());
+          break;
+
+        case "phoneDirectory":
+          navigateTo("phoneDirectory", () => showPhoneDirectory());
+          break;
+
+        case "carsRegister":
+          navigateTo("carsRegister", () => showCarsRegister());
+          break;
+
+        case "weaponsRegister":
+          navigateTo("weaponsRegister", () => showWeaponsRegister());
+          break;
+
+        case "inventoryReconciliation":
+          navigateTo("inventoryReconciliation", () =>
+            showInventoryReconciliation(),
+          );
+          break;
+
+        case "externalMigration":
+          navigateTo("externalMigration", () => showExternalMigration());
+          break;
+
+        case "vacationReminder": {
+          const result = await ActionDispatcher.run(
+            "checkVacationsAndBirthdays",
+            () =>
+              Stage7Api.checkVacationsAndBirthdays({
+                date: _todayStr_(),
+                recipientRole: getSelectedCommanderRecipient_(),
+              }),
+          );
+          if (result?.success) {
+            navigateTo("vacationReminder", () => {
+              displayInResult(
+                "vacationResult",
+                Object.assign({}, result.vacations || {}, {
+                  message: result.message || "",
+                }),
+              );
+            });
+            logToConsole("🏖️ Нагадування про відпустки перевірено", "success");
+          } else {
+            navigateTo("vacationReminder", () => {
+              displayInResult("error", {
+                error: result?.error || "Невідома помилка",
+              });
+            });
+          }
+          break;
+        }
+
+        case "birthdayCheck": {
+          const result = await ActionDispatcher.run("checkBirthdays", () =>
+            Stage7Api.checkVacationsAndBirthdays({
+              date: _todayStr_(),
+              recipientRole: getSelectedCommanderRecipient_(),
+            }),
+          );
+          if (result?.success) {
+            navigateTo("birthdayCheck", () => {
+              showStandardResult("🎂 Дні Народження");
+              displayBirthdayResult(result.birthdays || {});
+            });
+            logToConsole("🎂 Перевірка ДН виконана", "success");
+          } else {
+            navigateTo("birthdayCheck", () => {
+              displayInResult("error", {
+                error: result?.error || "Невідома помилка",
+              });
+            });
+          }
+          break;
+        }
+
+        case "switchMonth":
+          navigateTo("switchMonth", () => showMonthSwitcher());
+          break;
+
+        case "debugAccess": {
+          navigateTo("debugAccess", () => {
+            showStandardResult("Перевірка доступу");
+            setHtml(
+              "resultContent",
+              `
+            <div class="result-item">
+              <div class="result-value">Перевіряю доступ...</div>
+            </div>
+          `,
+            );
+          });
+
+          const result = await ActionDispatcher.run(
+            "debugAccess",
+            () => MaintenanceApi.debugAccess(),
+            { successMessage: "" },
+          );
+          if (!result?.success) {
+            displayInResult("error", {
+              error: result?.error || "Невідома помилка",
+            });
+            break;
+          }
+
+          const data = result.data || {};
+          logToConsole(
+            "🔐 Access debug: role=" +
+              String(data.role || "guest") +
+              ", registered=" +
+              String(!!data.registered) +
+              ", source=" +
+              String(data.source || "default") +
+              ", key=" +
+              String(
+                (data.identity && data.identity.currentKeyHashMasked) ||
+                  data.currentKeyHashMasked ||
+                  "∅",
+              ),
+            data.registered ? "info" : "warning",
+          );
+
+          setHtml("resultContent", renderAccessDebugResult_(data));
+          break;
+        }
+
+        case "clearCache": {
+          const result = await ActionDispatcher.run("clearCache", () =>
+            MaintenanceApi.clearCache(),
+          );
+          displayInResult(
+            result?.success ? "success" : "error",
+            result?.success
+              ? { message: result.message }
+              : { error: result?.error || "Невідома помилка" },
+          );
+          break;
+        }
+
+        case "healthCheck":
+          navigateTo("healthCheck", () => showHealthCheckPanel());
+          break;
+
+        case "pendingRepairs":
+          navigateTo("pendingRepairs", () => showPendingRepairs());
+          break;
+
+        case "restartBot":
+          await restartBot();
+          break;
+
+        case "clearLog": {
+          const result = await ActionDispatcher.run(
+            "clearLog",
+            () => MaintenanceApi.clearLog(),
+            { successMessage: "" },
+          );
+          if (result?.success) clearConsole();
+          displayInResult(
+            result?.success ? "success" : "error",
+            result?.success
+              ? { message: result.message }
+              : { error: result?.error || "Невідома помилка" },
+          );
+          break;
+        }
+
+        case "applyProtections":
+          await applyProtections();
+          break;
+
+        case "previewProtections":
+          await previewProtections();
+          break;
+
+        case "bootstrapRuntime":
+          await bootstrapRuntimeSheets();
+          break;
+
+        case "bootstrapAccess":
+          await bootstrapAccessSheet();
+          break;
+
+        case "runRegressionTests":
+          await runRegressionTests();
+          break;
+
+        case "requests":
+          navigateTo("requests", () => SidebarApp.showRequestsForm());
+          break;
+
+        default:
+          logToConsole(`⚠ Невідома дія: ${action}`, "warning");
+      }
+    } catch (error) {
+      handleError(error);
+    }
+  }
+</script>

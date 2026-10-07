@@ -1,0 +1,20 @@
+<script>
+  // Js.Security.Login — registration/login UI removed (key allowlist only).
+  function openAccessLoginFlow(mode) {
+    if (typeof showToast === "function") {
+      showToast("Реєстрацію та вхід за логіном вимкнено");
+    }
+  }
+
+  function closeAccessLoginModal() {}
+  function closeAccessLoginModal_() {}
+  function ensureAccessLoginModal_() {
+    return null;
+  }
+  async function submitAccessLoginForm_() {
+    openAccessLoginFlow("login");
+  }
+  async function submitLoginByAccessKeyForm_() {
+    openAccessLoginFlow("haveKey");
+  }
+</script>

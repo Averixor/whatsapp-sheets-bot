@@ -1,0 +1,1405 @@
+<script>
+  // Js.Render fragment
+
+  // MONTH SWITCHER
+  // =========================
+
+  let monthSwitcherLoadPromise_ = null;
+  let monthSwitchInProgress_ = false;
+
+  function loadMonthsForSwitcherOnce_() {
+    if (monthSwitcherLoadPromise_) return monthSwitcherLoadPromise_;
+    monthSwitcherLoadPromise_ = Promise.resolve()
+      .then(() => Stage7Api.getMonths())
+      .finally(() => {
+        monthSwitcherLoadPromise_ = null;
+      });
+    return monthSwitcherLoadPromise_;
+  }
+
+  async function showMonthSwitcher() {
+    try {
+      const data = await loadMonthsForSwitcherOnce_();
+
+      if (data?.success && Array.isArray(data.months)) {
+        STATE.monthsList = data.months;
+        if (data.current) STATE.currentMonth = data.current;
+        renderMonthSwitcher();
+      } else if (STATE.monthsList.length) {
+        renderMonthSwitcher();
+      } else {
+        goBack();
+      }
+    } catch (error) {
+      logToConsole(`${normalizeError(error)}`, "error");
+      if (STATE.monthsList.length) {
+        renderMonthSwitcher();
+      } else {
+        goBack();
+      }
+    } finally {
+      hideLoading();
+    }
+  }
+
+  function renderMonthSwitcher() {
+    showStandardResult("Перемикання місяця");
+
+    const options = STATE.monthsList
+      .map(
+        (month) => `
+        <option value="${escapeHtml(month)}" ${month === STATE.currentMonth ? "selected" : ""}>
+          ${escapeHtml(month)}
+        </option>
+      `,
+      )
+      .join("");
+
+    setHtml(
+      "resultContent",
+      `
+      <div class="result-screen month-switcher-card">
+        <div class="month-switcher-hint">Виберіть місяць, на який потрібно перемкнути активний бот.</div>
+        <div class="month-switcher-badge">Активний місяць: ${escapeHtml(STATE.currentMonth || "—")}</div>
+
+        <label class="month-switcher-field">
+          <span class="month-switcher-field__label">Виберіть місяць</span>
+          <span class="month-switcher-select-wrap">
+            <select id="monthSelect" name="monthSelect" class="month-switcher-select">${options}</select>
+          </span>
+        </label>
+
+        <div class="month-switcher-actions">
+          <button id="monthSwitchSubmit" type="button" class="result-link" onclick="SidebarApp.switchToSelectedMonth()">Перемкнути й оновити журнал</button>
+          <button type="button" class="result-link result-link--secondary" onclick="SidebarApp.goBack()">Скасувати</button>
+        </div>
+      </div>
+    `,
+    );
+  }
+
+  async function switchToSelectedMonth() {
+    const select = $id("monthSelect");
+    if (!select || monthSwitchInProgress_) return;
+
+    monthSwitchInProgress_ = true;
+    select.disabled = true;
+    const submit = $id("monthSwitchSubmit");
+    if (submit) submit.disabled = true;
+
+    try {
+      const result = await ActionDispatcher.run("switchBotToMonth", () =>
+        Stage7Api.switchMonth(select.value),
+      );
+      if (result?.success) {
+        const switchedMonth = String(result.month || select.value || "").trim();
+        STATE.currentMonth = switchedMonth;
+        updateMonthBadge(STATE.currentMonth);
+        logToConsole(`✓ Перемкнено на ${STATE.currentMonth}`, "success");
+        const journal = result?.data?.journal || null;
+        if (journal?.ok !== false && journal?.monthSheet) {
+          logToConsole(
+            `✓ Журнал місяця ${journal.monthSheet} оновлено після перемикання`,
+            "success",
+          );
+        } else if (journal?.ok === false) {
+          logToConsole(
+            `⚠ Місяць перемкнено, але журнал не оновлено: ${journal.message || journal.reason || "невідома помилка"}`,
+            "warn",
+          );
+        }
+        goBack();
+      } else {
+        displayInResult("error", {
+          error: result?.error || "Невідома помилка",
+        });
+      }
+    } catch (error) {
+      handleError(error);
+    } finally {
+      monthSwitchInProgress_ = false;
+      if (select) select.disabled = false;
+      if (submit) submit.disabled = false;
+    }
+  }
+
+  async function clearPhoneCache() {
+    assertAdminAction_("clearPhoneCache");
+    if (
+      !(await showConfirmModal({
+        title: "Очищення кешу",
+        message: "Очистити кеш телефонів?",
+      }))
+    )
+      return;
+
+    logToConsole("Очищення кешу телефонів...", "info");
+
+    try {
+      const result = await ActionDispatcher.run("clearPhoneCache", () =>
+        MaintenanceApi.clearPhoneCache(),
+      );
+      if (!result?.success) {
+        showToast("" + (result?.error || "Помилка"));
+        return;
+      }
+
+      showToast("Кеш очищено");
+      showStandardResult("Очищення кешу");
+
+      setHtml(
+        "resultContent",
+        `
+        <div class="result-item">
+          <div class="result-label" style="color: var(--success-color);">Успішно</div>
+          <div class="result-value">${escapeHtml(result.message || "Кеш телефонів очищено")}</div>
+        </div>
+      `,
+      );
+    } catch (error) {
+      showToast("" + normalizeError(error));
+    }
+  }
+
+  function formatMonthlyCallsignSyncSummary_(monthlySync) {
+    if (!monthlySync || typeof monthlySync !== "object") {
+      return {
+        logLevel: "warn",
+        logText: "⚠ Позивні (телефони, дні народження, місяці): дані синхронізації не отримано",
+        sheet: "",
+        rowsWritten: 0,
+        error: "",
+        warnings: [],
+      };
+    }
+
+    const nestedSheets = Array.isArray(monthlySync.sheets) ? monthlySync.sheets : [];
+    if (nestedSheets.length) {
+      const failed = nestedSheets.filter((item) => item && item.ok === false);
+      const rowsWritten = Number(monthlySync.rowsWritten || 0);
+      const warnings = Array.isArray(monthlySync.warnings)
+        ? monthlySync.warnings.filter(Boolean)
+        : [];
+      if (failed.length) {
+        const errorText = failed
+          .map((item) => String(item.sheet || "?") + ": " + String(item.error || "помилка"))
+          .join("; ");
+        return {
+          logLevel: "warn",
+          logText: "⚠ Позивні: " + errorText,
+          sheet: "",
+          rowsWritten: rowsWritten,
+          error: errorText,
+          warnings: warnings,
+        };
+      }
+      let logText =
+        "✓ Позивні оновлено на " +
+        String(monthlySync.sheetCount || nestedSheets.length) +
+        " аркушах (" +
+        rowsWritten +
+        " рядків)";
+      if (warnings.length) {
+        logText += " — " + warnings.join("; ");
+      }
+      return {
+        logLevel: warnings.length ? "warn" : "success",
+        logText: logText,
+        sheet: "",
+        rowsWritten: rowsWritten,
+        error: "",
+        warnings: warnings,
+      };
+    }
+
+    if (monthlySync.ok === false) {
+      const errorText = String(monthlySync.error || "помилка синхронізації");
+      return {
+        logLevel: "warn",
+        logText: "⚠ Позивні: " + errorText,
+        sheet: "",
+        rowsWritten: 0,
+        error: errorText,
+        warnings: [],
+      };
+    }
+    const sheet = String(monthlySync.sheet || "").trim();
+    const rowsWritten = Number(monthlySync.rowsWritten || 0);
+    const warnings = Array.isArray(monthlySync.warnings)
+      ? monthlySync.warnings.filter(Boolean)
+      : [];
+    let logText =
+      "✓ Позивні" + (sheet ? " (" + sheet + ")" : "") + ": " + rowsWritten + " рядків";
+    if (warnings.length) {
+      logText += " — " + warnings.join("; ");
+    }
+    return {
+      logLevel: warnings.length ? "warn" : "success",
+      logText: logText,
+      sheet: sheet,
+      rowsWritten: rowsWritten,
+      error: "",
+      warnings: warnings,
+    };
+  }
+
+  function renderMaterializeComputedDataConfirm_() {
+    showStandardResult("Обчислювані дані");
+    setHtml(
+      "resultContent",
+      `
+      <div class="result-screen month-switcher-card">
+        <div class="result-screen-title">Підтвердження</div>
+        <div class="month-switcher-hint">
+          Оновити обчислювані дані (вік, дні до дня народження, позивні на графіку, відпустки у місячному графіку, статус панелі)?
+        </div>
+        <div class="month-switcher-actions">
+          <button
+            type="button"
+            class="result-link"
+            onclick="SidebarApp.runMaterializeComputedData_()"
+          >
+            Оновити
+          </button>
+          <button
+            type="button"
+            class="result-link result-link--secondary"
+            onclick="SidebarApp.goBack()"
+          >
+            Скасувати
+          </button>
+        </div>
+      </div>
+    `,
+    );
+  }
+
+  async function runMaterializeComputedData_() {
+    assertAdminAction_("materializeComputedData");
+    if (monthSwitchInProgress_) {
+      showToast("Дочекайтеся завершення перемикання місяця");
+      return;
+    }
+    logToConsole("Оновлення обчислюваних даних...", "info");
+
+    const targetMonth = String(STATE.currentMonth || "").trim();
+
+    try {
+      const result = await ActionDispatcher.run(
+        "materializeComputedData",
+        () =>
+          MaintenanceApi.materializeComputedData({
+            monthSheet: /^\d{2}$/.test(targetMonth) ? targetMonth : "",
+          }),
+      );
+      if (!result?.success) {
+        showToast("" + (result?.error || result?.message || "Помилка"));
+        return;
+      }
+
+      const suppressedMaterialize =
+        !result.personnel &&
+        (String(result.message || "").indexOf("подавлено") !== -1 ||
+          Number(
+            (result.meta && result.meta.skippedChangesCount) ||
+              result.skippedChangesCount ||
+              0,
+          ) > 0);
+      if (suppressedMaterialize) {
+        showToast(result.message || "Повторний запуск не виконав оновлення");
+        logToConsole(result.message || "Повторний запуск не виконав оновлення", "warn");
+        showStandardResult("Обчислювані дані");
+        setHtml(
+          "resultContent",
+          `
+          <div class="result-item">
+            <div class="result-label" style="color: var(--warn-color, #d97706);">Не оновлено</div>
+            <div class="result-value">${escapeHtml(
+              result.message ||
+                "Операцію подавлено як повторний запуск. Спробуйте ще раз через кілька хвилин.",
+            )}</div>
+          </div>
+        `,
+        );
+        return;
+      }
+
+      const monthlySummary = formatMonthlyCallsignSyncSummary_(
+        result.personnel && result.personnel.monthlyCallsigns,
+      );
+      logToConsole(monthlySummary.logText, monthlySummary.logLevel);
+
+      const personnelBlock =
+        (result.personnel && result.personnel.personnel) ||
+        (result.data &&
+          result.data.result &&
+          result.data.result.personnel &&
+          result.data.result.personnel.personnel) ||
+        null;
+      const assignmentBlock =
+        (result.personnel && result.personnel.assignmentIdentity) ||
+        (result.data &&
+          result.data.result &&
+          result.data.result.personnel &&
+          result.data.result.personnel.assignmentIdentity) ||
+        null;
+      const carAssignmentRows = Number(
+        assignmentBlock && assignmentBlock.car && assignmentBlock.car.rowsChanged,
+      );
+      const weaponAssignmentRows = Number(
+        assignmentBlock && assignmentBlock.weapon && assignmentBlock.weapon.rowsChanged,
+      );
+      const ageBirthdayRows = Number(
+        personnelBlock && personnelBlock.birthdayColumnsFormattedRows,
+      );
+      if (ageBirthdayRows > 0) {
+        logToConsole(
+          "✓ Дані ДН відформатовано: " + String(ageBirthdayRows) + " рядків",
+          "success",
+        );
+      }
+      if (carAssignmentRows > 0 || weaponAssignmentRows > 0) {
+        logToConsole(
+          "✓ Закріплене майно синхронізовано: авто " +
+            String(carAssignmentRows) +
+            ", озброєння " +
+            String(weaponAssignmentRows),
+          "success",
+        );
+      }
+
+      logMaterializeComputedTimings_(result);
+
+      showToast("Обчислювані дані оновлено");
+      showStandardResult("Обчислювані дані");
+      logToConsole("✓ " + (result.message || "Обчислювані дані оновлено"), "success");
+
+      const vacationSync =
+        result.vacationMonthlySync ||
+        (result.data &&
+          result.data.result &&
+          result.data.result.vacationMonthlySync) ||
+        null;
+      const vacationSyncStats = vacationSync && vacationSync.stats ? vacationSync.stats : {};
+      const vacationSyncAuto =
+        Number(vacationSync && vacationSync.autoFillApplied) ||
+        Number(vacationSyncStats.autoFill) ||
+        0;
+      const vacationSyncConflicts = Number(vacationSyncStats.conflicts || 0);
+      const vacationSyncRemovals = Number(vacationSyncStats.removals || 0);
+
+      setHtml(
+        "resultContent",
+        `
+        <div class="result-item">
+          <div class="result-label" style="color: var(--success-color);">Успішно</div>
+          <div class="result-value">${escapeHtml(result.message || "Обчислювані дані оновлено")}</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">День народження (особовий склад)</div>
+          <div class="result-value">${escapeHtml(
+            ageBirthdayRows > 0
+              ? "Відформатовано " + String(ageBirthdayRows) + " рядків"
+              : "Колонки не оновлено",
+          )}</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Позивні (телефони, дні народження, місяці)</div>
+          <div class="result-value">${escapeHtml(
+            monthlySummary.error ||
+              (monthlySummary.sheet
+                ? "Аркуш " +
+                  monthlySummary.sheet +
+                  ": " +
+                  String(monthlySummary.rowsWritten) +
+                  " рядків"
+                : "Оновлено " +
+                  String(monthlySummary.rowsWritten) +
+                  " рядків на телефонах, днях народження та місячних аркушах") +
+              (monthlySummary.warnings.length
+                ? ". " + monthlySummary.warnings.join("; ")
+                : ""),
+          )}</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Закріплене майно</div>
+          <div class="result-value">${escapeHtml(
+            assignmentBlock && assignmentBlock.ok === false
+              ? assignmentBlock.error || "Синхронізацію майна не виконано"
+              : "Автотехніка: " +
+                  String(carAssignmentRows) +
+                  " змін; озброєння: " +
+                  String(weaponAssignmentRows) +
+                  " змін",
+          )}</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Синхронізація відпусток із місячним графіком</div>
+          <div class="result-value">${escapeHtml(
+            vacationSync && vacationSync.skipped
+              ? vacationSync.message || "Пропущено"
+              : "Автозаповнено " +
+                  String(vacationSyncAuto) +
+                  " клітинок" +
+                  (vacationSyncConflicts || vacationSyncRemovals
+                    ? "; конфліктів: " +
+                      String(vacationSyncConflicts) +
+                      ", зняття: " +
+                      String(vacationSyncRemovals)
+                    : ""),
+          )}</div>
+        </div>
+      `,
+      );
+
+      if (
+        vacationSync &&
+        vacationSync.pendingUserDecision &&
+        typeof maybeOpenVacationMonthlySyncConflicts_ === "function"
+      ) {
+        maybeOpenVacationMonthlySyncConflicts_(result);
+      }
+    } catch (error) {
+      showToast("" + normalizeError(error));
+    }
+  }
+
+  function logMaterializeComputedTimings_(result) {
+    const timings =
+      result?.timings ||
+      result?.data?.result?.timings ||
+      result?.data?.timings ||
+      null;
+    const stages = timings?.stages || {};
+    if (!timings || !stages || typeof logToConsole !== "function") return;
+
+    const rows = [];
+    const append = (label, timing) => {
+      if (!timing || timing.skipped === true) return;
+      const ms = Number(timing.durationMs);
+      if (!Number.isFinite(ms) || ms < 0) return;
+      rows.push(`${label} ${(ms / 1000).toFixed(1)} с`);
+    };
+
+    append("особовий склад", stages.personnel);
+    const personnelDetails = stages.personnel?.details || {};
+    const assignmentDetails = personnelDetails.assignments?.details || {};
+    append("авто", assignmentDetails.car);
+    append("озброєння", assignmentDetails.weapon);
+    append("обчислення відпусток", stages.vacationComputed);
+    append("графік відпусток", stages.vacationSchedule);
+    append("відпустки в місяці", stages.vacationMonthlySync);
+    append("панель надсилання", stages.sendPanel);
+    append("статус системи", stages.systemStatus);
+
+    const totalMs = Number(timings.totalMs);
+    if (Number.isFinite(totalMs) && totalMs >= 0) {
+      rows.push(`разом ${(totalMs / 1000).toFixed(1)} с`);
+    }
+    if (rows.length) {
+      logToConsole(`⏱ Етапи оновлення: ${rows.join("; ")}`, "info");
+    }
+  }
+
+  async function materializeComputedData() {
+    assertAdminAction_("materializeComputedData");
+    renderMaterializeComputedDataConfirm_();
+  }
+
+  async function materializeMonthJournal() {
+    assertAdminAction_("materializeMonthJournal");
+    if (monthSwitchInProgress_) {
+      showToast("Дочекайтеся завершення перемикання місяця");
+      return;
+    }
+    logToConsole("Оновлення журналу місяця...", "info");
+
+    const targetMonth = String(STATE.currentMonth || "").trim();
+
+    try {
+      const result = await ActionDispatcher.run(
+        "materializeMonthJournal",
+        () =>
+          MaintenanceApi.materializeMonthJournal({
+            monthSheet: /^\d{2}$/.test(targetMonth) ? targetMonth : "",
+          }),
+      );
+
+      const payload = result?.data?.result || result?.data || result || {};
+      const journalSheet = String(payload.journalSheet || "").trim();
+      const summarySheet = String(payload.summarySheet || "").trim();
+      const journalRows = Number(payload.journalRowsWritten || 0);
+      const summaryRows = Number(payload.summaryRowsWritten || 0);
+
+      if (result?.success) {
+        showToast("Журнал активного місяця оновлено");
+        showStandardResult("Журнал місяця");
+        setHtml(
+          "resultContent",
+          `
+          <div class="result-item">
+            <div class="result-label" style="color: var(--success-color);">Успішно</div>
+            <div class="result-value">
+              <p>${escapeHtml(result.message || "Журнал активного місяця оновлено")}</p>
+              <p style="font-size:0.85rem; margin-top:8px;">
+                ${escapeHtml(journalSheet)}: ${escapeHtml(String(journalRows))} записів<br>
+                ${escapeHtml(summarySheet)}: ${escapeHtml(String(summaryRows))} осіб
+              </p>
+            </div>
+          </div>
+        `,
+        );
+      } else {
+        showToast("" + (result?.message || "Не вдалося оновити журнал місяця"));
+      }
+    } catch (error) {
+      showToast("" + normalizeError(error));
+    }
+  }
+
+  async function setupTemporaryPropertyRegister() {
+    assertAdminAction_("setupTemporaryPropertyRegister");
+    if (
+      !(await showConfirmModal({
+        title: "Облік майна",
+        message:
+          "Налаштувати облік майна? За потреби буде створено резервну копію старого журналу перед міграцією.",
+      }))
+    )
+      return;
+
+    logToConsole("Налаштування обліку майна...", "info");
+
+    try {
+      const result = await ActionDispatcher.run(
+        "setupTemporaryPropertyRegister",
+        () => MaintenanceApi.setupTemporaryPropertyRegister(),
+      );
+      if (result?.success) {
+        showToast("Облік майна налаштовано");
+        showStandardResult("Облік майна");
+        setHtml(
+          "resultContent",
+          `
+          <div class="result-item">
+            <div class="result-label" style="color: var(--success-color);">Успішно</div>
+            <div class="result-value">${escapeHtml(result.message || "Облік майна налаштовано")}</div>
+          </div>
+        `,
+        );
+      } else {
+        showToast("" + (result?.message || result?.error || "Помилка"));
+      }
+    } catch (error) {
+      showToast("" + normalizeError(error));
+    }
+  }
+
+  async function refreshTemporaryPropertyRegister() {
+    assertAdminAction_("refreshTemporaryPropertyRegister");
+    logToConsole("Оновлення обліку майна...", "info");
+
+    try {
+      const result = await ActionDispatcher.run(
+        "refreshTemporaryPropertyRegister",
+        () => MaintenanceApi.refreshTemporaryPropertyRegister(),
+      );
+      if (result?.success) {
+        showToast("Облік майна оновлено");
+        showStandardResult("Облік майна");
+        setHtml(
+          "resultContent",
+          `
+          <div class="result-item">
+            <div class="result-label" style="color: var(--success-color);">Успішно</div>
+            <div class="result-value">${escapeHtml(result.message || "Облік майна оновлено")}</div>
+          </div>
+        `,
+        );
+      } else {
+        showToast("" + (result?.message || result?.error || "Помилка"));
+      }
+    } catch (error) {
+      showToast("" + normalizeError(error));
+    }
+  }
+
+  async function setupTrigger() {
+    assertAdminAction_("setupTrigger");
+    if (
+      !(await showConfirmModal({
+        title: "Тригери",
+        message: "Створити щоденні тригери для відпусток і ДН?",
+      }))
+    )
+      return;
+
+    logToConsole("Створення тригера...", "info");
+
+    try {
+      const result = await ActionDispatcher.run("setupVacationTriggers", () =>
+        MaintenanceApi.setupVacationTriggers(),
+      );
+
+      if (result?.success) {
+        showToast("Тригер створено");
+        showStandardResult("Щоденні тригери");
+
+        setHtml(
+          "resultContent",
+          `
+          <div class="result-item">
+            <div class="result-label" style="color: var(--success-color);">Успішно</div>
+            <div class="result-value">
+              <p>${escapeHtml(result.message || "")
+                .split("\n")
+                .join("<br>")}</p>
+              <p style="font-size:0.8rem; color:var(--text-secondary); margin-top:8px;">
+                Видалено старих тригерів: ${result.removed || 0}
+              </p>
+            </div>
+          </div>
+        `,
+        );
+      } else {
+        showToast("" + (result?.error || "Помилка"));
+      }
+    } catch (error) {
+      showToast("" + normalizeError(error));
+    }
+  }
+
+  async function cleanupTriggers() {
+    assertAdminAction_("cleanupTriggers");
+    if (
+      !(await showConfirmModal({
+        title: "Тригери",
+        message: "Очистити дублікати тригерів?",
+      }))
+    )
+      return;
+
+    logToConsole("Очищення дублів тригерів...", "info");
+
+    try {
+      const result = await ActionDispatcher.run(
+        "cleanupDuplicateTriggers",
+        () => MaintenanceApi.cleanupDuplicateTriggers(),
+      );
+
+      if (result?.ok) {
+        const statusMessage =
+          result.removed === 0
+            ? "Дублів не знайдено. Все добре!"
+            : `Видалено дублів: ${result.removed} (було: ${result.found})`;
+
+        showToast(statusMessage);
+        showStandardResult("Очищення дублів тригерів");
+
+        setHtml(
+          "resultContent",
+          `
+          <div class="result-item">
+            <div class="result-label" style="color: var(--success-color);">Результат</div>
+            <div class="result-value">${escapeHtml(statusMessage)}</div>
+          </div>
+        `,
+        );
+      } else {
+        showToast("" + (result?.error || "Помилка"));
+      }
+    } catch (error) {
+      showToast("" + normalizeError(error));
+    }
+  }
+
+  async function debugPhones() {
+    assertAdminAction_("debugPhones");
+    logToConsole("Діагностика телефонів...", "info");
+    showStandardResult("Діагностика телефонів");
+
+    setHtml(
+      "resultContent",
+      `
+      <div class="result-item">
+        <div class="result-label">Діагностика телефонів</div>
+        <div class="result-value">Аналізую аркуш телефонів...</div>
+      </div>
+    `,
+    );
+
+    try {
+      const result = await ActionDispatcher.run(
+        "debugPhones",
+        () => MaintenanceApi.debugPhones(),
+        { successMessage: "" },
+      );
+      if (!result?.success) {
+        throw new Error(
+          result?.error || "Не вдалося виконати діагностику телефонів",
+        );
+      }
+
+      const stats = result.stats || {};
+      const contacts = Array.isArray(result.contacts) ? result.contacts : [];
+      const preview = contacts.slice(0, 20);
+      const rowsHtml = preview.length
+        ? `
+          <div class="result-item">
+            <div class="result-label">Перші записи</div>
+            <div class="result-value">
+              <div style="display:grid; gap:8px;">
+                ${preview
+                  .map(
+                    (item) => `
+                  <div style="padding:8px; border:1px solid var(--border-color); border-radius:10px; background:var(--bg-glass);">
+                    <div><strong>#${Number(item.row || 0)}</strong> ${escapeHtml(item.fml || "—")}</div>
+                    <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:4px;">
+                      ${escapeHtml(formatPhone(item.phone || "—"))}
+                      ${item.role ? `<br>🏷 ${escapeHtml(item.role)}` : ""}
+                      ${item.birthday ? `<br>🎂 ${escapeHtml(item.birthday)}` : ""}
+                    </div>
+                  </div>
+                `,
+                  )
+                  .join("")}
+              </div>
+            </div>
+          </div>
+        `
+        : `
+          <div class="result-item">
+            <div class="result-label">Записи</div>
+            <div class="result-value">Аркуш порожній або не містить контактів.</div>
+          </div>
+        `;
+
+      setHtml(
+        "resultContent",
+        `
+        <div class="result-item">
+          <div class="result-label" style="color: var(--success-color);">Результат</div>
+          <div class="result-value">${escapeHtml(result.message || "Діагностику телефонів виконано")}</div>
+        </div>
+
+        <div class="result-item">
+          <div class="result-label">Аркуш</div>
+          <div class="result-value">${escapeHtml(result.sheetName || "Телефони")}</div>
+        </div>
+
+        <div class="result-item">
+          <div class="result-label">Статистика</div>
+          <div class="result-value">
+            Усього контактів: <strong>${Number(stats.total || contacts.length || 0)}</strong><br>
+            З телефонами: <strong>${Number(stats.withPhone || 0)}</strong><br>
+            Без телефонів: <strong>${Number(stats.withoutPhone || 0)}</strong><br>
+            З роллю/позивним: <strong>${Number(stats.withRole || 0)}</strong><br>
+            З днем народження: <strong>${Number(stats.withBirthday || 0)}</strong>
+          </div>
+        </div>
+
+        ${rowsHtml}
+      `,
+      );
+
+      showToast("Діагностику телефонів завершено");
+      logToConsole(
+        `Діагностика телефонів завершена: ${Number(stats.total || contacts.length || 0)} записів`,
+        "success",
+      );
+    } catch (error) {
+      const message = normalizeError(error);
+      setHtml(
+        "resultContent",
+        `
+        <div class="result-item">
+          <div class="result-label" style="color: var(--danger-color);">Помилка</div>
+          <div class="result-value">${escapeHtml(message)}</div>
+        </div>
+      `,
+      );
+      showToast("✕ " + message);
+      logToConsole("Діагностика телефонів: " + message, "error");
+    }
+  }
+
+  async function applyProtections() {
+    assertAdminAction_("applyProtections");
+    if (
+      !(await showConfirmModal({
+        title: "Захист листів",
+        message: "Застосувати захист до службових листів?",
+      }))
+    )
+      return;
+    logToConsole("Застосування захисту до службових листів...", "info");
+    showStandardResult("Захист службових листів");
+    setHtml(
+      "resultContent",
+      '<div class="result-item"><div class="result-value">Підготовка захисту...</div></div>',
+    );
+    try {
+      const result = await ActionDispatcher.run(
+        "applyProtections",
+        () => MaintenanceApi.applyProtections({ dryRun: false }),
+        { successMessage: "" },
+      );
+      const protectedSheets = Array.isArray(result?.protectedSheets)
+        ? result.protectedSheets
+        : Array.isArray(result?.data?.protectedSheets)
+          ? result.data.protectedSheets
+          : [];
+      const warnings = Array.isArray(result?.warnings)
+        ? result.warnings
+        : Array.isArray(result?.data?.warnings)
+          ? result.data.warnings
+          : [];
+      setHtml(
+        "resultContent",
+        `
+        <div class="result-item">
+          <div class="result-label" style="color: var(--success-color);">Результат</div>
+          <div class="result-value">${escapeHtml(result?.message || "Захист застосовано")}</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Захищені листи</div>
+          <div class="result-value">${protectedSheets.length ? protectedSheets.map(escapeHtml).join("<br>") : "—"}</div>
+        </div>
+        ${warnings.length ? `<div class="result-item"><div class="result-label">Попередження</div><div class="result-value">${warnings.map(escapeHtml).join("<br>")}</div></div>` : ""}
+      `,
+      );
+      showToast("Захист службових листів застосовано");
+    } catch (error) {
+      setHtml(
+        "resultContent",
+        `<div class="result-item"><div class="result-value">✕ ${escapeHtml(normalizeError(error))}</div></div>`,
+      );
+      showToast("Не вдалося застосувати захист");
+    }
+  }
+
+  async function previewProtections() {
+    assertAdminAction_("previewProtections");
+    logToConsole("Перегляд захисту службових листів (без змін)...", "info");
+    showStandardResult("Перегляд захисту листів");
+    setHtml(
+      "resultContent",
+      '<div class="result-item"><div class="result-value">Готую звіт без змін...</div></div>',
+    );
+    try {
+      const result = await ActionDispatcher.run(
+        "previewProtections",
+        () => MaintenanceApi.applyProtections({ dryRun: true }),
+        { successMessage: "" },
+      );
+      const protectedSheets = Array.isArray(result?.protectedSheets)
+        ? result.protectedSheets
+        : Array.isArray(result?.data?.protectedSheets)
+          ? result.data.protectedSheets
+          : [];
+      const warnings = Array.isArray(result?.warnings)
+        ? result.warnings
+        : Array.isArray(result?.data?.warnings)
+          ? result.data.warnings
+          : [];
+      setHtml(
+        "resultContent",
+        `
+        <div class="result-item">
+          <div class="result-label">Режим</div>
+          <div class="result-value">Перегляд без застосування змін</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label" style="color: var(--success-color);">Звіт</div>
+          <div class="result-value">${escapeHtml(result?.message || "Звіт підготовлено")}</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Листи для захисту</div>
+          <div class="result-value">${protectedSheets.length ? protectedSheets.map(escapeHtml).join("<br>") : "—"}</div>
+        </div>
+        ${warnings.length ? `<div class="result-item"><div class="result-label">Попередження</div><div class="result-value">${warnings.map(escapeHtml).join("<br>")}</div></div>` : ""}
+      `,
+      );
+      showToast("Звіт захисту готовий");
+    } catch (error) {
+      setHtml(
+        "resultContent",
+        `<div class="result-item"><div class="result-value">✕ ${escapeHtml(normalizeError(error))}</div></div>`,
+      );
+      showToast("Не вдалося підготувати звіт захисту");
+    }
+  }
+
+  async function bootstrapRuntimeSheets() {
+    assertAdminAction_("bootstrapRuntime");
+    logToConsole("Створення службових листів журналів...", "info");
+    showStandardResult("Створення службових листів");
+    setHtml(
+      "resultContent",
+      '<div class="result-item"><div class="result-value">Створюю службові листи...</div></div>',
+    );
+    try {
+      const result = await ActionDispatcher.run(
+        "bootstrapRuntime",
+        () => MaintenanceApi.bootstrapRuntimeAndAlertsSheets(),
+        { successMessage: "" },
+      );
+      const success = result && result.success !== false;
+      const sheets = Array.isArray(result?.affectedSheets)
+        ? result.affectedSheets
+        : Array.isArray(result?.data?.affectedSheets)
+          ? result.data.affectedSheets
+          : [];
+      const warnings = Array.isArray(result?.warnings)
+        ? result.warnings
+        : Array.isArray(result?.data?.warnings)
+          ? result.data.warnings
+          : [];
+      const statusLabel = success ? "Успішно" : "Помилка";
+      const statusColor = success
+        ? "var(--success-color)"
+        : "var(--danger-color)";
+      const statusMessage =
+        result?.message ||
+        result?.error ||
+        (success
+          ? "Службові листи створено"
+          : "Не вдалося створити листи");
+      setHtml(
+        "resultContent",
+        `
+        <div class="result-item">
+          <div class="result-label" style="color: ${statusColor};">${escapeHtml(statusLabel)}</div>
+          <div class="result-value">${escapeHtml(statusMessage)}</div>
+        </div>
+        ${sheets.length ? `<div class="result-item"><div class="result-label">Листи</div><div class="result-value">${sheets.map(escapeHtml).join("<br>")}</div></div>` : ""}
+        ${warnings.length ? `<div class="result-item"><div class="result-label">Попередження</div><div class="result-value">${warnings.map(escapeHtml).join("<br>")}</div></div>` : ""}
+      `,
+      );
+      showToast(success ? "Службові листи створено" : "Не вдалося створити службові листи");
+    } catch (error) {
+      setHtml(
+        "resultContent",
+        `<div class="result-item"><div class="result-value">✕ ${escapeHtml(normalizeError(error))}</div></div>`,
+      );
+      showToast("Не вдалося створити службові листи");
+    }
+  }
+
+  async function bootstrapAccessSheet() {
+    assertAdminAction_("bootstrapAccess");
+    logToConsole("Ініціалізація листа доступу...", "info");
+    showStandardResult("Ініціалізація листа доступу");
+    setHtml(
+      "resultContent",
+      '<div class="result-item"><div class="result-value">Ініціалізую лист доступу...</div></div>',
+    );
+    try {
+      const result = await ActionDispatcher.run(
+        "bootstrapAccess",
+        () => MaintenanceApi.bootstrapAccessSheet(),
+        { successMessage: "" },
+      );
+      const success = result && result.success !== false;
+      const warnings = Array.isArray(result?.warnings)
+        ? result.warnings
+        : Array.isArray(result?.data?.warnings)
+          ? result.data.warnings
+          : [];
+      const statusLabel = success ? "Успішно" : "Помилка";
+      const statusColor = success
+        ? "var(--success-color)"
+        : "var(--danger-color)";
+      const statusMessage =
+        result?.message ||
+        result?.error ||
+        (success
+          ? "Лист доступу ініціалізовано"
+          : "Не вдалося ініціалізувати лист доступу");
+      setHtml(
+        "resultContent",
+        `
+        <div class="result-item">
+          <div class="result-label" style="color: ${statusColor};">${escapeHtml(statusLabel)}</div>
+          <div class="result-value">${escapeHtml(statusMessage)}</div>
+        </div>
+        ${warnings.length ? `<div class="result-item"><div class="result-label">Попередження</div><div class="result-value">${warnings.map(escapeHtml).join("<br>")}</div></div>` : ""}
+      `,
+      );
+      showToast(success ? "Лист доступу ініціалізовано" : "Не вдалося ініціалізувати лист доступу");
+    } catch (error) {
+      setHtml(
+        "resultContent",
+        `<div class="result-item"><div class="result-value">✕ ${escapeHtml(normalizeError(error))}</div></div>`,
+      );
+      showToast("Не вдалося ініціалізувати лист доступу");
+    }
+  }
+
+  async function runRegressionTests() {
+    assertAdminAction_("runRegressionTests");
+    logToConsole("Запуск регресійних тестів...", "info");
+    showStandardResult("Регресійні тести");
+    setHtml(
+      "resultContent",
+      '<div class="result-item"><div class="result-value">⏳ Виконую регресійні тести...</div></div>',
+    );
+    try {
+      const result = await ActionDispatcher.run(
+        "runRegressionTests",
+        () => DiagnosticsApi.runRegressionTests({ dryRun: true }),
+        { successMessage: "" },
+      );
+      const report = (result && (result.data || result)) || {};
+      STATE.lastHealthReport = report;
+      const failCount = Number((report.counts && report.counts.failed) || 0);
+      if (typeof renderHealthReport === "function") {
+        setHtml("resultContent", renderHealthReport(report));
+      } else {
+        const statusColor =
+          failCount > 0 ? "var(--danger-color)" : "var(--success-color)";
+        setHtml(
+          "resultContent",
+          `
+          <div class="result-item">
+            <div class="result-label" style="color: ${statusColor};">Результат</div>
+            <div class="result-value">${escapeHtml(result?.message || report.summary || "Регресійні тести завершено")}</div>
+          </div>
+        `,
+        );
+      }
+      showToast(failCount > 0 ? "⚠ Є провалені регресійні тести" : "✓ Регресійні тести пройдено");
+    } catch (error) {
+      setHtml(
+        "resultContent",
+        `<div class="result-item"><div class="result-value">✕ ${escapeHtml(normalizeError(error))}</div></div>`,
+      );
+      showToast("Не вдалося запустити регресійні тести");
+    }
+  }
+
+  async function restartBot() {
+    assertAdminAction_("restartBot");
+    if (
+      !(await showConfirmModal({
+        title: "Перезапуск бота",
+        message:
+          "Повністю перезапустити бота?\n\nБудуть очищені активні маркери та активні операції життєвого циклу.",
+        danger: true,
+      }))
+    )
+      return;
+    logToConsole("Перезапуск бота...", "info");
+    try {
+      const result = await ActionDispatcher.run(
+        "restartBot",
+        () => MaintenanceApi.restartBot(),
+        { successMessage: "" },
+      );
+      if (!result?.success) {
+        showToast("" + (result?.error || "Помилка"));
+        return;
+      }
+      showToast("" + (result.message || "Бот перезапущено"));
+      showStandardResult("Перезапуск бота");
+      setHtml(
+        "resultContent",
+        `
+      <div class="result-item">
+        <div class="result-label" style="color: var(--success-color);">Успішно</div>
+        <div class="result-value">${escapeHtml(result.message || "Бота перезапущено")}</div>
+      </div>
+    `,
+      );
+      setTimeout(() => {
+        window.location.reload();
+      }, 300);
+    } catch (error) {
+      showToast("✕ " + normalizeError(error));
+    }
+  }
+
+  function getPendingRepairsCacheTtlMs_() {
+    return 30000;
+  }
+
+  function readPendingRepairsCache_() {
+    const cached = STATE._pendingRepairsCache || null;
+    if (!cached || !Array.isArray(cached.items)) return null;
+    if (Date.now() - Number(cached.ts || 0) > getPendingRepairsCacheTtlMs_())
+      return null;
+    return cached;
+  }
+
+  function writePendingRepairsCache_(items, skippedWithoutOperationId) {
+    STATE._pendingRepairsCache = {
+      ts: Date.now(),
+      items: Array.isArray(items) ? items.slice() : [],
+      skippedWithoutOperationId: Number(skippedWithoutOperationId || 0),
+    };
+  }
+
+  function invalidatePendingRepairsCache_() {
+    STATE._pendingRepairsCache = null;
+  }
+
+  function readOperationDetailsCache_(operationId) {
+    const key = String(operationId || "").trim();
+    if (!key) return null;
+    const map = STATE._operationDetailsCache || {};
+    const cached = map[key];
+    if (!cached) return null;
+    if (Date.now() - Number(cached.ts || 0) > getPendingRepairsCacheTtlMs_())
+      return null;
+    return cached.details || null;
+  }
+
+  function writeOperationDetailsCache_(operationId, details) {
+    const key = String(operationId || "").trim();
+    if (!key) return;
+    if (
+      !STATE._operationDetailsCache ||
+      typeof STATE._operationDetailsCache !== "object"
+    ) {
+      STATE._operationDetailsCache = {};
+    }
+    STATE._operationDetailsCache[key] = {
+      ts: Date.now(),
+      details: details || {},
+    };
+  }
+
+  function invalidateOperationDetailsCache_(operationId) {
+    const key = String(operationId || "").trim();
+    if (
+      !key ||
+      !STATE._operationDetailsCache ||
+      typeof STATE._operationDetailsCache !== "object"
+    )
+      return;
+    delete STATE._operationDetailsCache[key];
+  }
+
+  function renderPendingRepairsTable_(items) {
+    if (!Array.isArray(items) || !items.length) {
+      return `
+      <div class="result-item">
+        <div class="result-value">Немає операцій, що потрібно виправити.</div>
+      </div>
+    `;
+    }
+
+    return `
+    <div class="result-item">
+      <div class="result-label">🛠 - ${items.length}</div>
+      <div class="result-value" style="display:grid; gap:10px;">
+        ${items
+          .map(
+            (item) => `
+          <div style="padding:10px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-glass);">
+            <div style="font-weight:700; font-size:12px;">${escapeHtml(item.operationId || "")}</div>
+            <div style="font-size:11px; color:var(--text-secondary); margin-top:4px;">${escapeHtml(translateLifecycleScenario(item.scenario || ""))} • ${escapeHtml(translateLifecycleStatus(item.status || ""))}</div>
+            <div style="font-size:11px; color:var(--text-secondary); margin-top:4px;">${escapeHtml(formatOperationDate(item.startedAt || ""))}</div>
+            ${item.errorMessage ? `<div style="margin-top:6px; color:var(--error-color); font-size:11px;">${escapeHtml(translateLifecycleText(item.errorMessage))}</div>` : ""}
+            <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+              <button class="btn btn-secondary" onclick="SidebarApp.showOperationDetails('${escapeJsString(item.operationId || "")}')">Деталі</button>
+              <button class="btn btn-primary" onclick="SidebarApp.runRepair('${escapeJsString(item.operationId || "")}')">Виправити</button>
+            </div>
+          </div>
+        `,
+          )
+          .join("")}
+      </div>
+    </div>
+  `;
+  }
+
+  async function showPendingRepairs(forceRefresh) {
+    assertAdminAction_("pendingRepairs");
+    logToConsole("Завантаження операцій, що потрібно виправити...", "info");
+    showStandardResult("Операції, що потрібно виправити");
+
+    const cached = forceRefresh ? null : readPendingRepairsCache_();
+    if (cached) {
+      let cachedHtml = renderPendingRepairsTable_(cached.items);
+      if (cached.skippedWithoutOperationId > 0) {
+        cachedHtml += `<div class="result-item"><div class="result-label">Пропущені записи</div><div class="result-value">${escapeHtml(String(cached.skippedWithoutOperationId))} запис(ів) без коректного operationId не показано в списку repair.</div></div>`;
+      }
+      setHtml("resultContent", cachedHtml);
+      logToConsole("📦 Список repair-операцій взято з короткого кешу", "info");
+      return;
+    }
+
+    setHtml(
+      "resultContent",
+      '<div class="result-item"><div class="result-value">Завантаження...</div></div>',
+    );
+    try {
+      const result = await ActionDispatcher.run(
+        "listPendingRepairs",
+        () => MaintenanceApi.listPendingRepairs(),
+        { successMessage: "" },
+      );
+      const items = result?.operations || result?.data?.operations || [];
+      const skippedWithoutOperationId = Number(
+        result?.skippedWithoutOperationId ||
+          result?.data?.skippedWithoutOperationId ||
+          0,
+      );
+      writePendingRepairsCache_(items, skippedWithoutOperationId);
+      let html = renderPendingRepairsTable_(items);
+      if (skippedWithoutOperationId > 0) {
+        html += `<div class="result-item"><div class="result-label">Пропущені записи</div><div class="result-value">${escapeHtml(String(skippedWithoutOperationId))} запис(ів) без коректного operationId не показано в списку repair.</div></div>`;
+      }
+      setHtml("resultContent", html);
+      showToast(
+        items.length
+          ? `Потрібно виправити: ${items.length}`
+          : "Операцій для виправлення немає",
+      );
+    } catch (error) {
+      setHtml(
+        "resultContent",
+        `<div class="result-item"><div class="result-value">✕ ${escapeHtml(normalizeError(error))}</div></div>`,
+      );
+      showToast("Не вдалося завантажити список");
+    }
+  }
+
+  async function showOperationDetails(operationId, forceRefresh) {
+    assertAdminAction_("operationDetails");
+    const opId = String(operationId || "").trim();
+    if (!opId) {
+      setHtml(
+        "resultContent",
+        '<div class="result-item"><div class="result-value">Не передано operationId</div></div>',
+      );
+      showToast("Не знайдено operationId");
+      return;
+    }
+    showStandardResult("Деталі операції");
+
+    const cachedDetails = forceRefresh
+      ? null
+      : readOperationDetailsCache_(opId);
+    if (!cachedDetails) {
+      setHtml(
+        "resultContent",
+        '<div class="result-item"><div class="result-value">Завантаження деталей...</div></div>',
+      );
+    }
+    try {
+      const details =
+        cachedDetails ||
+        (function () {
+          return null;
+        })();
+      const resolved =
+        details ||
+        (function (result) {
+          return result?.operation ? result : result?.data || {};
+        })(
+          await ActionDispatcher.run(
+            "getOperationDetails",
+            () => MaintenanceApi.getOperationDetails(opId),
+            { successMessage: "" },
+          ),
+        );
+      writeOperationDetailsCache_(opId, resolved);
+      const operation = resolved.operation || {};
+      const checkpoints = Array.isArray(resolved.checkpoints)
+        ? resolved.checkpoints
+        : [];
+      if (cachedDetails) {
+        logToConsole("📦 Деталі операції взято з короткого кешу", "info");
+      }
+      setHtml(
+        "resultContent",
+        `
+      <div class="result-item">
+        <div class="result-label">Ідентифікатор операції</div>
+        <div class="result-value">${escapeHtml(operation.OperationId || opId || "")}</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Сценарій / Статус</div>
+        <div class="result-value">${escapeHtml(translateLifecycleScenario(operation.Scenario || ""))} • ${escapeHtml(translateLifecycleStatus(operation.Status || ""))}</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Відбиток операції</div>
+        <div class="result-value">${escapeHtml(operation.Fingerprint || "")}</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Затронуті сутності</div>
+        <div class="result-value">${escapeHtml(operation.AffectedEntities || "") || "—"}</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Перевірка / Результат виправлення</div>
+        <div class="result-value">${escapeHtml(translateLifecycleText(operation.VerificationResult || "")) || "—"} / ${escapeHtml(translateLifecycleText(operation.ResolutionStatus || "")) || "—"}</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Примітки</div>
+        <div class="result-value" style="white-space:pre-wrap;">${escapeHtml(translateLifecycleText(operation.Notes || "")) || "—"}</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Контекст контрольних точок</div>
+        <div class="result-value">${checkpoints.length ? checkpoints.map((cp) => `${escapeHtml(String(cp.CheckpointIndex || ""))}: ${escapeHtml(String(cp.ProcessedUpTo || ""))}`).join("<br>") : "—"}</div>
+      </div>
+    `,
+      );
+    } catch (error) {
+      setHtml(
+        "resultContent",
+        `<div class="result-item"><div class="result-value">✕ ${escapeHtml(normalizeError(error))}</div></div>`,
+      );
+    }
+  }
+
+  async function runRepair(operationId) {
+    assertAdminAction_("runRepair");
+    const opId = String(operationId || "").trim();
+    if (!opId) {
+      setHtml(
+        "resultContent",
+        '<div class="result-item"><div class="result-value">Не передано operationId для repair</div></div>',
+      );
+      showToast("Не знайдено operationId");
+      return;
+    }
+    if (
+      !(await showConfirmModal({
+        title: "Виправлення",
+        message: "Запустити виправлення для цієї операції?",
+      }))
+    )
+      return;
+    showStandardResult("Запуск виправлення");
+    setHtml(
+      "resultContent",
+      '<div class="result-item"><div class="result-value">Запускаю виправлення...</div></div>',
+    );
+    try {
+      const result = await ActionDispatcher.run(
+        "runRepair",
+        () => MaintenanceApi.runRepair(opId),
+        { successMessage: "" },
+      );
+      invalidatePendingRepairsCache_();
+      invalidateOperationDetailsCache_(opId);
+      if (result?.success) {
+        showToast("Виправлення виконано");
+        await showOperationDetails(result.operationId || opId, true);
+      } else {
+        setHtml(
+          "resultContent",
+          `<div class="result-item"><div class="result-value">✕ ${escapeHtml(translateLifecycleText(result?.error || result?.message || "Repair failed"))}</div></div>`,
+        );
+        showToast("Виправлення завершилося з помилкою");
+      }
+    } catch (error) {
+      setHtml(
+        "resultContent",
+        `<div class="result-item"><div class="result-value">✕ ${escapeHtml(normalizeError(error))}</div></div>`,
+      );
+    }
+  }
+</script>

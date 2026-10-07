@@ -8,6 +8,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
+import { readRepoFileByBasename } from "./lib/gas-files.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 
@@ -167,7 +168,9 @@ function makeContext(spreadsheet) {
 
 function loadHotfix(context) {
   vm.runInContext(
-    fs.readFileSync(path.join(repoRoot, "AccessSheetRowAutoFillHotfix.gs"), "utf8"),
+    readRepoFileByBasename(repoRoot, "AccessSheetRowAutoFillHotfix.gs", {
+      errorPrefix: "verify-access-autofill-hotfix",
+    }),
     context,
     { filename: "AccessSheetRowAutoFillHotfix.gs" },
   );

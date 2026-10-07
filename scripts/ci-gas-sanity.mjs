@@ -12,6 +12,11 @@ const BAD_GS_PATTERNS = [
   { re: /^\s*git add \.\s*$/m, desc: 'raw "git add ." line in .gs' },
 ];
 
+const HTML_FROM_FILE_RE =
+  /HtmlService\.create(?:Template|HtmlOutput)FromFile\(\s*["'](?!resolveHtmlTemplateName_)/;
+
+const CODE_GS = path.join(repoRoot, 'core/Code.gs');
+
 function walkGsFiles(dir, out = []) {
   for (const name of fs.readdirSync(dir, { withFileTypes: true })) {
     if (name.name === 'node_modules' || name.name === '.git') continue;
@@ -31,6 +36,12 @@ function main() {
         console.error(`ci-gas-sanity: ${desc}\n  file: ${path.relative(repoRoot, file)}`);
         process.exit(1);
       }
+    }
+    if (file !== CODE_GS && HTML_FROM_FILE_RE.test(text)) {
+      console.error(
+        `ci-gas-sanity: create*FromFile must use resolveHtmlTemplateName_()\n  file: ${path.relative(repoRoot, file)}`,
+      );
+      process.exit(1);
     }
   }
 

@@ -126,7 +126,6 @@ const ALLOW_ORPHAN = [
   /^wasbInstall/,
   /^wasbRepair/,
   /^wasbAccessAutoFill/,
-  /^smokeTest/,
   /^testNotifyWithTemplate/,
   /^testVacationEngine/,
   /^testWasbAccess/,

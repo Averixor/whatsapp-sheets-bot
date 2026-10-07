@@ -39,7 +39,6 @@ const footer = `
     runProjectTestChunk: runProjectTestChunk,
     runFast: runFast,
     runDiagnosticsOnly: runDiagnosticsOnly,
-    runSmokeOnly: runSmokeOnly,
     runHealthOnly: runHealthOnly,
     runAccessOnly: runAccessOnly,
     runDomainOnly: runDomainOnly,
@@ -89,4 +88,3 @@ body = body.replace(/ctx\.ctx\./g, 'ctx.');
 
 fs.writeFileSync(path.join(root, 'Stage7TestRunner.gs'), header + body + footer);
 console.log('Stage7TestRunner.gs lines:', (header + body + footer).split('\n').length);
-

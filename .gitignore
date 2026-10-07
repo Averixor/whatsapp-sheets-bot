@@ -4,23 +4,20 @@ node_modules/
 # Local debug reports
 _debug_person_card_lookup.txt
 _person_card_compact_report.txt
-
 # Logs/temp
 *.log
 *.tmp
 *.bak
 _audit-out.txt
-
-# VS Code / AI local settings
+# VS Code / Cursor — спільні workspace-файли в репо; локальний шум ігноруємо
 .vscode/*
 !.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
 .aider*
-
-# Local Google Apps Script / clasp mapping
-# Contains scriptId and bound spreadsheet parentId.
+# Local Google Apps Script / clasp mapping (scriptId, spreadsheet parentId)
 .clasp.json
 .clasp.*.json
 !.clasp.example.json
-!.clasp.smoke.example.json
-.npmrc
-.clasp.smoke.json
+!.clasp.staging.example.json

@@ -1,0 +1,415 @@
+/**
+ * UseCases.MonthOps.gs — month switch / create next month (PR7 domain split).
+ */
+
+function _stage7CreateNextMonthCore_(payload) {
+  const ss = getWasbSpreadsheet_();
+  const explicitSource =
+    payload && payload.sourceMonth
+      ? validateMonthSwitch_(payload.sourceMonth).sheet
+      : getBotSheet_();
+  const src = explicitSource;
+  const srcName = String(src.getName()).trim();
+
+  _stage7Assert_(
+    /^\d{2}$/.test(srcName),
+    "_stage7CreateNextMonthCore_",
+    { sheet: srcName },
+    `Активний лист "${srcName}" не є місячним`,
+  );
+
+  let nextNum = parseInt(srcName, 10) + 1;
+  if (nextNum > 12) nextNum = 1;
+  if (nextNum < 1) nextNum = 1;
+
+  const nextName = String(nextNum).padStart(2, "0");
+  _stage7Assert_(
+    !ss.getSheetByName(nextName),
+    "_stage7CreateNextMonthCore_",
+    { sourceMonth: srcName, nextMonth: nextName },
+    `Лист "${nextName}" вже існує`,
+  );
+
+  const newSheet = src.copyTo(ss).setName(nextName);
+  const srcMY = _inferMonthYearFromSheet_(src);
+  const targetMonth = nextNum;
+  const targetYear = targetMonth < srcMY.month ? srcMY.year + 1 : srcMY.year;
+  const sourceFormulaBounds =
+    typeof _monthlyCodeBoundsFromSheet_ === "function"
+      ? _monthlyCodeBoundsFromSheet_(src)
+      : null;
+
+  const monthGrid = _setMonthDatesRow_(newSheet, targetMonth, targetYear);
+  newSheet.getRange(monthGrid.clearRangeA1).clearContent();
+
+  try {
+    applyGlobalSheetStandards_();
+  } catch (_) {}
+
+  var callsignSync = null;
+  if (typeof syncMonthlyCallsignsFromPersonnel_ !== "function") {
+    callsignSync = {
+      ok: false,
+      message: "syncMonthlyCallsignsFromPersonnel_ недоступна",
+    };
+  } else {
+    try {
+      callsignSync = syncMonthlyCallsignsFromPersonnel_(newSheet, {
+        allowShrink: true,
+        skipFormulaRewrite: true,
+      });
+      if (!callsignSync || callsignSync.ok === false) {
+        callsignSync = {
+          ok: false,
+          message:
+            (callsignSync && callsignSync.message) ||
+            "помилка синхронізації позивних",
+          capacityEndRow: callsignSync && callsignSync.capacityEndRow,
+          scheduleBounds: callsignSync && callsignSync.scheduleBounds,
+        };
+      }
+    } catch (syncErr) {
+      console.error(syncErr);
+      callsignSync = {
+        ok: false,
+        message:
+          syncErr && syncErr.message
+            ? String(syncErr.message)
+            : String(syncErr),
+      };
+    }
+  }
+
+  var formulaSync = null;
+  if (callsignSync && callsignSync.ok !== false) {
+    try {
+      if (typeof rewriteMonthlyScheduleFormulasToCodeRange_ !== "function") {
+        formulaSync = {
+          ok: false,
+          message: "rewriteMonthlyScheduleFormulasToCodeRange_ недоступна",
+        };
+      } else {
+        var afterBounds =
+          callsignSync && callsignSync.scheduleBounds
+            ? callsignSync.scheduleBounds
+            : typeof _monthlyCodeBoundsFromSheet_ === "function"
+              ? _monthlyCodeBoundsFromSheet_(newSheet)
+              : null;
+        if (
+          afterBounds &&
+          callsignSync &&
+          callsignSync.capacityEndRow &&
+          typeof _monthlyBoundsWithEndRow_ === "function"
+        ) {
+          afterBounds = _monthlyBoundsWithEndRow_(
+            afterBounds,
+            callsignSync.capacityEndRow,
+          );
+        }
+        formulaSync = rewriteMonthlyScheduleFormulasToCodeRange_(
+          newSheet,
+          sourceFormulaBounds,
+          afterBounds,
+        );
+        if (!formulaSync || formulaSync.ok === false) {
+          formulaSync = {
+            ok: false,
+            message:
+              (formulaSync && formulaSync.message) ||
+              "помилка переписування формул",
+            before: formulaSync && formulaSync.before,
+            after: formulaSync && formulaSync.after,
+          };
+        }
+      }
+    } catch (formulaSyncErr) {
+      console.error(formulaSyncErr);
+      formulaSync = {
+        ok: false,
+        message:
+          formulaSyncErr && formulaSyncErr.message
+            ? String(formulaSyncErr.message)
+            : String(formulaSyncErr),
+      };
+    }
+  } else {
+    formulaSync = {
+      ok: false,
+      message: "пропущено через помилку синхронізації позивних",
+    };
+  }
+
+  _assertCreateNextMonthSyncSucceeded_({
+    sheet: newSheet,
+    intendedName: nextName,
+    callsignSync: callsignSync,
+    formulaSync: formulaSync,
+  });
+
+  var vacationMonthlySync = null;
+  try {
+    if (typeof syncVacationsWithMonthlySheet_ === "function") {
+      vacationMonthlySync = syncVacationsWithMonthlySheet_({
+        sheet: newSheet,
+        source: "createMonthSheet",
+      });
+    }
+  } catch (vacationSyncErr) {
+    console.error(vacationSyncErr);
+    vacationMonthlySync = {
+      ok: false,
+      message:
+        vacationSyncErr && vacationSyncErr.message
+          ? String(vacationSyncErr.message)
+          : String(vacationSyncErr),
+    };
+  }
+
+  var conditionalFormatSync;
+  try {
+    conditionalFormatSync = replaceConditionalFormatRulesFromSheet_(
+      src,
+      newSheet,
+    );
+  } catch (formatSyncErr) {
+    console.error(formatSyncErr);
+    try {
+      _markIncompleteMonthSheet_(newSheet, nextName);
+    } catch (_) {}
+    throw new Error(
+      "Не вдалося перенести умовне форматування до нового місячного аркуша",
+    );
+  }
+
+  var dataValidationsSync = null;
+  try {
+    if (typeof _copyMonthSheetDataValidationsFromSource_ === "function") {
+      dataValidationsSync = _copyMonthSheetDataValidationsFromSource_(
+        src,
+        newSheet,
+      );
+    }
+  } catch (_) {}
+
+  try {
+    if (typeof applyColumnWidthsStandardsToSheet_ === "function") {
+      applyColumnWidthsStandardsToSheet_(newSheet);
+    }
+  } catch (widthErr) {
+    console.error(widthErr);
+  }
+
+  // Only after callsign + formula sync succeeded (assert above).
+  if (payload.switchToNewMonth !== false) {
+    setBotMonthSheetName_(nextName);
+  } else {
+    highlightActiveMonthTab_(getBotMonthSheetName_());
+  }
+
+  return {
+    sheet: newSheet,
+    sourceMonth: srcName,
+    createdMonth: nextName,
+    switched: payload.switchToNewMonth !== false,
+    vacationMonthlySync: vacationMonthlySync,
+    formulaSync: formulaSync,
+    conditionalFormatSync: conditionalFormatSync,
+    dataValidationsSync: dataValidationsSync,
+  };
+}
+
+var UseCasesMonthOps_ = (function () {
+  function switchBotToMonth(options, monthSheetName) {
+    const payload =
+      typeof options === "string"
+        ? { month: options }
+        : Object.assign(
+            {},
+            options || {},
+            monthSheetName ? { month: monthSheetName } : {},
+          );
+    return WorkflowOrchestrator_.run({
+      scenario: "switchBotToMonth",
+      payload: payload,
+      write: true,
+      idempotency: false,
+      validate: function (input) {
+        const validated = validateMonthSwitch_(
+          input.month || input.monthSheetName || input.sheetName || "",
+        );
+        if (
+          typeof AccessEnforcement_ === "object" &&
+          AccessEnforcement_.assertCanUseWorkingActions
+        ) {
+          AccessEnforcement_.assertCanUseWorkingActions("switchBotToMonth", {
+            requestedMonth: validated.month,
+          });
+        }
+        return {
+          payload: Object.assign({}, input, { month: validated.month }),
+          warnings: [],
+        };
+      },
+      execute: function (input) {
+        setBotMonthSheetName_(input.month);
+        try {
+          const ss = getWasbSpreadsheet_();
+          const sh = ss.getSheetByName(input.month);
+          if (sh) sh.activate();
+        } catch (_) {}
+
+        var journalRequested = input.refreshJournal === true;
+        var journal = null;
+        var journalWarnings = [];
+        if (journalRequested) {
+          try {
+            journal =
+              typeof materializeMonthJournalBundle_ === "function"
+                ? materializeMonthJournalBundle_(input.month)
+                : {
+                    ok: false,
+                    monthSheet: input.month,
+                    reason: "materialize_unavailable",
+                    message: "Модуль оновлення журналу недоступний",
+                  };
+          } catch (journalError) {
+            journal = {
+              ok: false,
+              monthSheet: input.month,
+              reason: "materialize_failed",
+              message:
+                journalError && journalError.message
+                  ? String(journalError.message)
+                  : String(journalError),
+            };
+          }
+          if (!journal || journal.ok === false) {
+            journalWarnings.push(
+              (journal && (journal.message || journal.reason)) ||
+                "Не вдалося оновити журнал після перемикання місяця",
+            );
+          }
+        }
+        var journalOk =
+          !journalRequested || !!(journal && journal.ok !== false);
+        var journalNames =
+          journalRequested &&
+          typeof monthJournalDerivedSheetNames_ === "function"
+            ? monthJournalDerivedSheetNames_(input.month)
+            : null;
+        var affectedSheets = [input.month];
+        if (journalRequested && journalOk && journalNames) {
+          affectedSheets.push(journalNames.journal, journalNames.summary);
+        }
+        return {
+          success: true,
+          message:
+            journalRequested && journalOk
+              ? "Активний місяць перемкнуто, журнал оновлено"
+              : "Активний місяць перемкнуто",
+          result: {
+            month: input.month,
+            journal: journal,
+          },
+          changes: [
+            {
+              type: "switchBotMonth",
+              month: input.month,
+            },
+          ],
+          affectedSheets: affectedSheets.filter(Boolean),
+          affectedEntities: [],
+          appliedChangesCount: 1 + (journalRequested && journalOk ? 1 : 0),
+          skippedChangesCount: 0,
+          partial: journalRequested && !journalOk,
+          warnings: journalWarnings,
+        };
+      },
+      sync: function (input) {
+        return {
+          refresh: ["panel"],
+          invalidateCaches: ["sidebar", "summary", "sendPanel"],
+          currentMonth: input.month,
+        };
+      },
+    });
+  }
+
+  function createNextMonth(options) {
+    const payload = Object.assign({ switchToNewMonth: true }, options || {});
+    return WorkflowOrchestrator_.run({
+      scenario: "createNextMonth",
+      routeName: "sidebar.createNextMonth",
+      publicApiMethod: "apiCreateNextMonthStage4",
+      payload: payload,
+      write: true,
+      validate: function (input) {
+        if (input.sourceMonth) validateMonthSwitch_(input.sourceMonth);
+        if (
+          typeof AccessEnforcement_ === "object" &&
+          AccessEnforcement_.assertCanUseWorkingActions
+        ) {
+          AccessEnforcement_.assertCanUseWorkingActions("createNextMonth", {
+            requestedSourceMonth: input.sourceMonth || "",
+          });
+        }
+        return { payload: input, warnings: [] };
+      },
+      execute: function (input) {
+        const created = _stage7CreateNextMonthCore_(input);
+        return {
+          success: true,
+          message: `Місяць "${created.createdMonth}" створено`,
+          result: created,
+          changes: [
+            {
+              type: "createMonthSheet",
+              from: created.sourceMonth,
+              to: created.createdMonth,
+            },
+          ],
+          affectedSheets: [created.sourceMonth, created.createdMonth],
+          affectedEntities: [],
+          appliedChangesCount: 1,
+          skippedChangesCount: 0,
+          partial: false,
+        };
+      },
+      sync: function (_input, _beforeState, _plan, execution) {
+        return {
+          refresh: ["monthsList", "currentMonth"],
+          invalidateCaches: ["sidebar", "summary"],
+          currentMonth:
+            execution.result && execution.result.switched
+              ? execution.result.createdMonth
+              : getBotMonthSheetName_(),
+        };
+      },
+      verify: function (input, _beforeState, _plan, execution) {
+        if (input.dryRun)
+          return {
+            ok: true,
+            createdMonth:
+              (execution.result && execution.result.createdMonth) || "",
+            partial: false,
+          };
+        const createdMonth =
+          (execution.result && execution.result.createdMonth) || "";
+        const exists = !!getWasbSpreadsheet_().getSheetByName(createdMonth);
+        return {
+          ok: exists,
+          createdMonth: createdMonth,
+          partial: !exists,
+          warnings: exists
+            ? []
+            : ["Післяопераційна перевірка не знайшла створений місяць"],
+        };
+      },
+    });
+  }
+
+  return {
+    switchBotToMonth: switchBotToMonth,
+    createNextMonth: createNextMonth,
+  };
+})();

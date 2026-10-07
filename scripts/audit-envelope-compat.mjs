@@ -4,6 +4,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { readRepoFileByBasename } from './lib/gas-files.mjs';
 import { loadContract, repoRoot } from './lib/load-contract.mjs';
 
 const envelope = loadContract('envelope.contract.json');
@@ -14,7 +15,9 @@ const ADAPTER_FILES = envelope.adapterFiles || ['Js.Core.html'];
 const CALL_SITE_FILES = envelope.callSiteFiles || [];
 
 function read(rel) {
-  return fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+  return readRepoFileByBasename(repoRoot, rel, {
+    errorPrefix: 'audit-envelope-compat',
+  });
 }
 
 function checkServerResponse() {

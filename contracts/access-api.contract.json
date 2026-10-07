@@ -9,10 +9,7 @@
   "clientRoutingGroupsField": "PROJECT_STAGE7_CLIENT_ROUTING_GROUPS_",
   "productionManifestFile": "appsscript.json",
   "productionExecutionApiAccess": "MYSELF",
-  "smokeManifestFile": "appsscript.smoke.json",
-  "smokeExecutionApiAccess": "ANYONE",
   "productionClaspIgnoreFile": ".claspignore",
-  "smokeOnlyFiles": ["GasRuntimeSmoke.gs"],
   "publicEndpoints": [
     "apiStage7GetAccessDescriptorLite",
     "apiStage7BootstrapSidebar",
@@ -25,6 +22,13 @@
     "apiGenerateSendPanelForDate",
     "apiGenerateSendPanelForRange",
     "apiStage7GetSendPanelData",
+    "apiStage7GetPhoneDirectory",
+    "apiStage7GetCarsRegister",
+    "apiStage7GetWeaponsRegister",
+    "apiStage7GetInventoryReconciliation",
+    "apiStage7SyncInventoryReconciliation",
+    "apiStage7SetInventoryReconciliationFolder",
+    "apiStage7GetSelectedInventoryReconciliation",
     "apiMarkPanelRowsAsPending",
     "apiMarkPanelRowsAsSent",
     "apiMarkPanelRowsAsSentFast",
@@ -48,6 +52,11 @@
     "apiStage7ClearCache",
     "apiStage7ClearLog",
     "apiStage7ClearPhoneCache",
+    "apiStage7MaterializeComputedData",
+    "apiStage7MaterializeMonthJournal",
+    "apiStage7MaterializeAllMonthJournals",
+    "apiStage7SetupTemporaryPropertyRegister",
+    "apiStage7RefreshTemporaryPropertyRegister",
     "apiStage7RestartBot",
     "apiStage7SetupVacationTriggers",
     "apiStage7CleanupDuplicateTriggers",
@@ -73,6 +82,7 @@
     "apiStage7ListBindableCallsigns",
     "apiStage7LoginByIdentifierAndCallsign",
     "apiStage7LoginByAccessKey",
+    "apiStage7ResumeBrowserSession",
     "apiStage7SubmitAccessKeyRequest",
     "apiStage7RegisterAccessWithTemporaryPassword",
     "apiStage7ReportAccessViolation",
@@ -85,7 +95,13 @@
     "apiScanManualFormatRules",
     "apiApplyFormatRulesRegistry",
     "apiExportAdoptedFormatRules",
-    "apiLoadCalendarDay"
+    "apiLoadCalendarDay",
+    "apiGetExternalSpreadsheetMigrationStatus",
+    "apiGetExternalStorageMode",
+    "apiBeginExternalSpreadsheetMigration",
+    "apiPreviewExternalSpreadsheetMigration",
+    "apiApplyExternalSpreadsheetMigration",
+    "apiFinalizeExternalSpreadsheetMigration"
   ],
   "requiredGovernanceEndpoints": [
     "apiStage7ListPersonnelCallsigns",
@@ -110,6 +126,7 @@
       "apiStage7ListBindableCallsigns",
       "apiStage7LoginByIdentifierAndCallsign",
       "apiStage7LoginByAccessKey",
+      "apiStage7ResumeBrowserSession",
       "apiStage7SubmitAccessKeyRequest",
       "apiStage7RegisterAccessWithTemporaryPassword"
     ],
@@ -134,6 +151,12 @@
       "apiGenerateSendPanelForDate",
       "apiGenerateSendPanelForRange",
       "apiStage7GetSendPanelData",
+      "apiStage7GetPhoneDirectory",
+      "apiStage7GetCarsRegister",
+      "apiStage7GetWeaponsRegister",
+      "apiStage7GetInventoryReconciliation",
+      "apiStage7SyncInventoryReconciliation",
+      "apiStage7GetSelectedInventoryReconciliation",
       "apiMarkPanelRowsAsPending",
       "apiMarkPanelRowsAsSent",
       "apiMarkPanelRowsAsSentFast",
@@ -146,6 +169,10 @@
       "apiBuildCommanderSummaryLink",
       "apiRunSelectionDiagnostics",
       "apiStage7DebugPhones",
+      "apiStage7MaterializeComputedData",
+      "apiStage7MaterializeMonthJournal",
+      "apiStage7MaterializeAllMonthJournals",
+      "apiStage7RefreshTemporaryPropertyRegister",
       "apiStage7QuickHealthCheck",
       "apiStage7HealthCheck",
       "apiRunStage7Diagnostics",
@@ -165,7 +192,8 @@
       "apiStage7NormalizeAccessSheetFormatting",
       "apiStage7BootstrapAccessSheet",
       "apiStage7RepairSystemSheets",
-      "apiStage7BootstrapRuntimeAndAlertsSheets"
+      "apiStage7BootstrapRuntimeAndAlertsSheets",
+      "apiStage7SetupTemporaryPropertyRegister"
     ],
     "sysadmin": [
       "apiStage7ClearCache",
@@ -181,7 +209,14 @@
       "apiStage7ReportAccessViolation",
       "apiStage7ApplyProtections",
       "apiStage7NormalizeAllSheetHeadersToEnglish",
-      "apiExportAdoptedFormatRules"
+      "apiExportAdoptedFormatRules",
+      "apiStage7SetInventoryReconciliationFolder",
+      "apiGetExternalSpreadsheetMigrationStatus",
+      "apiGetExternalStorageMode",
+      "apiBeginExternalSpreadsheetMigration",
+      "apiPreviewExternalSpreadsheetMigration",
+      "apiApplyExternalSpreadsheetMigration",
+      "apiFinalizeExternalSpreadsheetMigration"
     ]
   },
   "rolePolicyOverrides": {
@@ -200,7 +235,9 @@
     "apiLoadCalendarDay": "apiStage7GetSidebarData("
   },
   "requiredServerMarkers": {
-    "apiStage7BootstrapSidebar": ["_stage7CanViewSidebarPersonnel_(descriptor)"]
+    "apiStage7BootstrapSidebar": [
+      "_stage7CanViewSidebarPersonnel_(descriptor)"
+    ]
   },
   "forbiddenServerMarkers": {
     "apiStage7BootstrapSidebar": [
@@ -208,7 +245,10 @@
       "_ensureOptionalBusinessSheetsQuiet_",
       "ensureAllSystemSheets_"
     ],
-    "apiGetActiveProjects": ["ensureProjectsSheet_", "insertSheet"]
+    "apiGetActiveProjects": [
+      "ensureProjectsSheet_",
+      "insertSheet"
+    ]
   },
   "requiredRoutingEndpoints": [
     "apiStage7BootstrapSidebar",
@@ -221,14 +261,6 @@
     {
       "name": "apiExecute_",
       "reason": "internal response helper; trailing underscore marks non-public API"
-    },
-    {
-      "name": "apiRunSmokeChecks",
-      "reason": "smoke-project-only entrypoint; excluded from production public API"
-    },
-    {
-      "name": "apiRunVacationRuntimeSmoke",
-      "reason": "self-cleaning vacation smoke-project-only entrypoint; excluded from production public API"
     },
     {
       "name": "apiBuildSendPanelFast",
@@ -281,6 +313,18 @@
     {
       "name": "apiStage7ReissueOwnerTemporaryPasswordManual",
       "reason": "GAS-editor manual wrapper for owner ACCESS temporary password reissue; not client-reachable"
+    },
+    {
+      "name": "apiSetupTemporaryPropertyRegister",
+      "reason": "GAS-editor one-time setup/migration alias; sidebar uses apiStage7SetupTemporaryPropertyRegister"
+    },
+    {
+      "name": "apiRefreshTemporaryPropertyRegister",
+      "reason": "GAS-editor refresh alias; sidebar uses apiStage7RefreshTemporaryPropertyRegister"
+    },
+    {
+      "name": "apiSetExternalStorageMode",
+      "reason": "GAS-editor sysadmin write of WASB_EXTERNAL_STORAGE_MODE; not client-reachable. UI never sends confirmParity."
     }
   ],
   "deprecatedEndpoints": [

@@ -91,10 +91,12 @@ export function buildApiFunctionIndex(root = defaultRepoRoot, options) {
 }
 
 /**
- * Find first repo file whose basename matches (supports future subfolders).
+ * Find repo file(s) whose basename matches (supports subfolders).
+ * Fails fast when more than one file shares the same basename.
+ *
  * @param {string} root
- * @param {string} basename - e.g. "Js.Core.html"
- * @param {string[]} extensions
+ * @param {string} basename - e.g. "Js.Core.html" or "Report_DailySimple.gs"
+ * @param {string[]} extensions - search order when multiple extensions apply
  * @param {{ skipDirs?: Set<string> }} [options]
  * @returns {string|null} repo-relative posix path
  */
@@ -105,8 +107,38 @@ export function findFileByBasename(root, basename, extensions, options) {
       return basename.endsWith(normalized) ? basename : `${basename}${normalized}`;
     }),
   );
+  const matches = [];
   for (const rel of walkRepoFiles(root, extensions, options)) {
-    if (targets.has(path.basename(rel))) return rel;
+    if (targets.has(path.basename(rel))) matches.push(rel);
   }
-  return null;
+  if (matches.length > 1) {
+    throw new Error(
+      `ambiguous basename ${basename}: ${matches.join(', ')} (resolve duplicate filenames)`,
+    );
+  }
+  return matches[0] || null;
+}
+
+/**
+ * Read repo text by basename with optional subfolder resolution.
+ *
+ * When `file` has no extension, `.gs` is preferred over `.html` via extensions
+ * order — intentional for CI scripts that load server modules by stem.
+ *
+ * @param {string} root
+ * @param {string} file - basename or legacy repo-relative path
+ * @param {{ errorPrefix?: string, skipDirs?: Set<string> }} [options]
+ * @returns {string}
+ */
+export function readRepoFileByBasename(root, file, options = {}) {
+  const errorPrefix = options.errorPrefix || 'readRepoFileByBasename';
+  const basename = path.basename(file);
+  const ext = path.extname(basename);
+  const extensions = ext ? [ext] : ['.gs', '.html'];
+  const rel = findFileByBasename(root, basename, extensions, options) || file;
+  const fullPath = path.join(root, rel);
+  if (!fs.existsSync(fullPath)) {
+    throw new Error(`${errorPrefix}: missing file: ${file}`);
+  }
+  return fs.readFileSync(fullPath, 'utf8');
 }

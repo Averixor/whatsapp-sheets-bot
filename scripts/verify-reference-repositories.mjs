@@ -1,0 +1,296 @@
+#!/usr/bin/env node
+/**
+ * Focused parser checks for optional reference sheets.
+ */
+import assert from "node:assert/strict";
+import path from "node:path";
+import vm from "node:vm";
+import { loadContract } from "./lib/load-contract.mjs";
+import { readRepoFileByBasename } from "./lib/gas-files.mjs";
+
+const repoRoot = path.resolve(import.meta.dirname, "..");
+const contract = loadContract("reference-repositories.contract.json");
+
+function readGasByBasename(fileName) {
+  return readRepoFileByBasename(repoRoot, fileName, {
+    errorPrefix: "verify-reference-repositories",
+  });
+}
+
+class FakeRange {
+  constructor(sheet, row, col, numRows = 1, numCols = 1) {
+    this.sheet = sheet;
+    this.row = row;
+    this.col = col;
+    this.numRows = numRows;
+    this.numCols = numCols;
+  }
+
+  getDisplayValues() {
+    return Array.from({ length: this.numRows }, (_, rowOffset) =>
+      Array.from({ length: this.numCols }, (_, colOffset) =>
+        String(this.sheet.valueAt(this.row + rowOffset, this.col + colOffset) ?? ""),
+      ),
+    );
+  }
+}
+
+class FakeSheet {
+  constructor(name, sourceRows) {
+    this.name = name;
+    this.rows = [null, ...sourceRows.map((row) => [null, ...row])];
+  }
+
+  getLastRow() {
+    return this.rows.length - 1;
+  }
+
+  getLastColumn() {
+    return Math.max(0, ...this.rows.slice(1).map((row) => row.length - 1));
+  }
+
+  getRange(row, col, numRows, numCols) {
+    return new FakeRange(this, row, col, numRows, numCols);
+  }
+
+  valueAt(row, col) {
+    return (this.rows[row] || [])[col];
+  }
+}
+
+class FakeSpreadsheet {
+  constructor(sheets) {
+    this.sheets = sheets;
+  }
+
+  getSheetByName(name) {
+    return this.sheets[name] || null;
+  }
+}
+
+function normalizePhoneForTest(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.length === 10 && digits.startsWith("0")) return `+38${digits}`;
+  return digits.startsWith("+") ? digits : `+${digits}`;
+}
+
+function normalizeCallsignForTest(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+const fakePersonnelRows = [
+  {
+    callsign: "ГУГЛ",
+    fml: "Гугл Оператор",
+    rank: "солдат",
+    phone: "0670000001",
+  },
+  {
+    callsign: "СОВА",
+    fml: "Сова Оператор",
+    rank: "солдат",
+    phone: "0670000002",
+  },
+  {
+    callsign: "МАЙОР",
+    fml: "Майор Оператор",
+    rank: "майор",
+    phone: "0670000003",
+  },
+  {
+    callsign: "ІВАН",
+    fml: "Іваненко Іван Іванович",
+    rank: "солдат",
+    phone: "0671112233",
+  },
+  {
+    callsign: "ПЕТРО",
+    fml: "Петренко Петро Петрович",
+    rank: "сержант",
+    phone: "0674445566",
+  },
+];
+
+const fakePersonnelRepository = {
+  getByCallsignAnyStatus(callsign) {
+    const key = normalizeCallsignForTest(callsign);
+    return fakePersonnelRows.find((row) => normalizeCallsignForTest(row.callsign) === key) || null;
+  },
+  getByFml(fml) {
+    const key = String(fml || "").trim().toLowerCase();
+    return fakePersonnelRows.find((row) => String(row.fml || "").trim().toLowerCase() === key) || null;
+  },
+  getRows() {
+    return fakePersonnelRows.slice();
+  },
+};
+
+function loadRepository(spreadsheet) {
+  const context = vm.createContext({
+    console,
+    CONFIG: {
+      PHONE_DIRECTORY_SHEET: contract.repositories.phoneDirectory.sheetName,
+      CAR_SHEET: contract.repositories.carsRegister.sheetName,
+      WEAPON_SHEET: contract.repositories.weaponsRegister.sheetName,
+    },
+    getWasbSpreadsheet_: () => spreadsheet,
+    normalizePhone_: normalizePhoneForTest,
+    _normCallsignKey_: normalizeCallsignForTest,
+    PersonnelRepository_: fakePersonnelRepository,
+  });
+  const source = readGasByBasename("DictionaryRepository.gs");
+  assert.match(source, /ReferenceSheetsRepository_/);
+  assert.match(source, /readPhoneDirectory/);
+  assert.match(source, /readCarsRegister/);
+  assert.match(source, /readWeaponsRegister/);
+  vm.runInContext(source, context, {
+    filename: "DictionaryRepository.gs",
+  });
+  return context;
+}
+
+const phoneContract = contract.repositories.phoneDirectory;
+const carContract = contract.repositories.carsRegister;
+const weaponContract = contract.repositories.weaponsRegister;
+const spreadsheet = new FakeSpreadsheet({
+  [phoneContract.sheetName]: new FakeSheet(
+    phoneContract.sheetName,
+    phoneContract.fixtureRows,
+  ),
+  [carContract.sheetName]: new FakeSheet(
+    carContract.sheetName,
+    carContract.fixtureRows,
+  ),
+  [weaponContract.sheetName]: new FakeSheet(
+    weaponContract.sheetName,
+    weaponContract.fixtureRows,
+  ),
+});
+
+const context = loadRepository(spreadsheet);
+
+const phoneDirectory = vm.runInContext(
+  "ReferenceSheetsRepository_.readPhoneDirectory()",
+  context,
+);
+assert.equal(phoneDirectory.items.length, phoneContract.expected.items.length);
+phoneContract.expected.items.forEach((expected, index) => {
+  assert.equal(phoneDirectory.items[index].section, expected.section);
+  assert.equal(phoneDirectory.items[index].name, expected.name);
+  assert.equal(phoneDirectory.items[index].phone, expected.phone);
+});
+assert.equal(
+  phoneDirectory.stats.contacts,
+  phoneContract.expected.stats.contacts,
+);
+assert.equal(
+  phoneDirectory.stats.sections,
+  phoneContract.expected.stats.sections,
+);
+phoneContract.expected.excludedHeaderMarkers.forEach((marker) => {
+  assert.equal(
+    phoneDirectory.items.some(
+      (item) => item.name === marker || item.phoneDisplay === marker,
+    ),
+    false,
+  );
+});
+
+const carsRegister = vm.runInContext(
+  "ReferenceSheetsRepository_.readCarsRegister()",
+  context,
+);
+assert.equal(carsRegister.items.length, carContract.expected.itemCount);
+assert.deepEqual(
+  Array.from(carsRegister.items.map((item) => item.assetName)),
+  carContract.expected.assetNames,
+);
+assert.equal(carsRegister.stats.total, carContract.expected.stats.total);
+assert.equal(carsRegister.stats.assigned, carContract.expected.stats.assigned);
+assert.equal(
+  carsRegister.stats.unassigned,
+  carContract.expected.stats.unassigned,
+);
+assert.equal(
+  carsRegister.stats.unresolvedOwners,
+  carContract.expected.stats.unresolvedOwners,
+);
+assert.equal(
+  carsRegister.stats.totalCost,
+  carContract.expected.stats.totalCost,
+);
+assert.equal(carsRegister.warnings.length, 1);
+assert.match(
+  carsRegister.warnings[0],
+  new RegExp(carContract.expected.warningPattern),
+);
+assert.equal(carsRegister.items.some((item) => !item.assetName), false);
+assert.deepEqual(
+  Array.from(carsRegister.items.map((item) => item.status)),
+  carContract.expected.normalizedStatuses,
+);
+assert.equal(
+  carsRegister.items[carContract.expected.statusDescriptionAtIndex.index]
+    .statusDescription,
+  carContract.expected.statusDescriptionAtIndex.value,
+);
+assert.equal(
+  carsRegister.stats.byStatus.map((entry) => `${entry.name}:${entry.count}`).join(","),
+  carContract.expected.byStatus.join(","),
+);
+assert.deepEqual(
+  Array.from(
+    carsRegister.items
+      .filter((item) => item.ownerMissing)
+      .map((item) => item.ownerRaw),
+  ),
+  carContract.expected.missingOwners,
+);
+assert.equal(carsRegister.items[2].searchText.includes("обмежено бг"), true);
+assert.equal(
+  carsRegister.items[carContract.expected.searchIncludesAtIndex.index].searchText.includes(
+    carContract.expected.searchIncludesAtIndex.value,
+  ),
+  true,
+);
+
+
+
+const weaponsRegister = vm.runInContext(
+  "ReferenceSheetsRepository_.readWeaponsRegister()",
+  context,
+);
+assert.equal(weaponsRegister.items.length, weaponContract.expected.itemCount);
+assert.deepEqual(
+  Array.from(weaponsRegister.items.map((item) => item.assetName)),
+  weaponContract.expected.assetNames,
+);
+assert.equal(weaponsRegister.stats.total, weaponContract.expected.stats.total);
+assert.equal(weaponsRegister.stats.persons, weaponContract.expected.stats.persons);
+assert.equal(weaponsRegister.stats.assigned, weaponContract.expected.stats.assigned);
+assert.equal(weaponsRegister.stats.unassigned, weaponContract.expected.stats.unassigned);
+assert.equal(
+  weaponsRegister.stats.totalUnitPrice,
+  weaponContract.expected.stats.totalUnitPrice,
+);
+assert.equal(weaponsRegister.warnings.length, 1);
+assert.match(
+  weaponsRegister.warnings[0],
+  new RegExp(weaponContract.expected.warningPattern),
+);
+assert.equal(
+  weaponsRegister.items[weaponContract.expected.searchIncludesAtIndex.index].searchText.includes(
+    weaponContract.expected.searchIncludesAtIndex.value,
+  ),
+  true,
+);
+weaponContract.expected.byType.forEach((marker) => {
+  assert.ok(
+    weaponsRegister.stats.byType.map((entry) => `${entry.name}:${entry.count}`).includes(marker),
+    `WEAPON type stats include ${marker}`,
+  );
+});
+console.log(
+  `verify-reference-repositories: OK (${phoneContract.sheetName}, ${carContract.sheetName}, ${weaponContract.sheetName})`,
+);

@@ -1,24 +1,35 @@
 # WASB documentation index
 
-Markdown files are excluded from `clasp push` by `.claspignore`. Keep operational
-truth in the documents below; do not add one-off audits or production workbook
+Markdown files are excluded from `clasp push` by `.claspignore`. GAS runtime
+`.gs` modules live in domain folders; all `.html` client files live in `ui/`.
+The repository root holds manifests, tooling, and documentation only.
+Keep operational truth in the documents below; do not add one-off audits or production workbook
 snapshots to the repository.
 
-| File                                                             | Source-of-truth responsibility                              |
-| ---------------------------------------------------------------- | ----------------------------------------------------------- |
-| [README.md](../README.md)                                        | Project overview, quick start, documentation map            |
-| [ARCHITECTURE.md](../ARCHITECTURE.md)                            | Runtime layers, data flow, canonical APIs                   |
-| [RUNBOOK.md](../RUNBOOK.md)                                      | Bootstrap, deployment, production checks, troubleshooting   |
-| [developer-guide.md](./developer-guide.md)                       | First-week map: layers, safe zones, how to think about changes |
-| [adr/README.md](./adr/README.md)                                 | Architecture Decision Records (structural change rules)       |
-| [SECURITY.md](../SECURITY.md)                                    | Identity, RBAC, lockout, protected data                     |
-| [CHANGELOG.md](../CHANGELOG.md)                                  | Durable release history                                     |
-| [WASB_RELEASE_AUDIT.md](../WASB_RELEASE_AUDIT.md)                | Production release verdict (CLOSED 2026-06-07)              |
-| [CONTRIBUTING.md](../CONTRIBUTING.md)                            | Local workflow, CI, change policy                           |
-| [AGENTS.md](../AGENTS.md)                                        | Automation-agent instructions                               |
-| [vacation-planner.md](./vacation-planner.md)                     | Vacation planner, concurrent rules, mini-calendar UX        |
-| [daily-summary-architecture.md](./daily-summary-architecture.md) | Short/detailed day summary modules, formula block, UI flow  |
-| [format-rules-governance.md](./format-rules-governance.md)       | Manual conditional-format registry and rebuild protection   |
+| File                                                                   | Source-of-truth responsibility                                                                                            |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| [README.md](../README.md)                                              | Project overview, quick start, documentation map                                                                          |
+| [ARCHITECTURE.md](../ARCHITECTURE.md)                                  | Runtime layers, data flow, canonical APIs                                                                                 |
+| [RUNBOOK.md](../RUNBOOK.md)                                            | Bootstrap, deployment, production checks, troubleshooting                                                                 |
+| [developer-guide.md](./developer-guide.md)                             | First-week map: layers, safe zones, how to think about changes                                                            |
+| [adr/README.md](./adr/README.md)                                       | Architecture Decision Records (structural change rules)                                                                   |
+| [module-map.md](./module-map.md)                                       | Domain folders: where modules live, which CI guards them                                                                  |
+| [adr/003-working-domain-layout.md](./adr/003-working-domain-layout.md) | Working domain folder agreement (not final architecture)                                                                  |
+| [SECURITY.md](../SECURITY.md)                                          | Identity, RBAC, lockout, protected data                                                                                   |
+| [CHANGELOG.md](../CHANGELOG.md)                                        | Durable release history                                                                                                   |
+| [WASB_RELEASE_AUDIT.md](../WASB_RELEASE_AUDIT.md)                      | Historical release snapshot; not current deploy truth                                                                     |
+| [CONTRIBUTING.md](../CONTRIBUTING.md)                                  | Local workflow, CI, change policy                                                                                         |
+| [AGENTS.md](../AGENTS.md)                                              | Automation-agent instructions                                                                                             |
+| [vacation-planner.md](./vacation-planner.md)                           | Vacation planner, concurrent rules, mini-calendar UX                                                                      |
+| [inventory-reconciliation.md](./inventory-reconciliation.md)           | Inventory month tracking, Drive links, sidebar **Звірка**                                                                 |
+| [temporary-property-register.md](./temporary-property-register.md)     | Temporary issue/return register, catalog, kits, migration                                                                 |
+| [INTEGRATION_GUIDE.md](./INTEGRATION_GUIDE.md)                         | One-time integrated deploy: property register setup with main workbook                                                    |
+| [daily-summary-architecture.md](./daily-summary-architecture.md)       | Short/detailed day summary modules, formula block, UI flow                                                                |
+| [format-rules-governance.md](./format-rules-governance.md)             | Manual conditional-format registry and rebuild protection                                                                 |
+| [user-facing-copy.md](./user-facing-copy.md)                           | UX copy: UA UI text, no technical names in user-facing strings; enforced by `verify-user-facing-copy.mjs`                 |
+| [codeql-coverage.md](./codeql-coverage.md)                             | CodeQL vs CI vs `.gs` security: open follow-up to verify/expand Apps Script coverage                                      |
+| [branch-archive.md](./branch-archive.md)                               | Archived former working branches (`archive/*` tags)                                                                       |
+| [project-files-complete.txt](./project-files-complete.txt)             | Canonical depth-first file tree (governance map); excludes local `.clasp*.json`; refresh with `npm run map:project-files` |
 
 ## Refactor Planning
 
@@ -30,11 +41,17 @@ Machine-readable policy belongs in [`contracts/`](../contracts/). Snapshot
 changes are governed by `scripts/verify-snapshot-governance.mjs` and must be
 recorded in [`contracts/SNAPSHOT_CHANGELOG.md`](../contracts/SNAPSHOT_CHANGELOG.md).
 
-**Reference data table:** Code and docs are kept in sync with the provided
-"Книга Взводу Охорони.xlsx" (PERSONNEL uses split names + TEMPLATE for callsign;
-monthly sheets use ПОЗИВНИЙ as key). See RUNBOOK §14 and recent CHANGELOG.
+Current workbook/runtime additions guarded by contracts and CI:
 
-Production status is recorded in
-[`WASB_RELEASE_AUDIT.md`](../WASB_RELEASE_AUDIT.md) (**CLOSED** 2026-06-07).
-Re-verify with current evidence when redeploying: `npm run ci`, `clasp status`,
-manual `apiRunProductionSmokeChecks()` in GAS, and GAS diagnostics.
+- `contracts/month-journal.contract.json` + `scripts/verify-month-journal-materialize.mjs` for unified `JOURNAL` / `SUMMARY`
+- `contracts/reference-repositories.contract.json` + `scripts/verify-reference-repositories.mjs` for `PHONE_DIRECTORY` / `CAR` / `WEAPON`
+- `contracts/personnel-status.contract.json` + `scripts/verify-personnel-status-contract.mjs` for `PERSONNEL.Status` and self-heal invariants
+- `contracts/system-status.contract.json` + `contracts/system-status-fingerprints.contract.json` + `scripts/verify-system-status-*.mjs` for system-status foundation/fingerprints (this branch; not yet a public Stage7 UI)
+
+**Reference data table:** Code and docs are kept in sync with the provided
+"Книга Взводу Охорони — робоча.xlsx" (PERSONNEL: split names + **`RNTRC` column L** + **`Email` column M** + **`Callsign` column N**; month **06** compact B=Позивний;
+monthly schedule key: **Callsign** — the xlsx may label the column Позивний/ПОЗИВНИЙ). See RUNBOOK §14 and recent CHANGELOG.
+
+Do not treat any static release-audit markdown as current readiness truth.
+Re-verify deploy state from current evidence: `npm run check`, `npm run gas:status`,
+and GAS diagnostics (`apiRunStage7RegressionTests()` or `runSmokeTests()`).

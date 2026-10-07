@@ -9,16 +9,32 @@ WASB is a Google Apps Script (GAS) bundle bound to a Google Spreadsheet. There i
 ### Running lint/CI checks
 
 ```bash
+npm run check    # alias for full CI
 npm run ci
 ```
 
-This runs all static analysis scripts (GAS sanity, function graph audit, client verification, XSS audit, envelope compat, usecase facade, snapshot governance, bridge flags, access API governance, OAuth scopes, jsconfig verification). All checks are Node.js-based and do not require any Google credentials or network access.
+This runs all static analysis scripts (GAS sanity, clasp patterns, language/copy guards, workbook and domain contracts, function graph audit, client verification, XSS audit, envelope compat, usecase facade, snapshot governance, bridge flags, access API governance, OAuth scopes, jsconfig verification). All checks are Node.js-based and do not require any Google credentials or network access.
 
-Individual subscripts: `npm run ci:gas`, `npm run ci:client`, `npm run audit:functions`.
+Individual subscripts: `npm run ci:gas`, `npm run ci:client`, `npm run ci:copy`, `npm run ci:language`, `npm run ci:spelling`, `npm run ci:workbook`, `npm run ci:materialize`, `npm run ci:vacations`, `npm run ci:recipients`, `npm run ci:personnel-status`, `npm run ci:format-rules`, `npm run ci:access-autofill`, `npm run audit:functions`.
+
+### Terminal deploy commands
+
+| Command | What it does |
+| -------- | ------------- |
+| `npm run check` / `check:all` / `ci` | Full local CI (`ci` → clean-env → `ci:chain`; no Debugger attached spam) |
+| `npm run c` | Refresh file map + full CI |
+| `npm run deploy:prod` | Full CI + `npm run gas:push` (production) |
+| `npm run push:remote` | `git push` only; add `-- --with-gas` on `main` for production `gas:push` |
+| `npm run gas` / `npm run gas -- push` | Node version check + `clasp push` only — **not** full CI |
+| `npm run gas -- status` | Same as `gas:status` (via `ops-gas.mjs`) |
+| `npm run gh -- "msg"` | Commit **staged-only** + `git push` (never `git add -A`) |
+| `npm run ship` / `go -- "msg"` | Preflight → `ci` + staged `gh`; optional `--deploy-gas` on `main` (checked before CI). Refresh map separately via `map:project-files` then `git add`. |
+| `npm run gas:open` | Open GAS editor (`ops-gas.mjs` → `clasp open-script`) |
+| `npm run gas:push` / `gas:status` / `gas:pull` | Production clasp helpers via `scripts/run-with-clean-env.mjs` (strips Cursor debugger env) |
 
 ### Node.js version
 
-CI requires **Node.js 24** (matching `.github/workflows/ci.yml` and `.nvmrc`). `npm run ci` runs `npm run precheck` first (`scripts/verify-node-version.mjs`).
+CI and local dev recommend **Node.js 24** (`.github/workflows/ci.yml`, `.nvmrc`). `package.json` `engines` is **`node >=24`**, **`npm >=10`** — Node 25, 26, … pass `npm run precheck` unless you add an explicit `<` / `<=` in `engines.node`. `npm run ci` runs precheck first (`scripts/verify-node-version.mjs`).
 
 ```bash
 nvm use    # reads .nvmrc (24)
@@ -33,52 +49,82 @@ This project cannot be "run" locally in the traditional sense. There is no dev s
 
 ### Testing
 
-- **Local (automated):** `npm run ci` — 17 static checks, no Google credentials.
-- **Remote smoke (separate non-production project):** `npm run deploy:smoke` — `apiRunSmokeChecks` via `.clasp.smoke.json`.
-- **Remote (manual):** `apiRunStage7RegressionTests()` in GAS editor.
+- **Local (automated):** `npm run ci` — **35** verify/audit scripts (+ `precheck`), no Google credentials. System-status: `npm run ci:system-status` (Foundation + Fingerprints; SS-2B runtime scope construction in `diagnostics/SystemStatus.Runtime.gs`).
+- **Remote (manual):** `apiRunStage7RegressionTests()` or `runSmokeTests()` in the GAS editor.
 
 Documentation index: [`docs/README.md`](./docs/README.md). Verify release status
-from current CI, clasp status, remote smoke, and GAS diagnostics.
+from current CI, `npm run gas:status`, and GAS diagnostics.
 
-### Production runtime smoke
+### Production deploy
 
 After local CI and deploy:
 
 ```bash
-fish_add_path $HOME/.local/node-v24.16.0/bin   # if Node 22 is default
-npm run ci
-npx clasp push
-apiStage7ClearPhoneCache() # run in the production GAS editor
+npm run check
+npm run deploy:prod
+apiStage7MaterializeComputedData()  # after PERSONNEL / PHONES / VACATIONS / birthday / Status edits
+apiStage7MaterializeMonthJournal({ monthSheet: "07" })  # active month slice in JOURNAL/SUMMARY; sidebar: Оновити журнал місяця
+apiStage7MaterializeAllMonthJournals()                  # bootstrap all 01–12 (uiAllowed: false; GAS editor)
+apiStage7MaterializeAllMonthJournals({ nextCursor: 3 }) # continuation via response.data.result.nextCursor
+apiStage7ClearPhoneCache()          # run in the production GAS editor after deploy
 ```
 
-Or one command: `npm run deploy:prod` (local CI + production push). Run
-`npm run deploy:smoke` separately against the non-production smoke project.
+Or: `npm run push:remote -- --with-gas` after commit on `main` (git + clasp, no second CI run).
 
-**Expectations** (`apiRunSmokeChecks` result):
+**If `clasp push` fails:**
 
-- `ok === true`
-- `checks.migrationFlag !== 'true'` (null/empty is OK)
-- `checks.clientSignal` — envelope `success: true`; inner result: `emailSent: false`, `alertLogged: true` (typically at `data.result`)
+1. Run `clasp login` and confirm `.clasp.json` scriptId matches the target project.
+2. Confirm production `appsscript.json` remains `"executionApi": { "access": "MYSELF" }`.
 
-**If `clasp run` fails with permission/API errors:**
+### Repository map (`docs/project-files-complete.txt`)
 
-1. Enable **Google Apps Script API** in [Google Cloud Console](https://console.cloud.google.com/) for the clasp OAuth project.
-2. Run `clasp login` and confirm `.clasp.json` scriptId matches the target project.
-3. Confirm `appsscript.smoke.json` contains `"executionApi": { "access": "ANYONE" }`.
-4. Confirm production `appsscript.json` remains `"executionApi": { "access": "MYSELF" }`.
-5. Re-run `npm run gas:smoke:push`, then create or refresh an **API executable** deployment in the smoke project if the Apps Script UI prompts for it.
+Before structural edits, treat **`docs/project-files-complete.txt`** as the canonical
+file tree of the repo (depth-first, excludes `.git/`, `node_modules/`, and local
+`.clasp*.json` binding files).
+
+**Agent / contributor rules:**
+
+- Before changes: skim the map to pick the correct **existing domain module** — do not add files when an existing folder already owns the concern.
+- **Client UI:** `ui/Js.*.html`, `ui/Js.Render.*.html`, `ui/Js.Security*.html` first.
+- **Server HTML / dialogs:** `ui-server/`.
+- **Styles:** `ui/Styles*.html` only.
+- Do not mix unrelated JS, GAS, and CSS in one change unless the task requires it.
+- Do **not** move files between domain folders without updating **`contracts/`**, **`docs/module-map.md`**, and release audit notes when applicable.
+- After **create / delete / rename / move** of any tracked file: refresh the map (see below) and include it in the same PR/commit.
+
+**Refresh the map:**
+
+```bash
+npm run map:project-files
+git diff -- docs/project-files-complete.txt
+```
+
+**Pre-release gate:**
+
+```bash
+git status --short
+git diff -- docs/project-files-complete.txt
+npm run release:check    # same as npm run ci; includes verify-project-files-map
+```
+
+Manual alternative (requires `tree`): see **`RUNBOOK.md` §12**.
+
+### Structural moves (ADR-002)
+
+Domain folders (`reports/`, `vacations/`, `core/`, `ui/`, …) are mechanical moves only. Working layout: [`docs/adr/003-working-domain-layout.md`](./docs/adr/003-working-domain-layout.md), live table [`docs/module-map.md`](./docs/module-map.md). Before a folder PR: run domain CI, update verify scripts that hardcode paths, `npx clasp status`.
 
 ### PERSONNEL keys (do not regress)
 
 - Monthly schedule row key: **Callsign**; personal fields from `PERSONNEL` by Callsign (fallback **FML**).
-- **ID** (Армія+) is optional data, not a required system key.
+- Display callsign on monthly/PHONES/BIRTHDAY sheets: **Callsign → Last name → First name** (never TEMPLATE). See `.cursor/rules/monthly-callsign-sync.mdc`.
+- **ID Army+** is optional data, not a required system key.
 - **Position** is not a person key.
-- **Status** (UA only in sheet): dropdown — `В наявності`, `У відрядженні`,
-  `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`.
+- **Status** (UA only in sheet): dropdown — `В наявності`, `У відрядженні`, `Вибув`, `Відпустка`, `Лікарняний`, `Тимчасовий`, `Гусачівка`, `БЗВП`, `СЗЧ`.
   Runtime-active: all except `Вибув` and `СЗЧ`; empty = `В наявності`. Legacy
   (`Дієвий`, `Active`, `Відрядження`, EN) mapped on read only.
-- Final (logical) headers: `ID | FML | … | Unit | Status`. Physical in reference "Книга Взводу Охорони.xlsx": split `Last name` / `First name` / `Patronymic` (FML synthesized), `TEMPLATE` as callsign value, `OSH 4`, `Rank`. Code reads by **header names only** (aliases cover variants). See `RUNBOOK.md` §14.
-- After every production deploy or PERSONNEL edits: run **`apiStage7ClearPhoneCache()`** in GAS (mandatory).
+- Final (logical) headers: `ID | FML | … | Unit | Status`. Physical in reference "Книга Взводу Охорони.xlsx": `Cells`, `ID v/s`, split `Last name` / `First name` / `Patronymic` (FML synthesized), **`RNTRC` in column L**, **`Email` in column M**, **`Callsign` in column N**, `Rank`, `OSH 4`, **`Status` in column R** — see `contracts/reference-workbook-layout.contract.json`. `TEMPLATE` is legacy-only (not in reference file). Code reads by **header names only** (aliases cover variants). See `RUNBOOK.md` §14.
+- Missing `Status` header is self-healed at runtime (reference column **R** when free, otherwise next safe column) before validation/materialize paths proceed.
+- After every production deploy or PERSONNEL edits: run **`apiStage7MaterializeComputedData()`** when derived columns may be stale; run **`apiStage7ClearPhoneCache()`** for phone cache invalidation (mandatory after deploy). Month fact/history lives on unified **`JOURNAL`** / **`SUMMARY`**: refresh the active month slice with **`apiStage7MaterializeMonthJournal()`** (sidebar), or bootstrap all existing `01`–`12` with **`apiStage7MaterializeAllMonthJournals()`** — **не підключено до UI** (`uiAllowed: false`); **призначено для GAS editor** (public `api*` + maintainer). Continuation fields are in the Stage7 envelope (`response.data.result.done` / `nextCursor`), not top-level — repeat with `{ nextCursor }` until `done`.
 - See `.cursor/rules/personnel-data-keys.mdc`.
 
 ### Daily summaries (do not regress)
@@ -86,7 +132,7 @@ Or one command: `npm run deploy:prod` (local CI + production push). Run
 - **Short summary** reads the lower **formula block** on month sheets (`01`…`12`);
   do not reintroduce manual PERSONNEL/DICT_SUM counting for short summary.
 - Modules: `reports/Report_SummaryData.gs`, `reports/Report_DailySimple.gs`, `reports/Report_DailyDetailed.gs`,
-  `Summaries.gs` (legacy `buildDaySummaryForColumn_` only delegates).
+  `reports/Summaries.gs` (legacy `buildDaySummaryForColumn_` only delegates).
 - Output order includes **`За штатом`** first; labels in report text must have **no `_`**.
 - **UI:** sidebar buttons **Зведення дня** / **Детальне зведення** only; top menu =
   `WASB` → `Відкрити панель` (no `Звіти` menu).
@@ -96,17 +142,41 @@ Or one command: `npm run deploy:prod` (local CI + production push). Run
 ### Vacation planner and mini-calendar (do not regress)
 
 - Concurrent load: **max 3** normal; **4** only as short overload ≤3 consecutive days; **5+** always error.
-- Rules source: `VacationPlannerConfig.gs` (`MAX_CONCURRENT`, `OVERLOAD_*`, `MIN_VACATION_DAYS`, `MIN_DAYS_GAP`, `MIN_START_GAP_DAYS`).
+- Rules source: `vacations/VacationPlannerConfig.gs` (`MAX_CONCURRENT`, `OVERLOAD_*`, `MIN_VACATION_DAYS`, `MIN_DAYS_GAP`, `MIN_START_GAP_DAYS`).
 - Mini-calendar cells: day number + divider + count only (no names in grid).
 - Footer summary: **Проблемних дат** / **Навантажених днів** only (no static rule lines).
-- Navigation ◀/▶ must pass explicit `{ year, month }` to `loadMonthCalendar` (see `Js.Vacations.html`).
-- Modules: `VacationMonthCalendar.gs`, `Vacation_Suggestions.gs`, `Js.Vacations.html`.
+- Navigation ◀/▶ must pass explicit `{ year, month }` to `loadMonthCalendar` (see `ui/Js.Vacations.Actions.html`).
+- Modules: `vacations/VacationMonthCalendar.gs`, `vacations/Vacation_Suggestions.gs`, `vacations/VacationMonthlySync.gs`, `ui/Js.Vacations.*.html` partials, `ui/Js.VacationSync.html`.
 - Design doc: [`docs/vacation-planner.md`](./docs/vacation-planner.md).
-- Local contract: `scripts/verify-vacation-planner.mjs` (`npm run ci:vacations`).
+- Local contract: `scripts/verify-vacation-planner.mjs`, `scripts/verify-vacation-monthly-sync.mjs` (`npm run ci:vacations`).
+
+### Inventory reconciliation (do not regress)
+
+- Sheets: `INVENTORY_RECONCILIATION` (visible), `INVENTORY_RECONCILIATION_FILES` (hidden index).
+- Drive folder id: Script Property `WASB_INVENTORY_RECONCILIATION_FOLDER_ID`; OAuth scope `drive.readonly` required.
+- Modules: `inventory/InventoryReconciliation.gs`, `ui/Js.InventoryReconciliation.html`, `ui/Styles_35_InventoryReconciliation.html`.
+- Design doc: [`docs/inventory-reconciliation.md`](./docs/inventory-reconciliation.md).
+
+### Temporary property register (do not regress)
+
+- Sheets: `Property_issued_for_temporary_u` (working register), `PROPERTY_CATALOG` (dropdown/unit source), `PROPERTY_KITS` (kit composition).
+- Module: `inventory/TemporaryPropertyRegister.gs`; edit routing: `access/AccessSheetTriggers.gs`.
+- Main quantities are numeric; unit is stored separately. Parent asset rows may have linked auto-generated component rows.
+- Fuel cans use separate `Вид палива` and `Об'єм палива, л` fields.
+- One-time setup/migration: **`apiSetupTemporaryPropertyRegister()`**. It backs up a legacy sheet before conversion.
+- Person cards read outstanding temporary property through `PersonsRepository_` and render it under **Тимчасово видане майно**.
+- Design doc: [`docs/temporary-property-register.md`](./docs/temporary-property-register.md).
+- Local contract: `scripts/verify-temporary-property-register.mjs` (`npm run ci:workbook`).
+
+### User-facing copy (do not regress)
+
+- Sidebar, menus, dialogs, health UI: **Ukrainian only**, no technical sheet keys (`SEND_PANEL`, `PERSONNEL`, …) in strings users see.
+- Physical tab names in `CONFIG` / `SheetSchemas_` may stay technical until a dedicated sheet-rename migration.
+- Policy: [`docs/user-facing-copy.md`](./docs/user-facing-copy.md). CI: `verify-no-russian-text.mjs`, `verify-user-facing-copy.mjs`, `cspell` (`npm run ci:language`, `npm run ci:copy`, `npm run ci:spelling`).
 
 ### Key gotchas
 
 - The `&&` chain in `npm run ci` may fail under restricted `cmd.exe` on Windows; use individual `node scripts/...` commands as fallback.
-- `npx clasp push` / `npm run gas push` requires prior `clasp login` and a `.clasp.json` (not committed to the repo for security). Prefer `npx clasp` over a global `clasp` so the version matches `package-lock.json` (`@google/clasp@3.3.0`).
+- `npx clasp push` / `npm run gas:push` requires prior `clasp login` and a `.clasp.json` (not committed to the repo for security). Prefer `npx clasp` over a global `clasp` so the version matches `package-lock.json` (`@google/clasp@3.3.0`).
 - **Do not run** `npm audit fix --force` — it toggles `@google/clasp` between 2.x and 3.x without fixing transitive `uuid` advisories and can introduce a **high** clasp CVE on older versions.
 - Script properties (`WASB_SPREADSHEET_ID`, `WASB_OWNER_EMAIL`) must be set in GAS Project Settings for headless/trigger execution.

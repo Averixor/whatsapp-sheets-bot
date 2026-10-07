@@ -7,9 +7,9 @@
 WASB — не випадковий набір `.gs` файлів, а **шари**. Перед зміною зрозумій, який шар відповідає за задачу.
 
 ```
-Sidebar / Client UI (Js.*, Sidebar.html)
+Sidebar / Client UI (ui/Js.*, ui/Sidebar.html)
   ↓
-api* server endpoints (Stage7ServerApi, SpreadsheetActionsApi, …)
+api* server endpoints (`api/Stage7ServerApi.gs`, `api/SpreadsheetActionsApi.gs`, …)
   ↓
 AccessEnforcement_  — чи дозволена конкретна дія
   ↓
@@ -22,15 +22,19 @@ Google Sheets       — ACCESS, PERSONNEL, місячні листи, …
 
 | Шар | За що відповідає |
 | ----- | ----------------- |
-| Sidebar / `Js.*` | Що бачить користувач у UI |
+| Sidebar / `ui/Js.*` | Що бачить користувач у UI |
 | `api*` | Який server-side сценарій викликано |
 | `AccessEnforcement_` | Чи дозволена конкретна дія (картка, send panel, summary) |
 | `AccessControl_` | Хто користувач, яка роль, ключ у ACCESS |
 | ACCESS | Доступи, ролі, bootstrap, lockout |
 | PERSONNEL | Люди, Callsign, Status (UA), телефони |
 | Місячні аркуші (`01`…`12`) | Добовий графік, формульний блок |
-| `Report_*` | Зведення дня (short з formula block, detailed окремо) |
-| Vacation modules | Відпустки, перевірки, міні-календар |
+| `MonthJournalMaterialize` | Derived unified `JOURNAL` / `SUMMARY` from month sheets + PERSONNEL + DICT |
+| `ReferenceSheetsRepository_` | Optional sidebar reference sheets `PHONE_DIRECTORY` / `CAR` / `WEAPON` |
+| `Report_*` | Зведення дня (short з formula block, detailed окремо) — modules in `reports/` |
+| Vacation modules | Відпустки, перевірки, міні-календар, monthly sync — server modules in `vacations/`; UI in `ui/Js.Vacations.*.html` + `ui/Js.VacationSync.html` |
+| `InventoryReconciliation_` | Звірка служб: `INVENTORY_RECONCILIATION`, Drive index, sidebar **Звірка** (`inventory/InventoryReconciliation.gs`) |
+| `TemporaryPropertyRegister_` | Тимчасово видане майно: `Property_issued_for_temporary_u` + `PROPERTY_CATALOG` / `PROPERTY_KITS` (`inventory/TemporaryPropertyRegister.gs`) |
 | `contracts/` + `scripts/verify-*` | Захист від тихої деградації (governance CI) |
 
 Детальніша архітектура: [ARCHITECTURE.md](../ARCHITECTURE.md). Доступ і RBAC: [SECURITY.md](../SECURITY.md).
@@ -43,8 +47,9 @@ Google Sheets       — ACCESS, PERSONNEL, місячні листи, …
 | `AccessEnforcement_*` | Server-side дозволи на дії |
 | `contracts/access-api.contract.json` | Публічна поверхня API + parity з кодом |
 | Guard markers (`_stage7AssertRole_`, `assertCan…`) | Обхід permissions |
-| PERSONNEL keys (Callsign, Status UA) | Графік, картки, телефони, health |
+| PERSONNEL keys (Callsign, Status UA) | Графік, картки, телефони, health; Status auto-heal/validation |
 | Formula block на місячних листах | Short summary ([daily-summary-architecture.md](./daily-summary-architecture.md)) |
+| `JOURNAL` / `SUMMARY` derived sheets | Фактична історія всіх місяців; зріз активного місяця оновлюється окремо |
 | Bootstrap ACCESS / protections | Login для всіх користувачів |
 | Production `clasp` remote | Ризик deploy не в той script project |
 
@@ -60,7 +65,13 @@ Google Sheets       — ACCESS, PERSONNEL, місячні листи, …
 
 Якщо додаєш або змінюєш `api*`, зміна **не завершена**, поки не проходить `verify-access-api-governance` (recursive scan, contract parity, guard markers).
 
-Структурні зміни (move/split/merge): [ADR-001](./adr/001-structural-changes.md).
+Якщо змінюєш derived місячний журнал або reference sheets, зміна **не завершена**, поки не проходять відповідні перевірки: `verify-month-journal-materialize`, `verify-reference-repositories`, `verify-reference-workbook-layout`.
+
+Структурні зміни (move/split/merge): [ADR-001](./adr/001-structural-changes.md). **Робоча** карта папок: [ADR-003](./adr/003-working-domain-layout.md), [module-map.md](./module-map.md). Історичні фази: [ADR-002](./adr/002-domain-folder-map.md).
+
+## Де лежать файли
+
+Коротка таблиця domain → folder → CI: [module-map.md](./module-map.md). Після PR #34 усі runtime `.gs` / `.html` у доменних папках (`core/`, `api/`, `ui/`, `reports/`, `vacations/`, …); у корені лишаються конфіг і документація. Структура **робоча**, не фінальна — уточнення через ADR-003.
 
 ## Правило для refactor
 
@@ -71,16 +82,19 @@ Move / split / merge файлів — лише **механічна** зміна
 ## Мінімальна перевірка
 
 ```bash
-npm run ci
+npm run check    # alias: npm run ci
 ```
 
-Перед production deploy (з правильною clasp-авторизацією і production script project):
+**Typical deploy (one production GAS):**
 
 ```bash
-npx clasp push
+git add -A && git commit -m "fix: …"
+npm run push:remote
 ```
 
-Після deploy у GAS editor: **`apiStage7ClearPhoneCache()`**, потім перевірка картки людини та health (`apiStage7QuickHealthCheck()`). Повний checklist: [RUNBOOK.md](../RUNBOOK.md) §12–§13.
+Or CI + clasp only: `npm run deploy:prod`. Staged ship pipeline: prepare map if needed (`npm run map:project-files` + `git add`), then `npm run ship -- "fix: …"`.
+
+Після deploy у GAS editor: **`apiStage7MaterializeComputedData()`** (після змін PERSONNEL/PHONES/VACATIONS/birthday/Status), за потреби **`apiStage7MaterializeMonthJournal({ monthSheet: "MM" })`** (зріз активного місяця в `JOURNAL`/`SUMMARY`; кнопка сайдбару **Оновити журнал місяця**), або **`apiStage7MaterializeAllMonthJournals()`** з повтором `{ nextCursor }` до `response.data.result.done` (bootstrap усіх наявних `01`–`12`; **не підключено до UI**, `uiAllowed: false`; **призначено для GAS editor**; public `api*` + maintainer — continuation у `response.data.result.*`, не top-level), потім **`apiStage7ClearPhoneCache()`**, потім перевірка картки людини, reference sidebar views, і health (`apiStage7QuickHealthCheck()`). Сайдбар **Перемістити бота** спочатку перемикає місяць, а потім оновлює його зріз у `JOURNAL`/`SUMMARY`. Для профільованого запуску можна передати `apiStage7MaterializeComputedData({ stages: ["personnel", "sendPanel", "systemStatus"], monthSheet: "MM" })`; без `stages` виконується повний набір, а `response.data.result.timings` містить тривалість етапів. Повний checklist: [RUNBOOK.md](../RUNBOOK.md) §12–§13.
 
 ## Куди далі
 
@@ -91,4 +105,6 @@ npx clasp push
 | Identity, lockout, RBAC | [SECURITY.md](../SECURITY.md) |
 | Зведення дня | [daily-summary-architecture.md](./daily-summary-architecture.md) |
 | Відпустки | [vacation-planner.md](./vacation-planner.md) |
+| Звірка (inventory) | [inventory-reconciliation.md](./inventory-reconciliation.md) |
+| Тимчасово видане майно | [temporary-property-register.md](./temporary-property-register.md) |
 | Локальний workflow | [CONTRIBUTING.md](../CONTRIBUTING.md) |

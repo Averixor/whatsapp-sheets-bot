@@ -1,0 +1,85 @@
+/************ LOG WRITER ************/
+function _ensureLogSheet_() {
+  let sh =
+    typeof ensureLogicalSheet_ === "function"
+      ? ensureLogicalSheet_(CONFIG.LOG_SHEET)
+      : null;
+  if (!sh) {
+    const ss = getWasbSpreadsheet_();
+    sh = ss.getSheetByName(CONFIG.LOG_SHEET);
+    if (!sh) sh = ss.insertSheet(CONFIG.LOG_SHEET);
+  }
+
+  const headers = [
+    'Timestamp',
+    'ReportDate',
+    'Sheet',
+    'Cell',
+    'FML',
+    'Phone',
+    'Code',
+    'Service',
+    'Place',
+    'Tasks',
+    'Message',
+    'Link'
+  ];
+
+  if (sh.getLastRow() === 0) {
+    sh.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sh.getRange(1, 1, 1, headers.length)
+      .setFontWeight('bold')
+      .setBackground('#f0f0f0');
+  }
+
+  return sh;
+}
+
+function writeLogsBatch_(items) {
+  items = Array.isArray(items) ? items.filter(Boolean) : [];
+  if (!items.length) {
+    return { success: true, count: 0, message: 'Немає логів для запису' };
+  }
+
+  const run = function () {
+    return writeLogsBatchUnlocked_(items);
+  };
+  if (typeof withExternalLogicalMutation_ === "function") {
+    return withExternalLogicalMutation_(CONFIG.LOG_SHEET, run);
+  }
+  return run();
+}
+
+function writeLogsBatchUnlocked_(items) {
+  const sh = _ensureLogSheet_();
+
+  const rows = items.map(item => {
+    if (Array.isArray(item)) return item;
+
+    const o = (typeof SecurityRedaction_ === 'object' && SecurityRedaction_.sanitizeLogEntry)
+      ? SecurityRedaction_.sanitizeLogEntry(item || {})
+      : (item || {});
+    return [
+      o.timestamp || new Date(),
+      o.reportDateStr || '',
+      o.sheet || '',
+      o.cell || '',
+      o.fml || '',
+      o.phone || '',
+      o.code || '',
+      o.service || '',
+      o.place || '',
+      o.tasks || '',
+      o.message || '',
+      o.link || ''
+    ];
+  });
+
+  sh.getRange(sh.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+
+  return {
+    success: true,
+    count: rows.length,
+    message: `Записано ${rows.length} логів`
+  };
+}

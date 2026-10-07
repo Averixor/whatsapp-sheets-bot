@@ -1,0 +1,66 @@
+---
+description: Місячний графік — колонка «Позивні» з PERSONNEL (Callsign → Last name → First name)
+globs: "**/*.{gs,html,mjs}"
+alwaysApply: true
+---
+
+# Місячний лист — колонка «Позивні»
+
+## 1. Fallback відображення
+
+Єдине правило на **всіх** аркушах з колонкою Callsign / «Позивні» (місяці `01`…`12`, PHONES, BIRTHDAY тощо):
+
+1. **Callsign** з PERSONNEL (після trim).
+2. Якщо порожній — **Last name** / **Прізвище** з того ж рядка.
+3. Якщо Last name порожній — **First name** / **Ім'я**.
+4. **TEMPLATE не використовується** для генерації / відображення позивних.
+
+Функція: `resolvePersonnelDisplayCallsign_(callsign, lastName, firstName)` у `personnel/PersonnelRepository.gs`
+(обгортка на місячних листах: `monthlyCallsignValueFromPersonnelRow_`).
+
+Не змішувати TEMPLATE у monthly sync замість явного Callsign → Last name → First name.
+
+## 2. Незмінність джерела (PERSONNEL)
+
+На PERSONNEL **не** materialize-ити і **не** писати зведені позивні з інших колонок.
+
+- Заборонено формули / materialize **M→L**, **D→L** (і аналоги) для Callsign на PERSONNEL.
+- Derived sheets читають Callsign + Last name + First name при materialize/sync і самі застосовують fallback.
+
+## 3. Пошук колонки
+
+Колонку на місячному листі шукати **за заголовком** (`позивн`, `позывной`, `callsign`), не лише за фіксованою літерою колонки.
+
+## 4. Позиції рядків і діапазон (capacity)
+
+- Рядки PERSONNEL відображаються **позиційно**, без стискання / пропускання порожніх кадрових слотів.
+- PERSONNEL → місяць: `numRows = lastRow - startRow + 1` (inclusive); sync пише `personnelRows` / покриває `activeRowsCount` без truncate.
+- Якщо кадрових рядків не вистачає — розширювати їх **перед** формульним блоком зведення, не перезаписуючи його й залишаючи порожній розділювач.
+- Нові рядки: формат, validation, висота та формула колонки A з робочого рядка; **не** значення графіка.
+- Після expand/shrink і при `createNextMonth` — `rewriteMonthlyScheduleFormulasToCodeRange_` з **примусовим** `capacityEndRow` (`_monthlyBoundsWithEndRow_`), щоб останній кадровий слот (включно з порожніми) входив у графік і формули зведення.
+- Compact data-end — лише Callsign (не BR+Callsign).
+- На create: `allowShrink: true` лише для зайвої capacity **поза** PERSONNEL, без стискання порожніх кадрових слотів.
+- Повністю порожні останні слоти PERSONNEL `getLastRow()` може не бачити — межі **не** будувати лише з `getLastRow()`, якщо слоти треба переносити.
+- CI: після expand/shrink `capacityEndRow` ≤ `formulaSync.after.endRow` / schedule bounds.
+
+## 5. Умовне форматування та validation
+
+**Ніколи** не використовувати `PASTE_CONDITIONAL_FORMATTING` при expand — на реальних книгах зносить sheet-level CF (~13 правил).
+
+- Expand: `extendConditionalFormatRulesThroughRow_`
+- Після `createNextMonth` (callsign + vacation sync): `replaceConditionalFormatRulesFromSheet_` (+ `_copyMonthSheetDataValidationsFromSource_`)
+
+## 6. Атомарність `createNextMonth`
+
+- Успіх лише після `_assertCreateNextMonthSyncSucceeded_` (callsign sync + formula rewrite).
+- Помилки `callsignSync` / `formulaSync` **не** ховати в `console.error` з повідомленням про успіх.
+- При помилці: **не** перемикати активний місяць; частково створений аркуш перейменувати з суфіксом `_НЕЗАВЕРШЕНО_…`.
+
+## 7. Реалізація та контракт
+
+| Модуль | Роль |
+| --- | --- |
+| `sheets/MonthlyCallsignSync.gs` | `syncMonthlyCallsignsFromPersonnel_`, `syncAllMonthlyCallsignsFromPersonnel_` |
+| `personnel/PersonnelMaterialize.gs` | PHONES + BIRTHDAY через `resolvePersonnelDisplayCallsign_`; за замовчуванням sync лише активного місяця; історія — режим `history` / `all` |
+| `usecases/UseCases.MonthOps.gs`, `sheets/MonthSheets.gs` | виклики create/sync |
+| `scripts/verify-monthly-callsign-sync.mjs` | CI-контракт |

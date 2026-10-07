@@ -4,18 +4,29 @@
   "layers": [
     {
       "id": "core",
-      "files": ["Js.Core", "Js.State", "Js.Api"],
+      "files": [
+        "Js.Core",
+        "Js.State",
+        "Js.Api"
+      ],
       "allowedDependsOn": []
     },
     {
       "id": "render",
-      "files": ["Js.Render.Panel", "Js.Render.Calendar", "Js.Render.Results"],
-      "allowedDependsOn": ["core"]
+      "files": [
+        "Js.Render.Panel",
+        "Js.Render.Calendar",
+        "Js.Render.Results"
+      ],
+      "allowedDependsOn": [
+        "core"
+      ]
     },
     {
       "id": "features",
       "files": [
-        "Js.Vacations",
+        "Js.Vacations.Module",
+        "Js.ExternalMigration",
         "Js.Diagnostics",
         "Js.Security.Boot",
         "Js.Security.Util",
@@ -31,7 +42,10 @@
         "Js.Events",
         "Js.Actions"
       ],
-      "allowedDependsOn": ["core", "render"]
+      "allowedDependsOn": [
+        "core",
+        "render"
+      ]
     }
   ],
   "runtimeBridges": [
@@ -39,8 +53,13 @@
       "id": "SidebarApp",
       "definedIn": "Js.Actions",
       "definedLayer": "features",
-      "consumerLayers": ["render", "features"],
-      "matchPatterns": ["\\bSidebarApp\\."]
+      "consumerLayers": [
+        "render",
+        "features"
+      ],
+      "matchPatterns": [
+        "\\bSidebarApp\\."
+      ]
     }
   ],
   "forbiddenRefs": [
@@ -52,14 +71,21 @@
       "id": "core-no-ui",
       "description": "Core layer must not call render or feature UI entrypoints.",
       "sourceLayer": "core",
-      "forbiddenTargetLayers": ["render", "features"]
+      "forbiddenTargetLayers": [
+        "render",
+        "features"
+      ]
     },
     {
       "id": "render-no-direct-features",
       "description": "Render layer must not call feature functions directly; use SidebarApp onclick bridge only.",
       "sourceLayer": "render",
-      "forbiddenTargetLayers": ["features"],
-      "allowedPatterns": ["\\bSidebarApp\\."]
+      "forbiddenTargetLayers": [
+        "features"
+      ],
+      "allowedPatterns": [
+        "\\bSidebarApp\\."
+      ]
     }
   ],
   "sharedUtilities": [
@@ -123,7 +149,9 @@
     "stopSending",
     "$id",
     "showProgressBar",
-    "hideProgressBar"
+    "hideProgressBar",
+    "syncConsoleOverlayState_",
+    "showConfirmModal"
   ],
   "builtins": [
     "undefined",

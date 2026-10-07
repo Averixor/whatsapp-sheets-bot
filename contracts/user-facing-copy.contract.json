@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "description": "Banned technical tokens in user-visible copy (sidebar, health UI, toasts, dialogs).",
+  "bannedTokens": [
+    "SEND_PANEL",
+    "PERSONNEL",
+    "DICT_SUM",
+    "VACATION_CHECK",
+    "CONFIG",
+    "LOGS",
+    "LOG",
+    "ACCESS",
+    "PHONES",
+    "VACATIONS",
+    "DICT",
+    "DATA",
+    "ARRAYFORMULA",
+    "reloadData",
+    "rebuildPanel",
+    "checkStatus",
+    "validation failed",
+    "handler"
+  ],
+  "scanUiHtmlGlob": "ui/**/*.html",
+  "scanGsPaths": [
+    "diagnostics/Diagnostics.Health.gs",
+    "diagnostics/Diagnostics.BasicChecks.gs",
+    "diagnostics/Diagnostics.Stage7.Baseline.gs",
+    "usecases/UseCases.Maintenance.gs",
+    "core/Code.gs",
+    "vacations/VacationsRepository.gs",
+    "access/AccessControl.AuthResolver.gs",
+    "vacations/VacationMonthCalendar.gs",
+    "api/Stage7ServerApi.gs",
+    "core/LockHelpers.gs",
+    "personnel/PersonsRepository.gs"
+  ]
+}

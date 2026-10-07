@@ -1,0 +1,31 @@
+# Module map
+
+Practical index: **where to look** and **what CI proves it**. Structural rules: [ADR-003](./adr/003-working-domain-layout.md) (working layout), [ADR-002](./adr/002-domain-folder-map.md) (phased history), [ADR-001](./adr/001-structural-changes.md) (mechanical moves).
+
+| Domain | Folder | Main files | CI / verification | Notes |
+| ------ | ------ | ---------- | ----------------- | ----- |
+| Reports | `reports/` | `Report_*.gs`, `Summaries.gs`, `Summary*.gs`, `MonthlyReport.gs`, `MonthJournalMaterialize.gs` | `npm run ci`, `npm run ci:workbook`, `npm run ci:materialize` | Includes daily summaries and unified `JOURNAL` / `SUMMARY` derived sheets. |
+| Vacations | `vacations/` | `Vacation*.gs` | `npm run ci:vacations` | Vacation UI partials live in `ui/Js.Vacations.*.html`; monthly sync in `VacationMonthlySync.gs`. |
+| Inventory | `inventory/` | `InventoryReconciliation.gs`, `TemporaryPropertyRegister.gs` | `npm run ci` (`ci:gas` pulls `verify-inventory-reconciliation.mjs`); `npm run ci:workbook` for temporary-property | Sidebar **Звірка** plus temporary-property register on `Property_issued_for_temporary_u`; reference sheets `PROPERTY_CATALOG` / `PROPERTY_KITS`. |
+| Send panel | `sendpanel/` | `SendPanel*.gs`, `SelectionActionService.gs`, `UseCases.SendPanel.gs`, `Stage7PhoneDictPayloadShims.gs` | `npm run ci`, `npm run ci:recipients` | |
+| Maintenance / formats | `maintenance/` | `ConditionalFormat*.gs`, `JobRuntime*.gs`, `Template*.gs`, `LifecycleRetention.gs` | `npm run ci:format-rules` | Sheet self-heal lives in `sheets/`. |
+| Diagnostics | `diagnostics/` | `Diagnostics.*.gs`, `SystemStatus.Foundation.gs`, `SystemStatus.Probes.gs`, `SystemStatus.Fingerprints.gs`, `SystemStatus.Runtime.gs` | `npm run ci` (`verify-system-status-foundation.mjs`, `verify-system-status-fingerprints.mjs`) | Foundation + fingerprints + SS-2B runtime scope construction; public API/routing later (SS-3). Tests: `tests/SystemStatus*.gs`. Stage7TestRunner still deployed with clasp. |
+| Access | `access/` | `AccessControl.*.gs`, `AccessEnforcement.gs`, autofill hotfix | `npm run ci` (access-api governance) | Move-only in structural PRs. |
+| Personnel | `personnel/` | `PersonnelRepository.gs`, `PersonsRepository.gs`, `PersonCards.gs`, `AlertsRepository.gs` | `npm run ci`, personnel contracts | Callsign/Status — workspace rules; `Status` header self-heal lives here. |
+| API entrypoints | `api/` | `Stage7ServerApi.gs`, `Stage7MaintenanceApi.gs`, `SpreadsheetActionsApi.gs` | `npm run ci` | Public `api*` surface and spreadsheet actions. |
+| Core runtime | `core/` | `Code.gs`, `Stage7Config.gs`, `ProjectMetadata.gs`, shared helpers | `npm run ci` | Cross-cutting GAS globals, routing, config, responses. |
+| Data repositories | `data/` | `DataAccess.gs`, `ExternalSpreadsheets.gs`, `DictionaryRepository.gs`, `LogsRepository.gs`, `OperationRepository.gs` | `npm run ci`, `npm run ci:workbook` (`verify-external-spreadsheets.mjs`) | `ReferenceSheetsRepository_` in `DictionaryRepository.gs` owns `PHONE_DIRECTORY` / `CAR` / `WEAPON`. Seventeen service sheets route via `ExternalSpreadsheets.gs`. |
+| Sheet/workbook | `sheets/` | `Sheet*.gs`, `MonthSheets.gs`, validation/protection/self-heal | `npm run ci:workbook` | Workbook schema, month sheets, protections. |
+| Use cases | `usecases/` | `UseCases*.gs` | `npm run ci`, `npm run ci:workbook` | Application facade and domain use-case modules. |
+| UI server helpers | `ui-server/` | `SidebarServer.gs`, dialogs, `HtmlUtils.gs` | `npm run ci:client` | HtmlService server-side host/helpers. |
+| Security/audit | `security/` | `AuditTrail.gs`, `SecurityRedaction.gs` | `npm run ci` | Audit and redaction utilities. |
+| Operations | `operations/` | `Actions.gs`, triggers, reconciliation, project requests, `ExternalSpreadsheetMigration.gs` | `npm run ci`, `npm run ci:workbook` (`verify-external-spreadsheets.mjs`) | External workbook cutover (preview/apply/finalize) plus Sidebar panel `ui/Js.ExternalMigration.html`. |
+| UI (HTML/JS) | `ui/` | `Sidebar.html`, `JavaScript.html`, `Js.*.html`, `Styles*.html` | `npm run ci:client`, `verify-user-facing-copy.mjs` | Phases 1–4 complete (#34); `include()` resolves legacy basenames. Sysadmin panel «Міграція зовнішніх таблиць». |
+
+## Root stays non-runtime only
+
+Repository metadata and tooling config stay at root: `appsscript.json`, `package.json`, `.claspignore`, docs index files, and similar non-runtime files. GAS runtime files (`.gs`, `.html`) live in purpose-named folders.
+
+## Clasp push reminder
+
+Nested files: `!**/*.gs`, `!**/*.html`, then re-exclude `node_modules/**`, `.git/**`, `_backup*/**`. `tests/Stage7TestRunner*.gs` are included in deploy. Run `npx clasp status` before production push.

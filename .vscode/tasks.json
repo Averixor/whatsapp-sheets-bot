@@ -1,0 +1,63 @@
+{
+  "version": "2.0.0",
+  "options": {
+    "env": {
+      "NODE_OPTIONS": "",
+      "VSCODE_INSPECTOR_OPTIONS": ""
+    }
+  },
+  "presentation": {
+    "reveal": "always",
+    "panel": "shared",
+    "focus": true
+  },
+  "tasks": [
+    {
+      "label": "npm: precheck",
+      "type": "npm",
+      "script": "precheck",
+      "problemMatcher": []
+    },
+    {
+      "label": "npm: check",
+      "type": "npm",
+      "script": "check",
+      "problemMatcher": [],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "npm: ci",
+      "type": "npm",
+      "script": "ci",
+      "problemMatcher": [],
+      "group": "test"
+    },
+    {
+      "label": "npm: gas:status",
+      "type": "npm",
+      "script": "gas:status",
+      "problemMatcher": []
+    },
+    {
+      "label": "npm: gas:push",
+      "type": "npm",
+      "script": "gas:push",
+      "problemMatcher": []
+    },
+    {
+      "label": "npm: gas:pull",
+      "type": "npm",
+      "script": "gas:pull",
+      "problemMatcher": []
+    },
+    {
+      "label": "npm: gas:open",
+      "type": "npm",
+      "script": "gas:open",
+      "problemMatcher": []
+    }
+  ]
+}

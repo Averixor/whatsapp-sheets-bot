@@ -9,20 +9,14 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { loadContract, repoRoot } from "./lib/load-contract.mjs";
-import { findFileByBasename, walkGasFiles } from "./lib/gas-files.mjs";
+import { readRepoFileByBasename, walkGasFiles, findFileByBasename } from "./lib/gas-files.mjs";
 
 const contract = loadContract("manual-format-rules.contract.json");
 
 function read(file) {
-  const basename = path.basename(file);
-  const ext = path.extname(basename);
-  const extensions = ext ? [ext] : [".gs", ".html"];
-  const rel = findFileByBasename(repoRoot, basename, extensions) || file;
-  const fullPath = path.join(repoRoot, rel);
-  if (!fs.existsSync(fullPath)) {
-    throw new Error(`verify-format-rules-governance: missing file: ${file}`);
-  }
-  return fs.readFileSync(fullPath, "utf8");
+  return readRepoFileByBasename(repoRoot, file, {
+    errorPrefix: "verify-format-rules-governance",
+  });
 }
 
 function load(context, file) {
@@ -42,7 +36,10 @@ function functionWindow(source, name, size = 5000) {
 }
 
 for (const file of contract.sourceFiles) {
-  assert.ok(fs.existsSync(path.join(repoRoot, file)), `${file} must exist`);
+  assert.ok(
+    findFileByBasename(repoRoot, path.basename(file), [".gs"]) !== null,
+    `${file} must exist`,
+  );
 }
 
 const registrySource = read("ConditionalFormatRegistry.gs");
@@ -109,7 +106,7 @@ const baseRecord = {
   Range: "C2:AG33",
   RuleType: "CONDITIONAL_FORMAT",
   ConditionType: "TEXT_EQUAL_TO",
-  ConditionValue: "Black",
+  ConditionValue: "Black Hawk",
   Formula: "",
   Background: "#000000",
   FontColor: "#ffffff",
@@ -198,7 +195,7 @@ assert.deepEqual(
   [10],
   "numeric criteria must remain numeric",
 );
-const unknownRule = fakeRule("Black");
+const unknownRule = fakeRule("Black Hawk");
 const serialized = serialize(fakeSheet, unknownRule, 1);
 assert.equal(
   classify(fakeSheet, unknownRule, { serialized, registryMap: {} }).detectedAs,
@@ -441,7 +438,7 @@ const exported = exportAdopted();
 assert.equal(guardedRole, "sysadmin");
 assert.equal(exported.rules.length, 1, "adopted permanent rule must export");
 assert.equal(exported.rules[0].sheet, "06");
-assert.equal(exported.rules[0].condition.value, "Black");
+assert.equal(exported.rules[0].condition.value, "Black Hawk");
 
 const setPreserved = vm.runInContext("_formatRulesSetPreservedRules_", context);
 const manualRule = fakeRule("MANUAL");
@@ -643,7 +640,45 @@ for (const file of contract.monthlyScheduleCopyPaths || []) {
     /\.clearFormats?\(\)|\.setConditionalFormatRules\(/,
     `${file} must not erase monthly formatting after copy`,
   );
+  assert.match(
+    source,
+    /replaceConditionalFormatRulesFromSheet_\(\s*src,\s*newSheet,?\s*\)/,
+    `${file} must restore CF from the source month after create/sync`,
+  );
+  assert.doesNotMatch(
+    source,
+    /CopyPasteType\.PASTE_CONDITIONAL_FORMATTING/,
+    `${file} must not use PASTE_CONDITIONAL_FORMATTING (destroys sheet CF rules)`,
+  );
 }
+
+assert.match(
+  governanceSource,
+  /function replaceConditionalFormatRulesFromSheet_/,
+  "governance must expose exact CF replace helper for month create restore",
+);
+assert.match(
+  governanceSource,
+  /function _formatRulesMapRangeBetweenMonthlySheets_/,
+  "governance must remap monthly CF ranges onto the target schedule grid",
+);
+assert.match(
+  governanceSource,
+  /function extendConditionalFormatRulesThroughRow_/,
+  "governance must expose CF range extend helper for capacity growth",
+);
+
+const monthlyCallsignSync = read("MonthlyCallsignSync.gs");
+assert.doesNotMatch(
+  monthlyCallsignSync,
+  /CopyPasteType\.PASTE_CONDITIONAL_FORMATTING/,
+  "monthly callsign capacity growth must not paste conditional formatting",
+);
+assert.match(
+  monthlyCallsignSync,
+  /extendConditionalFormatRulesThroughRow_/,
+  "monthly callsign capacity growth must extend CF rule ranges safely",
+);
 
 for (const [api, role] of Object.entries(contract.apis)) {
   const source = governanceSource.includes(`function ${api}`)
@@ -658,10 +693,24 @@ for (const [api, role] of Object.entries(contract.apis)) {
 
 const packageJson = JSON.parse(read("package.json"));
 assert.ok(
-  String(packageJson.scripts.ci || "").includes(
+  String(packageJson.scripts["ci:format-rules"] || "").includes(
     "scripts/verify-format-rules-governance.mjs",
   ),
-  "main CI must run format-rules governance verifier",
+  "ci:format-rules must run format-rules governance verifier",
+);
+assert.ok(
+  String(packageJson.scripts["ci:domain"] || "").includes("ci:format-rules"),
+  "ci:domain must invoke ci:format-rules",
+);
+assert.ok(
+  String(packageJson.scripts["ci:chain"] || "").includes("ci:domain") ||
+    String(packageJson.scripts.ci || "").includes("ci:domain"),
+  "main CI chain must include ci:domain phase",
+);
+assert.ok(
+  String(packageJson.scripts.ci || "").includes("ci:chain") ||
+    String(packageJson.scripts.ci || "").includes("ci:domain"),
+  "main CI must reach domain phase (directly or via ci:chain)",
 );
 assert.ok(
   fs.existsSync(path.join(repoRoot, "docs/format-rules-governance.md")),

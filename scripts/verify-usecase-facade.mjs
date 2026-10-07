@@ -9,13 +9,20 @@ import {
   loadEnvelopeFieldTypes,
   repoRoot,
 } from './lib/load-contract.mjs';
+import { findFileByBasename } from './lib/gas-files.mjs';
 
 const facadeContract = loadContract('facade.contract.json');
 const DEFAULT_ENVELOPE = loadEnvelopeFieldTypes();
 const snapshotPath = path.join(repoRoot, facadeContract.snapshotPath);
 
+function resolveRepoRel(rel) {
+  if (fs.existsSync(path.join(repoRoot, rel))) return rel;
+  return findFileByBasename(repoRoot, path.basename(rel), ['.gs']) || rel;
+}
+
 function read(rel) {
-  return fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+  const resolved = resolveRepoRel(rel);
+  return fs.readFileSync(path.join(repoRoot, resolved), 'utf8');
 }
 
 function extractNamedFunctionsBeforeReturn(text, iifeMarker) {
@@ -50,7 +57,8 @@ function extractNamedFunctionsBeforeReturn(text, iifeMarker) {
 function extractDomainImplementations() {
   const methods = {};
   for (const [rel, marker] of facadeContract.domainFiles) {
-    const full = path.join(repoRoot, rel);
+    const resolved = resolveRepoRel(rel);
+    const full = path.join(repoRoot, resolved);
     if (!fs.existsSync(full)) continue;
     Object.assign(methods, extractNamedFunctionsBeforeReturn(read(rel), marker));
   }

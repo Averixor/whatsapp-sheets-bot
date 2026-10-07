@@ -4,19 +4,32 @@ Thank you for helping improve this project.
 
 This repository contains a Google Apps Script and Google Sheets automation project. Changes should be careful, focused, testable, and easy to review.
 
-New maintainers: start with [`docs/developer-guide.md`](./docs/developer-guide.md) (system layers, first-week safe zones). Incident routing: [`RUNBOOK.md`](./RUNBOOK.md) §9. Structural changes: [`docs/adr/README.md`](./docs/adr/README.md).
+New maintainers: start with [`docs/developer-guide.md`](./docs/developer-guide.md) (system layers, first-week safe zones). File locations: [`docs/module-map.md`](./docs/module-map.md). Incident routing: [`RUNBOOK.md`](./RUNBOOK.md) §9. Structural changes: [`docs/adr/README.md`](./docs/adr/README.md).
 
 ## Local workflow (source of truth)
 
-Use Node.js 24 (`.nvmrc`) and the repository-pinned dependencies:
+Use Node.js 24 locally (`.nvmrc`; `engines.node` is `>=24` with no max major) and the repository-pinned dependencies:
 
 ```bash
 npm ci
-npm run ci
-npx clasp status
+npm run check    # full CI (alias: npm run ci)
 ```
 
 Run individual npm scripts only when diagnosing a specific failed check.
+
+### Terminal commands (maintainers)
+
+| Command | What it does |
+| -------- | ------------- |
+| `npm run check` | Full local CI |
+| `npm run c` | Refresh `docs/project-files-complete.txt` + full CI |
+| `npm run deploy:prod` | Full CI + production `clasp push` |
+| `npm run push:remote` | `git push` only; `-- --with-gas` on `main` for clasp — **no CI**; commit first |
+| `npm run gas` | Node version gate + `clasp push` only — **not** full CI |
+| `npm run gh -- "msg"` | Commit **staged-only** + push to GitHub (never `git add -A`) |
+| `npm run ship -- "msg"` | Preflight → `ci` + `gh`; optional `--deploy-gas` on `main` (before CI). Prepare map with `map:project-files` + `git add` first. |
+| `npm run gas:open` | Open GAS editor (`clasp open-script`) |
+| `npm run gas:status` | List files tracked for clasp push |
 
 ### Commit messages
 
@@ -29,16 +42,13 @@ descriptive enough.
 **Pushing to GitHub does not update Google Apps Script.** Deploy explicitly:
 
 ```bash
-npx clasp status
-npx clasp push
+npm run gas:status
+npm run gas:push
 ```
 
-Or run `npm run deploy:prod` for CI + production push. Production keeps
-`executionApi.access = MYSELF`; it does not run remote smoke.
+Confirm **Tracked files** includes all domain `**/*.gs` (including `tests/Stage7TestRunner*.gs`), `ui/**/*.html`, and excludes `node_modules/`, `*.md`. See [`docs/module-map.md`](./docs/module-map.md) and [ADR-003](docs/adr/003-working-domain-layout.md).
 
-For remote smoke, configure `.clasp.smoke.json` from
-`.clasp.smoke.example.json` with a separate non-production Apps Script project,
-then run `npm run deploy:smoke`.
+Or run `npm run deploy:prod` for CI + production clasp, or `npm run push:remote -- --with-gas` on `main` after commit for git + clasp without re-running CI. Production keeps `executionApi.access = MYSELF`.
 
 ### Script Properties (spreadsheet binding)
 
@@ -55,9 +65,10 @@ Sidebar bootstrap can create and seed these sheets (headers + one template row) 
 ### PERSONNEL / PHONES / birthday cache
 
 After every production deploy, and after changing **PERSONNEL**, **PHONES**,
-phone index logic, or birthday behavior, clear the script cache that backs
-profiles:
+phone index logic, or birthday behavior:
 
+- Run **`apiStage7MaterializeComputedData()`** when derived columns (Birthday `DD.MM.YYYY р.н.`, Age, Days until birthday), `PERSONNEL.Status` self-heal/validation, or callsign-sync outputs may be stale.
+- If you changed a month sheet and rely on derived history views, run **`apiStage7MaterializeMonthJournal({ monthSheet: "MM" })`** for that month.
 - Run **`apiStage7ClearPhoneCache()`** in the Apps Script editor (maintenance API).
 
 Then in the spreadsheet: close the sidebar → open it again → open a person card and confirm **ДН** and phone fields.
@@ -66,14 +77,24 @@ Then in the spreadsheet: close the sidebar → open it again → open a person c
 
 The repository runs a lightweight CI workflow on push and pull requests to **`main`** (also **`workflow_dispatch`**).
 
-It runs the complete `npm run ci` contract suite: GAS sanity, workbook and
-recipient contracts, **vacation planner** (`verify-vacation-planner.mjs`),
-function graph, client parsing/layers/XSS, response
-envelope, facade/snapshot/bridge governance, access API policy, OAuth scopes,
-and jsconfig verification.
+It runs the complete `npm run ci` contract suite (**35** verify/audit scripts after `precheck`): GAS sanity, clasp patterns, **Ukrainian/Russian language** and **user-facing copy** guards, reference workbook layout, reference repositories, workbook and monthly callsign contracts, send-panel bounds, temporary-property register, materialize / month-journal / age-birthday countdown, vacation planner,
+recipient contracts, personnel-status and format-rules contracts, function graph, client
+parsing/layers/XSS, response envelope, facade/snapshot/bridge governance, access
+API governance, access policy checks and hotfixes, OAuth scopes, project file map, and jsconfig verification.
+
+Shortcuts: `npm run ci:copy`, `npm run ci:language`, `npm run ci:vacations`, `npm run ci:workbook`, `npm run ci:materialize`.
 
 The workflow does **not** deploy to Apps Script. Deployment stays local
-(`npx clasp push` / `npm run deploy:prod`). No Google secrets.
+(`npm run push:remote` / `npm run deploy:prod` / `npm run gas:push`). No Google secrets.
+
+### Local secrets (never commit)
+
+| File | In git? | Purpose |
+| ------ | -------- | -------- |
+| `.clasp.json` | no | Production scriptId |
+| `.clasp.example.json` | yes | Template |
+
+`.gitignore` and `.cursorignore` hide local clasp bindings from git and from Cursor AI indexing.
 
 ## Basic workflow (contributors)
 
@@ -95,7 +116,7 @@ Check project state:
 
 ```powershell
 git status
-clasp status
+npm run gas:status
 ```
 
 ## Code guidelines
@@ -122,6 +143,9 @@ Use logical separation:
 - Compatibility shims should stay small and clearly named.
 
 Before adding a new file, check whether the code belongs in an existing module.
+Use [`docs/project-files-complete.txt`](docs/project-files-complete.txt) as the
+repository file map (depth-first tree). After creating, deleting, or moving files,
+run **`npm run map:project-files`** and commit the updated map in the same change.
 
 ## Security rules
 
@@ -152,8 +176,6 @@ A pull request should include:
 
 Apps Script errors often appear only at runtime in Google’s environment.
 
-After `clasp push`, run smoke or diagnostics from the editor when relevant (see `RUNBOOK.md` — Post-deploy checks).
-
 ## Documentation
 
 Update documentation when changing:
@@ -167,8 +189,14 @@ Update documentation when changing:
 - Configuration files
 - Project workflow
 - **`SHEET_HEADERS` / ACCESS schema** — keep **`README.md`**, **`RUNBOOK.md`**, **`ARCHITECTURE.md`** in sync
-- **Daily summaries** — keep **`docs/daily-summary-architecture.md`**, **`ARCHITECTURE.md` §7.1**, **`RUNBOOK.md` §22** aligned when changing `Report_*.gs`, `Summaries.gs`, or sidebar summary flow
-- **Script properties** — keep **`README.md`**, **`RUNBOOK.md` §14**, **`SECURITY.md`**, **`CONTRIBUTING.md`** aligned with `DataAccess.gs`
+- **Daily summaries** — keep **`docs/daily-summary-architecture.md`**, **`ARCHITECTURE.md` §7.1**, **`RUNBOOK.md` §22** aligned when changing `reports/Report_*.gs`, `reports/Summaries.gs`, or sidebar summary flow
+- **Month journal / reference sheets** — keep **`README.md`**, **`ARCHITECTURE.md`**, **`RUNBOOK.md`**, **`docs/module-map.md`**, and workbook/reference contracts aligned when changing `reports/MonthJournalMaterialize.gs` or `ReferenceSheetsRepository_`
+- **Vacation monthly sync** — keep **`docs/vacation-planner.md`**, **`ARCHITECTURE.md` §7.2**, **`RUNBOOK.md` §21–§23** aligned when changing `vacations/VacationMonthlySync.gs` or `ui/Js.VacationSync.html`
+- **Inventory reconciliation** — keep **`docs/inventory-reconciliation.md`**, **`ARCHITECTURE.md` §7.4**, **`SECURITY.md`** (OAuth scopes), and access-api governance aligned when changing `inventory/InventoryReconciliation.gs` or `ui/Js.InventoryReconciliation.html`
+- **Temporary property register** — keep **`docs/temporary-property-register.md`**, **`ARCHITECTURE.md` §7.5**, **`AGENTS.md`**, and `scripts/verify-temporary-property-register.mjs` aligned when changing `inventory/TemporaryPropertyRegister.gs` or person-card outstanding-property rendering
+- **User-facing copy** — keep **`docs/user-facing-copy.md`** aligned when changing sidebar labels, menus, dialogs, health messages, or sheet titles shown to users; run **`npm run ci:copy`** after UI text edits
+- **Script properties** — keep **`README.md`**, **`RUNBOOK.md` §15**, **`SECURITY.md`**, **`CONTRIBUTING.md`** aligned with `data/DataAccess.gs`
+- **Repository file map** — refresh **`docs/project-files-complete.txt`** with **`npm run map:project-files`** whenever files are added, removed, or moved; CI enforces freshness via **`verify-project-files-map.mjs`**
 
 ## Review principles
 

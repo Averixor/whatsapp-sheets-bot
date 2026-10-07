@@ -1,0 +1,1701 @@
+<script>
+  // Js.Actions — active Stage 7.1 runtime fragment.
+
+  window.SidebarApp = window.SidebarApp || {
+    handleMenuAction() {},
+    showMenu() {},
+    goBack() {},
+    navigateTo() {},
+    showRequestsForm() {},
+    submitRequestForm() {},
+    toggleConsole() {},
+    setConsoleMode() {},
+    clearConsole() {},
+    scrollConsole() {},
+    copyConsole() {},
+    setConsoleFilter() {},
+    startSendingUnsent() {},
+    sendOneFromPanel() {},
+    confirmSendFromPanel() {},
+    rejectSendFromPanel() {},
+    debugAccess() {},
+    showPhoneDirectory() {},
+    showCarsRegister() {},
+    showInventoryReconciliation() {},
+    showExternalMigration() {},
+    filterPhoneDirectory() {},
+    filterCarsRegister() {},
+    openReferenceLink() {},
+  };
+
+  // =========================
+  // REQUESTS (Projects -> Requests)
+  // =========================
+
+  async function showRequestsForm() {
+    showStandardResult("📝 Заявка");
+    setText("resultTitle", "Заявки");
+
+    setHtml(
+      "resultContent",
+      `
+        <div class="result-screen requests-form">
+          <div class="result-screen-title">Нова заявка</div>
+          <div style="color:var(--text-secondary);font-size:13px;line-height:1.45;">
+            Завантажую список проєктів...
+          </div>
+        </div>
+      `,
+    );
+
+    showLoading();
+    try {
+      const res = await runServerMethod_(
+        "apiGetActiveProjects",
+        [],
+        "Js.Actions.showRequestsForm",
+      );
+      if (!res?.success) {
+        throw new Error(res?.error || "Не вдалося отримати проєкти");
+      }
+
+      const projects = Array.isArray(res?.data?.result?.projects)
+        ? res.data.result.projects
+        : [];
+
+      setHtml(
+        "resultContent",
+        `
+          <div class="result-screen requests-form">
+            <div class="result-screen-title">Нова заявка</div>
+
+            <label for="reqProject" style="display:block;margin:10px 0 6px;font-weight:700;color:var(--text-primary);">
+              Проєкт *
+            </label>
+            <select
+              id="reqProject" name="reqProject"
+              class="input"
+              style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);"
+            >
+              <option value="">— Обери проєкт —</option>
+            </select>
+
+            <label for="reqTitle" style="display:block;margin:12px 0 6px;font-weight:700;color:var(--text-primary);">
+              Тема *
+            </label>
+            <input
+              id="reqTitle" name="reqTitle"
+              class="input"
+              type="text"
+              maxlength="140"
+              style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);"
+              placeholder="Коротко про суть"
+            />
+
+            <label for="reqDetails" style="display:block;margin:12px 0 6px;font-weight:700;color:var(--text-primary);">
+              Опис *
+            </label>
+            <textarea
+              id="reqDetails" name="reqDetails"
+              class="input"
+              rows="8"
+              maxlength="3000"
+              style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);resize:vertical;min-height:150px;"
+              placeholder="Що саме потрібно зробити / що не працює / посилання / приклади"
+            ></textarea>
+
+            <div class="result-screen-actions">
+              <button class="btn btn-primary" type="button" onclick="SidebarApp.submitRequestForm()">Зберегти</button>
+            </div>
+          </div>
+        `,
+      );
+
+      const select = $id("reqProject");
+      if (select) {
+        projects.forEach((project) => {
+          const option = document.createElement("option");
+          option.value = String(project?.id ?? "");
+          option.textContent = String(project?.name ?? "");
+          select.appendChild(option);
+        });
+      }
+
+      logToConsole(`✓ Проєкти завантажено: ${projects.length}`, "success");
+    } catch (e) {
+      logToConsole(`✕ Заявки: ${normalizeError(e)}`, "error");
+      displayInResult("error", { error: normalizeError(e) });
+    } finally {
+      hideLoading();
+    }
+  }
+
+  async function submitRequestForm() {
+    const projectId = String($id("reqProject")?.value || "").trim();
+    const title = String($id("reqTitle")?.value || "").trim();
+    const details = String($id("reqDetails")?.value || "").trim();
+
+    if (!projectId) {
+      showToast("✕ Обери проєкт");
+      return;
+    }
+    if (!title) {
+      showToast("✕ Заповни тему");
+      return;
+    }
+    if (!details) {
+      showToast("✕ Заповни опис");
+      return;
+    }
+
+    const projectName = String(
+      $id("reqProject")?.selectedOptions?.[0]?.textContent || "",
+    ).trim();
+
+    showLoading();
+    try {
+      const res = await runServerMethod_(
+        "apiSubmitRequest",
+        [
+          {
+            projectId,
+            projectName,
+            title,
+            details,
+          },
+        ],
+        "Js.Actions.submitRequestForm",
+      );
+      if (res?.success) {
+        showToast("✓ Заявку збережено");
+        displayInResult("success", {
+          message: res.message || "✓ Заявку збережено",
+        });
+      } else if (res?.success === true && res?.message) {
+        showToast(res?.message || "");
+        displayInResult("success", { message: res?.message || "" });
+      } else {
+        throw new Error(res?.error || "Не вдалося зберегти");
+      }
+      logToConsole(
+        `📝 Заявка: ${res?.message || "операція виконана"}`,
+        res?.success ? "info" : "warning",
+      );
+    } catch (e) {
+      logToConsole(`✕ Збереження заявки: ${normalizeError(e)}`, "error");
+      displayInResult("error", { error: normalizeError(e) });
+    } finally {
+      hideLoading();
+    }
+  }
+
+  window.SidebarApp.showRequestsForm = showRequestsForm;
+  window.SidebarApp.submitRequestForm = submitRequestForm;
+
+  function canOpenPersonCardClientSafe_(callsign) {
+    if (typeof canOpenPersonCardClient_ === "function") {
+      try {
+        return !!canOpenPersonCardClient_(callsign);
+      } catch (_) {}
+    }
+    const access =
+      typeof STATE !== "undefined" && STATE && STATE.access ? STATE.access : {};
+    const role = String(access.role || "guest")
+      .trim()
+      .toLowerCase();
+    const target = String(callsign || "")
+      .trim()
+      .toUpperCase();
+    const own = String(access.personCallsign || "")
+      .trim()
+      .toUpperCase();
+    if (!target) return false;
+    if (access.isOperator || access.isAdmin) return true;
+    if (role !== "viewer") return false;
+    return !!own && own === target;
+  }
+
+  async function reportAccessViolationSafe_(actionName, details) {
+    if (typeof reportAccessViolation_ === "function") {
+      try {
+        return await reportAccessViolation_(actionName, details);
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  // =========================
+  // COPY
+  // =========================
+
+  function fallbackCopy(text) {
+    try {
+      const el = document.createElement("textarea");
+      el.id = "wasbClipboardFallback";
+      el.name = "wasbClipboardFallback";
+      el.setAttribute("aria-hidden", "true");
+      el.tabIndex = -1;
+      el.value = text;
+      el.style.position = "fixed";
+      el.style.left = "-9999px";
+
+      document.body.appendChild(el);
+      el.focus();
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+
+      showToast("✓ Скопійовано");
+    } catch (_) {
+      showToast("✕ Не вдалося скопіювати");
+    }
+  }
+
+  function copyResultText(text) {
+    const value = String(text ?? "");
+
+    if (!value) {
+      showToast("⚠ Нічого копіювати");
+      return;
+    }
+
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText(value)
+        .then(() => showToast("✓ Скопійовано"))
+        .catch(() => fallbackCopy(value));
+      return;
+    }
+
+    fallbackCopy(value);
+  }
+
+  function copyToClipboard(btn) {
+    const text = btn?.getAttribute?.("data-text") || btn?.innerText;
+    if (!text) return;
+    copyResultText(text);
+  }
+
+  // =========================
+  // COMMANDER SEND
+  // =========================
+
+  function getSelectedCommanderRecipient_() {
+    const el = document.getElementById("commanderRecipientSelect");
+    const fromSelect = el ? String(el.value || "").trim() : "";
+    return fromSelect || String(STATE.commanderRole || "").trim();
+  }
+
+  function setCommanderRecipient(value) {
+    STATE.commanderRole = String(value || "").trim();
+    try {
+      localStorage.setItem("wasb.commanderRole", STATE.commanderRole);
+    } catch (_) {}
+  }
+
+  function extractCommanderLink_(result) {
+    return String(
+      result?.link ||
+        result?.data?.link ||
+        result?.data?.result?.link ||
+        result?.result?.link ||
+        result?.raw?.data?.link ||
+        result?.raw?.data?.result?.link ||
+        "",
+    ).trim();
+  }
+
+  function openPreparedCommanderLink_(popup, link) {
+    if (!link) {
+      showToast("✕ Посилання WhatsApp не отримано від сервера");
+      try {
+        if (popup && !popup.closed) popup.close();
+      } catch (_) {}
+      return false;
+    }
+
+    if (STATE.DIAG_TEST_MODE) return true;
+
+    try {
+      if (popup && !popup.closed) {
+        popup.location.href = link;
+        return true;
+      }
+    } catch (_) {}
+
+    openLinkSafe(link);
+    return true;
+  }
+
+  async function sendDetailedToCommander() {
+    if (!STATE.lastDetailedDate || !STATE.lastDetailedText) {
+      showToast("✕ Спочатку створи детальне зведення");
+      return;
+    }
+
+    const popup = STATE.DIAG_TEST_MODE
+      ? null
+      : window.open("about:blank", "WA_COMMANDER_WINDOW");
+    showLoading();
+
+    try {
+      const result = await runServerMethod_(
+        "sendDetailedToCommanderSidebar",
+        [
+          STATE.lastDetailedDate,
+          STATE.lastDetailedText,
+          getSelectedCommanderRecipient_(),
+        ],
+        "Js.Actions.sendDetailedToCommander",
+      );
+
+      if (result?.success) {
+        const link = extractCommanderLink_(result);
+        openPreparedCommanderLink_(popup, link);
+        showToast("✓ Відправлено командиру");
+      } else {
+        try {
+          if (popup && !popup.closed) popup.close();
+        } catch (_) {}
+        showToast("✕ " + (result?.error || "Помилка"));
+      }
+    } catch (error) {
+      try {
+        if (popup && !popup.closed) popup.close();
+      } catch (_) {}
+      showToast("✕ " + normalizeError(error));
+    } finally {
+      hideLoading();
+    }
+  }
+
+  async function sendDaySummaryToCommander() {
+    if (!STATE.lastSummaryDate || !STATE.lastSummaryText) {
+      showToast("✕ Спочатку створи зведення дня");
+      return;
+    }
+
+    const popup = STATE.DIAG_TEST_MODE
+      ? null
+      : window.open("about:blank", "WA_COMMANDER_WINDOW");
+    showLoading();
+
+    try {
+      const result = await runServerMethod_(
+        "sendDaySummaryToCommanderSidebar",
+        [
+          STATE.lastSummaryDate,
+          STATE.lastSummaryText,
+          getSelectedCommanderRecipient_(),
+        ],
+        "Js.Actions.sendDaySummaryToCommander",
+      );
+
+      if (result?.success) {
+        const link = extractCommanderLink_(result);
+        openPreparedCommanderLink_(popup, link);
+        showToast("✓ Відправлено командиру");
+      } else {
+        try {
+          if (popup && !popup.closed) popup.close();
+        } catch (_) {}
+        showToast("✕ " + (result?.error || "Помилка"));
+      }
+    } catch (error) {
+      try {
+        if (popup && !popup.closed) popup.close();
+      } catch (_) {}
+      showToast("✕ " + normalizeError(error));
+    } finally {
+      hideLoading();
+    }
+  }
+
+  // =========================
+  // BIRTHDAYS
+  // =========================
+
+  function displayBirthdayResult(result) {
+    const contentEl = $id("resultContent");
+    if (!contentEl) return;
+    contentEl.innerHTML =
+      renderCommanderRecipientControls_() + renderBirthdayResult(result);
+  }
+
+  function formatAgeDisplayUa(age) {
+    const raw = String(age == null ? "" : age).trim();
+    if (!raw) return "";
+
+    const alreadyFormatted = raw.match(/^(\d+)\s*р\.$/);
+    if (alreadyFormatted) {
+      return `${alreadyFormatted[1]} р.`;
+    }
+
+    const a = Number(raw);
+    if (!Number.isFinite(a) || a <= 0) return "";
+    return `${a} р.`;
+  }
+
+  function formatBirthdayWithAge(birthday, age) {
+    const b = String(birthday || "").trim();
+    const agePart = formatAgeDisplayUa(age);
+
+    if (!b) return "—";
+    if (!agePart) return b;
+
+    return `${b} (${agePart})`;
+  }
+
+  function formatBirthdayDayWord(days) {
+    const n = Math.abs(Number(days)) % 100;
+    const n1 = n % 10;
+    if (n > 10 && n < 20) return "днів";
+    if (n1 === 1) return "день";
+    if (n1 >= 2 && n1 <= 4) return "дні";
+    return "днів";
+  }
+
+  function formatBirthdayCardNote(daysUntil, mode) {
+    const d = Number(daysUntil);
+    if (!Number.isFinite(d)) return "";
+
+    if (d === 0) return "🥳 Сьогодні день народження!";
+    if (d === 1) return "⏳ Завтра день народження";
+
+    const word = formatBirthdayDayWord(d);
+    return mode === "commander"
+      ? `Нагадування: через ${d} ${word}`
+      : `До свята: ${d} ${word}`;
+  }
+
+  function renderBirthdayResult(rawData) {
+    const data = normalizeBirthdayData(rawData);
+    const esc = (value) => escapeHtml(String(value || ""));
+
+    let html = "";
+
+    // ---------- NEW SHAPE ----------
+
+    if (data.mode === "new") {
+      if (
+        Array.isArray(data.commanderMessages) &&
+        data.commanderMessages.length > 0
+      ) {
+        html += `
+          <div class="birthday-group birthday-group--info">
+            <div class="birthday-group__title">КОМАНДИРУ (${data.commanderMessages.length})</div>
+        `;
+
+        data.commanderMessages.forEach((row) => {
+          html += `
+            <div class="birthday-card">
+              <div class="birthday-card__name">🎂 ${esc(row.fml || row.callsign)}</div>
+              <div class="birthday-card__meta">
+                ${esc(formatBirthdayWithAge(row.birthday, row.age))}
+              </div>
+              <div class="birthday-card__note">
+                ${esc(formatBirthdayCardNote(row.daysUntil, "commander"))}
+              </div>
+              ${renderSelectedRecipientSendButton_(row?.message, "birthday-card__btn birthday-card__btn--blue")}
+            </div>
+          `;
+        });
+
+        html += `</div>`;
+      }
+
+      if (
+        Array.isArray(data.birthdayMessages) &&
+        data.birthdayMessages.length > 0
+      ) {
+        html += `
+          <div class="birthday-group birthday-group--warning">
+            <div class="birthday-group__title">ІМЕНИННИКУ (${data.birthdayMessages.length})</div>
+        `;
+
+        data.birthdayMessages.forEach((person) => {
+          html += `
+            <div class="birthday-card">
+              <div class="birthday-card__name">🎂 ${esc(person.fml || person.displayName)}</div>
+              <div class="birthday-card__meta">
+                ${esc(formatBirthdayWithAge(person.birthday, person.age))}
+              </div>
+              <div class="birthday-card__note">
+                ${esc(formatBirthdayCardNote(person.daysUntil, "person"))}
+              </div>
+              ${
+                person.link
+                  ? `<button class="birthday-card__btn" onclick="SidebarApp.sendBirthdayMessage('${escapeJsString(person.link)}')">Привітати</button>`
+                  : person.phone
+                    ? `<button class="birthday-card__btn" onclick="SidebarApp.openBirthdayWA('${escapeJsString(person.phone)}', '${escapeJsString(person.displayName || person.fml)}')">Привітати у WhatsApp</button>`
+                    : `<div class="birthday-card__empty">⚠ Немає телефону</div>`
+              }
+            </div>
+          `;
+        });
+
+        html += `</div>`;
+      }
+    }
+
+    // ---------- LEGACY SHAPE ----------
+
+    if (data.mode === "legacy") {
+      if (Array.isArray(data.today) && data.today.length > 0) {
+        html += `
+          <div class="birthday-group birthday-group--warning">
+            <div class="birthday-group__title">🎂 СЬОГОДНІ ДН (${data.today.length})</div>
+        `;
+
+        data.today.forEach((person) => {
+          html += `
+            <div class="birthday-card">
+              <div class="birthday-card__name">🎉 ${esc(person.fml || person.displayName)}</div>
+              <div class="birthday-card__meta">
+                ${esc(formatBirthdayWithAge(person.birthday, person.age))}
+              </div>
+              ${
+                person.phone
+                  ? `<button class="birthday-card__btn" onclick="SidebarApp.openBirthdayWA('${escapeJsString(person.phone)}', '${escapeJsString(person.displayName || person.fml)}')">Привітати у WhatsApp</button>`
+                  : `<div class="birthday-card__empty">Немає телефону</div>`
+              }
+            </div>
+          `;
+        });
+
+        html += `</div>`;
+      }
+
+      if (Array.isArray(data.tomorrow) && data.tomorrow.length > 0) {
+        html += `
+          <div class="birthday-group birthday-group--info">
+            <div class="birthday-group__title">⏳ ЗАВТРА ДН (${data.tomorrow.length})</div>
+        `;
+
+        data.tomorrow.forEach((person) => {
+          html += `
+            <div class="birthday-card">
+              <div class="birthday-card__name">🎂 ${esc(person.fml || person.displayName)}</div>
+              <div class="birthday-card__meta">
+                ${esc(formatBirthdayWithAge(person.birthday, person.age))}
+              </div>
+              ${
+                person.phone
+                  ? `<button class="birthday-card__btn birthday-card__btn--blue" onclick="SidebarApp.openBirthdayWA('${escapeJsString(person.phone)}', '${escapeJsString(person.displayName || person.fml)}')">📱 Підготувати привітання</button>`
+                  : `<div class="birthday-card__empty">⚠ Немає телефону</div>`
+              }
+            </div>
+          `;
+        });
+
+        html += `</div>`;
+      }
+    }
+
+    if (!html) {
+      html = `
+        <div class="result-item">
+          <div class="result-value" style="color:var(--text-secondary);">
+            Сьогодні немає нагадувань по днях народженнях.
+          </div>
+        </div>
+      `;
+    }
+
+    return html;
+  }
+
+  async function openBirthdayWA(phone, name) {
+    showLoading();
+
+    try {
+      const result = await CardApi.buildBirthdayLink(phone, name);
+
+      if (result?.success && result.link) {
+        if (!STATE.DIAG_TEST_MODE) openLinkSafe(result.link);
+        showToast("✓ WhatsApp відкрито");
+      } else {
+        showToast("✕ " + (result?.error || "Немає телефону"));
+      }
+    } catch (error) {
+      showToast("✕ " + normalizeError(error));
+    } finally {
+      hideLoading();
+    }
+  }
+
+  function sendBirthdayMessage(link) {
+    if (!link) {
+      logToConsole("✕ Немає посилання для відправки", "error");
+      return;
+    }
+
+    if (!STATE.DIAG_TEST_MODE) openLinkSafe(link);
+    logToConsole("📱 WhatsApp відкрито", "success");
+  }
+
+  async function sendMessageToSelectedRecipient(message) {
+    const safeMessage = String(message || "").trim();
+    if (!safeMessage) {
+      showToast("✕ Немає тексту повідомлення");
+      return;
+    }
+
+    const popup = STATE.DIAG_TEST_MODE
+      ? null
+      : window.open("about:blank", "WA_RECIPIENT_WINDOW");
+    showLoading();
+
+    try {
+      const result = await runServerMethod_(
+        "prepareMessageToRecipientSidebar",
+        [
+          safeMessage,
+          {
+            recipientMode: "selected",
+            recipientRole: getSelectedCommanderRecipient_(),
+          },
+        ],
+        "Js.Actions.sendMessageToSelectedRecipient",
+      );
+      const link = extractCommanderLink_(result);
+      if (result?.success && openPreparedCommanderLink_(popup, link)) {
+        showToast("✓ Повідомлення підготовлено");
+      } else {
+        try {
+          if (popup && !popup.closed) popup.close();
+        } catch (_) {}
+        showToast(
+          "✕ " + (result?.error || "Не вдалося підготувати повідомлення"),
+        );
+      }
+    } catch (error) {
+      try {
+        if (popup && !popup.closed) popup.close();
+      } catch (_) {}
+      showToast("✕ " + normalizeError(error));
+    } finally {
+      hideLoading();
+    }
+  }
+
+  // =========================
+  // PERSON CARD
+  // =========================
+
+  async function openPersonCardByCallsign_(callsign, dateStr = "") {
+    if (!callsign) {
+      showToast("⚠ Позивний не вказано");
+      return;
+    }
+
+    if (!canOpenPersonCardClientSafe_(callsign)) {
+      await reportAccessViolationSafe_("openPersonCardUiDenied", {
+        source: "person-card-open",
+        requestedCallsign: callsign,
+        requestedDate: dateStr || "",
+      });
+      showToast("Можна відкрити лише власну картку");
+      logToConsole(
+        "✕ Недостатньо прав для відкриття картки: " + callsign,
+        "warning",
+      );
+      return;
+    }
+
+    try {
+      const data = await ActionDispatcher.run("openPersonCard", () =>
+        Stage7Api.openPersonCard(callsign, dateStr || ""),
+      );
+      if (!data || !data.success) {
+        const msg = data?.error || "Не вдалося отримати дані картки";
+        showError(msg);
+        logToConsole(`✕ ${msg}`, "error");
+        return;
+      }
+
+      renderPersonCard(data);
+      logToConsole(`Відкрито картку: ${data.callsign || callsign}`, "success");
+    } catch (error) {
+      const msg = normalizeError(error);
+      showError(msg);
+      logToConsole(`✕ ${msg}`, "error");
+    }
+  }
+
+  function looksLikeMessageTemplate_(message) {
+    const text = String(message || "");
+    return /\{\{|\[\[|%[A-Z_]+%|<<|>>/.test(text);
+  }
+
+  function renderPersonCard(data) {
+    const root = $id("personCardContainer");
+    if (!root) return;
+
+    showCardResult(`Картка: ${data.callsign || "Боєць"}`);
+
+    const currentVacHtml =
+      data.vac && data.vac.inVacation && Array.isArray(data.vac.matches)
+        ? `
+          <div class="person-card__section person-card__section--warn">
+            <div class="person-card__section-title">Відпустка зараз</div>
+            ${data.vac.matches
+              .map(
+                (v) => `
+              <div class="person-card__vac-row">
+                <b>${escapeHtml(v.no || "—")}</b>: ${escapeHtml(v.start || "—")} — ${escapeHtml(v.end || "—")}
+              </div>
+            `,
+              )
+              .join("")}
+          </div>
+        `
+        : "";
+
+    const nextVacHtml = data.nextVacation
+      ? `
+          <div class="person-card__section person-card__section--info">
+            <div class="person-card__section-title">Найближча відпустка</div>
+            <div><b>Номер:</b> ${escapeHtml(data.nextVacation.word || "—")}</div>
+            <div><b>Період:</b> ${escapeHtml(data.nextVacation.start || "—")} — ${escapeHtml(data.nextVacation.end || "—")}</div>
+            <div><b>Залишилось:</b> ${escapeHtml(String(data.nextVacation.daysUntil ?? "—"))} дн.</div>
+          </div>
+        `
+      : "";
+
+    const waButton = data.waLink
+      ? `<a class="person-card__btn person-card__btn--primary" href="${escapeAttr(data.waLink)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>`
+      : `<button class="person-card__btn" type="button" disabled>WhatsApp</button>`;
+
+    root.innerHTML = `
+      <div class="person-card">
+        <div class="person-card__header">
+          <div class="person-card__callsign">${escapeHtml(data.callsign || "—")}</div>
+          <div class="person-card__rank">${escapeHtml(data.rank || "—")}</div>
+        </div>
+
+        <div class="person-card__meta">
+          <div class="person-card__field">
+            <div class="person-card__label">Дата</div>
+            <div class="person-card__value">${escapeHtml(data.dateStr || "—")}</div>
+          </div>
+
+          <div class="person-card__field">
+            <div class="person-card__label">ПІБ</div>
+            <div class="person-card__value">${escapeHtml(data.fml || "—")}</div>
+          </div>
+
+          <div class="person-card__field">
+            <div class="person-card__label">Посада</div>
+            <div class="person-card__value">${escapeHtml(data.position || "—")}</div>
+          </div>
+
+          <div class="person-card__field">
+            <div class="person-card__label">ОШС</div>
+            <div class="person-card__value">${escapeHtml(data.oshs || "—")}</div>
+          </div>
+
+          <div class="person-card__field">
+            <div class="person-card__label">Телефон</div>
+            <div class="person-card__value">${escapeHtml(data.phoneDisplay || "—")}</div>
+          </div>
+
+          <div class="person-card__field">
+            <div class="person-card__label">ДН</div>
+            <div class="person-card__value">${escapeHtml(data.birthday || "—")}</div>
+          </div>
+
+          <div class="person-card__field">
+            <div class="person-card__label">Група</div>
+            <div class="person-card__value">${escapeHtml(data.todayGroup || "—")}</div>
+          </div>
+
+          <div class="person-card__field">
+            <div class="person-card__label">БР цей місяць</div>
+            <div class="person-card__value">${escapeHtml(data.brDaysThisMonth || "0")}</div>
+          </div>
+
+          <div class="person-card__field">
+            <div class="person-card__label">БР минулий місяць</div>
+            <div class="person-card__value">${escapeHtml(data.brDaysPrevMonth || "0")}</div>
+          </div>
+        </div>
+
+        ${currentVacHtml}
+        ${nextVacHtml}
+
+        <div class="person-card__actions">
+          ${waButton}
+          <button class="person-card__btn" type="button" onclick="SidebarApp.copyPersonMessage()">Копіювати</button>
+          <button class="person-card__btn" type="button" onclick="SidebarApp.openPersonCalendarFromCard('${escapeJsString(data.callsign || "")}')">Календар</button>
+        </div>
+
+        <div class="person-card__message-label">============================/div>
+        <div class="person-card__message" id="personCardMessage">${escapeHtml(data?.message ?? "")}</div>
+      </div>
+    `;
+
+    if (looksLikeMessageTemplate_(data?.message)) {
+      $id("personCardMessage")?.classList?.add(
+        "person-card__message--template",
+      );
+    }
+  }
+
+  async function openPersonCalendarFromCard(callsign) {
+    if (!callsign) {
+      showToast("Позивний не вказано");
+      return;
+    }
+
+    try {
+      await runServerMethod_(
+        "openPersonCalendar",
+        [callsign],
+        "Js.Actions.openPersonCalendarFromCard",
+      );
+    } catch (error) {
+      const msg = normalizeError(error);
+      showToast("✕ " + msg);
+      logToConsole(`✕ ${msg}`, "error");
+    }
+  }
+
+  function copyPersonMessage() {
+    const el = $id("personCardMessage");
+
+    if (!el) {
+      showToast("Немає тексту для копіювання");
+      return;
+    }
+
+    copyResultText(el.innerText || "");
+  }
+
+  function showError(message) {
+    const root = $id("personCardContainer");
+    if (!root) return;
+
+    showCardResult("Помилка");
+    root.innerHTML = `<div class="person-card-error">✕ ${escapeHtml(message || "Помилка")}</div>`;
+  }
+
+  // =========================
+  // PERSONNEL MODAL
+  // =========================
+
+  function initPersonnelModal() {
+    const modal = $id("personnelModal");
+    const backdrop = $id("personnelModalBackdrop");
+    const btnOpen = $id("btnOpenPersonnelModal");
+    const btnClose = $id("btnClosePersonnelModal");
+    const grid = $id("personnelGrid");
+    const searchInput = $id("personnelSearchInput");
+    const countEl = $id("personnelModalCount");
+    const emptyState = $id("personnelEmptyState");
+
+    if (
+      !modal ||
+      !backdrop ||
+      !btnOpen ||
+      !btnClose ||
+      !grid ||
+      !searchInput ||
+      !countEl ||
+      !emptyState
+    ) {
+      return;
+    }
+
+    const normalizeText = (value) =>
+      String(value || "")
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, " ");
+
+    const personnelSource =
+      typeof getPersonnelCallsigns_ === "function"
+        ? getPersonnelCallsigns_()
+        : PERSONNEL_CALLSIGNS;
+    let filteredCallsigns = Array.isArray(personnelSource)
+      ? [...personnelSource]
+      : [];
+
+    btnOpen.setAttribute("aria-expanded", "false");
+    modal.hidden = true;
+
+    function updateCount(count) {
+      countEl.textContent = `Усього: ${count}`;
+    }
+
+    function openModal() {
+      flashScreenTransition_("Завантаження списку...");
+
+      modal.hidden = false;
+      modal.classList.add("open");
+      btnOpen.setAttribute("aria-expanded", "true");
+
+      if (typeof syncConsoleOverlayState_ === "function") {
+        syncConsoleOverlayState_();
+      }
+
+      setTimeout(() => {
+        try {
+          searchInput.focus();
+          searchInput.select?.();
+        } catch (_) {}
+      }, 20);
+    }
+
+    function closeModal() {
+      modal.classList.remove("open");
+      modal.hidden = true;
+      btnOpen.setAttribute("aria-expanded", "false");
+
+      if (typeof syncConsoleOverlayState_ === "function") {
+        syncConsoleOverlayState_();
+      }
+
+      try {
+        btnOpen.focus();
+      } catch (_) {}
+    }
+
+    function renderGrid(list) {
+      grid.innerHTML = "";
+
+      if (!Array.isArray(list) || !list.length) {
+        emptyState.classList.remove("hidden");
+        updateCount(0);
+        return;
+      }
+
+      emptyState.classList.add("hidden");
+      updateCount(list.length);
+
+      const fragment = document.createDocumentFragment();
+
+      list.forEach((callsign) => {
+        const btn = document.createElement("button");
+        const allowed = canOpenPersonCardClientSafe_(callsign);
+
+        btn.type = "button";
+        btn.className = "personnel-card";
+        btn.textContent = allowed ? callsign : callsign + " 🔒";
+        btn.classList.toggle("is-locked", !allowed);
+        btn.setAttribute("aria-disabled", allowed ? "false" : "true");
+        btn.title = allowed ? callsign : "Доступно лише до власної картки";
+
+        btn.addEventListener("click", async () => {
+          if (!allowed) {
+            await reportAccessViolationSafe_("personnelListUiDenied", {
+              source: "personnel-modal",
+              requestedCallsign: callsign,
+            });
+            showToast("Можна відкрити лише власну картку");
+            return;
+          }
+
+          closeModal();
+          openPersonCardByCallsign_(callsign);
+        });
+
+        fragment.appendChild(btn);
+      });
+
+      grid.appendChild(fragment);
+    }
+
+    function filterGrid(query) {
+      const q = normalizeText(query);
+
+      const source =
+        typeof getPersonnelCallsigns_ === "function"
+          ? getPersonnelCallsigns_()
+          : PERSONNEL_CALLSIGNS;
+      filteredCallsigns = !q
+        ? [...source]
+        : source.filter((callsign) => normalizeText(callsign).includes(q));
+
+      renderGrid(filteredCallsigns);
+    }
+
+    async function refreshPersonnelCallsignsFromServer_() {
+      if (
+        typeof Stage7Api !== "object" ||
+        !Stage7Api ||
+        typeof Stage7Api.listPersonnelCallsigns !== "function"
+      ) {
+        return getPersonnelCallsigns_();
+      }
+      try {
+        const res = await Stage7Api.listPersonnelCallsigns();
+        if (
+          res?.success &&
+          Array.isArray(res.callsigns) &&
+          res.callsigns.length
+        ) {
+          applyPersonnelCallsignsFromServer_(res.callsigns);
+          return res.callsigns;
+        }
+      } catch (_) {}
+      return typeof getPersonnelCallsigns_ === "function"
+        ? getPersonnelCallsigns_()
+        : PERSONNEL_CALLSIGNS;
+    }
+
+    btnOpen.addEventListener("click", async () => {
+      searchInput.value = "";
+      openModal();
+      filteredCallsigns = await refreshPersonnelCallsignsFromServer_();
+      renderGrid(filteredCallsigns);
+    });
+
+    btnClose.addEventListener("click", closeModal);
+    backdrop.addEventListener("click", closeModal);
+
+    searchInput.addEventListener("input", (event) => {
+      filterGrid(event.target.value);
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (!modal.hidden && event.key === "Escape") {
+        closeModal();
+      }
+    });
+
+    renderGrid(filteredCallsigns);
+  }
+
+  function registerLegacyPersonnelButtons() {
+    const legacySource =
+      typeof getPersonnelCallsigns_ === "function"
+        ? getPersonnelCallsigns_()
+        : PERSONNEL_CALLSIGNS;
+    legacySource.forEach((callsign) => {
+      window[`btn_${callsign}`] = () => openPersonCardByCallsign_(callsign);
+    });
+  }
+
+  async function reloadSendPanelFromServer() {
+    try {
+      const rows = await ensurePanelDataLoadedFromServer({
+        silent: false,
+        preserveNonEmpty: false,
+        retries: 2,
+        retryDelayMs: 450,
+        reason: "manual-reload",
+      });
+      logToConsole(
+        `Панель надсилання оновлено: ${Array.isArray(rows) ? rows.length : 0} рядків`,
+        "success",
+      );
+      showSendPanel();
+    } catch (error) {
+      logToConsole(
+        `Не вдалося оновити панель надсилання: ${normalizeError(error)}`,
+        "error",
+      );
+      showSendPanel();
+    }
+  }
+
+
+  // =========================
+  // REFERENCE SHEETS
+  // =========================
+
+  function referenceSearchMatch_(item, query) {
+    const q = String(query || "").trim().toLowerCase();
+    if (!q) return true;
+    return String(item?.searchText || JSON.stringify(item || {}))
+      .toLowerCase()
+      .includes(q);
+  }
+
+  function formatReferenceNumber_(value) {
+    const num = Number(value || 0);
+    if (!Number.isFinite(num)) return "0";
+    return num.toLocaleString("uk-UA");
+  }
+
+  function renderReferenceWarnings_(warnings) {
+    const list = Array.isArray(warnings) ? warnings.filter(Boolean) : [];
+    if (!list.length) return "";
+    return `
+      <div class="result-item">
+        <div class="result-label">Попередження</div>
+        <div class="result-value">${list.map((w) => escapeHtml(w)).join("<br>")}</div>
+      </div>
+    `;
+  }
+
+  function openReferenceLink(link) {
+    const safeLink = String(link || "").trim();
+    if (!safeLink) return;
+    if (STATE.DIAG_TEST_MODE) return;
+    openLinkSafe(safeLink);
+  }
+
+  async function showPhoneDirectory() {
+    showStandardResult("📒 Службові телефони");
+    setHtml(
+      "resultContent",
+      `
+        <div class="result-screen">
+          <div class="result-item">
+            <div class="result-value">Завантажую службові телефони...</div>
+          </div>
+        </div>
+      `,
+    );
+
+    showLoading();
+    try {
+      const result = await ActionDispatcher.run(
+        "phoneDirectory",
+        () => Stage7Api.getPhoneDirectory(),
+        { successMessage: "" },
+      );
+      if (!result?.success) {
+        throw new Error(result?.error || "Не вдалося завантажити телефони");
+      }
+      const data = result.data || result;
+      STATE.phoneDirectory = data;
+      renderPhoneDirectory(data, "");
+      logToConsole(
+        `✓ Службові телефони: ${Number(data?.stats?.contacts || 0)} контактів`,
+        "success",
+      );
+    } catch (error) {
+      logToConsole(`✕ Службові телефони: ${normalizeError(error)}`, "error");
+      displayInResult("error", { error: normalizeError(error) });
+    } finally {
+      hideLoading();
+    }
+  }
+
+  function renderPhoneDirectory(data, query) {
+    const payload = data || {};
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    const filtered = items.filter((item) => referenceSearchMatch_(item, query));
+    const groups = new Map();
+    const phoneActionStyle =
+      "display:inline-flex;align-items:center;justify-content:center;flex:0 0 56px;width:56px;white-space:nowrap;text-align:center;padding-left:0;padding-right:0;";
+    const phoneMissingStyle =
+      "display:inline-flex;align-items:center;justify-content:center;flex:0 0 56px;width:56px;white-space:nowrap;text-align:center;padding:6px 0;border-radius:999px;background:rgba(100,116,139,0.18);color:var(--text-secondary);font-size:0.85rem;font-weight:600;cursor:default;opacity:1;";
+
+    filtered.forEach((item) => {
+      const section = String(item.section || "Без розділу").trim() || "Без розділу";
+      if (!groups.has(section)) groups.set(section, []);
+      groups.get(section).push(item);
+    });
+
+    const sectionsHtml = filtered.length
+      ? Array.from(groups.entries())
+          .map(([section, rows]) => `
+            <div class="result-item">
+              <div class="result-label">${escapeHtml(section)}</div>
+              ${rows
+                .map((item) => `
+                  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid var(--border-color);">
+                    <div style="min-width:0;">
+                      <div class="result-value" style="font-weight:700;">${escapeHtml(item.name || "—")}</div>
+                      <div style="color:var(--text-secondary);font-size:12px;line-height:1.35;">${escapeHtml(item.phoneDisplay || item.phone || "—")}</div>
+                    </div>
+                    ${item.link
+                      ? `<button class="result-link" type="button" style="${phoneActionStyle}" title="Відкрити чат у WhatsApp" onclick="SidebarApp.openReferenceLink('${escapeJsString(item.link)}')">WA</button>`
+                      : `<span style="${phoneMissingStyle}" title="Немає номера" aria-disabled="true">Н/Д</span>`}
+                  </div>
+                `)
+                .join("")}
+            </div>
+          `)
+          .join("")
+      : `
+        <div class="result-item">
+          <div class="result-label">Результат</div>
+          <div class="result-value">Нічого не знайдено</div>
+        </div>
+      `;
+
+    const rowsHtml = renderReferenceWarnings_(payload.warnings) + sectionsHtml;
+
+    setHtml(
+      "resultContent",
+      `
+        <div class="result-screen">
+          <div class="result-item">
+            <div class="result-label">Усього</div>
+            <div class="result-value">${escapeHtml(formatReferenceNumber_(payload?.stats?.contacts))} контактів · ${escapeHtml(formatReferenceNumber_(payload?.stats?.sections))} розділів</div>
+          </div>
+
+          <div class="result-item">
+            <label class="result-label" for="phoneDirectorySearch">Пошук</label>
+            <input
+              id="phoneDirectorySearch" name="phoneDirectorySearch"
+              class="input"
+              type="search"
+              value="${escapeAttr(query || "")}" 
+              placeholder="ПІБ, служба або номер"
+              oninput="SidebarApp.filterPhoneDirectory(this.value)"
+              style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);"
+            />
+          </div>
+
+          ${rowsHtml}
+        </div>
+      `,
+    );
+  }
+
+  function filterPhoneDirectory(query) {
+    renderPhoneDirectory(STATE.phoneDirectory || {}, query || "");
+    setTimeout(() => {
+      const el = $id("phoneDirectorySearch");
+      if (!el) return;
+      el.focus();
+      const end = String(el.value || "").length;
+      el.setSelectionRange?.(end, end);
+    }, 0);
+  }
+
+  async function showCarsRegister() {
+    showStandardResult("🚙 Автотехніка");
+    setHtml(
+      "resultContent",
+      `
+        <div class="result-screen">
+          <div class="result-item">
+            <div class="result-value">Завантажую реєстр автотехніки...</div>
+          </div>
+        </div>
+      `,
+    );
+
+    showLoading();
+    try {
+      const result = await ActionDispatcher.run(
+        "carsRegister",
+        () => Stage7Api.getCarsRegister(),
+        { successMessage: "" },
+      );
+      if (!result?.success) {
+        throw new Error(result?.error || "Не вдалося завантажити автотехніку");
+      }
+      const data = result.data || result;
+      STATE.carsRegister = data;
+      renderCarsRegister(data, "");
+      logToConsole(
+        `✓ Автотехніка: ${Number(data?.stats?.total || 0)} записів`,
+        "success",
+      );
+    } catch (error) {
+      logToConsole(`✕ Автотехніка: ${normalizeError(error)}`, "error");
+      displayInResult("error", { error: normalizeError(error) });
+    } finally {
+      hideLoading();
+    }
+  }
+
+  function renderCarStatList_(entries, fallback) {
+    const source = entries && typeof entries === "object" ? entries : {};
+    const rows = Array.isArray(source)
+      ? source.map((entry) =>
+          `${String(entry?.name || fallback)}: ${formatReferenceNumber_(entry?.count)}`,
+        )
+      : Object.keys(source)
+          .sort()
+          .map((key) => `${String(key)}: ${formatReferenceNumber_(source[key])}`);
+    return rows.length ? rows.join(" · ") : "Без розподілу";
+  }
+
+  function renderCarTypeStats_(stats) {
+    return renderCarStatList_(stats?.byType, "Інше");
+  }
+
+  function renderCarStatusStats_(stats) {
+    return renderCarStatList_(stats?.byStatus, "Без стану");
+  }
+
+  function renderCarsRegister(data, query) {
+    const payload = data || {};
+    const stats = payload.stats || {};
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    const filtered = items.filter((item) => referenceSearchMatch_(item, query));
+
+    const itemRowsHtml = filtered.length
+      ? filtered
+          .map((item) => {
+            const ownerMissing = item?.ownerMissing === true;
+            const ownerClass = ownerMissing
+              ? " result-item--reference-missing-person"
+              : "";
+            const ownerBadge = ownerMissing
+              ? '<div class="reference-missing-person-badge">Не знайдено в особовому складі</div>'
+              : "";
+            return `
+            <div class="result-item${ownerClass}">
+              <div class="result-label">${escapeHtml(item.assetName || "—")}</div>
+              <div class="result-value" style="font-weight:700;">${escapeHtml(item.ownerDisplay || "Не закріплено")}</div>
+              ${ownerBadge}
+              <div style="color:var(--text-secondary);font-size:12px;line-height:1.45;margin-top:6px;">
+                Позивний: ${escapeHtml(item.ownerCallsign || item.ownerKey || "—")}<br>
+                Стан: ${escapeHtml(item.status || "Без стану")}${item.statusDescription ? ` — ${escapeHtml(item.statusDescription)}` : ""}<br>
+                Військовий номер: ${escapeHtml(item.militaryNumber || "—")}<br>
+                Шасі: ${escapeHtml(item.chassisNumber || "—")}<br>
+                Рік: ${escapeHtml(item.year || "—")} · Вартість: ${escapeHtml(item.costDisplay || "—")}
+              </div>
+            </div>
+          `;
+          })
+          .join("")
+      : `
+        <div class="result-item">
+          <div class="result-label">Результат</div>
+          <div class="result-value">Нічого не знайдено</div>
+        </div>
+      `;
+
+    const rowsHtml = renderReferenceWarnings_(payload.warnings) + itemRowsHtml;
+
+    setHtml(
+      "resultContent",
+      `
+        <div class="result-screen">
+          <div class="result-item">
+            <div class="result-label">Підсумок</div>
+            <div class="result-value">
+              ${escapeHtml(formatReferenceNumber_(stats.total))} записів · закріплено: ${escapeHtml(formatReferenceNumber_(stats.assigned))} · без позивного: ${escapeHtml(formatReferenceNumber_(stats.unassigned))}
+            </div>
+            <div style="color:var(--text-secondary);font-size:12px;line-height:1.45;margin-top:6px;">
+              Не знайдено в особовому складі: ${escapeHtml(formatReferenceNumber_(stats.unresolvedOwners))}<br>
+              Загальна вартість: ${escapeHtml(stats.totalCostDisplay || "0,00")}<br>
+              Роки: ${escapeHtml(stats.minYear || "—")} — ${escapeHtml(stats.maxYear || "—")}<br>
+              Типи: ${escapeHtml(renderCarTypeStats_(stats))}<br>
+              Стани: ${escapeHtml(renderCarStatusStats_(stats))}
+            </div>
+          </div>
+
+          <div class="result-item">
+            <label class="result-label" for="carsRegisterSearch">Пошук</label>
+            <input
+              id="carsRegisterSearch" name="carsRegisterSearch"
+              class="input"
+              type="search"
+              value="${escapeAttr(query || "")}" 
+              placeholder="ПІБ, авто, номер, шасі або стан"
+              oninput="SidebarApp.filterCarsRegister(this.value)"
+              style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);"
+            />
+          </div>
+
+          ${rowsHtml}
+        </div>
+      `,
+    );
+  }
+
+  function filterCarsRegister(query) {
+    renderCarsRegister(STATE.carsRegister || {}, query || "");
+    setTimeout(() => {
+      const el = $id("carsRegisterSearch");
+      if (!el) return;
+      el.focus();
+      const end = String(el.value || "").length;
+      el.setSelectionRange?.(end, end);
+    }, 0);
+  }
+
+
+  async function showWeaponsRegister() {
+    showStandardResult("🪖 Озброєння");
+    setHtml(
+      "resultContent",
+      `
+        <div class="result-screen">
+          <div class="result-item">
+            <div class="result-value">Завантажую реєстр озброєння та майна...</div>
+          </div>
+        </div>
+      `,
+    );
+
+    showLoading();
+    try {
+      const result = await ActionDispatcher.run(
+        "weaponsRegister",
+        () => Stage7Api.getWeaponsRegister(),
+        { successMessage: "" },
+      );
+      if (!result?.success) {
+        throw new Error(result?.error || "Не вдалося завантажити озброєння");
+      }
+      const data = result.data || result;
+      STATE.weaponsRegister = data;
+      renderWeaponsRegister(data, "");
+      logToConsole(
+        `✓ Озброєння: ${Number(data?.stats?.total || 0)} записів`,
+        "success",
+      );
+    } catch (error) {
+      logToConsole(`✕ Озброєння: ${normalizeError(error)}`, "error");
+      displayInResult("error", { error: normalizeError(error) });
+    } finally {
+      hideLoading();
+    }
+  }
+
+  function renderWeaponTypeStats_(stats) {
+    return renderCarStatList_(stats?.byType, "Інше");
+  }
+
+  function renderWeaponLocationStats_(stats) {
+    return renderCarStatList_(stats?.byLocation, "Без місця");
+  }
+
+  function renderWeaponsRegister(data, query) {
+    const payload = data || {};
+    const stats = payload.stats || {};
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    const filtered = items.filter((item) => referenceSearchMatch_(item, query));
+
+    const itemRowsHtml = filtered.length
+      ? filtered
+          .map((item) => `
+            <div class="result-item">
+              <div class="result-label">${escapeHtml(item.assetName || "—")}</div>
+              <div class="result-value" style="font-weight:700;">${escapeHtml(item.personDisplay || "Не закріплено")}</div>
+              <div style="color:var(--text-secondary);font-size:12px;line-height:1.45;margin-top:6px;">
+                Блок: ${escapeHtml(item.blockLabel || "—")}<br>
+                Звання: ${escapeHtml(item.rank || "—")} · Телефон: ${escapeHtml(item.phone || "—")}<br>
+                Номенклатура: ${escapeHtml(item.nomenclatureCode || "—")}<br>
+                Заводський номер: ${escapeHtml(item.serialNumber || "—")}<br>
+                Рік: ${escapeHtml(item.year || "—")} · Ціна: ${escapeHtml(item.unitPriceDisplay || "—")}<br>
+                Закріплено: ${escapeHtml(item.assignmentDateDisplay || "—")} · Місце: ${escapeHtml(item.location || "—")}
+              </div>
+            </div>
+          `)
+          .join("")
+      : `
+        <div class="result-item">
+          <div class="result-label">Результат</div>
+          <div class="result-value">Нічого не знайдено</div>
+        </div>
+      `;
+
+    const rowsHtml = renderReferenceWarnings_(payload.warnings) + itemRowsHtml;
+
+    setHtml(
+      "resultContent",
+      `
+        <div class="result-screen">
+          <div class="result-item">
+            <div class="result-label">Підсумок</div>
+            <div class="result-value">
+              ${escapeHtml(formatReferenceNumber_(stats.total))} записів · осіб: ${escapeHtml(formatReferenceNumber_(stats.persons))} · без власника: ${escapeHtml(formatReferenceNumber_(stats.unassigned))}
+            </div>
+            <div style="color:var(--text-secondary);font-size:12px;line-height:1.45;margin-top:6px;">
+              Загальна ціна: ${escapeHtml(stats.totalUnitPriceDisplay || "0,00")}<br>
+              Роки: ${escapeHtml(stats.minYear || "—")} — ${escapeHtml(stats.maxYear || "—")}<br>
+              Типи: ${escapeHtml(renderWeaponTypeStats_(stats))}<br>
+              Місця: ${escapeHtml(renderWeaponLocationStats_(stats))}
+            </div>
+          </div>
+
+          <div class="result-item">
+            <label class="result-label" for="weaponsRegisterSearch">Пошук</label>
+            <input
+              id="weaponsRegisterSearch" name="weaponsRegisterSearch"
+              class="input"
+              type="search"
+              value="${escapeAttr(query || "")}" 
+              placeholder="ПІБ, майно, номер, номенклатура або місце"
+              oninput="SidebarApp.filterWeaponsRegister(this.value)"
+              style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);"
+            />
+          </div>
+
+          ${rowsHtml}
+        </div>
+      `,
+    );
+  }
+
+  function filterWeaponsRegister(query) {
+    renderWeaponsRegister(STATE.weaponsRegister || {}, query || "");
+    setTimeout(() => {
+      const el = $id("weaponsRegisterSearch");
+      if (!el) return;
+      el.focus();
+      const end = String(el.value || "").length;
+      el.setSelectionRange?.(end, end);
+    }, 0);
+  }
+
+  // =========================
+  // BOOTSTRAP
+  // =========================
+
+  async function onSidebarLoad() {
+    var startedAt = new Date().toISOString();
+    window.__WASB_BOOTSTRAP_STATE__ = {
+      startedAt: startedAt,
+      status: "starting",
+    };
+
+    try {
+      registerGlobalRuntimeEvents_();
+      await initSidebar();
+      updateSendUnsentButtonState();
+      initPersonnelModal();
+      registerLegacyPersonnelButtons();
+      window.addEventListener("beforeunload", stopSending);
+      window.__WASB_BOOTSTRAP_STATE__ = {
+        startedAt: startedAt,
+        finishedAt: new Date().toISOString(),
+        status: "ready",
+        policyMarker: CLIENT_RUNTIME_POLICY.policyMarker,
+      };
+    } catch (err) {
+      try {
+        showFatalSidebarError(err);
+      } catch (_) {}
+      try {
+        stopSidebarBootTimeout();
+        hideLoading();
+      } catch (_) {}
+      window.__WASB_BOOTSTRAP_STATE__ = {
+        startedAt: startedAt,
+        finishedAt: new Date().toISOString(),
+        status: "error",
+        error: normalizeError(err),
+        policyMarker: CLIENT_RUNTIME_POLICY.policyMarker,
+      };
+    }
+  }
+
+  window.addEventListener("load", onSidebarLoad);
+
+  // =========================
+  // EXPORTS
+  // =========================
+
+  const SidebarApp = {
+    STATE,
+    PERSONNEL_CALLSIGNS,
+    CLIENT_RUNTIME_POLICY,
+
+    handleMenuAction,
+    showMenu,
+    goBack,
+    navigateTo,
+    toggleConsole,
+    setConsoleMode,
+    clearConsole,
+    scrollConsole,
+    copyConsole,
+    setConsoleFilter,
+
+    startSendingUnsent,
+    sendOneFromPanel,
+    confirmSendFromPanel,
+    rejectSendFromPanel,
+    rebuildCurrentSendPanel,
+    resetAllSentFromPanel,
+    reloadSendPanelFromServer,
+    updateSendUnsentButtonState,
+
+    processSelectedDate,
+    changeMonth,
+    changeCalendarYear,
+    navigateCalendarWeek,
+    navigateCalendarDay,
+    setCalendarViewMode,
+    selectCalendarMonth,
+    selectCalendarDay,
+    selectDate,
+    switchToSelectedMonth,
+
+    runHealthCheck,
+    runAllProjectTests,
+    showHealthCheckPanel,
+    cleanupTriggers,
+    debugPhones,
+    clearPhoneCache,
+    materializeComputedData,
+    materializeMonthJournal,
+    setupTemporaryPropertyRegister,
+    refreshTemporaryPropertyRegister,
+    runMaterializeComputedData_,
+    restartBot,
+    setupTrigger,
+    showPendingRepairs,
+    showOperationDetails,
+    runRepair,
+    copyHealthReport,
+    copyProjectTestReport,
+    setHealthCheckMode,
+    debugAccess: function () {
+      return handleMenuAction("debugAccess");
+    },
+
+    sendDaySummaryToCommander,
+    sendDetailedToCommander,
+    setCommanderRecipient,
+    sendVacationMessage,
+    sendBirthdayMessage,
+    showVacationsModule,
+    checkVacationRemindersFromMainPanel,
+    VacationModule,
+    sendMessageToSelectedRecipient,
+    openBirthdayWA,
+
+    copyResultText,
+    copyToClipboard,
+    copyPersonMessage,
+    openPersonCalendarFromCard,
+
+    renderMonthSwitcher,
+    renderHealthReport,
+    renderCheckItem,
+    renderPersonCard,
+    renderBirthdayResult,
+    displayBirthdayResult,
+    displayInResult,
+    displayPanelResult,
+    showSendPanel,
+    showCalendar,
+    showResult,
+    showLoading,
+    hideLoading,
+    showToast,
+    showError,
+
+    Stage7Api,
+    UiState,
+    LoaderService,
+    ToastService,
+    ErrorPresenter,
+    RenderCoordinator,
+    ActionDispatcher,
+
+    openPersonCardByCallsign_,
+    initPersonnelModal,
+    showRequestsForm,
+    submitRequestForm,
+    showPhoneDirectory,
+    showCarsRegister,
+    showWeaponsRegister,
+    showInventoryReconciliation,
+    showExternalMigration,
+    InventoryReconciliationModule,
+    ExternalMigrationModule,
+    filterPhoneDirectory,
+    filterCarsRegister,
+    filterWeaponsRegister,
+    openReferenceLink,
+  };
+
+  window.SidebarApp = SidebarApp;
+</script>

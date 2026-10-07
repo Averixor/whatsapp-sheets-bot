@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="uk-UA">
+  <head>
+    <title>WASB</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+      name="description"
+      content="Панель керування WASB (WhatsApp-Sheets-Bot).">
+    <?!= includeTemplate('Styles'); ?>
+    <base target="_top">
+    <style>
+      .header-content {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .logo-wrap {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+      }
+
+      .header-tool-btn {
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        transition: background-color 0.2s;
+      }
+
+      .header-tool-btn:hover,
+      .header-tool-btn:focus-visible {
+        background-color: rgba(0, 0, 0, 0.05);
+      }
+
+      .logo.header-logo {
+        margin: 0;
+      }
+
+      .sr-only {
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        padding: 0 !important;
+        margin: -1px !important;
+        overflow: hidden !important;
+        clip: rect(0, 0, 0, 0) !important;
+        white-space: nowrap !important;
+        border: 0 !important;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="sidebar-container">
+      <header class="header">
+        <div class="header-content">
+          <div class="logo-wrap">
+            <h1 class="logo header-logo" title="WhatsApp-Sheets-Bot">
+              <span>WASB</span>
+            </h1>
+            <button
+              type="button"
+              class="header-tool-btn"
+              data-role-min="guest"
+              onclick="SidebarApp.handleMenuAction('debugAccess')"
+              title="Сервісна діагностика доступу"
+              aria-label="Відкрити сервісну діагностику доступу"
+            >
+              <span class="whatsapp-icon" aria-hidden="true">🧑‍💻</span>
+            </button>
+            <button
+              type="button"
+              class="header-tool-btn wasb-is-hidden"
+              id="btnHeaderLogin"
+              onclick="
+                if (typeof openAccessLoginFlow === 'function')
+                  openAccessLoginFlow('login');
+              "
+              title="Увійти"
+              aria-label="Увійти"
+            >
+              <span class="whatsapp-icon" aria-hidden="true">🔑</span>
+            </button>
+          </div>
+
+          <div
+            class="status-badge"
+            id="botMonthStatus"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            <span class="status-dot" aria-hidden="true"></span>
+            <span class="status-text">Завантаження...</span>
+          </div>
+        </div>
+      </header>
+
+      <main class="main-content" id="mainContent">
+        <div
+          id="accessBanner"
+          class="access-banner wasb-is-hidden"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <div id="accessBannerText" class="access-banner__text"></div>
+        </div>
+
+        <section
+          class="menu-section active"
+          id="menuSection"
+          aria-labelledby="mainMenuTitle"
+        >
+          <h2 id="mainMenuTitle" class="sr-only">Головне меню</h2>
+
+          <div class="menu-grid">
+            <button
+              id="btnGeneratePanel"
+              class="menu-item"
+              data-role-min="maintainer"
+              type="button"
+              onclick="SidebarApp.handleMenuAction('generatePanel')"
+              title="Створити панель відправки на сьогодні"
+            >
+              <span class="menu-icon" aria-hidden="true">🎲</span>
+              <span class="menu-text">Панель відправок</span>
+            </button>
+
+            <button
+              id="sendUnsentBtn"
+              class="btn"
+              data-role-min="maintainer"
+              type="button"
+              onclick="SidebarApp.handleMenuAction('sendUnsent')"
+              title="Немає невідправлених"
+              disabled
+            >
+              🚀 Невідправлені
+            </button>
+
+            <button
+              id="btnDetailedSummary"
+              class="menu-item"
+              data-role-min="operator"
+              type="button"
+              onclick="SidebarApp.handleMenuAction('detailedDay')"
+              title="Детальне зведення за день"
+            >
+              <span class="menu-icon" aria-hidden="true">🪬</span>
+              <span class="menu-text">Детальне зведення</span>
+            </button>
+
+            <button
+              id="btnDaySummary"
+              class="menu-item"
+              data-role-min="operator"
+              type="button"
+              onclick="SidebarApp.handleMenuAction('daySummary')"
+              title="Коротке зведення за день"
+            >
+              <span class="menu-icon" aria-hidden="true">1️⃣</span>
+              <span class="menu-text">Зведення дня</span>
+            </button>
+
+            <div class="personnel-launch-wrap wasb-u-grid-span-2">
+              <button
+                id="btnOpenPersonnelModal"
+                class="btn personnel-launch-btn"
+                data-role-min="viewer"
+                type="button"
+                aria-haspopup="dialog"
+                aria-controls="personnelModal"
+                aria-expanded="false"
+              >
+                🪖 Особовий склад
+              </button>
+            </div>
+
+
+
+            <button
+              id="btnPhoneDirectory"
+              class="menu-item"
+              data-role-min="maintainer"
+              type="button"
+              onclick="SidebarApp.handleMenuAction('phoneDirectory')"
+              title="Відкрити службові телефони"
+            >
+              <span class="menu-icon" aria-hidden="true">📒</span>
+              <span class="menu-text">Службові телефони</span>
+            </button>
+
+            <button
+              id="btnCarsRegister"
+              class="menu-item"
+              data-role-min="maintainer"
+              type="button"
+              onclick="SidebarApp.handleMenuAction('carsRegister')"
+              title="Відкрити реєстр автотехніки"
+            >
+              <span class="menu-icon" aria-hidden="true">🚙</span>
+              <span class="menu-text">Автотехніка</span>
+            </button>
+
+            <button
+              id="btnWeaponsRegister"
+              class="menu-item"
+              data-role-min="maintainer"
+              type="button"
+              onclick="SidebarApp.handleMenuAction('weaponsRegister')"
+              title="Відкрити реєстр озброєння та майна"
+            >
+              <span class="menu-icon" aria-hidden="true">🪖</span>
+              <span class="menu-text">Озброєння</span>
+            </button>
+
+            <button
+              id="btnInventoryReconciliation"
+              class="menu-item"
+              data-role-min="maintainer"
+              type="button"
+              onclick="SidebarApp.handleMenuAction('inventoryReconciliation')"
+              title="Переглянути статуси звірки та пов’язані документи"
+            >
+              <span class="menu-icon" aria-hidden="true">🧾</span>
+              <span class="menu-text">Звірка</span>
+            </button>
+
+            <button
+              id="btnVacations"
+              class="menu-item"
+              data-role-min="maintainer"
+              type="button"
+              onclick="SidebarApp.handleMenuAction('vacations')"
+              title="Керування відпустками"
+            >
+              <span class="menu-icon" aria-hidden="true">🏖️</span>
+              <span class="menu-text">Відпустки</span>
+            </button>
+
+            <button
+              id="btnBirthdayCheck"
+              class="menu-item"
+              data-role-min="maintainer"
+              type="button"
+              onclick="SidebarApp.handleMenuAction('birthdayCheck')"
+              title="Перевірити іменинників"
+            >
+              <span class="menu-icon" aria-hidden="true">🎂</span>
+              <span class="menu-text">Дні народження</span>
+            </button>
+
+            <button
+              id="btnCreateNextMonth"
+              class="menu-item"
+              data-role-min="maintainer"
+              type="button"
+              onclick="SidebarApp.handleMenuAction('createNextMonth')"
+              title="Створити аркуш наступного місяця"
+            >
+              <span class="menu-icon" aria-hidden="true">🗓️</span>
+              <span class="menu-text">Новий місяць</span>
+            </button>
+
+            <button
+              id="btnSwitchMonth"
+              class="menu-item"
+              data-role-min="maintainer"
+              type="button"
+              onclick="SidebarApp.handleMenuAction('switchMonth')"
+              title="Перемкнути бота на інший місяць"
+            >
+              <span class="menu-icon" aria-hidden="true">🏃‍♂️‍➡️✈️</span>
+              <span class="menu-text">Перемістити бота</span>
+            </button>
+
+            <button
+              id="btnRequests"
+              class="menu-item"
+              data-role-min="viewer"
+              type="button"
+              onclick="SidebarApp.handleMenuAction('requests')"
+              title="Подати заявку по проєкту"
+            >
+              <span class="menu-icon" aria-hidden="true">📝</span>
+              <span class="menu-text">Заявки</span>
+            </button>
+
+            <div
+              class="menu-divider wasb-u-grid-span-2"
+              aria-hidden="true"
+            ></div>
+
+            <div
+              class="health-actions wasb-u-grid-span-2 wasb-is-hidden"
+              data-role-min="maintainer"
+            >
+              <details class="health-actions-details" id="healthActionsDetails">
+                <summary class="health-actions-summary">
+                  <span class="health-actions-summary__icon" aria-hidden="true">⚙</span>
+                  <span class="health-actions-summary__label">Системні дії</span>
+                  <span class="health-actions-summary__chevron" aria-hidden="true">▼</span>
+                </summary>
+                <div class="health-actions-grid">
+                <button
+                  class="btn btn-secondary health-actions-btn health-actions-btn--wide"
+                  data-role-min="maintainer"
+                  type="button"
+                  onclick="SidebarApp.showPendingRepairs()"
+                >
+                  🛠 Потребують виправлення
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn health-actions-btn--wide"
+                  data-role-min="admin"
+                  type="button"
+                  onclick="SidebarApp.handleMenuAction('bootstrapRuntime')"
+                >
+                  📋 Створити службові листи
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn health-actions-btn--wide"
+                  data-role-min="admin"
+                  type="button"
+                  onclick="SidebarApp.handleMenuAction('bootstrapAccess')"
+                >
+                  🔐 Ініціалізувати лист доступу
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="sysadmin"
+                  type="button"
+                  onclick="SidebarApp.handleMenuAction('previewProtections')"
+                >
+                  👁 Переглянути захист листів
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="sysadmin"
+                  type="button"
+                  onclick="SidebarApp.handleMenuAction('applyProtections')"
+                >
+                  🛡 Захистити службові листи
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="maintainer"
+                  type="button"
+                  onclick="SidebarApp.runHealthCheck()"
+                >
+                  🩺 Перевірка системи
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="admin"
+                  type="button"
+                  onclick="SidebarApp.handleMenuAction('runRegressionTests')"
+                >
+                  🧪 Регресійні тести
+                </button>
+
+                <button
+                  id="btnRunAllProjectTests"
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="admin"
+                  type="button"
+                  onclick="SidebarApp.runAllProjectTests()"
+                >
+                  🧪 Всі тести проєкту
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="sysadmin"
+                  type="button"
+                  onclick="SidebarApp.handleMenuAction('restartBot')"
+                >
+                  ♻ Перезапуск бота
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="sysadmin"
+                  type="button"
+                  onclick="SidebarApp.handleMenuAction('clearCache')"
+                >
+                  🧹 Очистити кеш
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="admin"
+                  type="button"
+                  onclick="SidebarApp.handleMenuAction('clearLog')"
+                >
+                  🗑 Очистити лог
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="maintainer"
+                  type="button"
+                  onclick="SidebarApp.materializeComputedData()"
+                >
+                  🔄 Оновити обчислювані дані
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="maintainer"
+                  type="button"
+                  onclick="SidebarApp.materializeMonthJournal()"
+                >
+                  📓 Оновити журнал місяця
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="admin"
+                  type="button"
+                  onclick="SidebarApp.setupTemporaryPropertyRegister()"
+                >
+                  📦 Налаштувати облік майна
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="maintainer"
+                  type="button"
+                  onclick="SidebarApp.refreshTemporaryPropertyRegister()"
+                >
+                  🔄 Оновити облік майна
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn health-actions-btn--wide"
+                  data-role-min="sysadmin"
+                  type="button"
+                  onclick="SidebarApp.handleMenuAction('externalMigration')"
+                >
+                  ⇄ Міграція зовнішніх таблиць
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="sysadmin"
+                  type="button"
+                  onclick="SidebarApp.clearPhoneCache()"
+                >
+                  🧹 Очистити кеш тел.
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="maintainer"
+                  type="button"
+                  onclick="SidebarApp.debugPhones()"
+                >
+                  📞 Діагностика тел.
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="sysadmin"
+                  type="button"
+                  onclick="SidebarApp.cleanupTriggers()"
+                >
+                  🎏 Перевірка дублів тригерів
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="sysadmin"
+                  type="button"
+                  onclick="SidebarApp.setupTrigger()"
+                >
+                  ⏰ Створити тригер
+                </button>
+
+                <button
+                  class="btn btn-secondary health-actions-btn"
+                  data-role-min="maintainer"
+                  type="button"
+                  onclick="SidebarApp.copyHealthReport()"
+                >
+                  📋 Копія звіту
+                </button>
+                </div>
+              </details>
+            </div>
+          </div>
+        </section>
+
+        <section
+          class="result-section"
+          id="resultSection"
+          aria-labelledby="resultTitle"
+        >
+          <div class="wasb-sticky-header result-header">
+            <button
+              class="back-button back-btn"
+              type="button"
+              onclick="SidebarApp.goBack()"
+              title="Повернутися назад"
+            >
+              <span class="back-icon" aria-hidden="true">↩</span>
+              <span>Назад</span>
+            </button>
+            <h2 id="resultTitle" class="screen-title">Результат</h2>
+          </div>
+          <div
+            class="screen-content result-content"
+            id="resultContent"
+            aria-live="polite"
+          ></div>
+          <div
+            id="personCardContainer"
+            class="screen-content wasb-is-hidden"
+          ></div>
+        </section>
+      </main>
+
+      <section
+        class="console-wrapper"
+        id="consoleWrapper"
+        aria-labelledby="consoleSectionTitle"
+      >
+        <div class="console-section" id="consoleSection">
+          <div class="console-header">
+            <h2 class="console-title" id="consoleSectionTitle">
+              <span class="console-icon" aria-hidden="true">✓</span>
+              <span class="console-title__label">Лог виконання</span>
+            </h2>
+            <div class="console-toolbar">
+              <div class="console-toolbar__filters">
+                <button
+                  class="console-btn console-btn--filter active"
+                  type="button"
+                  data-console-filter="all"
+                  title="Усі записи"
+                  aria-label="Фільтр: усі"
+                >Все</button>
+                <button
+                  class="console-btn console-btn--filter"
+                  type="button"
+                  data-console-filter="action"
+                  title="Дії"
+                  aria-label="Фільтр: дії"
+                >▶</button>
+                <button
+                  class="console-btn console-btn--filter"
+                  type="button"
+                  data-console-filter="warning"
+                  title="Попередження"
+                  aria-label="Фільтр: попередження"
+                >⚠</button>
+                <button
+                  class="console-btn console-btn--filter"
+                  type="button"
+                  data-console-filter="error"
+                  title="Помилки"
+                  aria-label="Фільтр: помилки"
+                >✕</button>
+                <button
+                  class="console-btn console-btn--filter"
+                  type="button"
+                  data-console-filter="server"
+                  title="Сервер"
+                  aria-label="Фільтр: сервер"
+                >→</button>
+              </div>
+              <div class="console-toolbar__tools">
+                <button
+                  class="console-btn console-btn--size"
+                  type="button"
+                  data-console-size="collapsed"
+                  title="Згорнути"
+                  aria-label="Згорнути консоль"
+                >▁</button>
+                <button
+                  class="console-btn console-btn--size"
+                  type="button"
+                  data-console-size="third"
+                  title="⅓ екрана"
+                  aria-label="Консоль на третину екрана"
+                >▢</button>
+                <button
+                  class="console-btn console-btn--size"
+                  type="button"
+                  data-console-size="full"
+                  title="На весь екран"
+                  aria-label="Консоль на весь екран"
+                >⛶</button>
+                <button
+                  class="console-btn"
+                  type="button"
+                  onclick="SidebarApp.copyConsole()"
+                  title="Копіювати"
+                  aria-label="Копіювати лог"
+                >📋</button>
+                <button
+                  class="console-btn"
+                  type="button"
+                  onclick="SidebarApp.clearConsole()"
+                  title="Очистити"
+                  aria-label="Очистити консоль"
+                >🗑</button>
+                <button
+                  class="console-btn"
+                  type="button"
+                  onclick="SidebarApp.scrollConsole('top')"
+                  title="Вгору"
+                  aria-label="Вгору"
+                >↥</button>
+                <button
+                  class="console-btn"
+                  type="button"
+                  onclick="SidebarApp.scrollConsole('bottom')"
+                  title="Вниз"
+                  aria-label="Вниз"
+                >↧</button>
+              </div>
+            </div>
+          </div>
+          <div
+            class="console-content"
+            id="consoleOutput"
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions text"
+          ></div>
+        </div>
+      </section>
+
+      <button
+        type="button"
+        class="console-fab"
+        id="consoleFab"
+        onclick="SidebarApp.toggleConsole()"
+        aria-label="Журнал виконання"
+        title="Розгорнути консоль на ⅓ екрана"
+        aria-controls="consoleSection"
+        aria-expanded="false"
+      >
+        <span class="console-fab__icon" aria-hidden="true">👾</span>
+        <span class="console-fab__badge wasb-is-hidden" id="consoleFabBadge">0</span>
+      </button>
+
+      <div
+        class="loading-overlay wasb-is-hidden"
+        id="loadingOverlay"
+        aria-live="assertive"
+        aria-busy="true"
+      >
+        <div class="loading-card" role="status" aria-live="assertive">
+          <div class="wasb-spinner" aria-hidden="true"></div>
+          <div class="loading-text">Завантаження...</div>
+        </div>
+      </div>
+
+      <div class="personnel-modal" id="personnelModal" hidden>
+        <div
+          class="personnel-modal__backdrop"
+          id="personnelModalBackdrop"
+          aria-hidden="true"
+        ></div>
+        <div
+          class="personnel-modal__dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="personnelModalTitle"
+          aria-describedby="personnelModalCount"
+        >
+          <div class="personnel-modal__header">
+            <div class="personnel-modal__title-wrap">
+              <h2 class="personnel-modal__title" id="personnelModalTitle">
+                Особовий склад
+              </h2>
+              <div
+                class="personnel-modal__subtitle"
+                id="personnelModalCount"
+                aria-live="polite"
+              >
+                Усього: 0
+              </div>
+            </div>
+            <button
+              class="personnel-modal__close"
+              id="btnClosePersonnelModal"
+              type="button"
+              aria-label="Закрити вікно особового складу"
+            >
+              Закрити
+            </button>
+          </div>
+          <div class="personnel-modal__controls">
+            <label for="personnelSearchInput" class="sr-only"
+              >Пошук за позивним</label
+            >
+            <input
+              id="personnelSearchInput" name="personnelSearchInput"
+              class="personnel-search"
+              type="text"
+              placeholder="Пошук позивного..."
+              aria-describedby="personnelModalCount"
+              autocomplete="off"
+            >
+          </div>
+          <div class="personnel-modal__body">
+            <h3 class="sr-only" id="personnelGridTitle">
+              Список особового складу
+            </h3>
+            <section
+              class="personnel-grid"
+              id="personnelGrid"
+              aria-labelledby="personnelGridTitle"
+            ></section>
+            <div
+              class="personnel-empty hidden"
+              id="personnelEmptyState"
+              aria-live="polite"
+            >
+              Нічого не знайдено
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wasb-modal" id="wasbModal" hidden aria-hidden="true">
+        <div class="wasb-modal__backdrop" id="wasbModalBackdrop" aria-hidden="true"></div>
+        <div
+          class="wasb-modal__dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="wasbModalTitle"
+        >
+          <div class="wasb-modal__header">
+            <h2 class="wasb-modal__title" id="wasbModalTitle">Повідомлення</h2>
+          </div>
+          <div class="wasb-modal__body" id="wasbModalBody"></div>
+          <div class="wasb-modal__footer" id="wasbModalFooter"></div>
+        </div>
+      </div>
+    </div>
+
+    <?!= includeTemplate('JavaScript'); ?>
+  </body>
+</html>

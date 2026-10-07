@@ -5,18 +5,14 @@ import path from "node:path";
 import vm from "node:vm";
 import { findFileByBasename } from "./lib/gas-files.mjs";
 
+import { readRepoFileByBasename } from "./lib/gas-files.mjs";
+
 const repoRoot = path.resolve(import.meta.dirname, "..");
 
 function read(file) {
-  const basename = path.basename(file);
-  const ext = path.extname(basename);
-  const extensions = ext ? [ext] : [".gs", ".html"];
-  const rel = findFileByBasename(repoRoot, basename, extensions) || file;
-  const fullPath = path.join(repoRoot, rel);
-  if (!fs.existsSync(fullPath)) {
-    throw new Error(`verify-recipient-contract: missing file: ${file}`);
-  }
-  return fs.readFileSync(fullPath, "utf8");
+  return readRepoFileByBasename(repoRoot, file, {
+    errorPrefix: "verify-recipient-contract",
+  });
 }
 
 function assertContains(file, pattern, message) {

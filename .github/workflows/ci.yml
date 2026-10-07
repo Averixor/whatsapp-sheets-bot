@@ -27,6 +27,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
+          # CI pin; package.json engines.node is >=24 (no upper major cap).
           node-version: "24"
           package-manager-cache: false
 
@@ -37,7 +38,7 @@ jobs:
         run: npm run ci
 
   preprod-checklist:
-    name: WASB pre-prod checklist (manual)
+    name: Publish manual release checklist
     runs-on: ubuntu-latest
     needs: ci
 
@@ -56,6 +57,7 @@ jobs:
           - [ ] `apiStage7DebugAccess()`: `bootstrapAllowed=false`
           - [ ] `apiStage7DebugAccess()`: `adminConfigured=true`
           - [ ] owner/admin залогінився; у рядку заповнений `user_key_current_hash`
+          - [ ] `apiStage7QuickHealthCheck()` — FAIL якщо bootstrap відкритий / немає elevated admin / немає `user_key_current_hash` у admin
 
           ### Захисти та Script Properties
           - [ ] `apiStage7ApplyProtections({ dryRun: true })` — переглянути звіт
