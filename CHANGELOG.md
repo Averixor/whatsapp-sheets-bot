@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-08 — Pin MCP SDK past OAuth credential redirect
+
+- **Deps:** `overrides["@modelcontextprotocol/sdk"] >=1.31.0` so `@google/clasp` no longer resolves the vulnerable 1.30.0 transitive client. This project does not use the SDK OAuth client over HTTP; the pin closes Dependabot alert #41.
+
 ## 2026-10-07 — Test discovery flag and single vacation sidebar entrypoints
 
 - **Tests:** `Stage7TestRunner` keeps `discover` through option normalization. Project-wide runs turn discovery on unless `discover: false`. A safe discovered test is included; operational names stay excluded.
