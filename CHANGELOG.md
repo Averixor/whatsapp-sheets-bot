@@ -2,7 +2,7 @@
 
 ## 2026-10-08 — Pin MCP SDK past OAuth credential redirect
 
-- **Deps:** `overrides["@modelcontextprotocol/sdk"] >=1.31.0` so `@google/clasp` no longer resolves the vulnerable 1.30.0 transitive client. This project does not use the SDK OAuth client over HTTP; the pin closes Dependabot alert #41.
+- **Deps:** npm `overrides` pin the clasp MCP TypeScript SDK transitive package to `>=1.31.0`, so the lockfile leaves the vulnerable 1.30.0 client. This project does not use that SDK OAuth client over HTTP; the pin closes Dependabot alert #41.
 
 ## 2026-10-07 — Test discovery flag and single vacation sidebar entrypoints
 
