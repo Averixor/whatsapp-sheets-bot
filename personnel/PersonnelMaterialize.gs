@@ -281,6 +281,42 @@ function getPersonnelMaterializeEndRow_(sheet, startRow) {
   );
 }
 
+/**
+ * Derived sheets (PHONES / Birthday) must fit every PERSONNEL source row.
+ * Never truncate people to the target sheet's current lastRow.
+ */
+function _personnelMaterializeEnsureDerivedCapacity_(sheet, startRow, neededRows) {
+  var start = Number(startRow) || 2;
+  var count = Math.max(Number(neededRows) || 0, 0);
+  if (!sheet || count < 1) return start - 1;
+  var neededEnd = start + count - 1;
+  var maxRows = Number(sheet.getMaxRows()) || 0;
+  if (maxRows < neededEnd) {
+    sheet.insertRowsAfter(maxRows, neededEnd - maxRows);
+  }
+  return neededEnd;
+}
+
+function _personnelMaterializeDerivedWriteRows_(
+  sheet,
+  startRow,
+  sourceRows,
+  emptyRow,
+) {
+  var start = Number(startRow) || 2;
+  var rows = Array.isArray(sourceRows) ? sourceRows.slice() : [];
+  var previousEnd = getPersonnelMaterializeEndRow_(sheet, start);
+  var previousCount = Math.max(previousEnd - start + 1, 0);
+  var floor = PERSONNEL_MATERIALIZE_MANAGED_ROW_COUNT_;
+  var writeCount = Math.max(rows.length, previousCount, floor);
+  var blank = Array.isArray(emptyRow) ? emptyRow : [];
+  while (rows.length < writeCount) {
+    rows.push(blank.slice());
+  }
+  _personnelMaterializeEnsureDerivedCapacity_(sheet, start, rows.length);
+  return rows;
+}
+
 function _personnelMaterializeToday_() {
   if (typeof DateUtils_ !== "undefined" && DateUtils_.toDayStart) {
     var parsed = DateUtils_.toDayStart(new Date());
@@ -717,18 +753,15 @@ function materializePhonesSheet_(sheet, sourceRows, options) {
   }
 
   var startRow = _phonesMaterializeStartRow_();
-  var endRow = getPersonnelMaterializeEndRow_(sheet, startRow);
-  var managedRows = Math.max(endRow - startRow + 1, 0);
-  var rows = (sourceRows || []).map(function (row) {
-    return [row.callsign || "", row.phone || "", row.phone2 || ""];
-  });
-
-  while (rows.length < managedRows) {
-    rows.push(["", "", ""]);
-  }
-  if (rows.length > managedRows) {
-    rows = rows.slice(0, managedRows);
-  }
+  var rows = _personnelMaterializeDerivedWriteRows_(
+    sheet,
+    startRow,
+    (sourceRows || []).map(function (row) {
+      return [row.callsign || "", row.phone || "", row.phone2 || ""];
+    }),
+    ["", "", ""],
+  );
+  var endRow = startRow + Math.max(rows.length, 1) - 1;
 
   var forceHeaders = !!(options && options.forceHeaders);
   var expectedHeaders = _phonesMaterializeHeaders_();
@@ -817,24 +850,21 @@ function materializeBirthdayHelperSheet_(sheet, sourceRows, options) {
   }
 
   var startRow = getPersonnelMaterializeStartRow_();
-  var endRow = getPersonnelMaterializeEndRow_(sheet, startRow);
-  var managedRows = Math.max(endRow - startRow + 1, 0);
   var expectedHeaders = _birthdayHelperCanonicalHeaders_();
-  var rows = (sourceRows || []).map(function (row) {
-    return [
-      row.callsign || "",
-      row.birthdayDisplay || "",
-      row.age,
-      row.daysUntilBirthday,
-    ];
-  });
-
-  while (rows.length < managedRows) {
-    rows.push(["", "", "", ""]);
-  }
-  if (rows.length > managedRows) {
-    rows = rows.slice(0, managedRows);
-  }
+  var rows = _personnelMaterializeDerivedWriteRows_(
+    sheet,
+    startRow,
+    (sourceRows || []).map(function (row) {
+      return [
+        row.callsign || "",
+        row.birthdayDisplay || "",
+        row.age,
+        row.daysUntilBirthday,
+      ];
+    }),
+    ["", "", "", ""],
+  );
+  var endRow = startRow + Math.max(rows.length, 1) - 1;
 
   var forceHeaders = !!(options && options.forceHeaders);
   var lastCol = Math.max(sheet.getLastColumn(), expectedHeaders.length, 1);
@@ -985,6 +1015,112 @@ function _personnelAssignmentSameRow_(a, b) {
   return true;
 }
 
+function _personnelAssignmentNormCallsignKey_(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toUpperCase();
+}
+
+function _personnelAssignmentPadRow_(row, width) {
+  var next = Array.isArray(row) ? row.slice(0, width) : [];
+  while (next.length < width) next.push("");
+  return next;
+}
+
+/**
+ * Reorder equipment rows to follow PERSONNEL callsign order.
+ * Moves the full row (property blocks included); then refreshes identity fields.
+ */
+function _personnelAssignmentReorderRowsByPersonnel_(
+  sheetRows,
+  personnelRows,
+  width,
+  resolveKeyFromRow,
+  applyIdentity,
+) {
+  var queues = {};
+  var unmatched = [];
+  var list = Array.isArray(sheetRows) ? sheetRows : [];
+
+  for (var i = 0; i < list.length; i += 1) {
+    var row = _personnelAssignmentPadRow_(list[i], width);
+    var key = _personnelAssignmentNormCallsignKey_(resolveKeyFromRow(row));
+    if (!key) {
+      unmatched.push(row);
+      continue;
+    }
+    if (!queues[key]) queues[key] = [];
+    queues[key].push(row);
+  }
+
+  var ordered = [];
+  var rowsMatched = 0;
+  var helperFilled = 0;
+  var people = Array.isArray(personnelRows) ? personnelRows : [];
+
+  for (var p = 0; p < people.length; p += 1) {
+    var person = people[p] || {};
+    var personKey = _personnelAssignmentNormCallsignKey_(person.callsign);
+    if (!personKey) continue;
+    if (!queues[personKey] || !queues[personKey].length) continue;
+    var taken = queues[personKey].shift();
+    var next = applyIdentity(taken, person);
+    ordered.push(next);
+    rowsMatched += 1;
+    if (
+      _personnelAssignmentNormCallsignKey_(
+        next[next.length - 1] || person.callsign,
+      )
+    ) {
+      helperFilled += 1;
+    }
+  }
+
+  Object.keys(queues)
+    .sort()
+    .forEach(function (leftKey) {
+      var leftover = queues[leftKey] || [];
+      for (var q = 0; q < leftover.length; q += 1) {
+        unmatched.push(leftover[q]);
+      }
+    });
+
+  for (var u = 0; u < unmatched.length; u += 1) {
+    var orphan = unmatched[u];
+    var orphanFml = "";
+    var orphanPhone = "";
+    var orphanCallsign = "";
+    if (width >= 27) {
+      orphanFml = [orphan[0], orphan[1], orphan[2]]
+        .map(function (part) {
+          return String(part || "").trim();
+        })
+        .filter(Boolean)
+        .join(" ");
+      orphanPhone = orphan[4];
+      orphanCallsign = orphan[26];
+    } else {
+      orphanFml = orphan[0];
+      orphanCallsign = orphan[7];
+    }
+    var orphanMatch = _personnelAssignmentSyncFind_(
+      people,
+      orphanFml,
+      orphanPhone,
+      orphanCallsign,
+    );
+    ordered.push(applyIdentity(orphan, orphanMatch));
+  }
+
+  return {
+    rows: ordered,
+    rowsMatched: rowsMatched,
+    helperFilled: helperFilled,
+    orphanCount: unmatched.length,
+  };
+}
+
 function materializeCarOwnersFromPersonnel_(personnelRows) {
   var ss = getWasbSpreadsheet_();
   var sheetName =
@@ -999,42 +1135,67 @@ function materializeCarOwnersFromPersonnel_(personnelRows) {
   _personnelAssignmentEnsureColumn_(sheet, 8, "Callsign", true);
 
   var rowCount = sheet.getLastRow() - 1;
-  var range = sheet.getRange(2, 1, rowCount, 8);
-  var values = range.getDisplayValues();
-  var out = [];
-  var rowsMatched = 0;
+  var width = 8;
+  var range = sheet.getRange(2, 1, rowCount, width);
+  var values = range.getValues();
+  var rebuilt = _personnelAssignmentReorderRowsByPersonnel_(
+    values,
+    personnelRows,
+    width,
+    function (row) {
+      var helper = row[7] || "";
+      if (helper) return helper;
+      var matched = _personnelAssignmentSyncFind_(
+        personnelRows,
+        row[0] || "",
+        "",
+        "",
+      );
+      return matched && matched.callsign ? matched.callsign : "";
+    },
+    function (row, matched) {
+      var next = _personnelAssignmentPadRow_(row, width);
+      if (matched) {
+        next[0] = matched.fml || next[0];
+        next[7] = matched.callsign || next[7];
+      }
+      return next;
+    },
+  );
+
+  var out = rebuilt.rows;
   var rowsChanged = 0;
-  var helperFilled = 0;
-
-  for (var i = 0; i < values.length; i += 1) {
-    var row = values[i] || [];
-    var owner = String(row[0] || "").trim();
-    var helperCallsign = String(row[7] || "").trim();
-    var matched = _personnelAssignmentSyncFind_(personnelRows, owner, "", helperCallsign);
-    var next = row.slice(0, 8);
-
-    if (matched) {
-      rowsMatched += 1;
-      next[0] = matched.fml || owner;
-      next[7] = matched.callsign || helperCallsign;
-      if (next[7]) helperFilled += 1;
+  var compareCount = Math.max(values.length, out.length);
+  for (var c = 0; c < compareCount; c += 1) {
+    if (
+      !_personnelAssignmentSameRow_(
+        _personnelAssignmentPadRow_(values[c], width),
+        _personnelAssignmentPadRow_(out[c], width),
+      )
+    ) {
+      rowsChanged += 1;
     }
-
-    if (!_personnelAssignmentSameRow_(row, next)) rowsChanged += 1;
-    out.push(next);
   }
 
-  if (rowsChanged > 0) {
-    range.setValues(out);
+  if (out.length > rowCount) {
+    _personnelMaterializeEnsureDerivedCapacity_(sheet, 2, out.length);
+  }
+  if (rowsChanged > 0 || out.length !== rowCount) {
+    sheet.getRange(2, 1, out.length, width).setValues(out);
+    if (out.length < rowCount) {
+      sheet.getRange(2 + out.length, 1, rowCount - out.length, width).clearContent();
+    }
   }
 
   return {
     ok: true,
     sheet: sheet.getName(),
-    rowsMatched: rowsMatched,
+    rowsMatched: rebuilt.rowsMatched,
     rowsChanged: rowsChanged,
     helperColumn: "H",
-    helperFilled: helperFilled,
+    helperFilled: rebuilt.helperFilled,
+    orphanCount: rebuilt.orphanCount,
+    fullRowReorder: true,
   };
 }
 
@@ -1052,71 +1213,79 @@ function materializeWeaponOwnersFromPersonnel_(personnelRows) {
   _personnelAssignmentEnsureColumn_(sheet, 27, "Callsign", true);
 
   var rowCount = sheet.getLastRow() - 1;
-  var identityRange = sheet.getRange(2, 1, rowCount, 5);
-  var identityValues = identityRange.getDisplayValues();
-  var callsignRange = sheet.getRange(2, 27, rowCount, 1);
-  var callsignValues = callsignRange.getDisplayValues();
-  var identityOut = [];
-  var callsignOut = [];
-  var identityChanged = 0;
-  var callsignChanged = 0;
-  var rowsMatched = 0;
-  var helperFilled = 0;
+  var width = 27;
+  var range = sheet.getRange(2, 1, rowCount, width);
+  var values = range.getValues();
+  var rebuilt = _personnelAssignmentReorderRowsByPersonnel_(
+    values,
+    personnelRows,
+    width,
+    function (row) {
+      var helper = row[26] || "";
+      if (helper) return helper;
+      var rawFml = [row[0], row[1], row[2]]
+        .map(function (part) {
+          return String(part || "").trim();
+        })
+        .filter(Boolean)
+        .join(" ");
+      var matched = _personnelAssignmentSyncFind_(
+        personnelRows,
+        rawFml,
+        row[4],
+        "",
+      );
+      return matched && matched.callsign ? matched.callsign : "";
+    },
+    function (row, matched) {
+      var next = _personnelAssignmentPadRow_(row, width);
+      if (matched) {
+        var parts = _personnelAssignmentSyncSplitFml_(matched.fml || "");
+        next[0] = matched.lastName || parts.lastName;
+        next[1] = matched.firstName || parts.firstName;
+        next[2] = matched.patronymic || parts.patronymic;
+        next[3] = matched.rank || matched.title || "";
+        next[4] = matched.phone || "";
+        next[26] = matched.callsign || next[26];
+      }
+      return next;
+    },
+  );
 
-  for (var i = 0; i < identityValues.length; i += 1) {
-    var row = identityValues[i] || [];
-    var rawFml = [row[0], row[1], row[2]]
-      .map(function (part) {
-        return String(part || "").trim();
-      })
-      .filter(Boolean)
-      .join(" ");
-    var helperCallsign = String((callsignValues[i] && callsignValues[i][0]) || "").trim();
-    var matched = _personnelAssignmentSyncFind_(personnelRows, rawFml, row[4], helperCallsign);
-    var nextIdentity = [
-      String(row[0] || "").trim(),
-      String(row[1] || "").trim(),
-      String(row[2] || "").trim(),
-      String(row[3] || "").trim(),
-      String(row[4] || "").trim(),
-    ];
-    var nextCallsign = helperCallsign;
-
-    if (matched) {
-      rowsMatched += 1;
-      var parts = _personnelAssignmentSyncSplitFml_(matched.fml || rawFml);
-      nextIdentity = [
-        matched.lastName || parts.lastName,
-        matched.firstName || parts.firstName,
-        matched.patronymic || parts.patronymic,
-        matched.rank || matched.title || "",
-        matched.phone || "",
-      ];
-      nextCallsign = matched.callsign || helperCallsign;
-      if (nextCallsign) helperFilled += 1;
+  var out = rebuilt.rows;
+  var rowsChanged = 0;
+  var compareCount = Math.max(values.length, out.length);
+  for (var w = 0; w < compareCount; w += 1) {
+    if (
+      !_personnelAssignmentSameRow_(
+        _personnelAssignmentPadRow_(values[w], width),
+        _personnelAssignmentPadRow_(out[w], width),
+      )
+    ) {
+      rowsChanged += 1;
     }
-
-    if (!_personnelAssignmentSameRow_(row, nextIdentity)) identityChanged += 1;
-    if (String(nextCallsign || "").trim() !== helperCallsign) callsignChanged += 1;
-    identityOut.push(nextIdentity);
-    callsignOut.push([nextCallsign]);
   }
 
-  if (identityChanged > 0) {
-    identityRange.setValues(identityOut);
+  if (out.length > rowCount) {
+    _personnelMaterializeEnsureDerivedCapacity_(sheet, 2, out.length);
   }
-  if (callsignChanged > 0) {
-    callsignRange.setValues(callsignOut);
+  if (rowsChanged > 0 || out.length !== rowCount) {
+    sheet.getRange(2, 1, out.length, width).setValues(out);
+    if (out.length < rowCount) {
+      sheet.getRange(2 + out.length, 1, rowCount - out.length, width).clearContent();
+    }
   }
 
   return {
     ok: true,
     sheet: sheet.getName(),
-    rowsMatched: rowsMatched,
-    rowsChanged: identityChanged,
+    rowsMatched: rebuilt.rowsMatched,
+    rowsChanged: rowsChanged,
     helperColumn: "AA",
-    helperChanged: callsignChanged,
-    helperFilled: helperFilled,
+    helperChanged: rowsChanged,
+    helperFilled: rebuilt.helperFilled,
+    orphanCount: rebuilt.orphanCount,
+    fullRowReorder: true,
   };
 }
 

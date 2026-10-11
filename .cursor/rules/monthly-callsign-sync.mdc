@@ -42,6 +42,7 @@ alwaysApply: true
 - На create: `allowShrink: true` лише для зайвої capacity **поза** PERSONNEL, без стискання порожніх кадрових слотів.
 - Повністю порожні останні слоти PERSONNEL `getLastRow()` може не бачити — межі **не** будувати лише з `getLastRow()`, якщо слоти треба переносити.
 - CI: після expand/shrink `capacityEndRow` ≤ `formulaSync.after.endRow` / schedule bounds.
+- Якщо порядок / набір Callsign змінився: **переносити повний кадровий рядок** (графік + примітки + суміжні колонки) за ключем Callsign через `_monthlyRemapPersonRowsByCallsign_`. Не залишати коди днів на старому номері рядка після підміни лише позивного.
 
 ## 5. Умовне форматування та validation
 

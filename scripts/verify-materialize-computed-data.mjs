@@ -81,6 +81,40 @@ assert.match(
   /formatBirthdayCell_|calculateBirthdayCountdownUa_|birthdayColumnsFormattedRows/,
 );
 
+const personnelMaterializeSource = readRepoFileByBasename(
+  repoRoot,
+  "PersonnelMaterialize.gs",
+  { errorPrefix: "verify-materialize-computed-data" },
+);
+assert.match(
+  personnelMaterializeSource,
+  /function _personnelMaterializeEnsureDerivedCapacity_/,
+  "PHONES/Birthday must expand capacity to fit PERSONNEL",
+);
+assert.match(
+  personnelMaterializeSource,
+  /function _personnelMaterializeDerivedWriteRows_/,
+);
+assert.doesNotMatch(
+  personnelMaterializeSource,
+  /rows\.slice\(0,\s*managedRows\)/,
+  "must not truncate PERSONNEL rows to the derived sheet lastRow",
+);
+assert.match(
+  personnelMaterializeSource,
+  /function _personnelAssignmentReorderRowsByPersonnel_/,
+  "WEAPON/CAR must reorder full rows by Callsign",
+);
+assert.match(
+  personnelMaterializeSource,
+  /fullRowReorder:\s*true/,
+);
+assert.doesNotMatch(
+  personnelMaterializeSource,
+  /identityRange\.setValues\(identityOut\)/,
+  "WEAPON must not overwrite A:E identity without moving property columns",
+);
+
 assert.match(maintenanceApi, /function apiStage7MaterializeComputedData/);
 assert.match(maintenanceApi, /monthlySyncMode/);
 assert.match(maintenanceApi, /stages:\s*Array\.isArray\(opts\.stages\)/);

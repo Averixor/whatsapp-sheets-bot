@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-11 — Human-readable durations in execution journal
+
+- **Sidebar journal:** server/UI timings use `formatDurationUa_` (`20 с`, `2 хв. 31 с.`) instead of raw milliseconds.
+
+## 2026-10-08 — Move full person rows with Callsign reorder
+
+- **Month sheets:** when PERSONNEL callsign order changes, schedule/notes move with the person (`_monthlyRemapPersonRowsByCallsign_`), not only the Callsign cell.
+- **WEAPON / CAR:** materialize reorders full equipment rows by Callsign to match PERSONNEL, then refreshes identity fields — property blocks no longer stay on the old row after a surname swap.
+- **PHONES / Birthday:** capacity expands to fit every PERSONNEL source row (no truncate to target `lastRow`).
+
 ## 2026-10-08 — Pin MCP SDK past OAuth credential redirect
 
 - **Deps:** npm `overrides` pin the clasp MCP TypeScript SDK transitive package to `>=1.31.0`, so the lockfile leaves the vulnerable 1.30.0 client. This project does not use that SDK OAuth client over HTTP; the pin closes Dependabot alert #41.

@@ -590,6 +590,143 @@ function _monthlyEnsurePersonnelCapacity_(monthSheet, requiredRows, options) {
   };
 }
 
+/**
+ * Person-bound columns on a month sheet: Callsign through schedule + notes.
+ * Columns left of Callsign (e.g. BR / =ROW() helpers) stay put.
+ * Summary/formula block below capacityEndRow is never included.
+ */
+function _monthlyPersonBoundColumnSpan_(monthSheet, callsignCol, scheduleBounds) {
+  var leftCol = Math.max(Number(callsignCol) || 1, 1);
+  var rightCol = leftCol;
+  if (scheduleBounds) {
+    rightCol = Math.max(
+      rightCol,
+      Number(scheduleBounds.endCol) || rightCol,
+      Number(scheduleBounds.startCol) || rightCol,
+    );
+  }
+  try {
+    if (typeof findMonthlyNotesCol_ === "function") {
+      var notesCol = Number(findMonthlyNotesCol_(monthSheet)) || 0;
+      if (notesCol > 0) rightCol = Math.max(rightCol, notesCol);
+    }
+  } catch (_) {}
+  var lastCol = Math.max(Number(monthSheet.getLastColumn()) || rightCol, rightCol);
+  rightCol = Math.min(rightCol, lastCol);
+  if (rightCol < leftCol) rightCol = leftCol;
+  return { leftCol: leftCol, rightCol: rightCol };
+}
+
+function _monthlyNormCallsignKey_(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toUpperCase();
+}
+
+/**
+ * When PERSONNEL order/set of callsigns changes, move the whole person row
+ * (schedule + notes + side columns), not only the Callsign cell.
+ */
+function _monthlyRemapPersonRowsByCallsign_(
+  monthSheet,
+  startRow,
+  rowCount,
+  callsignCol,
+  newCallsigns,
+  scheduleBounds,
+) {
+  var count = Math.max(Number(rowCount) || 0, 0);
+  if (!monthSheet || count < 1) {
+    return { remapped: false, rowsMoved: 0 };
+  }
+
+  var span = _monthlyPersonBoundColumnSpan_(
+    monthSheet,
+    callsignCol,
+    scheduleBounds,
+  );
+  var leftCol = span.leftCol;
+  var rightCol = span.rightCol;
+  var width = rightCol - leftCol + 1;
+  var callsignOffset = Math.max((Number(callsignCol) || leftCol) - leftCol, 0);
+
+  var block = monthSheet.getRange(startRow, leftCol, count, width);
+  var currentValues = block.getValues();
+  var currentFormulas = block.getFormulas();
+  var displayCallsigns = monthSheet
+    .getRange(startRow, callsignCol, count, 1)
+    .getDisplayValues();
+
+  var queues = {};
+  for (var i = 0; i < count; i++) {
+    var key = _monthlyNormCallsignKey_(
+      (displayCallsigns[i] && displayCallsigns[i][0]) || "",
+    );
+    if (!key) continue;
+    if (!queues[key]) queues[key] = [];
+    queues[key].push({
+      values: (currentValues[i] || []).slice(),
+      formulas: (currentFormulas[i] || []).slice(),
+    });
+  }
+
+  var nextValues = [];
+  var nextFormulas = [];
+  var rowsMoved = 0;
+  for (var r = 0; r < count; r++) {
+    var nextCs = String(
+      (newCallsigns[r] && newCallsigns[r][0]) || "",
+    ).trim();
+    var nextKey = _monthlyNormCallsignKey_(nextCs);
+    var taken =
+      nextKey && queues[nextKey] && queues[nextKey].length
+        ? queues[nextKey].shift()
+        : null;
+    if (taken) {
+      var valueRow = taken.values.slice();
+      var formulaRow = taken.formulas.slice();
+      while (valueRow.length < width) valueRow.push("");
+      while (formulaRow.length < width) formulaRow.push("");
+      valueRow[callsignOffset] = nextCs;
+      formulaRow[callsignOffset] = "";
+      nextValues.push(valueRow);
+      nextFormulas.push(formulaRow);
+      var oldKey = _monthlyNormCallsignKey_(
+        (displayCallsigns[r] && displayCallsigns[r][0]) || "",
+      );
+      if (oldKey !== nextKey) rowsMoved += 1;
+    } else {
+      var emptyValues = [];
+      var emptyFormulas = [];
+      for (var c = 0; c < width; c++) {
+        emptyValues.push(c === callsignOffset ? nextCs : "");
+        emptyFormulas.push("");
+      }
+      nextValues.push(emptyValues);
+      nextFormulas.push(emptyFormulas);
+    }
+  }
+
+  block.setValues(nextValues);
+  for (var fr = 0; fr < nextFormulas.length; fr++) {
+    for (var fc = 0; fc < width; fc++) {
+      if (nextFormulas[fr][fc]) {
+        monthSheet
+          .getRange(startRow + fr, leftCol + fc)
+          .setFormula(nextFormulas[fr][fc]);
+      }
+    }
+  }
+
+  return {
+    remapped: true,
+    rowsMoved: rowsMoved,
+    leftCol: leftCol,
+    rightCol: rightCol,
+  };
+}
+
 function syncMonthlyCallsignsFromPersonnel_(targetSheetOrName, options) {
   var opts = options || {};
   var personnelSheet = _personnelResolveSheetForMonthlySync_();
@@ -643,8 +780,22 @@ function syncMonthlyCallsignsFromPersonnel_(targetSheetOrName, options) {
       break;
     }
   }
+
+  var personRemap = null;
   if (callsignChanged) {
-    targetRange.setValues(output);
+    var detectedBeforeWrite = _monthlyCodeBoundsFromSheet_(monthSheet);
+    var remapBounds = _monthlyBoundsWithEndRow_(
+      detectedBeforeWrite || beforeBounds,
+      capacityEndRow,
+    );
+    personRemap = _monthlyRemapPersonRowsByCallsign_(
+      monthSheet,
+      startRow,
+      maxRows,
+      callsignCol,
+      output,
+      remapBounds,
+    );
   }
 
   var detectedBounds = _monthlyCodeBoundsFromSheet_(monthSheet);
@@ -688,6 +839,8 @@ function syncMonthlyCallsignsFromPersonnel_(targetSheetOrName, options) {
     personnelSheet: personnelSheet.getName(),
     rowsWritten: callsignChanged ? values.length : 0,
     skippedWrite: !callsignChanged,
+    personRowsRemapped: !!(personRemap && personRemap.remapped),
+    personRowsMoved: personRemap ? personRemap.rowsMoved : 0,
     personnelRows: built.personnelRows,
     activeRowsCount: activeRowsCount,
     callsignColumn: callsignCol,

@@ -893,7 +893,7 @@
         STATE._loadingDepth = 0;
         const started = Number(STATE._loadingStartedAt || 0);
         const ms = started ? Date.now() - started : 0;
-        const suffix = ms > 0 ? " (" + ms + " мс)" : "";
+        const suffix = ms > 0 ? " (" + formatDurationUa_(ms) + ")" : "";
         try {
           if (typeof logToConsole === "function") {
             logToConsole("✓ Завантаження завершено" + suffix, "success");

@@ -28,5 +28,6 @@
       "NODE_OPTIONS": "",
       "VSCODE_INSPECTOR_OPTIONS": ""
     }
-  }
+  },
+  "markdown.validate.enabled": true
 }

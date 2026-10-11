@@ -478,7 +478,7 @@
       if (!timing || timing.skipped === true) return;
       const ms = Number(timing.durationMs);
       if (!Number.isFinite(ms) || ms < 0) return;
-      rows.push(`${label} ${(ms / 1000).toFixed(1)} с`);
+      rows.push(`${label} ${formatDurationUa_(ms)}`);
     };
 
     append("особовий склад", stages.personnel);
@@ -494,7 +494,7 @@
 
     const totalMs = Number(timings.totalMs);
     if (Number.isFinite(totalMs) && totalMs >= 0) {
-      rows.push(`разом ${(totalMs / 1000).toFixed(1)} с`);
+      rows.push(`разом ${formatDurationUa_(totalMs)}`);
     }
     if (rows.length) {
       logToConsole(`⏱ Етапи оновлення: ${rows.join("; ")}`, "info");
