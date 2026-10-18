@@ -86,6 +86,8 @@ const personnelMaterializeSource = readRepoFileByBasename(
   "PersonnelMaterialize.gs",
   { errorPrefix: "verify-materialize-computed-data" },
 );
+// Structural smoke checks (names/markers). Behavioral fake-sheet execution
+// below must remain — string matches alone would accept no-op stubs.
 assert.match(
   personnelMaterializeSource,
   /function _personnelMaterializeDerivedManagedRowCount_/,
@@ -104,6 +106,11 @@ assert.match(
 assert.match(
   personnelMaterializeSource,
   /fullRowReorder:\s*true/,
+);
+assert.match(
+  personnelMaterializeSource,
+  /Drain every queued equipment row for this callsign/,
+  "multi-CAR owners must keep all vehicles in PERSONNEL order",
 );
 assert.match(personnelMaterializeSource, /Object\.create\(null\)/);
 assert.match(personnelMaterializeSource, /concurrent_edit/);
@@ -847,6 +854,25 @@ assert.match(
     ],
   );
   assert.equal(byPhone.ordered[0].displayPhone, "0501112233");
+
+  // Multiple CAR rows for one PERSONNEL callsign stay together in PERSONNEL order.
+  const multiCar = matContext._personnelAssignmentReorderRowsByPersonnel_(
+    [
+      { callsign: "OWNER_B", fml: "B", phone: "", displayPhone: "", tag: "b1" },
+      { callsign: "OWNER_A", fml: "A", phone: "", displayPhone: "", tag: "a1" },
+      { callsign: "OWNER_A", fml: "A", phone: "", displayPhone: "", tag: "a2" },
+      { callsign: "OWNER_B", fml: "B", phone: "", displayPhone: "", tag: "b2" },
+    ],
+    [
+      { callsign: "OWNER_A", fml: "A", phone: "" },
+      { callsign: "OWNER_B", fml: "B", phone: "" },
+    ],
+  );
+  assert.equal(
+    multiCar.ordered.map((row) => row.tag).join(","),
+    "a1,a2,b1,b2",
+    "all CAR rows for each owner must drain before the next PERSONNEL member",
+  );
 }
 
 console.log("verify-materialize-computed-data: OK");

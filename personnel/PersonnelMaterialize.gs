@@ -1027,23 +1027,31 @@ function _personnelAssignmentReorderRowsByPersonnel_(sheetRows, personnelRows) {
   var ordered = [];
   for (var p = 0; p < people.length; p += 1) {
     var person = people[p] || {};
-    var matched = null;
     var personKey = _personnelAssignmentSyncNormCallsign_(person.callsign);
-    if (
+    var tookByCallsign = false;
+    // Drain every queued equipment row for this callsign (e.g. multiple CARs)
+    // before moving to the next PERSONNEL member.
+    while (
       personKey &&
       Object.prototype.hasOwnProperty.call(byCallsign, personKey) &&
       byCallsign[personKey].length
     ) {
-      matched = byCallsign[personKey].shift();
-      while (matched && matched.used) {
-        matched = byCallsign[personKey].length
+      var queued = byCallsign[personKey].shift();
+      while (queued && queued.used) {
+        queued = byCallsign[personKey].length
           ? byCallsign[personKey].shift()
           : null;
       }
+      if (!queued) break;
+      queued.used = true;
+      ordered.push(queued.row);
+      tookByCallsign = true;
     }
-    if (!matched) {
-      matched = takeUnusedByFml_(_personnelAssignmentSyncNormFml_(person.fml));
-    }
+    if (tookByCallsign) continue;
+
+    // Stale helper callsign: match once via FML / display phone during the
+    // PERSONNEL pass (not after append).
+    var matched = takeUnusedByFml_(_personnelAssignmentSyncNormFml_(person.fml));
     if (!matched) {
       matched =
         takeUnusedByPhone_(_personnelAssignmentSyncNormPhone_(person.phone)) ||
