@@ -81,6 +81,38 @@ assert.match(
   /formatBirthdayCell_|calculateBirthdayCountdownUa_|birthdayColumnsFormattedRows/,
 );
 
+const personnelMaterializeSource = readRepoFileByBasename(
+  repoRoot,
+  "PersonnelMaterialize.gs",
+  { errorPrefix: "verify-materialize-computed-data" },
+);
+assert.match(
+  personnelMaterializeSource,
+  /function _personnelMaterializeDerivedManagedRowCount_/,
+  "PHONES/Birthday must expand capacity to fit PERSONNEL",
+);
+assert.doesNotMatch(
+  personnelMaterializeSource,
+  /rows\.slice\(0,\s*managedRows\)/,
+  "must not truncate PERSONNEL rows to the derived sheet lastRow",
+);
+assert.match(
+  personnelMaterializeSource,
+  /function _personnelAssignmentReorderRowsByPersonnel_/,
+  "WEAPON/CAR must reorder full rows by Callsign",
+);
+assert.match(
+  personnelMaterializeSource,
+  /fullRowReorder:\s*true/,
+);
+assert.match(personnelMaterializeSource, /Object\.create\(null\)/);
+assert.match(personnelMaterializeSource, /concurrent_edit/);
+assert.doesNotMatch(
+  personnelMaterializeSource,
+  /identityRange\.setValues\(identityOut\)/,
+  "WEAPON must not overwrite A:E identity without moving property columns",
+);
+
 assert.match(maintenanceApi, /function apiStage7MaterializeComputedData/);
 assert.match(maintenanceApi, /monthlySyncMode/);
 assert.match(maintenanceApi, /stages:\s*Array\.isArray\(opts\.stages\)/);
@@ -393,23 +425,6 @@ assert.match(
   /stage7SafeStringify_\([\s\S]*?SHEET_CELL_SAFE_JSON_LIMIT/,
   "OperationRepository must apply the safe ResultJson cell limit",
 );
-
-const personnelMaterializeSource = readRepoFileByBasename(
-  repoRoot,
-  "PersonnelMaterialize.gs",
-  { errorPrefix: "verify-materialize-computed-data" },
-);
-assert.match(
-  personnelMaterializeSource,
-  /function _personnelAssignmentReorderRowsByPersonnel_/,
-);
-assert.match(personnelMaterializeSource, /fullRowReorder:\s*true/);
-assert.match(
-  personnelMaterializeSource,
-  /function _personnelMaterializeDerivedManagedRowCount_/,
-);
-assert.match(personnelMaterializeSource, /Object\.create\(null\)/);
-assert.match(personnelMaterializeSource, /concurrent_edit/);
 
 {
   function blankCell() {

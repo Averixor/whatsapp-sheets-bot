@@ -73,7 +73,15 @@ const summaryData = readRepoFileByBasename(repoRoot, "Report_SummaryData.gs", {
 assert.match(syncModule, /function syncMonthlyCallsignsFromPersonnel_/);
 assert.match(syncModule, /function findMonthlyCallsignColumn_/);
 assert.match(syncModule, /monthlyCallsignValueFromPersonnelRow_/);
-assert.match(syncModule, /targetRange\.setValues\(output\)/);
+assert.match(syncModule, /function _monthlyRemapPersonRowsByCallsign_/);
+assert.match(syncModule, /_monthlyRemapPersonRowsByCallsign_/);
+assert.match(syncModule, /personRemap/);
+assert.match(syncModule, /remapped:\s*true/);
+assert.doesNotMatch(
+  syncModule,
+  /if \(callsignChanged\) \{\s*targetRange\.setValues\(output\);\s*\}/,
+  "callsign-only write must not replace full-row remap when order changes",
+);
 assert.match(syncModule, /skippedWrite/);
 assert.match(syncModule, /insertRowsBefore\(summaryBlock\.startRow, rowsInserted\)/);
 assert.match(syncModule, /SpreadsheetApp\.CopyPasteType\.PASTE_FORMAT/);
@@ -738,7 +746,8 @@ function buildMonthSheet(layout, options = {}) {
     if (layout === "compact") {
       sheet.cell(row, 1).formulaR1C1 = "=COUNTA(RC[2]:RC[32])";
     }
-    sheet.cell(row, 2).value = `OLD_${row}`;
+    // Same keys as buildPersonnel so remapping keeps schedule cells with the person.
+    sheet.cell(row, 2).value = `CALL_${row}`;
     sheet.cell(row, firstDateCol).value = `SCHEDULE_${row}`;
     sheet.rowHeights[row - 1] = 27;
     for (let col = 1; col <= lastDateCol; col++) {
@@ -945,6 +954,35 @@ function assertRowTemplateCopied(sheet, row, sourceRow, lastDateCol) {
 }
 
 {
+  // Swap two people in PERSONNEL: schedule cells must move with Callsign.
+  const runtime = loadSyncContext();
+  const month = buildMonthSheet("compact");
+  // Seed matching callsigns so remap has identity overlap (not a full label replace).
+  for (let row = 2; row <= 32; row++) {
+    month.cell(row, 2).value = `CALL_${row}`;
+    month.cell(row, 3).formula = "";
+  }
+  month.cell(2, 3).value = "SCHEDULE_2";
+  month.cell(3, 3).value = "SCHEDULE_3";
+  const personnel = buildPersonnel(32, {
+    2: { callsign: "CALL_3", lastName: "LAST_3", firstName: "FIRST_3" },
+    3: { callsign: "CALL_2", lastName: "LAST_2", firstName: "FIRST_2" },
+  });
+  runtime.use(month, personnel);
+  const swapped = runtime.context.syncMonthlyCallsignsFromPersonnel_(month);
+  assert.equal(swapped.personRemap && swapped.personRemap.remapped, true);
+  assert.ok((swapped.personRemap && swapped.personRemap.moved) >= 2);
+  assert.equal(month.valueAt(2, 2), "CALL_3");
+  assert.equal(month.valueAt(3, 2), "CALL_2");
+  assert.equal(
+    month.valueAt(2, 3),
+    "SCHEDULE_3",
+    "day codes must follow the person after PERSONNEL reorder",
+  );
+  assert.equal(month.valueAt(3, 3), "SCHEDULE_2");
+}
+
+{
   const runtime = loadSyncContext();
   const month = buildMonthSheet("compact");
   const personnel = buildPersonnel(33, {
@@ -1015,7 +1053,9 @@ function assertRowTemplateCopied(sheet, row, sourceRow, lastDateCol) {
     41: { callsign: "ПісляПрогалини", lastName: "" },
     60: { callsign: "", lastName: "Шістдесят" },
   });
-  const scheduleBefore = scheduleSnapshot(month, 3);
+  const scheduleExpected = scheduleSnapshot(month, 3);
+  // Empty PERSONNEL slots must not keep the previous person's day codes.
+  scheduleExpected[18] = "";
   runtime.use(month, personnel);
 
   const result = runtime.context.syncMonthlyCallsignsFromPersonnel_(month);
@@ -1031,7 +1071,7 @@ function assertRowTemplateCopied(sheet, row, sourceRow, lastDateCol) {
   assert.equal(month.valueAt(62, 2), "За_штатом");
   assert.equal(month.cell(62, 3).formulaR1C1, "=COUNTA(R2C:R[-2]C)");
   assert.equal(month.cell(62, 3).formula, "=COUNTA($C$2:$AG$60)");
-  assert.deepEqual(scheduleSnapshot(month, 3), scheduleBefore);
+  assert.deepEqual(scheduleSnapshot(month, 3), scheduleExpected);
 
   const second = runtime.context.syncMonthlyCallsignsFromPersonnel_(month);
   assert.equal(second.rowsInserted, 0);
@@ -1230,7 +1270,7 @@ function assertRowTemplateCopied(sheet, row, sourceRow, lastDateCol) {
 {
   // Apps Script Range.setFormulas("") on mixed cells clears VALUES, not only formulas.
   const sheet = buildMonthSheet("compact");
-  assert.equal(sheet.valueAt(2, 2), "OLD_2");
+  assert.equal(sheet.valueAt(2, 2), "CALL_2");
   const mixed = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn());
   mixed.setFormulas(mixed.getFormulas());
   assert.equal(sheet.valueAt(2, 2), "", "setFormulas on mixed grid wipes callsigns");
@@ -1264,8 +1304,8 @@ function assertRowTemplateCopied(sheet, row, sourceRow, lastDateCol) {
   );
   assert.ok(formulaSync.rewritten > 0);
   assert.equal(month.setFormulasCalls, 0);
-  assert.equal(month.valueAt(2, 2), "OLD_2", "copied callsigns must survive 31→30 remap");
-  assert.equal(month.valueAt(32, 2), "OLD_32");
+  assert.equal(month.valueAt(2, 2), "CALL_2", "copied callsigns must survive 31→30 remap");
+  assert.equal(month.valueAt(32, 2), "CALL_32");
   assert.equal(month.valueAt(1, 2), "Позивний");
   assert.equal(month.valueAt(1, 3), "01.09.2026");
   assert.equal(month.valueAt(1, 32), "30.09.2026");

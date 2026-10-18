@@ -36,6 +36,25 @@
     return PERSONNEL_CALLSIGNS;
   }
 
+  /**
+   * Human-readable duration for the execution journal (no raw ms).
+   * 500 → "1 с"; 20395 → "20 с"; 151804 → "2 хв. 31 с."
+   */
+  function formatDurationUa_(ms) {
+    var n = Number(ms);
+    if (!Number.isFinite(n) || n < 0) n = 0;
+    var totalSec = Math.floor(n / 1000);
+    if (n > 0 && totalSec < 1) totalSec = 1;
+    if (totalSec < 60) return totalSec + " с";
+    var hours = Math.floor(totalSec / 3600);
+    var minutes = Math.floor((totalSec % 3600) / 60);
+    var seconds = totalSec % 60;
+    if (hours > 0) {
+      return hours + " год. " + minutes + " хв. " + seconds + " с.";
+    }
+    return minutes + " хв. " + seconds + " с.";
+  }
+
   // =========================
   // STATE
   // =========================
@@ -403,7 +422,7 @@
       try {
         if (typeof logToConsole === "function") {
           logToConsole(
-            "⏱ " + name + " (" + (Date.now() - started) + " мс)",
+            "⏱ " + name + " (" + formatDurationUa_(Date.now() - started) + ")",
             "success",
             { channel: "ui" },
           );
@@ -486,9 +505,10 @@
             typeof summaryFn === "function" ? summaryFn(result) : "";
           const summarySuffix = summary ? " — " + summary : "";
 
+          const durationLabel = formatDurationUa_(ms);
           if (result && result.success === false) {
             _consoleLog_(
-              "✕ Сервер: " + method + " (" + ms + " мс)" + summarySuffix,
+              "✕ Сервер: " + method + " (" + durationLabel + ")" + summarySuffix,
               "error",
             );
           } else {
@@ -502,8 +522,8 @@
               "✓ Сервер: " +
                 method +
                 " (" +
-                ms +
-                " мс)" +
+                durationLabel +
+                ")" +
                 expectedLongSuffix +
                 summarySuffix,
               logType,
@@ -524,8 +544,8 @@
             "✕ Сервер: " +
               method +
               " (" +
-              ms +
-              " мс) — " +
+              formatDurationUa_(ms) +
+              ") — " +
               normalizeError(err),
             "error",
           );

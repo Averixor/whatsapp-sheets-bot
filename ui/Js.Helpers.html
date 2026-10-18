@@ -859,7 +859,7 @@
       "Активний місяць: " + month,
       "Записів: " + entries.length,
       sessionMs > 0
-        ? "Тривалість сесії: " + Math.round(sessionMs / 1000) + " с"
+        ? "Тривалість сесії: " + formatDurationUa_(sessionMs)
         : "",
       "",
       body || "Лог порожній",
