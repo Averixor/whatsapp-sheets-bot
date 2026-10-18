@@ -480,7 +480,7 @@ function _personnelMaterializeWriteColumnIfChanged_(
   var nextValues = safeValues.slice(0, writeEndRow - startRow + 1).map(function (value) {
     return [value];
   });
-  var currentValues = range.getDisplayValues();
+  var currentValues = range.getValues();
   if (_personnelMaterializeColumnEqual_(currentValues, nextValues)) {
     return 0;
   }
@@ -497,15 +497,15 @@ function _personnelMaterializeWriteMatrixIfChanged_(sheet, startRow, values) {
   if (!width) return 0;
 
   var range = sheet.getRange(startRow, 1, safeValues.length, width);
-  var currentValues = range.getDisplayValues();
-  if (_personnelMaterializeRowsEqualDisplay_(currentValues, safeValues)) {
+  var currentValues = range.getValues();
+  if (_personnelMaterializeRowsEqualRaw_(currentValues, safeValues)) {
     return 0;
   }
   range.setValues(safeValues);
   return safeValues.length;
 }
 
-function _personnelMaterializeRowsEqualDisplay_(left, right) {
+function _personnelMaterializeRowsEqualRaw_(left, right) {
   var a = Array.isArray(left) ? left : [];
   var b = Array.isArray(right) ? right : [];
   if (a.length !== b.length) return false;
@@ -1634,7 +1634,18 @@ function materializePersonnelDerivedSheets_(options) {
   timings.totalMs = Math.max(new Date().getTime() - startedAtMs, 0);
 
   return {
-    ok: !!(personnelResult && personnelResult.ok),
+    ok: !!(
+      personnelResult &&
+      personnelResult.ok &&
+      phonesResult &&
+      phonesResult.ok &&
+      birthdayResult &&
+      birthdayResult.ok &&
+      monthlySync &&
+      monthlySync.ok &&
+      equipmentAssignments &&
+      equipmentAssignments.ok
+    ),
     source: options && options.source ? String(options.source) : "",
     personnel: personnelResult,
     phones: phonesResult,

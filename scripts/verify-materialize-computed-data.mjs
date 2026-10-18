@@ -112,6 +112,31 @@ assert.doesNotMatch(
   /identityRange\.setValues\(identityOut\)/,
   "WEAPON must not overwrite A:E identity without moving property columns",
 );
+assert.match(
+  personnelMaterializeSource,
+  /function _personnelMaterializeWriteColumnIfChanged_[\s\S]*?range\.getValues\(\)/,
+  "column write-if-changed must compare raw getValues()",
+);
+assert.match(
+  personnelMaterializeSource,
+  /function _personnelMaterializeWriteMatrixIfChanged_[\s\S]*?range\.getValues\(\)/,
+  "matrix write-if-changed must compare raw getValues()",
+);
+assert.match(
+  personnelMaterializeSource,
+  /function _personnelMaterializeRowsEqualRaw_/,
+  "matrix equality helper must use RowsEqualRaw naming",
+);
+assert.doesNotMatch(
+  personnelMaterializeSource,
+  /_personnelMaterializeRowsEqualDisplay_/,
+  "RowsEqualDisplay must be renamed to RowsEqualRaw",
+);
+assert.match(
+  personnelMaterializeSource,
+  /personnelResult\.ok[\s\S]*phonesResult\.ok[\s\S]*birthdayResult\.ok[\s\S]*monthlySync\.ok[\s\S]*equipmentAssignments\.ok/,
+  "derived materialize ok must aggregate personnel+phones+birthday+monthly+equipment",
+);
 
 assert.match(maintenanceApi, /function apiStage7MaterializeComputedData/);
 assert.match(maintenanceApi, /monthlySyncMode/);
