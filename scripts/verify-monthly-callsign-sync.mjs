@@ -75,7 +75,8 @@ assert.match(syncModule, /function findMonthlyCallsignColumn_/);
 assert.match(syncModule, /monthlyCallsignValueFromPersonnelRow_/);
 assert.match(syncModule, /function _monthlyRemapPersonRowsByCallsign_/);
 assert.match(syncModule, /_monthlyRemapPersonRowsByCallsign_/);
-assert.match(syncModule, /personRowsRemapped/);
+assert.match(syncModule, /personRemap/);
+assert.match(syncModule, /remapped:\s*true/);
 assert.doesNotMatch(
   syncModule,
   /if \(callsignChanged\) \{\s*targetRange\.setValues\(output\);\s*\}/,
@@ -956,14 +957,21 @@ function assertRowTemplateCopied(sheet, row, sourceRow, lastDateCol) {
   // Swap two people in PERSONNEL: schedule cells must move with Callsign.
   const runtime = loadSyncContext();
   const month = buildMonthSheet("compact");
+  // Seed matching callsigns so remap has identity overlap (not a full label replace).
+  for (let row = 2; row <= 32; row++) {
+    month.cell(row, 2).value = `CALL_${row}`;
+    month.cell(row, 3).formula = "";
+  }
+  month.cell(2, 3).value = "SCHEDULE_2";
+  month.cell(3, 3).value = "SCHEDULE_3";
   const personnel = buildPersonnel(32, {
     2: { callsign: "CALL_3", lastName: "LAST_3", firstName: "FIRST_3" },
     3: { callsign: "CALL_2", lastName: "LAST_2", firstName: "FIRST_2" },
   });
   runtime.use(month, personnel);
   const swapped = runtime.context.syncMonthlyCallsignsFromPersonnel_(month);
-  assert.equal(swapped.personRowsRemapped, true);
-  assert.ok(swapped.personRowsMoved >= 2);
+  assert.equal(swapped.personRemap && swapped.personRemap.remapped, true);
+  assert.ok((swapped.personRemap && swapped.personRemap.moved) >= 2);
   assert.equal(month.valueAt(2, 2), "CALL_3");
   assert.equal(month.valueAt(3, 2), "CALL_2");
   assert.equal(

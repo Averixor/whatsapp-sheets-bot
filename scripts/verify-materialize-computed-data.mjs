@@ -88,12 +88,8 @@ const personnelMaterializeSource = readRepoFileByBasename(
 );
 assert.match(
   personnelMaterializeSource,
-  /function _personnelMaterializeEnsureDerivedCapacity_/,
+  /function _personnelMaterializeDerivedManagedRowCount_/,
   "PHONES/Birthday must expand capacity to fit PERSONNEL",
-);
-assert.match(
-  personnelMaterializeSource,
-  /function _personnelMaterializeDerivedWriteRows_/,
 );
 assert.doesNotMatch(
   personnelMaterializeSource,
@@ -109,6 +105,8 @@ assert.match(
   personnelMaterializeSource,
   /fullRowReorder:\s*true/,
 );
+assert.match(personnelMaterializeSource, /Object\.create\(null\)/);
+assert.match(personnelMaterializeSource, /concurrent_edit/);
 assert.doesNotMatch(
   personnelMaterializeSource,
   /identityRange\.setValues\(identityOut\)/,
@@ -427,23 +425,6 @@ assert.match(
   /stage7SafeStringify_\([\s\S]*?SHEET_CELL_SAFE_JSON_LIMIT/,
   "OperationRepository must apply the safe ResultJson cell limit",
 );
-
-const personnelMaterializeSource = readRepoFileByBasename(
-  repoRoot,
-  "PersonnelMaterialize.gs",
-  { errorPrefix: "verify-materialize-computed-data" },
-);
-assert.match(
-  personnelMaterializeSource,
-  /function _personnelAssignmentReorderRowsByPersonnel_/,
-);
-assert.match(personnelMaterializeSource, /fullRowReorder:\s*true/);
-assert.match(
-  personnelMaterializeSource,
-  /function _personnelMaterializeDerivedManagedRowCount_/,
-);
-assert.match(personnelMaterializeSource, /Object\.create\(null\)/);
-assert.match(personnelMaterializeSource, /concurrent_edit/);
 
 {
   function blankCell() {
