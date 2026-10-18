@@ -22,8 +22,8 @@ var SYSTEM_STATUS_FINGERPRINT_STAGE_VERSIONS_ = Object.freeze({
   "computed.phones_result": "phones-result-v2",
   "computed.birthday_result": "birthday-result-v2",
   "computed.monthly_callsigns": "monthly-callsigns-v3",
-  "computed.assignment_car": "assignment-car-v6",
-  "computed.assignment_weapon": "assignment-weapon-v6",
+  "computed.assignment_car": "assignment-car-v7",
+  "computed.assignment_weapon": "assignment-weapon-v7",
   "computed.vacation_computed": "vacation-computed-v4",
   "computed.vacation_schedule": "vacation-schedule-v3",
   "computed.vacation_monthly_sync": "vacation-monthly-sync-v10",
@@ -258,16 +258,16 @@ var SystemStatusFingerprints_ = (function () {
 
   var SYSTEM_STATUS_FINGERPRINT_TRANSITION_POLICIES_ = Object.freeze({
     "computed.assignment_car": Object.freeze({
-      mode: "cell_patch",
+      mode: "full_row_reorder",
       rowKeyField: "rowKey",
-      reorderPolicy: "reject",
+      reorderPolicy: "personnel_order",
       writableFields: Object.freeze(["ownerFml", "helperCallsign"]),
       preservedFields: Object.freeze(["rowKey", "columnsBtoG"]),
     }),
     "computed.assignment_weapon": Object.freeze({
-      mode: "cell_patch",
+      mode: "full_row_reorder",
       rowKeyField: "rowKey",
-      reorderPolicy: "reject",
+      reorderPolicy: "personnel_order",
       writableFields: Object.freeze([
         "lastName", "firstName", "patronymic", "rank", "phone", "callsign",
       ]),
@@ -1564,7 +1564,8 @@ var SystemStatusFingerprints_ = (function () {
     }
 
     var transitionDecision = _transitionDecision_(id, "eligible", []);
-    if (policy.mode === "cell_patch" || policy.mode === "birthday_semantic_patch" ||
+    if (policy.mode === "cell_patch" || policy.mode === "full_row_reorder" ||
+        policy.mode === "birthday_semantic_patch" ||
         policy.mode === "vacation_monthly_atomic") {
       transitionDecision = _evaluateCellPatch_(id, value.transition, policy);
     } else if (policy.mode === "target_slice_replace") {

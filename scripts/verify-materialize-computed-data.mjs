@@ -394,4 +394,444 @@ assert.match(
   "OperationRepository must apply the safe ResultJson cell limit",
 );
 
+const personnelMaterializeSource = readRepoFileByBasename(
+  repoRoot,
+  "PersonnelMaterialize.gs",
+  { errorPrefix: "verify-materialize-computed-data" },
+);
+assert.match(
+  personnelMaterializeSource,
+  /function _personnelAssignmentReorderRowsByPersonnel_/,
+);
+assert.match(personnelMaterializeSource, /fullRowReorder:\s*true/);
+assert.match(
+  personnelMaterializeSource,
+  /function _personnelMaterializeDerivedManagedRowCount_/,
+);
+assert.match(personnelMaterializeSource, /Object\.create\(null\)/);
+assert.match(personnelMaterializeSource, /concurrent_edit/);
+
+{
+  function blankCell() {
+    return { value: "", formula: "", formulaR1C1: "" };
+  }
+
+  class MatFakeRange {
+    constructor(sheet, row, col, numRows, numCols) {
+      this.sheet = sheet;
+      this.row = row;
+      this.col = col;
+      this.numRows = numRows;
+      this.numCols = numCols;
+    }
+    getValues() {
+      const out = [];
+      for (let r = 0; r < this.numRows; r++) {
+        const row = [];
+        for (let c = 0; c < this.numCols; c++) {
+          row.push(this.sheet.cell(this.row + r, this.col + c).value);
+        }
+        out.push(row);
+      }
+      return out;
+    }
+    getDisplayValues() {
+      const out = [];
+      for (let r = 0; r < this.numRows; r++) {
+        const row = [];
+        for (let c = 0; c < this.numCols; c++) {
+          const cell = this.sheet.cell(this.row + r, this.col + c);
+          row.push(
+            cell.value !== "" && cell.value != null
+              ? String(cell.value)
+              : cell.formula
+                ? "0"
+                : "",
+          );
+        }
+        out.push(row);
+      }
+      return out;
+    }
+    getFormulas() {
+      const out = [];
+      for (let r = 0; r < this.numRows; r++) {
+        const row = [];
+        for (let c = 0; c < this.numCols; c++) {
+          row.push(this.sheet.cell(this.row + r, this.col + c).formula || "");
+        }
+        out.push(row);
+      }
+      return out;
+    }
+    setValues(values) {
+      values.forEach((sourceRow, rowOffset) => {
+        sourceRow.forEach((value, colOffset) => {
+          const target = this.sheet.cell(
+            this.row + rowOffset,
+            this.col + colOffset,
+          );
+          target.value = value;
+          target.formula = "";
+        });
+      });
+      return this;
+    }
+    setFormulas(values) {
+      values.forEach((sourceRow, rowOffset) => {
+        sourceRow.forEach((value, colOffset) => {
+          const target = this.sheet.cell(
+            this.row + rowOffset,
+            this.col + colOffset,
+          );
+          target.formula = String(value || "");
+          target.value = "";
+        });
+      });
+      return this;
+    }
+    setValue(value) {
+      this.sheet.cell(this.row, this.col).value = value;
+      return this;
+    }
+    getDisplayValue() {
+      return this.getDisplayValues()[0][0];
+    }
+    getA1Notation() {
+      return `R${this.row}C${this.col}`;
+    }
+  }
+
+  class MatFakeSheet {
+    constructor(name, rowCount = 40, colCount = 30) {
+      this.name = name;
+      this.colCount = colCount;
+      this.rows = Array.from({ length: rowCount }, () =>
+        Array.from({ length: colCount }, blankCell),
+      );
+      this.hiddenColumns = new Set();
+    }
+    getName() {
+      return this.name;
+    }
+    cell(row, col) {
+      while (this.rows.length < row) {
+        this.rows.push(Array.from({ length: this.colCount }, blankCell));
+      }
+      while (this.rows[row - 1].length < col) {
+        this.rows[row - 1].push(blankCell());
+        this.colCount = Math.max(this.colCount, col);
+      }
+      return this.rows[row - 1][col - 1];
+    }
+    getLastRow() {
+      for (let row = this.rows.length; row >= 1; row--) {
+        if (
+          this.rows[row - 1].some(
+            (cell) => cell.value !== "" || cell.formula !== "",
+          )
+        ) {
+          return row;
+        }
+      }
+      return 0;
+    }
+    getLastColumn() {
+      return this.colCount;
+    }
+    getMaxColumns() {
+      return this.colCount;
+    }
+    getRange(row, col, numRows, numCols) {
+      return new MatFakeRange(this, row, col, numRows, numCols);
+    }
+    hideColumns(col) {
+      this.hiddenColumns.add(col);
+    }
+    insertColumnsAfter() {}
+  }
+
+  const phones = new MatFakeSheet("PHONES", 40, 3);
+  phones.cell(1, 1).value = "Callsign";
+  phones.cell(1, 2).value = "Phone";
+  phones.cell(1, 3).value = "Phone 2";
+
+  const car = new MatFakeSheet("CAR", 10, 8);
+  car.cell(1, 1).value = "Owner";
+  car.cell(1, 8).value = "Callsign";
+  // Stale helper callsign, identity still matches via FML; property formula in B.
+  car.cell(2, 1).value = "Іваненко Іван";
+  car.cell(2, 2).formula = "=A2&\"-car\"";
+  car.cell(2, 8).value = "STALE";
+  car.cell(3, 1).value = "Петренко Петро";
+  car.cell(3, 2).value = "PROP_B";
+  car.cell(3, 8).value = "PETRO";
+
+  const sheetsByName = Object.create(null);
+  sheetsByName.PHONES = phones;
+  sheetsByName.CAR = car;
+  sheetsByName.WEAPON = new MatFakeSheet("WEAPON", 5, 27);
+
+  const sourcePeople = [];
+  for (let i = 1; i <= 35; i++) {
+    sourcePeople.push({
+      callsign: `P${i}`,
+      phone: `3805000000${String(i).padStart(2, "0")}`,
+      phone2: "",
+      fml: i === 1 ? "Петренко Петро" : i === 2 ? "Іваненко Іван" : `Person ${i}`,
+      lastName: i === 1 ? "Петренко" : i === 2 ? "Іваненко" : `Last${i}`,
+      firstName: i === 1 ? "Петро" : i === 2 ? "Іван" : `First${i}`,
+      patronymic: "",
+      rank: "",
+      title: "",
+    });
+  }
+
+  function matLetterToNum_(letters) {
+    const text = String(letters || "").toUpperCase();
+    let n = 0;
+    for (let i = 0; i < text.length; i++) {
+      n = n * 26 + (text.charCodeAt(i) - 64);
+    }
+    return n;
+  }
+  function matFormatA1_(col, row, absCol, absRow) {
+    let n = Number(col) || 0;
+    let out = "";
+    while (n > 0) {
+      const rem = (n - 1) % 26;
+      out = String.fromCharCode(65 + rem) + out;
+      n = Math.floor((n - 1) / 26);
+    }
+    return (absCol ? "$" : "") + (out || "A") + (absRow ? "$" : "") + String(row);
+  }
+  function matParseA1_(token) {
+    const match = String(token || "").match(
+      /^(\$?)([A-Za-z]{1,3})(\$?)(\d+)(?::(\$?)([A-Za-z]{1,3})(\$?)(\d+))?$/,
+    );
+    if (!match) return null;
+    const startCol = matLetterToNum_(match[2]);
+    const startRow = Number(match[4]) || 0;
+    const endCol = match[6] ? matLetterToNum_(match[6]) : startCol;
+    const endRow = match[8] ? Number(match[8]) || 0 : startRow;
+    return {
+      startCol,
+      startRow,
+      endCol,
+      endRow,
+      absStartCol: match[1] === "$",
+      absStartRow: match[3] === "$",
+      absEndCol: match[6] ? match[5] === "$" : match[1] === "$",
+      absEndRow: match[8] ? match[7] === "$" : match[3] === "$",
+      isRange: !!match[6],
+    };
+  }
+  function matAdjustFormula_(formula, fromRow, toRow) {
+    const text = String(formula == null ? "" : formula);
+    const delta = (Number(toRow) || 0) - (Number(fromRow) || 0);
+    if (!text || !delta) return text;
+    return text.replace(
+      /(^|[^A-Za-z0-9_])((?:\$?[A-Za-z]{1,3}\$?\d+)(?::\$?[A-Za-z]{1,3}\$?\d+)?)/g,
+      (full, prefix, token) => {
+        if (prefix === "!") return full;
+        const parsed = matParseA1_(token);
+        if (!parsed) return full;
+        let startRow = parsed.startRow;
+        let endRow = parsed.endRow;
+        let changed = false;
+        if (!parsed.absStartRow) {
+          startRow += delta;
+          changed = true;
+        }
+        if (!parsed.absEndRow) {
+          endRow += delta;
+          changed = true;
+        }
+        if (!changed || startRow < 1 || endRow < 1) return full;
+        if (!parsed.isRange) {
+          return (
+            prefix +
+            matFormatA1_(
+              parsed.startCol,
+              startRow,
+              parsed.absStartCol,
+              parsed.absStartRow,
+            )
+          );
+        }
+        return (
+          prefix +
+          matFormatA1_(
+            parsed.startCol,
+            startRow,
+            parsed.absStartCol,
+            parsed.absStartRow,
+          ) +
+          ":" +
+          matFormatA1_(parsed.endCol, endRow, parsed.absEndCol, parsed.absEndRow)
+        );
+      },
+    );
+  }
+
+  const matContext = vm.createContext({
+    console,
+    CONFIG: {
+      PHONES_SHEET: "PHONES",
+      CAR_SHEET: "CAR",
+      WEAPON_SHEET: "WEAPON",
+      BIRTHDAY_HELPER_SHEET: "Birthday",
+    },
+    MONTHLY_CONFIG: { LAST_DATA_ROW: 30 },
+    getWasbSpreadsheet_() {
+      return {
+        getSheetByName(name) {
+          return sheetsByName[name] || null;
+        },
+        getSheets() {
+          return Object.values(sheetsByName);
+        },
+      };
+    },
+    _personnelCanonicalHeaderKey_(header) {
+      return String(header || "").trim();
+    },
+    _normFml_(s) {
+      return String(s || "")
+        .trim()
+        .replace(/\s+/g, " ")
+        .toUpperCase();
+    },
+    normalizePhone_(value) {
+      const digits = String(value || "").replace(/\D/g, "");
+      if (!digits) return "";
+      if (/^0\d{9}$/.test(digits)) return "+38" + digits;
+      if (/^380\d{9}$/.test(digits)) return "+" + digits;
+      return "+" + digits;
+    },
+    _monthlyWriteSeparatedValuesAndFormulas_(
+      sheet,
+      startRow,
+      startCol,
+      values,
+      formulas,
+    ) {
+      for (let r = 0; r < values.length; r++) {
+        const valueRow = values[r] || [];
+        const formulaRow = (formulas && formulas[r]) || [];
+        let c = 0;
+        while (c < valueRow.length) {
+          const hasFormula = !!String(formulaRow[c] || "").trim();
+          const runStart = c;
+          if (hasFormula) {
+            while (c < valueRow.length && String(formulaRow[c] || "").trim()) {
+              c++;
+            }
+            sheet
+              .getRange(startRow + r, startCol + runStart, 1, c - runStart)
+              .setFormulas([formulaRow.slice(runStart, c)]);
+          } else {
+            while (c < valueRow.length && !String(formulaRow[c] || "").trim()) {
+              c++;
+            }
+            sheet
+              .getRange(startRow + r, startCol + runStart, 1, c - runStart)
+              .setValues([valueRow.slice(runStart, c)]);
+          }
+        }
+      }
+      return { ok: true, valueRuns: 1, formulaRuns: 1 };
+    },
+    _monthlyParseFlexibleA1Token_: matParseA1_,
+    _monthlyFormatA1Cell_: matFormatA1_,
+    _monthlyAdjustFormulaRowDelta_: matAdjustFormula_,
+  });
+
+  vm.runInContext(personnelMaterializeSource, matContext, {
+    filename: "PersonnelMaterialize.gs",
+  });
+
+  const phonesResult = matContext.materializePhonesSheet_(phones, sourcePeople, {
+    forceHeaders: true,
+  });
+  assert.equal(phonesResult.ok, true);
+  assert.equal(
+    phonesResult.rowsWritten,
+    35,
+    "PHONES must expand to fit all source people (no truncate at 31)",
+  );
+  assert.equal(phones.cell(36, 1).value, "P35");
+
+  const carResult = matContext.materializeCarOwnersFromPersonnel_([
+    {
+      fml: "Петренко Петро",
+      callsign: "PETRO",
+      phone: "",
+      phone2: "",
+      lastName: "Петренко",
+      firstName: "Петро",
+      patronymic: "",
+      rank: "",
+      title: "",
+    },
+    {
+      fml: "Іваненко Іван",
+      callsign: "IVAN",
+      phone: "",
+      phone2: "",
+      lastName: "Іваненко",
+      firstName: "Іван",
+      patronymic: "",
+      rank: "",
+      title: "",
+    },
+  ]);
+  assert.equal(carResult.ok, true);
+  assert.equal(carResult.fullRowReorder, true);
+  assert.equal(car.cell(2, 8).value, "PETRO", "PERSONNEL order first");
+  assert.equal(car.cell(2, 2).value, "PROP_B");
+  assert.equal(car.cell(3, 8).value, "IVAN", "stale helper matched via FML");
+  assert.equal(
+    car.cell(3, 2).formula,
+    '=A3&"-car"',
+    "property formula must survive reorder and adjust relative row refs",
+  );
+
+  // Prototype-key callsign must not break queue maps.
+  const reorder = matContext._personnelAssignmentReorderRowsByPersonnel_(
+    [
+      { callsign: "constructor", fml: "Ctor Person", phone: "", displayPhone: "" },
+      { callsign: "toString", fml: "Ts Person", phone: "", displayPhone: "" },
+    ],
+    [
+      { callsign: "toString", fml: "Ts Person", phone: "" },
+      { callsign: "constructor", fml: "Ctor Person", phone: "" },
+    ],
+  );
+  assert.equal(reorder.ordered[0].callsign, "toString");
+  assert.equal(reorder.ordered[1].callsign, "constructor");
+  assert.equal(reorder.fullRowReorder, true);
+
+  // Phone identity fallback uses display phone (leading zeros / formatting).
+  const byPhone = matContext._personnelAssignmentReorderRowsByPersonnel_(
+    [
+      {
+        callsign: "",
+        fml: "Other Name",
+        phone: 501112233,
+        displayPhone: "0501112233",
+      },
+    ],
+    [
+      {
+        callsign: "PHONE_MATCH",
+        fml: "Different",
+        phone: "+380501112233",
+        phone2: "",
+      },
+    ],
+  );
+  assert.equal(byPhone.ordered[0].displayPhone, "0501112233");
+}
+
 console.log("verify-materialize-computed-data: OK");

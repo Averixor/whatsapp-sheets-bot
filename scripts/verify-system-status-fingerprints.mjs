@@ -929,6 +929,14 @@ for (const [stageId, projectionKinds] of Object.entries(executableManifest)) {
     assert.ok(projectionKinds.transitionPolicy.rowKeyField, `${stageId}: row key policy missing`);
     assert.equal(projectionKinds.transitionPolicy.reorderPolicy, "reject", `${stageId}: reorder must fail closed`);
   }
+  if (projectionKinds.transitionPolicy.mode === "full_row_reorder") {
+    assert.ok(projectionKinds.transitionPolicy.rowKeyField, `${stageId}: row key policy missing`);
+    assert.equal(
+      projectionKinds.transitionPolicy.reorderPolicy,
+      "personnel_order",
+      `${stageId}: assignment reorder follows PERSONNEL order`,
+    );
+  }
 }
 assert.ok(!Object.hasOwn(contract.transitionPolicies["computed.vacation_monthly_sync"], "confirmations"));
 assert.deepEqual(

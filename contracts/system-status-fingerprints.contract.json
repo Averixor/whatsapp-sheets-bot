@@ -62,8 +62,8 @@
   },
   "transitionPolicies": {
     "computed.personnel_helpers": {"mode": "birthday_semantic_patch", "rowKeyField": "rowKey", "reorderPolicy": "reject", "writableFields": ["birthdaySemantic"], "preservedFields": ["rowKey"], "semanticInvariant": "prior_equals_expected_equals_post", "emptySemanticState": "eligible_noop", "invalidSemanticState": "failed"},
-    "computed.assignment_car": {"mode": "cell_patch", "rowKeyField": "rowKey", "reorderPolicy": "reject", "writableFields": ["ownerFml", "helperCallsign"], "preservedFields": ["rowKey", "columnsBtoG"]},
-    "computed.assignment_weapon": {"mode": "cell_patch", "rowKeyField": "rowKey", "reorderPolicy": "reject", "writableFields": ["lastName", "firstName", "patronymic", "rank", "phone", "callsign"], "preservedFields": ["rowKey", "columnsFtoZ"]},
+    "computed.assignment_car": {"mode": "full_row_reorder", "rowKeyField": "rowKey", "reorderPolicy": "personnel_order", "writableFields": ["ownerFml", "helperCallsign"], "preservedFields": ["rowKey", "columnsBtoG"]},
+    "computed.assignment_weapon": {"mode": "full_row_reorder", "rowKeyField": "rowKey", "reorderPolicy": "personnel_order", "writableFields": ["lastName", "firstName", "patronymic", "rank", "phone", "callsign"], "preservedFields": ["rowKey", "columnsFtoZ"]},
     "computed.vacation_monthly_sync": {"mode": "vacation_monthly_atomic", "rowKeyField": "cellKey", "reorderPolicy": "reject", "writableFields": ["cellValue", "cellDisplay"], "preservedFields": ["cellKey", "validationAllowed", "note", "dateRaw", "dateDisplay", "callsign", "fml"], "structuredProofs": ["targetCells", "metadata", "pendingPlan", "conflicts"], "missingProofState": "unknown", "presentMismatchState": "failed", "expectedBindingSource": "trusted_execution_context", "expectedBindingArgument": "trustedExecutionContext", "expectedBindingBuilder": "buildExpectedBindingFromTrustedContext", "derivedFromEvidenceAllowed": false, "evidenceExpectedBindingUsed": false, "evidenceTrustedContextUsed": false, "stageWrapperTrustedContextArgument": "trustedExecutionContext", "operationWrapperTrustedContextArgument": "trustedContextMap", "structuredStatusPropagation": true, "digestValidationBeforeComparison": true},
     "month_journal.journal_slice": {"mode": "target_slice_replace", "remapNonTargetByHeader": false},
     "month_journal.summary_slice": {"mode": "target_slice_replace", "remapNonTargetByHeader": true},
@@ -268,7 +268,7 @@
     },
     {
       "stageId": "computed.assignment_car",
-      "version": "assignment-car-v6",
+      "version": "assignment-car-v7",
       "policy": "optional",
       "skipPredicate": "target_missing_or_empty",
       "extractor": "CAR A:H plus PERSONNEL transition",
@@ -280,7 +280,7 @@
     },
     {
       "stageId": "computed.assignment_weapon",
-      "version": "assignment-weapon-v6",
+      "version": "assignment-weapon-v7",
       "policy": "optional",
       "skipPredicate": "target_missing_or_empty",
       "extractor": "WEAPON A:E and AA plus PERSONNEL transition",
@@ -428,7 +428,7 @@
     "version": "ss2a9-executable-projection-v10",
     "builderId": "SystemStatusFingerprints_.buildStageSourceFingerprintFromContext/buildStageResultFingerprintFromContext",
     "manifestExport": "SystemStatusFingerprints_.executableManifest",
-    "manifestCanonicalJsonSha256": "0ce943276cfdf929344607707a0135d8b1c174ffa71ba5088232893c9d6c8ca2",
+    "manifestCanonicalJsonSha256": "d347282b97d883767cfde4ca4d06e0a3e9637fc712c6bc17acd7ccf9001847fd",
     "stageCount": 17,
     "requiredDependencyAttributes": ["id", "kind", "sheet", "range", "readModes", "fields", "order", "duplicates", "ignoreEmptyTail", "ignoredFields", "required", "presence", "evidenceRole"],
     "dependencyPresencePolicy": {"defaultRequired": true, "emptyArrayIsPresent": true, "missingBinding": "unavailable", "missingInjectedKey": "unavailable", "adapterFailure": "unavailable", "requiredUnavailableFingerprint": null},

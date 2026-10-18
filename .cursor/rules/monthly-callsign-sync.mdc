@@ -43,6 +43,17 @@ alwaysApply: true
 - Повністю порожні останні слоти PERSONNEL `getLastRow()` може не бачити — межі **не** будувати лише з `getLastRow()`, якщо слоти треба переносити.
 - CI: після expand/shrink `capacityEndRow` ≤ `formulaSync.after.endRow` / schedule bounds.
 
+## 4.1. Ремап графіка / нотаток за позивним
+
+Коли набір або порядок позивних на місячному аркуші змінюється, `syncMonthlyCallsignsFromPersonnel_` викликає `_monthlyRemapPersonRowsByCallsign_` **до** (або замість чистого) запису колонки «Позивні»:
+
+- Person-bound діапазон: Callsign → notes / кінець code-range.
+- Черги: `Object.create(null)` + `_normCallsignKey_` (безпечно для `constructor` / `toString`).
+- Дублікати активних позивних (`duplicateActiveCallsigns > 0`) → **abort** ремапу, графіки не міняти.
+- Точний матч позивного переносить графік/нотатки з рядком; rename лише при **1↔1** orphan; неоднозначні orphans → порожній слот + warning.
+- Немає спільної ідентичності (повна заміна міток) → ремап пропускається, пишеться лише колонка позивних (позиційно).
+- Формули: роздільний `setValues` / `setFormulas`; відносні A1 через `_monthlyAdjustFormulaRowDelta_`.
+
 ## 5. Умовне форматування та validation
 
 **Ніколи** не використовувати `PASTE_CONDITIONAL_FORMATTING` при expand — на реальних книгах зносить sheet-level CF (~13 правил).
@@ -60,7 +71,7 @@ alwaysApply: true
 
 | Модуль | Роль |
 | --- | --- |
-| `sheets/MonthlyCallsignSync.gs` | `syncMonthlyCallsignsFromPersonnel_`, `syncAllMonthlyCallsignsFromPersonnel_` |
+| `sheets/MonthlyCallsignSync.gs` | `syncMonthlyCallsignsFromPersonnel_`, `_monthlyRemapPersonRowsByCallsign_`, `syncAllMonthlyCallsignsFromPersonnel_` |
 | `personnel/PersonnelMaterialize.gs` | PHONES + BIRTHDAY через `resolvePersonnelDisplayCallsign_`; за замовчуванням sync лише активного місяця; історія — режим `history` / `all` |
 | `usecases/UseCases.MonthOps.gs`, `sheets/MonthSheets.gs` | виклики create/sync |
 | `scripts/verify-monthly-callsign-sync.mjs` | CI-контракт |

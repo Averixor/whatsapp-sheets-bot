@@ -505,6 +505,349 @@ function _monthlyCopyPersonnelRowTemplate_(
   }
 }
 
+function _monthlyNormCallsignKey_(value) {
+  if (typeof _normCallsignKey_ === "function") {
+    return _normCallsignKey_(value) || "";
+  }
+  return String(value || "")
+    .trim()
+    .toUpperCase();
+}
+
+/**
+ * Shift relative A1 row references by (toRow - fromRow). Absolute rows ($5) stay.
+ */
+function _monthlyAdjustFormulaRowDelta_(formula, fromRow, toRow) {
+  var text = String(formula == null ? "" : formula);
+  var from = Number(fromRow) || 0;
+  var to = Number(toRow) || 0;
+  var delta = to - from;
+  if (!text || !delta) return text;
+
+  return text.replace(
+    /(^|[^A-Za-z0-9_])((?:\$?[A-Za-z]{1,3}\$?\d+)(?::\$?[A-Za-z]{1,3}\$?\d+)?)/g,
+    function (full, prefix, token) {
+      if (prefix === "!") return full;
+      var parsed = _monthlyParseFlexibleA1Token_(token);
+      if (!parsed) return full;
+      var startRow = parsed.startRow;
+      var endRow = parsed.endRow;
+      var changed = false;
+      if (!parsed.absStartRow) {
+        startRow = startRow + delta;
+        changed = true;
+      }
+      if (!parsed.absEndRow) {
+        endRow = endRow + delta;
+        changed = true;
+      }
+      if (!changed || startRow < 1 || endRow < 1) return full;
+      if (!parsed.isRange) {
+        return (
+          prefix +
+          _monthlyFormatA1Cell_(
+            parsed.startCol,
+            startRow,
+            parsed.absStartCol,
+            parsed.absStartRow,
+          )
+        );
+      }
+      return (
+        prefix +
+        _monthlyFormatA1Cell_(
+          parsed.startCol,
+          startRow,
+          parsed.absStartCol,
+          parsed.absStartRow,
+        ) +
+        ":" +
+        _monthlyFormatA1Cell_(
+          parsed.endCol,
+          endRow,
+          parsed.absEndCol,
+          parsed.absEndRow,
+        )
+      );
+    },
+  );
+}
+
+function _monthlyPersonBoundEndCol_(sheet, callsignCol) {
+  var startCol = Math.max(Number(callsignCol) || 1, 1);
+  var notesCol = 0;
+  try {
+    if (typeof findMonthlyNotesCol_ === "function") {
+      notesCol = Number(findMonthlyNotesCol_(sheet)) || 0;
+    }
+  } catch (_) {}
+  var bounds = _monthlyCodeBoundsFromSheet_(sheet);
+  var codeEnd = bounds && bounds.endCol ? Number(bounds.endCol) : 0;
+  return Math.max(startCol, notesCol, codeEnd);
+}
+
+/**
+ * Write value-only and formula-only contiguous runs separately so formulas are
+ * never replaced by evaluated values (and values are never wiped by setFormulas).
+ */
+function _monthlyWriteSeparatedValuesAndFormulas_(
+  sheet,
+  startRow,
+  startCol,
+  values,
+  formulas,
+) {
+  if (!sheet || !values || !values.length) {
+    return { ok: true, valueRuns: 0, formulaRuns: 0 };
+  }
+  var valueRuns = 0;
+  var formulaRuns = 0;
+  var numCols = values[0].length;
+
+  for (var r = 0; r < values.length; r++) {
+    var sheetRow = startRow + r;
+    var valueRow = values[r] || [];
+    var formulaRow = (formulas && formulas[r]) || [];
+    var c = 0;
+    while (c < numCols) {
+      var hasFormula = !!String(formulaRow[c] || "").trim();
+      var runStart = c;
+      if (hasFormula) {
+        while (c < numCols && String(formulaRow[c] || "").trim()) c++;
+        var formulaWidth = c - runStart;
+        var formulaMatrix = [formulaRow.slice(runStart, c)];
+        sheet
+          .getRange(sheetRow, startCol + runStart, 1, formulaWidth)
+          .setFormulas(formulaMatrix);
+        formulaRuns++;
+      } else {
+        while (c < numCols && !String(formulaRow[c] || "").trim()) c++;
+        var valueWidth = c - runStart;
+        var valueMatrix = [valueRow.slice(runStart, c)];
+        sheet
+          .getRange(sheetRow, startCol + runStart, 1, valueWidth)
+          .setValues(valueMatrix);
+        valueRuns++;
+      }
+    }
+  }
+
+  return { ok: true, valueRuns: valueRuns, formulaRuns: formulaRuns };
+}
+
+function _monthlyBlankPersonBoundRow_(numCols, callsignOffset, callsign) {
+  var values = [];
+  var formulas = [];
+  for (var i = 0; i < numCols; i++) {
+    values.push(i === callsignOffset ? String(callsign || "") : "");
+    formulas.push("");
+  }
+  return { values: values, formulas: formulas };
+}
+
+/**
+ * Remap person-bound month rows (callsign…notes/schedule) to follow target
+ * callsign order. Carries schedule/notes across renames (1↔1 orphan) and
+ * adjusts relative formula row refs. Rejects remap when active callsigns duplicate.
+ */
+function _monthlyRemapPersonRowsByCallsign_(monthSheet, targetCallsigns, options) {
+  var opts = options || {};
+  var warnings = [];
+  var targets = targetCallsigns || [];
+  if (!monthSheet || !targets.length) {
+    return { ok: true, remapped: false, moved: 0, warnings: warnings };
+  }
+
+  if (typeof getPersonnelReadOnlyStatus_ === "function") {
+    try {
+      var status = getPersonnelReadOnlyStatus_() || {};
+      if (Number(status.duplicateActiveCallsigns || 0) > 0) {
+        warnings.push(
+          "Перенесення графіка зупинено: у активному особовому складі є дублікати позивних.",
+        );
+        return {
+          ok: false,
+          remapped: false,
+          reason: "duplicate_active_callsigns",
+          duplicateActiveCallsigns: Number(status.duplicateActiveCallsigns) || 0,
+          warnings: warnings,
+        };
+      }
+    } catch (_) {}
+  }
+
+  var startRow = Math.max(Number(opts.startRow) || 2, 1);
+  var numRows = Math.max(Number(opts.numRows) || targets.length, 0);
+  var callsignCol = Math.max(Number(opts.callsignCol) || 1, 1);
+  var endCol =
+    Math.max(Number(opts.endCol) || 0, callsignCol) ||
+    _monthlyPersonBoundEndCol_(monthSheet, callsignCol);
+  var numCols = endCol - callsignCol + 1;
+  if (numRows <= 0 || numCols <= 0) {
+    return { ok: true, remapped: false, moved: 0, warnings: warnings };
+  }
+
+  var block = monthSheet.getRange(startRow, callsignCol, numRows, numCols);
+  var values = block.getValues();
+  var formulas =
+    typeof block.getFormulas === "function" ? block.getFormulas() : [];
+  var callsignOffset = 0;
+
+  var queues = Object.create(null);
+  var sourceEntries = [];
+  for (var i = 0; i < values.length; i++) {
+    var rowValues = (values[i] || []).slice(0, numCols);
+    while (rowValues.length < numCols) rowValues.push("");
+    var rowFormulas = ((formulas && formulas[i]) || []).slice(0, numCols);
+    while (rowFormulas.length < numCols) rowFormulas.push("");
+    var rawCallsign = String(rowValues[callsignOffset] || "").trim();
+    var key = _monthlyNormCallsignKey_(rawCallsign);
+    var entry = {
+      values: rowValues,
+      formulas: rowFormulas,
+      fromRow: startRow + i,
+      key: key,
+    };
+    sourceEntries.push(entry);
+    if (!key) continue;
+    if (!Object.prototype.hasOwnProperty.call(queues, key)) {
+      queues[key] = [];
+    }
+    queues[key].push(entry);
+  }
+
+  var targetKeySet = Object.create(null);
+  for (var t = 0; t < targets.length; t++) {
+    var tKey = _monthlyNormCallsignKey_(targets[t]);
+    if (tKey) targetKeySet[tKey] = true;
+  }
+
+  var assigned = [];
+  var needsOrphanIndexes = [];
+  var exactMatches = 0;
+  for (var s = 0; s < numRows; s++) {
+    var target = s < targets.length ? String(targets[s] || "").trim() : "";
+    var targetKey = _monthlyNormCallsignKey_(target);
+    if (
+      targetKey &&
+      Object.prototype.hasOwnProperty.call(queues, targetKey) &&
+      queues[targetKey].length
+    ) {
+      assigned[s] = {
+        target: target,
+        entry: queues[targetKey].shift(),
+      };
+      exactMatches++;
+    } else if (targetKey) {
+      needsOrphanIndexes.push(s);
+      assigned[s] = { target: target, entry: null };
+    } else {
+      assigned[s] = { target: "", entry: null };
+    }
+  }
+
+  // Orphans: queued rows whose callsign is no longer in the PERSONNEL target set.
+  var orphans = [];
+  for (var orphanKey in queues) {
+    if (!Object.prototype.hasOwnProperty.call(queues, orphanKey)) continue;
+    if (Object.prototype.hasOwnProperty.call(targetKeySet, orphanKey)) continue;
+    var bucket = queues[orphanKey] || [];
+    for (var b = 0; b < bucket.length; b++) orphans.push(bucket[b]);
+  }
+
+  var renamePaired = false;
+  if (needsOrphanIndexes.length === 1 && orphans.length === 1) {
+    assigned[needsOrphanIndexes[0]].entry = orphans[0];
+    orphans = [];
+    needsOrphanIndexes = [];
+    renamePaired = true;
+  }
+
+  // Full label replacement with no shared identity: keep schedules in place and
+  // let the caller rewrite the callsign column only (positional sync).
+  if (exactMatches === 0 && !renamePaired) {
+    return {
+      ok: true,
+      remapped: false,
+      reason: "no_safe_identity_overlap",
+      moved: 0,
+      warnings: warnings,
+    };
+  }
+
+  if (needsOrphanIndexes.length > 0) {
+    if (orphans.length > 0 || needsOrphanIndexes.length > 1) {
+      warnings.push(
+        "Неоднозначне перейменування позивних на аркуші " +
+          monthSheet.getName() +
+          ": нових без рядка " +
+          needsOrphanIndexes.length +
+          ", старих рядків без пари " +
+          orphans.length +
+          ". Графік для неоднозначних слотів очищено.",
+      );
+      try {
+        console.warn(warnings[warnings.length - 1]);
+      } catch (_) {}
+    }
+  }
+
+  var nextValues = [];
+  var nextFormulas = [];
+  var moved = 0;
+  for (var n = 0; n < numRows; n++) {
+    var slot = assigned[n] || { target: "", entry: null };
+    var destRow = startRow + n;
+    if (slot.entry) {
+      var movedValues = slot.entry.values.slice();
+      var movedFormulas = [];
+      for (var fc = 0; fc < numCols; fc++) {
+        var srcFormula = String(slot.entry.formulas[fc] || "");
+        movedFormulas.push(
+          srcFormula
+            ? _monthlyAdjustFormulaRowDelta_(
+                srcFormula,
+                slot.entry.fromRow,
+                destRow,
+              )
+            : "",
+        );
+      }
+      movedValues[callsignOffset] = slot.target;
+      // Callsign cell is always a value, never a carried formula.
+      movedFormulas[callsignOffset] = "";
+      nextValues.push(movedValues);
+      nextFormulas.push(movedFormulas);
+      if (slot.entry.fromRow !== destRow) moved++;
+    } else {
+      var blank = _monthlyBlankPersonBoundRow_(
+        numCols,
+        callsignOffset,
+        slot.target,
+      );
+      nextValues.push(blank.values);
+      nextFormulas.push(blank.formulas);
+    }
+  }
+
+  var write = _monthlyWriteSeparatedValuesAndFormulas_(
+    monthSheet,
+    startRow,
+    callsignCol,
+    nextValues,
+    nextFormulas,
+  );
+
+  return {
+    ok: !!write.ok,
+    remapped: true,
+    moved: moved,
+    valueRuns: write.valueRuns,
+    formulaRuns: write.formulaRuns,
+    warnings: warnings,
+  };
+}
+
 function _monthlyEnsurePersonnelCapacity_(monthSheet, requiredRows, options) {
   var opts = options || {};
   var codeRangeA1 = getMonthlyCodeRangeA1ForSheet_(monthSheet);
@@ -611,6 +954,33 @@ function syncMonthlyCallsignsFromPersonnel_(targetSheetOrName, options) {
     };
   }
 
+  // Fail closed before capacity mutations when remap would be unsafe.
+  if (
+    opts.skipPersonRemap !== true &&
+    typeof getPersonnelReadOnlyStatus_ === "function"
+  ) {
+    try {
+      var dupStatus = getPersonnelReadOnlyStatus_() || {};
+      if (Number(dupStatus.duplicateActiveCallsigns || 0) > 0) {
+        warnings.push(
+          "Синхронізацію позивних зупинено: у активному особовому складі є дублікати позивних.",
+        );
+        return {
+          ok: false,
+          sheet: monthSheet.getName(),
+          personnelSheet: personnelSheet.getName(),
+          rowsWritten: 0,
+          skippedWrite: true,
+          reason: "duplicate_active_callsigns",
+          duplicateActiveCallsigns:
+            Number(dupStatus.duplicateActiveCallsigns) || 0,
+          callsignColumn: callsignCol,
+          warnings: warnings,
+        };
+      }
+    } catch (_) {}
+  }
+
   var beforeBounds = _monthlyCodeBoundsFromSheet_(monthSheet);
   var capacity = _monthlyEnsurePersonnelCapacity_(
     monthSheet,
@@ -643,7 +1013,50 @@ function syncMonthlyCallsignsFromPersonnel_(targetSheetOrName, options) {
       break;
     }
   }
-  if (callsignChanged) {
+
+  var personRemap = null;
+  if (callsignChanged && opts.skipPersonRemap !== true) {
+    var targetCallsigns = [];
+    for (var tc = 0; tc < output.length; tc++) {
+      targetCallsigns.push(String((output[tc] && output[tc][0]) || "").trim());
+    }
+    personRemap = _monthlyRemapPersonRowsByCallsign_(monthSheet, targetCallsigns, {
+      startRow: startRow,
+      numRows: maxRows,
+      callsignCol: callsignCol,
+      endCol: _monthlyPersonBoundEndCol_(monthSheet, callsignCol),
+    });
+    if (personRemap && personRemap.warnings && personRemap.warnings.length) {
+      warnings = warnings.concat(personRemap.warnings);
+    }
+    if (personRemap && personRemap.ok === false) {
+      return {
+        ok: false,
+        sheet: monthSheet.getName(),
+        personnelSheet: personnelSheet.getName(),
+        rowsWritten: 0,
+        skippedWrite: true,
+        reason: personRemap.reason || "person_remap_failed",
+        personRemap: personRemap,
+        personnelRows: built.personnelRows,
+        activeRowsCount: Number(built.activeRowsCount) || 0,
+        callsignColumn: callsignCol,
+        startRow: startRow,
+        capacityRows: maxRows,
+        capacityEndRow: capacityEndRow,
+        rowsInserted: capacity.rowsInserted,
+        rowsDeleted: capacity.rowsDeleted,
+        warnings: warnings,
+      };
+    }
+  }
+
+  // Callsign-only write when remap did not rewrite the person-bound block
+  // (no identity overlap, skipPersonRemap, or remap unavailable).
+  if (
+    callsignChanged &&
+    !(personRemap && personRemap.remapped === true)
+  ) {
     targetRange.setValues(output);
   }
 
@@ -703,6 +1116,7 @@ function syncMonthlyCallsignsFromPersonnel_(targetSheetOrName, options) {
       getMonthlyCodeRangeA1ForSheet_(monthSheet),
     scheduleBounds: scheduleBounds,
     formulaSync: formulaSync,
+    personRemap: personRemap,
     warnings: warnings,
   };
 }
