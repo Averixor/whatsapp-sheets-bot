@@ -197,6 +197,7 @@ function _personnelState_() {
       byFmlActive: null,
       byFmlAll: null,
       activeRowsCache: null,
+      schemaEnsured: false,
     };
   }
   return root.__WASB_PERSONNEL_REPO_STATE__;
@@ -212,6 +213,12 @@ function invalidatePersonnelCache_() {
   state.byFmlActive = null;
   state.byFmlAll = null;
   state.activeRowsCache = null;
+  state.schemaEnsured = false;
+  if (typeof invalidateMonthlyLookupCache_ === "function") {
+    try {
+      invalidateMonthlyLookupCache_();
+    } catch (_) {}
+  }
 }
 
 function _personnelBuildMaps_() {
@@ -238,8 +245,9 @@ function _personnelBuildMaps_() {
         typeof _normCallsignKey_ === "function"
           ? _normCallsignKey_(callsign)
           : callsign.toUpperCase();
-      byCallsignAll[csKey] = row;
-      if (row.active === true) byCallsign[csKey] = row;
+      // First-wins: keep the earliest PERSONNEL row for each callsign key.
+      if (!(csKey in byCallsignAll)) byCallsignAll[csKey] = row;
+      if (row.active === true && !(csKey in byCallsign)) byCallsign[csKey] = row;
     }
 
     var fmlKey =
@@ -249,8 +257,9 @@ function _personnelBuildMaps_() {
             .trim()
             .toLowerCase();
     if (fmlKey) {
-      byFmlAll[fmlKey] = row;
-      if (row.active === true) byFmlActive[fmlKey] = row;
+      // First-wins: keep the earliest PERSONNEL row for each FML key.
+      if (!(fmlKey in byFmlAll)) byFmlAll[fmlKey] = row;
+      if (row.active === true && !(fmlKey in byFmlActive)) byFmlActive[fmlKey] = row;
     }
 
     if (row.active === true) activeRows.push(row);
@@ -629,7 +638,7 @@ function ensurePersonnelStatusColumn() {
 }
 
 function _personnelReadCell_(row, colIndex) {
-  if (colIndex === undefined || colIndex < 0) return "";
+  if (!row || colIndex == null || colIndex < 0) return "";
   return row[colIndex];
 }
 
@@ -763,9 +772,6 @@ function _personnelRowToRecord_(row, sheetRow, col) {
 
 function _personnelLoadRowsUncached_() {
   var sh = _personnelGetSheet_(true);
-  if (typeof ensurePersonnelStatusColumnHeader_ === "function") {
-    ensurePersonnelStatusColumnHeader_(sh);
-  }
   var lastCol = Math.max(sh.getLastColumn(), 1);
   var lastRow = Math.max(sh.getLastRow(), 1);
   var values = sh.getRange(1, 1, lastRow, lastCol).getDisplayValues();
@@ -829,6 +835,13 @@ function getPersonnelWarnings_() {
 
 /** Усі рядки PERSONNEL (включно з Вибув). */
 function getPersonnelRows_() {
+  var state = _personnelState_();
+  if (!state.schemaEnsured) {
+    try {
+      ensurePersonnelStatusColumnHeader_(_personnelGetSheet_(false));
+    } catch (_) {}
+    state.schemaEnsured = true;
+  }
   return _personnelGetLoaded_().slice();
 }
 
