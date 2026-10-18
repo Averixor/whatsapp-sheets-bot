@@ -5,7 +5,12 @@ function _personCardSafeHtml_(value) {
 function _personCardJsString_(value) {
   return JSON.stringify(
     value === null || typeof value === "undefined" ? "" : String(value),
-  );
+  )
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
 }
 
 function _getSheetByDateStr_(dateStr) {
@@ -95,11 +100,10 @@ function getPersonCardData(callsign, dateStr) {
       AccessEnforcement_.assertCanOpenPersonCard(callsign || "", dateStr || "");
     }
     const data = PersonsRepository_.getPersonByCallsign(callsign, dateStr);
-    return Object.assign(
-      okResponse_(data, "Дані картки завантажено", context),
-      data,
-      { ok: true },
-    );
+    return Object.assign(okResponse_(null, "Дані картки завантажено", context), {
+      ok: true,
+      data: data,
+    });
   } catch (e) {
     return Object.assign(errorResponse_(e, context), { ok: false });
   }
@@ -234,12 +238,13 @@ function openPersonCardByCallsign_(callsign) {
 }
 
 function openPersonCardByCallsignAndDate_(callsign, dateStr) {
-  const data = getPersonCardData(callsign, dateStr);
-  if (!data || !data.ok) {
+  const resp = getPersonCardData(callsign, dateStr);
+  if (!resp || !resp.ok) {
     throw new Error(
-      data && data.error ? data.error : "Не вдалося відкрити картку",
+      resp && resp.error ? resp.error : "Не вдалося відкрити картку",
     );
   }
+  const data = resp.data || {};
 
   const escapedCallsign = _personCardSafeHtml_(data.callsign || "");
   const escapedDateStr = _personCardSafeHtml_(data.dateStr || "");
@@ -266,6 +271,9 @@ function openPersonCardByCallsignAndDate_(callsign, dateStr) {
       ? `<div class="vacation-card vacation-card-current">
         <div class="vacation-card-title">Відпустка зараз</div>
         <div class="vacation-card-list">${data.vac.matches
+          .filter(function (v) {
+            return v && (v.no || v.start || v.end);
+          })
           .map(function (v) {
             return `<div class="vacation-card-line">${_personCardSafeHtml_(v.no || "—")}: ${_personCardSafeHtml_(v.start || "—")} — ${_personCardSafeHtml_(v.end || "—")}</div>`;
           })
