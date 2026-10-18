@@ -32,6 +32,8 @@ const AlertsRepository_ = (function () {
 
   const MAX_ROWS = 1000;
   const CLEANUP_KEEP_ROWS = 500;
+  const CLEANUP_THRESHOLD_ROWS = MAX_ROWS + 200;
+  const MAX_BATCH_SIZE = 500;
   const MAX_MESSAGE_LENGTH = 500;
   const MAX_DETAILS_LENGTH = 4000;
   const DEFAULT_CLEAR_DAYS = 30;
@@ -91,9 +93,13 @@ const AlertsRepository_ = (function () {
     for (let i = 0; i < HEADERS.length; i++) {
       const current = String(existingHeaders[i] || '').trim();
       if (current !== HEADERS[i]) {
-        sh.getRange(1, i + 1).setValue(HEADERS[i]);
         changed = true;
+        break;
       }
+    }
+
+    if (changed) {
+      sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
     }
 
     if (changed || sh.getFrozenRows() < 1) {
@@ -216,9 +222,9 @@ const AlertsRepository_ = (function () {
     return out;
   }
 
-  function _cleanupByRowCount_(sh) {
+  function _cleanupByRowCountIfNeeded_(sh) {
     const lastRow = sh.getLastRow();
-    if (lastRow <= MAX_ROWS) return 0;
+    if (lastRow <= CLEANUP_THRESHOLD_ROWS) return 0;
 
     const rowsToDelete = lastRow - CLEANUP_KEEP_ROWS;
     if (rowsToDelete <= 0) return 0;
@@ -271,7 +277,8 @@ const AlertsRepository_ = (function () {
       lastColumn: sh.getLastColumn(),
       headers: HEADERS.slice(),
       maxRows: MAX_ROWS,
-      keepRows: CLEANUP_KEEP_ROWS
+      keepRows: CLEANUP_KEEP_ROWS,
+      cleanupThresholdRows: CLEANUP_THRESHOLD_ROWS
     };
   }
 
@@ -296,7 +303,7 @@ const AlertsRepository_ = (function () {
       const row = _recordToRow_(item);
 
       _appendRowFast_(sh, row);
-      _cleanupByRowCount_(sh);
+      _cleanupByRowCountIfNeeded_(sh);
 
       return {
         success: true,
@@ -326,18 +333,22 @@ const AlertsRepository_ = (function () {
   function appendAlertsBatchUnlocked_(records) {
     try {
       const sh = _getSheet_();
-      const rows = [];
+      let written = 0;
 
-      for (let i = 0; i < records.length; i++) {
-        rows.push(_recordToRow_(_validateRecord_(records[i])));
+      for (let offset = 0; offset < records.length; offset += MAX_BATCH_SIZE) {
+        const chunk = records.slice(offset, offset + MAX_BATCH_SIZE);
+        const rows = [];
+        for (let i = 0; i < chunk.length; i++) {
+          rows.push(_recordToRow_(_validateRecord_(chunk[i])));
+        }
+        written += _appendRowsFast_(sh, rows);
       }
 
-      _appendRowsFast_(sh, rows);
-      _cleanupByRowCount_(sh);
+      _cleanupByRowCountIfNeeded_(sh);
 
       return {
         success: true,
-        written: rows.length,
+        written: written,
         sheet: sh.getName()
       };
     } catch (e) {
