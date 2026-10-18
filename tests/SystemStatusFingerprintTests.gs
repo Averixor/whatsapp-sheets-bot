@@ -1466,10 +1466,20 @@ function runSystemStatusFingerprintTests_() {
     car.transition.priorRows.push({ rowKey: "2", ownerFml: "", helperCallsign: "", columnsBtoG: [] });
     _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.assignment_car", car).status, "failed");
     car.transition.priorRows.pop();
-    car.transition.priorRows.push({ rowKey: "2" });
-    car.transition.expectedRows.push({ rowKey: "2" });
-    car.transition.postRows.unshift({ rowKey: "2" });
-    _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.assignment_car", car).status, "failed");
+    car.transition.priorRows = [
+      { rowKey: "1", ownerFml: "old", helperCallsign: "old", columnsBtoG: [1, 2] },
+      { rowKey: "2", ownerFml: "x", helperCallsign: "x", columnsBtoG: [3, 4] },
+    ];
+    car.transition.expectedRows = [
+      { rowKey: "1", ownerFml: "new", helperCallsign: "new", columnsBtoG: [1, 2] },
+      { rowKey: "2", ownerFml: "y", helperCallsign: "y", columnsBtoG: [3, 4] },
+    ];
+    car.transition.postRows = [
+      { rowKey: "2", ownerFml: "y", helperCallsign: "y", columnsBtoG: [3, 4] },
+      { rowKey: "1", ownerFml: "new", helperCallsign: "new", columnsBtoG: [1, 2] },
+    ];
+    // full_row_reorder / personnel_order: same key set in a new order stays eligible.
+    _systemStatusFingerprintAssert_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.assignment_car", car).eligibleForReceipt);
 
     var weapon = {
       immutable: stableImmutable_(),
@@ -1494,10 +1504,19 @@ function runSystemStatusFingerprintTests_() {
     weapon.transition.expectedRows.push({ rowKey: "2" });
     _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.assignment_weapon", weapon).status, "failed");
     weapon.transition.expectedRows.pop();
-    weapon.transition.priorRows.push({ rowKey: "2" });
-    weapon.transition.expectedRows.push({ rowKey: "2" });
-    weapon.transition.postRows.unshift({ rowKey: "2" });
-    _systemStatusFingerprintEqual_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.assignment_weapon", weapon).status, "failed");
+    weapon.transition.priorRows = [
+      { rowKey: "1", lastName: "old", firstName: "", patronymic: "", rank: "", phone: "", callsign: "", columnsFtoZ: ["keep"] },
+      { rowKey: "2", lastName: "a", firstName: "", patronymic: "", rank: "", phone: "", callsign: "", columnsFtoZ: ["keep2"] },
+    ];
+    weapon.transition.expectedRows = [
+      { rowKey: "1", lastName: "new", firstName: "N", patronymic: "P", rank: "R", phone: "1", callsign: "C", columnsFtoZ: ["keep"] },
+      { rowKey: "2", lastName: "b", firstName: "B", patronymic: "", rank: "", phone: "2", callsign: "D", columnsFtoZ: ["keep2"] },
+    ];
+    weapon.transition.postRows = [
+      { rowKey: "2", lastName: "b", firstName: "B", patronymic: "", rank: "", phone: "2", callsign: "D", columnsFtoZ: ["keep2"] },
+      { rowKey: "1", lastName: "new", firstName: "N", patronymic: "P", rank: "R", phone: "1", callsign: "C", columnsFtoZ: ["keep"] },
+    ];
+    _systemStatusFingerprintAssert_(SystemStatusFingerprints_.evaluateTransitionEvidence("computed.assignment_weapon", weapon).eligibleForReceipt);
   });
 
   _systemStatusFingerprintCheck_(report, "Birthday normalization is a keyed semantic transition", function () {
@@ -1785,15 +1804,23 @@ function runSystemStatusFingerprintTests_() {
     "computed.vacation_monthly_sync",
   ].forEach(function (stageId) {
     _systemStatusFingerprintCheck_(report, stageId + " full identity mutation matrix", function () {
-      var keyField = SystemStatusFingerprints_.transitionPolicies[stageId].rowKeyField;
+      var policy = SystemStatusFingerprints_.transitionPolicies[stageId];
+      var keyField = policy.rowKeyField;
+      var allowReorder = policy.reorderPolicy === "personnel_order";
       var cases = [
         { name: "wrong", reason: "row_set_changed", mutate: function (rows) { rows[0][keyField] = "wrong"; } },
         { name: "duplicate", reason: "row_identity_invalid", mutate: function (rows) { rows[1][keyField] = rows[0][keyField]; } },
         { name: "missing", reason: "row_identity_invalid", mutate: function (rows) { rows[0][keyField] = ""; } },
         { name: "extra", reason: "row_set_changed", mutate: function (rows) { var copy = Object.assign({}, rows[0]); copy[keyField] = "k3"; rows.push(copy); } },
         { name: "lost", reason: "row_set_changed", mutate: function (rows) { rows.pop(); } },
-        { name: "reorder", reason: "row_order_changed", mutate: function (rows) { rows.reverse(); } },
       ];
+      if (!allowReorder) {
+        cases.push({
+          name: "reorder",
+          reason: "row_order_changed",
+          mutate: function (rows) { rows.reverse(); },
+        });
+      }
       ["priorRows", "expectedRows", "postRows"].forEach(function (arrayName) {
         cases.forEach(function (testCase) {
           var evidence = identityMatrixFixture_(stageId);
@@ -1811,6 +1838,18 @@ function runSystemStatusFingerprintTests_() {
           );
         });
       });
+      if (allowReorder) {
+        var reorderEvidence = identityMatrixFixture_(stageId);
+        reorderEvidence.transition.postRows =
+          reorderEvidence.transition.postRows.slice().reverse();
+        var reorderDecision = SystemStatusFingerprints_.evaluateTransitionEvidence(
+          stageId, reorderEvidence, null,
+        );
+        _systemStatusFingerprintAssert_(
+          reorderDecision.eligibleForReceipt,
+          stageId + " personnel_order reorder must stay eligible",
+        );
+      }
     });
   });
 

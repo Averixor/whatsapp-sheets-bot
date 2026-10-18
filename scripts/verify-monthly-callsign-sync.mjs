@@ -866,6 +866,35 @@ function loadSyncContext() {
       FirstName: headers.indexOf("First name"),
     }),
     resolvePersonnelDisplayCallsign_: monthlyCallsignValueFromPersonnelRow,
+    _normCallsignKey_(callsign) {
+      return String(callsign || "")
+        .trim()
+        .toUpperCase();
+    },
+    getPersonnelReadOnlyStatus_() {
+      return { duplicateActiveCallsigns: 0 };
+    },
+    findMonthlyNotesCol_() {
+      return 0;
+    },
+    _columnNumberToLetter_(col) {
+      let n = Number(col) || 0;
+      let out = "";
+      while (n > 0) {
+        const rem = (n - 1) % 26;
+        out = String.fromCharCode(65 + rem) + out;
+        n = Math.floor((n - 1) / 26);
+      }
+      return out || "A";
+    },
+    _columnLetterToNumber_(letters) {
+      const text = String(letters || "").toUpperCase();
+      let n = 0;
+      for (let i = 0; i < text.length; i++) {
+        n = n * 26 + (text.charCodeAt(i) - 64);
+      }
+      return n;
+    },
     extendConditionalFormatRulesThroughRow_(sheet, templateRow, throughRow) {
       const fromRow = Number(templateRow) || 0;
       const toRow = Number(throughRow) || 0;
@@ -1353,5 +1382,140 @@ function assertRowTemplateCopied(sheet, row, sourceRow, lastDateCol) {
     "after expand/shrink last PERSONNEL row must sit inside formula range",
   );
 }
+
+{
+  const runtime = loadSyncContext();
+  assert.equal(
+    runtime.context._monthlyAdjustFormulaRowDelta_("=A5+B$5+$C5+$D$5", 5, 8),
+    "=A8+B$5+$C8+$D$5",
+    "relative rows shift; absolute rows stay",
+  );
+  assert.equal(
+    runtime.context._monthlyAdjustFormulaRowDelta_("=C2:AG2", 2, 4),
+    "=C4:AG4",
+  );
+}
+
+function clearMonthCapacityExcept(month, keepThroughRow, summaryStart) {
+  const clearUntil = Math.min(32, (summaryStart || 34) - 1);
+  for (let row = keepThroughRow + 1; row <= clearUntil; row++) {
+    month.cell(row, 2).value = "";
+    month.cell(row, 3).value = "";
+    month.cell(row, 3).formula = "";
+  }
+}
+
+{
+  // Reorder: shared callsigns move schedule/notes with the person.
+  const runtime = loadSyncContext();
+  const month = buildMonthSheet("compact", { summaryStart: 6 });
+  clearMonthCapacityExcept(month, 3, 6);
+  month.cell(2, 2).value = "CALL_A";
+  month.cell(2, 3).value = "SCHED_A";
+  month.cell(2, 3).formula = "=B2";
+  month.cell(3, 2).value = "CALL_B";
+  month.cell(3, 3).value = "SCHED_B";
+  month.cell(3, 3).formula = "=B3";
+  const personnel = buildPersonnel(3, {
+    2: { callsign: "CALL_B", lastName: "B", firstName: "B" },
+    3: { callsign: "CALL_A", lastName: "A", firstName: "A" },
+  });
+  runtime.use(month, personnel);
+  const result = runtime.context.syncMonthlyCallsignsFromPersonnel_(month, {
+    allowShrink: true,
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.personRemap && result.personRemap.remapped, true);
+  assert.equal(month.valueAt(2, 2), "CALL_B");
+  assert.equal(month.cell(2, 3).formula, "=B2", "formula row delta to dest row 2");
+  assert.equal(month.valueAt(3, 2), "CALL_A");
+  assert.equal(month.cell(3, 3).formula, "=B3");
+}
+
+{
+  // Rename 1↔1: carry unconsumed old-callsign schedule into the new callsign slot.
+  const runtime = loadSyncContext();
+  const month = buildMonthSheet("compact", { summaryStart: 5 });
+  clearMonthCapacityExcept(month, 2, 5);
+  month.cell(2, 2).value = "OLD_NAME";
+  month.cell(2, 3).value = "KEEP_SCHEDULE";
+  month.cell(2, 3).formula = "";
+  month.cell(2, 4).value = "NOTE";
+  const personnel = buildPersonnel(2, {
+    2: { callsign: "NEW_NAME", lastName: "Ln", firstName: "Fn" },
+  });
+  runtime.use(month, personnel);
+  const result = runtime.context.syncMonthlyCallsignsFromPersonnel_(month, {
+    allowShrink: true,
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.personRemap && result.personRemap.remapped, true);
+  assert.equal(month.valueAt(2, 2), "NEW_NAME");
+  assert.equal(month.valueAt(2, 3), "KEEP_SCHEDULE");
+  assert.equal(month.valueAt(2, 4), "NOTE");
+}
+
+{
+  // Prototype-safe queues: callsigns that collide with Object.prototype names.
+  const runtime = loadSyncContext();
+  const month = buildMonthSheet("compact", { summaryStart: 6 });
+  clearMonthCapacityExcept(month, 3, 6);
+  month.cell(2, 2).value = "constructor";
+  month.cell(2, 3).value = "SCHED_CTOR";
+  month.cell(2, 3).formula = "";
+  month.cell(3, 2).value = "toString";
+  month.cell(3, 3).value = "SCHED_TS";
+  month.cell(3, 3).formula = "";
+  const personnel = buildPersonnel(3, {
+    2: { callsign: "toString", lastName: "T", firstName: "S" },
+    3: { callsign: "constructor", lastName: "C", firstName: "T" },
+  });
+  runtime.use(month, personnel);
+  const result = runtime.context.syncMonthlyCallsignsFromPersonnel_(month, {
+    allowShrink: true,
+  });
+  assert.equal(result.ok, true);
+  assert.equal(month.valueAt(2, 2), "toString");
+  assert.equal(month.valueAt(2, 3), "SCHED_TS");
+  assert.equal(month.valueAt(3, 2), "constructor");
+  assert.equal(month.valueAt(3, 3), "SCHED_CTOR");
+}
+
+{
+  // Duplicate active callsigns must abort remap (no schedule swap).
+  const runtime = loadSyncContext();
+  runtime.context.getPersonnelReadOnlyStatus_ = () => ({
+    duplicateActiveCallsigns: 2,
+  });
+  const month = buildMonthSheet("compact", { summaryStart: 6 });
+  clearMonthCapacityExcept(month, 3, 6);
+  month.cell(2, 2).value = "ALPHA";
+  month.cell(2, 3).value = "SCHED_1";
+  month.cell(2, 3).formula = "";
+  month.cell(3, 2).value = "BETA";
+  month.cell(3, 3).value = "SCHED_2";
+  month.cell(3, 3).formula = "";
+  const scheduleBefore = [month.valueAt(2, 3), month.valueAt(3, 3)];
+  const personnel = buildPersonnel(3, {
+    2: { callsign: "DUP", lastName: "A", firstName: "A" },
+    3: { callsign: "DUP", lastName: "B", firstName: "B" },
+  });
+  runtime.use(month, personnel);
+  const result = runtime.context.syncMonthlyCallsignsFromPersonnel_(month, {
+    allowShrink: true,
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, "duplicate_active_callsigns");
+  assert.deepEqual(
+    [month.valueAt(2, 3), month.valueAt(3, 3)],
+    scheduleBefore,
+    "duplicate abort must not rewrite schedules",
+  );
+}
+
+assert.match(syncModule, /function _monthlyRemapPersonRowsByCallsign_/);
+assert.match(syncModule, /function _monthlyAdjustFormulaRowDelta_/);
+assert.match(syncModule, /Object\.create\(null\)/);
+assert.match(syncModule, /_monthlyWriteSeparatedValuesAndFormulas_/);
 
 console.log("verify-monthly-callsign-sync: OK");

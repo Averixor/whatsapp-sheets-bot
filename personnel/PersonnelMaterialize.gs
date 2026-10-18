@@ -281,42 +281,6 @@ function getPersonnelMaterializeEndRow_(sheet, startRow) {
   );
 }
 
-/**
- * Derived sheets (PHONES / Birthday) must fit every PERSONNEL source row.
- * Never truncate people to the target sheet's current lastRow.
- */
-function _personnelMaterializeEnsureDerivedCapacity_(sheet, startRow, neededRows) {
-  var start = Number(startRow) || 2;
-  var count = Math.max(Number(neededRows) || 0, 0);
-  if (!sheet || count < 1) return start - 1;
-  var neededEnd = start + count - 1;
-  var maxRows = Number(sheet.getMaxRows()) || 0;
-  if (maxRows < neededEnd) {
-    sheet.insertRowsAfter(maxRows, neededEnd - maxRows);
-  }
-  return neededEnd;
-}
-
-function _personnelMaterializeDerivedWriteRows_(
-  sheet,
-  startRow,
-  sourceRows,
-  emptyRow,
-) {
-  var start = Number(startRow) || 2;
-  var rows = Array.isArray(sourceRows) ? sourceRows.slice() : [];
-  var previousEnd = getPersonnelMaterializeEndRow_(sheet, start);
-  var previousCount = Math.max(previousEnd - start + 1, 0);
-  var floor = PERSONNEL_MATERIALIZE_MANAGED_ROW_COUNT_;
-  var writeCount = Math.max(rows.length, previousCount, floor);
-  var blank = Array.isArray(emptyRow) ? emptyRow : [];
-  while (rows.length < writeCount) {
-    rows.push(blank.slice());
-  }
-  _personnelMaterializeEnsureDerivedCapacity_(sheet, start, rows.length);
-  return rows;
-}
-
 function _personnelMaterializeToday_() {
   if (typeof DateUtils_ !== "undefined" && DateUtils_.toDayStart) {
     var parsed = DateUtils_.toDayStart(new Date());
@@ -741,6 +705,17 @@ function _phonesMaterializeHeaderColIndex_(headersRow) {
   return col;
 }
 
+function _personnelMaterializeDerivedManagedRowCount_(sheet, startRow, sourceRowCount) {
+  var start = Number(startRow) || 2;
+  var baseline = Math.max(
+    getPersonnelMaterializeEndRow_(sheet, start) - start + 1,
+    0,
+  );
+  var needed = Math.max(Number(sourceRowCount) || 0, 0);
+  // Expand to fit every source person; never truncate below source length.
+  return Math.max(baseline, needed);
+}
+
 function materializePhonesSheet_(sheet, sourceRows, options) {
   var ss = getWasbSpreadsheet_();
   var phonesName =
@@ -753,15 +728,20 @@ function materializePhonesSheet_(sheet, sourceRows, options) {
   }
 
   var startRow = _phonesMaterializeStartRow_();
-  var rows = _personnelMaterializeDerivedWriteRows_(
+  var sourceList = sourceRows || [];
+  var managedRows = _personnelMaterializeDerivedManagedRowCount_(
     sheet,
     startRow,
-    (sourceRows || []).map(function (row) {
-      return [row.callsign || "", row.phone || "", row.phone2 || ""];
-    }),
-    ["", "", ""],
+    sourceList.length,
   );
-  var endRow = startRow + Math.max(rows.length, 1) - 1;
+  var endRow = startRow + managedRows - 1;
+  var rows = sourceList.map(function (row) {
+    return [row.callsign || "", row.phone || "", row.phone2 || ""];
+  });
+
+  while (rows.length < managedRows) {
+    rows.push(["", "", ""]);
+  }
 
   var forceHeaders = !!(options && options.forceHeaders);
   var expectedHeaders = _phonesMaterializeHeaders_();
@@ -850,21 +830,26 @@ function materializeBirthdayHelperSheet_(sheet, sourceRows, options) {
   }
 
   var startRow = getPersonnelMaterializeStartRow_();
-  var expectedHeaders = _birthdayHelperCanonicalHeaders_();
-  var rows = _personnelMaterializeDerivedWriteRows_(
+  var sourceList = sourceRows || [];
+  var managedRows = _personnelMaterializeDerivedManagedRowCount_(
     sheet,
     startRow,
-    (sourceRows || []).map(function (row) {
-      return [
-        row.callsign || "",
-        row.birthdayDisplay || "",
-        row.age,
-        row.daysUntilBirthday,
-      ];
-    }),
-    ["", "", "", ""],
+    sourceList.length,
   );
-  var endRow = startRow + Math.max(rows.length, 1) - 1;
+  var endRow = startRow + managedRows - 1;
+  var expectedHeaders = _birthdayHelperCanonicalHeaders_();
+  var rows = sourceList.map(function (row) {
+    return [
+      row.callsign || "",
+      row.birthdayDisplay || "",
+      row.age,
+      row.daysUntilBirthday,
+    ];
+  });
+
+  while (rows.length < managedRows) {
+    rows.push(["", "", "", ""]);
+  }
 
   var forceHeaders = !!(options && options.forceHeaders);
   var lastCol = Math.max(sheet.getLastColumn(), expectedHeaders.length, 1);
@@ -983,6 +968,151 @@ function _personnelAssignmentSyncFind_(rows, fml, phone, callsign) {
   return null;
 }
 
+/**
+ * Reorder equipment sheet rows to follow PERSONNEL order.
+ * Match during the PERSONNEL pass: callsign queue → FML → display phone.
+ * Unmatched equipment rows are appended after PERSONNEL-ordered matches.
+ * Queues use Object.create(null) so keys like "constructor" are safe.
+ */
+function _personnelAssignmentReorderRowsByPersonnel_(sheetRows, personnelRows) {
+  var rows = sheetRows || [];
+  var people = personnelRows || [];
+  var byCallsign = Object.create(null);
+  var unused = [];
+
+  for (var i = 0; i < rows.length; i += 1) {
+    var sheetRow = rows[i] || {};
+    var item = { row: sheetRow, used: false, index: i };
+    unused.push(item);
+    var key = _personnelAssignmentSyncNormCallsign_(sheetRow.callsign);
+    if (!key) continue;
+    if (!Object.prototype.hasOwnProperty.call(byCallsign, key)) {
+      byCallsign[key] = [];
+    }
+    byCallsign[key].push(item);
+  }
+
+  function takeUnusedByFml_(fmlKey) {
+    if (!fmlKey) return null;
+    for (var u = 0; u < unused.length; u += 1) {
+      if (unused[u].used) continue;
+      if (_personnelAssignmentSyncNormFml_(unused[u].row.fml) === fmlKey) {
+        return unused[u];
+      }
+    }
+    return null;
+  }
+
+  function takeUnusedByPhone_(phoneKey) {
+    if (!phoneKey) return null;
+    for (var u = 0; u < unused.length; u += 1) {
+      if (unused[u].used) continue;
+      var candidate = unused[u].row;
+      var displayPhone = candidate.displayPhone != null
+        ? candidate.displayPhone
+        : candidate.phone;
+      if (_personnelAssignmentSyncNormPhone_(displayPhone) === phoneKey) {
+        return unused[u];
+      }
+      if (
+        candidate.phone2 != null &&
+        _personnelAssignmentSyncNormPhone_(candidate.phone2) === phoneKey
+      ) {
+        return unused[u];
+      }
+    }
+    return null;
+  }
+
+  var ordered = [];
+  for (var p = 0; p < people.length; p += 1) {
+    var person = people[p] || {};
+    var matched = null;
+    var personKey = _personnelAssignmentSyncNormCallsign_(person.callsign);
+    if (
+      personKey &&
+      Object.prototype.hasOwnProperty.call(byCallsign, personKey) &&
+      byCallsign[personKey].length
+    ) {
+      matched = byCallsign[personKey].shift();
+      while (matched && matched.used) {
+        matched = byCallsign[personKey].length
+          ? byCallsign[personKey].shift()
+          : null;
+      }
+    }
+    if (!matched) {
+      matched = takeUnusedByFml_(_personnelAssignmentSyncNormFml_(person.fml));
+    }
+    if (!matched) {
+      matched =
+        takeUnusedByPhone_(_personnelAssignmentSyncNormPhone_(person.phone)) ||
+        takeUnusedByPhone_(_personnelAssignmentSyncNormPhone_(person.phone2));
+    }
+    if (!matched) continue;
+    matched.used = true;
+    ordered.push(matched.row);
+  }
+
+  for (var left = 0; left < unused.length; left += 1) {
+    if (!unused[left].used) ordered.push(unused[left].row);
+  }
+
+  return {
+    ordered: ordered,
+    fullRowReorder: true,
+  };
+}
+
+function _personnelAssignmentRangeDigest_(values, formulas) {
+  return JSON.stringify({
+    values: values || [],
+    formulas: formulas || [],
+  });
+}
+
+function _personnelAssignmentWriteSeparated_(sheet, startRow, startCol, values, formulas) {
+  if (typeof _monthlyWriteSeparatedValuesAndFormulas_ === "function") {
+    return _monthlyWriteSeparatedValuesAndFormulas_(
+      sheet,
+      startRow,
+      startCol,
+      values,
+      formulas,
+    );
+  }
+  if (!sheet || !values || !values.length) {
+    return { ok: true, valueRuns: 0, formulaRuns: 0 };
+  }
+  var valueRuns = 0;
+  var formulaRuns = 0;
+  var numCols = values[0].length;
+  for (var r = 0; r < values.length; r += 1) {
+    var sheetRow = startRow + r;
+    var valueRow = values[r] || [];
+    var formulaRow = (formulas && formulas[r]) || [];
+    var c = 0;
+    while (c < numCols) {
+      var hasFormula = !!String(formulaRow[c] || "").trim();
+      var runStart = c;
+      if (hasFormula) {
+        while (c < numCols && String(formulaRow[c] || "").trim()) c += 1;
+        sheet
+          .getRange(sheetRow, startCol + runStart, 1, c - runStart)
+          .setFormulas([formulaRow.slice(runStart, c)]);
+        formulaRuns += 1;
+      } else {
+        while (c < numCols && !String(formulaRow[c] || "").trim()) c += 1;
+        sheet
+          .getRange(sheetRow, startCol + runStart, 1, c - runStart)
+          .setValues([valueRow.slice(runStart, c)]);
+        valueRuns += 1;
+      }
+    }
+  }
+  return { ok: true, valueRuns: valueRuns, formulaRuns: formulaRuns };
+}
+
 function _personnelAssignmentEnsureColumn_(sheet, col, header, hide) {
   if (!sheet || !col) return;
   try {
@@ -1015,112 +1145,6 @@ function _personnelAssignmentSameRow_(a, b) {
   return true;
 }
 
-function _personnelAssignmentNormCallsignKey_(value) {
-  return String(value || "")
-    .trim()
-    .replace(/\s+/g, " ")
-    .toUpperCase();
-}
-
-function _personnelAssignmentPadRow_(row, width) {
-  var next = Array.isArray(row) ? row.slice(0, width) : [];
-  while (next.length < width) next.push("");
-  return next;
-}
-
-/**
- * Reorder equipment rows to follow PERSONNEL callsign order.
- * Moves the full row (property blocks included); then refreshes identity fields.
- */
-function _personnelAssignmentReorderRowsByPersonnel_(
-  sheetRows,
-  personnelRows,
-  width,
-  resolveKeyFromRow,
-  applyIdentity,
-) {
-  var queues = {};
-  var unmatched = [];
-  var list = Array.isArray(sheetRows) ? sheetRows : [];
-
-  for (var i = 0; i < list.length; i += 1) {
-    var row = _personnelAssignmentPadRow_(list[i], width);
-    var key = _personnelAssignmentNormCallsignKey_(resolveKeyFromRow(row));
-    if (!key) {
-      unmatched.push(row);
-      continue;
-    }
-    if (!queues[key]) queues[key] = [];
-    queues[key].push(row);
-  }
-
-  var ordered = [];
-  var rowsMatched = 0;
-  var helperFilled = 0;
-  var people = Array.isArray(personnelRows) ? personnelRows : [];
-
-  for (var p = 0; p < people.length; p += 1) {
-    var person = people[p] || {};
-    var personKey = _personnelAssignmentNormCallsignKey_(person.callsign);
-    if (!personKey) continue;
-    if (!queues[personKey] || !queues[personKey].length) continue;
-    var taken = queues[personKey].shift();
-    var next = applyIdentity(taken, person);
-    ordered.push(next);
-    rowsMatched += 1;
-    if (
-      _personnelAssignmentNormCallsignKey_(
-        next[next.length - 1] || person.callsign,
-      )
-    ) {
-      helperFilled += 1;
-    }
-  }
-
-  Object.keys(queues)
-    .sort()
-    .forEach(function (leftKey) {
-      var leftover = queues[leftKey] || [];
-      for (var q = 0; q < leftover.length; q += 1) {
-        unmatched.push(leftover[q]);
-      }
-    });
-
-  for (var u = 0; u < unmatched.length; u += 1) {
-    var orphan = unmatched[u];
-    var orphanFml = "";
-    var orphanPhone = "";
-    var orphanCallsign = "";
-    if (width >= 27) {
-      orphanFml = [orphan[0], orphan[1], orphan[2]]
-        .map(function (part) {
-          return String(part || "").trim();
-        })
-        .filter(Boolean)
-        .join(" ");
-      orphanPhone = orphan[4];
-      orphanCallsign = orphan[26];
-    } else {
-      orphanFml = orphan[0];
-      orphanCallsign = orphan[7];
-    }
-    var orphanMatch = _personnelAssignmentSyncFind_(
-      people,
-      orphanFml,
-      orphanPhone,
-      orphanCallsign,
-    );
-    ordered.push(applyIdentity(orphan, orphanMatch));
-  }
-
-  return {
-    rows: ordered,
-    rowsMatched: rowsMatched,
-    helperFilled: helperFilled,
-    orphanCount: unmatched.length,
-  };
-}
-
 function materializeCarOwnersFromPersonnel_(personnelRows) {
   var ss = getWasbSpreadsheet_();
   var sheetName =
@@ -1129,72 +1153,135 @@ function materializeCarOwnersFromPersonnel_(personnelRows) {
       : "CAR";
   var sheet = ss.getSheetByName(sheetName);
   if (!sheet || sheet.getLastRow() < 2) {
-    return { ok: true, sheet: sheetName, rowsMatched: 0, rowsChanged: 0, helperColumn: "H" };
+    return {
+      ok: true,
+      sheet: sheetName,
+      rowsMatched: 0,
+      rowsChanged: 0,
+      helperColumn: "H",
+      fullRowReorder: true,
+    };
   }
 
   _personnelAssignmentEnsureColumn_(sheet, 8, "Callsign", true);
 
   var rowCount = sheet.getLastRow() - 1;
-  var width = 8;
-  var range = sheet.getRange(2, 1, rowCount, width);
-  var values = range.getValues();
-  var rebuilt = _personnelAssignmentReorderRowsByPersonnel_(
-    values,
-    personnelRows,
-    width,
-    function (row) {
-      var helper = row[7] || "";
-      if (helper) return helper;
-      var matched = _personnelAssignmentSyncFind_(
-        personnelRows,
-        row[0] || "",
-        "",
-        "",
-      );
-      return matched && matched.callsign ? matched.callsign : "";
-    },
-    function (row, matched) {
-      var next = _personnelAssignmentPadRow_(row, width);
-      if (matched) {
-        next[0] = matched.fml || next[0];
-        next[7] = matched.callsign || next[7];
-      }
-      return next;
-    },
-  );
+  var range = sheet.getRange(2, 1, rowCount, 8);
+  var rawValues = range.getValues();
+  var rawFormulas =
+    typeof range.getFormulas === "function" ? range.getFormulas() : [];
+  var displayValues =
+    typeof range.getDisplayValues === "function"
+      ? range.getDisplayValues()
+      : rawValues;
+  var priorDigest = _personnelAssignmentRangeDigest_(rawValues, rawFormulas);
 
-  var out = rebuilt.rows;
+  var sheetRows = [];
+  for (var i = 0; i < rawValues.length; i += 1) {
+    var valueRow = (rawValues[i] || []).slice(0, 8);
+    while (valueRow.length < 8) valueRow.push("");
+    var formulaRow = ((rawFormulas && rawFormulas[i]) || []).slice(0, 8);
+    while (formulaRow.length < 8) formulaRow.push("");
+    var displayRow = (displayValues[i] || []).slice(0, 8);
+    sheetRows.push({
+      values: valueRow,
+      formulas: formulaRow,
+      fromRow: 2 + i,
+      fml: String((displayRow[0] != null ? displayRow[0] : valueRow[0]) || "").trim(),
+      callsign: String(
+        (displayRow[7] != null ? displayRow[7] : valueRow[7]) || "",
+      ).trim(),
+      phone: "",
+      displayPhone: "",
+    });
+  }
+
+  var reordered = _personnelAssignmentReorderRowsByPersonnel_(
+    sheetRows,
+    personnelRows,
+  );
+  var ordered = reordered.ordered || [];
+  var outValues = [];
+  var outFormulas = [];
+  var rowsMatched = 0;
   var rowsChanged = 0;
-  var compareCount = Math.max(values.length, out.length);
-  for (var c = 0; c < compareCount; c += 1) {
+  var helperFilled = 0;
+
+  for (var o = 0; o < ordered.length; o += 1) {
+    var item = ordered[o] || {};
+    var destRow = 2 + o;
+    var nextValues = (item.values || []).slice(0, 8);
+    while (nextValues.length < 8) nextValues.push("");
+    var nextFormulas = [];
+    for (var fc = 0; fc < 8; fc += 1) {
+      var srcFormula = String((item.formulas && item.formulas[fc]) || "");
+      if (
+        srcFormula &&
+        typeof _monthlyAdjustFormulaRowDelta_ === "function" &&
+        item.fromRow &&
+        item.fromRow !== destRow
+      ) {
+        nextFormulas.push(
+          _monthlyAdjustFormulaRowDelta_(srcFormula, item.fromRow, destRow),
+        );
+      } else {
+        nextFormulas.push(srcFormula);
+      }
+    }
+    var owner = String(item.fml || nextValues[0] || "").trim();
+    var helperCallsign = String(item.callsign || nextValues[7] || "").trim();
+    var matched = _personnelAssignmentSyncFind_(
+      personnelRows,
+      owner,
+      "",
+      helperCallsign,
+    );
+    if (matched) {
+      rowsMatched += 1;
+      nextValues[0] = matched.fml || owner;
+      nextFormulas[0] = "";
+      nextValues[7] = matched.callsign || helperCallsign;
+      nextFormulas[7] = "";
+      if (nextValues[7]) helperFilled += 1;
+    }
     if (
-      !_personnelAssignmentSameRow_(
-        _personnelAssignmentPadRow_(values[c], width),
-        _personnelAssignmentPadRow_(out[c], width),
-      )
+      !_personnelAssignmentSameRow_(rawValues[o] || [], nextValues) ||
+      JSON.stringify((rawFormulas[o] || []).slice(0, 8)) !==
+        JSON.stringify(nextFormulas)
     ) {
       rowsChanged += 1;
     }
+    outValues.push(nextValues);
+    outFormulas.push(nextFormulas);
   }
 
-  if (out.length > rowCount) {
-    _personnelMaterializeEnsureDerivedCapacity_(sheet, 2, out.length);
-  }
-  if (rowsChanged > 0 || out.length !== rowCount) {
-    sheet.getRange(2, 1, out.length, width).setValues(out);
-    if (out.length < rowCount) {
-      sheet.getRange(2 + out.length, 1, rowCount - out.length, width).clearContent();
+  if (rowsChanged > 0) {
+    var freshValues = range.getValues();
+    var freshFormulas =
+      typeof range.getFormulas === "function" ? range.getFormulas() : [];
+    if (
+      _personnelAssignmentRangeDigest_(freshValues, freshFormulas) !== priorDigest
+    ) {
+      return {
+        ok: false,
+        reason: "concurrent_edit",
+        sheet: sheet.getName(),
+        rowsMatched: rowsMatched,
+        rowsChanged: 0,
+        helperColumn: "H",
+        fullRowReorder: true,
+      };
     }
+    _personnelAssignmentWriteSeparated_(sheet, 2, 1, outValues, outFormulas);
   }
 
   return {
     ok: true,
     sheet: sheet.getName(),
-    rowsMatched: rebuilt.rowsMatched,
+    rowsMatched: rowsMatched,
     rowsChanged: rowsChanged,
     helperColumn: "H",
-    helperFilled: rebuilt.helperFilled,
-    orphanCount: rebuilt.orphanCount,
+    helperFilled: helperFilled,
     fullRowReorder: true,
   };
 }
@@ -1207,84 +1294,162 @@ function materializeWeaponOwnersFromPersonnel_(personnelRows) {
       : "WEAPON";
   var sheet = ss.getSheetByName(sheetName);
   if (!sheet || sheet.getLastRow() < 2) {
-    return { ok: true, sheet: sheetName, rowsMatched: 0, rowsChanged: 0, helperColumn: "AA" };
+    return {
+      ok: true,
+      sheet: sheetName,
+      rowsMatched: 0,
+      rowsChanged: 0,
+      helperColumn: "AA",
+      fullRowReorder: true,
+    };
   }
 
   _personnelAssignmentEnsureColumn_(sheet, 27, "Callsign", true);
 
   var rowCount = sheet.getLastRow() - 1;
-  var width = 27;
-  var range = sheet.getRange(2, 1, rowCount, width);
-  var values = range.getValues();
-  var rebuilt = _personnelAssignmentReorderRowsByPersonnel_(
-    values,
-    personnelRows,
-    width,
-    function (row) {
-      var helper = row[26] || "";
-      if (helper) return helper;
-      var rawFml = [row[0], row[1], row[2]]
-        .map(function (part) {
-          return String(part || "").trim();
-        })
-        .filter(Boolean)
-        .join(" ");
-      var matched = _personnelAssignmentSyncFind_(
-        personnelRows,
-        rawFml,
-        row[4],
-        "",
-      );
-      return matched && matched.callsign ? matched.callsign : "";
-    },
-    function (row, matched) {
-      var next = _personnelAssignmentPadRow_(row, width);
-      if (matched) {
-        var parts = _personnelAssignmentSyncSplitFml_(matched.fml || "");
-        next[0] = matched.lastName || parts.lastName;
-        next[1] = matched.firstName || parts.firstName;
-        next[2] = matched.patronymic || parts.patronymic;
-        next[3] = matched.rank || matched.title || "";
-        next[4] = matched.phone || "";
-        next[26] = matched.callsign || next[26];
-      }
-      return next;
-    },
-  );
+  // Full person-bound property row A:Z plus helper AA (col 27).
+  var fullColCount = 27;
+  var range = sheet.getRange(2, 1, rowCount, fullColCount);
+  var rawValues = range.getValues();
+  var rawFormulas =
+    typeof range.getFormulas === "function" ? range.getFormulas() : [];
+  var displayValues =
+    typeof range.getDisplayValues === "function"
+      ? range.getDisplayValues()
+      : rawValues;
+  var priorDigest = _personnelAssignmentRangeDigest_(rawValues, rawFormulas);
 
-  var out = rebuilt.rows;
+  var sheetRows = [];
+  for (var i = 0; i < rawValues.length; i += 1) {
+    var valueRow = (rawValues[i] || []).slice(0, fullColCount);
+    while (valueRow.length < fullColCount) valueRow.push("");
+    var formulaRow = ((rawFormulas && rawFormulas[i]) || []).slice(
+      0,
+      fullColCount,
+    );
+    while (formulaRow.length < fullColCount) formulaRow.push("");
+    var displayRow = (displayValues[i] || []).slice(0, fullColCount);
+    var displayFml = [displayRow[0], displayRow[1], displayRow[2]]
+      .map(function (part) {
+        return String(part || "").trim();
+      })
+      .filter(Boolean)
+      .join(" ");
+    var displayPhone = String(
+      displayRow[4] != null ? displayRow[4] : valueRow[4] || "",
+    ).trim();
+    sheetRows.push({
+      values: valueRow,
+      formulas: formulaRow,
+      fromRow: 2 + i,
+      fml: displayFml,
+      callsign: String(
+        (displayRow[26] != null ? displayRow[26] : valueRow[26]) || "",
+      ).trim(),
+      phone: valueRow[4],
+      displayPhone: displayPhone,
+    });
+  }
+
+  var reordered = _personnelAssignmentReorderRowsByPersonnel_(
+    sheetRows,
+    personnelRows,
+  );
+  var ordered = reordered.ordered || [];
+  var outValues = [];
+  var outFormulas = [];
+  var rowsMatched = 0;
   var rowsChanged = 0;
-  var compareCount = Math.max(values.length, out.length);
-  for (var w = 0; w < compareCount; w += 1) {
+  var helperFilled = 0;
+  var helperChanged = 0;
+
+  for (var o = 0; o < ordered.length; o += 1) {
+    var item = ordered[o] || {};
+    var destRow = 2 + o;
+    var nextValues = (item.values || []).slice(0, fullColCount);
+    while (nextValues.length < fullColCount) nextValues.push("");
+    var nextFormulas = [];
+    for (var fc = 0; fc < fullColCount; fc += 1) {
+      var srcFormula = String((item.formulas && item.formulas[fc]) || "");
+      if (
+        srcFormula &&
+        typeof _monthlyAdjustFormulaRowDelta_ === "function" &&
+        item.fromRow &&
+        item.fromRow !== destRow
+      ) {
+        nextFormulas.push(
+          _monthlyAdjustFormulaRowDelta_(srcFormula, item.fromRow, destRow),
+        );
+      } else {
+        nextFormulas.push(srcFormula);
+      }
+    }
+    var rawFml = String(item.fml || "").trim();
+    var helperCallsign = String(item.callsign || nextValues[26] || "").trim();
+    var matched = _personnelAssignmentSyncFind_(
+      personnelRows,
+      rawFml,
+      item.displayPhone || item.phone,
+      helperCallsign,
+    );
+    var prevCallsign = helperCallsign;
+    if (matched) {
+      rowsMatched += 1;
+      var parts = _personnelAssignmentSyncSplitFml_(matched.fml || rawFml);
+      nextValues[0] = matched.lastName || parts.lastName;
+      nextValues[1] = matched.firstName || parts.firstName;
+      nextValues[2] = matched.patronymic || parts.patronymic;
+      nextValues[3] = matched.rank || matched.title || "";
+      nextValues[4] = matched.phone || "";
+      nextFormulas[0] = "";
+      nextFormulas[1] = "";
+      nextFormulas[2] = "";
+      nextFormulas[3] = "";
+      nextFormulas[4] = "";
+      nextValues[26] = matched.callsign || helperCallsign;
+      nextFormulas[26] = "";
+      if (nextValues[26]) helperFilled += 1;
+    }
+    if (String(nextValues[26] || "").trim() !== prevCallsign) helperChanged += 1;
     if (
-      !_personnelAssignmentSameRow_(
-        _personnelAssignmentPadRow_(values[w], width),
-        _personnelAssignmentPadRow_(out[w], width),
-      )
+      JSON.stringify(rawValues[o] || []) !== JSON.stringify(nextValues) ||
+      JSON.stringify((rawFormulas[o] || []).slice(0, fullColCount)) !==
+        JSON.stringify(nextFormulas)
     ) {
       rowsChanged += 1;
     }
+    outValues.push(nextValues);
+    outFormulas.push(nextFormulas);
   }
 
-  if (out.length > rowCount) {
-    _personnelMaterializeEnsureDerivedCapacity_(sheet, 2, out.length);
-  }
-  if (rowsChanged > 0 || out.length !== rowCount) {
-    sheet.getRange(2, 1, out.length, width).setValues(out);
-    if (out.length < rowCount) {
-      sheet.getRange(2 + out.length, 1, rowCount - out.length, width).clearContent();
+  if (rowsChanged > 0) {
+    var freshValues = range.getValues();
+    var freshFormulas =
+      typeof range.getFormulas === "function" ? range.getFormulas() : [];
+    if (
+      _personnelAssignmentRangeDigest_(freshValues, freshFormulas) !== priorDigest
+    ) {
+      return {
+        ok: false,
+        reason: "concurrent_edit",
+        sheet: sheet.getName(),
+        rowsMatched: rowsMatched,
+        rowsChanged: 0,
+        helperColumn: "AA",
+        fullRowReorder: true,
+      };
     }
+    _personnelAssignmentWriteSeparated_(sheet, 2, 1, outValues, outFormulas);
   }
 
   return {
     ok: true,
     sheet: sheet.getName(),
-    rowsMatched: rebuilt.rowsMatched,
+    rowsMatched: rowsMatched,
     rowsChanged: rowsChanged,
     helperColumn: "AA",
-    helperChanged: rowsChanged,
-    helperFilled: rebuilt.helperFilled,
-    orphanCount: rebuilt.orphanCount,
+    helperChanged: helperChanged,
+    helperFilled: helperFilled,
     fullRowReorder: true,
   };
 }
