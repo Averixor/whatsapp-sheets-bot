@@ -298,15 +298,11 @@ var PersonsRepository_ =
         phonesIndex,
         dictMap,
       );
-      const personnel =
-        _resolvePersonnel_(payload.callsign || rowMeta.callsign, payload.fml, payload.id) ||
-        (function () {
-          try {
-            return getPersonnelByCallsign_(callsign);
-          } catch (e) {
-            return null;
-          }
-        })();
+      const personnel = _resolvePersonnel_(
+        payload.callsign || rowMeta.callsign,
+        payload.fml,
+        payload.id,
+      );
 
       if (!personnel && typeof isPersonnelSheetAvailable_ === "function") {
         if (isPersonnelSheetAvailable_()) {
@@ -486,6 +482,12 @@ var PersonsRepository_ =
       return dates;
     }
 
+    function invalidateMonthlyLookupCache() {
+      Object.keys(monthlyRowLookupCache).forEach(function (key) {
+        delete monthlyRowLookupCache[key];
+      });
+    }
+
     return {
       normalizeDateStr: normalizeDateStr,
       getSheetByDate: getSheetByDate,
@@ -499,5 +501,15 @@ var PersonsRepository_ =
       getSidebarPersonnel: getSidebarPersonnel,
       getAnyCallsign: getAnyCallsign,
       getAvailableDates: getAvailableDates,
+      invalidateMonthlyLookupCache: invalidateMonthlyLookupCache,
     };
   })();
+
+function invalidateMonthlyLookupCache_() {
+  if (
+    PersonsRepository_ &&
+    typeof PersonsRepository_.invalidateMonthlyLookupCache === "function"
+  ) {
+    PersonsRepository_.invalidateMonthlyLookupCache();
+  }
+}
