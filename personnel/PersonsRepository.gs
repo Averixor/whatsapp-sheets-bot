@@ -358,7 +358,11 @@ var PersonsRepository_ =
         unit: merged.unit || "",
         phone: phone,
         phone2: merged.phone2 || "",
-        driversLicense: merged.driversLicense || "",
+        driversLicense:
+          merged.driversLicense ||
+          (personnel && personnel.driversLicense) ||
+          "",
+        weapon: merged.weapon || (personnel && personnel.weapon) || "",
         birthday: merged.birthday || "",
         brDaysThisMonth: rowMeta.brDays || "0",
         brDaysPrevMonth: prevRow ? prevRow.brDays || "0" : "0",

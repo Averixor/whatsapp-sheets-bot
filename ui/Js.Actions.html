@@ -767,6 +767,83 @@
       ? `<a class="person-card__btn person-card__btn--primary" href="${escapeAttr(data.waLink)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>`
       : `<button class="person-card__btn" type="button" disabled>WhatsApp</button>`;
 
+    const driversLicenseDisplay = String(data.driversLicense || "")
+      .replace(/\s+/g, " ")
+      .trim();
+    const cars = Array.isArray(data.cars)
+      ? data.cars
+      : Array.isArray(data.equipment?.cars)
+        ? data.equipment.cars
+        : [];
+    const weapons = Array.isArray(data.weapons)
+      ? data.weapons
+      : Array.isArray(data.equipment?.weapons)
+        ? data.equipment.weapons
+        : [];
+    const temporaryProperty = Array.isArray(data.temporaryProperty)
+      ? data.temporaryProperty
+      : Array.isArray(data.equipment?.temporaryProperty)
+        ? data.equipment.temporaryProperty
+        : [];
+
+    const carsHtml = cars.length
+      ? `
+          <div class="person-card__section person-card__section--info">
+            <div class="person-card__section-title">Автотехніка</div>
+            ${cars
+              .map((car) => {
+                const license = String(car?.ownerDriversLicense || driversLicenseDisplay)
+                  .replace(/\s+/g, " ")
+                  .trim();
+                return `
+              <div class="person-card__vac-row" style="margin-bottom:8px;">
+                <b>${escapeHtml(car?.assetName || "Авто")}</b><br>
+                Номер: ${escapeHtml(car?.militaryNumber || "—")}<br>
+                Стан: ${escapeHtml(car?.status || "—")}<br>
+                Посвідчення: ${escapeHtml(license || "—")}
+              </div>`;
+              })
+              .join("")}
+          </div>
+        `
+      : "";
+
+    const weaponsHtml = weapons.length
+      ? `
+          <div class="person-card__section person-card__section--info">
+            <div class="person-card__section-title">Озброєння</div>
+            ${weapons
+              .map(
+                (weapon) => `
+              <div class="person-card__vac-row" style="margin-bottom:8px;">
+                <b>${escapeHtml(weapon?.assetName || "Майно")}</b><br>
+                № ${escapeHtml(weapon?.serialNumber || "—")} · ${escapeHtml(weapon?.year || "—")}<br>
+                Місце: ${escapeHtml(weapon?.location || "—")}
+              </div>`,
+              )
+              .join("")}
+          </div>
+        `
+      : "";
+
+    const temporaryHtml = temporaryProperty.length
+      ? `
+          <div class="person-card__section">
+            <div class="person-card__section-title">Тимчасово видане майно</div>
+            ${temporaryProperty
+              .map(
+                (item) => `
+              <div class="person-card__vac-row" style="margin-bottom:8px;">
+                <b>${escapeHtml(item?.assetName || "Майно")}</b><br>
+                Залишок: ${escapeHtml(String(item?.remaining ?? "—"))} ${escapeHtml(item?.unit || "")}<br>
+                Статус: ${escapeHtml(item?.status || "—")}
+              </div>`,
+              )
+              .join("")}
+          </div>
+        `
+      : "";
+
     root.innerHTML = `
       <div class="person-card">
         <div class="person-card__header">
@@ -802,11 +879,7 @@
 
           <div class="person-card__field">
             <div class="person-card__label">Посвідчення водія</div>
-            <div class="person-card__value">${escapeHtml(
-              String(data.driversLicense || "")
-                .replace(/\s+/g, " ")
-                .trim() || "—",
-            )}</div>
+            <div class="person-card__value">${escapeHtml(driversLicenseDisplay || "—")}</div>
           </div>
 
           <div class="person-card__field">
@@ -832,6 +905,9 @@
 
         ${currentVacHtml}
         ${nextVacHtml}
+        ${carsHtml}
+        ${weaponsHtml}
+        ${temporaryHtml}
 
         <div class="person-card__actions">
           ${waButton}
@@ -839,7 +915,7 @@
           <button class="person-card__btn" type="button" onclick="SidebarApp.openPersonCalendarFromCard('${escapeJsString(data.callsign || "")}')">Календар</button>
         </div>
 
-        <div class="person-card__message-label">============================/div>
+        <div class="person-card__message-label">Повідомлення</div>
         <div class="person-card__message" id="personCardMessage">${escapeHtml(data?.message ?? "")}</div>
       </div>
     `;

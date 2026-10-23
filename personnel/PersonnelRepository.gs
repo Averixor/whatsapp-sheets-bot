@@ -1194,6 +1194,8 @@ function mergePersonnelIntoPersonView_(base, personnel) {
   if (personnel.birthday) out.birthday = personnel.birthday;
   if (personnel.unit) out.unit = personnel.unit;
   if (personnel.status) out.status = personnel.status;
+  if (personnel.driversLicense) out.driversLicense = personnel.driversLicense;
+  if (personnel.weapon) out.weapon = personnel.weapon;
 
   var phone =
     typeof normalizePhone_ === "function"
