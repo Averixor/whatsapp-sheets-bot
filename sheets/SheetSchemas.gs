@@ -720,7 +720,9 @@ function _ssBuildPersonnelSchema_() {
       "Days_until_birthday",
       "Unit",
       "2_Phone",
+      "DriversLicense",
       "Email",
+      "Weapon",
       "RNTRC",
       "Title",
       "Rank",
@@ -742,7 +744,9 @@ function _ssBuildPersonnelSchema_() {
       "Phone",
       "2_Phone",
       "RNTRC",
+      "DriversLicense",
       "Email",
+      "Weapon",
       "Callsign",
       "Rank",
       "Position",
@@ -750,7 +754,7 @@ function _ssBuildPersonnelSchema_() {
       "Status",
     ],
     notes:
-      "Єдине джерело даних людини. Еталон «Книга Взводу Охорони»: Cells/ID v/s/ID Army+ + split names + RNTRC + Email + Callsign (N) + Rank + OSH 4 + Status — contracts/reference-workbook-layout.contract.json. Місячний графік: Callsign. Status dropdown (9 UA): В наявності … СЗЧ.",
+      "Єдине джерело даних людини. Еталон «Книга Взводу Охорони»: Cells/ID v/s/ID Army+ + split names + RNTRC + Driver's license + Email + Weapon + Callsign (P) + Rank + OSH 4 + Status (T) — contracts/reference-workbook-layout.contract.json. Місячний графік: Callsign. Status dropdown (9 UA): В наявності … СЗЧ.",
   });
 }
 
@@ -1007,11 +1011,6 @@ function _ssBuildWeaponSchema_() {
 
       separator2: _ssFreeze_({ col: 21, type: "string", required: false, allowBlank: true, label: "" }),
 
-      assetName3: _ssFreeze_({ col: 22, type: "string", required: false, allowBlank: true, label: "Name of military property" }),
-      year3: _ssFreeze_({ col: 23, type: "number|string", required: false, allowBlank: true, label: "Year of manufacture" }),
-      nomenclatureCode3: _ssFreeze_({ col: 24, type: "string", required: false, allowBlank: true, label: "Nomenclature code" }),
-      serialNumber3: _ssFreeze_({ col: 25, type: "string", required: false, allowBlank: true, label: "Serial number" }),
-      unitPrice3: _ssFreeze_({ col: 26, type: "number|string", required: false, allowBlank: true, label: "Unit price" }),
       callsign: _ssFreeze_({ col: 27, type: "string", required: false, allowBlank: true, label: "Callsign" }),
     }),
     headerAliases: _ssFreeze_({
@@ -1029,7 +1028,7 @@ function _ssBuildWeaponSchema_() {
       location: ["Location", "Місцезнаходження"],
       callsign: ["Callsign", "Позивний", "Location"],
     }),
-    keyFields: ["lastName", "firstName", "patronymic", "serialNumber1", "serialNumber2", "serialNumber3"],
+    keyFields: ["lastName", "firstName", "patronymic", "serialNumber1", "serialNumber2"],
     requiredFields: [],
     nullableFields: [
       "lastName",
@@ -1039,10 +1038,8 @@ function _ssBuildWeaponSchema_() {
       "phone",
       "assetName1",
       "assetName2",
-      "assetName3",
       "serialNumber1",
       "serialNumber2",
-      "serialNumber3",
       "location1",
       "location2",
       "callsign",
@@ -1055,18 +1052,15 @@ function _ssBuildWeaponSchema_() {
       "callsign",
       "assetName1",
       "assetName2",
-      "assetName3",
       "serialNumber1",
       "serialNumber2",
-      "serialNumber3",
       "nomenclatureCode1",
       "nomenclatureCode2",
-      "nomenclatureCode3",
       "location1",
       "location2",
     ],
     notes:
-      "Реєстр WEAPON з реальної книги: особа в A:E; блоки майна F:L, N:T, V:Z (порожні роздільники M і U); позивний у AA.",
+      "Реєстр WEAPON з реальної книги: особа в A:E; блоки майна F:L, N:T (порожні роздільники M і U); допоміжна колонка Callsign у AA забезпечує materialize.",
   });
 }
 

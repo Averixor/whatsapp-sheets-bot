@@ -452,6 +452,12 @@ const ReferenceSheetsRepository_ = (function () {
       rank: clean_(source.rank || source.title || source.Title || raw.rank || ""),
       phone: normalizedPhone || phone,
       phoneDisplay: phone || normalizedPhone,
+      driversLicense: clean_(
+        source.driversLicense ||
+          source.DriversLicense ||
+          raw.driversLicense ||
+          "",
+      ),
       status: clean_(source.status || source.Status || ""),
       sheetRow: source.sheetRow || raw.sheetRow || 0,
     };
@@ -569,6 +575,7 @@ const ReferenceSheetsRepository_ = (function () {
         ownerCallsign: ownerPerson.callsign || ownerCallsignRaw,
         ownerRank: ownerPerson.rank,
         ownerPhone: ownerPerson.phone,
+        ownerDriversLicense: ownerPerson.driversLicense || "",
         assigned: !!ownerKeyRaw && !ownerIsDash,
         assetName: assetName,
         militaryNumber: militaryNumber,
@@ -587,6 +594,7 @@ const ReferenceSheetsRepository_ = (function () {
           ownerPerson.callsign,
           ownerPerson.rank,
           ownerPerson.phone,
+          ownerPerson.driversLicense,
           assetName,
           militaryNumber,
           chassisNumber,
@@ -683,6 +691,10 @@ const ReferenceSheetsRepository_ = (function () {
       personDisplay: person.fullName,
       personRawDisplay: person.rawFullName || person.fullName,
       personCanonical: person.found === true,
+      personMissing:
+        personnelReferenceAvailable_() &&
+        !!(person.fullName || person.phone || person.callsign) &&
+        person.found !== true,
       callsign: person.callsign || "",
       rank: person.rank,
       phone: person.phone,
@@ -752,11 +764,10 @@ const ReferenceSheetsRepository_ = (function () {
     const values = sheet
       .getRange(2, 1, sheet.getLastRow() - 1, Math.max(sheet.getLastColumn(), 27))
       .getDisplayValues();
-    // Еталонна книга: F:L | (порожня M) | N:T | (порожня U) | V:Z | AA=Callsign.
+    // Робоча книга: F:L | (порожня M) | N:T | (порожня U). Callsign helper AA (col 27) may be ensured by materialize.
     const blocks = [
       { index: 1, base: 5, hasAssignmentDate: true, hasLocation: true, label: "Майно 1" },
       { index: 2, base: 13, hasAssignmentDate: true, hasLocation: true, label: "Майно 2" },
-      { index: 3, base: 21, hasAssignmentDate: false, hasLocation: false, label: "Майно 3" },
     ];
     const personKeys = {};
     let totalUnitPrice = 0;

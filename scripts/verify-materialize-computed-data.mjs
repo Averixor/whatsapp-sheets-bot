@@ -103,10 +103,7 @@ assert.match(
   /function _personnelAssignmentReorderRowsByPersonnel_/,
   "WEAPON/CAR must reorder full rows by Callsign",
 );
-assert.match(
-  personnelMaterializeSource,
-  /fullRowReorder:\s*true/,
-);
+assert.match(personnelMaterializeSource, /fullRowReorder:\s*true/);
 assert.match(
   personnelMaterializeSource,
   /Drain every queued equipment row for this callsign/,
@@ -231,12 +228,20 @@ assert.match(
     auditContext,
   );
   assert.equal(reusedLockResult.success, true);
-  assert.equal(lockWaitCalls, 0, "already-held audit lock must not be reacquired");
+  assert.equal(
+    lockWaitCalls,
+    0,
+    "already-held audit lock must not be reacquired",
+  );
   vm.runInContext(
     "Stage7AuditTrail_.record({ scenario: 'standalone' })",
     auditContext,
   );
-  assert.equal(lockWaitCalls, 1, "standalone audit writes must still acquire the lock");
+  assert.equal(
+    lockWaitCalls,
+    1,
+    "standalone audit writes must still acquire the lock",
+  );
   assert.ok(writes.length >= 2);
 }
 
@@ -247,13 +252,9 @@ assert.match(
   /materializeAllComputedData_\(\{\s*source:\s*"dailyJob"[\s\S]*?lockOwner:\s*"daily_caller"/,
 );
 assert.match(useCases, /LockService\.getDocumentLock\s*\(\s*\)/);
-assert.match(
-  orchestrator,
-  /SystemStatusRuntime_\.evaluateComputedMaterialize/,
-);
+assert.match(orchestrator, /SystemStatusRuntime_\.evaluateComputedMaterialize/);
 assert.doesNotMatch(
-  useCases.match(/case "clearPhoneCache"[\s\S]*?case "restartBot"/)?.[0] ||
-    "",
+  useCases.match(/case "clearPhoneCache"[\s\S]*?case "restartBot"/)?.[0] || "",
   /materializePersonnelDerivedSheets_/,
   "clearPhoneCache must not materialize derived sheets",
 );
@@ -608,7 +609,7 @@ assert.match(
   car.cell(1, 8).value = "Callsign";
   // Stale helper callsign, identity still matches via FML; property formula in B.
   car.cell(2, 1).value = "Іваненко Іван";
-  car.cell(2, 2).formula = "=A2&\"-car\"";
+  car.cell(2, 2).formula = '=A2&"-car"';
   car.cell(2, 8).value = "STALE";
   car.cell(3, 1).value = "Петренко Петро";
   car.cell(3, 2).value = "PROP_B";
@@ -625,7 +626,8 @@ assert.match(
       callsign: `P${i}`,
       phone: `3805000000${String(i).padStart(2, "0")}`,
       phone2: "",
-      fml: i === 1 ? "Петренко Петро" : i === 2 ? "Іваненко Іван" : `Person ${i}`,
+      fml:
+        i === 1 ? "Петренко Петро" : i === 2 ? "Іваненко Іван" : `Person ${i}`,
       lastName: i === 1 ? "Петренко" : i === 2 ? "Іваненко" : `Last${i}`,
       firstName: i === 1 ? "Петро" : i === 2 ? "Іван" : `First${i}`,
       patronymic: "",
@@ -650,7 +652,9 @@ assert.match(
       out = String.fromCharCode(65 + rem) + out;
       n = Math.floor((n - 1) / 26);
     }
-    return (absCol ? "$" : "") + (out || "A") + (absRow ? "$" : "") + String(row);
+    return (
+      (absCol ? "$" : "") + (out || "A") + (absRow ? "$" : "") + String(row)
+    );
   }
   function matParseA1_(token) {
     const match = String(token || "").match(
@@ -715,7 +719,12 @@ assert.match(
             parsed.absStartRow,
           ) +
           ":" +
-          matFormatA1_(parsed.endCol, endRow, parsed.absEndCol, parsed.absEndRow)
+          matFormatA1_(
+            parsed.endCol,
+            endRow,
+            parsed.absEndCol,
+            parsed.absEndRow,
+          )
         );
       },
     );
@@ -798,9 +807,13 @@ assert.match(
     filename: "PersonnelMaterialize.gs",
   });
 
-  const phonesResult = matContext.materializePhonesSheet_(phones, sourcePeople, {
-    forceHeaders: true,
-  });
+  const phonesResult = matContext.materializePhonesSheet_(
+    phones,
+    sourcePeople,
+    {
+      forceHeaders: true,
+    },
+  );
   assert.equal(phonesResult.ok, true);
   assert.equal(
     phonesResult.rowsWritten,
@@ -835,6 +848,7 @@ assert.match(
   ]);
   assert.equal(carResult.ok, true);
   assert.equal(carResult.fullRowReorder, true);
+  assert.equal(carResult.ownerMode, "fml", "Owner header uses FML mode");
   assert.equal(car.cell(2, 8).value, "PETRO", "PERSONNEL order first");
   assert.equal(car.cell(2, 2).value, "PROP_B");
   assert.equal(car.cell(3, 8).value, "IVAN", "stale helper matched via FML");
@@ -844,10 +858,68 @@ assert.match(
     "property formula must survive reorder and adjust relative row refs",
   );
 
+  // Callsign-mode CAR (working book): column A stays Callsign, never overwritten by FML.
+  const carCallsign = new MatFakeSheet("CAR_CS", 5, 8);
+  carCallsign.cell(1, 1).value = "Callsign";
+  carCallsign.cell(1, 8).value = "Callsign";
+  carCallsign.cell(2, 1).value = "IVAN";
+  carCallsign.cell(2, 2).value = "CAR_A";
+  carCallsign.cell(3, 1).value = "PETRO";
+  carCallsign.cell(3, 2).value = "CAR_B";
+  carCallsign.cell(4, 1).value = "－";
+  carCallsign.cell(4, 2).value = "UNASSIGNED";
+  sheetsByName.CAR = carCallsign;
+  const carCsResult = matContext.materializeCarOwnersFromPersonnel_([
+    {
+      fml: "Петренко Петро",
+      callsign: "PETRO",
+      phone: "",
+      phone2: "",
+      lastName: "Петренко",
+      firstName: "Петро",
+      patronymic: "",
+      rank: "",
+      title: "",
+    },
+    {
+      fml: "Іваненко Іван",
+      callsign: "IVAN",
+      phone: "",
+      phone2: "",
+      lastName: "Іваненко",
+      firstName: "Іван",
+      patronymic: "",
+      rank: "",
+      title: "",
+    },
+  ]);
+  assert.equal(carCsResult.ok, true);
+  assert.equal(carCsResult.ownerMode, "callsign");
+  assert.equal(
+    carCallsign.cell(2, 1).value,
+    "PETRO",
+    "callsign mode keeps A=Callsign",
+  );
+  assert.equal(carCallsign.cell(2, 2).value, "CAR_B");
+  assert.equal(carCallsign.cell(3, 1).value, "IVAN");
+  assert.equal(carCallsign.cell(3, 2).value, "CAR_A");
+  assert.equal(
+    carCallsign.cell(4, 1).value,
+    "－",
+    "dash owner must stay unassigned",
+  );
+  assert.equal(carCallsign.cell(4, 2).value, "UNASSIGNED");
+  sheetsByName.CAR = car;
+
   // Prototype-key callsign must not break queue maps.
   const reorder = matContext._personnelAssignmentReorderRowsByPersonnel_(
     [
-      { callsign: "constructor", fml: "Ctor Person", phone: "", displayPhone: "" },
+      {
+        callsign: "constructor",
+        fml: "Ctor Person",
+        phone: "",
+        displayPhone: "",
+      },
       { callsign: "toString", fml: "Ts Person", phone: "", displayPhone: "" },
     ],
     [

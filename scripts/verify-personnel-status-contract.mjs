@@ -17,8 +17,8 @@ const statusColLetter = Object.entries(personnelHeaders).find(
 )?.[0];
 assert.equal(
   statusColLetter,
-  "R",
-  "reference-workbook-layout PERSONNEL Status must be column R",
+  "T",
+  "reference-workbook-layout PERSONNEL Status must be column T",
 );
 const statusColIndex = statusColLetter.charCodeAt(0) - 64;
 assert.equal(

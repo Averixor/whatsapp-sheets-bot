@@ -125,6 +125,12 @@ function _personCardRenderCar_(item) {
     ${_personCardAssetLine_("Рік", car.year || "—")}
     ${_personCardAssetLine_("Стан", car.status || "—")}
     ${_personCardAssetLine_("Вартість", car.costDisplay || "—")}
+    ${_personCardAssetLine_(
+      "Посвідчення водія",
+      String(car.ownerDriversLicense || "")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )}
   </div>`;
 }
 
@@ -253,6 +259,11 @@ function openPersonCardByCallsignAndDate_(callsign, dateStr) {
   const escapedPosition = _personCardSafeHtml_(data.position || "—");
   const escapedOshs = _personCardSafeHtml_(data.oshs || "—");
   const escapedPhoneDisplay = _personCardSafeHtml_(data.phoneDisplay || "—");
+  const escapedDriversLicense = _personCardSafeHtml_(
+    String(data.driversLicense || "")
+      .replace(/\s+/g, " ")
+      .trim() || "—",
+  );
   const escapedBirthday = _personCardSafeHtml_(data.birthday || "—");
   const escapedTodayGroup = _personCardSafeHtml_(data.todayGroup || "—");
   const escapedBrDaysThisMonth = _personCardSafeHtml_(
@@ -773,6 +784,11 @@ function openPersonCardByCallsignAndDate_(callsign, dateStr) {
             <div class="info-item">
               <span class="lbl">Телефон</span>
               <span class="val">${escapedPhoneDisplay}</span>
+            </div>
+
+            <div class="info-item">
+              <span class="lbl">Посвідчення водія</span>
+              <span class="val">${escapedDriversLicense}</span>
             </div>
 
             <div class="info-item">

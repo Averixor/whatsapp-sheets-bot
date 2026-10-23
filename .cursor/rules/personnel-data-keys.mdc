@@ -19,13 +19,15 @@ alwaysApply: true
 | `phone` | `Phone` | основний телефон |
 | `phone2` | `2_Phone` / `Phone 2` | другий телефон |
 | `rntrc` | `RNTRC` (L) | РНТРЦ |
-| `email` | `Email` (M) | Читається для експорту / повідомлень. **Не** частина runtime-ключа особи |
-| `callsign` | `Callsign` (N) | **Основний ключ** місячного графіка й lookup у PERSONNEL. У еталоні — колонка N, значення на кшталт `ГРАФ` |
-| `rank` / `title` | `Rank` (еталон, O); legacy-заголовок `Title` теж читається | Звання. **Не** ключ людини. Runtime зливає `Title`∥`Rank` в `rank`/`title` |
+| `driversLicense` | `Driver's license` (M; аліаси з переносом рядка / typo `license`+U+0491) | Посвідчення водія. **Не** ключ людини |
+| `email` | `Email` (N) | Читається для експорту / повідомлень. **Не** частина runtime-ключа особи |
+| `weapon` | `Weapon` (O) | Підсумковий текст зброї на PERSONNEL. **Не** аркуш WEAPON і не ключ людини |
+| `callsign` | `Callsign` (P) | **Основний ключ** місячного графіка й lookup у PERSONNEL. У еталоні — колонка P, значення на кшталт `ГРАФ` |
+| `rank` / `title` | `Rank` (еталон, Q); legacy-заголовок `Title` теж читається | Звання. **Не** ключ людини. Runtime зливає `Title`∥`Rank` в `rank`/`title` |
 | `position` | `Position` | Посада / місце в структурі. **Не** ключ людини |
-| `osh4` | `OSH 4` (Q, з пробілом) | ОШ 4. Runtime-алиас `osh4`; шукати заголовок **`OSH 4`**, не `OSH_4` |
+| `osh4` | `OSH 4` (S, з пробілом) | ОШ 4. Runtime-алиас `osh4`; шукати заголовок **`OSH 4`**, не `OSH_4` |
 | `unit` | `Unit` | Підрозділ (опційно) |
-| `status` | `Status` (R) | Лише **українські** значення в аркуші |
+| `status` | `Status` (T) | Лише **українські** значення в аркуші |
 
 **Runtime-назви** (`id`, `fml`, `rank`, `osh4`, `phone2`, …) — внутрішні алиаси коду. Читання PERSONNEL — **виключно за заголовками аркуша** (з аліасами в `_personnelCanonicalHeaderKey_`), ніколи за літерами колонок і ніколи «навпаки» з runtime-алиасів у клітинки.
 
@@ -33,11 +35,11 @@ alwaysApply: true
 
 `ID | FML | Birthday | Age | Days_until_birthday | Phone | 2_Phone | RNTRC | Callsign | Rank | Position | OSH 4 | Unit | Status`
 
-`Email` у цей логічний рядок **не** входить (є у фізичному еталоні, не є ключем особи).
+`Email`, `Driver's license`, `Weapon` у цей логічний рядок **не** входять (є у фізичному еталоні, не є ключами особи).
 
-Фізична структура еталона «Книга Взводу Охорони.xlsx» → PERSONNEL (A–R), див. `contracts/reference-workbook-layout.contract.json`:
+Фізична структура еталона «Книга Взводу Охорони.xlsx» → PERSONNEL (A–T), див. `contracts/reference-workbook-layout.contract.json`:
 
-`Cells | ID v/s | ID Army+ | Last name | First name | Patronymic | Birthday | Age | Days until birthday | Phone | Phone 2 | RNTRC (L) | Email (M) | Callsign (N) | Rank (O) | Position | OSH 4 (Q) | Status (R)`
+`Cells | ID v/s | ID Army+ | Last name | First name | Patronymic | Birthday | Age | Days until birthday | Phone | Phone 2 | RNTRC (L) | Driver's license (M) | Email (N) | Weapon (O) | Callsign (P) | Rank (Q) | Position (R) | OSH 4 (S) | Status (T)`
 
 `TEMPLATE` — лише legacy-layout; у еталоні відсутній.
 

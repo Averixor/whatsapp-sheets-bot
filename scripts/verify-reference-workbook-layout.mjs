@@ -18,8 +18,11 @@ const contract = JSON.parse(fs.readFileSync(contractPath, "utf8"));
 const personnelHeaders = contract.sheets.PERSONNEL;
 assert.ok(personnelHeaders, "PERSONNEL headers missing in contract");
 assert.equal(personnelHeaders.L, "RNTRC");
-assert.equal(personnelHeaders.M, "Email");
-assert.equal(personnelHeaders.N, "Callsign");
+assert.equal(personnelHeaders.M, "Driver's license");
+assert.equal(personnelHeaders.N, "Email");
+assert.equal(personnelHeaders.O, "Weapon");
+assert.equal(personnelHeaders.P, "Callsign");
+assert.equal(personnelHeaders.T, "Status");
 assert.ok(
   !Object.values(personnelHeaders).includes("TEMPLATE"),
   "reference PERSONNEL must not use TEMPLATE column",
@@ -38,7 +41,10 @@ const expectedPersonnelCanonical = {
   Phone: "Phone",
   "Phone 2": "2_Phone",
   RNTRC: "RNTRC",
+  "Driver's license": "DriversLicense",
+  "Driver's\nlicenseґ": "DriversLicense",
   Email: "Email",
+  Weapon: "Weapon",
   Callsign: "Callsign",
   Rank: "Rank",
   Position: "Position",
@@ -62,10 +68,13 @@ for (const [header, expected] of Object.entries(expectedPersonnelCanonical)) {
 
 const built = ctx._personnelBuildHeaderColIndex_(Object.values(personnelHeaders));
 assert.ok(built.RNTRC >= 0, "RNTRC column index");
+assert.ok(built.DriversLicense >= 0, "DriversLicense column index");
 assert.ok(built.Email >= 0, "Email column index");
+assert.ok(built.Weapon >= 0, "Weapon column index");
 assert.ok(built.Callsign >= 0, "Callsign column index");
 assert.ok(built.LastName >= 0, "Last name column index");
 assert.ok(built.Rank >= 0, "Rank column index");
+assert.equal(built.Status, 19, "Status must be column T (0-based index 19)");
 assert.equal(built.TEMPLATE, -1, "TEMPLATE must stay unused in reference layout");
 
 assert.equal(contract.sheets["06"].B, "Позивний");
@@ -82,9 +91,17 @@ assert.equal(contract.sheets.WEAPON.F, "Name of military property");
 assert.equal(contract.sheets.WEAPON.K, "Date of assignment");
 assert.equal(contract.sheets.WEAPON.M, "");
 assert.equal(contract.sheets.WEAPON.N, "Name of military property");
+assert.equal(contract.sheets.WEAPON.T, "Location");
 assert.equal(contract.sheets.WEAPON.U, "");
-assert.equal(contract.sheets.WEAPON.V, "Name of military property");
-assert.equal(contract.sheets.WEAPON.AA, "Callsign");
+assert.ok(
+  !Object.prototype.hasOwnProperty.call(contract.sheets.WEAPON, "V") ||
+    contract.sheets.WEAPON.V === "",
+  "reference WEAPON must not declare a third property block starting at V",
+);
+assert.ok(
+  !Object.prototype.hasOwnProperty.call(contract.sheets.WEAPON, "AA"),
+  "native WEAPON export has no Callsign at AA (materialize may add helper)",
+);
 assert.equal(contract.sheets.DICT_SUM.A, "Code");
 assert.equal(contract.sheets.DICT_SUM.C, "Order");
 assert.ok(!Object.prototype.hasOwnProperty.call(contract.sheets.DICT_SUM, "F"));
@@ -109,8 +126,11 @@ assert.doesNotMatch(
   "RUNBOOK must not claim TEMPLATE is reference callsign carrier",
 );
 assert.match(runbook, /\| L \| RNTRC \|/);
-assert.match(runbook, /\| M \| Email \|/);
-assert.match(runbook, /\| \*\*N\*\* \| \*\*Callsign\*\*/);
+assert.match(runbook, /\| M \| Driver's license \|/);
+assert.match(runbook, /\| N \| Email \|/);
+assert.match(runbook, /\| O \| Weapon \|/);
+assert.match(runbook, /\| \*\*P\*\* \| \*\*Callsign\*\*/);
+assert.match(runbook, /\| T \| Status \|/);
 assert.match(runbook, /reference-workbook-layout\.contract\.json/);
 
 const agents = fs.readFileSync(path.join(repoRoot, "AGENTS.md"), "utf8");
@@ -121,18 +141,18 @@ assert.doesNotMatch(
 );
 assert.match(
   agents,
-  /`Callsign` in column N/,
-  "AGENTS.md must document Callsign in reference column N",
+  /`Callsign` in column P/,
+  "AGENTS.md must document Callsign in reference column P",
 );
 assert.doesNotMatch(
   agents,
-  /`Callsign` in column L/,
-  "AGENTS.md must not claim Callsign is reference column L",
+  /`Callsign` in column N/,
+  "AGENTS.md must not claim Callsign is reference column N",
 );
 assert.match(
   agents,
-  /reference column \*\*R\*\*/,
-  "AGENTS.md must document Status self-heal in reference column R",
+  /reference column \*\*T\*\*/,
+  "AGENTS.md must document Status self-heal in reference column T",
 );
 
 const personnelStatusContract = JSON.parse(
@@ -144,7 +164,7 @@ const personnelStatusContract = JSON.parse(
 const statusColLetter = Object.entries(personnelHeaders).find(
   ([, header]) => header === "Status",
 )?.[0];
-assert.equal(statusColLetter, "R", "PERSONNEL Status must be column R");
+assert.equal(statusColLetter, "T", "PERSONNEL Status must be column T");
 assert.equal(
   personnelStatusContract.referenceStatusColumn,
   statusColLetter.charCodeAt(0) - 64,

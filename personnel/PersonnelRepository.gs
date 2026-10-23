@@ -22,7 +22,8 @@ var PERSONNEL_SHEET_NAME =
 /** Sheet must have these header columns (ID and computed birthday helpers are optional). */
 /** Canonical (logical) header order. Physical layout in reference workbook "Книга Взводу Охорони" (see contracts/reference-workbook-layout.contract.json):
  *  A Cells (ignored), B ID v/s, C ID Army+, D–F Last/First/Patronymic (code synthesizes FML), G–I birthday helpers,
- *  J–K phones, L RNTRC, M Email, N Callsign (working values, e.g. ГРАФ), O Rank, P Position, Q OSH 4, R Status.
+ *  J–K phones, L RNTRC, M Driver's license, N Email, O Weapon (summary), P Callsign (e.g. ГРАФ),
+ *  Q Rank, R Position, S OSH 4, T Status.
  *  TEMPLATE is supported only as a legacy alternate layout — not present in the reference xlsx.
  *  Reading is header-name based with aliases (see _personnelCanonicalHeaderKey_).
  */
@@ -39,7 +40,9 @@ var PERSONNEL_CANONICAL_HEADER_ORDER_ = [
   "Phone",
   "2_Phone",
   "RNTRC",
+  "DriversLicense",
   "Email",
+  "Weapon",
   "Callsign",
   "Rank",
   "Position",
@@ -69,7 +72,9 @@ var PERSONNEL_OPTIONAL_HEADER_KEYS = [
   "ID_VS",
   "Rank",
   "TEMPLATE",
+  "DriversLicense",
   "Email",
+  "Weapon",
   "RNTRC",
   "LastName",
   "FirstName",
@@ -428,6 +433,15 @@ function _personnelCanonicalHeaderKey_(rawHeader) {
     рнокпп: "RNTRC",
     inn: "RNTRC",
     іпн: "RNTRC",
+    "drivers license": "DriversLicense",
+    // Working-book typo: trailing Ukrainian ge (U+0491) after "license"
+    "drivers license\u0491": "DriversLicense",
+    "driver s license": "DriversLicense",
+    "посвідчення водія": "DriversLicense",
+    "водійське посвідчення": "DriversLicense",
+    weapon: "Weapon",
+    зброя: "Weapon",
+    озброєння: "Weapon",
     callsign: "Callsign",
     позивний: "Callsign",
     "\u043f\u043e\u0437\u044b\u0432\u043d\u043e\u0439": "Callsign",
@@ -473,7 +487,7 @@ function _personnelGetSheet_(mustExist) {
         PERSONNEL_REQUIRED_HEADER_KEYS.concat(
           PERSONNEL_OPTIONAL_HEADER_KEYS,
         ).join(", ") +
-        " (еталон «Книга Взводу Охорони»: Last/First/Patronymic + RNTRC + Email + Callsign у колонці N; TEMPLATE — лише legacy)",
+        " (еталон «Книга Взводу Охорони»: Last/First/Patronymic + RNTRC + Email + Callsign у колонці P; TEMPLATE — лише legacy)",
     );
   }
   return sh || null;
@@ -534,8 +548,8 @@ function _personnelBuildHeaderColIndex_(headersRow) {
   return col;
 }
 
-/** Reference workbook column R (1-based). */
-var PERSONNEL_REFERENCE_STATUS_COL_ = 18;
+/** Reference workbook column T (1-based). */
+var PERSONNEL_REFERENCE_STATUS_COL_ = 20;
 
 function _personnelFindStatusColumnIndex_(headersRow) {
   var headers = headersRow || [];
@@ -548,7 +562,7 @@ function _personnelFindStatusColumnIndex_(headersRow) {
 }
 
 /**
- * Creates missing Status header on PERSONNEL (column R in reference layout, or next free column).
+ * Creates missing Status header on PERSONNEL (column T in reference layout, or next free column).
  * Does not overwrite unrelated headers. Empty data cells stay empty (= В наявності on read).
  */
 function ensurePersonnelStatusColumnHeader_(sheet) {
@@ -686,7 +700,7 @@ function _personnelRowToRecord_(row, sheetRow, col) {
   var statusCanonical = getPersonnelStatusCanonical_(status);
   var active = isPersonnelStatusActive_(status);
 
-  // Reference workbook layout: split name parts; Callsign column N holds working values.
+  // Reference workbook layout: split name parts; Callsign column P holds working values.
   if (!fml) {
     var ln = lastName;
     var fn = firstName;
@@ -709,6 +723,15 @@ function _personnelRowToRecord_(row, sheetRow, col) {
     return null;
   }
 
+  var driversLicense = String(
+    col.DriversLicense >= 0
+      ? _personnelReadCell_(row, col.DriversLicense) || ""
+      : "",
+  ).trim();
+  var weaponNote = String(
+    col.Weapon >= 0 ? _personnelReadCell_(row, col.Weapon) || "" : "",
+  ).trim();
+
   var record = {
     id: id,
     fml: fml,
@@ -722,7 +745,9 @@ function _personnelRowToRecord_(row, sheetRow, col) {
     ).trim(),
     phone: String(_personnelReadCell_(row, col.Phone) || "").trim(),
     phone2: String(_personnelReadCell_(row, col["2_Phone"]) || "").trim(),
+    driversLicense: driversLicense,
     email: String(col.Email >= 0 ? _personnelReadCell_(row, col.Email) || "" : "").trim(),
+    weapon: weaponNote,
     rntrc: String(col.RNTRC >= 0 ? _personnelReadCell_(row, col.RNTRC) || "" : "").trim(),
     callsign: callsign,
     template:
@@ -758,7 +783,9 @@ function _personnelRowToRecord_(row, sheetRow, col) {
   record.Days_until_birthday = record.daysUntilBirthday;
   record.Phone = record.phone;
   record["2_Phone"] = record.phone2;
+  record.DriversLicense = record.driversLicense;
   record.Email = record.email;
+  record.Weapon = record.weapon;
   record.RNTRC = record.rntrc;
   record.Callsign = record.callsign;
   record.Title = record.title;

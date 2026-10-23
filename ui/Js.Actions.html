@@ -801,6 +801,15 @@
           </div>
 
           <div class="person-card__field">
+            <div class="person-card__label">Посвідчення водія</div>
+            <div class="person-card__value">${escapeHtml(
+              String(data.driversLicense || "")
+                .replace(/\s+/g, " ")
+                .trim() || "—",
+            )}</div>
+          </div>
+
+          <div class="person-card__field">
             <div class="person-card__label">ДН</div>
             <div class="person-card__value">${escapeHtml(data.birthday || "—")}</div>
           </div>
@@ -1341,6 +1350,11 @@
               ${ownerBadge}
               <div style="color:var(--text-secondary);font-size:12px;line-height:1.45;margin-top:6px;">
                 Позивний: ${escapeHtml(item.ownerCallsign || item.ownerKey || "—")}<br>
+                Посвідчення водія: ${escapeHtml(
+                  String(item.ownerDriversLicense || "")
+                    .replace(/\s+/g, " ")
+                    .trim() || "—",
+                )}<br>
                 Стан: ${escapeHtml(item.status || "Без стану")}${item.statusDescription ? ` — ${escapeHtml(item.statusDescription)}` : ""}<br>
                 Військовий номер: ${escapeHtml(item.militaryNumber || "—")}<br>
                 Шасі: ${escapeHtml(item.chassisNumber || "—")}<br>
@@ -1384,7 +1398,7 @@
               class="input"
               type="search"
               value="${escapeAttr(query || "")}" 
-              placeholder="ПІБ, авто, номер, шасі або стан"
+              placeholder="ПІБ, позивний, посвідчення, авто, номер, шасі або стан"
               oninput="SidebarApp.filterCarsRegister(this.value)"
               style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);"
             />
@@ -1462,11 +1476,21 @@
 
     const itemRowsHtml = filtered.length
       ? filtered
-          .map((item) => `
-            <div class="result-item">
+          .map((item) => {
+            const personMissing = item?.personMissing === true;
+            const personClass = personMissing
+              ? " result-item--reference-missing-person"
+              : "";
+            const personBadge = personMissing
+              ? '<div class="reference-missing-person-badge">Не знайдено в особовому складі</div>'
+              : "";
+            return `
+            <div class="result-item${personClass}">
               <div class="result-label">${escapeHtml(item.assetName || "—")}</div>
               <div class="result-value" style="font-weight:700;">${escapeHtml(item.personDisplay || "Не закріплено")}</div>
+              ${personBadge}
               <div style="color:var(--text-secondary);font-size:12px;line-height:1.45;margin-top:6px;">
+                Позивний: ${escapeHtml(item.callsign || "—")}<br>
                 Блок: ${escapeHtml(item.blockLabel || "—")}<br>
                 Звання: ${escapeHtml(item.rank || "—")} · Телефон: ${escapeHtml(item.phone || "—")}<br>
                 Номенклатура: ${escapeHtml(item.nomenclatureCode || "—")}<br>
@@ -1475,7 +1499,8 @@
                 Закріплено: ${escapeHtml(item.assignmentDateDisplay || "—")} · Місце: ${escapeHtml(item.location || "—")}
               </div>
             </div>
-          `)
+          `;
+          })
           .join("")
       : `
         <div class="result-item">
@@ -1510,7 +1535,7 @@
               class="input"
               type="search"
               value="${escapeAttr(query || "")}" 
-              placeholder="ПІБ, майно, номер, номенклатура або місце"
+              placeholder="ПІБ, позивний, майно, номер, номенклатура або місце"
               oninput="SidebarApp.filterWeaponsRegister(this.value)"
               style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);"
             />

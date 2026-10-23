@@ -1,15 +1,16 @@
 {
   "sourceFile": "Книга Взводу Охорони — робоча.xlsx",
   "notes": {
-    "personnelCallsign": "Column N Callsign holds working callsign values (e.g. ГРАФ); column L is RNTRC; column M is Email; no TEMPLATE column in reference file.",
+    "personnelCallsign": "Column P Callsign holds working callsign values (e.g. ГРАФ); column L is RNTRC; column M is Driver's license; column N is Email; column O is Weapon (summary text); no TEMPLATE column in reference file.",
+    "personnelStatus": "Status is column T (20). Self-heal prefers T when the header is missing.",
     "month06": "Compact layout: A=BR formula, B=Позивний, dates from C.",
     "monthStandard": "Sheets 02-05: A=ТЕЛЕФОН, B=ПОЗИВНИЙ, dates from H.",
     "phoneDirectory": "PHONE_DIRECTORY is a sectioned reference without a required header row: column A holds section titles (often merged A:B) or phone numbers, column B holds contact name/description. Optional English headers Phone / Section + Name / Note are still accepted by the parser.",
-    "car": "CAR is an optional vehicle register from the real workbook: A=Callsign, B=Name of military property, C=Military registration number, D=Chassis number, E=Year of manufacture, F=Value, G=Condition, H=Callsign (legacy when A=FML). Legacy A=FML is read only for compatibility.",
+    "car": "CAR is an optional vehicle register from the real workbook: A=Callsign, B=Name of military property, C=Military registration number, D=Chassis number, E=Year of manufacture, F=Value, G=Condition, H=Callsign (legacy when A=FML). Linked to PERSONNEL by Callsign (or legacy FML); ownerDriversLicense is read from PERSONNEL Driver's license. Legacy A=FML is read only for compatibility.",
     "month07": "Compact layout: B=Позивний, dates from C, notes in AH.",
-    "weapon": "WEAPON is a person-bound military property register: A:E person identity; property blocks F:L, N:T, V:Z with empty separator columns M and U; AA holds Callsign (row-1 label may still say Location in some exports).",
+    "weapon": "WEAPON is a person-bound military property register: A:E person identity; property blocks F:L and N:T with empty separator columns M and U. Linked to PERSONNEL by FML/phone/Callsign; materializeWeaponOwnersFromPersonnel_ ensures helper Callsign at AA and refreshes A:E identity from PERSONNEL.",
     "dictSum": "DICT_SUM in the working book has Code / Type of service / Order only (no Резерв column).",
-    "temporaryProperty": "Property_issued_for_temporary_u is the temporary issue/return register. PROPERTY_CATALOG drives dependent dropdowns and units; PROPERTY_KITS defines automatic component rows."
+    "temporaryProperty": "Property_issued_for_temporary_u is the temporary issue/return register (may be created by apiSetupTemporaryPropertyRegister when absent). PROPERTY_CATALOG drives dependent dropdowns and units; PROPERTY_KITS defines automatic component rows."
   },
   "sheets": {
     "PERSONNEL": {
@@ -25,12 +26,14 @@
       "J": "Phone",
       "K": "Phone 2",
       "L": "RNTRC",
-      "M": "Email",
-      "N": "Callsign",
-      "O": "Rank",
-      "P": "Position",
-      "Q": "OSH 4",
-      "R": "Status"
+      "M": "Driver's license",
+      "N": "Email",
+      "O": "Weapon",
+      "P": "Callsign",
+      "Q": "Rank",
+      "R": "Position",
+      "S": "OSH 4",
+      "T": "Status"
     },
     "PHONES": {
       "A": "Callsign",
@@ -170,13 +173,7 @@
       "R": "Unit price",
       "S": "Date of assignment",
       "T": "Location",
-      "U": "",
-      "V": "Name of military property",
-      "W": "Year of manufacture",
-      "X": "Nomenclature code",
-      "Y": "Serial number",
-      "Z": "Unit price",
-      "AA": "Callsign"
+      "U": ""
     },
     "07": {
       "B": "Позивний",

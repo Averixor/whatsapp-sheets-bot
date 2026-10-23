@@ -752,13 +752,13 @@ Run from the Apps Script editor when relevant after a deploy or config change:
 
 ### Final header row (row 1)
 
-Logical (canonical): `Cells | ID_VS | ID | LastName | FirstName | Patronymic | Birthday | Age | Days_until_birthday | Phone | 2_Phone | RNTRC | Email | Callsign | Rank | Position | OSH_4 | Status`
+Logical (canonical): `Cells | ID_VS | ID | LastName | FirstName | Patronymic | Birthday | Age | Days_until_birthday | Phone | 2_Phone | RNTRC | DriversLicense | Email | Weapon | Callsign | Rank | Position | OSH_4 | Status`
 
 **Reference workbook "Книга Взводу Охорони" physical layout (supported):**
 
 Contract: `contracts/reference-workbook-layout.contract.json` (headers extracted from the reference xlsx).
 
-**PERSONNEL (row 1, columns A–R):**
+**PERSONNEL (row 1, columns A–T):**
 
 | Col | Header | Role |
 | --- | --- | --- |
@@ -769,12 +769,14 @@ Contract: `contracts/reference-workbook-layout.contract.json` (headers extracted
 | G–I | Birthday / Age / Days until birthday | Materialized display: **Birthday** `DD.MM.YYYY р.н.` (space before suffix; legacy `… р.` normalizes on read); **Age** `N р.` (e.g. `25 р.`); **Days until birthday** — total days to next birthday as `N дн.` or `Сьогодні` (`personnel/PersonnelMaterialize.gs`) |
 | J–K | Phone / Phone 2 | Phones |
 | L | RNTRC | Optional tax ID (РНОКПП) |
-| M | Email | Optional contact email |
-| **N** | **Callsign** | **Working callsign** (e.g. `ГРАФ`) — schedule key |
-| O | Rank | Rank (instead of Title) |
-| P | Position | Position |
-| Q | OSH 4 | OSH_4 (space ok) |
-| R | Status | UA dropdown (9 values) |
+| M | Driver's license | Optional driver's license note |
+| N | Email | Optional contact email |
+| O | Weapon | Optional weapon summary text (not the WEAPON sheet) |
+| **P** | **Callsign** | **Working callsign** (e.g. `ГРАФ`) — schedule key |
+| Q | Rank | Rank (instead of Title) |
+| R | Position | Position |
+| S | OSH 4 | OSH_4 (space ok) |
+| T | Status | UA dropdown (9 values) |
 
 **Monthly sheets:**
 
@@ -790,7 +792,7 @@ Required (logical): `FML` (or split name parts), `Birthday`, `Phone`, `Callsign`
 
 ### One-time / migration in the spreadsheet
 
-1. If column **`Status`** is missing, runtime self-heal creates header **`Status`** in reference column **Q** (or appends a safe new column if P is occupied), then applies dropdown validation.
+1. If column **`Status`** is missing, runtime self-heal creates header **`Status`** in reference column **T** (or appends a safe new column if T is occupied), then applies dropdown validation.
 2. For everyone on duty: leave **`Status` empty** (defaults to **`В наявності`**) or pick an active dropdown value:
    **`В наявності`**, **`У відрядженні`**, **`Відпустка`**, **`Лікарняний`**, **`Тимчасовий`**, **`Гусачівка`**, **`БЗВП`**. Do not mix EN/UA in the same column.
 3. For departed or absent-without-leave: set **`Вибув`** or **`СЗЧ`** — excluded from schedule, phones, and cards. Do **not** use **`Переведений`** (legacy values map to **`Вибув`** on read).

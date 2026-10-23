@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-23 — Link CAR/WEAPON to PERSONNEL and surface driver's licenses
+
+- **CAR materialize:** detect A=`Callsign` vs legacy A=`FML`; callsign-mode keeps column A as Callsign (does not overwrite with ПІБ); dash owners stay unassigned.
+- **CAR/WEAPON ↔ PERSONNEL:** cars pull `ownerDriversLicense` from PERSONNEL; weapons flag `personMissing` and show Callsign; person cards / sidebar / registers show посвідчення водія.
+- **CI:** callsign-mode CAR reorder test; reference repos assert license propagation for `МАЙОР`.
+
+## 2026-10-23 — Align PERSONNEL/WEAPON with working workbook layout
+
+- **PERSONNEL:** reference layout now A–T — inserted `Driver's license` (M) and `Weapon` (O); **Callsign = P**, **Status = T** (self-heal preferColumn 20).
+- **WEAPON:** two property blocks only (F:L, N:T); third block V:Z removed from contract/reader/schema. Callsign at AA remains a materialize helper.
+- **Contracts/docs/CI:** `reference-workbook-layout`, `personnel-status`, `reference-repositories`, RUNBOOK/AGENTS/rules updated from `Книга Взводу Охорони — робоча.xlsx`.
+
 ## 2026-10-11 — Human-readable durations in execution journal
 
 - **Sidebar journal:** server/UI timings use `formatDurationUa_` (`20 с`, `2 хв. 31 с.`) instead of raw milliseconds.

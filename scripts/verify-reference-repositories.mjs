@@ -29,7 +29,9 @@ class FakeRange {
   getDisplayValues() {
     return Array.from({ length: this.numRows }, (_, rowOffset) =>
       Array.from({ length: this.numCols }, (_, colOffset) =>
-        String(this.sheet.valueAt(this.row + rowOffset, this.col + colOffset) ?? ""),
+        String(
+          this.sheet.valueAt(this.row + rowOffset, this.col + colOffset) ?? "",
+        ),
       ),
     );
   }
@@ -76,7 +78,9 @@ function normalizePhoneForTest(value) {
 }
 
 function normalizeCallsignForTest(value) {
-  return String(value || "").trim().toUpperCase();
+  return String(value || "")
+    .trim()
+    .toUpperCase();
 }
 
 const fakePersonnelRows = [
@@ -97,6 +101,7 @@ const fakePersonnelRows = [
     fml: "Майор Оператор",
     rank: "майор",
     phone: "0670000003",
+    driversLicense: "ЯАА 200463\n(В, С)",
   },
   {
     callsign: "ІВАН",
@@ -115,11 +120,24 @@ const fakePersonnelRows = [
 const fakePersonnelRepository = {
   getByCallsignAnyStatus(callsign) {
     const key = normalizeCallsignForTest(callsign);
-    return fakePersonnelRows.find((row) => normalizeCallsignForTest(row.callsign) === key) || null;
+    return (
+      fakePersonnelRows.find(
+        (row) => normalizeCallsignForTest(row.callsign) === key,
+      ) || null
+    );
   },
   getByFml(fml) {
-    const key = String(fml || "").trim().toLowerCase();
-    return fakePersonnelRows.find((row) => String(row.fml || "").trim().toLowerCase() === key) || null;
+    const key = String(fml || "")
+      .trim()
+      .toLowerCase();
+    return (
+      fakePersonnelRows.find(
+        (row) =>
+          String(row.fml || "")
+            .trim()
+            .toLowerCase() === key,
+      ) || null
+    );
   },
   getRows() {
     return fakePersonnelRows.slice();
@@ -225,7 +243,27 @@ assert.match(
   carsRegister.warnings[0],
   new RegExp(carContract.expected.warningPattern),
 );
-assert.equal(carsRegister.items.some((item) => !item.assetName), false);
+const majorCar = carsRegister.items.find(
+  (item) => String(item.ownerCallsign || "").toUpperCase() === "МАЙОР",
+);
+assert.ok(majorCar, "CAR owner МАЙОР must resolve from PERSONNEL");
+assert.equal(majorCar.ownerCanonical, true);
+assert.equal(
+  String(majorCar.ownerDriversLicense || "")
+    .replace(/\s+/g, " ")
+    .trim(),
+  "ЯАА 200463 (В, С)",
+  "CAR must pull Driver's license from PERSONNEL",
+);
+assert.equal(
+  majorCar.searchText.includes("яаа 200463"),
+  true,
+  "CAR searchText must include drivers license",
+);
+assert.equal(
+  carsRegister.items.some((item) => !item.assetName),
+  false,
+);
 assert.deepEqual(
   Array.from(carsRegister.items.map((item) => item.status)),
   carContract.expected.normalizedStatuses,
@@ -236,7 +274,9 @@ assert.equal(
   carContract.expected.statusDescriptionAtIndex.value,
 );
 assert.equal(
-  carsRegister.stats.byStatus.map((entry) => `${entry.name}:${entry.count}`).join(","),
+  carsRegister.stats.byStatus
+    .map((entry) => `${entry.name}:${entry.count}`)
+    .join(","),
   carContract.expected.byStatus.join(","),
 );
 assert.deepEqual(
@@ -249,13 +289,11 @@ assert.deepEqual(
 );
 assert.equal(carsRegister.items[2].searchText.includes("обмежено бг"), true);
 assert.equal(
-  carsRegister.items[carContract.expected.searchIncludesAtIndex.index].searchText.includes(
-    carContract.expected.searchIncludesAtIndex.value,
-  ),
+  carsRegister.items[
+    carContract.expected.searchIncludesAtIndex.index
+  ].searchText.includes(carContract.expected.searchIncludesAtIndex.value),
   true,
 );
-
-
 
 const weaponsRegister = vm.runInContext(
   "ReferenceSheetsRepository_.readWeaponsRegister()",
@@ -267,9 +305,18 @@ assert.deepEqual(
   weaponContract.expected.assetNames,
 );
 assert.equal(weaponsRegister.stats.total, weaponContract.expected.stats.total);
-assert.equal(weaponsRegister.stats.persons, weaponContract.expected.stats.persons);
-assert.equal(weaponsRegister.stats.assigned, weaponContract.expected.stats.assigned);
-assert.equal(weaponsRegister.stats.unassigned, weaponContract.expected.stats.unassigned);
+assert.equal(
+  weaponsRegister.stats.persons,
+  weaponContract.expected.stats.persons,
+);
+assert.equal(
+  weaponsRegister.stats.assigned,
+  weaponContract.expected.stats.assigned,
+);
+assert.equal(
+  weaponsRegister.stats.unassigned,
+  weaponContract.expected.stats.unassigned,
+);
 assert.equal(
   weaponsRegister.stats.totalUnitPrice,
   weaponContract.expected.stats.totalUnitPrice,
@@ -280,14 +327,16 @@ assert.match(
   new RegExp(weaponContract.expected.warningPattern),
 );
 assert.equal(
-  weaponsRegister.items[weaponContract.expected.searchIncludesAtIndex.index].searchText.includes(
-    weaponContract.expected.searchIncludesAtIndex.value,
-  ),
+  weaponsRegister.items[
+    weaponContract.expected.searchIncludesAtIndex.index
+  ].searchText.includes(weaponContract.expected.searchIncludesAtIndex.value),
   true,
 );
 weaponContract.expected.byType.forEach((marker) => {
   assert.ok(
-    weaponsRegister.stats.byType.map((entry) => `${entry.name}:${entry.count}`).includes(marker),
+    weaponsRegister.stats.byType
+      .map((entry) => `${entry.name}:${entry.count}`)
+      .includes(marker),
     `WEAPON type stats include ${marker}`,
   );
 });
