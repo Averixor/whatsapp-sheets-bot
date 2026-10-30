@@ -57,7 +57,15 @@ apiStage7ClearPhoneCache()          # run in the production GAS editor after dep
 Use Node.js 24 (`.nvmrc`). `npm run deploy:prod` runs local CI and pushes the
 production project with `executionApi.access = MYSELF`.
 
-**Clasp config (local, not in git):** copy `.clasp.example.json` → `.clasp.json` once.
+**Clasp (local, not in git):** one-time bind, then push:
+
+```bash
+npm run gas:setup -- <scriptId>          # creates .clasp.json + clasp login if needed
+npm run ready                            # local CI + clasp status
+npm run gas:push                         # production deploy
+```
+
+Windows PowerShell: prefer `npm.cmd run ci` / `npm.cmd run ready` if `npm` hits ExecutionPolicy.
 
 - **Script properties** (Apps Script → Project settings → Script properties):
   - **`WASB_SPREADSHEET_ID`** — headless/triggers (see `RUNBOOK.md` §15)

@@ -30,6 +30,8 @@ Individual subscripts: `npm run ci:gas`, `npm run ci:client`, `npm run ci:copy`,
 | `npm run gh -- "msg"` | Commit **staged-only** + `git push` (never `git add -A`) |
 | `npm run ship` / `go -- "msg"` | Preflight → `ci` + staged `gh`; optional `--deploy-gas` on `main` (checked before CI). Refresh map separately via `map:project-files` then `git add`. |
 | `npm run gas:open` | Open GAS editor (`ops-gas.mjs` → `clasp open-script`) |
+| `npm run gas:setup -- <scriptId>` | Create local `.clasp.json` + `clasp login` if needed |
+| `npm run ready` | Local `ci` + `gas:status` (bind must exist) |
 | `npm run gas:push` / `gas:status` / `gas:pull` | Production clasp helpers via `scripts/run-with-clean-env.mjs` (strips Cursor debugger env) |
 
 ### Node.js version

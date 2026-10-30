@@ -36,6 +36,19 @@
       "group": "test"
     },
     {
+      "label": "npm: gas:setup",
+      "type": "npm",
+      "script": "gas:setup",
+      "problemMatcher": []
+    },
+    {
+      "label": "npm: ready (ci + gas:status)",
+      "type": "npm",
+      "script": "ready",
+      "problemMatcher": [],
+      "group": "test"
+    },
+    {
       "label": "npm: gas:status",
       "type": "npm",
       "script": "gas:status",

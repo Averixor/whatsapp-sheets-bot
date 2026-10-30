@@ -23,20 +23,34 @@ function childEnv() {
   return env;
 }
 
+function resolveBin_(cmd) {
+  if (process.platform === 'win32' && (cmd === 'npx' || cmd === 'npm')) {
+    return `${cmd}.cmd`;
+  }
+  return cmd;
+}
+
 function run(cmd, args = []) {
-  console.log(`\n$ ${cmd} ${args.join(' ')}`);
-  const r = spawnSync(cmd, args, {
+  const bin = resolveBin_(cmd);
+  console.log(`\n$ ${bin} ${args.join(' ')}`);
+  const r = spawnSync(bin, args, {
     stdio: 'inherit',
-    shell: false,
+    shell: process.platform === 'win32' && /\.cmd$/i.test(bin),
     env: childEnv(),
   });
+  if (r.error) {
+    console.error(`ERROR: ${r.error.message}`);
+    process.exit(1);
+  }
   if (r.status !== 0) process.exit(r.status ?? 1);
 }
 
 function assertProductionClaspConfig_() {
   if (!existsSync('.clasp.json')) {
     console.error(
-      'ERROR: .clasp.json not found. Copy .clasp.example.json → .clasp.json and fill scriptId.',
+      'ERROR: .clasp.json not found.\n' +
+        '  Run: npm run gas:setup -- <scriptId>\n' +
+        '  (or copy .clasp.example.json → .clasp.json and fill scriptId)',
     );
     process.exit(1);
   }
@@ -55,8 +69,9 @@ function assertProductionClaspConfig_() {
   if (!scriptId || scriptId === PLACEHOLDER_SCRIPT_ID) {
     console.error(
       'ERROR: production scriptId is not configured.\n' +
-        '  Copy .clasp.example.json → .clasp.json and set real Apps Script scriptId\n' +
-        '  (from script.google.com/…/projects/<scriptId>/edit). Do not commit .clasp.json.',
+        '  Run: npm run gas:setup -- <scriptId>\n' +
+        '  scriptId = segment in script.google.com/…/projects/<scriptId>/edit\n' +
+        '  Do not commit .clasp.json.',
     );
     process.exit(1);
   }
@@ -100,7 +115,7 @@ if (action === 'push') {
   run('node', ['scripts/verify-node-version.mjs']);
 }
 
-run('npx', ['clasp', ...claspArgs]);
+run('npx', ['--yes', '@google/clasp@3.3.0', ...claspArgs]);
 
 if (action === 'push') {
   console.log('\nGAS: push completed');
