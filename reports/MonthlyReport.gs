@@ -628,16 +628,25 @@ function generateMonthlyReportHTML_(personnel, statusSummary, sheetName) {
     html += `</tbody></table>`;
   });
 
+  const legendRules =
+    typeof readDictSum_ === "function" ? readDictSum_() : [];
+  let legendItems = "";
+  legendRules.forEach(function (rule) {
+    const code = String((rule && rule.code) || "").trim();
+    if (!code || code === "ОС") return;
+    legendItems +=
+      '<div class="legend-item"><span class="status st-' +
+      toCssToken(code) +
+      '">' +
+      esc(code) +
+      "</span> — " +
+      esc((rule && rule.label) || code) +
+      "</div>";
+  });
   html += `
     <div class="legend">
       <strong>Легенда:</strong>
-      <div class="legend-item"><span class="status st-${toCssToken("БР")}">БР</span> — Бойове розпорядження</div>
-      <div class="legend-item"><span class="status st-${toCssToken("Резерв")}">Резерв</span> — Резерв</div>
-      <div class="legend-item"><span class="status st-${toCssToken("Відпус")}">Відпус</span> — Відпустка</div>
-      <div class="legend-item"><span class="status st-${toCssToken("Евак")}">Евак</span> — Медевак</div>
-      <div class="legend-item"><span class="status st-${toCssToken("КП")}">КП</span> — Командний пункт</div>
-      <div class="legend-item"><span class="status st-${toCssToken("Black Hawk")}">Black Hawk</span> — Екіпаж Black Hawk</div>
-      <div class="legend-item"><span class="status st-${toCssToken("Гектор")}">Гектор</span> — Екіпаж Гектор</div>
+      ${legendItems}
     </div>
 `;
 

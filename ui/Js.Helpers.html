@@ -893,6 +893,8 @@
       phoneDirectory: "Службові телефони",
       carsRegister: "Автотехніка",
       weaponsRegister: "Озброєння",
+      expenseRegister: "Витрата боєкомплекту",
+      aircraftSerials: "Борти",
       inventoryReconciliation: "Звірка",
       externalMigration: "Міграція зовнішніх таблиць",
       requests: "Заявки",
@@ -1007,6 +1009,14 @@
 
         case "weaponsRegister":
           navigateTo("weaponsRegister", () => showWeaponsRegister());
+          break;
+
+        case "expenseRegister":
+          navigateTo("expenseRegister", () => showExpenseRegister());
+          break;
+
+        case "aircraftSerials":
+          navigateTo("aircraftSerials", () => showAircraftSerials());
           break;
 
         case "inventoryReconciliation":

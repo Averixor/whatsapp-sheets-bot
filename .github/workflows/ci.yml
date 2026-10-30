@@ -34,6 +34,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Unix-only: .mjs script-shell strips js-debug NODE_OPTIONS. On Windows
+      # Node 26+ spawning .mjs as script-shell fails with EFTYPE (silent npm exit).
+      - name: Enable Unix npm script-shell
+        run: echo 'script-shell=./scripts/npm-script-shell.mjs' >> .npmrc
+
       - name: Run full CI suite
         run: npm run ci
 

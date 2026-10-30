@@ -880,6 +880,182 @@ const ReferenceSheetsRepository_ = (function () {
     return out;
   }
 
+  function findReferenceHeaderCol_(headers, names, fallbackIndex) {
+    const normalized = (headers || []).map(function (value) {
+      return clean_(value).toLowerCase();
+    });
+    for (let i = 0; i < normalized.length; i += 1) {
+      for (let j = 0; j < names.length; j += 1) {
+        if (normalized[i] && normalized[i].indexOf(names[j]) !== -1) return i;
+      }
+    }
+    return typeof fallbackIndex === "number" ? fallbackIndex : -1;
+  }
+
+  function parseQuantity_(value) {
+    const text = clean_(value).replace(/\s/g, "").replace(",", ".");
+    if (!text) return 0;
+    const num = Number(text.replace(/[^\d.-]/g, ""));
+    return isFinite(num) && !isNaN(num) ? num : 0;
+  }
+
+  function formatQuantity_(value) {
+    const num = Number(value) || 0;
+    const rounded = Math.round(num * 1000) / 1000;
+    if (Math.abs(rounded - Math.round(rounded)) < 0.0005) {
+      return String(Math.round(rounded));
+    }
+    return String(rounded).replace(".", ",");
+  }
+
+  function readExpenseRegister() {
+    const resolved = getSheet_("EXPENSE_BK_SHEET", "Expense_BK");
+    const sheet = resolved.sheet;
+    const out = {
+      sheet: resolved.name,
+      exists: !!sheet,
+      items: [],
+      stats: {
+        total: 0,
+        totalQuantity: 0,
+        totalQuantityDisplay: "0",
+        byCrew: [],
+        byName: [],
+      },
+      warnings: [],
+    };
+
+    if (!sheet || sheet.getLastRow() < 2) {
+      out.warnings.push("Аркуш витрати боєкомплекту не знайдено або він порожній");
+      return out;
+    }
+
+    const lastCol = Math.max(sheet.getLastColumn(), 4);
+    const header =
+      sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0] || [];
+    const dateCol = findReferenceHeaderCol_(header, ["date", "дата"], 0);
+    const crewCol = findReferenceHeaderCol_(
+      header,
+      ["crew", "екіпаж", "позивн"],
+      1,
+    );
+    const nameCol = findReferenceHeaderCol_(
+      header,
+      ["name", "наймен", "назва"],
+      2,
+    );
+    const numberCol = findReferenceHeaderCol_(
+      header,
+      ["number", "qty", "кільк", "к-сть"],
+      3,
+    );
+    const values = sheet
+      .getRange(2, 1, sheet.getLastRow() - 1, lastCol)
+      .getDisplayValues();
+    let totalQuantity = 0;
+
+    values.forEach(function (row, idx) {
+      const date = dateCol >= 0 ? clean_(row[dateCol]) : "";
+      const crew = crewCol >= 0 ? clean_(row[crewCol]) : "";
+      const name = nameCol >= 0 ? clean_(row[nameCol]) : "";
+      const quantityRaw = numberCol >= 0 ? clean_(row[numberCol]) : "";
+      if (!date && !crew && !name && !quantityRaw) return;
+      if (!name && !quantityRaw) return;
+      const quantity = parseQuantity_(quantityRaw);
+      totalQuantity += quantity;
+      const item = {
+        rowNumber: idx + 2,
+        date: date,
+        crew: crew,
+        name: name,
+        quantity: quantity,
+        quantityDisplay: quantityRaw || formatQuantity_(quantity),
+        searchText: [date, crew, name, quantityRaw]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase(),
+      };
+      out.items.push(item);
+    });
+
+    out.stats.total = out.items.length;
+    out.stats.totalQuantity = totalQuantity;
+    out.stats.totalQuantityDisplay = formatQuantity_(totalQuantity);
+    out.stats.byCrew = buildNamedStats_(out.items, "crew", "Без екіпажу", []);
+    out.stats.byName = buildNamedStats_(out.items, "name", "Без назви", []);
+    return out;
+  }
+
+  function readAircraftSerials() {
+    const resolved = getSheet_("SN_AIRCRAFT_SHEET", "SN_AIRCRAFT");
+    const sheet = resolved.sheet;
+    const out = {
+      sheet: resolved.name,
+      exists: !!sheet,
+      items: [],
+      models: [],
+      stats: {
+        total: 0,
+        models: 0,
+        byModel: [],
+      },
+      warnings: [],
+    };
+
+    if (!sheet || sheet.getLastRow() < 2) {
+      out.warnings.push("Аркуш серійних номерів бортів не знайдено або він порожній");
+      return out;
+    }
+
+    const lastCol = Math.max(sheet.getLastColumn(), 1);
+    const values = sheet
+      .getRange(1, 1, sheet.getLastRow(), lastCol)
+      .getDisplayValues();
+    const header = values[0] || [];
+    const groups = [];
+    header.forEach(function (cell, index) {
+      const model = clean_(cell);
+      if (!model) return;
+      groups.push({
+        model: model,
+        serialCol: index,
+        boardCol: index + 1,
+      });
+    });
+    out.models = groups.map(function (group) {
+      return group.model;
+    });
+
+    if (!groups.length) {
+      out.warnings.push("У реєстрі бортів не знайдено назв моделей у першому рядку");
+      return out;
+    }
+
+    values.slice(1).forEach(function (row, idx) {
+      groups.forEach(function (group) {
+        const serialNumber = clean_(row[group.serialCol]);
+        const boardNumber =
+          group.boardCol < row.length ? clean_(row[group.boardCol]) : "";
+        if (!serialNumber) return;
+        out.items.push({
+          rowNumber: idx + 2,
+          model: group.model,
+          serialNumber: serialNumber,
+          boardNumber: boardNumber,
+          searchText: [group.model, serialNumber, boardNumber]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase(),
+        });
+      });
+    });
+
+    out.stats.total = out.items.length;
+    out.stats.models = groups.length;
+    out.stats.byModel = buildNamedStats_(out.items, "model", "Без моделі", out.models);
+    return out;
+  }
+
   function getCarsForPerson(person) {
     const safePerson = person || {};
     return readCarsRegister().items.filter(function (item) {
@@ -908,6 +1084,8 @@ const ReferenceSheetsRepository_ = (function () {
     readPhoneDirectory: readPhoneDirectory,
     readCarsRegister: readCarsRegister,
     readWeaponsRegister: readWeaponsRegister,
+    readExpenseRegister: readExpenseRegister,
+    readAircraftSerials: readAircraftSerials,
     getCarsForPerson: getCarsForPerson,
     getWeaponsForPerson: getWeaponsForPerson,
     getEquipmentForPerson: getEquipmentForPerson,

@@ -115,6 +115,34 @@ var WASB_STAGE7_ROUTING_REGISTRY_STORE_ =
         verifyAfterWrite: false,
       }),
 
+      getExpenseRegister: Object.freeze({
+        routeName: "sidebar.getExpenseRegister",
+        publicApiMethod: "apiStage7GetExpenseRegister",
+        useCase: "ReferenceSheetsRepository_.readExpenseRegister",
+        category: "sidebar",
+        compatibilityStatus: "canonical",
+        mode: "read",
+        lockRequired: false,
+        dryRunSupported: false,
+        uiAllowed: true,
+        clientActionAliases: ["expenseRegister"],
+        verifyAfterWrite: false,
+      }),
+
+      getAircraftSerials: Object.freeze({
+        routeName: "sidebar.getAircraftSerials",
+        publicApiMethod: "apiStage7GetAircraftSerials",
+        useCase: "ReferenceSheetsRepository_.readAircraftSerials",
+        category: "sidebar",
+        compatibilityStatus: "canonical",
+        mode: "read",
+        lockRequired: false,
+        dryRunSupported: false,
+        uiAllowed: true,
+        clientActionAliases: ["aircraftSerials"],
+        verifyAfterWrite: false,
+      }),
+
       getInventoryReconciliation: Object.freeze({
         routeName: "sidebar.getInventoryReconciliation",
         publicApiMethod: "apiStage7GetInventoryReconciliation",

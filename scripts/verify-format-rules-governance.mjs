@@ -709,8 +709,13 @@ assert.ok(
 );
 assert.ok(
   String(packageJson.scripts.ci || "").includes("ci:chain") ||
-    String(packageJson.scripts.ci || "").includes("ci:domain"),
-  "main CI must reach domain phase (directly or via ci:chain)",
+    String(packageJson.scripts.ci || "").includes("ci:domain") ||
+    String(packageJson.scripts.ci || "").includes("run-ci.mjs"),
+  "main CI must reach domain phase (directly, via ci:chain, or run-ci.mjs)",
+);
+assert.ok(
+  String(packageJson.scripts["ci:chain"] || "").includes("ci:domain"),
+  "ci:chain must include ci:domain",
 );
 assert.ok(
   fs.existsSync(path.join(repoRoot, "docs/format-rules-governance.md")),

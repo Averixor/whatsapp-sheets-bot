@@ -6,6 +6,7 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { repoRoot } from './lib/load-contract.mjs';
 
 const MAP_FILE = path.join(repoRoot, 'docs/project-files-complete.txt');
@@ -140,6 +141,9 @@ function main() {
   console.log(`update-project-files-map: OK → ${rel}`);
 }
 
-if (import.meta.url === new URL(process.argv[1], 'file:').href) {
+const isMain =
+  Boolean(process.argv[1]) &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+if (isMain) {
   main();
 }

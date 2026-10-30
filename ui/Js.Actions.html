@@ -21,10 +21,14 @@
     debugAccess() {},
     showPhoneDirectory() {},
     showCarsRegister() {},
+    showExpenseRegister() {},
+    showAircraftSerials() {},
     showInventoryReconciliation() {},
     showExternalMigration() {},
     filterPhoneDirectory() {},
     filterCarsRegister() {},
+    filterExpenseRegister() {},
+    filterAircraftSerials() {},
     openReferenceLink() {},
   };
 
@@ -844,6 +848,9 @@
         `
       : "";
 
+    const rowsHtml =
+      currentVacHtml + nextVacHtml + carsHtml + weaponsHtml + temporaryHtml;
+
     root.innerHTML = `
       <div class="person-card">
         <div class="person-card__header">
@@ -903,11 +910,7 @@
           </div>
         </div>
 
-        ${currentVacHtml}
-        ${nextVacHtml}
-        ${carsHtml}
-        ${weaponsHtml}
-        ${temporaryHtml}
+        ${rowsHtml}
 
         <div class="person-card__actions">
           ${waButton}
@@ -1486,6 +1489,222 @@
     );
   }
 
+  async function showExpenseRegister() {
+    showStandardResult("📦 Витрата боєкомплекту");
+    setHtml(
+      "resultContent",
+      `
+        <div class="result-screen">
+          <div class="result-item">
+            <div class="result-value">Завантажую витрату боєкомплекту...</div>
+          </div>
+        </div>
+      `,
+    );
+
+    showLoading();
+    try {
+      const result = await ActionDispatcher.run(
+        "expenseRegister",
+        () => Stage7Api.getExpenseRegister(),
+        { successMessage: "" },
+      );
+      if (!result?.success) {
+        throw new Error(result?.error || "Не вдалося завантажити витрату боєкомплекту");
+      }
+      const data = result.data || result;
+      STATE.expenseRegister = data;
+      renderExpenseRegister(data, "");
+      logToConsole(
+        `✓ Витрата боєкомплекту: ${Number(data?.stats?.total || 0)} записів`,
+        "success",
+      );
+    } catch (error) {
+      logToConsole(`✕ Витрата боєкомплекту: ${normalizeError(error)}`, "error");
+      displayInResult("error", { error: normalizeError(error) });
+    } finally {
+      hideLoading();
+    }
+  }
+
+  function renderExpenseRegister(data, query) {
+    const payload = data || {};
+    const stats = payload.stats || {};
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    const filtered = items.filter((item) => referenceSearchMatch_(item, query));
+    const itemRowsHtml = filtered.length
+      ? filtered
+          .map(
+            (item) => `
+            <div class="result-item">
+              <div class="result-label">${escapeHtml(item.name || "—")}</div>
+              <div class="result-value" style="font-weight:700;">${escapeHtml(item.quantityDisplay || "0")}</div>
+              <div style="color:var(--text-secondary);font-size:12px;line-height:1.45;margin-top:6px;">
+                Дата: ${escapeHtml(item.date || "—")}<br>
+                Екіпаж: ${escapeHtml(item.crew || "—")}
+              </div>
+            </div>
+          `,
+          )
+          .join("")
+      : `
+        <div class="result-item">
+          <div class="result-label">Результат</div>
+          <div class="result-value">Нічого не знайдено</div>
+        </div>
+      `;
+    const rowsHtml = renderReferenceWarnings_(payload.warnings) + itemRowsHtml;
+
+    setHtml(
+      "resultContent",
+      `
+        <div class="result-screen">
+          <div class="result-item">
+            <div class="result-label">Підсумок</div>
+            <div class="result-value">
+              ${escapeHtml(formatReferenceNumber_(stats.total))} записів · кількість: ${escapeHtml(stats.totalQuantityDisplay || "0")}
+            </div>
+            <div style="color:var(--text-secondary);font-size:12px;line-height:1.45;margin-top:6px;">
+              Екіпажі: ${escapeHtml(renderCarStatList_(stats.byCrew, "Без екіпажу"))}<br>
+              Найменування: ${escapeHtml(renderCarStatList_(stats.byName, "Без назви"))}
+            </div>
+          </div>
+          <div class="result-item">
+            <label class="result-label" for="expenseRegisterSearch">Пошук</label>
+            <input
+              id="expenseRegisterSearch" name="expenseRegisterSearch"
+              class="input"
+              type="search"
+              value="${escapeAttr(query || "")}"
+              placeholder="Дата, екіпаж або найменування"
+              oninput="SidebarApp.filterExpenseRegister(this.value)"
+              style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);"
+            />
+          </div>
+          ${rowsHtml}
+        </div>
+      `,
+    );
+  }
+
+  function filterExpenseRegister(query) {
+    renderExpenseRegister(STATE.expenseRegister || {}, query || "");
+    setTimeout(() => {
+      const el = $id("expenseRegisterSearch");
+      if (!el) return;
+      el.focus();
+      const end = String(el.value || "").length;
+      el.setSelectionRange?.(end, end);
+    }, 0);
+  }
+
+  async function showAircraftSerials() {
+    showStandardResult("✈️ Борти");
+    setHtml(
+      "resultContent",
+      `
+        <div class="result-screen">
+          <div class="result-item">
+            <div class="result-value">Завантажую серійні номери бортів...</div>
+          </div>
+        </div>
+      `,
+    );
+
+    showLoading();
+    try {
+      const result = await ActionDispatcher.run(
+        "aircraftSerials",
+        () => Stage7Api.getAircraftSerials(),
+        { successMessage: "" },
+      );
+      if (!result?.success) {
+        throw new Error(result?.error || "Не вдалося завантажити серійні номери бортів");
+      }
+      const data = result.data || result;
+      STATE.aircraftSerials = data;
+      renderAircraftSerials(data, "");
+      logToConsole(
+        `✓ Борти: ${Number(data?.stats?.total || 0)} записів`,
+        "success",
+      );
+    } catch (error) {
+      logToConsole(`✕ Борти: ${normalizeError(error)}`, "error");
+      displayInResult("error", { error: normalizeError(error) });
+    } finally {
+      hideLoading();
+    }
+  }
+
+  function renderAircraftSerials(data, query) {
+    const payload = data || {};
+    const stats = payload.stats || {};
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    const filtered = items.filter((item) => referenceSearchMatch_(item, query));
+    const itemRowsHtml = filtered.length
+      ? filtered
+          .map(
+            (item) => `
+            <div class="result-item">
+              <div class="result-label">${escapeHtml(item.model || "—")}</div>
+              <div class="result-value" style="font-weight:700;">${escapeHtml(item.boardNumber || "—")}</div>
+              <div style="color:var(--text-secondary);font-size:12px;line-height:1.45;margin-top:6px;">
+                Серійний номер: ${escapeHtml(item.serialNumber || "—")}
+              </div>
+            </div>
+          `,
+          )
+          .join("")
+      : `
+        <div class="result-item">
+          <div class="result-label">Результат</div>
+          <div class="result-value">Нічого не знайдено</div>
+        </div>
+      `;
+    const rowsHtml = renderReferenceWarnings_(payload.warnings) + itemRowsHtml;
+
+    setHtml(
+      "resultContent",
+      `
+        <div class="result-screen">
+          <div class="result-item">
+            <div class="result-label">Підсумок</div>
+            <div class="result-value">
+              ${escapeHtml(formatReferenceNumber_(stats.total))} бортів · моделей: ${escapeHtml(formatReferenceNumber_(stats.models))}
+            </div>
+            <div style="color:var(--text-secondary);font-size:12px;line-height:1.45;margin-top:6px;">
+              Моделі: ${escapeHtml(renderCarStatList_(stats.byModel, "Без моделі"))}
+            </div>
+          </div>
+          <div class="result-item">
+            <label class="result-label" for="aircraftSerialsSearch">Пошук</label>
+            <input
+              id="aircraftSerialsSearch" name="aircraftSerialsSearch"
+              class="input"
+              type="search"
+              value="${escapeAttr(query || "")}"
+              placeholder="Модель, серійний або бортовий номер"
+              oninput="SidebarApp.filterAircraftSerials(this.value)"
+              style="width:100%;box-sizing:border-box;padding:10px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);"
+            />
+          </div>
+          ${rowsHtml}
+        </div>
+      `,
+    );
+  }
+
+  function filterAircraftSerials(query) {
+    renderAircraftSerials(STATE.aircraftSerials || {}, query || "");
+    setTimeout(() => {
+      const el = $id("aircraftSerialsSearch");
+      if (!el) return;
+      el.focus();
+      const end = String(el.value || "").length;
+      el.setSelectionRange?.(end, end);
+    }, 0);
+  }
+
   function filterCarsRegister(query) {
     renderCarsRegister(STATE.carsRegister || {}, query || "");
     setTimeout(() => {
@@ -1787,6 +2006,8 @@
     submitRequestForm,
     showPhoneDirectory,
     showCarsRegister,
+    showExpenseRegister,
+    showAircraftSerials,
     showWeaponsRegister,
     showInventoryReconciliation,
     showExternalMigration,
@@ -1794,6 +2015,8 @@
     ExternalMigrationModule,
     filterPhoneDirectory,
     filterCarsRegister,
+    filterExpenseRegister,
+    filterAircraftSerials,
     filterWeaponsRegister,
     openReferenceLink,
   };

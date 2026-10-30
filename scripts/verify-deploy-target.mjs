@@ -349,9 +349,22 @@ function runSelfTest() {
   }
 
   function runCase(label, dir, env, args, expectCode) {
+    // Windows os.homedir() prefers USERPROFILE over HOME; keep both aligned
+    // so self-test credentials resolve to the isolated temp home.
+    const isolatedHome =
+      env &&
+      Object.prototype.hasOwnProperty.call(env, 'HOME') &&
+      env.HOME
+        ? env.HOME
+        : homeDir;
     const result = spawnSync(process.execPath, [selfPath, ...args], {
       cwd: dir,
-      env: { ...process.env, HOME: homeDir, ...env },
+      env: {
+        ...process.env,
+        ...env,
+        HOME: isolatedHome,
+        USERPROFILE: isolatedHome,
+      },
       encoding: 'utf8',
     });
     const code = result.status == null ? 1 : result.status;

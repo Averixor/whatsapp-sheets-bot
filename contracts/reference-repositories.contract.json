@@ -366,6 +366,39 @@
           "value": "ab1234"
         }
       }
+    },
+    "expenseRegister": {
+      "sheetName": "Expense_BK",
+      "fixtureRows": [
+        ["Date", "Crew", "Name", "Number"],
+        ["01.10.2026", "Гектор", "Набій 40 мм", "2"],
+        ["02.10.2026", "Black Hawk", "Набій 40 мм", "1"],
+        ["", "", "", ""]
+      ],
+      "expected": {
+        "itemCount": 2,
+        "totalQuantity": 3,
+        "names": ["Набій 40 мм", "Набій 40 мм"],
+        "crews": ["Гектор", "Black Hawk"]
+      }
+    },
+    "aircraftSerials": {
+      "sheetName": "SN_AIRCRAFT",
+      "fixtureRows": [
+        ["AUTEL 4N", "", "", "AUTEL 4T", "", "", "MATRICE 4T"],
+        ["SN-4N-001", "8N", "", "SN-4T-001", "1T", "", "SN-M-001", "1M"],
+        ["", "9N", "", "SN-4T-002", "", "", "", "2M"],
+        ["SN-4N-003", "", "", "", "", "", "", ""]
+      ],
+      "expected": {
+        "itemCount": 5,
+        "models": ["AUTEL 4N", "AUTEL 4T", "MATRICE 4T"],
+        "serials": ["SN-4N-001", "SN-4T-001", "SN-M-001", "SN-4T-002", "SN-4N-003"],
+        "boardAtSerial": {
+          "SN-4N-001": "8N",
+          "SN-4N-003": ""
+        }
+      }
     }
   },
   "sidebar": {
@@ -373,6 +406,8 @@
     "carsRegisterLabel": "Автотехніка",
     "whatsAppButtonLabel": "WA",
     "noDataBadgeLabel": "Н/Д",
-    "weaponsRegisterLabel": "Озброєння"
+    "weaponsRegisterLabel": "Озброєння",
+    "expenseRegisterLabel": "Витрата боєкомплекту",
+    "aircraftSerialsLabel": "Борти"
   }
 }
