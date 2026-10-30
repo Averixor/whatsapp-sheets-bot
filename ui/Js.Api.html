@@ -267,6 +267,41 @@
       };
     },
 
+    async getExpenseRegister() {
+      const response = await Api.run("apiStage7GetExpenseRegister");
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success,
+        message: response?.message || "",
+        error: response?.error || null,
+        data: result,
+        items: Array.isArray(result.items) ? result.items : [],
+        stats: result.stats || {},
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response,
+      };
+    },
+
+    async getAircraftSerials() {
+      const response = await Api.run("apiStage7GetAircraftSerials");
+      const result = unwrapStage4Result(response) || {};
+      return {
+        success: !!response?.success,
+        message: response?.message || "",
+        error: response?.error || null,
+        data: result,
+        items: Array.isArray(result.items) ? result.items : [],
+        models: Array.isArray(result.models) ? result.models : [],
+        stats: result.stats || {},
+        warnings: Array.isArray(response?.warnings) ? response.warnings : [],
+        context: response?.context || null,
+        meta: unwrapStage4Meta(response),
+        raw: response,
+      };
+    },
+
     async getWeaponsRegister() {
       const response = await Api.run("apiStage7GetWeaponsRegister");
       const result = unwrapStage4Result(response) || {};

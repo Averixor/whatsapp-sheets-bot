@@ -9,7 +9,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 export function capture(cmd, args, cwd = process.cwd()) {
   const result = spawnSync(cmd, args, {
@@ -273,6 +273,7 @@ function runSelfTest() {
   // Exit-path smoke via child process (preflight must fail before any mutation).
   const selfDir = path.dirname(fileURLToPath(import.meta.url));
   const root = path.resolve(selfDir, '..', '..');
+  const selfModuleUrl = pathToFileURL(path.join(selfDir, 'git-ops-guards.mjs')).href;
 
   const failBranch2 = spawnSync(
     process.execPath,
@@ -280,9 +281,7 @@ function runSelfTest() {
       '--input-type=module',
       '-e',
       `
-      import { assertShipReleasePreflight } from ${JSON.stringify(
-        path.join(selfDir, 'git-ops-guards.mjs'),
-      )};
+      import { assertShipReleasePreflight } from ${JSON.stringify(selfModuleUrl)};
       assertShipReleasePreflight({
         message: 'fix: x',
         flags: new Set(['--deploy-gas']),
@@ -304,9 +303,7 @@ function runSelfTest() {
       '--input-type=module',
       '-e',
       `
-      import { assertShipReleasePreflight } from ${JSON.stringify(
-        path.join(selfDir, 'git-ops-guards.mjs'),
-      )};
+      import { assertShipReleasePreflight } from ${JSON.stringify(selfModuleUrl)};
       assertShipReleasePreflight({
         message: 'fix: x',
         flags: new Set(),
@@ -327,9 +324,7 @@ function runSelfTest() {
       '--input-type=module',
       '-e',
       `
-      import { assertShipReleasePreflight } from ${JSON.stringify(
-        path.join(selfDir, 'git-ops-guards.mjs'),
-      )};
+      import { assertShipReleasePreflight } from ${JSON.stringify(selfModuleUrl)};
       assertShipReleasePreflight({
         message: 'fix: x',
         flags: new Set(),
@@ -350,9 +345,7 @@ function runSelfTest() {
       '--input-type=module',
       '-e',
       `
-      import { assertShipReleasePreflight } from ${JSON.stringify(
-        path.join(selfDir, 'git-ops-guards.mjs'),
-      )};
+      import { assertShipReleasePreflight } from ${JSON.stringify(selfModuleUrl)};
       assertShipReleasePreflight({
         message: 'fix: x',
         flags: new Set(),
@@ -373,9 +366,7 @@ function runSelfTest() {
       '--input-type=module',
       '-e',
       `
-      import { assertShipReleasePreflight } from ${JSON.stringify(
-        path.join(selfDir, 'git-ops-guards.mjs'),
-      )};
+      import { assertShipReleasePreflight } from ${JSON.stringify(selfModuleUrl)};
       assertShipReleasePreflight({
         message: 'fix: x',
         flags: new Set(['--deploy-gas']),

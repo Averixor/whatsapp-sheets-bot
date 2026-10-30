@@ -1613,6 +1613,114 @@ function _ssBuildPropertyKitsSchema_() {
   });
 }
 
+function _ssBuildExpenseBkSchema_() {
+  return _ssFreeze_({
+    key: "expenseBk",
+    legacyKey: "Expense_BK",
+    type: "table",
+    title: "Expense_BK",
+    name: _ssTrimmedString_(
+      _ssConfigValue_("EXPENSE_BK_SHEET", "Expense_BK"),
+      "Expense_BK",
+    ),
+    headerRow: 1,
+    dataStartRow: 2,
+    required: false,
+    fields: _ssFreeze_({
+      date: _ssFreeze_({
+        col: 1,
+        type: "date|string",
+        required: false,
+        allowBlank: true,
+        label: "Date",
+      }),
+      crew: _ssFreeze_({
+        col: 2,
+        type: "string",
+        required: false,
+        allowBlank: true,
+        label: "Crew",
+      }),
+      name: _ssFreeze_({
+        col: 3,
+        type: "string",
+        required: true,
+        allowBlank: false,
+        label: "Name",
+      }),
+      number: _ssFreeze_({
+        col: 4,
+        type: "number|string",
+        required: false,
+        allowBlank: true,
+        label: "Number",
+      }),
+    }),
+    headerAliases: _ssFreeze_({
+      date: ["Date", "Дата"],
+      crew: ["Crew", "Екіпаж"],
+      name: ["Name", "Найменування"],
+      number: ["Number", "Кількість"],
+    }),
+    keyFields: ["date", "crew", "name"],
+    requiredFields: ["name"],
+    nullableFields: ["date", "crew", "number"],
+    searchableFields: ["date", "crew", "name"],
+    notes:
+      "Журнал витрати боєкомплекту з робочої книги: Date, Crew, Name, Number.",
+  });
+}
+
+function _ssBuildAircraftSerialsSchema_() {
+  return _ssFreeze_({
+    key: "aircraftSerials",
+    legacyKey: "SN_AIRCRAFT",
+    type: "table",
+    title: "SN_AIRCRAFT",
+    name: _ssTrimmedString_(
+      _ssConfigValue_("SN_AIRCRAFT_SHEET", "SN_AIRCRAFT"),
+      "SN_AIRCRAFT",
+    ),
+    headerRow: 1,
+    dataStartRow: 2,
+    required: false,
+    fields: _ssFreeze_({
+      autel4n: _ssFreeze_({
+        col: 1,
+        type: "string",
+        required: false,
+        allowBlank: true,
+        label: "AUTEL 4N",
+      }),
+      autel4t: _ssFreeze_({
+        col: 4,
+        type: "string",
+        required: false,
+        allowBlank: true,
+        label: "AUTEL 4T",
+      }),
+      matrice4t: _ssFreeze_({
+        col: 7,
+        type: "string",
+        required: false,
+        allowBlank: true,
+        label: "MATRICE 4T",
+      }),
+    }),
+    headerAliases: _ssFreeze_({
+      autel4n: ["AUTEL 4N"],
+      autel4t: ["AUTEL 4T"],
+      matrice4t: ["MATRICE 4T"],
+    }),
+    keyFields: [],
+    requiredFields: [],
+    nullableFields: ["autel4n", "autel4t", "matrice4t"],
+    searchableFields: ["autel4n", "autel4t", "matrice4t"],
+    notes:
+      "Реєстр серійних номерів бортів: назва моделі в першому рядку групи, серійний номер під нею, бортовий номер у сусідній колонці. Нові моделі читаються з непорожніх клітинок рядка 1.",
+  });
+}
+
 function _ssBuildSchemas_() {
   return _ssFreeze_({
     monthly: _ssBuildMonthlySchema_(),
@@ -1621,6 +1729,8 @@ function _ssBuildSchemas_() {
     phoneDirectory: _ssBuildPhoneDirectorySchema_(),
     car: _ssBuildCarSchema_(),
     weapon: _ssBuildWeaponSchema_(),
+    expenseBk: _ssBuildExpenseBkSchema_(),
+    aircraftSerials: _ssBuildAircraftSerialsSchema_(),
     tempProperty: _ssBuildTemporaryPropertySchema_(),
     propertyCatalog: _ssBuildPropertyCatalogSchema_(),
     propertyKits: _ssBuildPropertyKitsSchema_(),
@@ -1649,6 +1759,12 @@ function _canonicalSchemaMap_() {
     car: SHEET_SCHEMAS.car,
     WEAPON: SHEET_SCHEMAS.weapon,
     weapon: SHEET_SCHEMAS.weapon,
+    Expense_BK: SHEET_SCHEMAS.expenseBk,
+    expenseBk: SHEET_SCHEMAS.expenseBk,
+    expensebk: SHEET_SCHEMAS.expenseBk,
+    SN_AIRCRAFT: SHEET_SCHEMAS.aircraftSerials,
+    aircraftSerials: SHEET_SCHEMAS.aircraftSerials,
+    sn_aircraft: SHEET_SCHEMAS.aircraftSerials,
     TEMP_PROPERTY: SHEET_SCHEMAS.tempProperty,
     tempProperty: SHEET_SCHEMAS.tempProperty,
     tempproperty: SHEET_SCHEMAS.tempProperty,
@@ -1776,6 +1892,8 @@ var SheetSchemas_ = (function () {
       PHONE_DIRECTORY: _toLegacySchema_(SHEET_SCHEMAS.phoneDirectory),
       CAR: _toLegacySchema_(SHEET_SCHEMAS.car),
       WEAPON: _toLegacySchema_(SHEET_SCHEMAS.weapon),
+      Expense_BK: _toLegacySchema_(SHEET_SCHEMAS.expenseBk),
+      SN_AIRCRAFT: _toLegacySchema_(SHEET_SCHEMAS.aircraftSerials),
       TEMP_PROPERTY: _toLegacySchema_(SHEET_SCHEMAS.tempProperty),
       PROPERTY_CATALOG: _toLegacySchema_(SHEET_SCHEMAS.propertyCatalog),
       PROPERTY_KITS: _toLegacySchema_(SHEET_SCHEMAS.propertyKits),

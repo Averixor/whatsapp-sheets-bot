@@ -5,6 +5,10 @@
  *
  * npm викликає: script-shell -c "<command>"
  * (.npmrc → script-shell=./scripts/npm-script-shell.mjs)
+ *
+ * На Windows js-debug bootloader часто патчить child_process.spawn і знову
+ * підставляє NODE_OPTIONS у env дочірнього процесу. Тому змінні чистимо
+ * ще й всередині cmd.exe (після інʼєкції хука).
  */
 
 import { spawnSync } from 'node:child_process';
@@ -20,11 +24,29 @@ if (!command) {
   process.exit(2);
 }
 
-const result = spawnSync(command, {
-  stdio: 'inherit',
-  env,
-  shell: true,
-});
+const result =
+  process.platform === 'win32'
+    ? spawnSync(
+        process.env.ComSpec || 'cmd.exe',
+        [
+          '/d',
+          '/s',
+          '/c',
+          // Clear after js-debug spawn hooks may re-inject into `env`.
+          `set "NODE_OPTIONS="&& set "VSCODE_INSPECTOR_OPTIONS="&& ${command}`,
+        ],
+        {
+          stdio: 'inherit',
+          env,
+          shell: false,
+          windowsVerbatimArguments: true,
+        },
+      )
+    : spawnSync(command, {
+        stdio: 'inherit',
+        env,
+        shell: true,
+      });
 
 if (result.error) {
   console.error(`[npm-script-shell] ${result.error.message}`);

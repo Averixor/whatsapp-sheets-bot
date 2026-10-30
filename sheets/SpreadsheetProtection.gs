@@ -122,6 +122,8 @@ function _spResolveSheetNames_(options) {
     _spGetConfigValue_(config, "PHONE_DIRECTORY_SHEET", "PHONE_DIRECTORY"),
     _spGetConfigValue_(config, "CAR_SHEET", "CAR"),
     _spGetConfigValue_(config, "WEAPON_SHEET", "WEAPON"),
+    _spGetConfigValue_(config, "EXPENSE_BK_SHEET", "Expense_BK"),
+    _spGetConfigValue_(config, "SN_AIRCRAFT_SHEET", "SN_AIRCRAFT"),
     _spGetConfigValue_(
       config,
       "INVENTORY_RECONCILIATION_FILES_SHEET",

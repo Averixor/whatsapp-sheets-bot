@@ -243,6 +243,8 @@ function apiStage7BootstrapSidebar() {
         CONFIG.PHONE_DIRECTORY_SHEET || "PHONE_DIRECTORY",
         CONFIG.CAR_SHEET || "CAR",
         CONFIG.WEAPON_SHEET || "WEAPON",
+        CONFIG.EXPENSE_BK_SHEET || "Expense_BK",
+        CONFIG.SN_AIRCRAFT_SHEET || "SN_AIRCRAFT",
       ].map(function (name) {
         var exists = false;
         try {
@@ -452,6 +454,40 @@ function apiStage7GetWeaponsRegister() {
     {
       startedAt: startedAt,
       affectedSheets: [CONFIG.WEAPON_SHEET || "WEAPON"],
+    },
+  );
+}
+
+function apiStage7GetExpenseRegister() {
+  const startedAt = _stage7FastStartedAt_();
+  _stage7AssertRole_("maintainer", "get expense register");
+
+  const data = ReferenceSheetsRepository_.readExpenseRegister();
+  return _stage7FastResponse_(
+    "getExpenseRegister",
+    "Витрату боєкомплекту завантажено",
+    data,
+    data.warnings || [],
+    {
+      startedAt: startedAt,
+      affectedSheets: [CONFIG.EXPENSE_BK_SHEET || "Expense_BK"],
+    },
+  );
+}
+
+function apiStage7GetAircraftSerials() {
+  const startedAt = _stage7FastStartedAt_();
+  _stage7AssertRole_("maintainer", "get aircraft serials");
+
+  const data = ReferenceSheetsRepository_.readAircraftSerials();
+  return _stage7FastResponse_(
+    "getAircraftSerials",
+    "Серійні номери бортів завантажено",
+    data,
+    data.warnings || [],
+    {
+      startedAt: startedAt,
+      affectedSheets: [CONFIG.SN_AIRCRAFT_SHEET || "SN_AIRCRAFT"],
     },
   );
 }

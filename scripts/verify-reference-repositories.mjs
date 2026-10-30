@@ -151,6 +151,8 @@ function loadRepository(spreadsheet) {
       PHONE_DIRECTORY_SHEET: contract.repositories.phoneDirectory.sheetName,
       CAR_SHEET: contract.repositories.carsRegister.sheetName,
       WEAPON_SHEET: contract.repositories.weaponsRegister.sheetName,
+      EXPENSE_BK_SHEET: contract.repositories.expenseRegister.sheetName,
+      SN_AIRCRAFT_SHEET: contract.repositories.aircraftSerials.sheetName,
     },
     getWasbSpreadsheet_: () => spreadsheet,
     normalizePhone_: normalizePhoneForTest,
@@ -162,6 +164,8 @@ function loadRepository(spreadsheet) {
   assert.match(source, /readPhoneDirectory/);
   assert.match(source, /readCarsRegister/);
   assert.match(source, /readWeaponsRegister/);
+  assert.match(source, /readExpenseRegister/);
+  assert.match(source, /readAircraftSerials/);
   vm.runInContext(source, context, {
     filename: "DictionaryRepository.gs",
   });
@@ -171,6 +175,8 @@ function loadRepository(spreadsheet) {
 const phoneContract = contract.repositories.phoneDirectory;
 const carContract = contract.repositories.carsRegister;
 const weaponContract = contract.repositories.weaponsRegister;
+const expenseContract = contract.repositories.expenseRegister;
+const aircraftContract = contract.repositories.aircraftSerials;
 const spreadsheet = new FakeSpreadsheet({
   [phoneContract.sheetName]: new FakeSheet(
     phoneContract.sheetName,
@@ -183,6 +189,14 @@ const spreadsheet = new FakeSpreadsheet({
   [weaponContract.sheetName]: new FakeSheet(
     weaponContract.sheetName,
     weaponContract.fixtureRows,
+  ),
+  [expenseContract.sheetName]: new FakeSheet(
+    expenseContract.sheetName,
+    expenseContract.fixtureRows,
+  ),
+  [aircraftContract.sheetName]: new FakeSheet(
+    aircraftContract.sheetName,
+    aircraftContract.fixtureRows,
   ),
 });
 
@@ -340,6 +354,49 @@ weaponContract.expected.byType.forEach((marker) => {
     `WEAPON type stats include ${marker}`,
   );
 });
+const expenseRegister = vm.runInContext(
+  "ReferenceSheetsRepository_.readExpenseRegister()",
+  context,
+);
+assert.equal(expenseRegister.items.length, expenseContract.expected.itemCount);
+assert.equal(
+  expenseRegister.stats.totalQuantity,
+  expenseContract.expected.totalQuantity,
+);
+assert.deepEqual(
+  Array.from(expenseRegister.items.map((item) => item.name)),
+  expenseContract.expected.names,
+);
+assert.deepEqual(
+  Array.from(expenseRegister.items.map((item) => item.crew)),
+  expenseContract.expected.crews,
+);
+
+const aircraftSerials = vm.runInContext(
+  "ReferenceSheetsRepository_.readAircraftSerials()",
+  context,
+);
+assert.deepEqual(
+  Array.from(aircraftSerials.models),
+  aircraftContract.expected.models,
+);
+assert.equal(aircraftSerials.items.length, aircraftContract.expected.itemCount);
+assert.deepEqual(
+  Array.from(aircraftSerials.items.map((item) => item.serialNumber)),
+  aircraftContract.expected.serials,
+);
+for (const [serial, board] of Object.entries(
+  aircraftContract.expected.boardAtSerial,
+)) {
+  const item = aircraftSerials.items.find((row) => row.serialNumber === serial);
+  assert.equal(item.boardNumber, board, serial);
+}
+assert.equal(
+  aircraftSerials.items.some((item) => item.boardNumber === "9N"),
+  false,
+  "a board number without a serial must not become an airframe",
+);
+
 console.log(
-  `verify-reference-repositories: OK (${phoneContract.sheetName}, ${carContract.sheetName}, ${weaponContract.sheetName})`,
+  `verify-reference-repositories: OK (${phoneContract.sheetName}, ${carContract.sheetName}, ${weaponContract.sheetName}, ${expenseContract.sheetName}, ${aircraftContract.sheetName})`,
 );

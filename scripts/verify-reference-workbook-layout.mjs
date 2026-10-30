@@ -79,6 +79,22 @@ assert.equal(built.TEMPLATE, -1, "TEMPLATE must stay unused in reference layout"
 
 assert.equal(contract.sheets["06"].B, "Позивний");
 assert.equal(contract.sheets["02"].B, "ПОЗИВНИЙ");
+assert.equal(contract.sheets["03"].A, "ТЕЛЕФОН");
+assert.equal(contract.sheets["03"].C, "ПОСАДА");
+assert.equal(contract.sheets["03"].G, "Особовий склад ПІБ");
+assert.equal(contract.sheets["05"].AM, "Примітки");
+assert.equal(contract.sheets["10"].B, "Позивний");
+assert.equal(contract.sheets["10"].AH, "Примітки");
+assert.equal(contract.sheets["11"].AF, "46356.0");
+assert.equal(contract.sheets.DICT.A, "");
+assert.equal(contract.sheets.DICT.B, "");
+assert.equal(contract.sheets.DICT.C, "Місце");
+assert.equal(contract.sheets.DICT.D, "Завдання");
+assert.equal(contract.sheets.Expense_BK.A, "Date");
+assert.equal(contract.sheets.Expense_BK.D, "Number");
+assert.equal(contract.sheets.SN_AIRCRAFT.A, "AUTEL 4N");
+assert.equal(contract.sheets.SN_AIRCRAFT.D, "AUTEL 4T");
+assert.equal(contract.sheets.SN_AIRCRAFT.G, "MATRICE 4T");
 assert.equal(contract.sheets.PHONE_DIRECTORY.A, "Phone / Section");
 assert.equal(contract.sheets.PHONE_DIRECTORY.B, "Name / Note");
 assert.equal(contract.sheets.CAR.A, "Callsign");
@@ -93,14 +109,11 @@ assert.equal(contract.sheets.WEAPON.M, "");
 assert.equal(contract.sheets.WEAPON.N, "Name of military property");
 assert.equal(contract.sheets.WEAPON.T, "Location");
 assert.equal(contract.sheets.WEAPON.U, "");
+assert.equal(contract.sheets.WEAPON.AA, "Callsign");
 assert.ok(
   !Object.prototype.hasOwnProperty.call(contract.sheets.WEAPON, "V") ||
     contract.sheets.WEAPON.V === "",
   "reference WEAPON must not declare a third property block starting at V",
-);
-assert.ok(
-  !Object.prototype.hasOwnProperty.call(contract.sheets.WEAPON, "AA"),
-  "native WEAPON export has no Callsign at AA (materialize may add helper)",
 );
 assert.equal(contract.sheets.DICT_SUM.A, "Code");
 assert.equal(contract.sheets.DICT_SUM.C, "Order");
