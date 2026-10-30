@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-31 — Remove project requests; redesign sidebar menu
+
+- **Removed** sidebar «Заявки» feature: `apiGetActiveProjects` / `apiSubmitRequest`, sheet «Заявки», and client form. Kept «Проєкти» for MonthlyReport. Vacation requests and access-key requests unchanged.
+- **Sidebar menu:** semantic sections (daily / personnel / registers / month admin) + three system `<details>` (maintenance / bootstrap / danger) with role-aware empty-container hiding.
+- **External sheets registry:** 16 service sheets (was 17 without «Заявки»).
+
 ## 2026-10-23 — Link CAR/WEAPON to PERSONNEL and surface driver's licenses
 
 - **CAR materialize:** detect A=`Callsign` vs legacy A=`FML`; callsign-mode keeps column A as Callsign (does not overwrite with ПІБ); dash owners stay unassigned.

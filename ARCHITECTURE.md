@@ -80,8 +80,6 @@ Representative entrypoints:
 - `apiOpenPersonCard()`
 - `apiLoadCalendarDay()`
 - `apiCheckVacationsAndBirthdays()`
-- `apiGetActiveProjects()` / `apiSubmitRequest()` — sidebar projects & requests (`operations/ProjectRequests.gs`)
-
 ### Maintenance API
 
 - file: `api/Stage7MaintenanceApi.gs`
@@ -261,15 +259,14 @@ Protected / service sheets include:
 
 ### Optional business sheets (auto-seeded)
 
-Три аркуші для заявок із сайдбару та місячного звіту за даними таблиці:
+Два аркуші для місячного звіту (email менеджерів / події):
 
 | Sheet (name) | Primary module                                                 | Seeded when                         |
 | ------------ | -------------------------------------------------------------- | ----------------------------------- |
 | `Дані`       | `reports/MonthlyReport.gs` (`MonthlyReport_.ensureDataSheet_`) | Sidebar bootstrap; empty sheet only |
 | `Проєкти`    | `operations/ProjectRequests.gs` (`ensureProjectsSheet_`)       | same                                |
-| `Заявки`     | `operations/ProjectRequests.gs` (`ensureRequestsSheet_`)       | same                                |
 
-Тригер входу: **`apiStage7BootstrapSidebar()`** → **`_ensureOptionalBusinessSheetsQuiet_()`** in `api/Stage7ServerApi.gs`. Деталі колонок і шаблонних рядків — **`RUNBOOK.md` §20**.
+Тригер входу: **`apiStage7BootstrapSidebar()`** → **`_ensureOptionalBusinessSheetsQuiet_()`** in `api/Stage7ServerApi.gs`. Деталі колонок і шаблонних рядків — **`RUNBOOK.md` §20**. Проєктні «Заявки» з сайдбару видалено.
 
 ## 7.1 Daily summaries (short and detailed)
 

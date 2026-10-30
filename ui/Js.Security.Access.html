@@ -224,13 +224,36 @@
       }
     }
 
+    function hideEmptyRoleContainers_() {
+      const containers = document.querySelectorAll(
+        ".menu-group, .health-actions",
+      );
+      Array.prototype.forEach.call(containers, function (group) {
+        const items = group.querySelectorAll("[data-role-min]");
+        if (!items.length) return;
+        const anyVisible = Array.prototype.some.call(items, function (el) {
+          return !el.classList.contains("wasb-is-hidden");
+        });
+        group.classList.toggle("wasb-is-hidden", !anyVisible);
+      });
+    }
+
     function updateRestrictedUi_() {
       const access = STATE.access || {};
       document.querySelectorAll("[data-role-min]").forEach(function (el) {
         const required = el.getAttribute("data-role-min") || "guest";
         if (el.classList && el.classList.contains("header-tool-btn")) return;
+        if (
+          el.classList &&
+          (el.classList.contains("menu-group") ||
+            el.classList.contains("health-actions"))
+        ) {
+          return;
+        }
         el.classList.toggle("wasb-is-hidden", !hasRoleAtLeast_(required));
       });
+
+      hideEmptyRoleContainers_();
 
       const detailedBtn = $id("btnDetailedSummary");
       if (detailedBtn) {

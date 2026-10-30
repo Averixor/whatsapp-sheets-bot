@@ -333,18 +333,61 @@
     }
   }
 
-  /* ОСНОВНА СІТКА: кнопки по одній в ряд */
+  /* ОСНОВНА СІТКА: секції по одній в ряд */
   .menu-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: var(--space-sm);
+    gap: var(--space-md);
     width: 100%;
     margin-bottom: var(--space-lg);
   }
 
+  .menu-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .menu-group + .menu-group {
+    margin-top: 2px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-soft);
+  }
+
+  .menu-group__title {
+    margin: 0 0 2px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .menu-group__items {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .menu-group__items--accent-first .menu-item--accent {
+    grid-column: 1 / -1;
+    font-weight: 600;
+  }
+
+  .menu-item--warning {
+    border-color: var(--warning-soft-border);
+    color: var(--warning-soft-text);
+  }
+
+  .menu-item--warning:hover,
+  .menu-item--warning:focus-visible {
+    background: var(--warning-soft-bg);
+    border-color: var(--warning-color);
+  }
+
   /* РОЗТЯГУЄМО БЛОКИ НА ВСЮ ШИРИНУ */
   .menu-divider,
-  .personnel-launch-wrap,
   .system-grid,
   .health-actions {
     width: 100%;
@@ -503,12 +546,33 @@
     margin-top: var(--space-sm);
   }
 
+  .health-actions + .health-actions {
+    margin-top: 6px;
+  }
+
+  .health-actions-subtitle {
+    margin: 10px 0 2px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .health-actions--danger {
+    margin-top: 6px;
+  }
+
   .health-actions-details {
     width: 100%;
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     background: var(--bg-card);
     overflow: hidden;
+  }
+
+  .health-actions-details--danger {
+    border-color: var(--danger-soft-border);
   }
 
   .health-actions-summary {
@@ -522,6 +586,15 @@
     color: var(--text-secondary);
     list-style: none;
     user-select: none;
+  }
+
+  .health-actions-summary--danger {
+    color: var(--danger-color);
+  }
+
+  .health-actions-summary--danger:hover,
+  .health-actions-summary--danger:focus-visible {
+    background: var(--danger-soft-bg);
   }
 
   .health-actions-summary::-webkit-details-marker {
@@ -565,6 +638,17 @@
 
   .health-actions-btn--wide {
     grid-column: span 2;
+  }
+
+  .health-actions-btn--danger {
+    border-color: var(--danger-soft-border);
+    color: var(--danger-color);
+  }
+
+  .health-actions-btn--danger:hover,
+  .health-actions-btn--danger:focus-visible {
+    background: var(--danger-soft-bg);
+    border-color: var(--danger-color);
   }
 
   .sidebar-container.console-mode-third .menu-item {

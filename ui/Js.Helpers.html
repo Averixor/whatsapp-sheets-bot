@@ -897,7 +897,6 @@
       aircraftSerials: "Борти",
       inventoryReconciliation: "Звірка",
       externalMigration: "Міграція зовнішніх таблиць",
-      requests: "Заявки",
     };
 
     return names[action] || action;
@@ -1190,10 +1189,6 @@
 
         case "runRegressionTests":
           await runRegressionTests();
-          break;
-
-        case "requests":
-          navigateTo("requests", () => SidebarApp.showRequestsForm());
           break;
 
         default:

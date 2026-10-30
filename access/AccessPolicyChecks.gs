@@ -1350,8 +1350,6 @@ function runAccessPolicyChecks(options) {
           "apiStage7ListBindableCallsigns",
           "apiStage7ReportAccessViolation",
           "apiStage7ReportClientAccessSignal",
-          "apiGetActiveProjects",
-          "apiSubmitRequest",
           "apiStage7RepairSystemSheets",
           "apiStage7NormalizeAllSheetHeadersToEnglish",
         ];
@@ -1378,7 +1376,6 @@ function runAccessPolicyChecks(options) {
           "apiStage7ReportClientAccessSignal",
           "apiStage7GetAccessDescriptorLite",
           "apiStage7BootstrapSidebar",
-          "apiGetActiveProjects",
         ];
         for (var i = 0; i < allowed.length; i++) {
           if (!isAccessApiEndpointAllowedForRole_(allowed[i], "guest")) {
@@ -1395,7 +1392,6 @@ function runAccessPolicyChecks(options) {
         "apiStage7BootstrapAccessSheet",
         "apiStage7NormalizeAccessSheetFormatting",
         "apiStage7ApplyProtections",
-        "apiSubmitRequest",
         "apiStage7RepairSystemSheets",
         "apiStage7NormalizeAllSheetHeadersToEnglish",
       ];
@@ -1418,7 +1414,6 @@ function runAccessPolicyChecks(options) {
           "apiStage7ResumeBrowserSession",
           "apiStage7ListBindableCallsigns",
           "apiStage7ReportClientAccessSignal",
-          "apiSubmitRequest",
         ];
         var roles = ["viewer", "operator", "admin"];
         for (var r = 0; r < roles.length; r++) {

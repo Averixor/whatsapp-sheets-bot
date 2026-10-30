@@ -25,11 +25,6 @@ var EXTERNAL_SPREADSHEET_ENTRIES_ = Object.freeze([
     sheetName: "Дані",
   }),
   Object.freeze({
-    logicalName: "Заявки",
-    spreadsheetId: "1jvcZ9hJi29IhMlRaDFlCJYlP5c5nntNPfKrqxZKhIcE",
-    sheetName: "Заявки",
-  }),
-  Object.freeze({
     logicalName: "Проєкти",
     spreadsheetId: "1S9k6ZX3AjwqpevYYkuqGX3TE61dXpwKSA8UAyHi59sg",
     sheetName: "Проєкти",
@@ -279,7 +274,7 @@ function writeExternalMigrationReceipt_(receipt) {
 function setExternalMigrationParity_(ok) {
   return writeExternalMigrationReceipt_({
     status: ok ? "PASS" : "FAIL",
-    resources: ok ? 17 : 0,
+    resources: ok ? EXTERNAL_SPREADSHEET_ENTRIES_.length : 0,
   });
 }
 
@@ -409,7 +404,6 @@ function getExternalLogicalDisplayName_(name) {
   }
   var labels = {
     "Дані": "Дані",
-    "Заявки": "Заявки",
     "Проєкти": "Проєкти",
     PROPERTY_KITS: "Комплекти майна",
     PROPERTY_CATALOG: "Каталог майна",

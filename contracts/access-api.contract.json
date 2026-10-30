@@ -13,8 +13,6 @@
   "publicEndpoints": [
     "apiStage7GetAccessDescriptorLite",
     "apiStage7BootstrapSidebar",
-    "apiGetActiveProjects",
-    "apiSubmitRequest",
     "apiStage7ListPersonnelCallsigns",
     "apiStage7ReportClientAccessSignal",
     "apiStage7GetMonthsList",
@@ -120,7 +118,6 @@
     "guest": [
       "apiStage7GetAccessDescriptorLite",
       "apiStage7BootstrapSidebar",
-      "apiGetActiveProjects",
       "apiStage7ReportClientAccessSignal",
       "apiStage7GetMonthsList",
       "apiStage7GetAccessDescriptor",
@@ -133,7 +130,6 @@
       "apiStage7RegisterAccessWithTemporaryPassword"
     ],
     "viewer": [
-      "apiSubmitRequest",
       "apiStage7ListPersonnelCallsigns",
       "apiStage7GetSidebarData",
       "apiOpenPersonCard",
@@ -248,10 +244,6 @@
       "_repairOptionalBusinessSheets_",
       "_ensureOptionalBusinessSheetsQuiet_",
       "ensureAllSystemSheets_"
-    ],
-    "apiGetActiveProjects": [
-      "ensureProjectsSheet_",
-      "insertSheet"
     ]
   },
   "requiredRoutingEndpoints": [

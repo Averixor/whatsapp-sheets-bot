@@ -1,5 +1,5 @@
 /**
- * ExternalSpreadsheetMigration.gs — idempotent copy of 17 service sheets
+ * ExternalSpreadsheetMigration.gs — idempotent copy of 16 service sheets
  * from the main workbook into dedicated Spreadsheets. Does not delete source tabs.
  */
 
@@ -329,7 +329,8 @@ function _extMigWriteParity_(preview) {
     preview.ok !== false &&
     Number(preview.conflictCount || 0) === 0 &&
     Number(preview.copyCount || 0) === 0 &&
-    Number(preview.alreadyMigrated || 0) === 17 &&
+    Number(preview.alreadyMigrated || 0) ===
+      EXTERNAL_SPREADSHEET_ENTRIES_.length &&
     _extMigArchivesOk_(preview.tables);
   var receipt = _extMigBuildReceipt_(preview, pass);
   if (typeof writeExternalMigrationReceipt_ === "function") {
@@ -518,7 +519,8 @@ function _finalizeExternalSpreadsheetMigrationBody_() {
       fresh.ok !== false &&
       Number(fresh.conflictCount || 0) === 0 &&
       Number(fresh.copyCount || 0) === 0 &&
-      Number(fresh.alreadyMigrated || 0) === 17 &&
+      Number(fresh.alreadyMigrated || 0) ===
+        EXTERNAL_SPREADSHEET_ENTRIES_.length &&
       _extMigArchivesOk_(fresh.tables) &&
       fingerprintsMatch;
     if (!pass) {

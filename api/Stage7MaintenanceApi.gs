@@ -1493,7 +1493,7 @@ function apiGetExternalSpreadsheetMigrationStatus() {
 }
 
 /**
- * Dry-run copy plan for the 17 external service spreadsheets.
+ * Dry-run copy plan for the 16 external service spreadsheets.
  */
 function apiPreviewExternalSpreadsheetMigration() {
   _stage7AssertRole_("sysadmin", "preview external spreadsheet migration");
@@ -1521,7 +1521,7 @@ function apiPreviewExternalSpreadsheetMigration() {
 }
 
 /**
- * Apply idempotent copy of 17 service sheets into dedicated Spreadsheets.
+ * Apply idempotent copy of 16 service sheets into dedicated Spreadsheets.
  * Does not delete source tabs. Stops on destination conflicts.
  */
 function apiApplyExternalSpreadsheetMigration() {

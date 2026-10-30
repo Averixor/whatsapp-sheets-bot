@@ -159,7 +159,7 @@ runtime `.gs` at repo root; all `.html` live in `ui/`.
 10. Run `apiStage7QuickHealthCheck()`.
 11. Verify the `🧑‍💻` sidebar block for each role you actually use.
 
-Після першого відкриття сайдбару (або явного виклику **`apiStage7BootstrapSidebar()`**) за потреби створюються порожні optional аркуші **`Дані`**, **`Проєкти`**, **`Заявки`** із заголовками й одним шаблонним рядком; якщо аркуш уже має дані, вміст не перезаписується. Див. **`RUNBOOK.md`** §20.
+Після першого відкриття сайдбару (або явного виклику **`apiStage7BootstrapSidebar()`**) за потреби створюються порожні optional аркуші **`Дані`**, **`Проєкти`** із заголовками й одним шаблонним рядком; якщо аркуш уже має дані, вміст не перезаписується. Див. **`RUNBOOK.md`** §20.
 
 ## ACCESS sheet schema
 

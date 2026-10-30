@@ -48,8 +48,6 @@ const PROJECT_STAGE7_CANONICAL_API_MAP_ = Object.freeze({
   application: Object.freeze([
     "apiStage7GetAccessDescriptorLite",
     "apiStage7BootstrapSidebar",
-    "apiGetActiveProjects",
-    "apiSubmitRequest",
     "apiStage7ListPersonnelCallsigns",
     "apiStage7ReportClientAccessSignal",
     "apiStage7GetMonthsList",
@@ -144,13 +142,6 @@ const PROJECT_STAGE7_ACCESS_API_ROLE_POLICY_ = Object.freeze({
   }),
   apiStage7BootstrapSidebar: Object.freeze({
     guestAllowed: true,
-  }),
-  apiGetActiveProjects: Object.freeze({
-    guestAllowed: true,
-  }),
-  apiSubmitRequest: Object.freeze({
-    guestAllowed: false,
-    minRole: "viewer",
   }),
   apiStage7ListPersonnelCallsigns: Object.freeze({
     guestAllowed: false,

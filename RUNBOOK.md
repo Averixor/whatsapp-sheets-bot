@@ -903,13 +903,15 @@ For day-to-day operations, prefer calling **`apiStage7*`** and documented Stage7
 
 Do **not** reintroduce `eval` for resolving test or handler names; extend **`getStage7TestRunnerExplicitRegistry_()`** when adding fixed registry tasks.
 
-## 20. Optional business sheets (Дані / Проєкти / Заявки)
+## 20. Optional business sheets (Дані / Проєкти)
 
-Ці три аркуші **не** створюються «ядром» bootstrap сервісних таблиць (`apiStage7BootstrapRuntimeAndAlertsSheets`). Вони підтягуються окремо:
+Ці два аркуші **не** створюються «ядром» bootstrap сервісних таблиць (`apiStage7BootstrapRuntimeAndAlertsSheets`). Вони підтягуються окремо:
 
 - **`apiStage7BootstrapSidebar()`** (`api/Stage7ServerApi.gs`) викликає **`_ensureOptionalBusinessSheetsQuiet_()`**: якщо аркуша немає — вставляє його; якщо аркуш **повністю порожній** (`getLastRow() < 1`) — записує заголовки, один шаблонний рядок і базове оформлення (frozen row 1, жирний заголовок, фон `#eef2ff`, `autoResizeColumns` де можливо).
 
 Якщо аркуш уже існує і містить хоч один рядок даних, **`ensure*`** його **не перезаписує** — правити структуру доведеться вручну або через окремі утиліти.
+
+Аркуш **«Заявки»** (проєктні заявки з сайдбару) **видалено** з продукту. Заявки на відпустку (`VACATION_REQUESTS`) та запити access-key лишаються окремими механізмами.
 
 ### «Дані» (`reports/MonthlyReport.gs`, `MonthlyReport_.ensureDataSheet_`)
 
@@ -917,11 +919,7 @@ Do **not** reintroduce `eval` for resolving test or handler names; extend **`get
 
 ### «Проєкти» (`operations/ProjectRequests.gs`, `ProjectRequests_.ensureProjectsSheet_`)
 
-Заголовки: **id**, **проєкт**, **активний**, **email менеджера**. Шаблон другого рядка має **`активний = false`**, тому **`readProjects_`** його не показує у сайдбарі, доки не заміниш дані й не увімкнеш активність.
-
-### «Заявки» (`operations/ProjectRequests.gs`, `ProjectRequests_.ensureRequestsSheet_`)
-
-Заголовки рядка 1 збігаються з порядком **`appendRow`** у **`apiSubmitRequest`**: **timestamp**, **user_email**, **project_id**, **project_name**, **title**, **details**, **dedupe_key**, **status**. Шаблон: **`dedupe_key`** = `wasb-template-row-v1`, **`status`** = `template`; **`findDuplicate_`** сканує колонку dedupe по всіх даних рядках до останнього заповненого рядка.
+Заголовки: **id**, **проєкт**, **активний**, **email менеджера**. Шаблон другого рядка має **`активний = false`**. Аркуш використовується для MonthlyReport (email менеджерів), не для UI-заявок.
 
 ### Перевірка
 

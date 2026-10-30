@@ -65,17 +65,16 @@ function runSmokeTests(options) {
 
   _smokePush_(
     report,
-    "Optional business sheets ensured (Дані/Проєкти/Заявки)",
+    "Optional business sheets ensured (Дані/Проєкти)",
     function () {
       var ss = getWasbSpreadsheet_();
       if (typeof ProjectRequests_ !== "undefined" && ProjectRequests_) {
         ProjectRequests_.ensureProjectsSheet_(ss);
-        ProjectRequests_.ensureRequestsSheet_(ss);
       }
       if (typeof MonthlyReport_ !== "undefined" && MonthlyReport_) {
         MonthlyReport_.ensureDataSheet_(ss);
       }
-      var optional = ["Дані", "Проєкти", "Заявки"];
+      var optional = ["Дані", "Проєкти"];
       var missing = optional.filter(function (name) {
         if (typeof getLogicalSheet_ === "function") {
           try {
@@ -101,18 +100,6 @@ function runSmokeTests(options) {
       "sendMonthlyReport() відсутній",
     );
     return "sendMonthlyReport OK";
-  });
-
-  _smokePush_(report, "Requests API available", function () {
-    _smokeAssert_(
-      typeof apiGetActiveProjects === "function",
-      "apiGetActiveProjects() відсутній",
-    );
-    _smokeAssert_(
-      typeof apiSubmitRequest === "function",
-      "apiSubmitRequest() відсутній",
-    );
-    return "Requests API OK";
   });
 
   _smokePush_(report, "HTML include helpers available", function () {

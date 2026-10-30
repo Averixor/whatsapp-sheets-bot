@@ -58,7 +58,7 @@ For **headless** runs (time-driven triggers, executions without an open spreadsh
 
 If this property is empty, `getWasbSpreadsheet_()` falls back to **`SpreadsheetApp.getActiveSpreadsheet()`** when a container spreadsheet is active. Pure headless execution without property and without context will throw a clear error—set the property for production triggers.
 
-### Optional business sheets (`Дані` / `Проєкти` / `Заявки`)
+### Optional business sheets (`Дані` / `Проєкти`)
 
 Sidebar bootstrap can create and seed these sheets (headers + one template row) when they are missing or completely empty. Behaviour, column lists, and caveats are documented in **`RUNBOOK.md` §20**. If you change **`ensure*`** helpers, update that section and **`ARCHITECTURE.md`** (§7) so docs stay accurate.
 

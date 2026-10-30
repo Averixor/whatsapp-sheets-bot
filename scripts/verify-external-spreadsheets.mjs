@@ -22,7 +22,7 @@ const apiSource = readFileSync(
   "utf8",
 );
 
-assert.equal(contract.sheets.length, 17, "contract must list exactly 17 external sheets");
+assert.equal(contract.sheets.length, 16, "contract must list exactly 16 external sheets");
 
 const ids = contract.sheets.map((row) => row.spreadsheetId);
 assert.equal(new Set(ids).size, ids.length, "spreadsheet IDs must be unique");
@@ -355,7 +355,7 @@ const apply = context.applyExternalSpreadsheetMigration_();
 assert.equal(context.getExternalStorageMode_(), "migration");
 assert.equal(apply.storageModeAfter, "migration");
 
-// 6. external → 17 on registry IDs
+// 6. external → 16 on registry IDs
 context.setExternalStorageMode_("external", { fromFinalizer: true });
 assert.equal(context.getExternalStorageMode_(), "external");
 assert.equal(context.usesExternalProductionRouting_(), true);
@@ -567,7 +567,7 @@ function enableExternalForTests() {
 setRawMode("migration");
 context.writeExternalMigrationReceipt_({
   status: "PASS",
-  resources: 17,
+  resources: 16,
   sourceFingerprint: "stale-source",
   targetFingerprint: "stale-source",
 });
@@ -739,11 +739,11 @@ setRawMode("migration");
 const status = context.getExternalSpreadsheetMigrationStatus_();
 assert.equal(status.ok, true);
 assert.equal(status.mode, "migration");
-assert.equal(status.registryCount, 17);
+assert.equal(status.registryCount, 16);
 assert.equal(status.mainWorkbookLabel, "основна книга");
 assert.equal(typeof status.checkedAt, "string");
 assert.ok(Array.isArray(status.resources));
-assert.equal(status.resources.length, 17);
+assert.equal(status.resources.length, 16);
 const statusJson = JSON.stringify(status);
 JSON.parse(statusJson);
 assert.ok(
@@ -759,7 +759,7 @@ const dto = context.toExternalMigrationPreviewDto_(previewDtoSource);
 assert.equal(typeof dto.checkedAt, "string");
 assert.ok(dto.totals && typeof dto.totals === "object");
 assert.ok(Array.isArray(dto.resources));
-assert.equal(dto.resources.length, 17);
+assert.equal(dto.resources.length, 16);
 const logRow = dto.resources.find((row) => row.name === "LOG");
 assert.ok(logRow, "preview DTO must include the events sheet");
 assert.equal(logRow.displayName, "Журнал подій");

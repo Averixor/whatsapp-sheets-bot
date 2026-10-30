@@ -130,9 +130,6 @@ function _repairOptionalBusinessSheets_() {
   ensureOne_("Проєкти", function () {
     return ProjectRequests_.ensureProjectsSheet_(ss);
   });
-  ensureOne_("Заявки", function () {
-    return ProjectRequests_.ensureRequestsSheet_(ss);
-  });
   ensureOne_("Дані", function () {
     return MonthlyReport_.ensureDataSheet_(ss);
   });
@@ -239,7 +236,6 @@ function apiStage7BootstrapSidebar() {
       businessSheets: [
         "Дані",
         "Проєкти",
-        "Заявки",
         CONFIG.PHONE_DIRECTORY_SHEET || "PHONE_DIRECTORY",
         CONFIG.CAR_SHEET || "CAR",
         CONFIG.WEAPON_SHEET || "WEAPON",
