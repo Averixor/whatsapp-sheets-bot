@@ -111,6 +111,23 @@ const SendPanelRepository_ = (function() {
     };
   }
 
+  function mapBuiltRowsToPanelItems_(built) {
+    const dataStart = Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3;
+    const sourceRows = built && Array.isArray(built.rows) ? built.rows : [];
+    return sourceRows.map(function(row, index) {
+      return {
+        fml: String(row[0] || '').trim(),
+        phone: String(row[1] || '').replace(/^'/, '').trim() || '—',
+        code: String(row[2] || '').trim(),
+        tasks: String(row[3] || '').trim() || '—',
+        status: normalizeSendPanelStatus_(String(row[4] || '').trim()),
+        sent: isSendPanelSentMark_(row[5]),
+        link: extractLinkUrl(String(row[6] || '')),
+        row: dataStart + index
+      };
+    });
+  }
+
   function buildRowsForDate(dateStr) {
     const ctx = PersonsRepository_.getDateContext(dateStr);
     const source = ctx.sheet;
@@ -125,6 +142,52 @@ const SendPanelRepository_ = (function() {
       .getRange(start, callsignCol, num, 1)
       .getDisplayValues();
 
+    // Resolve layout columns once (avoid detectMonthlyLayout / schema per row).
+    let brCol = 0;
+    let fmlCol = 0;
+    let idCol = 0;
+    try {
+      brCol = Number(getMonthlyBrDaysColForSheet_(source)) || 0;
+    } catch (_) {}
+    try {
+      fmlCol = Number(getMonthlyFmlColForSheet_(source)) || 0;
+    } catch (_) {}
+    try {
+      idCol = Number(
+        (typeof CONFIG !== 'undefined' && CONFIG && CONFIG.ID_COL) || 0
+      ) || 0;
+    } catch (_) {}
+
+    const brValues = brCol > 0
+      ? source.getRange(start, brCol, num, 1).getDisplayValues()
+      : null;
+    const fmlValues = fmlCol > 0
+      ? source.getRange(start, fmlCol, num, 1).getDisplayValues()
+      : null;
+    const idValues = idCol > 0
+      ? source.getRange(start, idCol, num, 1).getDisplayValues()
+      : null;
+
+    // Date header once for the day column (was re-read per person row).
+    let panelDate = String(ctx.dateStr || '').trim();
+    if (!panelDate) {
+      try {
+        const dateRow = Number(
+          (typeof CONFIG !== 'undefined' && CONFIG && CONFIG.DATE_ROW) || 1
+        ) || 1;
+        const dateCell = source.getRange(dateRow, ctx.col);
+        if (typeof DateUtils_ !== 'undefined' && DateUtils_ && DateUtils_.normalizeDate) {
+          panelDate = DateUtils_.normalizeDate(
+            dateCell.getValue(),
+            dateCell.getDisplayValue()
+          );
+        } else {
+          panelDate = String(dateCell.getDisplayValue() || '').trim();
+        }
+      } catch (_) {}
+    }
+
+    const sheetName = source.getName();
     const rows = [];
     const payloads = [];
 
@@ -133,8 +196,34 @@ const SendPanelRepository_ = (function() {
       const rowCallsign = String(callsigns[i][0] || '').trim();
       if (!code || !rowCallsign) continue;
 
+      const rowNum = start + i;
+      const brRaw = brValues ? String(brValues[i][0] || '').trim() : '';
+      const brDays = brRaw ? Number(String(brRaw).replace(',', '.')) || 0 : 0;
+      const fmlFromSheet = fmlValues ? String(fmlValues[i][0] || '').trim() : '';
+      const idFromSheet = idValues ? String(idValues[i][0] || '').trim() : '';
+
       try {
-        const payload = buildPayloadForCell_(source, start + i, ctx.col, phones, dict);
+        // Object form skips per-row getRange reads inside buildPayloadForCell_.
+        const payload = buildPayloadForCell_({
+          sheet: source,
+          sheetName: sheetName,
+          row: rowNum,
+          col: ctx.col,
+          cell: typeof a1FromRowCol_ === 'function'
+            ? a1FromRowCol_(rowNum, ctx.col)
+            : '',
+          id: idFromSheet,
+          fml: fmlFromSheet,
+          name: fmlFromSheet,
+          callsign: rowCallsign,
+          code: code,
+          status: code,
+          date: panelDate,
+          dateStr: panelDate,
+          brDays: brDays,
+          phonesMap: phones,
+          dictMap: dict
+        });
         if (!payload.fml) continue;
         let formattedPhone = String(payload.phone || '').trim();
         if (formattedPhone.startsWith('+')) {
@@ -157,7 +246,7 @@ const SendPanelRepository_ = (function() {
       } catch (e) {
         var fallbackFml = "";
         try {
-          var p = resolvePersonnelForLookup_(rowCallsign, "", "");
+          var p = resolvePersonnelForLookup_(rowCallsign, fmlFromSheet, idFromSheet);
           if (p && p.fml) fallbackFml = p.fml;
         } catch (_) {}
         rows.push([
@@ -173,45 +262,37 @@ const SendPanelRepository_ = (function() {
     }
 
     return {
-      month: source.getName(),
-      date: ctx.dateStr,
+      month: sheetName,
+      date: panelDate || ctx.dateStr,
       rows: rows,
       payloads: payloads,
       canonicalSource: {
         type: 'MONTHLY',
-        sheet: source.getName(),
-        date: ctx.dateStr
+        sheet: sheetName,
+        date: panelDate || ctx.dateStr
       }
     };
   }
 
-  function preview(dateStr) {
-    const built = buildRowsForDate(dateStr);
-    const mapped = built.rows.map(function(row, index) {
-      return {
-        fml: String(row[0] || '').trim(),
-        phone: String(row[1] || '').replace(/^'/, '').trim() || '—',
-        code: String(row[2] || '').trim(),
-        tasks: String(row[3] || '').trim() || '—',
-        status: normalizeSendPanelStatus_(String(row[4] || '').trim()),
-        sent: isSendPanelSentMark_(row[5]),
-        link: extractLinkUrl(String(row[6] || '')),
-        row: (Number(CONFIG.SEND_PANEL_DATA_START_ROW) || 3) + index
-      };
-    });
+  function preview(dateStr, options) {
+    const opts = options || {};
+    const built = opts.built || buildRowsForDate(dateStr);
+    const mapped = mapBuiltRowsToPanelItems_(built);
 
     return {
       month: built.month,
       date: built.date,
       canonicalSource: built.canonicalSource,
       rows: mapped,
-      stats: buildStats(mapped)
+      stats: buildStats(mapped),
+      built: built
     };
   }
 
-  function rebuild(dateStr) {
+  function rebuild(dateStr, options) {
+    const opts = options || {};
     const ss = getWasbSpreadsheet_();
-    const built = buildRowsForDate(dateStr);
+    const built = opts.built || buildRowsForDate(dateStr);
     let panel = ss.getSheetByName(CONFIG.SEND_PANEL_SHEET);
     const prevMeta = panel ? getSendPanelMetadata_(panel) : { month: '', date: '', hasMetadata: false };
     const preserveState = !!(panel && prevMeta.date && prevMeta.date === built.date);
@@ -248,7 +329,8 @@ const SendPanelRepository_ = (function() {
     panel.setFrozenRows(CONFIG.SEND_PANEL_HEADER_ROW);
     applyVisualState_(panel, rows.length);
 
-    const rowsData = readRows();
+    // Prefer in-memory mapping of what we just wrote (avoids another full sheet read).
+    const rowsData = mapBuiltRowsToPanelItems_({ rows: rows });
     return {
       month: built.month,
       date: built.date,

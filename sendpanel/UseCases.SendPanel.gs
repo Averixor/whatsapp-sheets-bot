@@ -38,6 +38,7 @@ var UseCasesSendPanel_ = (function () {
         };
       },
       plan: function (input) {
+        // One buildRowsForDate for both dry-run preview and write path.
         const preview = SendPanelRepository_.preview(
           input.dateStr || input.date,
         );
@@ -45,6 +46,7 @@ var UseCasesSendPanel_ = (function () {
           preview.stats || SendPanelRepository_.buildStats(preview.rows || []);
         return {
           preview: preview,
+          built: preview.built || null,
           meta: {
             affectedSheets: [
               CONFIG.SEND_PANEL_SHEET,
@@ -59,7 +61,17 @@ var UseCasesSendPanel_ = (function () {
       execute: function (input, _beforeState, plan) {
         const built = input.dryRun
           ? plan.preview
-          : SendPanelRepository_.rebuild(input.dateStr || input.date);
+          : SendPanelRepository_.rebuild(input.dateStr || input.date, {
+              built: plan.built || (plan.preview && plan.preview.built) || null,
+            });
+        // Do not leak internal built payload to the client envelope.
+        if (built && built.built) {
+          try {
+            delete built.built;
+          } catch (_) {
+            built.built = undefined;
+          }
+        }
         const stats =
           built.stats || SendPanelRepository_.buildStats(built.rows || []);
         return {
@@ -143,6 +155,7 @@ var UseCasesSendPanel_ = (function () {
         const start = DateUtils_.parseUaDate(input.startDate);
         const end = DateUtils_.parseUaDate(input.endDate);
         const reports = [];
+        let lastBuilt = null;
         let cursor = new Date(start);
         while (cursor.getTime() <= end.getTime()) {
           const dateStr = Utilities.formatDate(
@@ -151,6 +164,7 @@ var UseCasesSendPanel_ = (function () {
             "dd.MM.yyyy",
           );
           const preview = SendPanelRepository_.preview(dateStr);
+          lastBuilt = preview.built || null;
           reports.push({
             date: dateStr,
             month: preview.month,
@@ -164,7 +178,9 @@ var UseCasesSendPanel_ = (function () {
         const warnings = [];
         if (!input.dryRun && reports.length) {
           const lastDate = reports[reports.length - 1].date;
-          persisted = SendPanelRepository_.rebuild(lastDate);
+          persisted = SendPanelRepository_.rebuild(lastDate, {
+            built: lastBuilt,
+          });
           warnings.push(
             "Фізично записано лише останню дату діапазону, бо панель надсилання — один аркуш",
           );
