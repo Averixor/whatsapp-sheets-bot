@@ -434,25 +434,17 @@
                     class="btn btn-secondary health-actions-btn"
                     data-role-min="maintainer"
                     type="button"
-                    onclick="SidebarApp.materializeMonthJournal()"
-                  >
-                    📓 Оновити журнал місяця
-                  </button>
-                  <button
-                    class="btn btn-secondary health-actions-btn"
-                    data-role-min="maintainer"
-                    type="button"
                     onclick="SidebarApp.refreshTemporaryPropertyRegister()"
                   >
                     🔄 Оновити облік майна
                   </button>
                   <button
-                    class="btn btn-secondary health-actions-btn"
-                    data-role-min="sysadmin"
+                    class="btn btn-secondary health-actions-btn health-actions-btn--wide"
+                    data-role-min="maintainer"
                     type="button"
-                    onclick="SidebarApp.clearPhoneCache()"
+                    onclick="SidebarApp.materializeMonthJournal()"
                   >
-                    🧹 Очистити кеш тел.
+                    📓 Оновити журнал місяця
                   </button>
                 </div>
               </details>
@@ -576,6 +568,14 @@
                     onclick="SidebarApp.handleMenuAction('clearCache')"
                   >
                     🧹 Очистити кеш
+                  </button>
+                  <button
+                    class="btn btn-secondary health-actions-btn health-actions-btn--danger"
+                    data-role-min="sysadmin"
+                    type="button"
+                    onclick="SidebarApp.clearPhoneCache()"
+                  >
+                    🧹 Очистити кеш тел.
                   </button>
                   <button
                     class="btn btn-secondary health-actions-btn health-actions-btn--danger"
